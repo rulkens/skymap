@@ -6,7 +6,7 @@
  * reopen splash), and renders the row's fixed children including the two
  * sibling pill containers (`AutoRotateToggleContainer`, `TourDebugPillContainer`),
  * so App no longer needs any of this reach. On a phone, search and home live
- * in the dock instead, leaving a right-aligned cluster of the remaining pills.
+ * in the dock instead, and a full-screen pill joins the right-aligned cluster.
  */
 
 import { memo, useCallback } from 'react';
@@ -14,6 +14,7 @@ import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import HomeButton from '../HomeButton/HomeButton';
 import AboutPill from '../Splash/AboutPill';
 import AutoRotateToggleContainer from './AutoRotateToggleContainer';
+import FullscreenToggleContainer from './FullscreenToggleContainer';
 import TourDebugPillContainer from './TourDebugPillContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectPaletteOpen, selectSplashVisible } from '../../state/ui/selectors';
@@ -51,6 +52,7 @@ function TopBarContainer(): React.ReactElement {
       {!isMobile && <SearchTrigger onClick={openPalette} hidden={hidden} />}
       {!isMobile && <HomeButton onClick={goHomeCb} hidden={hidden} />}
       <AutoRotateToggleContainer hidden={hidden} />
+      {isMobile && <FullscreenToggleContainer hidden={hidden} />}
       <AboutPill onClick={reopenSplashScreen} hidden={hidden} />
       {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={hidden} />}
     </div>
