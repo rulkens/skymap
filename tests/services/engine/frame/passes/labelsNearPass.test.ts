@@ -1,8 +1,8 @@
 /**
- * foregroundLabelsPass — now a thin draw-call shim over what
+ * labelsNearPass — now a thin draw-call shim over what
  * `foregroundLabelDirector` already uploaded earlier in `runFrame` (spec §5.2).
  *
- * `enabled` must read `renderer.glyphCount()` fresh every call — the "latches
+ * `enabled` must read the director's `labels()` fresh every call — the "latches
  * false forever" regression is now impossible by construction, since the
  * upload happens outside this layer's own `draw` (in the director), so there
  * is no same-frame ordering for a stale artifact to hide behind.
@@ -10,7 +10,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { foregroundLabelsPass } from '../../../../../src/services/engine/frame/passes/foregroundLabelsPass';
+import { labelsNearPass } from '../../../../../src/services/engine/frame/passes/labelsNearPass';
+import { NEAR0_OVERLAY_CLIP_SCALE } from '../../../../../src/services/engine/frame/near0OverlayClipScale';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregroundLabelDirectorConfig';
@@ -19,6 +20,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { Label2DDirector } from '../../../../../src/@types/engine/subsystems/Label2DDirector';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
@@ -42,14 +44,11 @@ const FAR_DEPTH_VIEW = {} as GPUTextureView;
 // What both renderers must receive as their occlusion joint.
 const SCENE_STUB = { colorView: COLOR_VIEW, depthView: FAR_DEPTH_VIEW, frame: null };
 
-function makeRenderer(glyphCount: number): LabelRenderer {
+function makeRenderer(): LabelRenderer {
   return {
     label: 'foregroundLabelRenderer',
     setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
-    measure: vi.fn<() => null>(() => null),
-    glyphCount: () => glyphCount,
-    labelCount: () => 0,
     destroy: vi.fn(),
   } as unknown as LabelRenderer;
 }
@@ -64,31 +63,14 @@ function makeLineRenderer(): MarkerLineRenderer {
   } as unknown as MarkerLineRenderer;
 }
 
-// A REAL renderer contract for the gate test below: `glyphCount()` reflects
-// whatever `setLabels` last received, exactly like the production renderer —
-// a fixed-constant stub (as `makeRenderer` above hands out) would let the
-// test pass even if the director's upload moved to AFTER this layer's draw.
-function makeStatefulLabelRenderer(): LabelRenderer {
-  let last: readonly Label2D[] = [];
-  return {
-    label: 'foregroundLabelRenderer',
-    setLabels: (labels: readonly Label2D[]) => {
-      last = labels;
-    },
-    draw: vi.fn<(...args: unknown[]) => void>(),
-    measure: vi.fn<() => null>(() => null),
-    glyphCount: () => last.reduce((n, l) => n + l.text.length, 0),
-    labelCount: () => last.length,
-    destroy: vi.fn(),
-  } as unknown as LabelRenderer;
-}
-
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
+  director: Pick<Label2DDirector, 'labels'> = { labels: () => [] },
 ): EngineState {
   return {
-    gpu: { foregroundLabelRenderer: renderer, foregroundMarkerLineRenderer: lineRenderer },
+    gpu: { labelRendererNear: renderer, markerLineRendererNear: lineRenderer },
+    subsystems: { foregroundLabelDirector: director },
   } as unknown as EngineState;
 }
 
@@ -112,19 +94,17 @@ function makeCtx(nowMs = 0): FrameView {
   } as unknown as FrameView;
 }
 
-describe('foregroundLabelsPass.enabled', () => {
+describe('labelsNearPass.enabled', () => {
   it("tracks the director's last flush across the runFrame/draw seam, and re-opens when demand returns", () => {
     // The "latches false forever" regression, exercised across the REAL seam:
-    // a REAL `label2DDirector` uploads via `setLabels` (as `runFrame` does,
-    // BEFORE the frame program walks), and a STATEFUL renderer's
-    // `glyphCount()` reflects only what it last received — so this test
-    // fails if a future change ever moved the director's upload to run
-    // AFTER this layer's `draw`, or reintroduced a `draw`-local upload the
-    // old layer used to do. `enabled` itself never calls `draw`.
+    // a REAL `label2DDirector` flushes via `runFrame` BEFORE the frame
+    // program walks, and `enabled` reads the director's `labels()` — so this
+    // test fails if the gate ever stops following the director's last flush.
+    // `enabled` itself never calls `draw`.
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    const labelRenderer = makeStatefulLabelRenderer();
+    const labelRenderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
-    dir.attachRenderers(labelRenderer, lineRenderer);
+    dir.attachRenderers(labelRenderer, lineRenderer, () => null);
 
     // A producer that ALWAYS emits one candidate — real producers never omit
     // a row, they drive it to invisible via `fadeAlpha` (Task 4/5's
@@ -153,41 +133,41 @@ describe('foregroundLabelsPass.enabled', () => {
       selection: { hover: null, select: null },
       selectionKindRows: [],
     } as unknown as EngineState;
-    const layerState = makeState(labelRenderer, lineRenderer);
+    const layerState = makeState(labelRenderer, lineRenderer, dir);
 
     // Demand present: a brand-new id seeds AT its target — no ramp needed —
     // so the very first flush already carries it.
     dir.runFrame(state, makeCtx(0));
-    expect(foregroundLabelsPass.enabled(layerState, makeCtx(0), VIEW_STUB)).toBe(true);
+    expect(labelsNearPass.enabled(layerState, makeCtx(0), VIEW_STUB)).toBe(true);
 
     // Demand drops (fadeAlpha → 0): a short dt later the envelope has only
     // PARTLY eased down — still emitted, so the gate stays open through the
     // fade-out tail exactly like the deleted layer-level demand-drop test.
     fadeAlpha = 0;
     dir.runFrame(state, makeCtx(50));
-    expect(foregroundLabelsPass.enabled(layerState, makeCtx(50), VIEW_STUB)).toBe(true);
+    expect(labelsNearPass.enabled(layerState, makeCtx(50), VIEW_STUB)).toBe(true);
 
     // Far enough later the envelope settles exactly on 0 — the label drops
     // from the flush and the gate finally closes.
     dir.runFrame(state, makeCtx(5050));
-    expect(foregroundLabelsPass.enabled(layerState, makeCtx(5050), VIEW_STUB)).toBe(false);
+    expect(labelsNearPass.enabled(layerState, makeCtx(5050), VIEW_STUB)).toBe(false);
 
     // Demand returns: the very next flush carries the label again (mid-ease
     // back toward 1, still nonzero), and the gate re-opens immediately —
     // the "latches false forever" bug this whole test exists to catch.
     fadeAlpha = 1;
     dir.runFrame(state, makeCtx(5100));
-    expect(foregroundLabelsPass.enabled(layerState, makeCtx(5100), VIEW_STUB)).toBe(true);
+    expect(labelsNearPass.enabled(layerState, makeCtx(5100), VIEW_STUB)).toBe(true);
   });
 });
 
-describe('foregroundLabelsPass.draw', () => {
+describe('labelsNearPass.draw', () => {
   it('resolves the shared NEAR0 projection (near0LabelProjection(ctx)) and draws the labels through it', () => {
-    const renderer = makeRenderer(3);
+    const renderer = makeRenderer();
     const state = makeState(renderer, null);
     const ctx = makeCtx();
 
-    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    labelsNearPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
     // Memoised per ctx — calling it again here returns the SAME object the
     // layer consumed, so identity proves the layer used the shared lookup
@@ -200,12 +180,12 @@ describe('foregroundLabelsPass.draw', () => {
       projection.vpF32,
       projection.viewportPx,
       projection.pxPerRad,
-      SCENE_STUB,
+      { scene: SCENE_STUB, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
     ]);
   });
 
   it('draws the leader-line renderer through the same shared projection, before the labels', () => {
-    const renderer = makeRenderer(3);
+    const renderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
     const state = makeState(renderer, lineRenderer);
     const ctx = makeCtx();
@@ -217,7 +197,7 @@ describe('foregroundLabelsPass.draw', () => {
       order.push('label'),
     );
 
-    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    labelsNearPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
     const projection = near0LabelProjection(ctx);
     const lineDrawSpy = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
@@ -233,9 +213,9 @@ describe('foregroundLabelsPass.draw', () => {
   });
 
   it('draws captions even when the leader-line renderer is null (bootstrap gap)', () => {
-    const renderer = makeRenderer(3);
+    const renderer = makeRenderer();
     const state = makeState(renderer, null);
-    foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
+    labelsNearPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
     expect(renderer.draw as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
   });
 });

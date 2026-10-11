@@ -21,9 +21,9 @@
  *                   `produceStructureLabels`.
  *   - galaxy      — per-galaxy name labels (the famous-galaxy atlas names).
  *   - starCatalog — curated star-map captions, emitted through the
- *                   foreground-labels layer on the NEAR0 slab.
+ *                   labels-near layer on the NEAR0 slab.
  *   - body        — scene-body captions (Sun, Earth, planets), likewise on the
- *                   foreground-labels layer.
+ *                   labels-near layer.
  *   - blackHoles  — the black holes' captions (the Galactic Centre), likewise.
  *   - scaleBar    — the on-screen scale-bar HUD. Constructed by React,
  *                   not a GPU layer; reserved for tour integration.

@@ -21,7 +21,7 @@
  *
  * Two conditions must both hold:
  *
- *   1. `state.gpu.markerLineRenderer` must be non-null.  It's null
+ *   1. `state.gpu.markerLineRendererCosmo` must be non-null.  It's null
  *      until `createMarkerLineRenderer` construction completes in
  *      `initGpu.ts`.
  *
@@ -33,7 +33,7 @@
  *
  * ### Position among the swap-target layers
  *
- * Placed BEFORE `labelsPass` so the label text composites over the
+ * Placed BEFORE `labelsCosmoPass` so the label text composites over the
  * line where they overlap, preserving readability.
  */
 
@@ -44,15 +44,15 @@ export const markerLinesPass: ContentPass = {
   name: 'marker-lines',
 
   enabled(state, _ctx, _view) {
-    if (state.gpu.markerLineRenderer === null) return false;
-    return state.gpu.markerLineRenderer.lineCount() > 0;
+    if (state.gpu.markerLineRendererCosmo === null) return false;
+    return state.gpu.markerLineRendererCosmo.lineCount() > 0;
   },
 
   draw(pass, view, ctx, state) {
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the framework only calls
     // `draw` when `enabled` returns true.
-    state.gpu.markerLineRenderer!.draw(
+    state.gpu.markerLineRendererCosmo!.draw(
       pass,
       view.vp,
       view.viewportPx,
