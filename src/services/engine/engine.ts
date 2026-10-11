@@ -363,11 +363,11 @@ export function createEngine(
   // Every runner below is registered in ONE `setSagaContext` call before the async
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
-  //
-  // The one row array core owns (D5); createLayers appends each Layer's rows
-  // once, in tuple order, over the empty composition today. `selection` reads
-  // it lazily (never rebuilds a list), so a deep link seen before createLayers
-  // sees only core rows — a Layer-only id instead waits on
+
+  // The one row array (D5): core's rows plus the structure row; createLayers
+  // appends each Layer's rows once, in tuple order. `selection` reads it lazily
+  // (never rebuilds a list), so a deep link seen before createLayers sees only
+  // these rows — a Layer-only id instead waits on
   // resolveFocusRefDeferringSaga's engineStatusChanged pulse to resolve.
   state.selectionKindRows = [...coreSelectionRows(), structureSelectionRow(state.data.structures)];
   const selection = composeSelectionRows(

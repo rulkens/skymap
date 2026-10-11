@@ -54,9 +54,7 @@ const FROM: CameraPose = { target: [1, 1, 1], yaw: 0.5, pitch: -0.2, distance: 9
 
 // The live structure records the store stub reads, modelling
 // `wireStructureProjection`'s anchors group landing mid-flight (Bug repro:
-// #focus=cluster-virgo-m87 races the boot window). Reset per test. The
-// starCatalog Layer's row, appended below, resolves stars over a survey store
-// that never lands (its seeded arm needs none).
+// #focus=cluster-virgo-m87 races the boot window). Reset per test.
 let structureById: Record<string, StructureInfo> = {};
 
 const structures: StructureRowFixture = {
@@ -209,6 +207,20 @@ describe('watchFocusTweenSaga', () => {
     // rather than looping forever waiting for a pulse that never recurs.
     store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-does-not-exist' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // A saga still parked on the pulse would re-extract here and plant a tween.
+    structureById['cluster-does-not-exist'] = {
+      type: 'structure',
+      category: 'galaxy-cluster',
+      id: 'cluster-does-not-exist',
+      name: 'Late Arrival',
+      worldPos: [4, 5, 6],
+      featured: true,
+      physicalRadiusMpc: 2.2,
+    };
+    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 2 }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });

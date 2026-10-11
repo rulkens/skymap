@@ -22,20 +22,20 @@ export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer'>;
 /**
  * A composed `SelectionResolver` over fixed fixtures — the one-line fixture a
  * test builds instead of calling `resolvePick`/`extractSelectionRow`/
- * `resolveFocusId`/`focusIdOf` directly. `structures`/`galaxies`/`stars`
- * append the structure, galaxyCatalog and starCatalog rows the way the engine
- * and `createLayers` do; omit one for a composition with no such data, where
- * its ids resolve to null exactly as before that row is registered.
+ * `resolveFocusId`/`focusIdOf` directly. `structures` feeds the structure row;
+ * `galaxies`/`stars` append the galaxyCatalog/starCatalog Layers' rows the way
+ * `createLayers` does — omit either for a composition with no such data, where
+ * its ids resolve to null exactly as before that Layer is created.
  */
 export function selectionResolverOver(
-  structures?: StructureRowFixture,
+  structures: StructureRowFixture,
   galaxies?: GalaxyRowFixture,
   stars?: StarRowFixture,
 ): SelectionResolver {
   return composeSelectionRows(
     () => [
       ...coreSelectionRows(),
-      ...(structures === undefined ? [] : [structureSelectionRow(structures)]),
+      structureSelectionRow(structures),
       milkyWaySelectionRow(),
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxies)]),
       ...(stars === undefined ? [] : [starCatalogSelectionRow(stars)]),

@@ -58,7 +58,7 @@ export function* watchFocusTweenSaga() {
       // a pulse that never recurs. `takeLatest` discards this waiter if a
       // newer focus supersedes it.
       type Deferral = {
-        /** A selector, read with `yield* select(deferral.empty)`: true while the ref's store may still be filling. */
+        /** True while the ref's store may still be filling. */
         empty(state: RootState): boolean;
         pulse: typeof engineStructureCountsChanged;
       };
