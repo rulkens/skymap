@@ -302,6 +302,20 @@ export const DATA_SOURCES: readonly DataSource[] = [
     evidence: `${REPO_BLOB}/data/raw/geodanmark/README.md`,
   },
   {
+    id: 'dss',
+    entries: ['dss'],
+    group: IMAGERY,
+    name: 'Digitized Sky Survey (DSS2 colour)',
+    gives: 'Sky photographs behind galaxy cards and the pictures of star clusters and nebulae',
+    release: 'DSS2 colour, served by CDS hips2fits',
+    licence:
+      'Copyrighted. Free for research, teaching and other non-profit use with acknowledgement; commercial use needs written permission from STScI.',
+    href: 'https://archive.stsci.edu/dss/copyright.html',
+    evidence: ATTRIBUTIONS,
+    ask: 'The Digitized Sky Surveys were produced at the Space Telescope Science Institute under U.S. Government grant NAG W-2166.',
+    askHref: 'https://archive.stsci.edu/dss/acknowledging.html',
+  },
+  {
     id: 'solar-system-scope',
     entries: ['solar-system-scope'],
     group: IMAGERY,

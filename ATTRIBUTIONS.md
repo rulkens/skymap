@@ -1039,8 +1039,10 @@ paying a fee."
 
 <!-- attribution: id=dss; hosts=alasky.cds.unistra.fr,aladin.cds.unistra.fr -->
 
-- **What:** The fallback when SDSS has no image: a DSS2 colour cutout from the
-  CDS `hips2fits` service. The cards also link to Aladin Lite.
+- **What:** A DSS2 colour cutout from the CDS `hips2fits` service: the
+  fallback when SDSS has no image, and the shot of each featured open cluster,
+  globular cluster, nebula and Galactic Centre structure. The cards also link
+  to Aladin Lite.
 - **By:** The Digitized Sky Surveys, produced at the Space Telescope Science
   Institute from Palomar and UK Schmidt plates; "Colored & Healpixed by CDS".
 - **Licence:** Copyrighted. STScI: "Scientists and educators conducting
@@ -1064,8 +1066,11 @@ paying a fee."
 
 - **Upstream:** `https://alasky.cds.unistra.fr/hips-image-services/hips2fits`
 - **Enters skymap:** `src/utils/math/dssThumbnailUrl.ts` →
-  `src/utils/network/fetchGalaxyBitmap.ts`, in the visitor's browser.
-- **Modified:** Drawn on a disc with a faded edge.
+  `src/utils/network/fetchGalaxyBitmap.ts`, in the visitor's browser; and
+  `tools/capture/captureStructureCutouts.ts`, which writes 71 shots to
+  `public/images/structures/` that ship with the app.
+- **Modified:** Drawn on a disc with a faded edge. The structure shots are
+  resampled to 204×204 pixels and re-encoded as webp.
 - **Checked:** 2026-10-07: <https://archive.stsci.edu/publishing/data-use>,
   <https://archive.stsci.edu/dss/copyright.html>,
   <https://archive.stsci.edu/dss/acknowledging.html>,
