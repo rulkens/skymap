@@ -18,16 +18,20 @@ export function createStarCatalogSlot(
   source: SourceType,
   renderer: StarCatalogRenderer,
 ): AssetSlot<StarOctree, StarCatalogReq> {
-  const id = SOURCE_REGISTRY[source].id;
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
+    throw new Error(`createStarCatalogSlot: source ${source} is not a streamed star catalog`);
+  }
+  const id = entry.id;
   const slot = createAssetSlot<StarOctree, StarCatalogReq>({
     name: `starCatalog:${id}`,
     fetch: starCatalogFetcher,
     commit: async (octree) => {
       // Replaces any previous upload for this source — a tier reload
-      // re-commits the new-resolution catalog.
-      // No chunk slots yet: SKST has no chunks, and the tier's pool size arrives
-      // with the octree format.
-      renderer.upload(source, octree, 0);
+      // re-commits at the new tier's pool size. The slot's race-check ran just
+      // before this call, so `lastRequest()` is this commit's own request.
+      const tier = slot.lastRequest()!.tier;
+      renderer.upload(source, octree, entry.budgets[tier].slots);
     },
   });
   slot.subscribe((s) => {

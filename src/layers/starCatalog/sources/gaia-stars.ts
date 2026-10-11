@@ -2,8 +2,8 @@ import type { SurveyStarCatalogSourceEntry } from '../../../@types/data/starCata
 import { Source } from '../../../data/source';
 
 /**
- * Survey-wide Gaia stellar catalog — the bulk near-field star bin, streamed
- * as tiered `stars-<tier>.bin` point clouds and drawn by the star renderer.
+ * Survey-wide Gaia stellar catalog — the bulk near-field stars, streamed as
+ * one octree index plus chunk objects and drawn by the star renderer.
  *
  * The wide-field twin of the curated `famousStar` neighbourhood (FAMOUS_STAR_ENTRY):
  * that row seeds a hand-picked map from the body store; this one loads millions
@@ -25,17 +25,18 @@ export const GAIA_STARS_ENTRY = {
   // or rings — so neither capability flag is set.
   bearsLabel: false,
   bearsMarker: false,
+  format: 'octree',
   binBaseName: 'stars',
   // Each tier's draw budget bounds Σ recordCount the GPU cut
   // (`cut.wesl`) emits. Sized so the small/medium tiers can refine to
   // (near-)all leaves when the camera is close. Starting values (grill Q9), raised
   // alongside `REFINE_ANGULAR_THRESHOLD`'s tightening (0.3 → 0.05): a lower
   // threshold refines more nodes at a given distance, so it wants more
-  // headroom.
+  // headroom. `slots` are first guesses for the v1/v2 A/B to tune.
   budgets: {
-    small: { drawBudget: 1_500_000 },
-    medium: { drawBudget: 1_500_000 },
-    large: { drawBudget: 1_500_000 },
+    small: { drawBudget: 1_500_000, slots: 64 },
+    medium: { drawBudget: 1_500_000, slots: 128 },
+    large: { drawBudget: 1_500_000, slots: 256 },
   },
   // Camera-distance band (parsecs) over which the survey stars crossfade to
   // the procedural Milky-Way cloud. Chosen so the stellar bubble starts

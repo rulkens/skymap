@@ -9,13 +9,12 @@
  * than hard-coding the Gaia row is what lets a future famous-star catalog
  * reuse this fetcher unchanged: the request dimension IS the reuse seam.
  *
- * ### Async decode
+ * ### Two formats, one shape
  *
- * Unlike the galaxy catalogs, `decodeSkstCatalog` is *async*: the on-disk
- * `.bin` is run through the sealed compression codec (`starBinCodec.ts`),
- * so decode inflates before parsing and the fetcher must await it — a
- * synchronous return would hand back an unresolved promise. The v1 catalog
- * then adapts to the shared `StarOctree` the renderer draws.
+ * The row's `format` picks the file: `skst` is one `-<tier>.bin` per tier,
+ * run through the sealed compression codec (`starBinCodec.ts`) so its decode
+ * is async; `octree` is one tier-less index object (the tier sizes the chunk
+ * pool instead). Both adapt to the `StarOctree` the renderer draws.
  *
  * ### Type guard, not a cast
  *
@@ -38,7 +37,10 @@ import {
   decodeSkstCatalog,
   STAR_CATALOG_DATA_PREFIX,
 } from '../../../data/starCatalog/starCatalogFormat';
+import { starIndexPath } from '../../../data/octree/octreeFormat';
+import { decodeOctreeIndex } from '../../../data/octree/decodeOctreeIndex';
 import { starOctreeFromSkst } from '../../../utils/star/starOctreeFromSkst';
+import { starOctreeFromIndex } from '../../../utils/star/starOctreeFromIndex';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
 
 export const starCatalogFetcher: Fetcher<StarOctree, StarCatalogReq> = async (
@@ -49,6 +51,14 @@ export const starCatalogFetcher: Fetcher<StarOctree, StarCatalogReq> = async (
   const entry = SOURCE_REGISTRY[req.source];
   if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
     throw new Error(`starCatalogFetcher: source ${req.source} is not a streamed star catalog`);
+  }
+  if (entry.format === 'octree') {
+    const buf = await fetchWithProgress(
+      dataUrl(starIndexPath(entry.binBaseName)),
+      signal,
+      onProgress,
+    );
+    return starOctreeFromIndex(decodeOctreeIndex(buf));
   }
   const name = `${entry.binBaseName}-${req.tier}.bin`;
   const buf = await fetchWithProgress(

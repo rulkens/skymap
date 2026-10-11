@@ -450,9 +450,9 @@ readonly slots: number;
 
 The fetcher (`starCatalogFetcher.ts:51-57`): `'skst'` fetches `${STAR_CATALOG_DATA_PREFIX}/${binBaseName}-${tier}.bin` and returns `starOctreeFromSkst(await decodeSkstCatalog(buf))`; `'octree'` fetches `starIndexPath(binBaseName)` (no tier in the name: one bake serves every tier) and returns `starOctreeFromIndex(decodeOctreeIndex(buf))`. `Fetcher<StarOctree, StarCatalogReq>`. The `tier` doc on `StarCatalogReq` says it selects the file for `skst` and the pool size for `octree`. Starting `slots` values are first guesses for the A/B (spec §5.4: large at 256 slots ≈ 67 MB of records); the comment above `budgets` says so in one line.
 
-- [ ] Test `fetches the v2 index by base name, with no tier, when the row's format is octree` — mock the Gaia row (`vi.mock` with `importOriginal`, override `format`), assert the fetched URL ends with `star-catalog/v2/stars.bin` and the result has `chunks.length` of the fixture index.
-- [ ] The existing `fetches <binBaseName>-<tier>.bin and decodes it` test pins the `skst` branch with `format: 'skst'` mocked; assert the result's `chunks` is empty.
-- [ ] Commit.
+- [x] Test `fetches the v2 index by base name, with no tier, when the row's format is octree` — mock the Gaia row (`vi.mock` with `importOriginal`, override `format`), assert the fetched URL ends with `star-catalog/v2/stars.bin` and the result has `chunks.length` of the fixture index.
+- [x] The existing `fetches <binBaseName>-<tier>.bin and decodes it` test pins the `skst` branch with `format: 'skst'` mocked; assert the result's `chunks` is empty.
+- [x] Commit.
 
 ### Task 12: The chunk stream and residency, `review: yes`
 
