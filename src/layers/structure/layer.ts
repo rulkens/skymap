@@ -28,7 +28,7 @@ export const structureLayer = defineLayer({
   name: 'structure',
   settings: structureLayerSettings,
   sources: STRUCTURE_SOURCE_ROWS,
-  facts: { counts: {}, bulk: 'idle' } as StructureFacts,
+  facts: { counts: {}, searchList: [], bulk: 'idle' } as StructureFacts,
   create,
   destroy,
   // Wrapped, not passed bare: the row's narrow `Pick` parameter would otherwise

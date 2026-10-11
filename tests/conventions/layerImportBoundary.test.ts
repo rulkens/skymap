@@ -123,13 +123,6 @@ const LAYER_STORE_REACH_DIRS = ['/ui/', '/sagas/'];
 const SLICE_SELECTORS_FILE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors\.ts$/;
 const SELECT_SETTINGS_MODULE = 'src/state/settings/selectSettings';
 
-const LAYER_STORE_REACH_ALLOWED: Readonly<Record<string, number>> = {
-  // The two engineSlice structure actions, until the structure Layer publishes
-  // facts instead (docs/superpowers/plans/2026-10-11-structure-layer-wiring.md,
-  // Tasks 5-6, delete this row). engineSlice never reaches appSettingsSlices.
-  'layers/structure/load/wireStructureProjection': 1,
-};
-
 function selectorsCarveOutOffenders(files: readonly string[]): string[] {
   return files.flatMap((file) => {
     const specifiers = specifiersUnder(file, ['src/state/', 'src/store/']);
@@ -158,7 +151,7 @@ describe('no file under src/layers imports src/state or src/store (outside ui/sa
     const otherFiles = files.filter((file) => !SLICE_SELECTORS_FILE.test(file));
     const offenders = [
       ...selectorsCarveOutOffenders(sliceSelectorsFiles),
-      ...sweepOffenders(otherFiles, ['src/state/', 'src/store/'], LAYER_STORE_REACH_ALLOWED),
+      ...sweepOffenders(otherFiles, ['src/state/', 'src/store/'], {}),
     ];
     expect(
       offenders,

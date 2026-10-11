@@ -24,7 +24,6 @@ import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
-import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 /**
@@ -40,7 +39,6 @@ const CORE_INITIAL: CoreEngineSliceState = {
   hdrCapable: false,
   sourceCounts: {},
   loadProgress: null,
-  structureSearchList: [],
   layerSearch: {},
 };
 
@@ -66,16 +64,6 @@ const engineSlice = createSlice({
     // ── load progress ────────────────────────────────────────────────────────
     engineLoadProgressChanged: (state, action: PayloadAction<LoadProgressState | null>) => {
       state.loadProgress = action.payload;
-    },
-
-    // ── structure search index ───────────────────────────────────────────────
-    // Whole-array replace, dispatched by `wireStructureProjection` at boot and
-    // on every later group change — the same schedule as its counts dispatch.
-    engineStructureSearchListChanged: (
-      state,
-      action: PayloadAction<readonly StructureSearchEntry[]>,
-    ) => {
-      state.structureSearchList = [...action.payload];
     },
 
     // ── per-Layer palette rows ───────────────────────────────────────────────
@@ -160,7 +148,6 @@ export const {
   engineStatusChanged,
   engineSourceCountReported,
   engineLoadProgressChanged,
-  engineStructureSearchListChanged,
   layerSearchReported,
   layerSearchCleared,
   engineScaleChanged,

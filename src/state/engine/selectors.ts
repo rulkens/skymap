@@ -58,6 +58,7 @@ const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
 const NO_STRUCTURE_COUNTS: Partial<Record<StructureId, number>> = {};
+const NO_STRUCTURE_SEARCH_LIST: readonly StructureSearchEntry[] = [];
 
 export const selectEngineStatus = (state: RootState): EngineStatus => selectEngine(state).status;
 
@@ -88,12 +89,11 @@ export const selectLoadProgress = (state: RootState): LoadProgressState | null =
   selectEngine(state).loadProgress;
 
 /**
- * The command palette's structure search index — published by
- * `wireStructureProjection` at boot (anchors) and on every later group
- * change (the bulk catalog landing or clearing).
+ * The command palette's structure search index, a structure Layer fact on the
+ * same pre-seed contract: the anchors from boot, the bulk catalog once it lands.
  */
 export const selectStructureSearchList = (state: RootState): readonly StructureSearchEntry[] =>
-  selectEngine(state).structureSearchList;
+  selectEngineFacts(state).structure?.searchList ?? NO_STRUCTURE_SEARCH_LIST;
 
 /**
  * Every Layer's published palette rows, flattened for the ranker. The one

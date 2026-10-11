@@ -37,6 +37,6 @@ export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
     STRUCTURE_IDS_BY_SCALE.milkyWay,
   );
   const slot = createStructureCatalogSlot();
-  wireStructureProjection({ store, slot }, deps.publish, deps.store.dispatch);
+  wireStructureProjection({ store, slot }, deps.publish);
   return { store, cosmoRenderer, nearRenderer, slot };
 }

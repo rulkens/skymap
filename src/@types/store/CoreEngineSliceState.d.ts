@@ -10,7 +10,6 @@ import type { EngineStatus } from '../engine/EngineStatus';
 import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
 
 export type CoreEngineSliceState = {
@@ -36,14 +35,6 @@ export type CoreEngineSliceState = {
   hdrCapable: boolean;
   sourceCounts: Partial<Record<SourceType, number>>;
   loadProgress: LoadProgressState | null;
-  /**
-   * The command palette's structure search index — every loaded structure
-   * (anchors + bulk) projected down to its lean searchable fields. Published
-   * by `wireStructureProjection` with each `counts` fact, on the same boot +
-   * group-change schedule, so a Cmd+K opened before any
-   * catalog lands still gets the anchor set.
-   */
-  structureSearchList: readonly StructureSearchEntry[];
   /**
    * Palette rows published by each Layer's `search` feed, keyed by Layer name
    * — a whole-snapshot replace per yield, so a Layer that clears its rows
