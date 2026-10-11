@@ -123,6 +123,7 @@ Columns bake into the GPU record at upload (research §8.5); the shader never de
 | Node index         | catalog-wide < 2²² (`:37`, `:100`)              | pool-wide: `indexNodes + slots·chunkNodeCap < 2²²`        | leaf-list entry `node \| block << 22` kept; the cap binds the resident set, not the catalog |
 | Records per node   | ≤ 8192 (`:108`)                                 | `ownCount ≤ 8192`, bake STOP above                        | 10-bit block index × 8                                                                      |
 | Records per chunk  | none                                            | `chunkCapacity` (32,768)                                  | pool slot stride                                                                            |
+| Rows per chunk     | none                                            | `chunkNodeCap` ≤ 4,096 (`CHUNK_NODE_CAPACITY`)            | pool slot row stride, swept by the cut every frame (§4)                                     |
 | Pick record index  | bin-global < 2²⁶ (`selectionEncoding.ts:15-18`) | pool-absolute: `indexRecords + slots·chunkCapacity < 2²⁶` | ⇒ about 2,040 slots at 32k, less the index records                                          |
 
 ## 3. Brightness stratification
@@ -160,13 +161,13 @@ A record's level is `L(M)` alone: hoisting wins over v1's fat-leaf fold (`STAR_L
 
 Chunks are capacity-bounded, not cut at a fixed level (research §8.2).
 
-1. Start at the root. A node with children whose descendant records number at most `chunkCapacity` (first guess **32,768**) becomes a **chunk root**.
+1. Start at the root. A node with children whose descendant records number at most `chunkCapacity` (first guess **32,768**) and whose descendant rows number at most `CHUNK_NODE_CAPACITY` (**4,096**) becomes a **chunk root**.
 2. A chunk root stays in the index: its row keeps its own records and its blob, so an absent chunk draws as a glow, never a hole. Its `chunkRef` names the chunk.
 3. Every node strictly below a chunk root goes into that chunk object, with its own node table and records. A chunk decodes without any other chunk; chunks never nest.
-4. A node over capacity stays in the index and the split recurses into its children.
-5. **Dense-cell STOP.** The bake stops loudly when a level-0 node would land in the index (its parent's subtree exceeds `chunkCapacity`), or when any node's `ownCount` exceeds 8,192. A deeper grid or a dense-leaf split is the open alternative (§10).
+4. A node over either bound stays in the index and the split recurses into its children.
+5. **Dense-cell STOP.** The bake stops loudly when a level-0 node would land in the index (its parent's subtree exceeds `chunkCapacity`), or when any node's `ownCount` exceeds 8,192. The row bound never fires it: a level-1 node has at most 8 rows below it. A deeper grid or a dense-leaf split is the open alternative (§10).
 
-`chunkNodeCap` is the largest chunk's row count, written by the bake; the pool's node stride reads it.
+`chunkNodeCap` is the largest chunk's row count, written by the bake; the pool's node stride reads it. The row bound exists because the cut sweeps `slots·chunkNodeCap` rows every frame: with records alone bounding a chunk, one sparse outlier subtree (11,530 rows against a 547-row median on the first Gaia bake) set the stride for every slot. Ruled 2026-10-11; the first bake's numbers and the floor that was measured and dropped are in §10.
 
 ## 5. Runtime
 
@@ -302,8 +303,8 @@ The GPU cut over the pool, the fade reset on slot reuse and the wake on chunk la
 ## 10. Open questions this slice does not answer
 
 - Dense cells beyond the STOP: a deeper grid (Morton no longer fits 30 bits) or a dense-leaf split (research §6, §8).
-- Node count under pure `L(M)` placement with no fat-leaf fold: sparse regions may build long single-record chains. `chunkNodeCap` and the index size from the first bake decide whether path compression is needed.
-- Tiny chunks: capacity-bounded splitting can emit many small chunks under unbalanced parents. The chunk-count measurement decides whether siblings pack together.
+- Node count under pure `L(M)` placement with no fat-leaf fold. **Measured 2026-10-11** on the first Gaia bake: 1,350,992 rows for 17.07 M records (12.6 records per row), so the tree is not chain-bound and path compression is not needed. What hurt was the spread: `chunkNodeCap` 11,530 against a 547-row median, about 94 % padding at a full pool. The row bound (§4) brings it to 4,082 (2,227 chunks, index 2,545 rows / 318,133 records, 85 % padding).
+- Tiny chunks. **Measured 2026-10-11**: 37 of 2,017 chunks under 10 KB, 83 of 2,227 after the row bound. A floor can only fold a small subtree into the index, since its parent is an index row and has no chunk to join. A 1,024-record floor removes every chunk under 10 KB but grows the index, fetched before first paint, from 2.8 MB to about 4.5 MB (48,837 rows / 396,528 records), so it was dropped. Packing sibling subtrees into one chunk would meet both goals (simulated, row bound 2,048 plus packing in Morton order: 975 chunks, 1 under 10 KB, 33 % padding, index 3,561 rows / 343,872 records) but needs a chunk with several roots in the format and the runtime (one `chunkRef` per root row, a top row's parent found by key, a resident bit and `refineDelta` per root). Open.
 - `chunkCapacity`, pool slots per tier and planner concurrency are first guesses for the A/B to tune.
 - Galaxies: record packing, aggregate look and bias modes, SDSS/2MRS/DESI on the octree or on SKMP, `pgc-`/`sdss-` side index, search into non-resident chunks (research §7.2 to §7.5).
 - Whether stratification also drives galaxy thumbnails and procedural discs (research §9).
