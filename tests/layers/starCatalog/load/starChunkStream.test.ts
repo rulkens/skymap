@@ -103,7 +103,7 @@ describe('starChunkStream', () => {
     expect(evict).not.toHaveBeenCalled();
   });
 
-  it('a landed chunk is uploaded to its slot, counted in fetchedBytes and bumps the epoch; eviction evicts the slot and bumps it again', async () => {
+  it('a landed chunk is uploaded to its slot and bumps the epoch; eviction evicts the slot and bumps it again', async () => {
     const { stream, upload, evict, land } = harness(1);
     stream.update(1, [], [{ chunkRef: 0, priority: 1 }]);
     await land(0);
@@ -111,7 +111,6 @@ describe('starChunkStream', () => {
     expect(upload).toHaveBeenCalledOnce();
     expect(upload.mock.calls[0]![0]).toBe(0);
     expect(upload.mock.calls[0]![1]).toMatchObject({ ref: 0, records: { count: 2 } });
-    expect(stream.fetchedBytes()).toBe(chunkBytes(0).byteLength);
     expect(stream.epoch()).toBe(1);
     expect(stream.resident(0)).toBe(upload.mock.calls[0]![1]);
 

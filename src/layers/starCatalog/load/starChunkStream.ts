@@ -32,7 +32,8 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
   const residents = new Map<number, { slot: number; chunk: StarChunk }>();
   const failed = new Set<number>();
   let epoch = 0;
-  let fetchedBytes = 0;
+  // Bytes after the browser inflates them, not on the wire.
+  let decodedBytes = 0;
   let fetchedChunks = 0;
   // The A/B's bytes-and-chunks readout logs once per settle: in flight back to 0 after a landing.
   let landedSinceSettle = false;
@@ -63,7 +64,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
   async function load(ref: number): Promise<StarChunk | null> {
     const buf = await fetchChunk(starChunkPath(binBaseName, octree.chunks[ref]!));
     if (buf === null) return null;
-    fetchedBytes += buf.byteLength;
+    decodedBytes += buf.byteLength;
     fetchedChunks++;
     const { header, nodes, columns } = decodeOctreeChunk(buf, octree);
     return { ref, nodes, records: starColumnsOf(columns, header.records) };
@@ -97,7 +98,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
       landedSinceSettle = false;
       console.log(
         `[stars] ${binBaseName}: ${fetchedChunks}/${octree.chunks.length} chunks, ` +
-          `${(fetchedBytes / 1e6).toFixed(1)} MB fetched, ${residents.size} resident`,
+          `${(decodedBytes / 1e6).toFixed(1)} MB decoded, ${residents.size} resident`,
       );
     }
   }
@@ -109,7 +110,6 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     resident: (ref) => residents.get(ref)?.chunk ?? null,
     inFlightCount: () => stream.inFlightCount(),
     epoch: () => epoch,
-    fetchedBytes: () => fetchedBytes,
     destroy() {
       stream.destroy();
       residents.clear();

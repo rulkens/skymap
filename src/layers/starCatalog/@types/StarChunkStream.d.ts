@@ -19,5 +19,4 @@ export type StarChunkStream = Destroyable & {
   inFlightCount(): number;
   /** Increments on every landing and eviction; the planner's wake and fade reset read it. */
   epoch(): number;
-  fetchedBytes(): number;
 };
