@@ -1,4 +1,6 @@
 /**
+ * SKST v1 only: the v2 bake is `tools/octree/`; kept to build the v1 fixture the v1 adapter test reads.
+ *
  * buildStarOctree — assemble Morton-sorted leaf stars into the
  * `{ nodes, records }` octree the star `.bin` format serializes.
  *

@@ -274,9 +274,9 @@ Rules carried from the spec: a chunk root's index row keeps its own records and 
 - `package.json` `build-stars` keeps its 16 GB heap for now (Task 6 measures); the script text is unchanged.
 - `buildStarOctree.ts` header: one line saying it builds the SKST v1 tree and is kept for the v1 fixture (ruling 8).
 
-- [ ] Update `buildStars.test.ts`: `produces a round-trippable catalog from a synthetic fixture` (`:136`) now decodes the written index with `decodeOctreeIndex` and asserts `stats.starCount` equals the fixture's surviving star count; the famous-dedup and drop-counter tests (`:172`, `:183`) keep their assertions on `drops`.
-- [ ] Delete the per-tier assertions and the `tierBudgets` fixture inputs. No new test: the pipeline below `buildStars` is tested in Tasks 3 and 4.
-- [ ] `npm run typecheck:fast` and `npm test -- buildStars` pass. Commit.
+- [x] Update `buildStars.test.ts`: `produces a round-trippable catalog from a synthetic fixture` (`:136`) now decodes the written index with `decodeOctreeIndex` and asserts `stats.starCount` equals the fixture's surviving star count; the famous-dedup and drop-counter tests (`:172`, `:183`) keep their assertions on `drops`.
+- [x] Delete the per-tier assertions and the `tierBudgets` fixture inputs. No new test: the pipeline below `buildStars` is tested in Tasks 3 and 4.
+- [x] `npm run typecheck:fast` and `npm test -- buildStars` pass. Commit.
 
 ### Task 6: TS bake timing checkpoint (ruling F) and first-bake statistics
 
