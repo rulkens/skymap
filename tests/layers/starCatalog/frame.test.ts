@@ -8,6 +8,7 @@ import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFoc
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../../../src/layers/starCatalog/@types/StarCutInputs';
+import type { StarChunkStream } from '../../../src/layers/starCatalog/@types/StarChunkStream';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
@@ -36,10 +37,16 @@ function makeView(camPos: Vec3, nowMs: number): FrameView {
   } as unknown as FrameView;
 }
 
-function makeRuntime(loaded: boolean): StarCatalogRuntime {
-  const catalog = { starCount: 0 } as unknown as StarOctree;
+function makeRuntime(loaded: boolean, stream?: StarChunkStream): StarCatalogRuntime {
+  // An empty index: the chunk planner walks nothing, so a stubbed stream's counters drive the vote.
+  const catalog = {
+    starCount: 0,
+    grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
+    nodes: { count: 0 },
+  } as unknown as StarOctree;
   let cut: StarCutInputs | null = null;
   return {
+    chunkStreams: new Map(stream ? [[Source.GaiaStars, stream]] : []),
     renderer: {
       loadedCatalogs: () =>
         (loaded ? [{ source: Source.GaiaStars, octree: catalog }] : [])[Symbol.iterator](),
@@ -97,6 +104,47 @@ describe('starCatalogPlanner', () => {
     plan(MID_BAND_PC + 10, 1000); // moved
     expect(plan(MID_BAND_PC + 10, 1000 + NODE_FADE_MS - 1).awake).toBe(true);
     expect(plan(MID_BAND_PC + 10, 1000 + NODE_FADE_MS).awake).toBe(false);
+  });
+
+  describe('chunk residency', () => {
+    function stubStream() {
+      const counters = { inFlight: 0, epoch: 0 };
+      const stream = {
+        update: vi.fn(),
+        isResident: () => false,
+        inFlightCount: () => counters.inFlight,
+        epoch: () => counters.epoch,
+      } as unknown as StarChunkStream;
+      return { stream, counters };
+    }
+
+    it('stays awake while a chunk is in flight', () => {
+      const { stream, counters } = stubStream();
+      const planner = starCatalogPlanner(makeRuntime(true, stream));
+      const plan = (t: number) =>
+        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE).awake;
+
+      counters.inFlight = 1;
+      plan(0);
+      expect(plan(10 * NODE_FADE_MS)).toBe(true);
+      counters.inFlight = 0;
+      expect(plan(11 * NODE_FADE_MS)).toBe(false);
+      expect(stream.update).toHaveBeenCalledTimes(3);
+    });
+
+    it('re-arms the fade window when a chunk lands', () => {
+      const { stream, counters } = stubStream();
+      const planner = starCatalogPlanner(makeRuntime(true, stream));
+      const plan = (t: number) =>
+        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE).awake;
+
+      plan(0);
+      expect(plan(1000)).toBe(false);
+      counters.epoch = 1;
+      expect(plan(2000)).toBe(true);
+      expect(plan(2000 + NODE_FADE_MS - 1)).toBe(true);
+      expect(plan(2000 + NODE_FADE_MS)).toBe(false);
+    });
   });
 
   describe('drift tolerance', () => {

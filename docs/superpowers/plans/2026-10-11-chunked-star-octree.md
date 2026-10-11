@@ -512,10 +512,10 @@ export function planStarChunks(octree: StarOctree, index: StarOctreeIndex, cut: 
 
 `starCatalogPlanner` (`frame.ts:20-41`): after `starCutInputs`, for every in-band source whose `chunkStreams` entry exists, `planStarChunks` then `stream.update(frameIndex, …)`; the wake vote becomes `awake = inputs !== null && (nowMs − changedAtMs < NODE_FADE_MS || inFlight > 0)`, and a change in any stream's `epoch()` since the last frame sets `changedAtMs = nowMs` (a landing chunk changes the cut without changing `sameStarCut`'s inputs). The frame index comes from a counter the planner owns.
 
-- [ ] Test `planStarChunks: requests are in descending proxy, a culled chunk is not requested, a resident chunk is touched` (spec §9) — a hand-built index with three chunk roots: one near and on-screen (resident → touched), one near and on-screen (absent → requested), one near but behind the camera (culled → neither), plus a far one below `thr` (neither); assert exactly that.
-- [ ] Test `planStarChunks: with no planes (more than CUT_MAX_VIEWS) nothing is culled` — `planes` empty; the behind-camera root is requested.
-- [ ] `frame.test.ts`: add `stays awake while a chunk is in flight` and `re-arms the fade window when a chunk lands` (stub stream with `inFlightCount` / `epoch`); the existing drift-tolerance tests keep their values.
-- [ ] Commit.
+- [x] Test `planStarChunks: requests are in descending proxy, a culled chunk is not requested, a resident chunk is touched` (spec §9) — a hand-built index with three chunk roots: one near and on-screen (resident → touched), one near and on-screen (absent → requested), one near but behind the camera (culled → neither), plus a far one below `thr` (neither); assert exactly that.
+- [x] Test `planStarChunks: with no planes (more than CUT_MAX_VIEWS) nothing is culled` — `planes` empty; the behind-camera root is requested.
+- [x] `frame.test.ts`: add `stays awake while a chunk is in flight` and `re-arms the fade window when a chunk lands` (stub stream with `inFlightCount` / `epoch`); the existing drift-tolerance tests keep their values.
+- [x] Commit.
 
 ### Task 14: Pick, selection and the field-star sphere over the pool, `review: yes`
 
