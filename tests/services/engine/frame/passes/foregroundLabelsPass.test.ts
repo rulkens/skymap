@@ -19,6 +19,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { TextLayout } from '../../../../../src/@types/rendering/TextLayout';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
@@ -124,7 +125,9 @@ describe('foregroundLabelsPass.enabled', () => {
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     const labelRenderer = makeStatefulLabelRenderer();
     const lineRenderer = makeLineRenderer();
-    dir.attachRenderers(labelRenderer, lineRenderer);
+    dir.attachRenderers(labelRenderer, lineRenderer, {
+      measure: () => null,
+    } as unknown as TextLayout);
 
     // A producer that ALWAYS emits one candidate — real producers never omit
     // a row, they drive it to invisible via `fadeAlpha` (Task 4/5's

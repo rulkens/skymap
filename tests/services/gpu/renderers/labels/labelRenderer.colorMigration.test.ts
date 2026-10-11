@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
+import { createTextLayout } from '../../../../../src/services/gpu/labelLayout/createTextLayout';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
 
@@ -27,6 +28,7 @@ const FIXTURE_ATLASES: LoadedFontAtlases = {
   metricsByFont: { cormorant: FIXTURE_METRICS },
   bitmaps: [],
 };
+const FIXTURE_TEXT_LAYOUT = createTextLayout(FIXTURE_ATLASES.metricsByFont);
 
 describe('LabelRenderer color migration to straight RGBA', () => {
   it('premultiplies straight RGBA on write to the storage buffer', () => {
@@ -38,8 +40,7 @@ describe('LabelRenderer color migration to straight RGBA', () => {
         canvas: null as unknown as HTMLCanvasElement,
         hdrCapable: false,
       },
-      'rgba16float',
-      FIXTURE_ATLASES,
+      { targetFormat: 'rgba16float', atlases: FIXTURE_ATLASES, textLayout: FIXTURE_TEXT_LAYOUT },
     );
     r.setLabels([
       {
@@ -68,8 +69,7 @@ describe('LabelRenderer color migration to straight RGBA', () => {
         canvas: null as unknown as HTMLCanvasElement,
         hdrCapable: false,
       },
-      'rgba16float',
-      FIXTURE_ATLASES,
+      { targetFormat: 'rgba16float', atlases: FIXTURE_ATLASES, textLayout: FIXTURE_TEXT_LAYOUT },
     );
     r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' }]);
     const buf = (r as unknown as { __debugLabelBuf(): Float32Array }).__debugLabelBuf();

@@ -1,6 +1,6 @@
 /**
  * The core prerequisites a Layer's `create` is handed — no more: `GpuHandleConstructDeps`
- * (whose job `create` inherits) minus `fontAtlases`, plus the core capabilities a
+ * (whose job `create` inherits) minus `fontAtlases`/`textLayout`, plus the core capabilities a
  * Layer's own subsystems close over today. `publish` is conditional on `Facts` (Ruling 7):
  * a factless Layer calling it is a `tsc` error at the call site, never a runtime throw.
  * No `fades`: core owns the fade edge (`installFadeOnArrival`), not a Layer's `create`.

@@ -1,6 +1,6 @@
 import type { EngineGpuHandles } from './EngineGpuHandles';
 
-// The 8 excluded fields are NOT Disposable / not GPU_HANDLE_ROWS rows — see
+// The 9 excluded fields are NOT Disposable / not GPU_HANDLE_ROWS rows — see
 // the plan's "out of scope" section for why each is excluded (`envBrdfLut`'s
 // and `memory`'s reasoning are on their `EngineGpuHandles` field docs).
 // pickRenderer / pickProgram ARE covered (rows constructed from wireInput.ts,
@@ -11,6 +11,7 @@ export type GpuHandleKey = Exclude<
   | 'sourceBgl'
   | 'focusBgl'
   | 'fontAtlases'
+  | 'textLayout'
   | 'envBrdfLut'
   | 'uiCtx'
   | 'timingService'

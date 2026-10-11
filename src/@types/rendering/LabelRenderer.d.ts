@@ -5,7 +5,6 @@
  */
 
 import type { Label2D } from './Label2D';
-import type { LabelBBox } from './LabelBBox';
 import type { Vec2 } from '../math/Vec2';
 import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
 
@@ -28,18 +27,6 @@ export type LabelRenderer = {
    * typically be 1–3 labels so the cost is negligible.
    */
   setLabels(labels: readonly Label2D[]): void;
-  /**
-   * Ink bounding box the label's text will occupy, in atlas pixels
-   * relative to the projected anchor (alignment shifts already applied
-   * — see LabelBBox).  Null when the text lays out to no glyphs.
-   *
-   * Lives on the renderer because measurement needs the font metrics
-   * the renderer already owns; the label director scales the box by its
-   * CPU-side reproduction of the shader's em clamp to declutter on
-   * actual text rects rather than anchor points.  Memoized per
-   * (font, alignment, text), so per-frame calls are cheap.
-   */
-  measure(label: Label2D): LabelBBox | null;
   /**
    * Issue the label draw call into an in-flight render pass.  Must be
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`

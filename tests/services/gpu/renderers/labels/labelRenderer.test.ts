@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
+import { createTextLayout } from '../../../../../src/services/gpu/labelLayout/createTextLayout';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
@@ -35,6 +36,7 @@ const FIXTURE_ATLASES: LoadedFontAtlases = {
   metricsByFont: { cormorant: FIXTURE_METRICS },
   bitmaps: [],
 };
+const FIXTURE_TEXT_LAYOUT = createTextLayout(FIXTURE_ATLASES.metricsByFont);
 
 // Build a LabelRenderer with a null device — the factory guards all GPU
 // calls behind `if (device)`, so CPU state is safe to exercise in unit
@@ -48,7 +50,11 @@ const newRenderer = () => {
     canvas: null as unknown as HTMLCanvasElement,
     hdrCapable: false,
   };
-  return createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
+  return createLabelRenderer(ctx, {
+    targetFormat: ctx.format,
+    atlases: FIXTURE_ATLASES,
+    textLayout: FIXTURE_TEXT_LAYOUT,
+  });
 };
 
 describe('LabelRenderer occlusion variant', () => {
@@ -89,7 +95,10 @@ describe('LabelRenderer occlusion variant', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, {
+    createLabelRenderer(ctx, {
+      targetFormat: ctx.format,
+      atlases: FIXTURE_ATLASES,
+      textLayout: FIXTURE_TEXT_LAYOUT,
       occludeAgainstScene: true,
     });
     return { bindGroupLayouts, pipelineLayouts, renderPipelines };
@@ -217,8 +226,7 @@ describe('LabelRenderer capacity growth', () => {
         canvas: null as unknown as HTMLCanvasElement,
         hdrCapable: false,
       },
-      'rgba16float',
-      FIXTURE_ATLASES,
+      { targetFormat: 'rgba16float', atlases: FIXTURE_ATLASES, textLayout: FIXTURE_TEXT_LAYOUT },
     );
 
     // 65 crosses INITIAL_LABEL_CAPACITY (64) — the real growth boundary,
@@ -232,7 +240,11 @@ describe('LabelRenderer capacity growth', () => {
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
     const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
+    const r = createLabelRenderer(ctx, {
+      targetFormat: ctx.format,
+      atlases: FIXTURE_ATLASES,
+      textLayout: FIXTURE_TEXT_LAYOUT,
+    });
     const bindGroupCallsAtConstruction = createBindGroupCalls.length;
 
     // 65 crosses INITIAL_LABEL_CAPACITY (64); the next power of two is 128,

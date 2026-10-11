@@ -201,11 +201,11 @@ export function produceFamousGalaxyLabels(
     // Hoisted once — every label this frame lifts through the same vp/viewport.
     const vp: Float32Array = ctx.vp;
     const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
-    // The renderer owns the font metrics, so its memoized `measure` is the one
+    // The text layout's memoized `measure` is the one
     // source for the caption's true ink bbox (which places the line top). Null
     // only during bootstrap, when the director isn't flushing anyway — the
     // chain then degrades to a bottom at the label anchor.
-    const labelRenderer = state.gpu.labelRenderer;
+    const textLayout = state.gpu.textLayout;
 
     // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
     // identical for every famous label (the `galaxy` handle is shared, and
@@ -299,7 +299,7 @@ export function produceFamousGalaxyLabels(
         viewportPx,
         pxPerRad: ctx.drawPxPerRad,
         subjectSizePx: sizePx,
-        textBbox: labelRenderer?.measure(label) ?? null,
+        textBbox: textLayout?.measure(label) ?? null,
         worldEmMpc: p.labelWorldEmMpc,
         minPixelSize: style.minPixelSize,
         maxPixelSize,

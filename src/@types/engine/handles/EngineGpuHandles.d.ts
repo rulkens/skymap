@@ -44,6 +44,7 @@ import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { Compositor } from '../../rendering/Compositor';
 import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
+import type { TextLayout } from '../../rendering/TextLayout';
 import type { GpuContext } from '../../rendering/GpuContext';
 import type { GpuMemorySnapshot } from '../../gpu/memory/GpuMemorySnapshot';
 
@@ -119,6 +120,12 @@ export type EngineGpuHandles = {
    * data, not a GPU resource.
    */
   fontAtlases: LoadedFontAtlases | null;
+  /**
+   * Memoized text layout over `fontAtlases`' metrics, shared by every label
+   * renderer and every CPU caller that measures text. Built right after the
+   * atlases resolve; pure CPU, so `destroy()` only re-nulls it.
+   */
+  textLayout: TextLayout | null;
   /**
    * The split-sum environment BRDF (`public/lut/envBrdf.bin`), uploaded once at
    * boot and handed to `meshBodyRenderer` as a construction input. Not a

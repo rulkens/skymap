@@ -29,7 +29,7 @@ function makeRegistry(): FadeRegistry {
   return createFadeRegistry({ requestRender: () => {} });
 }
 
-// Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
+// Measured ink bbox the textLayout stub reports (atlas px, anchor-relative,
 // +Y down). maxY = 12 puts the text's true bottom 12 atlas px BELOW the
 // baseline anchor (a descender), which the producer scales by the em clamp to
 // place the line top — nonzero so the tests bite on that scaling.
@@ -46,7 +46,7 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // and the positional catalog, `state.subsystems.fades` for the `galaxy` layer
 // opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
-// visibility gate, and `state.gpu.labelRenderer.measure` for the caption's ink
+// visibility gate, and `state.gpu.textLayout.measure` for the caption's ink
 // bbox (which places the leader-line top). The fixture supplies all four; the
 // `galaxy` handle is registered at 1 so the at-rest opacity is 1. The
 // famous label gate defaults visible.
@@ -63,7 +63,7 @@ function makeState(
   const bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
+    gpu: { textLayout: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades,
       // clipPlayer is non-nullable; return factor 1 so the clip channel is

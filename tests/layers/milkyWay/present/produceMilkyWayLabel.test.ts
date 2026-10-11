@@ -17,7 +17,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
-// Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
+// Measured ink bbox the textLayout stub reports (atlas px, anchor-relative,
 // +Y down). maxY = 12 puts the text's true bottom 12 atlas px below the
 // baseline anchor (a descender — 'You are here' has one), which the producer
 // scales by the em clamp to place the stem top.
@@ -32,7 +32,7 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // Minimal state: the producer reads settings.milkyWay.labelEnabled,
 // settings.labels.focusedOnly (+ selection.focus for the solo gate), the fade
 // registry (opacityOf only — the producer is a pure reader), and
-// state.gpu.labelRenderer.measure for the caption's ink bbox (which places
+// state.gpu.textLayout.measure for the caption's ink bbox (which places
 // the stem top).
 function makeState(
   labelEnabled: boolean,
@@ -46,7 +46,7 @@ function makeState(
       labels: { focusedOnly: opts.focusedOnly ?? false },
     },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
+    gpu: { textLayout: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,

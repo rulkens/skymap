@@ -37,6 +37,12 @@ export function attachLabelDirectors(state: EngineState): void {
     // Non-null: both phases run this only once their renderer pair has just
     // been (re)constructed — same assumption the two call sites made inline
     // before this table existed.
-    row.director(state).attachRenderers(row.labelRenderer(state)!, row.markerLineRenderer(state)!);
+    row
+      .director(state)
+      .attachRenderers(
+        row.labelRenderer(state)!,
+        row.markerLineRenderer(state)!,
+        state.gpu.textLayout!,
+      );
   }
 }

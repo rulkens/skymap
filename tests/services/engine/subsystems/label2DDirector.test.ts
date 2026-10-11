@@ -108,9 +108,13 @@ function makeLabelStub() {
     glyphCount: () => 0,
     labelCount: () => 0,
     destroy: vi.fn(),
-    // Default measure: a modest single-line box extending up from the
-    // baseline anchor (text sits above `worldPos`), 20 atlas px per
-    // character.  Rect-declutter tests override this per label.
+  };
+}
+// Default measure: a modest single-line box extending up from the
+// baseline anchor (text sits above `worldPos`), 20 atlas px per
+// character.  Rect-declutter tests override this per label.
+function makeTextLayoutStub() {
+  return {
     measure: vi.fn<(label: Label2D) => { minX: number; minY: number; maxX: number; maxY: number }>(
       (label) => ({ minX: 0, minY: -30, maxX: 20 * label.text.length, maxY: 0 }),
     ),
@@ -149,8 +153,9 @@ describe('label2DDirector', () => {
   it('merges labels from multiple producers', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     // Distinct world positions so the two anchors don't collide on screen.
     const a: Label2D = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
@@ -170,8 +175,9 @@ describe('label2DDirector', () => {
   it('skips re-uploading the same merged set across frames once settled', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
     dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
 
     // The envelope animates alpha during the first 300 ms, so flushes
@@ -187,8 +193,9 @@ describe('label2DDirector', () => {
   it('reports the vote when any producer is awake', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
     dir.registerProducer(makeProducer('p', [], true));
 
     expect(dir.runFrame(makeState(), makeCtx())).toBe(true);
@@ -203,8 +210,9 @@ describe('label2DDirector', () => {
     // opacity.
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     // Producer whose output flips fadeAlpha between calls but keeps
     // the same id (same scenario as youAreHere mid-fade).
@@ -241,8 +249,9 @@ describe('label2DDirector', () => {
   it('re-uploads when a label colour changes at fixed id (hover highlight)', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     let color: [number, number, number, number] = [0.5, 0.6, 0.7, 1];
     dir.registerProducer({
@@ -271,7 +280,8 @@ describe('label2DDirector', () => {
     ) {
       const dir = createLabel2DDirector(config);
       const labelStub = makeLabelStub();
-      dir.attachRenderers(labelStub as never, makeLineStub() as never);
+      const textLayoutStub = makeTextLayoutStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub as never);
       dir.registerProducer(makeProducer('p', labels));
       dir.runFrame(state, ctx);
       return { dir, flushed: flushedLabels(labelStub).at(-1)![0]! };
@@ -306,7 +316,8 @@ describe('label2DDirector', () => {
       ];
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
-      dir.attachRenderers(labelStub as never, makeLineStub() as never);
+      const textLayoutStub = makeTextLayoutStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub as never);
       dir.registerProducer(makeProducer('p', labels));
       dir.runFrame(makeHighlightState('earth', null), makeCtx(300));
       const flushed = flushedLabels(labelStub).at(-1)!;
@@ -331,7 +342,8 @@ describe('label2DDirector', () => {
     it('re-uploads when only the hover changes at a fixed label set', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
-      dir.attachRenderers(labelStub as never, makeLineStub() as never);
+      const textLayoutStub = makeTextLayoutStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub as never);
       dir.registerProducer(makeProducer('p', [BASE]));
       dir.runFrame(makeHighlightState(null, null), makeCtx(300));
       dir.runFrame(makeHighlightState(null, null), makeCtx(400));
@@ -345,8 +357,9 @@ describe('label2DDirector', () => {
   it('re-uploads when a label loses its pick id at fixed id (focus strips it)', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     let pickId: number | undefined = 7;
     dir.registerProducer({
@@ -373,8 +386,9 @@ describe('label2DDirector', () => {
     // geometry was uploaded the first visible frame.
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     let tipY = 0.5;
     const producer: Label2DProducer = {
@@ -418,8 +432,9 @@ describe('label2DDirector', () => {
     // reproject/drift over the glyphs under orbit.
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     let anchorY = 0;
     const producer: Label2DProducer = {
@@ -449,8 +464,9 @@ describe('label2DDirector', () => {
   it('flushes empty when no producers contribute, then skips subsequent empties', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(100));
@@ -462,8 +478,9 @@ describe('label2DDirector', () => {
   it('declutters colliding on-screen labels across producers, keeping higher prominence', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     // Two labels at the same world point (both project to screen centre, so
     // within the 48 px margin). The higher-prominence one wins.
@@ -485,8 +502,9 @@ describe('label2DDirector', () => {
     // separate line-filter pass.
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100, leader: SAMPLE_LEADER };
     const small: Label2D = {
@@ -526,11 +544,17 @@ describe('label2DDirector', () => {
     it('keeps a label whose anchor is near another but whose text rect is clear of it', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // Baseline-aligned text: the rect spans 30 px UP from the anchor.
-      labelStub.measure.mockImplementation(() => ({ minX: -50, minY: -30, maxX: 50, maxY: 0 }));
+      textLayoutStub.measure.mockImplementation(() => ({
+        minX: -50,
+        minY: -30,
+        maxX: 50,
+        maxY: 0,
+      }));
 
       // B sits 40 screen px BELOW A (screen y 500 → 540). Anchor distance is
       // inside the old 48 px point margin, but A's text occupies y∈[470,500]
@@ -547,11 +571,17 @@ describe('label2DDirector', () => {
     it('culls the lower-prominence label when wide text rects overlap despite distant anchors', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // Wide centered text: 300 px across the anchor.
-      labelStub.measure.mockImplementation(() => ({ minX: -150, minY: -15, maxX: 150, maxY: 15 }));
+      textLayoutStub.measure.mockImplementation(() => ({
+        minX: -150,
+        minY: -15,
+        maxX: 150,
+        maxY: 15,
+      }));
 
       // B sits 100 screen px RIGHT of A (screen x 500 → 600) — outside the
       // old 48 px point margin, but the 300 px-wide rects overlap by 200 px.
@@ -568,8 +598,9 @@ describe('label2DDirector', () => {
   it('never drops or blocks off-screen labels', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();
+    const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
     // On-screen low-prominence label + an off-screen label (|x| > 1 → outside
     // NDC). The off-screen one is accepted unconditionally and never blocks.
@@ -591,8 +622,9 @@ describe('label2DDirector', () => {
     it('fades a newly appearing label in over the 300 ms ramp (smoothstep of nowMs)', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
       dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -612,8 +644,9 @@ describe('label2DDirector', () => {
     it('fades a disappearing label out by re-emitting the remembered label, then drops it', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -637,8 +670,9 @@ describe('label2DDirector', () => {
     it('multiplies the envelope with the producer-driven fadeAlpha', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
       const dimmed: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.5 };
       dir.registerProducer(makeProducer('p', [dimmed]));
 
@@ -658,8 +692,9 @@ describe('label2DDirector', () => {
       // without any separate "owned lines" bookkeeping.
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // fadeAlpha: 0.8 so the flushed line's alpha (envelope × producer) is
       // distinguishable from either factor alone.
@@ -720,8 +755,9 @@ describe('label2DDirector', () => {
     it('keeps the loop awake while any envelope ramps, and goes quiet once settled', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       // Producer is never awake — every vote below comes from the envelope.
@@ -739,8 +775,9 @@ describe('label2DDirector', () => {
     it('resumes from the current alpha when a label reappears mid-fade-out (no pop either way)', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -775,8 +812,9 @@ describe('label2DDirector', () => {
     it('sorts by prominencePx descending with a stable input-order tiebreak', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // Same world point, same prominence — the padded rects fully overlap,
       // so exactly one survives. Only registration order can break the tie.
@@ -794,8 +832,9 @@ describe('label2DDirector', () => {
     it('exponentialApproach seeds a new id AT its target, not at 0', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // No `lift` field — isolates the envelope seed from the lift stage.
       const caption: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.4 };
@@ -816,8 +855,9 @@ describe('label2DDirector', () => {
       // never show, even though it has a real, positive target.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       const zeroTarget: Label2D = {
         ...SAMPLE_LABEL,
@@ -843,8 +883,9 @@ describe('label2DDirector', () => {
     it('exponentialApproach drops an absent id immediately, with no remembered-emission tail', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       let labels: Label2D[] = [{ ...SAMPLE_LABEL, fadeAlpha: 0.4 }];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -875,8 +916,9 @@ describe('label2DDirector', () => {
       // `fadeAlpha` — only declutter survival flips its target.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // `big` always wins a collision (higher prominence); its worldPos
       // toggles between far-from-`small` (no contest) and on top of it
@@ -945,8 +987,9 @@ describe('label2DDirector', () => {
       // pop, and the render-loop wake vote must go quiet once settled.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       let fadeAlpha = 1;
       dir.registerProducer({
@@ -988,8 +1031,9 @@ describe('label2DDirector', () => {
       // (`captionPriority.ts`'s whole reason to exist).
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       const bodyLabel: Label2D = {
         ...SAMPLE_LABEL,
@@ -1029,8 +1073,9 @@ describe('label2DDirector', () => {
       };
       const dir = createLabel2DDirector(config);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -1050,8 +1095,9 @@ describe('label2DDirector', () => {
     it('the lift stage runs after the envelope, over survivors only', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // Same world point (screen separation 0, well inside the 48 px margin)
       // — declutter culls one. Both carry `lift`, so if the lift stage ran
@@ -1090,15 +1136,16 @@ describe('label2DDirector', () => {
       // (screenSeparation's declutter arm never reads it) — exactly one
       // call proves neither the declutter-culled label nor the
       // envelope-dropped (zero-target) label ever reached the lift.
-      expect(labelStub.measure).toHaveBeenCalledTimes(1);
-      expect(labelStub.measure).toHaveBeenCalledWith(big);
+      expect(textLayoutStub.measure).toHaveBeenCalledTimes(1);
+      expect(textLayoutStub.measure).toHaveBeenCalledWith(big);
     });
 
     it('a label without a lift field is emitted unlifted (the constellation-shaped case, by data absence)', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
+      const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
 
       // No `lift` field, no `kind` discriminant anywhere in sight — the
       // constellation caption's shape, not its label.
@@ -1107,7 +1154,7 @@ describe('label2DDirector', () => {
 
       dir.runFrame(makeState(), makeNear0Ctx(0));
 
-      expect(labelStub.measure).not.toHaveBeenCalled();
+      expect(textLayoutStub.measure).not.toHaveBeenCalled();
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([constellationLike]);
     });
   });

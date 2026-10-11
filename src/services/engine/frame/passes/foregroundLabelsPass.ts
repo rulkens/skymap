@@ -62,13 +62,14 @@ export const foregroundLabelsPass: ContentPass = {
   drawPick(pass, _view, ctx, state) {
     const renderer = state.gpu.foregroundLabelRenderer;
     const pickRenderer = state.gpu.foregroundLabelPickRenderer;
-    if (renderer === null || pickRenderer === null) return;
+    const textLayout = state.gpu.textLayout;
+    if (renderer === null || pickRenderer === null || textLayout === null) return;
 
     const projection = near0LabelProjection(ctx);
     const quads = labelPickQuads({
       labels: renderer.packedLabels(),
       projection,
-      measure: (label) => renderer.measure(label),
+      measure: (label) => textLayout.measure(label),
     });
     pickRenderer.draw(pass, quads, projection.viewportPx);
   },

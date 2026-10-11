@@ -76,9 +76,7 @@ import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontA
 import { FONT_IDS } from '../../../../data/fonts';
 import type { FontId } from '../../../../@types/data/FontId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import { layoutLabel } from '../../labelLayout/labelLayout';
-import { measureLabel } from '../../labelLayout/measureLabel';
-import type { LabelBBox } from '../../../../@types/rendering/LabelBBox';
+import type { TextLayout } from '../../../../@types/rendering/TextLayout';
 import vsCode from '../../shaders/labels/vertex.wesl?static';
 import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
@@ -191,22 +189,22 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  */
 export function createLabelRenderer(
   ctx: GpuContext,
-  targetFormat: GPUTextureFormat,
-  atlases: LoadedFontAtlases,
-  opts?: { occludeAgainstScene?: boolean; clipScale?: number },
+  init: {
+    targetFormat: GPUTextureFormat;
+    atlases: LoadedFontAtlases;
+    textLayout: TextLayout;
+    occludeAgainstScene?: boolean;
+    clipScale?: number;
+  },
 ): LabelRenderer {
-  const clipScale = opts?.clipScale ?? 1;
+  const { targetFormat, atlases, textLayout } = init;
+  const clipScale = init.clipScale ?? 1;
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
   const device = ctx.device as GPUDevice | null;
   const format = targetFormat;
 
-  // Per-font metrics record + pre-computed layer index lookup.  Built
-  // once at construction time so the per-glyph pack loop in setLabels
-  // never has to call FONT_IDS.indexOf — that would be O(N) per glyph,
-  // O(N²) per label.  The Record is keyed by FontId so callers do
-  // `metricsByFont[label.font]` without a string compare per glyph.
   const metricsByFont = atlases.metricsByFont;
   // Pre-computed FontId → layer index lookup. Built once at construction
   // time so the per-glyph pack loop in setLabels never has to call
@@ -270,7 +268,7 @@ export function createLabelRenderer(
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
   let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
-  const occludesScene = opts?.occludeAgainstScene === true;
+  const occludesScene = init.occludeAgainstScene === true;
 
   /**
    * (Re)size the CPU scratch arrays for `newCapacity` labels and, with a
@@ -541,7 +539,7 @@ export function createLabelRenderer(
       // Each label specifies its own font; layout reads the font's
       // metrics from the FontId-keyed record built at construction
       // time.  No fallback — Label.font is required at the type level.
-      const quads = layoutOf(label);
+      const quads = textLayout.layout(label);
 
       // Write the per-label storage record unconditionally — even when
       // `quads` is empty.  Keeping the per-label index stable
@@ -727,40 +725,6 @@ export function createLabelRenderer(
     return currentLabelCount;
   }
 
-  // Memoized ink-bbox measurement.  The director's declutter measures
-  // every candidate label every frame; the bbox depends only on
-  // (font, alignment, text), all of which are stable for a given label
-  // id, so the cache converges to one entry per distinct label and the
-  // steady-state cost is a Map lookup.  Unbounded by design: the key
-  // space is the label catalog (~hundreds), not user input.
-  const measureCache = new Map<string, LabelBBox | null>();
-  // Glyph quads share the key and the lifetime: setLabels re-lays-out every
-  // label on each moving-camera frame, but the quads depend only on
-  // (font, alignment, text). Callers only read the cached arrays.
-  const layoutCache = new Map<string, ReturnType<typeof layoutLabel>>();
-  function layoutOf(label: Label2D): ReturnType<typeof layoutLabel> {
-    const alignX = label.alignX ?? 'left';
-    const alignY = label.alignY ?? 'baseline';
-    const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
-    let quads = layoutCache.get(key);
-    if (quads === undefined) {
-      quads = layoutLabel(label.text, metricsByFont[label.font], alignX, alignY);
-      layoutCache.set(key, quads);
-    }
-    return quads;
-  }
-  function measure(label: Label2D): LabelBBox | null {
-    const alignX = label.alignX ?? 'left';
-    const alignY = label.alignY ?? 'baseline';
-    const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
-    let bbox = measureCache.get(key);
-    if (bbox === undefined) {
-      bbox = measureLabel(label.text, metricsByFont[label.font], alignX, alignY);
-      measureCache.set(key, bbox);
-    }
-    return bbox;
-  }
-
   function destroy(): void {
     uniformBuffer?.destroy();
     storageBuffer?.destroy();
@@ -773,7 +737,6 @@ export function createLabelRenderer(
   const renderer: LabelRenderer = {
     label: 'labelRenderer',
     setLabels,
-    measure,
     draw,
     glyphCount,
     labelCount,

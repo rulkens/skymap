@@ -114,7 +114,7 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
     viewportPx,
     pxPerRad: ctx.drawPxPerRad,
     subjectSizePx: sizePx,
-    textBbox: state.gpu.labelRenderer?.measure(label) ?? null,
+    textBbox: state.gpu.textLayout?.measure(label) ?? null,
     worldEmMpc: style.worldEmMpc,
     minPixelSize: style.minPixelSize,
     maxPixelSize: style.maxPixelSize,

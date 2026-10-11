@@ -90,7 +90,10 @@ export const GPU_HANDLE_ROWS = [
     key: 'labelRenderer',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, {
+      createLabelRenderer(deps.ctx, {
+        targetFormat: deps.ctx.format,
+        atlases: deps.fontAtlases,
+        textLayout: deps.textLayout,
         occludeAgainstScene: true,
       }),
   },
@@ -126,15 +129,16 @@ export const GPU_HANDLE_ROWS = [
     key: 'foregroundLabelRenderer',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(
-        deps.ctx,
-        deps.ctx.format,
-        deps.fontAtlases,
+      createLabelRenderer(deps.ctx, {
+        targetFormat: deps.ctx.format,
+        atlases: deps.fontAtlases,
+        textLayout: deps.textLayout,
         // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
         // packs must be in those clip units too — the pair the vertex stage
         // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
-        { occludeAgainstScene: true, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
-      ),
+        occludeAgainstScene: true,
+        clipScale: NEAR0_OVERLAY_CLIP_SCALE,
+      }),
   },
   {
     key: 'foregroundMarkerLineRenderer',
