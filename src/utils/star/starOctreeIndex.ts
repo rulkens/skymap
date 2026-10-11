@@ -7,7 +7,7 @@
 import type { OctreeGrid } from '../../@types/octree/OctreeGrid';
 import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
-import { LEVEL_KEY_STRIDE, OCTANTS } from '../../data/octree/octreeFormat';
+import { LEVEL_KEY_STRIDE, NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import { mortonDecode3 } from '../math/mortonDecode3';
 
 const cache = new WeakMap<OctreeNodeTable, StarOctreeIndex>();
@@ -21,6 +21,7 @@ export function starOctreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): StarO
   const boxOriginPc = new Float64Array(n * 3);
   const boxEdgePc = new Float64Array(n);
 
+  const chunkRoots: number[] = [];
   const rowByKey = new Map<number, number>();
   for (let i = 0; i < n; i++)
     rowByKey.set(nodes.level[i]! * LEVEL_KEY_STRIDE + nodes.morton[i]!, i);
@@ -38,6 +39,7 @@ export function starOctreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): StarO
 
     const mask = nodes.childMask[i]!;
     if (mask === 0) continue;
+    if (nodes.chunkRef[i] !== NO_CHUNK_REF) chunkRoots.push(i);
     const childKeyBase = (level - 1) * LEVEL_KEY_STRIDE + morton * OCTANTS;
     for (let k = 0; k < OCTANTS; k++) {
       if ((mask & (1 << k)) === 0) continue;
@@ -46,7 +48,12 @@ export function starOctreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): StarO
     }
   }
 
-  const index: StarOctreeIndex = { childIndex, boxOriginPc, boxEdgePc };
+  const index: StarOctreeIndex = {
+    childIndex,
+    boxOriginPc,
+    boxEdgePc,
+    chunkRoots: Int32Array.from(chunkRoots),
+  };
   cache.set(nodes, index);
   return index;
 }

@@ -51,6 +51,7 @@ function makeRuntime(loaded: boolean, stream?: StarChunkStream): StarCatalogRunt
     starCount: 0,
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
     nodes: { count: 0 },
+    chunks: [],
   } as unknown as StarOctree;
   let cut: StarCutInputs | null = null;
   return {

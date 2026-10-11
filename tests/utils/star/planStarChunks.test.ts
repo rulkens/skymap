@@ -32,6 +32,7 @@ const OCTREE = {
     blobCount: new Uint32Array(6),
     chunkRef: Uint32Array.from([A, B, C, E, D, NO_CHUNK_REF]),
   },
+  chunks: MORTONS.map(() => ({})),
 } as unknown as StarOctree;
 
 const pc = (v: number) => v * SCALE_UNITS.PC_TO_MPC;
