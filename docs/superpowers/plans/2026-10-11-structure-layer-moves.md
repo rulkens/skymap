@@ -247,7 +247,7 @@ One dispatch for Tasks 1–2 (the move and the fold read the same files), the co
 - `src/data/sources.ts` folds `STRUCTURE_SOURCE_ROWS`; `UNFORMED_SOURCE_REGISTRY` holds only the three body rows.
 - `src/layers/README.md` has no "Unsettled" section and carries the two ruling paragraphs.
 - `docs/BACKLOG.md` lists **Layer dependency DAG**; its detail file exists.
-- No `tools/` file imports from `src/layers/`.
+- No `tools/` file imports a file this PR moved (`tools/utils/capture/*DeclutterActions.ts` already read `layers/structure/state` before this PR).
 
 **Observable behaviours for the smoke pass (all unchanged from main)**
 
