@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
@@ -12,7 +13,7 @@ import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
 import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
 
 /** No chunk resident: a v1 catalog has none. */
-const NONE: StarResidency = () => null;
+const NONE: StarResidency = residencyOf();
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs, so the reconstructions below are hand-computable in the same frame.
@@ -107,7 +108,7 @@ describe('resolveStarRecord', () => {
   it('resolves a record inside a resident chunk and returns null for the same ordinal once evicted', () => {
     const { octree, chunk } = hoistedStarOctree();
     // Ordinal 4: chunk 0's second star, (1.5, 1.5, 1.5) pc.
-    const star = resolveStarRecord(octree, (ref) => (ref === 0 ? chunk : null), 4)!;
+    const star = resolveStarRecord(octree, residencyOf(chunk), 4)!;
     expect(star.positionMpc[0]).toBeCloseTo(1.5 * PC_TO_MPC, 18);
     expect(star.absMag).toBe(6);
     expect(resolveStarRecord(octree, NONE, 4)).toBeNull();

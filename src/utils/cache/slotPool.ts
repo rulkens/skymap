@@ -64,17 +64,33 @@ export class SlotPool implements SlotStore {
     const evictedKey = this.slots[lruIdx]!.key;
     this.keyToSlot.delete(evictedKey);
     // BEFORE the overwrite, so the handler can still clear state keyed on
-    // `evictedKey`; a throw must not corrupt the pool, so log and proceed.
-    if (this.onEvict) {
-      try {
-        this.onEvict(evictedKey);
-      } catch (err) {
-        console.error('[SlotPool] onEvict handler threw:', err);
-      }
-    }
+    // `evictedKey`.
+    this.notifyEvict(evictedKey);
     this.slots[lruIdx] = { key, lastSeenFrame: frame };
     this.keyToSlot.set(key, lruIdx);
     return lruIdx;
+  }
+
+  /**
+   * Free `key`'s slot through the evict handler, as recycling it would; nothing for an absent
+   * key. For an owner whose keys depend on each other (a chunk's descendants go with it).
+   */
+  evict(key: string): void {
+    const idx = this.keyToSlot.get(key);
+    if (idx === undefined) return;
+    this.keyToSlot.delete(key);
+    this.slots[idx] = undefined;
+    this.notifyEvict(key);
+  }
+
+  /** A throw must not corrupt the pool, so log and proceed. */
+  private notifyEvict(key: string): void {
+    if (!this.onEvict) return;
+    try {
+      this.onEvict(key);
+    } catch (err) {
+      console.error('[SlotPool] onEvict handler threw:', err);
+    }
   }
 
   /** Refresh a resident key's `lastSeenFrame`; `null` if `key` holds no slot. Never allocates. */

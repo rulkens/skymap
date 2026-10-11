@@ -6,7 +6,7 @@ import type { StarColumns } from './StarColumns';
 
 /**
  * What both star formats decode to and the renderer, planner and pick read: the index's
- * node table and records plus the chunk manifest. A SKST v1 catalog is an index with every
+ * node table and records plus the refs of the chunks it roots. A SKST v1 catalog is an index with every
  * row and no chunks (`starOctreeFromSkst`).
  */
 export type StarOctree = {
@@ -20,12 +20,12 @@ export type StarOctree = {
   readonly nodes: OctreeNodeTable;
   /** The index object's records. */
   readonly records: StarColumns;
-  /** [] for SKST. */
+  /** The chunks rooted in index rows; deeper ones are learnt as their parents decode. [] for SKST. */
   readonly chunks: readonly OctreeChunkRef[];
+  /** Chunks at every depth, so per-chunk tables size once; 0 for SKST. */
+  readonly chunkCount: number;
   /** Max records in one chunk (the pool's record stride); 0 for SKST. */
   readonly chunkCapacity: number;
   /** Max rows in one chunk (the pool's row stride); 0 for SKST. */
   readonly chunkNodeCap: number;
-  /** Prefix sum over `chunks[i].records`, length chunks + 1, starting at `records.count`. */
-  readonly recordOrdinalBase: Uint32Array;
 };

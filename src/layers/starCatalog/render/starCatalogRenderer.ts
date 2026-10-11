@@ -18,9 +18,8 @@ import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from '../@types/StarDrawStream';
+import type { StarChunkHost } from '../@types/StarChunkHost';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
-import { starRecordObject } from '../../../utils/star/starRecordObject';
-import { starRecordOrdinal } from '../../../utils/star/starRecordOrdinal';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -45,10 +44,10 @@ const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 type LoadedStarSource = {
   octree: StarOctree;
   slots: number;
-  /** The chunk ref each slot holds, −1 when empty: the pick's pool index ↔ ordinal map. */
-  chunkOfSlot: Int32Array;
-  /** `chunkOfSlot` as of the last pick draw: a readback names what was drawn, not what landed since. */
-  pickChunkOfSlot: Int32Array;
+  /** The chunk each slot holds: the pick's pool index ↔ ordinal map, and a nested chunk's host. */
+  slotChunks: (StarChunk | null)[];
+  /** `slotChunks` as of the last pick draw: a readback names what was drawn, not what landed since. */
+  pickSlotChunks: (StarChunk | null)[];
   /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
@@ -121,7 +120,7 @@ export function createStarCatalogRenderer(
   const sources = new Map<SourceType, LoadedStarSource>();
 
   function upload(source: SourceType, octree: StarOctree, slots: number): number {
-    const poolSlots = Math.min(slots, octree.chunks.length);
+    const poolSlots = Math.min(slots, octree.chunkCount);
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, poolSlots);
     // Empty octree is the unload signal (a tier swap that drops the bin);
@@ -146,12 +145,24 @@ export function createStarCatalogRenderer(
     sources.set(source, {
       octree,
       slots: poolSlots,
-      chunkOfSlot: new Int32Array(poolSlots).fill(-1),
-      pickChunkOfSlot: new Int32Array(poolSlots).fill(-1),
+      slotChunks: new Array<StarChunk | null>(poolSlots).fill(null),
+      pickSlotChunks: new Array<StarChunk | null>(poolSlots).fill(null),
       recordsBuffer,
       recordsBindGroup,
     });
     return poolSlots;
+  }
+
+  /** The object holding a chunk's roots: the index, or its parent chunk's slot (resident, as it lands first and evicts last). */
+  function hostOf(entry: LoadedStarSource, parent: number | null): StarChunkHost {
+    const { octree, slotChunks } = entry;
+    if (parent === null) return { nodes: octree.nodes, nodeBase: 0 };
+    const slot = slotChunks.findIndex((c) => c?.ref.id === parent);
+    if (slot < 0) throw new Error(`starCatalogRenderer: parent chunk ${parent} is not resident`);
+    return {
+      nodes: slotChunks[slot]!.nodes,
+      nodeBase: octree.nodes.count + slot * octree.chunkNodeCap,
+    };
   }
 
   function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
@@ -160,27 +171,30 @@ export function createStarCatalogRenderer(
       throw new Error(`starCatalogRenderer: no slot ${slot} for source ${source}`);
     }
     const { octree } = entry;
-    // The records land before the cut marks the chunk's root resident.
+    const host = hostOf(entry, chunk.parent);
+    // The records land before the cut marks the chunk's roots resident.
     const recordBase = octree.records.count + slot * octree.chunkCapacity;
     device.queue.writeBuffer(
       entry.recordsBuffer,
       recordBase * GPU_RECORD_BYTES,
       packStarGpuRecords(chunk.records),
     );
-    cut.uploadChunk(source, slot, chunk);
-    entry.chunkOfSlot[slot] = chunk.ref;
+    cut.uploadChunk(source, slot, chunk, host);
+    entry.slotChunks[slot] = chunk;
   }
 
   function evictChunk(source: SourceType, slot: number): void {
     const entry = sources.get(source);
-    const ref = entry?.chunkOfSlot[slot] ?? -1;
-    if (entry === undefined || ref < 0) return;
-    cut.evictChunk(source, slot, ref);
-    entry.chunkOfSlot[slot] = -1;
+    const chunk = entry?.slotChunks[slot] ?? null;
+    if (entry === undefined || chunk === null) return;
+    cut.evictChunk(source, slot, chunk, hostOf(entry, chunk.parent));
+    entry.slotChunks[slot] = null;
   }
 
   function snapshotPickSlots(): void {
-    for (const entry of sources.values()) entry.pickChunkOfSlot.set(entry.chunkOfSlot);
+    for (const entry of sources.values()) {
+      entry.slotChunks.forEach((chunk, slot) => (entry.pickSlotChunks[slot] = chunk));
+    }
   }
 
   function recordOrdinal(source: SourceType, poolIndex: number): number | null {
@@ -190,21 +204,24 @@ export function createStarCatalogRenderer(
     const indexRecords = octree.records.count;
     if (poolIndex < indexRecords) return poolIndex;
     const slot = Math.floor((poolIndex - indexRecords) / octree.chunkCapacity);
-    const ref = slot < entry.slots ? entry.pickChunkOfSlot[slot]! : -1;
-    if (ref < 0) return null;
+    const chunk = slot < entry.slots ? entry.pickSlotChunks[slot]! : null;
+    if (chunk === null) return null;
     const local = poolIndex - indexRecords - slot * octree.chunkCapacity;
-    return local < octree.chunks[ref]!.records ? starRecordOrdinal(octree, ref, local) : null;
+    return local < chunk.ref.records ? chunk.ref.recordBase + local : null;
   }
 
   function poolRecordIndex(source: SourceType, ordinal: number): number | null {
     const entry = sources.get(source);
-    if (entry === undefined) return null;
-    const at = starRecordObject(entry.octree, ordinal);
-    if (at === null) return null;
-    if (at.chunk === null) return at.local;
-    const slot = entry.chunkOfSlot.indexOf(at.chunk);
+    if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
+    const { octree } = entry;
+    if (ordinal < octree.records.count) return ordinal;
+    const slot = entry.slotChunks.findIndex(
+      (c) =>
+        c !== null && ordinal >= c.ref.recordBase && ordinal < c.ref.recordBase + c.ref.records,
+    );
     if (slot < 0) return null;
-    return entry.octree.records.count + slot * entry.octree.chunkCapacity + at.local;
+    const local = ordinal - entry.slotChunks[slot]!.ref.recordBase;
+    return octree.records.count + slot * octree.chunkCapacity + local;
   }
 
   function* loadedCatalogs(): IterableIterator<{ source: SourceType; octree: StarOctree }> {

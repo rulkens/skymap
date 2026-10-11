@@ -93,8 +93,8 @@ export function starOctreeFromSkst(cat: SkstCatalog): StarOctree {
     nodes,
     records: { count, offset, absMag, colourIndex },
     chunks: [],
+    chunkCount: 0,
     chunkCapacity: 0,
     chunkNodeCap: 0,
-    recordOrdinalBase: Uint32Array.of(count),
   };
 }

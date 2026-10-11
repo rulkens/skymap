@@ -16,7 +16,7 @@ import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimes
 export type StarCatalogRenderer = Renderer & {
   /**
    * Commit one catalog's index to pool-sized per-source GPU buffers, replacing any earlier
-   * upload; `min(slots, octree.chunks.length)` chunk slots follow the index, and that pool
+   * upload; `min(slots, octree.chunkCount)` chunk slots follow the index, and that pool
    * size is returned for the chunk stream to match.
    */
   upload(source: SourceType, octree: StarOctree, slots: number): number;

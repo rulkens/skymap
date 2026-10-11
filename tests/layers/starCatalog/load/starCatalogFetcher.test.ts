@@ -91,7 +91,7 @@ function synthIndex(chunks: readonly OctreeChunkRef[]): Uint8Array {
       nodes: 1,
       records: 1,
       columns: STAR_COLUMN_SCHEMA,
-      stats: { starCount: 1 },
+      stats: { starCount: 1, chunkCount: chunks.length },
       chunks,
     },
     nodes,

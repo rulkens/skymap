@@ -84,7 +84,7 @@ export function starCatalogPlanner(
               octree,
               index,
               inputs.cut,
-              stream.isResident,
+              stream.resident,
               stream.hasFailed,
               stream.slots,
             );

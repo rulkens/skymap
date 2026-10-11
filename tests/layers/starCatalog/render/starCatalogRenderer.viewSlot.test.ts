@@ -50,6 +50,7 @@ const CATALOG = {
     colourIndex: new Float32Array(2),
   },
   chunks: [],
+  chunkCount: 0,
   chunkCapacity: 0,
 } as unknown as StarOctree;
 

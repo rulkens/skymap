@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StarRowFixture } from '../../../support/selectionResolverOver';
@@ -240,7 +241,7 @@ describe('extractRow, composed', () => {
   it('survey star ref resolves against the loaded catalog', async () => {
     const catalog = await makeStarCatalog();
     const starResolver = selectionResolverOver(deps, galaxies, starsFixture(catalog));
-    const record = resolveStarRecord(catalog, () => null, 1)!;
+    const record = resolveStarRecord(catalog, residencyOf(), 1)!;
     expect(
       starResolver.extractRow(
         { type: 'starCatalog', source: Source.GaiaStars, index: 1 },

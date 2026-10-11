@@ -270,13 +270,18 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     );
   }
 
-  function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
+  function uploadChunk(
+    source: SourceType,
+    slot: number,
+    chunk: StarChunk,
+    host: StarChunkHost,
+  ): void {
     const entry = slotOf(source, slot);
     const { octree } = entry;
-    const roots = octree.chunks[chunk.ref]!.roots.map((rootRow) => ({
-      level: octree.nodes.level[rootRow]!,
-      morton: octree.nodes.morton[rootRow]!,
-      rootRow,
+    const roots = chunk.ref.roots.map((row) => ({
+      level: host.nodes.level[row]!,
+      morton: host.nodes.morton[row]!,
+      rootRow: host.nodeBase + row,
     }));
     const nodeBase = octree.nodes.count + slot * octree.chunkNodeCap;
     const rows = packStarChunkNodes(
@@ -297,17 +302,18 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       device.queue.writeBuffer(state.opacity, nodeBase * OPACITY_CHANNELS * WORD_BYTES, zeros);
     }
     const deltas = chunkRootRefineDeltas(chunk, roots);
-    const host = { nodes: octree.nodes, nodeBase: 0 };
-    octree.chunks[chunk.ref]!.roots.forEach((row, k) =>
-      writeRootWords(entry, host, row, deltas[k]!),
-    );
+    chunk.ref.roots.forEach((row, k) => writeRootWords(entry, host, row, deltas[k]!));
   }
 
-  function evictChunk(source: SourceType, slot: number, chunkRef: number): void {
+  function evictChunk(
+    source: SourceType,
+    slot: number,
+    chunk: StarChunk,
+    host: StarChunkHost,
+  ): void {
     const entry = slotOf(source, slot);
     // Every root stops refining before its rows go; a landing rewrites every row of the slot.
-    const host = { nodes: entry.octree.nodes, nodeBase: 0 };
-    for (const row of entry.octree.chunks[chunkRef]!.roots) writeRootWords(entry, host, row, null);
+    for (const row of chunk.ref.roots) writeRootWords(entry, host, row, null);
     writeSlotRows(entry, slot, 0);
   }
 

@@ -60,10 +60,11 @@ export function hoistedStarOctree(): { octree: StarOctree; chunk: StarChunk } {
     ],
     chunkCapacity: 8,
     chunkNodeCap: 1,
-    recordOrdinalBase: Uint32Array.of(3, 5),
+    chunkCount: 1,
   };
   const chunk: StarChunk = {
-    ref: 0,
+    ref: octree.chunks[0]!,
+    parent: null,
     nodes: chunkNodes,
     records: columns([0.25, 0.25, 0.25, 0.75, 0.75, 0.75], [4, 6]),
   };

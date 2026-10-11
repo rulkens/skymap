@@ -52,6 +52,7 @@ function makeRuntime(loaded: boolean, stream?: StarChunkStream): StarCatalogRunt
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
     nodes: { count: 0 },
     chunks: [],
+    chunkCount: 0,
   } as unknown as StarOctree;
   let cut: StarCutInputs | null = null;
   return {
@@ -120,7 +121,7 @@ describe('starCatalogPlanner', () => {
       const counters = { inFlight: 0, epoch: 0 };
       const stream = {
         update: vi.fn(),
-        isResident: () => false,
+        resident: () => null,
         hasFailed: () => false,
         inFlightCount: () => counters.inFlight,
         epoch: () => counters.epoch,

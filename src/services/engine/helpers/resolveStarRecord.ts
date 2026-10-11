@@ -12,7 +12,6 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
-import { starRecordObject } from '../../../utils/star/starRecordObject';
 import { OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
@@ -37,12 +36,12 @@ export function resolveStarRecord(
   resident: StarResidency,
   ordinal: number,
 ): { positionMpc: Vec3; absMag: number; bpRp: number } | null {
-  const at = starRecordObject(octree, ordinal);
-  if (at === null) return null;
-  const object = at.chunk === null ? octree : resident(at.chunk);
-  if (object === null) return null;
-  const { nodes, records } = object;
-  const recordIndex = at.local;
+  if (!Number.isInteger(ordinal) || ordinal < 0) return null;
+  const inIndex = ordinal < octree.records.count;
+  const chunk = inIndex ? null : resident.chunkOfRecord(ordinal);
+  if (!inIndex && chunk === null) return null;
+  const { nodes, records } = chunk ?? octree;
+  const recordIndex = chunk === null ? ordinal : ordinal - chunk.ref.recordBase;
   const owners = ownerRows(nodes);
 
   // Largest owner whose firstRecord ≤ recordIndex.

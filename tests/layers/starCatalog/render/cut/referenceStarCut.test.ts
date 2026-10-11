@@ -276,7 +276,7 @@ function octreeOf(nodes: OctreeNodeTable, grid: OctreeGrid, chunk?: StarChunk): 
       : [],
     chunkCapacity: chunk ? 16 : 0,
     chunkNodeCap: chunk ? chunk.nodes.count : 0,
-    recordOrdinalBase: Uint32Array.of(count),
+    chunkCount: chunk ? 1 : 0,
   };
 }
 
@@ -394,7 +394,18 @@ describe('referenceStarCut over own records and blobs', () => {
   // Its chunk: two L0 rows, 1 and 2 own records, in the pool's one slot (rows 1, 2).
   const grid: OctreeGrid = { bits: 1, origin: [0, 0, 0], cellEdge: 1 };
   const chunk: StarChunk = {
-    ref: 0,
+    ref: {
+      id: 0,
+      recordBase: 0,
+      level: 1,
+      morton: 0,
+      roots: [0],
+      hash: '',
+      bytes: 0,
+      nodes: 2,
+      records: 3,
+    },
+    parent: null,
     nodes: table([
       { level: 0, morton: 0, childMask: 0, own: 1, blob: 0 },
       { level: 0, morton: 1, childMask: 0, own: 2, blob: 0 },

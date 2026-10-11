@@ -17,6 +17,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
@@ -83,7 +84,7 @@ function camAt(starPos: Readonly<Vec3>, distMpc: number): Vec3 {
   return [starPos[0] + distMpc, starPos[1], starPos[2]];
 }
 
-const NO_CHUNKS: StarResidency = () => null;
+const NO_CHUNKS: StarResidency = residencyOf();
 
 function makeCtx(camPos: Vec3): FrameView {
   return {

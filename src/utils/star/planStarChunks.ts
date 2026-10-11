@@ -1,14 +1,15 @@
 /**
- * Walks the index from its root with the cut's own tests: frustum (every view's six planes,
- * `cut.planes`, rebased about `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen` grows a
- * refine candidate) and the refine proxy edge²/dist² ≥ thr². A row that fails either is skipped
- * with its whole subtree, exactly: a child's proxy is ≤ ¼ its parent's, and, as `worldSpread` ≥ 1,
- * its sphere lies inside its parent's. So the cost follows the visible, refining rows, not the
- * catalog. A chunk root that would refine requests its chunk (priority = its best root's proxy)
- * when absent, touches it when resident. The plan cannot see the GPU's budget bin, so it may fetch
- * a chunk the budget then declines to open: bytes, never correctness. A failed chunk asks for
- * nothing. Only the `limit` best requests are kept.
+ * Walks the index from its root, and on into every resident chunk the walk reaches, with the
+ * cut's own tests: frustum (every view's six planes, `cut.planes`, rebased about
+ * `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen` grows a refine candidate) and the
+ * refine proxy edge²/dist² ≥ thr². A row that fails either is skipped with its whole subtree,
+ * exactly: a child's proxy is ≤ ¼ its parent's and its sphere lies inside its parent's. A chunk
+ * root that would refine requests its chunk (priority = its best root's proxy) when absent, and
+ * is touched and walked into when resident, so a chunk is only requested under a resident parent.
+ * The plan cannot see the GPU's budget bin: it may fetch a chunk the budget declines to open
+ * (bytes, never correctness). A failed chunk asks for nothing. Only the `limit` best are kept.
  */
+import type { StarChunk } from '../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
@@ -23,26 +24,34 @@ import {
   MIN_DIST_SQ,
   PLANE_FLOATS,
 } from '../../layers/starCatalog/render/starCutLayout';
+import { lowerBoundNodeRow } from '../octree/lowerBoundNodeRow';
+import { starOctreeIndex } from './starOctreeIndex';
 
 const AXES = 3;
-// Per chunk, this plan: 0 unseen, SEEN once touched or failed, else its best root's proxy (> 0).
-// Shared across calls: the plan is synchronous.
+// Per chunk, this plan: 0 unseen, TOUCHED (resident, walked into), FAILED, else its best root's
+// proxy (> 0). Shared across calls: the plan is synchronous.
 let best = new Float64Array(0);
-const SEEN = -1;
+const TOUCHED = -1;
+const FAILED = -2;
+/** A stack entry's object: the index, else a resident chunk's id. */
+const INDEX = -1;
 // The wanted chunks' proxies, sorted natively to find the `limit`-th best without sorting objects.
 let ranked = new Float64Array(0);
-// Depth-first with all children pushed holds at most seven siblings per level plus the root.
-const stack = new Int32Array(1 + (OCTANTS - 1) * (MAX_GRID_BITS + 1));
+// Depth-first with all children pushed holds at most seven siblings per level plus the root,
+// whichever objects the levels lie in.
+const STACK_DEPTH = 1 + (OCTANTS - 1) * (MAX_GRID_BITS + 1);
+const stack = new Int32Array(STACK_DEPTH);
+const stackObject = new Int32Array(STACK_DEPTH);
 
 export function planStarChunks(
   octree: StarOctree,
   index: StarOctreeIndex,
   cut: StarCutSpec,
-  isResident: (chunkRef: number) => boolean,
-  hasFailed: (chunkRef: number) => boolean,
+  resident: (id: number) => StarChunk | null,
+  hasFailed: (id: number) => boolean,
   limit: number,
 ): StarChunkPlan {
-  const chunks = octree.chunks.length;
+  const chunks = octree.chunkCount;
   if (chunks === 0) return { requests: [], touched: [] };
   if (best.length < chunks) {
     best = new Float64Array(chunks);
@@ -60,21 +69,30 @@ export function planStarChunks(
   const planeFloats = planes.length <= CUT_MAX_VIEWS * FLOATS_PER_VIEW ? planes.length : 0;
   const radiusPerEdgeMpc = SCALE_UNITS.PC_TO_MPC * HALF_DIAGONAL * cut.worldSpread;
   const toMpc = SCALE_UNITS.PC_TO_MPC;
-  const { boxOriginPc, boxEdgePc, childIndex } = index;
-  const { chunkRef, childMask, count: rows } = octree.nodes;
+  // The object being walked; depth-first, it switches about twice per chunk walked into.
+  let object = INDEX;
+  let nodes = octree.nodes;
+  let { boxOriginPc, boxEdgePc, childIndex } = index;
 
   const touched: number[] = [];
   const wanted: number[] = [];
   let top = 0;
-  stack[top++] = rows - 1;
+  stack[top] = nodes.count - 1;
+  stackObject[top++] = INDEX;
   walk: while (top > 0) {
     const i = stack[--top]!;
+    if (stackObject[top] !== object) {
+      object = stackObject[top]!;
+      nodes = object === INDEX ? octree.nodes : resident(object)!.nodes;
+      ({ boxOriginPc, boxEdgePc, childIndex } =
+        object === INDEX ? index : starOctreeIndex(nodes, octree.grid));
+    }
     // A childless row holds no chunk and nothing below it.
-    if (childMask[i] === 0) continue;
-    const ref = chunkRef[i]!;
+    if (nodes.childMask[i] === 0) continue;
+    const ref = nodes.chunkRef[i]!;
     const isChunkRoot = ref !== NO_CHUNK_REF;
     const seen = isChunkRoot ? best[ref]! : 0;
-    if (seen === SEEN) continue;
+    if (seen === FAILED) continue;
     const edgePc = boxEdgePc[i]!;
     const lx = boxOriginPc[i * AXES]! - cx;
     const ly = boxOriginPc[i * AXES + 1]! - cy;
@@ -107,17 +125,39 @@ export function planStarChunks(
     if (!isChunkRoot) {
       for (let k = 0; k < OCTANTS; k++) {
         const child = childIndex[i * OCTANTS + k]!;
-        if (child >= 0) stack[top++] = child;
+        if (child < 0) continue;
+        stack[top] = child;
+        stackObject[top++] = object;
       }
       continue;
     }
 
-    // A chunk with several roots is touched or requested once, at its best root's proxy.
-    if (seen > 0) best[ref] = proxy;
-    else if (isResident(ref)) {
-      best[ref] = SEEN;
-      touched.push(ref);
-    } else if (hasFailed(ref)) best[ref] = SEEN;
+    // A chunk with several roots is touched or requested once, at its best root's proxy; a
+    // resident one is walked into under every root that passes.
+    if (seen > 0) {
+      best[ref] = proxy;
+      continue;
+    }
+    const chunk = resident(ref);
+    if (chunk !== null) {
+      if (seen !== TOUCHED) {
+        best[ref] = TOUCHED;
+        touched.push(ref);
+      }
+      // The root's children are the chunk's rows one level down under its key, adjacent in
+      // (level, morton) order.
+      const c = chunk.nodes;
+      const level = nodes.level[i]! - 1;
+      const parentMorton = nodes.morton[i]!;
+      for (
+        let k = lowerBoundNodeRow(c, level, parentMorton * OCTANTS);
+        k < c.count && c.level[k] === level && Math.floor(c.morton[k]! / OCTANTS) === parentMorton;
+        k++
+      ) {
+        stack[top] = k;
+        stackObject[top++] = ref;
+      }
+    } else if (hasFailed(ref)) best[ref] = FAILED;
     else {
       best[ref] = proxy;
       wanted.push(ref);

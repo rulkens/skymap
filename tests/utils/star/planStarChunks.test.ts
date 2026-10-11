@@ -9,6 +9,8 @@ import { planStarChunks } from '../../../src/utils/star/planStarChunks';
 import { starOctreeIndex } from '../../../src/utils/star/starOctreeIndex';
 import { NO_CHUNK_REF } from '../../../src/data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import type { StarChunk } from '../../../src/@types/data/starCatalog/StarChunk';
+import type { OctreeNodeTable } from '../../../src/@types/octree/OctreeNodeTable';
 import type { StarOctree } from '../../../src/@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from '../../../src/layers/starCatalog/@types/StarCutSpec';
 
@@ -33,7 +35,26 @@ const OCTREE = {
     chunkRef: Uint32Array.from([A, B, C, E, D, NO_CHUNK_REF]),
   },
   chunks: MORTONS.map(() => ({})),
+  chunkCount: 7,
 } as unknown as StarOctree;
+
+/** Rows as [level, morton, childMask, chunkRef], sorted by (level, morton). */
+function table(rows: readonly (readonly number[])[]): OctreeNodeTable {
+  const col = (k: number) => rows.map((r) => r[k]!);
+  return {
+    count: rows.length,
+    level: Uint8Array.from(col(0)),
+    morton: Uint32Array.from(col(1)),
+    childMask: Uint8Array.from(col(2)),
+    firstRecord: new Uint32Array(rows.length),
+    ownCount: new Uint32Array(rows.length),
+    blobCount: new Uint32Array(rows.length),
+    chunkRef: Uint32Array.from(col(3)),
+  };
+}
+
+const chunkOf = (nodes: OctreeNodeTable) => ({ nodes }) as unknown as StarChunk;
+const EMPTY_CHUNK = chunkOf(table([]));
 
 const pc = (v: number) => v * SCALE_UNITS.PC_TO_MPC;
 
@@ -67,7 +88,7 @@ const plan = (
     OCTREE,
     starOctreeIndex(OCTREE.nodes, OCTREE.grid),
     cut(planes),
-    (ref) => resident.includes(ref),
+    (ref) => (resident.includes(ref) ? EMPTY_CHUNK : null),
     (ref) => failed.includes(ref),
     limit,
   );
@@ -108,11 +129,32 @@ describe('planStarChunks', () => {
       shared,
       starOctreeIndex(shared.nodes, shared.grid),
       cut(new Float32Array(0)),
-      () => false,
+      () => null,
       () => false,
       8,
     );
     expect(requests.map((r) => r.chunkRef).sort()).toEqual([A, B, C]);
     expect(requests.find((r) => r.chunkRef === B)!.priority).toBeCloseTo(256 / 260, 6);
+  });
+  it('walks into a resident chunk and requests the chunk rooted in its rows, under the same pruning', () => {
+    // Chunk A holds A's level-3 children: octant 0 (z 0–8, proxy 64/196 ≥ 0.25) roots chunk 5,
+    // octant 4 (z 8–16, proxy 64/484) roots chunk 6 and does not refine.
+    const chunkA = chunkOf(
+      table([
+        [3, 0, 0xff, 5],
+        [3, 4, 0xff, 6],
+      ]),
+    );
+    const { requests, touched } = planStarChunks(
+      OCTREE,
+      starOctreeIndex(OCTREE.nodes, OCTREE.grid),
+      cut(ONE_VIEW),
+      (ref) => (ref === A ? chunkA : null),
+      () => false,
+      8,
+    );
+    expect(touched).toEqual([A]);
+    expect(requests.map((r) => r.chunkRef)).toEqual([B, 5, E]);
+    expect(requests[1]!.priority).toBeCloseTo(64 / 196, 6);
   });
 });

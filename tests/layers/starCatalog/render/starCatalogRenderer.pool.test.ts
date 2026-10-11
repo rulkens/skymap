@@ -10,6 +10,7 @@ import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/re
 import {
   CUT_NODE_WORDS,
   NODE_BITS_WORD,
+  NODE_PARENT_WORD,
   NODE_REFINE_DELTA_WORD,
   NODE_RESIDENT_BIT,
   OPACITY_CHANNELS,
@@ -123,13 +124,14 @@ function octreeOf(
     })),
     chunkCapacity: over.chunkCapacity ?? 50,
     chunkNodeCap: over.chunkNodeCap ?? 7,
-    recordOrdinalBase: Uint32Array.of(100),
+    chunkCount,
   };
 }
 
 /** Chunk 1 (root: level 1, Morton 1, index row 1): one level-0 row with 3 own records. */
 const CHUNK: StarChunk = {
-  ref: 1,
+  ref: octreeOf().chunks[1]!,
+  parent: null,
   nodes: {
     count: 1,
     morton: Uint32Array.of(8),
@@ -250,7 +252,8 @@ describe('starCatalogRenderer chunk pool', () => {
       chunks: [base.chunks[0]!, { ...base.chunks[1]!, roots: [1, 2], nodes: 2, records: 5 }],
     };
     const chunk: StarChunk = {
-      ref: 1,
+      ref: octree.chunks[1]!,
+      parent: null,
       nodes: {
         count: 2,
         morton: Uint32Array.of(8, 16),
@@ -297,8 +300,7 @@ describe('starCatalogRenderer chunk pool', () => {
   it("recordOrdinal and poolRecordIndex map a resident chunk's records both ways, and nothing once evicted", () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    const octree = { ...octreeOf(), recordOrdinalBase: Uint32Array.of(100, 103, 106, 109) };
-    renderer.upload(Source.GaiaStars, octree, 2);
+    renderer.upload(Source.GaiaStars, octreeOf(), 2);
     renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
     renderer.snapshotPickSlots();
     // Chunk 1's third record: pool 100 + 1·50 + 2, ordinal 103 + 2.
@@ -317,15 +319,14 @@ describe('starCatalogRenderer chunk pool', () => {
   it('a slot evicted and refilled between the pick draw and its readback resolves to the star that was drawn', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    const octree = { ...octreeOf(), recordOrdinalBase: Uint32Array.of(100, 103, 106, 109) };
-    renderer.upload(Source.GaiaStars, octree, 2);
+    renderer.upload(Source.GaiaStars, octreeOf(), 2);
     renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
     renderer.snapshotPickSlots();
 
     renderer.evictChunk(Source.GaiaStars, 1);
     renderer.uploadChunk(Source.GaiaStars, 1, {
       ...CHUNK,
-      ref: 2,
+      ref: octreeOf().chunks[2]!,
       nodes: { ...CHUNK.nodes, morton: Uint32Array.of(16) },
     });
     // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
@@ -368,5 +369,81 @@ describe('starCatalogRenderer chunk pool', () => {
       [`${OPACITY}-capture`, at],
     ]);
     for (const w of zeroed) expect([...(w.data as Float32Array)].every((v) => v === 0)).toBe(true);
+  });
+  it("a nested chunk's roots are written in its parent's slot rows, and its records pick through its record base", () => {
+    const { device, writes } = recordingDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    // Index: level-2 row 0 roots chunk 0; the level-3 root. Chunk 0's one level-1 row roots chunk 1.
+    const row = (level: number, childMask: number, ownCount: number, chunkRef: number) => ({
+      count: 1,
+      morton: Uint32Array.of(0),
+      level: Uint8Array.of(level),
+      childMask: Uint8Array.of(childMask),
+      firstRecord: Uint32Array.of(0),
+      ownCount: Uint32Array.of(ownCount),
+      blobCount: Uint32Array.of(3),
+      chunkRef: Uint32Array.of(chunkRef),
+    });
+    const ref = (id: number, recordBase: number, records: number) => ({
+      id,
+      recordBase,
+      records,
+      level: 2 - id,
+      morton: 0,
+      roots: [0],
+      hash: '',
+      bytes: 0,
+      nodes: 1,
+    });
+    const octree: StarOctree = {
+      ...octreeOf(),
+      nodes: {
+        count: 2,
+        morton: Uint32Array.of(0, 0),
+        level: Uint8Array.of(2, 3),
+        childMask: Uint8Array.of(1, 1),
+        firstRecord: Uint32Array.of(0, 1),
+        ownCount: Uint32Array.of(0, 0),
+        blobCount: Uint32Array.of(3, 3),
+        chunkRef: Uint32Array.of(0, NO_CHUNK_REF),
+      },
+      records: columns(2),
+      chunks: [ref(0, 2, 1)],
+      chunkCount: 2,
+    };
+    const parent: StarChunk = {
+      ref: ref(0, 2, 1),
+      parent: null,
+      nodes: row(1, 1, 0, 1),
+      records: columns(1),
+    };
+    const child: StarChunk = {
+      ref: ref(1, 3, 3),
+      parent: 0,
+      nodes: row(0, 0, 3, NO_CHUNK_REF),
+      records: columns(3),
+    };
+    renderer.upload(Source.GaiaStars, octree, 2);
+    renderer.uploadChunk(Source.GaiaStars, 1, parent);
+
+    writes.length = 0;
+    renderer.uploadChunk(Source.GaiaStars, 0, child);
+    // The parent's row sits in slot 1: pool row 2 + 1·7; the child's own row in slot 0, row 2.
+    const parentRow = 2 + 1 * 7;
+    expect(writes.slice(-2).map((w) => [w.label, w.offset])).toEqual(rootWords(parentRow));
+    expect(word(writes.at(-2)!) & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
+    expect(word(writes.at(-1)!)).toBe(3 - 1);
+    const childRows = writes.find((w) => w.label === NODES && w.offset === 2 * ROW_BYTES)!;
+    expect((childRows.data as Uint32Array)[NODE_PARENT_WORD]).toBe(parentRow);
+
+    // The child's third record: pool 2 + 0·50 + 2, ordinal 3 + 2.
+    renderer.snapshotPickSlots();
+    expect(renderer.recordOrdinal(Source.GaiaStars, 4)).toBe(5);
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 5)).toBe(4);
+
+    writes.length = 0;
+    renderer.evictChunk(Source.GaiaStars, 0);
+    expect(writes.slice(0, 2).map((w) => [w.label, w.offset])).toEqual(rootWords(parentRow));
+    expect(word(writes[0]!) & NODE_RESIDENT_BIT).toBe(0);
   });
 });

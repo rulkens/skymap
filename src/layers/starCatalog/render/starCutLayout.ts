@@ -238,7 +238,7 @@ export function packStarCutNodes(octree: StarOctree, foldRecords = STAR_FOLD_REC
   return out;
 }
 
-/** `chunkNodeCap` rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase; a top row's parent is its root's index row. */
+/** `chunkNodeCap` rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase; a top row's parent is its root's pool row. */
 export function packStarChunkNodes(
   chunk: StarChunk,
   roots: readonly StarChunkRoot[],

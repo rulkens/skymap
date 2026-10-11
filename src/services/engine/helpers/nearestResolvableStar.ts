@@ -84,7 +84,7 @@ export function nearestResolvableStar(
       // under its key. A chunk holds several roots, maybe at several levels.
       if (nodes.childMask[i] !== 0) {
         const ref = nodes.chunkRef[i]!;
-        const chunk = ref === NO_CHUNK_REF ? null : resident(ref);
+        const chunk = ref === NO_CHUNK_REF ? null : resident.chunk(ref);
         if (chunk !== null) {
           const top: number[] = [];
           const c = chunk.nodes;
@@ -94,7 +94,7 @@ export function nearestResolvableStar(
               top.push(k);
             }
           }
-          scan(c, chunk.records, top, octree.recordOrdinalBase[ref]!);
+          scan(c, chunk.records, top, chunk.ref.recordBase);
         }
         const cbase = i * OCTANTS;
         for (let k = 0; k < OCTANTS; k++) {

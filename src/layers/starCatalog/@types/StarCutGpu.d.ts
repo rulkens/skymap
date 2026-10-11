@@ -7,6 +7,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
+import type { StarChunkHost } from './StarChunkHost';
 import type { StarDrawStream } from './StarDrawStream';
 import type { StarCutInputs } from './StarCutInputs';
 import type { StarCutDraw } from './StarCutDraw';
@@ -19,10 +20,10 @@ export type StarCutGpu = {
    * an empty octree releases them. Throws, creating nothing, past a pool cap.
    */
   upload(source: SourceType, octree: StarOctree, slots: number): void;
-  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its root resident. */
-  uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
-  /** Mark every root of `chunkRef` (the chunk the slot holds) unresident, then empty the slot. */
-  evictChunk(source: SourceType, slot: number, chunkRef: number): void;
+  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots in `host` resident. */
+  uploadChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
+  /** Mark every root of `chunk` (the one the slot holds) in `host` unresident, then empty the slot. */
+  evictChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
   /** One compute pass: every source in `inputs` gets this frame's cut. */
   encode(
     encoder: GPUCommandEncoder,

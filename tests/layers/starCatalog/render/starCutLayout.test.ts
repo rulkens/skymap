@@ -99,7 +99,18 @@ describe('packStarChunkNodes', () => {
     // Root at level 2. Rows: two L0 children of the L1 row at Morton 0, then the
     // two L1 top rows. Records in row order, own then blob: 3, 2, 1 + blob, 4.
     const chunk: StarChunk = {
-      ref: 0,
+      ref: {
+        id: 0,
+        recordBase: 0,
+        level: 2,
+        morton: 0,
+        roots: [0],
+        hash: '',
+        bytes: 0,
+        nodes: 4,
+        records: 7,
+      },
+      parent: null,
       nodes: {
         count: 4,
         morton: Uint32Array.of(0, 1, 0, 1),

@@ -61,10 +61,11 @@ export function multiRootStarOctree(): { octree: StarOctree; chunk: StarChunk } 
     ],
     chunkCapacity: 8,
     chunkNodeCap: 2,
-    recordOrdinalBase: Uint32Array.of(4, 6),
+    chunkCount: 1,
   };
   const chunk: StarChunk = {
-    ref: 0,
+    ref: octree.chunks[0]!,
+    parent: null,
     nodes: table([
       [0, 448, 0, 0, 1, 0, NO_CHUNK_REF],
       [1, 0, 0, 1, 1, 0, NO_CHUNK_REF],

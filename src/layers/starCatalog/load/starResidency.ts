@@ -7,5 +7,8 @@ export function starResidency(
   runtime: Pick<StarCatalogRuntime, 'chunkStreams'>,
   source: SourceType,
 ): StarResidency {
-  return (chunkRef) => runtime.chunkStreams.get(source)?.resident(chunkRef) ?? null;
+  return {
+    chunk: (id) => runtime.chunkStreams.get(source)?.resident(id) ?? null,
+    chunkOfRecord: (ordinal) => runtime.chunkStreams.get(source)?.residentOfRecord(ordinal) ?? null,
+  };
 }

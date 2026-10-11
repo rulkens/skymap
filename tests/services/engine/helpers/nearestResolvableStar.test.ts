@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 import { nearestResolvableStar } from '../../../../src/services/engine/helpers/nearestResolvableStar';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
@@ -15,7 +16,7 @@ import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
 import { multiRootStarOctree } from '../../../fixtures/multiRootStarOctree';
 
 /** No chunk resident: a v1 catalog has none. */
-const NONE: StarResidency = () => null;
+const NONE: StarResidency = residencyOf();
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs (a leaf cell's world box is `[mortonCoord, mortonCoord + 1) pc`),
@@ -150,12 +151,7 @@ describe('nearestResolvableStar', () => {
     const { octree, chunk } = hoistedStarOctree();
     const cam: Vec3 = [0.5 * PC_TO_MPC, 0.5 * PC_TO_MPC, 0.501 * PC_TO_MPC];
     expect(nearestResolvableStar(octree, NONE, cam, 0.01 * PC_TO_MPC)).toBeNull();
-    const hit = nearestResolvableStar(
-      octree,
-      (ref) => (ref === 0 ? chunk : null),
-      cam,
-      0.01 * PC_TO_MPC,
-    );
+    const hit = nearestResolvableStar(octree, residencyOf(chunk), cam, 0.01 * PC_TO_MPC);
     expect(hit!.ordinal).toBe(3);
   });
 
@@ -164,7 +160,7 @@ describe('nearestResolvableStar', () => {
     const near = (pc: number) =>
       nearestResolvableStar(
         octree,
-        (ref) => (ref === 0 ? chunk : null),
+        residencyOf(chunk),
         [pc * PC_TO_MPC, pc * PC_TO_MPC, (pc + 0.001) * PC_TO_MPC],
         0.01 * PC_TO_MPC,
       );

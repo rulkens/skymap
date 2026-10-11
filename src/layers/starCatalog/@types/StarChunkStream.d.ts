@@ -13,11 +13,12 @@ export type StarChunkStream = Destroyable & {
   readonly slots: number;
   /** Touches resident chunks, then allocates and enqueues `requests` (descending priority, as the planner orders them) until the pool refuses. */
   update(frame: number, touched: readonly number[], requests: readonly StarChunkRequest[]): void;
-  isResident(chunkRef: number): boolean;
   /** Its fetch came back empty: it is never asked for again. */
-  hasFailed(chunkRef: number): boolean;
+  hasFailed(id: number): boolean;
   /** The CPU copy while its slot holds it. */
-  resident(chunkRef: number): StarChunk | null;
+  resident(id: number): StarChunk | null;
+  /** The resident chunk whose records hold a catalog-global ordinal: a scan of at most `slots`. */
+  residentOfRecord(ordinal: number): StarChunk | null;
   inFlightCount(): number;
   /** Increments on every landing and eviction; the planner's wake and fade reset read it. */
   epoch(): number;

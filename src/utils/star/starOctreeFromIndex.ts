@@ -3,16 +3,12 @@ import type { DecodedOctreeObject } from '../../@types/octree/DecodedOctreeObjec
 import type { OctreeIndexHeader } from '../../@types/octree/OctreeIndexHeader';
 import { starColumnsOf } from './starColumnsOf';
 
-/** The octree index object as the shared runtime shape; chunk ordinals follow the index's records. */
+/** The octree index object as the shared runtime shape. */
 export function starOctreeFromIndex(obj: DecodedOctreeObject<OctreeIndexHeader>): StarOctree {
   const { header, nodes, columns } = obj;
-  const starCount = header.stats.starCount;
+  const { starCount, chunkCount } = header.stats;
   if (starCount === undefined) throw new Error('star octree index lacks the starCount stat');
-  const recordOrdinalBase = new Uint32Array(header.chunks.length + 1);
-  recordOrdinalBase[0] = header.records;
-  header.chunks.forEach((chunk, i) => {
-    recordOrdinalBase[i + 1] = recordOrdinalBase[i]! + chunk.records;
-  });
+  if (chunkCount === undefined) throw new Error('star octree index lacks the chunkCount stat');
   return {
     grid: header.grid,
     starCount,
@@ -20,8 +16,8 @@ export function starOctreeFromIndex(obj: DecodedOctreeObject<OctreeIndexHeader>)
     nodes,
     records: starColumnsOf(columns, header.records),
     chunks: header.chunks,
+    chunkCount,
     chunkCapacity: header.chunkCapacity,
     chunkNodeCap: header.chunkNodeCap,
-    recordOrdinalBase,
   };
 }
