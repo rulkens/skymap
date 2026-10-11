@@ -2,8 +2,9 @@
  * frameOrderBoot — `checkFrameOrder` over the REAL artifacts the app boots
  * with, which is the check `startLoop` runs once before the first frame. The
  * per-rule cases live in `checkFrameOrder.test.ts`; this one binds them to
- * production data, so a Layer that contributes a pass and forgets its
- * `FRAME_ORDER` line fails here instead of silently never drawing. Target ids
+ * production data, so a core pass that forgets its `FRAME_ORDER` line fails
+ * here instead of silently never drawing (a Layer's passes are pinned by that
+ * Layer's own test, e.g. `tests/layers/structure/layer.test.ts`). Target ids
  * include every Layer's `targets` too, via `composeRenderTargetRows` — the
  * same composed table the `renderTargets` GPU-handle row allocates.
  */

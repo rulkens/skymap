@@ -1,7 +1,9 @@
 /**
  * create — the store, one marker renderer per slab, then the bulk slot and the
- * projection that fills the store from it. The anchors land synchronously
- * here, so the selection row resolves a featured structure from boot.
+ * projection that fills the store from it. The renderers come first so a
+ * throwing constructor leaves nothing published. The anchors land
+ * synchronously in the projection, so the selection row resolves a featured
+ * structure from boot.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
@@ -17,26 +19,23 @@ import { wireStructureProjection } from './load/wireStructureProjection';
 
 export function create(deps: LayerCoreDeps): StructureRuntime {
   const store = createStructureStore();
+  const cosmoRenderer = createStructureMarkerRenderer(
+    deps.ctx,
+    HDR_TARGET_FORMAT,
+    deps.fadeBgl,
+    COSMO,
+    STRUCTURE_IDS_BY_SCALE.cosmic,
+  );
+  // Its own uniform + instance buffers: both marker passes record into one
+  // encoder, so a shared uniform would hand both draws the last-written matrix.
+  const nearRenderer = createStructureMarkerRenderer(
+    deps.ctx,
+    HDR_TARGET_FORMAT,
+    deps.fadeBgl,
+    NEAR0,
+    STRUCTURE_IDS_BY_SCALE.milkyWay,
+  );
   const slot = createStructureCatalogSlot();
   wireStructureProjection({ store, slot }, deps.store.dispatch);
-  return {
-    store,
-    cosmoRenderer: createStructureMarkerRenderer(
-      deps.ctx,
-      HDR_TARGET_FORMAT,
-      deps.fadeBgl,
-      COSMO,
-      STRUCTURE_IDS_BY_SCALE.cosmic,
-    ),
-    // Its own uniform + instance buffers: both marker passes record into one
-    // encoder, so a shared uniform would hand both draws the last-written matrix.
-    nearRenderer: createStructureMarkerRenderer(
-      deps.ctx,
-      HDR_TARGET_FORMAT,
-      deps.fadeBgl,
-      NEAR0,
-      STRUCTURE_IDS_BY_SCALE.milkyWay,
-    ),
-    slot,
-  };
+  return { store, cosmoRenderer, nearRenderer, slot };
 }

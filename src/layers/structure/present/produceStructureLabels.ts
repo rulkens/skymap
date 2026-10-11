@@ -3,13 +3,14 @@
  * (every cosmic and Milky Way category), read from the Layer's structure store.
  *
  * Applies the marker close-approach / far-distance fades, the featured +
- * visibility gates, and the anchor (ring centre, or just above the ring's drawn top for the
- * categories whose style asks for it). Famous-galaxy labels come from
- * `produceFamousGalaxyLabels` instead — a split that also carries the deep-zoom
- * exemption: THIS producer rides the `surveyDeepZoom` band (structure labels
- * dissolve with their rings on the descent into the solar system), while
- * famous labels stay visible with the famous points they name. The exemption
- * is per-producer, not per-label — no flag to thread through the loop.
+ * visibility gates, and the anchor (ring centre, or just above the ring's
+ * drawn top for the categories whose style asks for it). Famous-galaxy labels
+ * come from `produceFamousGalaxyLabels` instead — a split that also carries the
+ * deep-zoom exemption: THIS producer rides the `surveyDeepZoom` band
+ * (structure labels dissolve with their rings on the descent into the solar
+ * system), while famous labels stay visible with the famous points they name.
+ * The exemption is per-producer, not per-label — no flag to thread through the
+ * loop.
  *
  * ### Per-category opacity × focused-exempt recession bakes into fadeAlpha
  *
