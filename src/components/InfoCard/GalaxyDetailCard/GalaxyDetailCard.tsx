@@ -41,25 +41,36 @@ function GalaxyDetailCard({
   const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   const famousAliases = target.famous?.names.filter((n) => n !== target.displayName) ?? [];
+  const thumbnail = (
+    <Thumbnail
+      url={target.thumbnailUrl}
+      fallbackUrl={target.thumbnailFallbackUrl}
+      href={target.skyViewUrl}
+      alt="Galaxy thumbnail"
+    />
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Galaxy"
+        title={
+          <>
+            {target.displayName}
+            {famousAliases.map((alias) => (
+              <span key={alias} className={styles.headlineAlias}>
+                {' · '}
+                {alias}
+              </span>
+            ))}
+          </>
+        }
+        badge={target.sourceLabel}
+        thumbnail={hasChrome ? undefined : thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />
-
-      <CardRow type="headline" badge={target.sourceLabel}>
-        {target.displayName}
-        {famousAliases.map((alias) => (
-          <span key={alias} className={styles.headlineAlias}>
-            {' · '}
-            {alias}
-          </span>
-        ))}
-      </CardRow>
 
       {target.famous?.description && (
         <div className={styles.cardSection}>
@@ -68,12 +79,7 @@ function GalaxyDetailCard({
       )}
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        <Thumbnail
-          url={target.thumbnailUrl}
-          fallbackUrl={target.thumbnailFallbackUrl}
-          href={target.skyViewUrl}
-          alt="Galaxy thumbnail"
-        />
+        {hasChrome && thumbnail}
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
             <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {formatLookback(target.lookbackGyr)}{' '}

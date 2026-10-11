@@ -42,7 +42,8 @@
   font-variant-numeric: tabular-nums;
   user-select: none;
 
-  transition: opacity var(--duration-base) var(--ease-standard),
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
     transform var(--duration-base) var(--ease-standard);
 }
 
@@ -90,7 +91,9 @@
   color: var(--color-fg);
   letter-spacing: var(--letter-spacing-tight);
   cursor: pointer;
-  transition: var(--transition-color), background var(--duration-color) ease;
+  transition:
+    var(--transition-color),
+    background var(--duration-color) ease;
 }
 
 .readout:hover,
@@ -119,7 +122,8 @@
    * the reserved area doesn't land on a hidden button. The root still catches
    * the hover that triggers the reveal. */
   pointer-events: none;
-  transition: grid-template-columns var(--duration-base) var(--ease-standard),
+  transition:
+    grid-template-columns var(--duration-base) var(--ease-standard),
     opacity var(--duration-color) var(--ease-standard) 80ms;
 }
 
@@ -173,7 +177,8 @@
 .nowCollapse {
   display: grid;
   grid-template-columns: 1fr;
-  transition: grid-template-columns var(--duration-base) var(--ease-standard),
+  transition:
+    grid-template-columns var(--duration-base) var(--ease-standard),
     opacity var(--duration-color) var(--ease-standard) 80ms,
     margin var(--duration-base) var(--ease-standard);
 }
@@ -270,7 +275,9 @@
   color: var(--color-fg-muted);
   letter-spacing: var(--letter-spacing-tight);
   cursor: pointer;
-  transition: var(--transition-color), background var(--duration-color) ease;
+  transition:
+    var(--transition-color),
+    background var(--duration-color) ease;
 }
 
 .rate:hover,
@@ -304,6 +311,97 @@
   background: var(--surface-control);
   border-color: transparent;
   color: var(--color-accent-bright);
+}
+
+/*
+ * Phone row variant (TimeBar given `onCloseRow`): a full-width row in the
+ * bottom stack's flow instead of a floating pill. Every control is always
+ * visible (no hover to reveal on touch); the readout leads, the close button
+ * trails.
+ */
+.row {
+  position: static;
+  width: 100%;
+  max-width: none;
+  /* Cancel the pill's fade-scale so the row does not offset the stack above. */
+  transform: none;
+}
+
+.row .pill {
+  flex-direction: row;
+  height: var(--time-row-height);
+  padding: 0 var(--space-4);
+  gap: var(--space-2);
+  width: 100%;
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border-width: 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* The readout sits inside CompactInfoTip's inline-flex wrapper, which is the pill's first flex item. */
+.row .pill > :first-child {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.row .readout {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  padding-left: var(--space-2);
+  padding-right: 0;
+}
+
+.row .controls {
+  flex: none;
+}
+
+/* Dividers cost width the 400 px row does not have. */
+.row .divider {
+  display: none;
+}
+
+.row .rate {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.row .controls {
+  grid-template-columns: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.row .group {
+  gap: 0;
+}
+
+.row .pill .step {
+  min-width: 36px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.row .rate,
+.row .pill .now {
+  min-height: 44px;
+}
+
+.row .pill .close {
+  min-width: 40px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-lg);
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

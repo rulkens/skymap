@@ -13,9 +13,14 @@ import { memo } from 'react';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import { useInitialMobile } from '../../hooks/useInitialMobile';
 
-function SettingsPanelContainer(): React.ReactElement {
+export type SettingsPanelContainerProps = {
+  /** Render without the collapsible card (the phone sheet owns the surface). */
+  readonly bare?: boolean;
+};
+
+function SettingsPanelContainer({ bare }: SettingsPanelContainerProps): React.ReactElement {
   const initialMobile = useInitialMobile();
-  return <SettingsPanel defaultOpen={!initialMobile} />;
+  return <SettingsPanel defaultOpen={!initialMobile} bare={bare} />;
 }
 
 export default memo(SettingsPanelContainer);

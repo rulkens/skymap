@@ -89,11 +89,16 @@
 .infoCardFull.chromeless {
   position: static;
   background: none;
+  /* The sheet owns the blur; a nested backdrop-filter would leave its grabber strip unblurred. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   border: none;
   border-radius: 0;
   box-shadow: none;
   min-width: 0;
   max-width: none;
+  /* The sheet's handle already sits above; the header's name row starts right under it. */
+  padding-top: 0;
   /* No explicit width: position:static block already fills its container at
      width:auto, and auto keeps padding inside — explicit 100% under
      content-box would add padding on top of the full width and overflow. */
@@ -129,6 +134,74 @@
   text-transform: uppercase;
 }
 
+/*
+ * Detail-card header: eyebrow bar, then the name row.  Desktop stacks them
+ * as before (the actions wrapper is `contents`).  Chromeless (the phone
+ * sheet) turns the root into a grid: name first, actions at its right, the
+ * eyebrow + badge as a meta line.
+ */
+.headerActions {
+  display: contents;
+}
+
+.infoCardFull.chromeless .headerRoot {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  grid-template-areas:
+    'name name name actions'
+    'eyebrow badge . actions';
+  column-gap: var(--space-4);
+  align-items: start;
+  /* Same height with or without a thumbnail, so the peek cuts at one place. */
+  min-height: calc(var(--thumbnail-size-header) + var(--space-4));
+}
+
+.infoCardFull.chromeless .headerBar,
+.infoCardFull.chromeless .headerRoot .headlineRow {
+  display: contents;
+}
+
+.infoCardFull.chromeless .headerRoot .cardHeadline {
+  grid-area: name;
+  /* Two lines at most: a long alias list must not push the meta line out of the peek. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  /* First line centred on the 44px actions beside it. */
+  padding-block: calc((var(--touch-target) - 1lh) / 2) var(--space-1);
+  /* Hold the name off the actions column. */
+  padding-right: var(--space-4);
+}
+
+.infoCardFull.chromeless .headerRoot .sourceBadge {
+  grid-area: badge;
+}
+
+.infoCardFull.chromeless .headerEyebrow {
+  grid-area: eyebrow;
+}
+
+.infoCardFull.chromeless .headerActions {
+  grid-area: actions;
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Thumbnail slot: spans the name + meta lines; Thumbnail reads the size token. */
+.infoCardFull.chromeless .headerRoot .headerThumbnail {
+  --thumbnail-size: var(--thumbnail-size-header);
+  grid-area: thumb;
+  align-self: center;
+}
+
+.infoCardFull.chromeless .headerRoot.headerWithThumbnail {
+  grid-template-columns: auto auto auto 1fr auto;
+  grid-template-areas:
+    'thumb name name name actions'
+    'thumb eyebrow badge . actions';
+}
+
 /* PINNED badge — hidden by default; shown via .pinned modifier on root */
 .pinnedBadge {
   display: none;
@@ -147,6 +220,11 @@
 /* Show the badge when the root element carries the .pinned modifier */
 .infoCardFull.pinned .pinnedBadge {
   display: inline;
+}
+
+/* The sheet only ever shows the pinned selection, so the badge is noise there. */
+.infoCardFull.chromeless.pinned .pinnedBadge {
+  display: none;
 }
 
 /* ── Source attribution badge ─────────────────────────────────────────────── */
@@ -459,4 +537,17 @@ details:not([open]) > .detailsSummary::before {
 
 .closeButton:active {
   background: var(--surface-control-active);
+}
+/* Phone sheet: both header actions are full-size touch targets. */
+.infoCardFull.chromeless .focusButton,
+.infoCardFull.chromeless .closeButton {
+  margin-left: 0;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+}
+
+.infoCardFull.chromeless .closeButton {
+  width: auto;
+  height: auto;
+  font-size: var(--font-size-xl);
 }

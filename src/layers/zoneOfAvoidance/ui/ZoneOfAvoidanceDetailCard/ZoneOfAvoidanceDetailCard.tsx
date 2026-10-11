@@ -13,7 +13,6 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { ZoneOfAvoidanceInfo } from '../../../../@types/engine/ZoneOfAvoidanceInfo';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
-import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
@@ -36,9 +35,11 @@ function ZoneOfAvoidanceDetailCard({
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
-      <CardHeader eyebrow="Guide Layer" onClose={isPinned ? onClose : undefined} />
-
-      <CardRow type="headline">{target.displayName}</CardRow>
+      <CardHeader
+        eyebrow="Guide Layer"
+        title={target.displayName}
+        onClose={isPinned ? onClose : undefined}
+      />
 
       <div className={styles.cardSection}>
         <WikipediaRow title={target.wikiTitle} />

@@ -55,19 +55,21 @@ function MilkyWayDetailCard({
 }: MilkyWayDetailCardProps): ReactNode {
   const outerClass = cx(mw.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
+  const thumbnail = <Thumbnail url={cardShotUrl(MILKY_WAY_FOCUS_ID)} alt="Milky Way thumbnail" />;
+
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Home Galaxy"
+        title={target.displayName}
+        thumbnail={hasChrome ? undefined : thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(MILKY_WAY_INFO) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />
 
-      <CardRow type="headline">{target.displayName}</CardRow>
-
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        <Thumbnail url={cardShotUrl(MILKY_WAY_FOCUS_ID)} alt="Milky Way thumbnail" />
+        {hasChrome && thumbnail}
         <div className={styles.cardSummary}>
           <div className={styles.cardTypeLine}>
             <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>

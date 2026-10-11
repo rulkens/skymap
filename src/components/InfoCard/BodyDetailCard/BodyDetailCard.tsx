@@ -73,6 +73,8 @@ function BodyDetailCard({
   const seed = SCENE_BODIES.find((b) => b.id === target.id);
   const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
   const hasShot = SHOT_CARD_IDS.has(shotId);
+  // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
+  const shotBeside = hasShot && hasChrome;
 
   // The lead rows — the "where / how big" facts — sit beside the card shot as
   // summary lines (the galaxy card's layout, one line per 20 px of the 80 px
@@ -104,14 +106,18 @@ function BodyDetailCard({
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Body"
+        title={target.label}
+        thumbnail={
+          hasShot && !hasChrome ? (
+            <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
+          ) : undefined
+        }
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
       />
 
-      <CardRow type="headline">{target.label}</CardRow>
-
-      {hasShot && (
+      {shotBeside && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
           <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
           <div className={styles.cardSummary}>
@@ -130,9 +136,9 @@ function BodyDetailCard({
         distance / orbital-period rows relabel for a moon (`facts.parent`), which
         orbits its planet rather than the Sun.
       */}
-      {(!hasShot || facts) && (
+      {(!shotBeside || facts) && (
         <div className={styles.cardSection}>
-          {!hasShot && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
+          {!shotBeside && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
           {facts?.dayLength && (
             <CardRow
               label={<InfoTip {...TIPS.bodyDayLength!}>Day length</InfoTip>}

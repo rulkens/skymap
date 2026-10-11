@@ -1,9 +1,16 @@
 /*
- * CardHeader.module.css — the header row's outermost hook.  CardHeader renders
- * nothing of its own beyond the shared title-row layout, so .root simply
- * composes it from the shared cardChrome vocabulary; the badge + buttons are
- * pulled straight from cardChrome in the component.
+ * CardHeader.module.css — .root is the header outermost box; the phone grid
+ * arrangement lives in cardChrome (it keys off the card .chromeless ancestor,
+ * which only that module can name without :global).
  */
 .root {
-  composes: cardTitle from '../cardChrome.module.css';
+  composes: headerRoot from '../cardChrome.module.css';
+}
+
+.withThumbnail {
+  composes: headerWithThumbnail from '../cardChrome.module.css';
+}
+
+.bar {
+  composes: cardTitle headerBar from '../cardChrome.module.css';
 }

@@ -50,14 +50,12 @@ function StructureDetailCard({
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Structure"
+        title={target.name}
+        badge={CATEGORY_DISPLAY_INFO[target.category].label}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.name}`}
         onClose={isPinned ? onClose : undefined}
       />
-
-      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[target.category].label}>
-        {target.name}
-      </CardRow>
 
       <div className={styles.cardSection}>
         <CardRow

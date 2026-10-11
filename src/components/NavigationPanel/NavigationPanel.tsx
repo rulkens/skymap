@@ -79,6 +79,8 @@ const MOBILE_ROWS: ReadonlyArray<{ key: string; action: string }> = [
 export type NavigationPanelProps = {
   defaultOpen?: boolean;
   isMobile?: boolean;
+  /** Render without the collapsible card, for hosts that own the surface. */
+  bare?: boolean;
 };
 
 function NavigationPanel(props: NavigationPanelProps): ReactNode {
@@ -89,10 +91,15 @@ function NavigationPanel(props: NavigationPanelProps): ReactNode {
   // try to pass `{ isMobile: true }` with a confusing
   // "Type 'X' has no properties in common with type 'Attributes'".
   // Callers that don't need any prop pass an explicit empty `{}`.
-  const { defaultOpen, isMobile = false } = props;
+  const { defaultOpen, isMobile = false, bare } = props;
   const rows = isMobile ? MOBILE_ROWS : DESKTOP_ROWS;
   return (
-    <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet" defaultOpen={defaultOpen}>
+    <Panel
+      title="NAVIGATION"
+      ariaLabel="Navigation cheatsheet"
+      defaultOpen={defaultOpen}
+      bare={bare}
+    >
       {rows.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.key}>{row.key}</span>

@@ -23,12 +23,15 @@ import EarthSectionContainer from '../containers/EarthSectionContainer';
 type SettingsPanelProps = {
   /** Initial Panel open/closed state. App passes `false` on mobile viewports. */
   defaultOpen?: boolean;
+  /** Render without the collapsible card, for hosts that own the surface. */
+  bare?: boolean;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
 
 export const SettingsPanel = memo(function SettingsPanel({
   defaultOpen,
+  bare,
 }: SettingsPanelProps): ReactNode {
   const mainSections = useMemo(() => layerUiContents(APP_COMPOSITION.layers, 'main'), []);
   const labelsAndGuidesRows = useMemo(
@@ -40,6 +43,7 @@ export const SettingsPanel = memo(function SettingsPanel({
       title="Settings"
       ariaLabel="Renderer settings"
       defaultOpen={defaultOpen}
+      bare={bare}
       headerExtra={<TierChipContainer />}
     >
       {mainSections.map((Section, index) => (

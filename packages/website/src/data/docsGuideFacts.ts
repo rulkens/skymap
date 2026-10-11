@@ -712,7 +712,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-phone-sheet',
     about: 'app',
     text: 'On a phone, and on any screen 768 pixels wide or narrower, the card is a sheet at the foot of the screen that shows its first lines; drag it up to read the rest. There is no hover card.',
-    source: `${REPO_BLOB}/src/components/InfoCard/MobileSheet/MobileSheet.tsx`,
+    source: `${REPO_BLOB}/src/components/MobileSheet/MobileSheet.tsx`,
     sourceLabel: `the card on a phone, ${IN_REPO}`,
     checked: CHECKED,
   },

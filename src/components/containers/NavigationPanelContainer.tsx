@@ -12,9 +12,14 @@ import { memo } from 'react';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import { useInitialMobile } from '../../hooks/useInitialMobile';
 
-function NavigationPanelContainer(): React.ReactElement {
+export type NavigationPanelContainerProps = {
+  /** Render without the collapsible card (the phone sheet owns the surface). */
+  readonly bare?: boolean;
+};
+
+function NavigationPanelContainer({ bare }: NavigationPanelContainerProps): React.ReactElement {
   const initialMobile = useInitialMobile();
-  return <NavigationPanel defaultOpen={!initialMobile} isMobile={initialMobile} />;
+  return <NavigationPanel defaultOpen={!initialMobile} isMobile={initialMobile} bare={bare} />;
 }
 
 export default memo(NavigationPanelContainer);

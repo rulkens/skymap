@@ -42,12 +42,11 @@ function BlackHoleDetailCard({
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Black hole"
+        title={target.label}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
       />
-
-      <CardRow type="headline">{target.label}</CardRow>
 
       <div className={styles.cardSection}>
         <CardRow label="Designation" value={target.detailLabel} />

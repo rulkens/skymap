@@ -1,15 +1,15 @@
 /*
- * Thumbnail.module.css — 80×80 px image cutout (.root) and its broken-image
+ * Thumbnail.module.css — var(--thumbnail-size) square image cutout (.root) and its broken-image
  * fallback placeholder (.placeholder).  Two mutually-exclusive render branches,
  * so the placeholder is a sibling root rather than nested under .root.
  *
  * All atoms reference tokens from `src/styles/global.css`.
  */
 
-/* Thumbnail image — 80×80 px rounded square */
+/* Thumbnail image — var(--thumbnail-size) square rounded square */
 .root {
-  width: 80px;
-  height: 80px;
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
   border-radius: var(--radius-lg);
   /*
    * Slightly more visible border than the panel default — thumbnail images
@@ -37,8 +37,8 @@
 
 /* Placeholder shown when the thumbnail fails to load — same dimensions */
 .placeholder {
-  width: 80px;
-  height: 80px;
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
   border-radius: var(--radius-lg);
   /* Dashed variant signals "absence" vs. the solid border on a real image */
   border: 1px dashed var(--border-control);

@@ -15,20 +15,19 @@
  * slot precedence — pinned target → detail, a different hovered target →
  * compact preview.
  *
- * On mobile (`useIsMobile`) hover has no cursor, so the card drops to a single
- * MobileSheet showing only the selected target's full detail — no compact slot.
+ * On mobile (`useIsMobile`) hover has no cursor, so the card drops to the
+ * selected target's bare detail body — no compact slot; the phone HUD wraps it
+ * in the MobileSheet.
  */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { targetEq } from '../../services/engine/helpers/targetEq';
-import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { APP_COMPOSITION } from '../../compositions/app';
 import { detailCardTable } from './detailCardTable';
 import { detailCardFor } from '../../utils/infoCard/detailCardFor';
-import MobileSheet from './MobileSheet/MobileSheet';
 import styles from './InfoCard.module.css';
 
 // Folded once at module load, not per-render: the composition is static for
@@ -66,15 +65,13 @@ export type InfoCardProps = {
 function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
 
-  // Mobile has no hover cursor: only the pinned target matters, and it shows as
-  // a single MobileSheet wrapping the same Detail card the desktop branch uses.
+  // Mobile has no hover cursor: only the pinned target matters, and it renders
+  // as the bare Detail body; the phone HUD's MobileSheet supplies the surface.
   if (isMobile) {
     if (selected === null) return null;
     const { Detail } = detailCardFor(DETAIL_CARD, selected);
     return (
-      <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
-      </MobileSheet>
+      <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
     );
   }
 

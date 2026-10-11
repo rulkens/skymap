@@ -197,6 +197,8 @@ function StarDetailCard({
   // all, so it never has a shot).
   const shotId = target.id === null ? null : `${STAR_FOCUS_PREFIX}${target.id}`;
   const hasShot = detail.kind === 'curated' && shotId !== null && SHOT_CARD_IDS.has(shotId);
+  // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
+  const shotBeside = hasShot && hasChrome;
 
   // The "where / how bright" rows: beside the shot as summary lines, or heading
   // the curated block as CardRows. Distance is the star's own row for every
@@ -229,20 +231,33 @@ function StarDetailCard({
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Star"
+        title={
+          // The sheet's peek cuts below the header, so its aliases ride in the name.
+          hasChrome || aliases.length === 0 ? (
+            target.displayName
+          ) : (
+            <>
+              {target.displayName}
+              <span className={styles.headlineAlias}> · {aliases.join(' · ')}</span>
+            </>
+          )
+        }
+        badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
+        thumbnail={
+          hasShot && !hasChrome ? (
+            <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
+          ) : undefined
+        }
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />
 
-      <CardRow
-        type="headline"
-        badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
-      >
-        {target.displayName}
-      </CardRow>
-      {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
+      {hasChrome && aliases.length > 0 && (
+        <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>
+      )}
 
-      {hasShot && (
+      {shotBeside && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
           <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
           <div className={styles.cardSummary}>
@@ -264,7 +279,7 @@ function StarDetailCard({
         </div>
       )}
 
-      {detailBlock(detail, hasShot ? [] : leadRows)}
+      {detailBlock(detail, shotBeside ? [] : leadRows)}
     </div>
   );
 }

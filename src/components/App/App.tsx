@@ -6,7 +6,9 @@
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
  * SplashContainer, ArrivalVeilContainer, and DebugPanelContainer.
- * Each container owns its own store reach; App just arranges them.
+ * Each container owns its own store reach; App just arranges them. On a phone
+ * the info card, scale, time and the two panels give way to PhoneHudContainer
+ * (dock, time row, one sheet).
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
  * putting the handle in state would re-render every consumer at startup.
@@ -19,9 +21,8 @@
  * the canvas + the tour overlay; every other piece of HUD chrome is absent
  * from the DOM, not merely CSS-hidden — see the branch above the main return.
  *
- * Store reach: App itself keeps only shell-level reach. `selectSelectedFocusable`
- * drives the `uiStack` "has a pinned mobile selection" className;
- * `selectPaletteOpen`, `selectUiHidden`,
+ * Store reach: App itself keeps only shell-level reach. `selectPaletteOpen`,
+ * `selectUiHidden`,
  * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX;
  * `selectTourActive` picks the tour-overlay/beat-rail branch; and
  * `selectTakeoverSource` picks the exhibit-overlay branch the same way. Everything
@@ -40,6 +41,7 @@ import ScaleBarContainer from '../containers/ScaleBarContainer';
 import NavigationPanelContainer from '../containers/NavigationPanelContainer';
 import TopBarContainer from '../containers/TopBarContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
+import PhoneHudContainer from '../containers/PhoneHudContainer';
 import SplashContainer from '../containers/SplashContainer';
 import LazyInfoCardContainer from '../containers/LazyInfoCardContainer';
 import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer';
@@ -48,7 +50,6 @@ import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
-import { selectSelectedFocusable } from '../../state/selection/selectors';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
@@ -65,14 +66,8 @@ import {
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
 
-  // The only selection-slice read App keeps: it drives the `uiStack`
-  // "pinned selection on mobile" className. All other selection reach (hover,
-  // InfoCard detail, member count) lives in InfoCardContainer.
-  const selected = useAppSelector(selectSelectedFocusable);
-
-  // Reactive companion to the containers' one-shot `useInitialMobile`: the
-  // `hasSelection` className must update live when the viewport crosses the
-  // breakpoint (rotation), so it reads the `matchMedia`-backed hook.
+  // Reactive (matchMedia-backed) so the phone HUD and the desktop HUD swap
+  // live when the viewport crosses the breakpoint (rotation).
   const isMobile = useIsMobile();
 
   // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice; App
@@ -147,25 +142,32 @@ export function App(): React.ReactElement {
           appStyles.uiStack,
           (uiHidden || splashVisible || tourActive || exhibitId !== null) &&
             appStyles.uiStackHidden,
-          selected != null && isMobile && appStyles.hasSelection,
         )}
       >
         <LoadingBarContainer />
         <StatusBarContainer />
-        <Suspense>
-          <LazyInfoCardContainer />
-        </Suspense>
-        <ScaleBarContainer />
-        {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
-            direct child rather than joining a flex row. */}
-        <TimeBarContainer hidden={paletteOpen || splashVisible} />
-        {/* Flex column anchored bottom-left. */}
-        <div className={appStyles.leftStack}>
-          <NavigationPanelContainer />
-          <Suspense>
-            <LazySettingsPanelContainer />
-          </Suspense>
-        </div>
+        {isMobile ? (
+          // Dock, time row and the one sheet (selection card or panel): they
+          // stack above each other instead of each floating on its own.
+          <PhoneHudContainer hidden={paletteOpen || splashVisible} />
+        ) : (
+          <>
+            <Suspense>
+              <LazyInfoCardContainer />
+            </Suspense>
+            <ScaleBarContainer />
+            {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
+                direct child rather than joining a flex row. */}
+            <TimeBarContainer hidden={paletteOpen || splashVisible} />
+            {/* Flex column anchored bottom-left. */}
+            <div className={appStyles.leftStack}>
+              <NavigationPanelContainer />
+              <Suspense>
+                <LazySettingsPanelContainer />
+              </Suspense>
+            </div>
+          </>
+        )}
         <TopBarContainer />
         <Suspense>
           <LazyCommandPaletteContainer />

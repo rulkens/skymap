@@ -14,9 +14,9 @@
 // both prevents a throw and observes the call without leaking between tests.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
-import MobileSheet from '../../../src/components/InfoCard/MobileSheet/MobileSheet';
+import MobileSheet from '../../../src/components/MobileSheet/MobileSheet';
 
 describe('MobileSheet', () => {
   const originalScrollTo = HTMLElement.prototype.scrollTo;
@@ -67,5 +67,30 @@ describe('MobileSheet', () => {
       }),
     );
     expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({ top: 0 });
+  });
+
+  it('shows a titled close button for panel content and renders the children', () => {
+    const onClose = vi.fn();
+    render(
+      createElement(MobileSheet, {
+        resetKey: 'panel:places',
+        panel: { title: 'Places', onClose },
+        children: createElement('p', null, 'marker'),
+      }),
+    );
+    expect(screen.getByRole('heading', { name: 'Places' })).toBeTruthy();
+    expect(screen.getByText('marker')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Close Places' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no title row or close button for the selection card', () => {
+    render(
+      createElement(MobileSheet, {
+        resetKey: 'galaxy:42',
+        children: createElement('p', null, 'marker'),
+      }),
+    );
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

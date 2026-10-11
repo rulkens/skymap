@@ -20,7 +20,6 @@
  */
 
 import type { ReactNode } from 'react';
-import cx from 'classnames';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import styles from './ScaleBar.module.css';
 
@@ -39,7 +38,7 @@ type ScaleBarProps = {
  */
 export function ScaleBar({ scale }: ScaleBarProps): ReactNode {
   return (
-    <div className={cx(styles.scaleBar, 'scaleBar')} aria-label="Scale reference">
+    <div className={styles.scaleBar} aria-label="Scale reference">
       {/* Label: pre-formatted string like "500 Mpc" or "2 Gpc" */}
       <span className={styles.scaleLabel}>{scale.label}</span>
 

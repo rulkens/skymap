@@ -207,6 +207,14 @@
   transition: var(--transition-fade);
 }
 
+/* Bare mode: the host's surface shows through; only type and padding remain. */
+.bare {
+  padding: var(--space-6) var(--space-7);
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
+  user-select: none;
+}
+
 .bodyContent {
   padding: var(--space-6) var(--space-7);
 }
