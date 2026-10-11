@@ -1,33 +1,10 @@
 /**
- * starCatalogFetcher — `Fetcher<StarOctree, StarCatalogReq>`.
- *
- * ONE fetcher for EVERY `starCatalog` row of the SOURCE_REGISTRY, keyed by
- * `req.source`. Unlike the galaxy fetcher — which reaches for
- * `tierFilenameForSource` (that helper narrows to galaxy-catalog rows,
- * see `tierTargets.ts`) — this builds the filename directly from the
- * source entry's own `binBaseName`. Parameterizing by `req.source` rather
- * than hard-coding the Gaia row is what lets a future famous-star catalog
- * reuse this fetcher unchanged: the request dimension IS the reuse seam.
- *
- * ### Two formats, one shape
- *
- * The row's `format` picks the file: `skst` is one `-<tier>.bin` per tier,
- * run through the sealed compression codec (`starBinCodec.ts`) so its decode
- * is async; `octree` is one tier-less index object (the tier sizes the chunk
- * pool instead). Both adapt to the `StarOctree` the renderer draws.
- *
- * ### Type guard, not a cast
- *
- * `SOURCE_REGISTRY[req.source]` is the full `SourceEntry` union; the runtime
- * check both narrows it to `SurveyStarCatalogSourceEntry` (giving
- * `binBaseName`) AND fails loudly if a caller wires this fetcher to
- * a source that ships no bin — a config bug the type system can't catch once
- * the request's `source` is a broad `SourceType`. The `binBaseName !== null`
- * half of the guard is what excludes a SEEDED star catalog: it is built in
- * code, so there is no filename to assemble and nothing to fetch.
- *
- * On 404 the slot machinery's error path leaves the catalog unregistered;
- * the star layer simply doesn't draw.
+ * starCatalogFetcher — `Fetcher<StarOctree, StarCatalogReq>` for every streamed `starCatalog`
+ * row, named from the row's own `binBaseName`. The row's `format` picks the file and what `tier`
+ * means: `skst` is one `-<tier>.bin` per tier through the async compression codec; `octree` is
+ * one tier-less index object (the tier sizes the chunk pool instead). Both adapt to the
+ * `StarOctree` the renderer draws. A seeded catalog (`binBaseName` null) is built in code and
+ * has nothing to fetch, so the guard below excludes it.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';

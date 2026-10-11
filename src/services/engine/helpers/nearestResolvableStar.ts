@@ -1,44 +1,11 @@
 /**
- * nearestResolvableStar — the nearest catalogued field star within a small
- * (~AU-scale) world radius of the camera, reconstructed to the EXACT position
- * the sprite/pick names it at. This is the presence query behind the close-range
- * field-star sphere: at solar-radius range the Gaia point sprite is
- * distance-retired in-shader (its f32 reconstruction swims), so the sphere is the
- * star's only geometry — and WHICH star gets a sphere is a fact about proximity,
- * not about selection.
- *
- * ── Why an expanded-box octree descent, not "the leaf containing the camera" ──
- *
- * The obvious query — descend to the leaf whose box contains the camera, scan
- * its records — is WRONG at a leaf face. A star can sit within the (AU-scale)
- * search radius of the camera yet across a leaf boundary from it: the camera
- * lands in leaf B while the nearest star lives in the adjacent leaf A, a
- * fraction of a cell away. Scanning only B's records misses A entirely.
- *
- * So this descends every node whose box, EXPANDED by the search radius on each
- * axis, still contains the camera (a per-axis interval test). That admits a
- * neighbour leaf exactly when a star in it could be within range, and no
- * farther. The descent is an explicit stack (no per-node closures on the hot
- * path).
- *
- * ── Why reconstruct through the SHARED starNodeOriginRelCamMpc formula ────────
- *
- * A leaf's records are reconstructed to world Mpc EXACTLY the way
- * `resolveStarRecord` does — `starNodeOriginRelCamMpc(grid, morton, level, SUN)`
- * for the node's heliocentric origin, plus the record's offset scaled by the
- * box. Sharing that one formula is what guarantees the sphere lands where the
- * sprite drew and where the pick resolves; a second derivation off the index's
- * box arrays could drift and place the sphere off the star.
- *
- * ── Why it is cheap enough to run every frame ─────────────────────────────────
- *
- * The search radius is ~an AU, so away from any star the descent dies almost
- * immediately: the root box contains the camera (you are inside the catalog
- * volume), but its CHILDREN thin out — only the handful whose expanded boxes
- * still straddle the camera are pushed, and one level down almost none do. The
- * walk therefore touches ~O(tree height) nodes near the camera, not the whole
- * tree, and unpacks records only at the one-or-two leaves that actually
- * neighbour the camera. All math is plain f64 JS numbers.
+ * nearestResolvableStar — the nearest catalogued field star within a small (~AU) radius of the
+ * camera, at the exact position the sprite and pick name it: at that range the point sprite is
+ * retired, so this picks which star gets the close-range sphere. The descent enters every node
+ * whose box, grown by the radius on each axis, contains the camera: the nearest star can sit
+ * across a leaf face from the camera's own leaf. Records are placed through
+ * `starNodeOriginRelCamMpc`, the formula `resolveStarRecord` and the renderer use, so the
+ * sphere lands where the sprite drew.
  */
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
