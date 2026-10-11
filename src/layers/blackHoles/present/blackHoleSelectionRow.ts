@@ -8,6 +8,7 @@
  */
 
 import { Source } from '../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
 import { BLACK_HOLES } from '../data/blackHoles';
@@ -29,6 +30,10 @@ export function blackHoleSelectionRow(): SelectionKindRow<
     resolvePick: (_entry, pick) => {
       const row = BLACK_HOLES[pick.localIdx];
       return row ? { type: 'blackHole', id: row.id } : null;
+    },
+    encodePick: (ref) => {
+      const index = BLACK_HOLES.findIndex((hole) => hole.id === ref.id);
+      return index < 0 ? null : packSelection(Source.SgrAStar, index + PICK_SENTINEL_OFFSET);
     },
     extractRow: (ref, simDays) => {
       const row = BLACK_HOLES.find((hole) => hole.id === ref.id);

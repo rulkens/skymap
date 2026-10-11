@@ -26,6 +26,26 @@ function makeState(): EngineState {
   // never calls it.
   return {
     subsystems: { fades: { fadeTo: vi.fn() } },
+    selection: { hover: null, select: null },
+    selectionKindRows: [],
+  } as unknown as EngineState;
+}
+
+// Two selectable subjects whose pick ids are their numeric ref index, so a
+// label's `pickId` names the ref without the real source registry.
+const HIGHLIGHT_ROWS = [
+  {
+    type: 'body',
+    encodePick: (ref: { id: string }) => (ref.id === 'earth' ? 7 : ref.id === 'mars' ? 8 : null),
+  },
+] as unknown as EngineState['selectionKindRows'];
+
+function makeHighlightState(hover: string | null, select: string | null): EngineState {
+  const ref = (id: string | null) => (id === null ? null : { type: 'body', id });
+  return {
+    ...makeState(),
+    selection: { hover: ref(hover), select: ref(select) },
+    selectionKindRows: HIGHLIGHT_ROWS,
   } as unknown as EngineState;
 }
 
@@ -238,6 +258,88 @@ describe('label2DDirector', () => {
     color = [0.8, 0.84, 0.88, 1];
     dir.runFrame(makeState(), makeCtx(500));
     expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
+  });
+
+  describe('highlight', () => {
+    const BASE: Label2D = { ...SAMPLE_LABEL, color: [0.5, 0.5, 0.5, 0.8], pickId: 7 };
+
+    function flushWith(
+      config: Label2DDirectorConfig,
+      ctx: FrameView,
+      state: EngineState,
+      labels: Label2D[],
+    ) {
+      const dir = createLabel2DDirector(config);
+      const labelStub = makeLabelStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never);
+      dir.registerProducer(makeProducer('p', labels));
+      dir.runFrame(state, ctx);
+      return { dir, flushed: flushedLabels(labelStub).at(-1)![0]! };
+    }
+
+    it('whitens a hovered label by the hover amount and leaves alpha alone', () => {
+      const { flushed } = flushWith(
+        COSMO_LABEL_DIRECTOR,
+        makeCtx(300),
+        makeHighlightState('earth', null),
+        [BASE],
+      );
+      expect(flushed.color![0]).toBeCloseTo(0.5 * 0.4 + 0.6, 12);
+      expect(flushed.color![3]).toBe(0.8);
+    });
+
+    it('whitens a selected label further, and selected wins when both name it', () => {
+      const { flushed } = flushWith(
+        COSMO_LABEL_DIRECTOR,
+        makeCtx(300),
+        makeHighlightState('earth', 'earth'),
+        [BASE],
+      );
+      expect(flushed.color![0]).toBeCloseTo(0.5 * 0.1 + 0.9, 12);
+    });
+
+    it('never touches a label with no pick id, a different subject, or no colour', () => {
+      const labels: Label2D[] = [
+        { ...BASE, id: 'a', pickId: undefined },
+        { ...BASE, id: 'b', pickId: 8, worldPos: [0.5, 0, 0] },
+        { ...SAMPLE_LABEL, id: 'c', pickId: 7, worldPos: [-0.5, 0, 0] },
+      ];
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never);
+      dir.registerProducer(makeProducer('p', labels));
+      dir.runFrame(makeHighlightState('earth', null), makeCtx(300));
+      const flushed = flushedLabels(labelStub).at(-1)!;
+      expect(flushed.find((l) => l.id === 'a')!.color).toEqual(BASE.color);
+      expect(flushed.find((l) => l.id === 'b')!.color).toEqual(BASE.color);
+      expect(flushed.find((l) => l.id === 'c')!.color).toBeUndefined();
+    });
+
+    it('the leader follows the label colour on the lifting (NEAR0) config', () => {
+      const lifted: Label2D = { ...BASE, lift: { subjectSizePx: 10 } };
+      const { flushed } = flushWith(
+        FOREGROUND_LABEL_DIRECTOR,
+        makeNear0Ctx(0),
+        makeHighlightState(null, 'earth'),
+        [lifted],
+      );
+      expect(flushed.leader).toBeDefined();
+      expect(flushed.leader!.color).toEqual(flushed.color);
+      expect(flushed.color![0]).toBeGreaterThan(0.9);
+    });
+
+    it('re-uploads when only the hover changes at a fixed label set', () => {
+      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never);
+      dir.registerProducer(makeProducer('p', [BASE]));
+      dir.runFrame(makeHighlightState(null, null), makeCtx(300));
+      dir.runFrame(makeHighlightState(null, null), makeCtx(400));
+      const settled = labelStub.setLabels.mock.calls.length;
+
+      dir.runFrame(makeHighlightState('earth', null), makeCtx(500));
+      expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
+    });
   });
 
   it('re-uploads when a label loses its pick id at fixed id (focus strips it)', () => {

@@ -7,6 +7,7 @@
 
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
+import { structurePickId } from '../../../utils/picking/structurePickId';
 import { resolveStructureFromPick } from '../helpers/resolveStructureFromPick';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
@@ -36,6 +37,13 @@ export function structureSelectionRow(
         structureIndex: pick.localIdx,
       });
       return record ? { type: 'structure', id: record.id } : null;
+    },
+    encodePick: (ref) => {
+      const { structures } = deps();
+      const record = structures.byId(ref.id);
+      if (!record) return null;
+      const index = structures.byCategory(record.category).findIndex((r) => r.id === ref.id);
+      return index < 0 ? null : structurePickId(record.category, index);
     },
     extractRow: (ref) => deps().structures.byId(ref.id),
     focusId: {

@@ -218,12 +218,3 @@ export const RING_PICK_MIN_ALPHA = 0.1;
 
 /** The hover gain on a structure ring: a softer cue than the selected one, which outranks it. */
 export const HOVERED_RING_BRIGHTEN = 1.3;
-
-/**
- * How far a hovered structure's label moves toward white. A blend, not a gain:
- * label colours already sit near full value, where a gain would only clip.
- */
-export const HOVERED_LABEL_WHITEN = 0.6;
-
-/** The selected structure's label goes further toward white than a hovered one. */
-export const SELECTED_LABEL_WHITEN = 0.9;

@@ -9,6 +9,7 @@ import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { BODY_PICK_ROWS } from '../../../data/bodies/bodyPickRows';
 import { BODY_FOCUS_PREFIX } from '../../url/bodyFocusId';
+import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { isRegistryBodyId } from '../../../utils/scene/isRegistryBodyId';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
@@ -33,6 +34,7 @@ export function bodySelectionRow(): SelectionKindRow<BodyRef> {
       const body = seeds[pick.localIdx];
       return body ? { type: 'body', id: body.id } : null;
     },
+    encodePick: (ref) => sceneBodyPickId(ref.id),
     extractRow: (ref, simDays) => {
       if (!SCENE_BODIES.some((b) => b.id === ref.id)) return null;
       return bodyRowAt(ref.id, deriveBodyStates(simDays).get(ref.id)!.positionMpc);
