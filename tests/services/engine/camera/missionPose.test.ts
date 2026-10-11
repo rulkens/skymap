@@ -21,7 +21,8 @@ import { beginDrag, endDrag, setMission } from '../../../../src/state/camera/cam
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { flybyNormal } from '../../../../src/utils/exhibits/mission/flybyNormal';
+import { bodyRelativeState } from '../../../../src/utils/exhibits/mission/bodyRelativeState';
+import { orbitAnglesLookingAlong } from '../../../../src/utils/camera/orbitAnglesLookingAlong';
 import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
 import { voyagerMissions } from '../../../../src/data/exhibits/voyagerMissions';
 import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
@@ -81,15 +82,19 @@ function worldPose(ctx: ReturnType<typeof ctxAt>) {
 }
 
 describe('missionPose', () => {
-  it('looks along the flyby normal at closest approach, zero offsets', () => {
+  it('looks from outside the bend at the cruise height above the ecliptic, zero offsets', () => {
     const pose = worldPose(ctxAt(missionOf(), tc));
     const eye = eyeMpcOf(pose, BASIS);
-    const back = normalize3([
-      eye[0] - pose.target[0],
-      eye[1] - pose.target[1],
-      eye[2] - pose.target[2],
-    ]);
-    expect(dot3(back, flybyNormal(neptune)!)).toBeCloseTo(-1, 9);
+    const ecliptic = ORIENTATION_FRAMES.ecliptic;
+    const view = orbitAnglesLookingAlong(
+      [pose.target[0] - eye[0], pose.target[1] - eye[1], pose.target[2] - eye[2]],
+      ecliptic,
+    );
+    expect(view.pitch).toBeCloseTo(voyagerMissions.pose.pitch, 9);
+    // Eye beyond the craft on the planet's far side from it at closest approach.
+    const { rKm } = bodyRelativeState('voyager2', 'neptune', tc)!;
+    const outside = orbitAnglesLookingAlong([-rKm[0], -rKm[1], -rKm[2]], ecliptic);
+    expect(view.yaw).toBeCloseTo(outside.yaw, 9);
   });
 
   it.each([-2, 0, 2])('keeps Voyager 2 and Neptune in frame at closest %+d d', (dDays) => {
