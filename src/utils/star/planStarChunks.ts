@@ -13,7 +13,7 @@ import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
 import type { StarChunkPlan } from '../../layers/starCatalog/@types/StarChunkPlan';
 import type { StarChunkRequest } from '../../layers/starCatalog/@types/StarChunkRequest';
-import { NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
+import { MAX_GRID_BITS, NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import {
   CUT_MAX_VIEWS,
@@ -24,6 +24,9 @@ import {
 } from '../../layers/starCatalog/render/starCutLayout';
 
 const AXES = 3;
+// Depth-first with all children pushed holds at most seven siblings per level plus the root.
+// Shared across calls: the walk is synchronous.
+const stack = new Int32Array(1 + (OCTANTS - 1) * (MAX_GRID_BITS + 1));
 
 export function planStarChunks(
   octree: StarOctree,
@@ -86,7 +89,6 @@ export function planStarChunks(
     if (requests.length > limit) requests.pop();
   };
 
-  const stack = new Int32Array(nodes.count);
   let top = 0;
   stack[top++] = nodes.count - 1;
   while (top > 0) {
