@@ -92,9 +92,11 @@ describe('labelsPass.draw', () => {
       VIEW_STUB.viewportPx,
       ctx.drawPxPerRad,
       {
-        colorView: sentinelColorView,
-        depthView: FAR_DEPTH_VIEW,
-        frame: null,
+        scene: {
+          colorView: sentinelColorView,
+          depthView: FAR_DEPTH_VIEW,
+          frame: null,
+        },
       },
     );
   });
@@ -108,6 +110,6 @@ describe('labelsPass.draw', () => {
 
     expect(viewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(drawSpy.mock.calls[0]![4]).toBeUndefined();
+    expect(drawSpy.mock.calls[0]![4]).toEqual({ scene: undefined });
   });
 });

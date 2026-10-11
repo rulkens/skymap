@@ -39,13 +39,17 @@ export type LabelRenderer = {
    * bodies already cover (that target's alpha) and by whether the sampled
    * scene depth stands in front of the subject — see lib/sceneDepth.wesl.
    * A plain instance ignores it.
+   *
+   * `clipScale` is the clip units of `viewProj` relative to Mpc (default 1):
+   * the NEAR0 overlays rescale their matrix, and the vertex stage must scale
+   * the em into the same units before dividing by `clip.w`.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    scene?: OverlaySceneOcclusion,
+    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

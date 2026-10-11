@@ -35,21 +35,21 @@
  * galaxy data — one level of indirection in exchange for a much smaller
  * per-glyph stride.
  *
- * ## Uniform layout (CameraUniforms, 80 bytes)
+ * ## Uniform layout (CameraUniforms prefix + em scale, 96 bytes)
  *
- * The labels shaders use only the shared `CameraUniforms` prefix from
- * `shaders/lib/camera.wesl` — no renderer-specific tail.  That prefix is:
+ * The shared `CameraUniforms` prefix from `shaders/lib/camera.wesl`, then
+ * this renderer's one tail field:
  *
  *   bytes  0..63  viewProj     mat4x4<f32>
  *   bytes 64..71  viewportPx   vec2<f32>
  *   bytes 72..75  pxPerRad    f32 (CameraUniforms focal term)
  *   bytes 76..79  _pad0       one reserved f32 (must stay zero)
+ *   bytes 80..83  emClipScale  f32 (clip units of viewProj relative to Mpc)
+ *   bytes 84..95  padding      WGSL rounds the struct to its 16-byte alignment
  *
- * The size const and the prefix write both come from
- * `lib/cameraUniforms.ts`, the TS twin of the WESL struct — if
- * `CameraUniforms` ever grows past 80 bytes, that one module is the
- * place to change.  See `instancedQuadRenderer.ts` for the same prefix
- * with a per-renderer tail after it.
+ * The prefix write comes from `lib/cameraUniforms.ts`, the TS twin of the
+ * WESL struct.  See `instancedQuadRenderer.ts` for the same prefix-plus-tail
+ * pattern.
  *
  * ## Blend mode
  *
@@ -137,6 +137,13 @@ const LABEL_DATA_BYTES = 96;
  */
 const GLYPH_INSTANCE_BYTES = 40;
 
+// ─── uniform constants ────────────────────────────────────────────────────
+
+// `struct Uniforms` in io.wesl: the 80-byte camera prefix + emClipScale, padded to 16.
+const UNIFORM_BYTES = 96;
+// f32 index of `emClipScale` (byte 80).
+const EM_CLIP_SCALE_F32_INDEX = CAMERA_UNIFORM_BYTES / 4;
+
 // ─── capacity constants ───────────────────────────────────────────────────
 
 // Starting label-storage size; `setLabels` grows it in power-of-two steps
@@ -182,10 +189,6 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
  * consumes a per-frame `OverlaySceneOcclusion`.  The default (opts omitted)
  * keeps the plain single-BGL pipeline — byte-for-byte unchanged.
- *
- * `opts.clipScale` states the clip units of the matrices this instance will be
- * drawn with, so the em it packs is divisible by their `clip.w` — the NEAR0
- * overlays rescale theirs (`near0OverlayVpF32`). Default 1 = matrix in Mpc.
  */
 export function createLabelRenderer(
   ctx: GpuContext,
@@ -194,11 +197,9 @@ export function createLabelRenderer(
     atlases: LoadedFontAtlases;
     textLayout: TextLayout;
     occludeAgainstScene?: boolean;
-    clipScale?: number;
   },
 ): LabelRenderer {
   const { targetFormat, atlases, textLayout } = init;
-  const clipScale = init.clipScale ?? 1;
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
@@ -441,7 +442,7 @@ export function createLabelRenderer(
     // ── Buffers ──────────────────────────────────────────────────────────
     uniformBuffer = device.createBuffer({
       label: 'label-uniforms',
-      size: CAMERA_UNIFORM_BYTES,
+      size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -550,9 +551,7 @@ export function createLabelRenderer(
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
-      // The em rides the same clip units as the matrix `draw` is handed: the
-      // vertex stage sizes glyphs as `worldEmMpc / clip.w`.
-      labelBuf[labelBase + 3] = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * clipScale;
+      labelBuf[labelBase + 3] = label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT;
 
       // Public colour API is STRAIGHT RGBA — producers write the natural
       // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment
@@ -652,8 +651,9 @@ export function createLabelRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    scene?: OverlaySceneOcclusion,
+    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
   ): void {
+    const scene = extras?.scene;
     if (
       !device ||
       !plainPipeline ||
@@ -666,11 +666,11 @@ export function createLabelRenderer(
     }
     if (currentGlyphCount === 0) return;
 
-    // Pack uniforms (80 bytes = CameraUniforms prefix only).  The pad
-    // float 19 stays zero via Float32Array zero-init — the shared writer
-    // leaves it untouched by design.
-    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    // The pad float 19 stays zero via Float32Array zero-init — the shared
+    // writer leaves it untouched by design.
+    const uni = new Float32Array(UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
+    uni[EM_CLIP_SCALE_F32_INDEX] = extras?.clipScale ?? 1;
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion

@@ -62,7 +62,7 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
   // Perspective-driven size.  EM_PX_RETUNE preserves the pre-pxPerRad label
   // size at the app's 60 degree fov (see its declaration); the CPU twins
   // 'labelScreenRect' and 'liftedLabelPlacement' apply the same factor.
-  let pxPerEm = worldLenToPx(u.cam, worldEmMpc, clip.w) * EM_PX_RETUNE;
+  let pxPerEm = worldLenToPx(u.cam, worldEmMpc * u.emClipScale, clip.w) * EM_PX_RETUNE;
   let displayEmPx = clamp(pxPerEm, minPx, maxPx);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 

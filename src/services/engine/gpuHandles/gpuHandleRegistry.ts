@@ -32,7 +32,6 @@ import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/dom
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
-import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
@@ -133,11 +132,7 @@ export const GPU_HANDLE_ROWS = [
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
         textLayout: deps.textLayout,
-        // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
-        // packs must be in those clip units too — the pair the vertex stage
-        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
         occludeAgainstScene: true,
-        clipScale: NEAR0_OVERLAY_CLIP_SCALE,
       }),
   },
   {

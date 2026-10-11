@@ -9,6 +9,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { near0LabelProjection } from '../near0LabelProjection';
+import { NEAR0_OVERLAY_CLIP_SCALE } from '../near0OverlayClipScale';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
@@ -50,7 +51,11 @@ export const foregroundLabelsPass: ContentPass = {
     if (lineRenderer !== null) {
       lineRenderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, scene);
     }
-    renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, scene);
+    // The captions' em rides the rescaled NEAR0 matrix, so it scales with it.
+    renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, {
+      scene,
+      clipScale: NEAR0_OVERLAY_CLIP_SCALE,
+    });
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn captions, stamped with

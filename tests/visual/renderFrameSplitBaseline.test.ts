@@ -638,7 +638,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "marker-lines",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,object",
           "renderer": "labels",
         },
       ]

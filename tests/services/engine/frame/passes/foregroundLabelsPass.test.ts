@@ -11,6 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { foregroundLabelsPass } from '../../../../../src/services/engine/frame/passes/foregroundLabelsPass';
+import { NEAR0_OVERLAY_CLIP_SCALE } from '../../../../../src/services/engine/frame/near0OverlayClipScale';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregroundLabelDirectorConfig';
@@ -182,7 +183,7 @@ describe('foregroundLabelsPass.draw', () => {
       projection.vpF32,
       projection.viewportPx,
       projection.pxPerRad,
-      SCENE_STUB,
+      { scene: SCENE_STUB, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
     ]);
   });
 

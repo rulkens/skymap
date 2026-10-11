@@ -71,7 +71,7 @@ export const labelsPass: ContentPass = {
       view.vp,
       view.viewportPx,
       ctx.drawPxPerRad,
-      overlaySceneOcclusion(ctx, view),
+      { scene: overlaySceneOcclusion(ctx, view) },
     );
   },
 

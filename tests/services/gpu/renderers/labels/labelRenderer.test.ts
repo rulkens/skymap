@@ -198,6 +198,34 @@ describe('LabelRenderer capacity growth', () => {
     return { ctx, createdBuffers, createBindGroupCalls };
   }
 
+  it('writes clipScale into the uniform tail after the 80-byte camera prefix', () => {
+    const { ctx, createdBuffers } = buildTrackingDevice();
+    const r = createLabelRenderer(ctx, {
+      targetFormat: ctx.format,
+      atlases: FIXTURE_ATLASES,
+      textLayout: FIXTURE_TEXT_LAYOUT,
+    });
+    r.setLabels([makeLabel('a')]);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const uniformBuffer = createdBuffers.find((b) => b.desc.label === 'label-uniforms')!;
+    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    const lastUniformWrite = () =>
+      writeBuffer.mock.calls
+        .filter((c) => c[0] === uniformBuffer.buffer)
+        .at(-1)![2] as Float32Array;
+
+    r.draw(pass, new Float32Array(16), [1280, 720], 1000);
+    expect(lastUniformWrite()[20]).toBe(1);
+    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { clipScale: 3 });
+    expect(lastUniformWrite()[20]).toBe(3);
+    expect(uniformBuffer.desc.size).toBe(lastUniformWrite().byteLength);
+  });
+
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
     const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
     const r = createLabelRenderer(ctx, {
