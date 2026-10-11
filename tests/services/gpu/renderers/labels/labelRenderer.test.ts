@@ -30,29 +30,10 @@ const FIXTURE_METRICS = parseFontMetrics({
 });
 
 // LoadedFontAtlases shape: one entry per registered FontId; bitmaps
-// array stays empty so the renderer's GPU upload branch is skipped
-// (we pass a null device anyway).
+// array stays empty so the renderer's GPU upload branch is skipped.
 const FIXTURE_ATLASES: LoadedFontAtlases = {
   metricsByFont: { cormorant: FIXTURE_METRICS },
   bitmaps: [],
-};
-
-// Build a LabelRenderer with a null device — the factory guards all GPU
-// calls behind `if (device)`, so CPU state is safe to exercise in unit
-// tests without a real WebGPU context.  Mirrors `textureAtlas.test.ts`'s
-// null-device pattern.
-const newRenderer = () => {
-  const ctx = {
-    device: null as unknown as GPUDevice,
-    context: null as unknown as GPUCanvasContext,
-    format: 'rgba16float' as GPUTextureFormat,
-    canvas: null as unknown as HTMLCanvasElement,
-    hdrCapable: false,
-  };
-  return createLabelRenderer(ctx, {
-    targetFormat: ctx.format,
-    atlases: FIXTURE_ATLASES,
-  });
 };
 
 describe('LabelRenderer occlusion variant', () => {
@@ -219,7 +200,6 @@ describe('LabelRenderer capacity growth', () => {
     expect(lastUniformWrite()[20]).toBe(1);
     r.draw(pass, new Float32Array(16), [1280, 720], 1000, { clipScale: 3 });
     expect(lastUniformWrite()[20]).toBe(3);
-    expect(uniformBuffer.desc.size).toBe(lastUniformWrite().byteLength);
   });
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {

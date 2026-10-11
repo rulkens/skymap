@@ -8,7 +8,7 @@
  * never drift from what the shader actually draws.  The extra quad
  * array allocation is irrelevant at label-set sizes (~50 labels of
  * ~20 glyphs), and callers that measure per frame memoize by
- * (font, text, align) anyway — see `LabelRenderer.measure`.
+ * (font, text, align) anyway — see `textLayoutOf`.
  *
  * Returns null when the text lays out to zero quads (empty string,
  * whitespace-only, or every glyph missing from the atlas): there is no

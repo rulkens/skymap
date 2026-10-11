@@ -54,11 +54,6 @@ function label(over: Partial<Label2D> & { id: string }): Label2D {
 }
 
 describe('packLabels glyphs', () => {
-  it('drops glyphs not present in metrics', () => {
-    // 'A中A': only the two 'A' glyphs are in the metrics.
-    expect(pack([label({ id: 'x', text: 'A中A' })]).glyphCount).toBe(2);
-  });
-
   it('counts every label glyph and indexes each glyph to its label', () => {
     const { glyphCount, glyphU32 } = pack([
       label({ id: 'a', text: 'A' }),

@@ -354,7 +354,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // and then nothing else keys the label's motion.  Keying the label's own
     // position closes that gap: a camera-derived label re-uploads on its
     // own, independent of whether its leader is present.  The glyph layout
-    // in `labelRenderer.setLabels` is cheap and label counts are tiny, so
+    // is memoised (`textLayoutOf`) and label counts are tiny, so
     // the per-orbit-frame re-upload this implies is the intended cost;
     // static-position producers (structures) keep their positions stable
     // and still benefit from the skip.  `color` is keyed too: a hovered or

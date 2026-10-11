@@ -12,7 +12,6 @@ import type { Label2DLiftPolicy } from './Label2DLiftPolicy';
  * than by which factory function got called.
  */
 export type Label2DDirectorConfig = {
-  readonly id: string;
   /** Resolves this frame's projection for the director's slab. Memoised per ctx. */
   readonly project: (ctx: FrameView) => Label2DProjection;
   readonly declutter: Label2DDeclutterPolicy;

@@ -15,7 +15,7 @@
  * Same convention every other freshly-extracted handle in the engine
  * follows (`thumbnailSubsystem`, `biasCorrectionSubsystem`,
  * the `Pass` object literals in `engine/frame/passes/`): factories return
- * typed handles, not class instances.  Internal state (CPU scratch buffers, running counts,
+ * typed handles, not class instances.  Internal state (CPU scratch buffers,
  * pipeline + bind-group references) is genuinely inaccessible from
  * outside the closure — there is no `this.glyphBuf` to reach in and
  * poke from a misbehaving caller — and the `type` aliases convention
@@ -27,10 +27,10 @@
  * ## Why a separate per-label storage buffer?
  *
  * All glyphs of one label share world position, color, and fade state.
- * Duplicating those 48 bytes into every glyph instance would bloat the
+ * Duplicating those 96 bytes into every glyph instance would bloat the
  * instance buffer and couple layout to label length.  Instead, each glyph
  * carries just its `localOffset`, `localSize`, `uvRect`, and `labelIndex`
- * (36 bytes/glyph), and the shader fetches shared state from `labels[]`.
+ * (40 bytes/glyph), and the shader fetches shared state from `labels[]`.
  * This is the same indirect-lookup pattern as `texturedQuadRenderer`'s per-instance
  * galaxy data — one level of indirection in exchange for a much smaller
  * per-glyph stride.
@@ -139,13 +139,13 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * across all labels (`capacity * MAX_GLYPHS_PER_LABEL`); growth scales that
  * pool with capacity, but a roster of unusually long labels can still
  * exhaust it and have glyphs silently dropped (the `currentGlyphCount >=
- * maxGlyphs` break in `setLabels`).
+ * maxGlyphs` break in `packLabels`).
  *
- * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
+ * `init.occludeAgainstScene` opts this instance into per-pixel attenuation
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
  * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
  * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
- * consumes a per-frame `OverlaySceneOcclusion`.  The default (opts omitted)
+ * consumes a per-frame `OverlaySceneOcclusion`.  The default (`init.occludeAgainstScene` omitted)
  * keeps the plain single-BGL pipeline — byte-for-byte unchanged.
  */
 export function createLabelRenderer(
@@ -165,7 +165,7 @@ export function createLabelRenderer(
 
   const metricsByFont = atlases.metricsByFont;
   // Pre-computed FontId → layer index lookup. Built once at construction
-  // time so the per-glyph pack loop in setLabels never has to call
+  // time so the per-glyph pack loop in `packLabels` never has to call
   // FONT_IDS.indexOf — that would be O(N) per glyph, O(N²) per label.
   const layerIndexOf: Readonly<Record<FontId, number>> = (() => {
     const lookup: Partial<Record<FontId, number>> = {};
@@ -176,9 +176,7 @@ export function createLabelRenderer(
   })();
 
   // First-font metrics serve as the canonical atlas-dimensions source
-  // (every layer is the same size — buildFontAtlas asserts this).  We
-  // also use it for layout when Label.font is missing, but post-Task
-  // 7 every Label carries `font` explicitly.
+  // (every layer is the same size — buildFontAtlas asserts this).
   const firstFontId = FONT_IDS[0]!;
   const firstMetrics: FontMetrics = metricsByFont[firstFontId];
 
@@ -441,10 +439,7 @@ export function createLabelRenderer(
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    // Upload each font's bitmap to its FONT_IDS-indexed layer.  Some
-    // tests pass an empty bitmap list (CPU-only state exercise); skip
-    // the upload in that case — the layout test only inspects
-    // CPU-side glyph packing, not the atlas contents.
+    // Upload each font's bitmap to its FONT_IDS-indexed layer.
     for (let i = 0; i < atlases.bitmaps.length; i++) {
       const bitmap = atlases.bitmaps[i];
       if (bitmap == null) continue;

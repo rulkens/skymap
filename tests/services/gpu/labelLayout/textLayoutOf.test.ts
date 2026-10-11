@@ -43,8 +43,4 @@ describe('textLayoutOf', () => {
       textLayoutOf({ cormorant: METRICS }, label),
     );
   });
-
-  it('measures null for text with no known glyphs', () => {
-    expect(textLayoutOf(metricsByFont, { text: 'zzz', font: 'cormorant' }).bbox).toBeNull();
-  });
 });

@@ -85,7 +85,7 @@ export function liftedLabelPlacement(input: {
   pxPerRad: number;
   /** The subject's apparent size (px) — drives the proportional lift. */
   subjectSizePx: number;
-  /** The caption's measured ink bbox (`labelRenderer.measure`), or null. */
+  /** The caption's measured ink bbox (`textLayoutOf`), or null. */
   textBbox: LabelBBox | null;
   /** The caption's `worldEmMpc` — the shader's primary size driver. */
   worldEmMpc: number;
