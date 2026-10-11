@@ -553,8 +553,8 @@ export function nearestResolvableStar(octree: StarOctree, resident: StarResidenc
 
 No test: a console line behind `import.meta.env.DEV`.
 
-- [ ] When `inFlightCount()` returns to 0 after at least one landing, log once per settle: `` `[stars] ${binBaseName}: ${fetched}/${total} chunks, ${(bytes / 1e6).toFixed(1)} MB fetched, ${resident} resident` ``. This is the A/B's bytes-and-chunks readout (spec §5.6).
-- [ ] Commit.
+- [x] When `inFlightCount()` returns to 0 after at least one landing, log once per settle: `` `[stars] ${binBaseName}: ${fetched}/${total} chunks, ${(bytes / 1e6).toFixed(1)} MB fetched, ${resident} resident` ``. This is the A/B's bytes-and-chunks readout (spec §5.6).
+- [x] Commit.
 
 ## Group D: deploy, docs, the real bake and the A/B
 
