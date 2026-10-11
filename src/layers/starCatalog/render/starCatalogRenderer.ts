@@ -120,7 +120,7 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  function upload(source: SourceType, octree: StarOctree, slots: number): void {
+  function upload(source: SourceType, octree: StarOctree, slots: number): number {
     const poolSlots = Math.min(slots, octree.chunks.length);
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, poolSlots);
@@ -130,7 +130,7 @@ export function createStarCatalogRenderer(
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
-    if (packed === null) return;
+    if (packed === null) return poolSlots;
 
     const recordsBuffer = device.createBuffer({
       label: `star-catalog-records-${source}`,
@@ -151,6 +151,7 @@ export function createStarCatalogRenderer(
       recordsBuffer,
       recordsBindGroup,
     });
+    return poolSlots;
   }
 
   function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
