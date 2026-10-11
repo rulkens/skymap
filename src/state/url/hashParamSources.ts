@@ -196,7 +196,7 @@ const focusSource: HashParamSource = {
 const timeSource: HashParamSource = {
   key: 't',
   deepLink: true,
-  // A chapter step moves the clock from the time slice's extraReducer, outside the `time/` prefix.
+  // An event step moves the clock from the time slice's extraReducer, outside the `time/` prefix.
   writesOn: [(action) => action.type.startsWith(`${timeRoute}/`), stepToMissionEvent.match],
   write: (state) => {
     const time = selectTimeState(state);

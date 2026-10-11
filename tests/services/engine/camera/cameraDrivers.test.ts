@@ -330,21 +330,21 @@ describe('pickWinner', () => {
 });
 
 describe('CAMERA_DRIVERS — mission', () => {
-  const ride = CAMERA_DRIVERS.find((d) => d.id === 'mission')!;
+  const mission = CAMERA_DRIVERS.find((d) => d.id === 'mission')!;
 
   it('ties no other driver, so no outcome rests on table order', () => {
-    const others = CAMERA_DRIVERS.filter((d) => d !== ride).map((d) => d.priority);
-    expect(others).not.toContain(ride.priority);
+    const others = CAMERA_DRIVERS.filter((d) => d !== mission).map((d) => d.priority);
+    expect(others).not.toContain(mission.priority);
   });
 
   it('outranks the follow rows but yields to a visitor-started tween', () => {
     const p = (id: string) => CAMERA_DRIVERS.find((d) => d.id === id)!.priority;
-    expect(ride.priority).toBeGreaterThan(p('followApproach'));
-    expect(ride.priority).toBeLessThan(p('tween'));
+    expect(mission.priority).toBeGreaterThan(p('followApproach'));
+    expect(mission.priority).toBeLessThan(p('tween'));
   });
 
   it('commits its pose on the edge, so the next winner starts from the mission frame', () => {
-    expect(ride.commitsOnEdge).toBe(true);
+    expect(mission.commitsOnEdge).toBe(true);
   });
 
   it('keeps the camera through a drag, which turns its view about the craft', () => {

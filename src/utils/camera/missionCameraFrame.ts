@@ -1,9 +1,10 @@
 /**
  * missionCameraFrame — the mission camera's geometry at `simDays` before the visitor's offsets:
  * aim at the mission frame's centre, look from outside the flyby's bend near a planet or along the
- * exhibit's cruise bearing far from one, stand back far enough that the frame's sphere fits. The view direction switches regime with hysteresis on the frame radius
- * (cruise above 0.5 AU, near again below 0.05 AU; `wasCruise` null on a first frame), so a radius
- * hovering at a threshold cannot flap it. Null when a body the frame needs has no position.
+ * exhibit's cruise bearing far from one, stand back far enough that the frame's sphere fits. The
+ * view direction switches regime with hysteresis on the frame radius (cruise above 0.5 AU, near
+ * again below 0.05 AU; `wasCruise` null on a first frame), so a radius hovering at a threshold
+ * cannot flap it. Null when a body the frame needs has no position.
  */
 
 import type { CameraMission } from '../../@types/camera/CameraMission';

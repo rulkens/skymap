@@ -59,7 +59,6 @@ describe('a t= restore while a mission profile plays', () => {
         startWallMs: 0,
         wallMs: Float64Array.from([0, 10_000]),
         simDays: Float64Array.from([2460000, 2460010]),
-        speedIndex: 2,
       },
     };
     let after: TimeState = profiled;

@@ -28,11 +28,11 @@ import styles from './ExhibitTimeline.module.css';
 export type TimelineTrackProps = {
   readonly events: readonly MissionEvent[];
   readonly stops: readonly MissionStop[];
-  readonly lanes: readonly TimelineLane[];
+  readonly lane: TimelineLane;
   readonly axis: TimelineAxis;
   readonly simMs: number;
   readonly endMs: number;
-  readonly currentId: string | null;
+  readonly currentId: string;
   readonly onSeekMs: (ms: number) => void;
   readonly onStep: (eventId: string) => void;
 };
@@ -46,7 +46,7 @@ const pct = (fraction: number) => `${fraction * 100}%`;
 function TimelineTrack({
   events,
   stops,
-  lanes,
+  lane,
   axis,
   simMs,
   endMs,
@@ -57,6 +57,8 @@ function TimelineTrack({
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
   const thumb = timelineFraction(simMs, axis);
   const firstMs = stops[0]!.ms;
+  const from = timelineFraction(firstMs, axis);
+  const to = timelineFraction(Math.min(simMs, endMs), axis);
   const seek = (ms: number) => onSeekMs(Math.min(endMs, Math.max(firstMs, ms)));
   // Each event's left edge: its stop's boundary, nudged apart from the stop's other events.
   const dotLeft = new Map(
@@ -125,58 +127,45 @@ function TimelineTrack({
         aria-valuemin={0}
         aria-valuemax={1000}
         aria-valuenow={Math.round(thumb * 1000)}
-        aria-valuetext={describeTimelineInstant(simMs, events, lanes)}
+        aria-valuetext={describeTimelineInstant(simMs, events, lane.label)}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onKeyDown={onKeyDown}
       >
-        {lanes.map((lane) => {
-          const mine = events.filter((e) => e.bodyId === lane.bodyId);
-          const launchMs = missionEventMs(mine[0]!);
-          const from = timelineFraction(launchMs, axis);
-          const to = timelineFraction(Math.min(simMs, endMs), axis);
-          return (
-            <div
-              key={lane.bodyId}
-              className={styles.lane}
-              style={{ '--lane': lane.color } as CSSProperties}
-            >
-              <div className={styles.laneLine} />
-              <div
-                className={styles.laneFill}
-                style={{ left: pct(from), width: pct(simMs > launchMs ? to - from : 0) }}
-              />
-              {mine.map((e) => {
-                const at = dotLeft.get(e.id);
-                const fraction = at?.fraction ?? 0.5;
-                return (
-                  <span key={e.id} className={styles.tickAt} style={{ left: at?.left }}>
-                    <CompactInfoTip
-                      label={`${e.label} · ${formatEventDate(e.iso)}`}
-                      align={fraction < 1 / 3 ? 'start' : fraction > 2 / 3 ? 'end' : 'center'}
-                    >
-                      <button
-                        type="button"
-                        // Previous / Next are the accessible twin; the slider's children are presentational.
-                        tabIndex={-1}
-                        aria-hidden="true"
-                        aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
-                        onPointerDown={(ev) => ev.stopPropagation()}
-                        onClick={() => onStep(e.id)}
-                        className={cx(
-                          styles.tick,
-                          styles[e.kind],
-                          missionEventMs(e) <= simMs && styles.passed,
-                          currentId === e.id && styles.current,
-                        )}
-                      />
-                    </CompactInfoTip>
-                  </span>
-                );
-              })}
-            </div>
-          );
-        })}
+        <div className={styles.lane} style={{ '--lane': lane.color } as CSSProperties}>
+          <div className={styles.laneLine} />
+          <div
+            className={styles.laneFill}
+            style={{ left: pct(from), width: pct(simMs > firstMs ? to - from : 0) }}
+          />
+          {events.map((e) => {
+            const at = dotLeft.get(e.id)!;
+            return (
+              <span key={e.id} className={styles.tickAt} style={{ left: at.left }}>
+                <CompactInfoTip
+                  label={`${e.label} · ${formatEventDate(e.iso)}`}
+                  align={at.fraction < 1 / 3 ? 'start' : at.fraction > 2 / 3 ? 'end' : 'center'}
+                >
+                  <button
+                    type="button"
+                    // Previous / Next are the accessible twin; the slider's children are presentational.
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
+                    onPointerDown={(ev) => ev.stopPropagation()}
+                    onClick={() => onStep(e.id)}
+                    className={cx(
+                      styles.tick,
+                      styles[e.kind],
+                      missionEventMs(e) <= simMs && styles.passed,
+                      currentId === e.id && styles.current,
+                    )}
+                  />
+                </CompactInfoTip>
+              </span>
+            );
+          })}
+        </div>
         <div className={styles.thumb} style={{ left: pct(thumb) }}>
           <span className={styles.knob} />
         </div>

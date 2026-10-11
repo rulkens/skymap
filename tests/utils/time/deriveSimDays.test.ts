@@ -64,7 +64,6 @@ describe('deriveSimDays', () => {
         startWallMs: 1_000,
         wallMs: Float64Array.from([0, 1_000, 3_000]),
         simDays: Float64Array.from([10, 12, 20]),
-        speedIndex: 2,
       },
     };
 

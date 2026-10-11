@@ -1,5 +1,5 @@
 /**
- * voyager — both Voyagers from launch to today: their full trails and a mission timeline whose
+ * voyagerMissions — both Voyagers from launch to today: their full trails and a mission timeline whose
  * camera follows the selected craft (`missionHoldSaga`). The event times and flyby distances
  * are measured, in `MISSION_EVENTS`.
  */
@@ -96,10 +96,7 @@ export const voyagerMissions: Exhibit = {
       kind: 'timeline',
       heading: 'Timeline',
       events: MISSION_EVENTS,
-      crafts: [
-        { bodyId: 'voyager1' },
-        { bodyId: 'voyager2' },
-      ],
+      crafts: ['voyager1', 'voyager2'],
     },
     {
       kind: 'prose',

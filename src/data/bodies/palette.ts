@@ -35,6 +35,6 @@ export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
 export const VOYAGER_1_LIME: Vec3 = [0.289, 0.5, 0.051];
 export const VOYAGER_2_GREEN: Vec3 = [0.038, 0.5, 0.135];
 
-// Hubble's aluminium skin, cool enough to stay off the probes' gold; unread
+// Hubble's aluminium skin, cool enough to stay off the probes' lime and green; unread
 // today — mesh bodies draw no trail.
 export const HUBBLE_SILVER: Vec3 = [0.38, 0.42, 0.5];

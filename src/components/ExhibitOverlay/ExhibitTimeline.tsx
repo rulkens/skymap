@@ -99,7 +99,7 @@ function ExhibitTimeline({
         <TimelineTrack
           events={events}
           stops={stops}
-          lanes={[lane]}
+          lane={lane}
           axis={axis}
           simMs={simMs}
           endMs={endMs}

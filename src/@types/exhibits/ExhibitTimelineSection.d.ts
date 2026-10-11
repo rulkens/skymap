@@ -4,11 +4,10 @@
  */
 
 import type { MissionEvent } from '../missions/MissionEvent';
-import type { ExhibitTimelineCraft } from './ExhibitTimelineCraft';
 
 export type ExhibitTimelineSection = {
   readonly kind: 'timeline';
   readonly heading: string;
   readonly events: readonly MissionEvent[];
-  readonly crafts: readonly ExhibitTimelineCraft[];
+  readonly crafts: readonly string[];
 };

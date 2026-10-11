@@ -35,7 +35,6 @@ beforeAll(() => {
 describe('buildMissionProfile', () => {
   it('is strictly monotone in both columns, from the given instant to the end', () => {
     expect(atOne.startWallMs).toBe(1234);
-    expect(atOne.speedIndex).toBe(ONE);
     expect(atOne.simDays[0]).toBe(bounds[0]);
     expect(atOne.simDays.at(-1)).toBe(END);
     for (let i = 1; i < atOne.wallMs.length; i++) {

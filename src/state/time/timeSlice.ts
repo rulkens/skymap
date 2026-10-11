@@ -156,7 +156,7 @@ const timeSlice = createSlice({
       time.profile = profile;
     },
   },
-  // A chapter step lands the clock, paused, where `missionEventStepMs` says; a flyby step's
+  // An event step lands the clock, paused, where `missionEventStepMs` says; a flyby step's
   // saga then plays the mission profile from there.
   extraReducers: (builder) => {
     builder.addCase(stepToMissionEvent, (time, action) => {

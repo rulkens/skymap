@@ -182,7 +182,6 @@ describe('ExhibitTimelineContainer', () => {
             // One sim hour per wall second for a minute.
             wallMs: Float64Array.of(0, 60_000),
             simDays: Float64Array.of(2447762, 2447762 + 60 / 24),
-            speedIndex: MISSION_SPEEDS.length - 1,
           },
         }),
       );

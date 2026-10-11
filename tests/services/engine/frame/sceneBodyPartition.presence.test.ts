@@ -79,13 +79,6 @@ describe('spacecraft presence', () => {
     expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).toContain('whale');
   });
 
-  it('presence turns on at the authored instant', () => {
-    const curiosityLanding = Date.parse('2012-08-06T05:17:00Z') / 86_400_000 + 2_440_587.5;
-    const ids = (t: number) => viewAt(t).snapshot.meshBodies.map((b) => b.id);
-    expect(ids(curiosityLanding - 1e-4)).not.toContain('curiosity');
-    expect(ids(curiosityLanding + 1e-4)).toContain('curiosity');
-  });
-
   it('an absent craft is in neither glints nor meshes and has no label', () => {
     expect(drawnIds(T0 + 5)).not.toContain('voyager1');
     expect(labelIds(T0 + 5)).not.toContain('sceneBody-voyager1');

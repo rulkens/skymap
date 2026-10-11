@@ -1,7 +1,6 @@
 import { missionEventMs } from './missionEventMs';
 import { DAY_MS } from '../../../data/time/dayMs';
 import type { MissionEvent } from '../../../@types/missions/MissionEvent';
-import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';
 
 /**
  * Screen-reader text for the thumb: '12 November 1980, 23:46 UTC, Voyager 1 at Saturn'.
@@ -10,7 +9,7 @@ import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';
 export function describeTimelineInstant(
   ms: number,
   events: readonly MissionEvent[],
-  lanes: readonly TimelineLane[],
+  craftLabel: string,
 ): string {
   const date = new Date(ms).toLocaleDateString('en-GB', {
     timeZone: 'UTC',
@@ -21,7 +20,6 @@ export function describeTimelineInstant(
   const time = new Date(ms).toISOString().slice(11, 16);
   const near = events.find((e) => Math.abs(missionEventMs(e) - ms) <= DAY_MS);
   if (!near) return `${date}, ${time} UTC`;
-  const craft = lanes.find((l) => l.bodyId === near.bodyId)?.label ?? near.bodyId;
   const what = near.kind === 'flyby' ? `at ${near.label}` : near.label.toLowerCase();
-  return `${date}, ${time} UTC, ${craft} ${what}`;
+  return `${date}, ${time} UTC, ${craftLabel} ${what}`;
 }

@@ -13,7 +13,7 @@ export const selectTimelineEvents = (state: RootState): readonly MissionEvent[] 
   if (source?.kind !== 'exhibit') return null;
   for (const section of exhibitRegistry[source.id].body) {
     if (section.kind === 'timeline') {
-      const craft = selectMissionEmphasis(state) ?? section.crafts[0]!.bodyId;
+      const craft = selectMissionEmphasis(state) ?? section.crafts[0]!;
       return section.events.filter((e) => e.bodyId === craft);
     }
   }

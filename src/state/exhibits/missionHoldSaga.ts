@@ -54,7 +54,7 @@ export function* missionHoldSaga(
   let speedIndex = MISSION_SPEEDS.indexOf(1);
   let retarget = 0;
   const missionOf = (craftId: string | null, offsets = NO_MISSION_OFFSETS): CameraMission => {
-    const id = craftId ?? timeline.crafts[0]!.bodyId;
+    const id = craftId ?? timeline.crafts[0]!;
     return {
       craftId: id,
       stops: missionStops(timeline.events.filter((e) => e.bodyId === id)),

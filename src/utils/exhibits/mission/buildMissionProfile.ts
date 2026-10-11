@@ -72,6 +72,5 @@ export function buildMissionProfile(
     startWallMs,
     wallMs: Float64Array.from(wallMs),
     simDays: Float64Array.from(simDays),
-    speedIndex,
   };
 }

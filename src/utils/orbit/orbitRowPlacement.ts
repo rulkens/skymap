@@ -2,7 +2,7 @@
  * orbitRowPlacement — one element row placed at `simDays` around its focus: Kepler plus the
  * fitted Horizons correction, less any pair reflex. A moon's correction also shifts M before
  * Kepler so it stays on its conic. Shared by `deriveBodyStates` (the whole scene) and
- * `flybyRelativeState` (one body) so the two cannot place a body differently.
+ * `bodyPositionMpcAt` (one body) so the two cannot place a body differently.
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
