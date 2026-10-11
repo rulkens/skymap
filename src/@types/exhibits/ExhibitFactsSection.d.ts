@@ -2,4 +2,4 @@
 
 import type { ExhibitFact } from './ExhibitFact';
 
-export type ExhibitFactsSection = { kind: 'facts'; facts: readonly ExhibitFact[] };
+export type ExhibitFactsSection = { facts: readonly ExhibitFact[] };

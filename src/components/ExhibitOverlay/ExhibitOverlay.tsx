@@ -2,18 +2,14 @@
  * ExhibitOverlay — "notes on the scene": a full-screen takeover for a curated
  * exhibit (spec §4.2), sibling to TourOverlay under the same `runTakeoverSaga`
  * bracket. No card, no chrome besides an Exit pill — the caption and notes
- * sit directly over the live field behind their own scrims. Purely
- * presentational; a container resolves the exhibit and owns the toggle's state.
+ * sit directly over the live field behind their own scrims. Each section draws
+ * itself through its kind's Component; a container resolves the exhibit.
  */
 
 import type { CSSProperties, ReactNode } from 'react';
 
 import StopIcon from '../TourOverlay/StopIcon';
-import ExhibitNoteSection from './ExhibitNoteSection';
-import { exhibitSectionHasRule } from '../../utils/exhibits/exhibitSectionHasRule';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
-import type { ExhibitToggle } from '../../@types/exhibits/ExhibitToggle';
-import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import styles from './ExhibitOverlay.module.css';
 
 export type ExhibitOverlayProps = {
@@ -22,9 +18,6 @@ export type ExhibitOverlayProps = {
   readonly body: readonly ExhibitSection[];
   /** Seconds to wait before the copy animates in — the fly-in's near-landing. */
   readonly enterDelaySec: number;
-  readonly toggleOn: boolean;
-  readonly onToggle: (toggle: ExhibitToggle, on: boolean) => void;
-  readonly renderTimeline: (section: ExhibitTimelineSection) => ReactNode;
   readonly onExit: () => void;
 };
 
@@ -33,9 +26,6 @@ function ExhibitOverlay({
   lede,
   body,
   enterDelaySec,
-  toggleOn,
-  onToggle,
-  renderTimeline,
   onExit,
 }: ExhibitOverlayProps): ReactNode {
   // Every entrance in the stylesheet is offset from this one property, so the
@@ -55,25 +45,15 @@ function ExhibitOverlay({
 
       {body.length > 0 ? (
         <div className={styles.notes}>
-          {body.map((section, i) => (
+          {body.map(({ kind, data }, i) => (
             // The group is what enters — a section and the hairline above it
             // are one beat, and `--i` is its place in the stagger.
             <div
-              key={`${section.kind}-${i}`}
+              key={`${kind.id}-${i}`}
               className={styles.sectionGroup}
               style={{ '--i': i } as CSSProperties}
             >
-              {/* The data blocks sit behind a hairline; it separates sections,
-                  so it is the column's presentation, not a section's content. */}
-              {exhibitSectionHasRule(section) ? (
-                <div className={styles.rule} aria-hidden="true" />
-              ) : null}
-              <ExhibitNoteSection
-                section={section}
-                toggleOn={toggleOn}
-                onToggle={onToggle}
-                renderTimeline={renderTimeline}
-              />
+              <kind.Component data={data} />
             </div>
           ))}
         </div>

@@ -10,6 +10,11 @@ import { initialState as milkyWayInitialState } from '../../layers/milkyWay/stat
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import { SURVEYS_OFF } from './utils/surveysOff';
 import { COSMIC_WEB_DENSITY_OFF } from './utils/cosmicWebDensityOff';
+import { section } from '../../utils/exhibits/section';
+import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
+import { keyKind } from '../../components/ExhibitOverlay/kinds/keyKind';
+import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The Milky Way stays ON here, label included: that label IS the "you are
@@ -43,23 +48,19 @@ export const cosmicFlows: Exhibit = {
   pose: { target: [0, -0.01, 0], yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
   lede: 'The expansion of the universe carries galaxies apart. Underneath that, each one is also falling towards the mass nearest it.',
   body: [
-    {
-      kind: 'prose',
+    section(proseKind, {
       heading: 'What you’re seeing',
       text: 'Each ribbon follows the motion of matter once the expansion is subtracted. They run out of the emptier regions and converge where mass has collected. The Milky Way is being carried along at about 600 km/s, towards the Great Attractor.',
-    },
-    {
-      kind: 'prose',
+    }),
+    section(proseKind, {
       heading: 'How it was made',
       text: 'Only the part of a galaxy’s motion along our line of sight can be measured, from the gap between its distance and its redshift. Cosmicflows collected tens of thousands of those distances; a reconstruction fits the three-dimensional field that explains them. What is drawn is the average of ten thousand such fits.',
-    },
-    {
-      kind: 'prose',
+    }),
+    section(proseKind, {
       heading: 'Laniakea',
       text: 'The basin these flows fall into is <a href="https://en.wikipedia.org/wiki/Laniakea_Supercluster">Laniakea</a>, our supercluster — bounded by which way galaxies move rather than by where they sit.',
-    },
-    {
-      kind: 'key',
+    }),
+    section(keyKind, {
       heading: 'Key',
       ramp: FLOW_SPEED_RAMP,
       ends: ['At rest', FLOW_SPEED_MAX],
@@ -70,18 +71,16 @@ export const cosmicFlows: Exhibit = {
         on: [mergeSnapshot({ galaxyCatalogs: galaxyCatalogsInitialState })],
         off: [mergeSnapshot({ galaxyCatalogs: SURVEYS_OFF })],
       },
-    },
-    {
-      kind: 'facts',
+    }),
+    section(factsKind, {
       facts: [
         { label: 'Reconstructed box', value: '1000 Mpc' },
         { label: 'Grid', value: '128³' },
         { label: 'Voxel', value: '7.8 Mpc' },
         { label: 'Hot end', value: FLOW_SPEED_MAX },
       ],
-    },
-    {
-      kind: 'sources',
+    }),
+    section(sourcesKind, {
       heading: 'Sources',
       links: [
         {
@@ -103,6 +102,6 @@ export const cosmicFlows: Exhibit = {
           href: 'https://arxiv.org/abs/1409.0880',
         },
       ],
-    },
+    }),
   ],
 };

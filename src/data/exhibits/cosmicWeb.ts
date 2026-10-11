@@ -8,6 +8,11 @@ import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyC
 import { initialState as volumesInitialState } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import { SURVEYS_OFF } from './utils/surveysOff';
+import { section } from '../../utils/exhibits/section';
+import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
+import { keyKind } from '../../components/ExhibitOverlay/kinds/keyKind';
+import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The 2MRS Polyphorm run rides with MCPM here: same quantity, but an all-sky
@@ -41,18 +46,15 @@ export const cosmicWeb: Exhibit = {
   },
   lede: 'Galaxies trace the largest structure there is: a web of filaments and knots around empty voids, hundreds of millions of light-years across.',
   body: [
-    {
-      kind: 'prose',
+    section(proseKind, {
       heading: 'What you’re seeing',
       text: 'Over 13.8 billion years gravity has pulled matter out of the voids and into walls and filaments. Where filaments cross, galaxy clusters form. The bright strands are the densest parts of the network; the dark cells are voids with few galaxies in them.',
-    },
-    {
-      kind: 'prose',
+    }),
+    section(proseKind, {
       heading: 'How it was made',
       text: 'The web can’t be photographed. This map was computed from the positions of about 325,000 SDSS galaxies by a simulation modelled on a <a href="https://en.wikipedia.org/wiki/Physarum_polycephalum">slime mould</a>, <i>Physarum polycephalum</i>, which grows efficient networks between food sources. Here the galaxies are the food; the network the swarm settles into traces the filaments between them.',
-    },
-    {
-      kind: 'key',
+    }),
+    section(keyKind, {
       heading: 'Key',
       ramp: INFERNO_RAMP,
       ends: ['Void', 'Filament', 'Knot'],
@@ -65,18 +67,16 @@ export const cosmicWeb: Exhibit = {
         on: [mergeSnapshot({ galaxyCatalogs: galaxyCatalogsInitialState })],
         off: [mergeSnapshot({ galaxyCatalogs: SURVEYS_OFF })],
       },
-    },
-    {
-      kind: 'facts',
+    }),
+    section(factsKind, {
       facts: [
         { label: 'Galaxies traced', value: '~325,000' },
         { label: 'Distance', value: '44–476 Mpc' },
         { label: 'Voxel', value: '0.78 Mpc' },
         { label: 'Grid', value: '712 × 1200 × 728' },
       ],
-    },
-    {
-      kind: 'sources',
+    }),
+    section(sourcesKind, {
       heading: 'Sources',
       links: [
         {
@@ -104,6 +104,6 @@ export const cosmicWeb: Exhibit = {
           href: 'https://github.com/CreativeCodingLab/Polyphorm',
         },
       ],
-    },
+    }),
   ],
 };

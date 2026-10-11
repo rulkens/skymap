@@ -19,6 +19,8 @@ import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
+import { section } from '../../../src/utils/exhibits/section';
+import { proseKind } from '../../../src/components/ExhibitOverlay/kinds/proseKind';
 import type { Exhibit } from '../../../src/@types/exhibits/Exhibit';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -29,7 +31,7 @@ const EXHIBIT: Exhibit = {
   settings: { flow: { ...flowInitialState, enabled: true } },
   pose: { target: [0, -0.01, 0], yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
   lede: 'test',
-  body: [{ kind: 'prose', heading: 'Cosmic Flows', text: 'test' }],
+  body: [section(proseKind, { heading: 'Cosmic Flows', text: 'test' })],
 };
 
 // Pre-bootstrap by default (`cameraRuntime` returns null), matching production

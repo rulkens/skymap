@@ -4,7 +4,7 @@
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
- * end it. A timeline exhibit hands its whole hold, fly-in included, to `missionHoldSaga`.
+ * end it. A section whose kind carries a `hold` takes the whole hold, fly-in included.
  */
 import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 
@@ -12,14 +12,12 @@ import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
-import { missionHoldSaga } from './missionHoldSaga';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
 import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { RootState } from '../../store/types';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
-import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import type { SagaContext } from '../../store/types';
 import type { Transition } from '../../@types/navigation/Transition';
 
@@ -48,9 +46,9 @@ export function* exhibitBodySaga(
   // exit restore, and an exhibit authors no focus of its own.
   yield* put(clearSelection());
   yield* put(mergeSnapshot(exhibit.settings));
-  const timeline = exhibit.body.find((s): s is ExhibitTimelineSection => s.kind === 'timeline');
-  if (timeline) {
-    yield* call(missionHoldSaga, exhibit, timeline, entry, atLinkedTime);
+  const held = exhibit.body.find((s) => s.kind.hold !== undefined);
+  if (held) {
+    yield* call([held.kind, held.kind.hold!], exhibit, held.data, entry, atLinkedTime);
     return;
   }
 

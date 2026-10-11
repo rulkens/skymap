@@ -6,7 +6,6 @@
 import type { MissionEvent } from '../missions/MissionEvent';
 
 export type ExhibitTimelineSection = {
-  readonly kind: 'timeline';
   readonly heading: string;
   readonly events: readonly MissionEvent[];
   readonly crafts: readonly string[];

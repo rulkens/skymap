@@ -15,6 +15,10 @@ import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import { MISSION_EVENTS } from '../missions/missionEvents.generated';
 import { SCALE_UNITS } from '../scaleUnits';
+import { section } from '../../utils/exhibits/section';
+import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
+import { missionTimelineKind } from '../../components/ExhibitOverlay/kinds/missionTimelineKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 /** Held down so the trails read against the sky, as in the solar-system exhibit. */
@@ -87,29 +91,24 @@ export const voyagerMissions: Exhibit = {
   },
   lede: 'Two spacecraft launched sixteen days apart in 1977. Between them they passed all four giant planets, and both still send data from beyond the edge of the solar wind.',
   body: [
-    {
-      kind: 'prose',
+    section(proseKind, {
       heading: 'The Voyager missions',
       text: 'NASA sent the twin Voyagers to study Jupiter and Saturn up close. Voyager 2 went on to Uranus and Neptune. Since 1989 both have been on an interstellar mission, measuring where the Sun’s influence ends and what lies beyond it.',
-    },
-    {
-      kind: 'timeline',
+    }),
+    section(missionTimelineKind, {
       heading: 'Timeline',
       events: MISSION_EVENTS,
       crafts: ['voyager1', 'voyager2'],
-    },
-    {
-      kind: 'prose',
+    }),
+    section(proseKind, {
       heading: 'The Grand Tour',
       text: 'In the late 1970s the outer planets lined up in a way that comes round about once every 175 years, so one craft could swing from each giant to the next. Voyager 2 flew the whole route. Voyager 1 left it for a close look at Titan.',
-    },
-    {
-      kind: 'prose',
+    }),
+    section(proseKind, {
       heading: 'The Golden Record',
       text: 'Each craft carries a gold-plated record of greetings in 55 languages, 90 minutes of music and 115 images. Its cover uses 14 pulsars to show where the Sun is.',
-    },
-    {
-      kind: 'sources',
+    }),
+    section(sourcesKind, {
       heading: 'Sources',
       links: [
         {
@@ -137,6 +136,6 @@ export const voyagerMissions: Exhibit = {
           href: 'https://science.nasa.gov/mission/voyager/golden-record/',
         },
       ],
-    },
+    }),
   ],
 };

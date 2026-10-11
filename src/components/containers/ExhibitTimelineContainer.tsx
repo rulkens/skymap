@@ -33,14 +33,14 @@ import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 const REFRESH_MS = 250;
 
 export type ExhibitTimelineContainerProps = {
-  readonly section: ExhibitTimelineSection;
+  readonly data: ExhibitTimelineSection;
 };
 
-function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): ReactNode {
+function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
   const craft = useAppSelector(selectMissionCraft);
-  const lanes = useMemo(() => timelineLanes(section.crafts), [section.crafts]);
+  const lanes = useMemo(() => timelineLanes(data.crafts), [data.crafts]);
   // The axis ends at the wall clock as the exhibit opened; it does not creep.
   const endMs = useMemo(() => Date.now(), []);
 
@@ -69,11 +69,11 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
 
   const onStep = useCallback(
     (eventId: string) => {
-      const event = section.events.find((e) => e.id === eventId)!;
+      const event = data.events.find((e) => e.id === eventId)!;
       const simDays = unixMsToJulianDays(missionEventStepMs(event));
       dispatch(stepToEvent({ eventId, simDays, nowMs: performance.now() }));
     },
-    [dispatch, section.events],
+    [dispatch, data.events],
   );
 
   const onPlayPause = useCallback(
@@ -97,7 +97,7 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
 
   return (
     <ExhibitTimeline
-      section={section}
+      section={data}
       lanes={lanes}
       selectedId={craft!}
       simDays={simDays}

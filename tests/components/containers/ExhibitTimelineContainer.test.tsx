@@ -28,6 +28,7 @@ import type { CameraMission } from '../../../src/@types/camera/CameraMission';
 import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
+import { missionTimelineKind } from '../../../src/components/ExhibitOverlay/kinds/missionTimelineKind';
 import type { ExhibitTimelineSection } from '../../../src/@types/exhibits/ExhibitTimelineSection';
 
 const missionAt = (speedIndex: number): CameraMission => ({
@@ -39,9 +40,8 @@ const missionAt = (speedIndex: number): CameraMission => ({
   reaim: false,
 });
 
-const section = voyagerMissions.body.find(
-  (s): s is ExhibitTimelineSection => s.kind === 'timeline',
-)!;
+const section = voyagerMissions.body.find((s) => s.kind === missionTimelineKind)!
+  .data as ExhibitTimelineSection;
 
 function mount(simIso: string) {
   const { store } = createTestStore();
@@ -54,7 +54,7 @@ function mount(simIso: string) {
   vi.spyOn(store, 'dispatch');
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(Provider, { store, children });
-  render(<ExhibitTimelineContainer section={section} />, { wrapper });
+  render(<ExhibitTimelineContainer data={section} />, { wrapper });
   return store;
 }
 
