@@ -27,7 +27,6 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceStructureLabels } from '../../layers/structure/present/produceStructureLabels';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
@@ -65,7 +64,6 @@ import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import { coreSelectionRows } from './selection/coreSelectionRows';
-import { structureSelectionRow } from '../../layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 
@@ -183,8 +181,6 @@ export function createEngine(
       labelPickRendererNear: null,
       debugLineRenderer: null,
       selectionRingRenderer: null,
-      structureMarkerCosmoRenderer: null,
-      structureMarkerNearRenderer: null,
       horizonShellRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
@@ -282,7 +278,6 @@ export function createEngine(
     // closures re-read GPU handles at call time and null-guard, rather than assuming
     // `initGpu` already assigned them.
     assetSlots: {
-      structureCatalog: null,
       bodyTextures: new Map(),
       // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
@@ -318,31 +313,12 @@ export function createEngine(
   // `#c[data-view-rig='dome']` rule reads it to square the canvas.
   canvas.dataset.viewRig = state.viewRig;
 
-  // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
-  // the director declutters by prominence otherwise. Every Layer's own COSMO
-  // producer registers later, from `createLayers`, so this core row wins any
-  // tie. The constellation figure NAMES are deliberately NOT here: their
-  // anchors sit at parsec distances, inside the COSMO slab's fixed 0.01-Mpc
-  // near plane, so a label here could never draw — they register on
-  // `foregroundLabelDirector` (NEAR0) from the constellations Layer, later in
-  // boot (`createLayers`).
-  state.subsystems.cosmoLabelDirector.registerProducer({
-    id: 'structureLabelsCosmo',
-    produceLabels: (s, c) => produceStructureLabels(s, c, 'cosmic'),
-  });
-
   // Scene-body captions first so an equal-prominence tiebreak favours the
   // navigation aid over the diffuse constellation overlay — the constellations
   // Layer's own producer registers later, from `createLayers`, landing second.
   state.subsystems.foregroundLabelDirector.registerProducer({
     id: 'sceneBodyCaptions',
     produceLabels: produceSceneBodyCaptions,
-  });
-  // Structure categories on the near0 slab (none yet) label here: NEAR0 is the
-  // projection their parsec-scale anchors survive.
-  state.subsystems.foregroundLabelDirector.registerProducer({
-    id: 'structureLabelsNear',
-    produceLabels: (s, c) => produceStructureLabels(s, c, 'milkyWay'),
   });
 
   // Orbit-controls attachment lives outside `inputBindings` because it needs a
@@ -364,12 +340,12 @@ export function createEngine(
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
 
-  // The one row array (D5): core's rows plus the structure row; createLayers
-  // appends each Layer's rows once, in tuple order. `selection` reads it lazily
-  // (never rebuilds a list), so a deep link seen before createLayers sees only
-  // these rows — a Layer-only id instead waits on
-  // resolveFocusRefDeferringSaga's engineStatusChanged pulse to resolve.
-  state.selectionKindRows = [...coreSelectionRows(), structureSelectionRow(state.data.structures)];
+  // The one row array core owns (D5); createLayers appends each Layer's rows
+  // once, in tuple order. `selection` reads it lazily (never rebuilds a list),
+  // so a deep link seen before createLayers sees only core rows — a Layer-only
+  // id instead waits on resolveFocusRefDeferringSaga's engineStatusChanged
+  // pulse to resolve.
+  state.selectionKindRows = coreSelectionRows();
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.kinds,

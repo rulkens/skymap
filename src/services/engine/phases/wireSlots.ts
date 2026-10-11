@@ -4,17 +4,16 @@
  * this mints core's own and then lets the demand loop decide what loads:
  *
  *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
- *      the composed rows (sidecars: cluster catalog, the volume overlays).
+ *      the composed rows (sidecars: the body-texture atlas, the volume overlays).
  *      Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
  *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
  *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
  *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
- *   4. `createSurfaceTileSubsystem` / `seedFades` / `wireStructureProjection` —
- *      Earth's surface virtual texture, the whole fade-ownership manifest
- *      (every composed fade handle, seeded), and the structure-store anchor +
- *      bulk projection.
+ *   4. `createSurfaceTileSubsystem` / `seedFades` — Earth's surface virtual
+ *      texture and the whole fade-ownership manifest (every composed fade
+ *      handle, seeded).
  *   5. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over core's slots and every Layer's.
  *   6. `installSlotReadyWake` — one subscription per slot wakes the render
@@ -40,10 +39,10 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.{structureCatalog,mcpm,flow,…}`
+ *   - `state.assetSlots.{bodyTextureAtlas,…}`
  *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
  *     `.meshBodies` (via `wireMeshBodySlots`).
- *   - `state.subsystems.{loadProgress, structures, surfaceTiles}`.
+ *   - `state.subsystems.{loadProgress, surfaceTiles}`.
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
  *     `installFormatVersionAlert` subscriber; the latter may later dispatch
@@ -65,7 +64,6 @@ import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
-import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { loadDataManifest } from '../../loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
@@ -105,10 +103,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // galaxy/filament/flow/volume sets — so frame 1 is coherent and the
   // demand-loaded layers seed at 0 ready to fade in on first load.
   seedFades(state);
-
-  // Wire the structure groups (static anchors + the bulk-cluster
-  // subscription) into the structure store.
-  wireStructureProjection(state, cb);
 
   // Build the flat `allSlots` registry + load-progress emitter over every
   // installed slot (core and Layer-owned).

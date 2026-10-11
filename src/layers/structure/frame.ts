@@ -12,14 +12,19 @@
 
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { StructureMarkerDescriptor } from '../../@types/rendering/StructureMarkerDescriptor';
+import type { StructureRuntime } from './@types/StructureRuntime';
 import { produceStructureMarkers } from './present/produceStructureMarkers';
 
-export const structureMarkersPlanner: FrameContentPlanner<readonly StructureMarkerDescriptor[]> = {
-  name: 'structure-markers',
-  scope: 'perView',
-  plan: (view, state) => ({
-    value: produceStructureMarkers(state, view),
-    awake: false,
-    settling: false,
-  }),
-};
+export function structureMarkersPlanner(
+  runtime: Pick<StructureRuntime, 'store'>,
+): Extract<FrameContentPlanner<readonly StructureMarkerDescriptor[]>, { scope: 'perView' }> {
+  return {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: (view, state) => ({
+      value: produceStructureMarkers(runtime.store, state, view),
+      awake: false,
+      settling: false,
+    }),
+  };
+}

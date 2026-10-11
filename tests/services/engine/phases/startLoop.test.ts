@@ -53,17 +53,16 @@ vi.mock('../../../../src/services/engine/frame/runFrame', () => ({
 import { startLoop } from '../../../../src/services/engine/phases/startLoop';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
-import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
-import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional — PRELUDE's Layer-owned rows need a stand-in here, since this
+// optional — PRELUDE's and SCENE's Layer-owned rows need a stand-in here, since this
 // fixture's `passes`/`computes` are core's own registry alone too.
-const LAYER_PLANNER_STUBS = stubPlannersFor(PRELUDE);
+const LAYER_PLANNER_STUBS = [...stubPlannersFor(PRELUDE), ...stubPlannersFor(SCENE)];
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -104,7 +103,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
     // tuple that is core's own registry.
     passes: CONTENT_PASSES,
     computes: CORE_COMPUTES,
-    planners: [...CORE_PLANNERS, ...LAYER_PLANNER_STUBS],
+    planners: LAYER_PLANNER_STUBS,
   } as unknown as EngineState;
 }
 

@@ -1,11 +1,12 @@
 /**
  * produceStructureMarkers — per-frame ring/halo descriptors for the extended
- * structures (every cosmic and Milky Way category), read from `structureStore`.
+ * structures (every cosmic and Milky Way category), read from the Layer's
+ * structure store.
  *
- * Reads `state.data.structures` and emits one marker descriptor per
- * marker-bearing structure — applying apparent-size fades, significance
- * weighting, the selection brighten, per-category opacity (the category toggle's
- * fade, read from the FadeRegistry), and a smooth focus *recession*. Famous
+ * Emits one marker descriptor per marker-bearing structure — applying
+ * apparent-size fades, significance weighting, the selection brighten,
+ * per-category opacity (the category toggle's fade, read from the
+ * FadeRegistry), and a smooth focus *recession*. Famous
  * galaxies are not on this path; they never emit markers.
  *
  * Per-category opacity and recession bake into the DESCRIPTOR alpha rather
@@ -33,6 +34,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
+import type { StructureStore } from '../../../@types/engine/data/StructureStore';
 import {
   STRUCTURE_MARKER_STYLES,
   SIG_MIN_ALPHA,
@@ -47,6 +49,7 @@ import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 export function produceStructureMarkers(
+  store: Pick<StructureStore, 'all'>,
   state: PassState,
   ctx: FrameView,
 ): readonly StructureMarkerDescriptor[] {
@@ -76,8 +79,7 @@ export function produceStructureMarkers(
   // maps every `StructureId` to this value without discrimination.
   const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureRing', now);
 
-  const structures = state.data.structures;
-  for (const p of structures.all()) {
+  for (const p of store.all()) {
     // Per-category marker opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — draw while the category
     // is enabled OR still fading out. Only when it's both disabled AND fully

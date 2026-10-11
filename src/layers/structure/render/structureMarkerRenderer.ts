@@ -3,7 +3,7 @@
  * `type:'structure'` categories of one slab; each slab gets its own instance
  * and buffers.
  * The producer (`produceStructureMarkers`) feeds it descriptors; the
- * store it visualises is `state.data.structures`.
+ * store it visualises is the Layer runtime's `store`.
  *
  * ### Why one renderer for three pipelines?
  *

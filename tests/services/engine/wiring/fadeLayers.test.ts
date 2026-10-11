@@ -27,6 +27,7 @@ import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import { structureFadeRows } from '../../../../src/layers/structure/present/structureFadeRows';
 
 /** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
 const GALAXY_RUNTIME = {
@@ -100,8 +101,12 @@ function makeState(
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
     // `seedFades` walks the COMPOSED rows: the core manifest plus the density
-    // Layer's, whose master and per-cube seeds are pinned below.
-    fadeRows: [...FADE_LAYERS, ...cosmicWebDensityFadeRows(DENSITY_RUNTIME)],
+    // and structure Layers', whose seeds are pinned below.
+    fadeRows: [
+      ...FADE_LAYERS,
+      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...structureFadeRows(),
+    ],
   } as unknown as EngineState;
 }
 
@@ -236,6 +241,7 @@ describe('FADE_LAYERS intent subset', () => {
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...zoneOfAvoidanceFadeRows(),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...structureFadeRows(),
     ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);

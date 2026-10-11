@@ -1,6 +1,5 @@
 /**
- * wireStructureProjection — unit tests for the structure-group wiring
- * extracted from wireSlots.
+ * wireStructureProjection — unit tests for the structure-group wiring.
  *
  * ### What this tests
  *
@@ -9,7 +8,7 @@
  *      call so the Structures panel has counts from frame 1.
  *   2. The bulk cluster group lands in the store when the structure-catalog
  *      slot fires, without clobbering the anchors group.
- *   3. `onStructureCountsChange` fires after any group change with fresh
+ *   3. `engineStructureCountsChanged` fires after any group change with fresh
  *      per-category counts.
  *
  * Famous galaxies are NOT wired here anymore — `produceFamousGalaxyLabels` derives
@@ -19,10 +18,11 @@
  * ### Mocking strategy
  *
  * `buildStaticAnchorStructures` is mocked to a deterministic minimal list so tests
- * don't depend on the curated JSON.  `structureCatalogToStructures` is mocked to
- * one record per meta entry.  The structure store is a real `createEngineData`
- * instance so `setGroup` / `byCategory` behave exactly as production.  The
- * cluster slot is a light fake with a `fire` helper.
+ * don't depend on the curated JSON; the bulk records come from the real
+ * `structureCatalogToStructures`. The structure store is a real
+ * `createStructureStore` so `setGroup` / `byCategory` behave exactly as
+ * production. The cluster slot is a light fake with a `fire` helper, except
+ * where a real slot drives the mocked fetcher end to end.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -31,12 +31,14 @@ import {
   engineStructureCountsChanged,
   engineStructureSearchListChanged,
 } from '../../../../src/state/engine/engineSlice';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
+import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
+import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
+import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
+import type { AppStore } from '../../../../src/store/types';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/structureCatalogPayload/StructureCatalogPayload';
+import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
 
 // ── Module mocks ───────────────────────────────────────────────────────
 
@@ -78,23 +80,12 @@ vi.mock('../../../../src/layers/structure/load/buildStaticAnchorStructures', () 
   ]),
 }));
 
-// structureCatalogToStructures: one record per entry in payload.meta.
-vi.mock('../../../../src/services/engine/phases/structureCatalogToStructures', () => ({
-  structureCatalogToStructures: vi.fn(
-    (payload: StructureCatalogPayload): StructureInfo[] =>
-      payload.meta.map((m) => ({
-        id: `galaxy-cluster-bulk-${m.id}`,
-        name: m.names[0],
-        category: 'galaxy-cluster',
-        worldPos: [0, 0, 0],
-        physicalRadiusMpc: 2,
-        featured: false,
-      })) as StructureInfo[],
-  ),
+vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => ({
+  structureCatalogFetcher: vi.fn(),
 }));
 
 // ── Import after mocks ─────────────────────────────────────────────────
-import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
+import { wireStructureProjection } from '../../../../src/layers/structure/load/wireStructureProjection';
 
 // ── Fake slot helper ───────────────────────────────────────────────────
 
@@ -122,43 +113,33 @@ function readyState<V>(value: V): LoadState<V> {
   return { kind: 'ready', req: {}, value, loadedAtMs: 0 };
 }
 
-// ── State builder ──────────────────────────────────────────────────────
+// ── Runtime builder ────────────────────────────────────────────────────
 
-function makeState(): {
-  state: EngineState;
+function makeRuntime(): {
+  runtime: Pick<StructureRuntime, 'store' | 'slot'>;
   structureCatalogSlot: FakeSlot<StructureCatalogPayload>;
 } {
   const structureCatalogSlot = makeSlot<StructureCatalogPayload>();
-  const state = {
-    data: createEngineData(),
-    assetSlots: {
-      structureCatalog: {
-        name: 'structure-catalog',
-        subscribe: structureCatalogSlot.subscribe,
-        load: vi.fn(),
-        state: () => ({ kind: 'idle' }),
-        current: () => null,
-        forceReload: vi.fn(),
-        cancel: vi.fn(),
-      },
-    },
-  } as unknown as EngineState;
-  return { state, structureCatalogSlot };
+  const runtime = {
+    store: createStructureStore(),
+    slot: { subscribe: structureCatalogSlot.subscribe },
+  } as unknown as Pick<StructureRuntime, 'store' | 'slot'>;
+  return { runtime, structureCatalogSlot };
 }
 
-function makeCb(): {
-  cb: EngineCallbacks;
+function makeStore(): {
+  store: AppStore;
   // The per-category count payloads dispatched so far, newest last.
   structureCountsCalls: () => Array<Partial<Record<string, number>>>;
 } {
-  const cb = { store: createAppStore().store } as unknown as EngineCallbacks;
-  const dispatchSpy = vi.spyOn(cb.store, 'dispatch');
+  const { store } = createAppStore();
+  const dispatchSpy = vi.spyOn(store, 'dispatch');
   const structureCountsCalls = () =>
     dispatchSpy.mock.calls
       .map((c) => c[0] as ReturnType<typeof engineStructureCountsChanged>)
       .filter((a) => a.type === engineStructureCountsChanged.type)
       .map((a) => a.payload);
-  return { cb, structureCountsCalls };
+  return { store, structureCountsCalls };
 }
 
 const clusterPayload: StructureCatalogPayload = {
@@ -173,6 +154,30 @@ const clusterPayload: StructureCatalogPayload = {
   meta: [{ id: 'coma', names: ['Coma Cluster'], abell: 'A1656', description: '' }],
 };
 
+// One cluster + one supercluster, loaded through a real slot.
+const clusterAndSuperclusterPayload: StructureCatalogPayload = {
+  catalog: {
+    count: 2,
+    positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+    physicalRadiusMpc: new Float32Array([1.5, 30]),
+    apparentRadiusMpc: new Float32Array([3, 30]),
+    significance: new Float32Array([10, 25]),
+    category: new Uint8Array([0, 1]),
+  },
+  meta: [
+    { id: 'coma', names: ['Coma'], abell: 'A1656', description: '' },
+    { id: 'shapley', names: ['Shapley'], abell: null, description: '' },
+  ],
+};
+
+/** The production slot over the mocked fetcher, resolved with `payload`. */
+function realSlotResolving(
+  payload: StructureCatalogPayload,
+): Pick<StructureRuntime, 'store' | 'slot'> {
+  vi.mocked(structureCatalogFetcher).mockResolvedValueOnce(payload as never);
+  return { store: createStructureStore(), slot: createStructureCatalogSlot() };
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────
 
 describe('wireStructureProjection', () => {
@@ -181,38 +186,52 @@ describe('wireStructureProjection', () => {
   });
 
   it('publishes static anchors synchronously into the structure store', () => {
-    const { state } = makeState();
-    const { cb } = makeCb();
+    const { runtime } = makeRuntime();
+    const { store } = makeStore();
 
-    wireStructureProjection(state, cb);
+    wireStructureProjection(runtime, store.dispatch);
 
-    expect(state.data.structures.byCategory('galaxy-cluster').length).toBeGreaterThan(0);
-    expect(state.data.structures.byCategory('supercluster').length).toBeGreaterThan(0);
-    expect(state.data.structures.byCategory('void').length).toBeGreaterThan(0);
-    expect(state.data.structures.byId('galaxy-cluster-virgo')?.id).toBe('galaxy-cluster-virgo');
+    expect(runtime.store.byCategory('galaxy-cluster').length).toBeGreaterThan(0);
+    expect(runtime.store.byCategory('supercluster').length).toBeGreaterThan(0);
+    expect(runtime.store.byCategory('void').length).toBeGreaterThan(0);
+    expect(runtime.store.byId('galaxy-cluster-virgo')?.id).toBe('galaxy-cluster-virgo');
   });
 
   it('lands the bulk cluster group when the slot fires, keeping the anchors', () => {
-    const { state, structureCatalogSlot } = makeState();
-    const { cb } = makeCb();
+    const { runtime, structureCatalogSlot } = makeRuntime();
+    const { store } = makeStore();
 
-    wireStructureProjection(state, cb);
+    wireStructureProjection(runtime, store.dispatch);
     structureCatalogSlot.fire(readyState(clusterPayload));
 
-    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')?.id).toBe(
-      'galaxy-cluster-bulk-coma',
-    );
+    expect(runtime.store.byId('galaxy-cluster-bulk-coma')?.id).toBe('galaxy-cluster-bulk-coma');
     // Anchors survive the bulk write (separate group).
-    expect(state.data.structures.byId('galaxy-cluster-virgo')?.id).toBe('galaxy-cluster-virgo');
+    expect(runtime.store.byId('galaxy-cluster-virgo')?.id).toBe('galaxy-cluster-virgo');
+  });
+
+  it('lands bulk clusters + superclusters in the structure store, keeping anchors', async () => {
+    // The slot's load resolves with one cluster + one supercluster; the
+    // projection builds bulk records (via the real structureCatalogToStructures)
+    // and writes them to the store's 'bulk' group, alongside the anchors.
+    const runtime = realSlotResolving(clusterAndSuperclusterPayload);
+    const { store } = makeStore();
+
+    wireStructureProjection(runtime, store.dispatch);
+    await runtime.slot.load({});
+
+    expect(runtime.store.byId('galaxy-cluster-bulk-coma')).not.toBeNull();
+    expect(runtime.store.byId('supercluster-bulk-shapley')).not.toBeNull();
+    // Static anchors survive the bulk write (separate group).
+    expect(runtime.store.byCategory('galaxy-cluster').length).toBeGreaterThan(0);
   });
 
   it('clears the bulk group and re-emits counts on a slot error', () => {
-    const { state, structureCatalogSlot } = makeState();
-    const { cb, structureCountsCalls } = makeCb();
+    const { runtime, structureCatalogSlot } = makeRuntime();
+    const { store, structureCountsCalls } = makeStore();
 
-    wireStructureProjection(state, cb);
+    wireStructureProjection(runtime, store.dispatch);
     structureCatalogSlot.fire(readyState(clusterPayload));
-    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')).not.toBeNull();
+    expect(runtime.store.byId('galaxy-cluster-bulk-coma')).not.toBeNull();
 
     const beforeError = structureCountsCalls().length;
     structureCatalogSlot.fire({
@@ -221,22 +240,22 @@ describe('wireStructureProjection', () => {
       error: new Error('fetch failed'),
       finalAttempt: 1,
     });
-    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')).toBeNull();
+    expect(runtime.store.byId('galaxy-cluster-bulk-coma')).toBeNull();
     // The error path re-emits counts (a fresh dispatch beyond those before it).
     expect(structureCountsCalls().length).toBeGreaterThan(beforeError);
   });
 
   it('publishes the structure search list with the counts, at boot and when the bulk group lands', () => {
-    const { state, structureCatalogSlot } = makeState();
-    const { cb } = makeCb();
-    const dispatchSpy = vi.spyOn(cb.store, 'dispatch');
+    const { runtime, structureCatalogSlot } = makeRuntime();
+    const { store } = makeStore();
+    const dispatchSpy = vi.spyOn(store, 'dispatch');
 
-    wireStructureProjection(state, cb);
+    wireStructureProjection(runtime, store.dispatch);
     const bootIds = dispatchSpy.mock.calls
       .map((c) => c[0] as ReturnType<typeof engineStructureSearchListChanged>)
       .filter((a) => a.type === engineStructureSearchListChanged.type)
       .flatMap((a) => a.payload.map((e) => e.id));
-    expect(bootIds).toEqual(state.data.structures.all().map((s) => s.id));
+    expect(bootIds).toEqual(runtime.store.all().map((s) => s.id));
 
     structureCatalogSlot.fire(readyState(clusterPayload));
     const afterIds = dispatchSpy.mock.calls
@@ -244,14 +263,33 @@ describe('wireStructureProjection', () => {
       .filter((a) => a.type === engineStructureSearchListChanged.type)
       .at(-1)!
       .payload.map((e) => e.id);
-    expect(afterIds).toEqual(state.data.structures.all().map((s) => s.id));
+    expect(afterIds).toEqual(runtime.store.all().map((s) => s.id));
+  });
+
+  it('dispatches engineStructureCountsChanged with four-category counts at boot', () => {
+    const { runtime } = makeRuntime();
+    const { store } = makeStore();
+    const spy = vi.spyOn(store, 'dispatch');
+
+    wireStructureProjection(runtime, store.dispatch);
+
+    expect(spy).toHaveBeenCalledWith(
+      engineStructureCountsChanged(
+        expect.objectContaining({
+          'galaxy-cluster': expect.any(Number),
+          supercluster: expect.any(Number),
+          void: expect.any(Number),
+          'galaxy-group': expect.any(Number),
+        }),
+      ),
+    );
   });
 
   it('dispatches engineStructureCountsChanged with per-category counts after a group change', () => {
-    const { state, structureCatalogSlot } = makeState();
-    const { cb, structureCountsCalls } = makeCb();
+    const { runtime, structureCatalogSlot } = makeRuntime();
+    const { store, structureCountsCalls } = makeStore();
 
-    wireStructureProjection(state, cb);
+    wireStructureProjection(runtime, store.dispatch);
 
     // At boot: static anchors emit counts.
     expect(structureCountsCalls()).toHaveLength(1);
@@ -271,5 +309,25 @@ describe('wireStructureProjection', () => {
     expect(afterCluster['supercluster']).toBe(bootCounts['supercluster']!);
     expect(afterCluster['void']).toBe(bootCounts['void']!);
     expect(afterCluster['galaxy-group']).toBe(bootCounts['galaxy-group']!);
+  });
+
+  it('emits per-category structure counts that grow when the bulk catalog lands', async () => {
+    // Asserting the DELTA (one extra cluster + one extra SC, voids unchanged)
+    // keeps the test robust to seed-anchor count changes.
+    const runtime = realSlotResolving(clusterAndSuperclusterPayload);
+    const { store, structureCountsCalls } = makeStore();
+
+    wireStructureProjection(runtime, store.dispatch);
+    await runtime.slot.load({});
+
+    const counts = structureCountsCalls();
+    expect(counts.length).toBeGreaterThanOrEqual(2);
+    const first = counts[0]!;
+    const last = counts[counts.length - 1]!;
+    // Bulk adds one cluster (Coma) + one supercluster (Shapley); voids
+    // come only from the static seed, so that count is unchanged.
+    expect(last['galaxy-cluster']!).toBe(first['galaxy-cluster']! + 1);
+    expect(last.supercluster!).toBe(first.supercluster! + 1);
+    expect(last.void!).toBe(first.void!);
   });
 });

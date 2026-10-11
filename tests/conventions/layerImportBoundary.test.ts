@@ -86,18 +86,7 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
-  // structure Layer PR 1 (#879) moved the files; core still wires them until PR 2
-  // (docs/superpowers/plans/2026-10-11-structure-layer-wiring.md) registers the Layer
-  // and deletes every row below.
-  'services/engine/data/createEngineData': 1,
-  'services/engine/engine': 2,
-  'services/engine/frame/passes/index': 2,
-  'services/engine/frame/planners/index': 1,
-  'services/engine/gpuHandles/gpuHandleRegistry': 1,
-  'services/engine/wiring/assetWiring': 1,
-  'services/engine/wiring/wireStructureProjection': 3,
-};
+const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {};
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
   const files = [...walk('src/services/engine'), ...walk('src/state')];
@@ -134,6 +123,13 @@ const LAYER_STORE_REACH_DIRS = ['/ui/', '/sagas/'];
 const SLICE_SELECTORS_FILE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors\.ts$/;
 const SELECT_SETTINGS_MODULE = 'src/state/settings/selectSettings';
 
+const LAYER_STORE_REACH_ALLOWED: Readonly<Record<string, number>> = {
+  // The two engineSlice structure actions, until the structure Layer publishes
+  // facts instead (docs/superpowers/plans/2026-10-11-structure-layer-wiring.md,
+  // Tasks 5-6, delete this row). engineSlice never reaches appSettingsSlices.
+  'layers/structure/load/wireStructureProjection': 1,
+};
+
 function selectorsCarveOutOffenders(files: readonly string[]): string[] {
   return files.flatMap((file) => {
     const specifiers = specifiersUnder(file, ['src/state/', 'src/store/']);
@@ -162,7 +158,7 @@ describe('no file under src/layers imports src/state or src/store (outside ui/sa
     const otherFiles = files.filter((file) => !SLICE_SELECTORS_FILE.test(file));
     const offenders = [
       ...selectorsCarveOutOffenders(sliceSelectorsFiles),
-      ...sweepOffenders(otherFiles, ['src/state/', 'src/store/'], {}),
+      ...sweepOffenders(otherFiles, ['src/state/', 'src/store/'], LAYER_STORE_REACH_ALLOWED),
     ];
     expect(
       offenders,

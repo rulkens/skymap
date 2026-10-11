@@ -345,7 +345,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         markerLineRendererCosmo: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
-        structureMarkerCosmoRenderer: null,
         // Near-field handles null → the (hdr, NEAR0) render, the
         // foreground:0 render, and the NEAR0 caption render all select
         // nothing, and the foreground:0→swap composite is
