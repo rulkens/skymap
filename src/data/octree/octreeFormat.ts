@@ -92,11 +92,16 @@ export const STAR_COLUMN_SCHEMA: readonly ColumnSchema[] = [
   },
 ];
 
+/** A chunk object's file name: the bake writes it, the reader, collector and `fetch-data` resolve it. */
+export function octreeChunkFileName(ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>): string {
+  return `${ref.level}-${ref.morton}.${ref.hash}.bin`;
+}
+
 export function starChunkPath(
   binBaseName: string,
   ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>,
 ): string {
-  return `${STAR_OCTREE_DATA_PREFIX}/${binBaseName}/${ref.level}-${ref.morton}.${ref.hash}.bin`;
+  return `${STAR_OCTREE_DATA_PREFIX}/${binBaseName}/${octreeChunkFileName(ref)}`;
 }
 
 export function starIndexPath(binBaseName: string): string {

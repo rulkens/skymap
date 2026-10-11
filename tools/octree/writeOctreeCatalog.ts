@@ -1,7 +1,8 @@
 /**
  * Quantises and encodes every chunk, writes each as `<outDir>/<name>/<level>-<morton>.<hash8>.bin`,
  * then writes the index `<outDir>/<name>.bin` last: the index names every chunk hash, so a
- * reader that sees the new index never meets a chunk that is not on disk yet.
+ * reader that sees the new index never meets a chunk that is not on disk yet. The quantiser
+ * covers the star schema's stores; `u10x3` and `u64` throw until a column uses them.
  */
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -14,7 +15,7 @@ import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
 import type { OctreeObjects } from '../@types/octree/OctreeObjects';
 import type { OctreeRawColumn } from '../@types/octree/OctreeRawColumn';
-import { OFFSET_FRACTION_LEVELS } from '../../src/data/octree/octreeFormat';
+import { octreeChunkFileName, OFFSET_FRACTION_LEVELS } from '../../src/data/octree/octreeFormat';
 import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';
 import { contentHash8 } from '../utils/data/contentHash8';
 import { encodeOctreeObject } from './encodeOctreeObject';
@@ -44,7 +45,7 @@ export function writeOctreeCatalog(
       quantise(c.columns, meta.schema),
     );
     const hash = contentHash8(bytes);
-    fs.writeFileSync(join(chunkDir, `${c.level}-${c.morton}.${hash}.bin`), bytes);
+    fs.writeFileSync(join(chunkDir, octreeChunkFileName({ ...c, hash })), bytes);
     return {
       level: c.level,
       morton: c.morton,
