@@ -284,10 +284,10 @@ Rules carried from the spec: a chunk root's index row keeps its own records and 
 
 Research §10 ruling F defers `tools/stars-rs` (port or drop) to "after timing a TS bake". This task produces the number and stops for the user's ruling; Group B does not wait for it.
 
-- [ ] Ensure `data/raw/gaia` resolves in this worktree (`ln -s <main checkout>/data/raw/gaia data/raw/gaia` if absent; never write into it).
-- [ ] Run `NODE_OPTIONS=--max-old-space-size=16384 /usr/bin/time -l npx tsx tools/stars/buildStars.ts --out-dir <scratchpad>/octree-bake` in the background (`run_in_background`), capturing stdout and stderr to the scratchpad.
-- [ ] Record: wall-clock seconds, `maximum resident set size` (bytes, from `time -l`), the logged chunk count, `chunkNodeCap`, index node count, index record count, index bytes raw and gzipped (`gzip -6 -c stars.bin | wc -c`), total chunk bytes, and the smallest and largest chunk sizes.
-- [ ] If the bake STOPs on a dense cell, record the node (level, morton, count) and stop here: the user rules on the deeper-grid vs dense-leaf-split alternative (spec §10) before Group C can stream real data. Group B still proceeds on fixtures.
+- [x] Ensure `data/raw/gaia` resolves in this worktree (`ln -s <main checkout>/data/raw/gaia data/raw/gaia` if absent; never write into it).
+- [x] Run `NODE_OPTIONS=--max-old-space-size=16384 /usr/bin/time -l npx tsx tools/stars/buildStars.ts --out-dir <scratchpad>/octree-bake` in the background (`run_in_background`), capturing stdout and stderr to the scratchpad.
+- [x] Record: wall-clock seconds, `maximum resident set size` (bytes, from `time -l`), the logged chunk count, `chunkNodeCap`, index node count, index record count, index bytes raw and gzipped (`gzip -6 -c stars.bin | wc -c`), total chunk bytes, and the smallest and largest chunk sizes.
+- [x] If the bake STOPs on a dense cell, record the node (level, morton, count) and stop here: the user rules on the deeper-grid vs dense-leaf-split alternative (spec §10) before Group C can stream real data. Group B still proceeds on fixtures.
 - [ ] Write the numbers into the ledger as `Checkpoint: TS bake timing — <wall> s, <RSS> GB peak, <chunks> chunks, chunkNodeCap <n>, index <bytes>` and ask the user for the ruling F verdict (port `stars-rs` to v2, or drop it) and whether the node count under pure `L(M)` placement wants path compression (spec §10, "node count"). Do not implement either; both are their own plans.
 
 ## Group B: one runtime shape, the cut over a pool
