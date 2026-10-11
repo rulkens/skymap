@@ -14,13 +14,19 @@ import { setMissionOffsets } from '../../../src/state/camera/cameraSlice';
 import { exhibitBodySaga } from '../../../src/state/exhibits/exhibitBodySaga';
 import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
-import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { setMissionEmphasis } from '../../../src/state/settings/core/missionTrails/slice';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { pause, resume, setSimDays, goLive } from '../../../src/state/time/timeSlice';
+import {
+  pause,
+  resume,
+  setSimDays,
+  goLive,
+  stepToMissionEvent,
+} from '../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
+import { missionEventStepMs } from '../../../src/utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { loadVoyagerStopWindows } from '../../helpers/missions/loadVoyagerStopWindows';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -60,8 +66,11 @@ async function hold(
     yield* exhibitBodySaga(voyagerMissions, entry, atLinkedTime);
   });
   await tick();
-  const step = (eventId: string) =>
-    store.dispatch(stepToMissionEvent({ eventId, nowMs: performance.now() }));
+  const step = (eventId: string) => {
+    const event = MISSION_EVENTS.find((e) => e.id === eventId)!;
+    const simDays = unixMsToJulianDays(missionEventStepMs(event));
+    store.dispatch(stepToMissionEvent({ eventId, simDays, nowMs: performance.now() }));
+  };
   const simDays = () => deriveSimDays(store.getState().time, performance.now());
   return { store, playClip, step, simDays };
 }

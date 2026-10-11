@@ -16,8 +16,13 @@ import { setMissionEmphasis } from '../../../src/state/settings/core/missionTrai
 import { MISSION_SPEEDS } from '../../../src/data/exhibits/mission/missionSpeeds';
 import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
-import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
-import { pause, resume, setSimDays, startMissionProfile } from '../../../src/state/time/timeSlice';
+import {
+  pause,
+  resume,
+  setSimDays,
+  startMissionProfile,
+  stepToMissionEvent,
+} from '../../../src/state/time/timeSlice';
 import { setMission } from '../../../src/state/camera/cameraSlice';
 import type { CameraMission } from '../../../src/@types/camera/CameraMission';
 import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';

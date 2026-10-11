@@ -89,7 +89,6 @@ import { selectTakeoverSource } from '../takeover/selectors';
 import { takeoverEnded, takeoverStarted } from '../takeover/takeoverActions';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import { timeRoute } from '../../store/constants';
-import { stepToMissionEvent } from '../exhibits/stepToMissionEvent';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
@@ -196,8 +195,7 @@ const focusSource: HashParamSource = {
 const timeSource: HashParamSource = {
   key: 't',
   deepLink: true,
-  // An event step moves the clock from the time slice's extraReducer, outside the `time/` prefix.
-  writesOn: [(action) => action.type.startsWith(`${timeRoute}/`), stepToMissionEvent.match],
+  writesOn: [(action) => action.type.startsWith(`${timeRoute}/`)],
   write: (state) => {
     const time = selectTimeState(state);
     if (time.mode !== 'manual') return null;

@@ -14,17 +14,18 @@ import ExhibitTimeline from '../ExhibitOverlay/ExhibitTimeline';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { playMission } from '../../state/exhibits/playMission';
 import { stepMissionSpeed } from '../../state/exhibits/stepMissionSpeed';
-import { stepToMissionEvent } from '../../state/exhibits/stepToMissionEvent';
 import { selectMissionSpeedIndex } from '../../state/camera/selectors';
 import { selectTimeState } from '../../state/time/selectors';
 import { selectMissionEmphasis } from '../../state/settings/core/missionTrails/selectors';
 import { setMissionEmphasis } from '../../state/settings/core/missionTrails/slice';
-import { pause, setSimDays } from '../../state/time/timeSlice';
+import { pause, setSimDays, stepToMissionEvent } from '../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { formatMissionSpeed } from '../../utils/exhibits/mission/formatMissionSpeed';
 import { formatSimRate } from '../../utils/time/formatSimRate';
 import { missionProfileRate } from '../../utils/time/missionProfileRate';
+import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
+import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 
@@ -67,8 +68,12 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
   );
 
   const onStep = useCallback(
-    (eventId: string) => dispatch(stepToMissionEvent({ eventId, nowMs: performance.now() })),
-    [dispatch],
+    (eventId: string) => {
+      const event = section.events.find((e) => e.id === eventId)!;
+      const simDays = unixMsToJulianDays(missionEventStepMs(event));
+      dispatch(stepToMissionEvent({ eventId, simDays, nowMs: performance.now() }));
+    },
+    [dispatch, section.events],
   );
 
   const onPlayPause = useCallback(

@@ -35,15 +35,11 @@
 
 import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
-import { stepToMissionEvent } from '../exhibits/stepToMissionEvent';
 import { timeRoute } from '../../store/constants';
 import type { MissionProfile } from '../../@types/time/MissionProfile';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
-import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { CONST_J2000 } from '../../data/time/constJ2000';
-import { MISSION_EVENTS } from '../../data/missions/missionEvents.generated';
 
 const initialState: TimeState = {
   mode: 'live',
@@ -155,21 +151,18 @@ const timeSlice = createSlice({
       time.paused = false;
       time.profile = profile;
     },
-  },
-  // An event step lands the clock, paused, where `missionEventStepMs` says; a flyby step's
-  // saga then plays the mission profile from there.
-  extraReducers: (builder) => {
-    builder.addCase(stepToMissionEvent, (time, action) => {
-      const event = MISSION_EVENTS.find((e) => e.id === action.payload.eventId);
-      if (!event) return;
+
+    // A visitor stepping to a timeline event lands the clock there, paused. The dispatch site
+    // resolves the event's instant; `eventId` rides along for the hold saga, which plays a flyby.
+    stepToMissionEvent: (
+      time,
+      action: PayloadAction<{ eventId: string; simDays: number; nowMs: number }>,
+    ) => {
       time.mode = 'manual';
-      time.anchor = {
-        simDays: unixMsToJulianDays(missionEventStepMs(event)),
-        realMs: action.payload.nowMs,
-      };
+      time.anchor = { simDays: action.payload.simDays, realMs: action.payload.nowMs };
       time.paused = true;
       time.profile = null;
-    });
+    },
   },
 });
 
@@ -182,6 +175,7 @@ export const {
   goLive,
   restoreTime,
   startMissionProfile,
+  stepToMissionEvent,
 } = timeSlice.actions;
 
 export default timeSlice.reducer;

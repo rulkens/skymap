@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { stepTimelineEvent } from '../../../src/state/exhibits/stepTimelineEvent';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
-import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
+import { stepToMissionEvent } from '../../../src/state/time/timeSlice';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
 import { missionEventStepMs } from '../../../src/utils/exhibits/timeline/missionEventStepMs';
@@ -56,6 +56,23 @@ describe('stepTimelineEvent', () => {
     expect(stepTimelineEvent(stateAt(V1.at(-1)!.iso, 'voyager-missions'), 1)).toBeNull();
     expect(stepTimelineEvent(stateAt('1980-01-01', 'solarSystem'), 1)).toBeNull();
     expect(stepTimelineEvent(stateAt('1980-01-01', null), 1)).toBeNull();
+  });
+});
+
+describe('stepTimelineEvent lands the clock', () => {
+  it.each([
+    ['voyager1', 'voyager1-pale-blue-dot', 0],
+    ['voyager2', 'voyager2-neptune', 2],
+  ])('%s: on %s, %i d early', (craft, id, leadDays) => {
+    const events = SAVED.filter((e) => e.bodyId === craft);
+    const i = events.findIndex((e) => e.id === id);
+    const from = new Date(missionEventStepMs(events[i - 1]!)).toISOString();
+    const action = stepTimelineEvent(stateAt(from, 'voyager-missions', craft), 1)!;
+    expect(action.payload.eventId).toBe(id);
+    expect(action.payload.simDays).toBeCloseTo(
+      unixMsToJulianDays(missionEventMs(events[i]!)) - leadDays,
+      9,
+    );
   });
 });
 

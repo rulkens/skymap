@@ -20,11 +20,8 @@ import reducer, {
   setSimDays,
   restoreTime,
   startMissionProfile,
+  stepToMissionEvent,
 } from '../../../src/state/time/timeSlice';
-import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
-import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
-import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
-import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
 
@@ -120,23 +117,6 @@ describe('timeSlice goLive lands the ladder on the truthful detent', () => {
   });
 });
 
-describe('stepToMissionEvent', () => {
-  it.each([
-    ['voyager1-pale-blue-dot', 0],
-    ['voyager2-neptune', 2],
-  ])('lands a paused manual clock on %s, %i d early', (id, leadDays) => {
-    const event = MISSION_EVENTS.find((e) => e.id === id)!;
-    const next = reducer(liveStart, stepToMissionEvent({ eventId: event.id, nowMs: 777 }));
-    expect(next.mode).toBe('manual');
-    expect(next.paused).toBe(true);
-    expect(next.anchor.realMs).toBe(777);
-    expect(next.anchor.simDays).toBeCloseTo(
-      unixMsToJulianDays(missionEventMs(event)) - leadDays,
-      9,
-    );
-  });
-});
-
 describe('mission profile', () => {
   const profile = {
     startWallMs: 0,
@@ -178,7 +158,7 @@ describe('mission profile', () => {
     },
     {
       name: 'stepToMissionEvent',
-      action: stepToMissionEvent({ eventId: MISSION_EVENTS[3]!.id, nowMs: 55_000 }),
+      action: stepToMissionEvent({ eventId: 'e', simDays: 2450000, nowMs: 55_000 }),
     },
   ];
 

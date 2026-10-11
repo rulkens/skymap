@@ -25,11 +25,10 @@ import { selectMissionEmphasis } from '../settings/core/missionTrails/selectors'
 import { setMissionEmphasis } from '../settings/core/missionTrails/slice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectTimeState } from '../time/selectors';
-import { pause, resume, setSimDays } from '../time/timeSlice';
+import { pause, resume, setSimDays, stepToMissionEvent } from '../time/timeSlice';
 import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from './playMission';
 import { stepMissionSpeed } from './stepMissionSpeed';
-import { stepToMissionEvent } from './stepToMissionEvent';
 import type { CameraMission } from '../../@types/camera/CameraMission';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';

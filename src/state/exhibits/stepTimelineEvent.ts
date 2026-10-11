@@ -1,9 +1,11 @@
 import { selectTimelineEvents } from './selectTimelineEvents';
-import { stepToMissionEvent } from './stepToMissionEvent';
 import { selectTimeState } from '../time/selectors';
+import { stepToMissionEvent } from '../time/timeSlice';
 import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
+import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
+import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { RootState } from '../../store/types';
 
 /**
@@ -15,6 +17,8 @@ export const stepTimelineEvent = (state: RootState, direction: -1 | 1) => {
   if (!events) return null;
   const nowMs = performance.now();
   const simMs = julianDaysToUnixMs(deriveSimDays(selectTimeState(state), nowMs));
-  const eventId = adjacentEventId(events, simMs, direction);
-  return eventId ? stepToMissionEvent({ eventId, nowMs }) : null;
+  const event = events.find((e) => e.id === adjacentEventId(events, simMs, direction));
+  if (!event) return null;
+  const simDays = unixMsToJulianDays(missionEventStepMs(event));
+  return stepToMissionEvent({ eventId: event.id, simDays, nowMs });
 };
