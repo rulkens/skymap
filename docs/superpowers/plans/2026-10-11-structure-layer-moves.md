@@ -173,13 +173,13 @@ export const STRUCTURE_SOURCE_ROWS = [
 
 **Files:** `docs/BACKLOG.md` (modify), `docs/backlog/2026-10-11-layer-dependency-dag.md` (create)
 
-- [ ] Add this index line to `docs/BACKLOG.md` under `## Engine & State`, directly after the **Derive `SettingsSnapshot` from the Layer registry** line (the other Layer-contract item):
+- [x] Add this index line to `docs/BACKLOG.md` under `## Engine & State`, directly after the **Derive `SettingsSnapshot` from the Layer registry** line (the other Layer-contract item):
 
   ```markdown
-  - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
+  - [x] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
   ```
 
-- [ ] Create the detail file with this content:
+- [x] Create the detail file with this content:
 
   ```markdown
   # Layer dependency DAG
@@ -232,7 +232,7 @@ export const STRUCTURE_SOURCE_ROWS = [
   (reverse topological), or core keeps destroying in composition order.
   ```
 
-- [ ] Commit.
+- [x] Commit.
 
 ## Dispatch grouping
 
