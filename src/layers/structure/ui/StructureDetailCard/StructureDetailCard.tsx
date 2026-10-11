@@ -50,6 +50,13 @@ function StructureDetailCard({
   const shot = CARD_SHOT_ID_BY_FOCUS_ID.get(target.id);
   // With a shot the lead rows sit beside it as summary lines (as the body card
   // does); without one they stay ordinary CardRows.
+  const countRow =
+    memberCount != null
+      ? {
+          label: <InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>,
+          value: memberCount.toLocaleString(),
+        }
+      : null;
   const leadRows = [
     {
       label: <InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>,
@@ -79,7 +86,7 @@ function StructureDetailCard({
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
           <Thumbnail url={cardShotUrl(shot)} alt={`${target.name} thumbnail`} />
           <div className={styles.cardSummary}>
-            {leadRows.map((row, i) => (
+            {[...leadRows, ...(countRow ? [countRow] : [])].map((row, i) => (
               <div key={i} className={styles.cardDistLine}>
                 <span>{row.label}</span> {row.value}
               </div>
@@ -93,12 +100,7 @@ function StructureDetailCard({
         {target.category === 'nebula' && (
           <CardRow label="Type" value={NEBULA_KIND_LABELS[target.nebulaKind]} />
         )}
-        {memberCount != null && (
-          <CardRow
-            label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}
-            value={memberCount.toLocaleString()}
-          />
-        )}
+        {shot === undefined && countRow && <CardRow {...countRow} />}
         {target.category === 'galaxy-cluster' && target.abell !== undefined && (
           <CardRow
             label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}

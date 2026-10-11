@@ -66,7 +66,12 @@ describe('StructureDetailCard', () => {
     const { container } = render(
       createElement(StructureDetailCard, {
         target: { ...virgoNoAbell, id: 'galaxy-cluster-virgo-m87' },
+        memberCount: 42,
       }),
+    );
+    // The count rides in the summary column beside the shot, not below it.
+    expect(container.querySelector('img')?.nextElementSibling?.textContent).toMatch(
+      /Galaxies.*42$/,
     );
     expect(container.querySelector('img')?.getAttribute('src')).toMatch(
       /\/images\/featured\/cluster-virgo-m87\.webp$/,
