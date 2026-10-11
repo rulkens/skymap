@@ -40,6 +40,7 @@ import {
   HOVERED_RING_BRIGHTEN,
   RING_PICK_MIN_ALPHA,
 } from './structureMarkerStyles';
+import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
@@ -100,41 +101,10 @@ export function produceStructureMarkers(
     // The apparent-size projection divides by distance, so an eye exactly on
     // the anchor gets alpha 0. Still emit a descriptor to keep the index
     // alignment — discarded in-fragment.
-    let fadeAlpha: number;
-    if (distanceMpc <= 0) {
-      fadeAlpha = 0;
-    } else {
-      const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
-
-      // Close-approach fade-out: smoothstep 1 → 0 as the ring grows past
-      // markerMaxApparentRadiusPx.
-      let maxFadeAlpha = 1;
-      if (apparentRadiusPx > style.markerMaxApparentRadiusPx) {
-        const t = Math.min(
-          1,
-          (apparentRadiusPx - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
-        );
-        maxFadeAlpha = 1 - t * t * (3 - 2 * t);
-      }
-
-      // Far-distance fade-out: smoothstep 0 → 1 across the band below
-      // markerMinApparentRadiusPx so rings don't pop as the camera pulls back.
-      let minFadeAlpha: number;
-      if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
-        minFadeAlpha = 0;
-      } else if (
-        apparentRadiusPx <
-        style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
-      ) {
-        const t =
-          (apparentRadiusPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
-        minFadeAlpha = t * t * (3 - 2 * t);
-      } else {
-        minFadeAlpha = 1;
-      }
-
-      fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
-    }
+    const fadeAlpha =
+      distanceMpc <= 0
+        ? 0
+        : structureApparentRadiusFade(style, (radiusMpc / distanceMpc) * pxPerRad);
 
     // Significance weighting on top of the distance fade: lerp from
     // SIG_MIN_ALPHA (significance 0) to 1 (significance 1). Featured anchors

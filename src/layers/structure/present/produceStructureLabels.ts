@@ -60,6 +60,7 @@ import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
+import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
@@ -158,42 +159,18 @@ export function produceStructureLabels(
     // lowest priority rather than beating real ones.
     let prominencePx = 0;
 
-    // Marker close-approach fade-out applied to the LABEL too. When the ring
-    // has grown past markerMaxApparentRadiusPx (cluster fills the viewport)
-    // the floating label is just chrome — fading it with the ring hands the
-    // view back to the galaxies. Mirrors the smoothstep produceStructureMarkers
-    // uses so label + ring disappear together. Render at the WIDER apparent
-    // extent, falling back to the core for structures that set only
-    // physicalRadiusMpc.
+    // The ring's apparent-size fade applies to the LABEL too: once the ring
+    // fills the viewport the floating label is just chrome, and at far zoom it
+    // would otherwise linger after its ring is gone. Render at the WIDER
+    // apparent extent, falling back to the core for structures that set only
+    // physicalRadiusMpc. No `awake` signal — the fade is a pure function of
+    // camera distance, and camera motion already wakes the loop.
     const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
     if (distanceMpc > 0) {
       const apRadPx = (markerRadiusMpc / distanceMpc) * pxPerRad;
       prominencePx = apRadPx;
-      if (apRadPx > style.markerMaxApparentRadiusPx) {
-        const t = Math.min(
-          1,
-          (apRadPx - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
-        );
-        const markerFadeOut = 1 - t * t * (3 - 2 * t);
-        if (markerFadeOut <= 0) continue;
-        // No `awake` signal — fadeAlpha is a pure function of camera distance,
-        // and camera motion already wakes the loop.
-        fadeAlpha = Math.min(fadeAlpha, markerFadeOut);
-      }
-      // Far-distance fade-out — mirrors the marker min-radius branch so label
-      // and ring disappear together at far zoom (without this the label would
-      // linger at full alpha after the ring fades).
-      if (apRadPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx) {
-        let minFadeOut: number;
-        if (apRadPx < style.markerMinApparentRadiusPx) {
-          minFadeOut = 0;
-        } else {
-          const t = (apRadPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
-          minFadeOut = t * t * (3 - 2 * t);
-        }
-        if (minFadeOut <= 0) continue;
-        fadeAlpha = Math.min(fadeAlpha, minFadeOut);
-      }
+      fadeAlpha = structureApparentRadiusFade(style, apRadPx);
+      if (fadeAlpha <= 0) continue;
     }
 
     // Bake the resolved layer opacity into fadeAlpha on top of the distance
