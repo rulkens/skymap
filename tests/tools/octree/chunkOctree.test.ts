@@ -9,21 +9,28 @@ import { makeOctreeBuildInput, randomOctreeRecords } from '../../fixtures/makeOc
 
 const GRID = { bits: 6, origin: [0, 0, 0] as [number, number, number], cellEdge: 10 };
 const CAPACITY = 300;
+const NODE_CAPACITY = 40;
 
 const key = (level: number, morton: number) => `${level}:${morton}`;
 const recordsOf = (t: OctreeNodeTable, i: number) => t.ownCount[i]! + (t.childMask[i] ? 1 : 0);
 
-/** Brute-force strict-descendant record count of every row of the stratified tree. */
-function descendantRecords(tree: StratifiedOctree): Map<string, number> {
-  const out = new Map<string, number>();
-  const walk = (row: number): number => {
-    let below = 0;
+type Below = { readonly records: number; readonly rows: number };
+
+/** Brute-force strict-descendant record and row counts of every row of the stratified tree. */
+function descendantCounts(tree: StratifiedOctree): Map<string, Below> {
+  const out = new Map<string, Below>();
+  const walk = (row: number): Below => {
+    let records = 0;
+    let rows = 0;
     for (let o = 0; o < 8; o++) {
       const c = tree.childIndex[row * 8 + o]!;
-      if (c >= 0) below += recordsOf(tree.nodes, c) + walk(c);
+      if (c < 0) continue;
+      const below = walk(c);
+      records += recordsOf(tree.nodes, c) + below.records;
+      rows += 1 + below.rows;
     }
-    out.set(key(tree.nodes.level[row]!, tree.nodes.morton[row]!), below);
-    return below;
+    out.set(key(tree.nodes.level[row]!, tree.nodes.morton[row]!), { records, rows });
+    return { records, rows };
   };
   walk(tree.nodes.count - 1);
   return out;
@@ -35,7 +42,7 @@ function fixtureTree(): StratifiedOctree {
 
 describe('chunkOctree', () => {
   it('a chunk decodes without any other chunk', () => {
-    const objects = chunkOctree(fixtureTree(), CAPACITY);
+    const objects = chunkOctree(fixtureTree(), CAPACITY, NODE_CAPACITY);
     expect(objects.chunks.length).toBeGreaterThan(3);
     for (const chunk of objects.chunks) {
       const t = chunk.nodes;
@@ -53,23 +60,32 @@ describe('chunkOctree', () => {
     }
   });
 
-  it('an over-capacity node stays in the index and the split recurses', () => {
+  it('a node over either bound stays in the index and the split recurses', () => {
     const tree = fixtureTree();
-    const below = descendantRecords(tree);
-    const { index, chunks } = chunkOctree(tree, CAPACITY);
+    const below = descendantCounts(tree);
+    const { index, chunks } = chunkOctree(tree, CAPACITY, NODE_CAPACITY);
     const t = index.nodes;
     const indexKeys = new Set(Array.from(t.morton, (m, i) => key(t.level[i]!, m)));
+    const overRowsOnly = [...below].filter(
+      ([, b]) => b.records <= CAPACITY && b.rows > NODE_CAPACITY,
+    );
+    expect(overRowsOnly.length).toBeGreaterThan(0);
 
     expect(indexKeys.has(key(GRID.bits, 0))).toBe(true);
-    for (const [k, n] of below) if (n > CAPACITY) expect(indexKeys.has(k)).toBe(true);
+    for (const [k, b] of below) {
+      if (b.records > CAPACITY || b.rows > NODE_CAPACITY) expect(indexKeys.has(k)).toBe(true);
+    }
+    expect(index.chunkNodeCap).toBeLessThanOrEqual(NODE_CAPACITY);
 
     const roots: { level: number; morton: number }[] = [];
     for (let i = 0; i < t.count; i++) {
       if (t.chunkRef[i] === NO_CHUNK_REF) continue;
       const chunk = chunks[t.chunkRef[i]!]!;
       expect([chunk.level, chunk.morton]).toEqual([t.level[i], t.morton[i]]);
-      expect(below.get(key(t.level[i]!, t.morton[i]!))).toBeLessThanOrEqual(CAPACITY);
-      expect(chunk.columns.get('absMag')!.length).toBe(below.get(key(t.level[i]!, t.morton[i]!)));
+      const b = below.get(key(t.level[i]!, t.morton[i]!))!;
+      expect(b.records).toBeLessThanOrEqual(CAPACITY);
+      expect(chunk.nodes.count).toBe(b.rows);
+      expect(chunk.columns.get('absMag')!.length).toBe(b.records);
       roots.push({ level: t.level[i]!, morton: t.morton[i]! });
     }
     expect(roots.length).toBe(chunks.length);
@@ -87,7 +103,7 @@ describe('chunkOctree', () => {
       absMag: 14,
     }));
     const tree = stratifyOctree(makeOctreeBuildInput(records, GRID));
-    expect(() => chunkOctree(tree, CAPACITY)).toThrow(/level 0/);
+    expect(() => chunkOctree(tree, CAPACITY, NODE_CAPACITY)).toThrow(/level 0/);
   });
 
   it('STOPs when a node owns more than MAX_OWN_COUNT records', () => {
@@ -96,6 +112,6 @@ describe('chunkOctree', () => {
       absMag: 14,
     }));
     const tree = stratifyOctree(makeOctreeBuildInput(records, GRID));
-    expect(() => chunkOctree(tree, 1_000_000)).toThrow(/MAX_OWN_COUNT/);
+    expect(() => chunkOctree(tree, 1_000_000, NODE_CAPACITY)).toThrow(/MAX_OWN_COUNT/);
   });
 });

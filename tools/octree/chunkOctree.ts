@@ -1,8 +1,9 @@
 /**
  * Capacity-bounded chunking (spec §4). From the root down, a node with children whose
- * strict-descendant records fit `capacity` becomes a chunk root: its row stays in the index
- * (own records + blob, so an absent chunk draws as a glow) and every row below it moves into
- * its chunk, renumbered object-local. Over capacity, the node stays and the split recurses.
+ * strict-descendant records fit `capacity` and strict-descendant rows fit `nodeCapacity` becomes
+ * a chunk root: its row stays in the index (own records + blob, so an absent chunk draws as a
+ * glow) and every row below it moves into its chunk, renumbered object-local. Over either bound,
+ * the node stays and the split recurses.
  */
 import type { ColumnId } from '../../src/@types/octree/ColumnId';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
@@ -13,7 +14,11 @@ import { MAX_OWN_COUNT, NO_CHUNK_REF } from '../../src/data/octree/octreeFormat'
 const OCTANTS = 8;
 const IN_INDEX = -1;
 
-export function chunkOctree(tree: StratifiedOctree, capacity: number): OctreeObjects {
+export function chunkOctree(
+  tree: StratifiedOctree,
+  capacity: number,
+  nodeCapacity: number,
+): OctreeObjects {
   const { nodes, childIndex } = tree;
   const count = nodes.count;
   const recordsOf = (i: number) => nodes.ownCount[i]! + (nodes.childMask[i] !== 0 ? 1 : 0);
@@ -27,10 +32,13 @@ export function chunkOctree(tree: StratifiedOctree, capacity: number): OctreeObj
   }
 
   const descendants = new Uint32Array(count);
+  const descendantRows = new Uint32Array(count);
   for (let i = 0; i < count; i++) {
     for (let o = 0; o < OCTANTS; o++) {
       const c = childIndex[i * OCTANTS + o]!;
-      if (c >= 0) descendants[i]! += recordsOf(c) + descendants[c]!;
+      if (c < 0) continue;
+      descendants[i]! += recordsOf(c) + descendants[c]!;
+      descendantRows[i]! += 1 + descendantRows[c]!;
     }
   }
 
@@ -40,7 +48,8 @@ export function chunkOctree(tree: StratifiedOctree, capacity: number): OctreeObj
   for (let i = count - 1; i >= 0; i--) {
     let childOwner = owner[i]!;
     if (owner[i] === IN_INDEX) {
-      if (nodes.childMask[i] !== 0 && descendants[i]! <= capacity) {
+      const fits = descendants[i]! <= capacity && descendantRows[i]! <= nodeCapacity;
+      if (nodes.childMask[i] !== 0 && fits) {
         isChunkRoot[i] = 1;
         childOwner = i;
       }
@@ -51,8 +60,9 @@ export function chunkOctree(tree: StratifiedOctree, capacity: number): OctreeObj
       if (childOwner === IN_INDEX && nodes.level[c] === 0) {
         throw new Error(
           `dense-cell STOP: level 0 node ${nodes.morton[c]} would land in the index; its parent ` +
-            `(level ${nodes.level[i]} node ${nodes.morton[i]}) holds ${descendants[i]} ` +
-            `descendant records > chunkCapacity ${capacity}`,
+            `(level ${nodes.level[i]} node ${nodes.morton[i]}) holds ${descendants[i]} records / ` +
+            `${descendantRows[i]} rows below it, over chunkCapacity ${capacity} or nodeCapacity ` +
+            `${nodeCapacity}`,
         );
       }
       owner[c] = childOwner;
