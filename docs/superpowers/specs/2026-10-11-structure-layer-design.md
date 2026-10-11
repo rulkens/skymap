@@ -1,6 +1,6 @@
 # Structure Layer — design spec
 
-Fold the featured-structures code (eight ring-marker categories: galaxy clusters, superclusters, voids, galaxy groups, open clusters, globular clusters, nebulae, Galactic Centre places) out of core and into `src/layers/structure/`, which today holds only its settings slice. No behaviour changes except the two named in §9. The Layer README's two unsettled placements are ruled at the same time (§4).
+Fold the featured-structures code (eight ring-marker categories: galaxy clusters, superclusters, voids, galaxy groups, open clusters, globular clusters, nebulae, Galactic Centre places) out of core and into `src/layers/structure/`, which today holds only its settings slice. No user-visible behaviour change except the one named in §9. The Layer README's two unsettled placements are ruled at the same time (§4).
 
 Rulings came from the brainstorm of 2026-10-10 → 2026-10-11 (dash asks zir4, bVU4, 3ZRj) and the `refactor-ground` checkpoint. They are listed in §2 and not re-litigated here.
 
@@ -22,14 +22,15 @@ Packaging: **two PRs**, each with its own plan. PR 1 is mechanical: file moves v
 | R3  | The duplicated smoothstep fade curve in the marker and label producers is folded into one helper in PR 2 (closes item 1 of `docs/backlog/2026-08-22-label-entanglement-residuals.md`; items 2 and 3 stay).                                                                                                                                                                                                                                                                                                   |
 | R4  | README unsettled 1: `subsystems/` and `render/` stay distinct, with the definition in §4.                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | R5  | README unsettled 2: a declaration row's folder names the concern it describes. `load/` for `assets` and `sourceCounts`; `present/` for `fades`, `guides`, `selection`, `search`, `slabs`.                                                                                                                                                                                                                                                                                                                    |
-| R6  | Per-category counts flow through `sourceCounts`, yielded once, when the bulk slot settles (ready or error). No `facts.counts`.                                                                                                                                                                                                                                                                                                                                                                                |
+| R6  | Per-category counts, the palette search list and the bulk slot's status are the Layer's `facts` (`counts`, `searchList`, `bulk`). Anchors publish at boot, the bulk group when its slot settles. Not `sourceCounts`: anchors are module data, not a loaded catalog, and a count report flips engine status to `ready` (`createLayers.ts:73-76`); batching at bulk-settle was rejected because the bulk slot never loads while the three bulk categories are off (`assetWiring.ts:149-157`), which would leave every category countless. |
 | R7  | The palette search list is `facts.searchList`; the palette keeps its `structure` row kind, chip and thumbnail. `LayerSearchEntry` is not extended.                                                                                                                                                                                                                                                                                                                                                            |
-| R8  | `watchFocusTweenSaga` reads the Layer's count report instead of `resolveDeps().structures`; `resolveDeps.structures` is deleted.                                                                                                                                                                                                                                                                                                                                                                              |
+| R8  | `watchFocusTweenSaga` waits on `facts.bulk !== 'pending'` (pulse: `factsReported`) instead of `resolveDeps().structures`. `structures` was `ResolveDeps`' only field, so `ResolveDeps`, the saga-context field and every test fixture that builds one are deleted (about 22 test files, mechanical).                                                                                                                                                                                                       |
 | R9  | `MARKER_PRODUCERS` is deleted; the structure planner calls `produceStructureMarkers` directly.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | R10 | `utils/structure/structureMemberCount.ts` and `structureMembership.ts` move into `layers/galaxyCatalog/` (their only reader) in PR 1.                                                                                                                                                                                                                                                                                                                                                                         |
 | R11 | Prep commits sit at the head of PR 2, one per joint. PR 1 stays pure moves.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | R12 | Stays in core, by readers: `structureFocusSubsystem` (its blend feeds five Layers), `structureFocusDistance` (camera framing), `structureIds`, `structureIdsByScale`, `labelCategories`, `categoryDisplayInfo`, `focusAlphaMultiplier`, `isPickableUnderFocus`, `structureIdOf`, and the shared types under `src/@types/` (`StructureId`, `StructureInfo`, `StructureSearchEntry`, `StructureFocusSubsystem`, `StructureCatalogPayload`). Shaders stay under `services/gpu/shaders/structureMarker/` by README rule. |
 | R13 | No Layer imports another Layer. Cross-Layer reads go through core state and core types (galaxyCatalog's member count reads the core selection row's structure arm). An explicit `Layer.dependsOn` DAG with typed access to another Layer's facts is backlogged (`docs/backlog/2026-10-11-layer-dependency-dag.md`, PR 1); its trigger is the second cross-Layer read. |
+| R14 | Structure labels register after every other Layer's labels, so ties on equal on-screen size may resolve differently than today. Accepted; draw-order ties were never a contract. |
 
 ## 3. Ground preparation
 
@@ -41,11 +42,10 @@ export const structureLayer = defineLayer({
   name: 'structure',
   settings: structureLayerSettings, // exists
   sources: STRUCTURE_SOURCE_ROWS, // sources/: 8 rows + the array
-  facts: { searchList: [] } as StructureFacts, // @types/StructureFacts.d.ts
-  create, // store, 2 marker renderers, bulk slot, projection
+  facts: { counts: {}, searchList: [], bulk: 'pending' } as StructureFacts, // @types/StructureFacts.d.ts
+  create, // store, 2 marker renderers, bulk slot, projection (publishes facts)
   destroy,
   assets: structureAssetRows, // load/: the 'structureCatalog' row
-  sourceCounts: structureSourceCounts, // load/: 8 reports, once, at bulk-settle
   passes: (rt) => [structureMarkersCosmoPass(rt), structureMarkersNearPass(rt)],
   planners: (rt) => [structureMarkersPlanner(rt)], // frame.ts; calls produceStructureMarkers
   guides: (rt) => ({
@@ -63,7 +63,11 @@ export const structureLayer = defineLayer({
 });
 
 // @types/StructureFacts.d.ts
-export type StructureFacts = { readonly searchList: readonly StructureSearchEntry[] };
+export type StructureFacts = {
+  readonly counts: Partial<Record<StructureId, number>>;
+  readonly searchList: readonly StructureSearchEntry[];
+  readonly bulk: 'pending' | 'ready' | 'error';
+};
 
 // @types/StructureRuntime.d.ts (private guts)
 export type StructureRuntime = {
@@ -74,32 +78,33 @@ export type StructureRuntime = {
 };
 ```
 
-Core after the move: `selectSourceCounts(state)['galaxy-cluster']` is the Structures section's count and the saga's loaded signal; `selectEngineFacts(state).structure.searchList` is the palette's list.
+Core after the move: `selectEngineFacts(state).structure` carries the Structures section's counts, the palette's list and the saga's loaded signal (`bulk !== 'pending'`). A facts key exists only once `createLayers` has seeded it, so every facts-reading change lands after the Layer is registered.
 
 ### 3.2 Verdicts
 
 | Touchpoint                                               | Verdict                                                                                 | Blocker today                                                                        |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Per-category counts                                      | bolt-on → growth via `sourceCounts` (categories are already `SourceType`s)              | `engineSlice.ts:43,68-75` own field + action                                         |
+| Per-category counts                                      | bolt-on → growth via `facts`                                                            | `engineSlice.ts:43,68-75` own field + action                                         |
 | Palette search list                                      | bolt-on → growth via `facts`                                                            | `engineSlice.ts:45,83-90` own field + action                                         |
-| "Bulk loaded" wait                                       | bolt-on → growth via the count report                                                   | `engine.ts:366-371` `resolveDeps().structures`, `watchFocusTweenSaga.ts:60-66` pulse |
+| "Bulk loaded" wait                                       | bolt-on → growth via `facts.bulk`                                                       | `engine.ts:366-371` `resolveDeps().structures`, `watchFocusTweenSaga.ts:60-66` pulse |
 | Marker producer                                          | bolt-on (single-row registry)                                                           | `presentation/markerProducers.ts:5`, `frame/runMarkerProducers.ts`                   |
 | Planner                                                  | bolt-on (single-row `CORE_PLANNERS`)                                                    | `frame/planners/index.ts:11-13`                                                      |
 | Passes, fades, selection, guides, assets, sources, ui    | growth, members exist                                                                   | hand rows listed in §1                                                               |
-| Engine-status side effect                                | a count report flips engine status to `ready` (`createLayers.ts:73-76`)                 | avoided by R6: no report before the bulk slot settles                                |
+| Engine-status side effect                                | a count report flips engine status to `ready` (`createLayers.ts:73-76`)                 | avoided by R6: structures never report a source count                                |
 
-Greenfield cross-check (fresh agent, Layer contract only) agreed on everything except counts and search, which became R6 and R7 at the checkpoint.
+Greenfield cross-check (fresh agent, Layer contract only) agreed on everything except counts and search, which became R6 and R7 at the checkpoint; R6 was then revised at plan time when the bulk-slot demand gate surfaced.
 
-### 3.3 Prep list (head of PR 2, one commit each, behaviour-neutral)
+### 3.3 Prep list (PR 2, one commit each, behaviour-neutral)
+
+P3 and P4 need no Layer and open PR 2. P1 and P2 write `facts`, so they follow the registration commit (§6); the deletions they list happen there.
 
 | #   | Commit                                                                                                                                                                                                                                                   | Deletes                                                                                            |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P1  | `wireStructureProjection` reports counts through a `sourceCounts` iterable at bulk-settle; `StructuresSectionContainer` reads `selectSourceCounts`; `watchSelectionRowsSaga` drops its structure pulse (it already listens to `engineSourceCountReported`). | `structureCounts`, `engineStructureCountsChanged`, `selectStructureCounts`                           |
+| P1  | The projection publishes `facts.counts` and `facts.bulk`; `StructuresSectionContainer` reads the facts key; `watchSelectionRowsSaga` swaps its structure pulse for `factsReported`.                                                                        | `structureCounts`, `engineStructureCountsChanged`, `selectStructureCounts`                           |
 | P2  | Search list published as `facts.searchList`; `selectStructureSearchList` re-points to the facts key.                                                                                                                                                     | `structureSearchList`, `engineStructureSearchListChanged`                                           |
-| P3  | `watchFocusTweenSaga` deferral: `empty` reads the galaxy-cluster count report's absence, `pulse` is `engineSourceCountReported`.                                                                                                                          | `resolveDeps().structures`, `ResolveDeps.structures`, the saga-context field in `store/types.ts`    |
+| P3  | `structureSelectionRow` takes the store directly; `watchFocusTweenSaga` deferral: `empty` is `yield* select` of `facts.bulk === 'pending'`, `pulse` is `factsReported`.                                                                                  | `ResolveDeps`, `resolveDeps()`, the saga-context field in `store/types.ts`, their test fixtures      |
 | P4  | `structureMarkersPlanner` calls `produceStructureMarkers`; `runMarkerProducers` goes.                                                                                                                                                                    | `MARKER_PRODUCERS`, `markerProducers.ts`, `runMarkerProducers.ts`, `MarkerProducer` type if unused  |
 
-P1 and P2 land before `create` exists, so they are wired from the current core call sites; the wiring commit (§6) is where `create` takes them over.
 
 ### 3.4 Adjacent findings
 
@@ -114,7 +119,7 @@ P1 and P2 land before `create` exists, so they are wired from the current core c
 
 **Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. All eleven formed Layers match today; no file moves.
 
-The "Unsettled" section is replaced by these two paragraphs under "Where things go", and the Status line names `structure` as formed and `body` as the one remaining stub.
+The "Unsettled" section is replaced by these two paragraphs under "Where things go" in PR 1. The Status line names `structure` as formed and `body` as the one remaining stub in PR 2, once `layer.ts` exists.
 
 ## 5. File moves (PR 1, one `move-files` manifest, tests dragged along)
 
@@ -127,17 +132,17 @@ The "Unsettled" section is replaced by these two paragraphs under "Where things 
 | `services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`                                                                                                                                  | `render/`                                                                                                                                                               |
 | `services/loading/fetchers/structureCatalogFetcher.ts`, `services/loading/slots/structureCatalogSlot.ts`                                                                                             | `load/`                                                                                                                                                                 |
 | `services/engine/wiring/structureCatalogToStructures.ts`, `wireStructureProjection.ts`                                                                                                               | `load/`                                                                                                                                                                 |
-| `data/structure/buildStaticAnchorStructures.ts`, `structureCatalogFormat.ts`                                                                                                                         | `load/`                                                                                                                                                                 |
+| `data/structure/buildStaticAnchorStructures.ts`                                                                                                                                                      | `load/` (`structureCatalogFormat.ts` stays: `tools/structures/buildStructures.ts:46` reads it)                                                                          |
 | `utils/structure/toStructureSearchEntry.ts`                                                                                                                                                          | `load/`                                                                                                                                                                 |
 | `services/engine/frame/passes/structureMarkersCosmoPass.ts`, `structureMarkersNearPass.ts`                                                                                                           | `passes/`                                                                                                                                                               |
 | `services/engine/frame/passes/createStructureMarkersPass.ts`                                                                                                                                         | `render/` (a factory helper, not a pass; purity rule)                                                                                                                   |
 | `services/engine/frame/planners/structureMarkersPlanner.ts`                                                                                                                                          | `frame.ts`                                                                                                                                                              |
 | `services/engine/presentation/produceStructureLabels.ts`, `produceStructureMarkers.ts`, `structureMarkerStyles.ts`, `structureVisibleBands.ts`                                                       | `present/`                                                                                                                                                              |
 | `services/engine/selection/structureSelectionRow.ts`, `services/engine/helpers/resolveStructureFromPick.ts`                                                                                          | `present/`                                                                                                                                                              |
-| `data/structure/structureScaleTitles.ts`, `nebulaKindLabels.ts`, `data/structureLabelAboveGapPx.ts`                                                                                                  | `data/` (Layer-local constants, as `blackHoles/data/`)                                                                                                                  |
+| `data/structure/structureScaleTitles.ts`, `data/structureLabelAboveGapPx.ts`                                                                                                                         | `data/` (Layer-local constants, as `blackHoles/data/`; `nebulaKindLabels.ts` stays: `tools/parsers/parseStructureSeed.ts:24` reads it)                                 |
 | `components/SettingsPanel/StructuresSection.tsx`, `components/containers/StructuresSectionContainer.tsx`                                                                                             | `ui/StructuresSection/`, `ui/`                                                                                                                                          |
 | `components/InfoCard/StructureDetailCard/`, `CompactStructureCard/`, `components/containers/StructureDetailCardContainer.tsx`                                                                        | `ui/`                                                                                                                                                                   |
-| `@types/rendering/StructureMarkerRenderer.d.ts`, `StructureMarkerDescriptor.d.ts`, `@types/engine/frame/StructureMarkersPassSpec.d.ts`, `@types/engine/data/{StructureStore,PickStructureStore}.d.ts` | `@types/` (`StructureStore` only after P3 removes `ResolveDeps`'s and `EngineData`'s reads; until then it stays shared, so it moves in PR 2)                            |
+| `@types/rendering/StructureMarkerRenderer.d.ts`, `StructureMarkerDescriptor.d.ts`, `@types/engine/frame/StructureMarkersPassSpec.d.ts`, `@types/engine/data/{StructureStore,PickStructureStore}.d.ts` | `@types/` (`PickStructureStore` and `StructureMarkersPassSpec` in PR 1, every reader moves with them; the other three in PR 2 once core no longer reads them)         |
 
 ### 5.2 Into `src/layers/galaxyCatalog/` (R10)
 
@@ -149,7 +154,7 @@ Everything in R12. Tests follow their files; the mirror root becomes `tests/laye
 
 ## 6. Wiring (PR 2, after the four preps)
 
-- `create(deps)` mints the Runtime: store, two renderers (from `gpuHandleRegistry`'s rows, deleted there), the bulk slot (from `assetWiring`'s row, deleted there), and runs the projection with `deps.publish` for `searchList` and the `sourceCounts` iterable for counts. `destroy` releases renderers and the slot.
+- `create(deps)` mints the Runtime: store, two renderers (from `gpuHandleRegistry`'s rows, deleted there), the bulk slot (from `assetWiring`'s row, deleted there), and runs the projection, which publishes `counts`, `searchList` and `bulk` through `deps.publish`. `destroy` releases the renderers; no Layer releases a slot today and this one does not start.
 - `createEngineData` loses `structures`; every core read of `state.data.structures` is gone by P3, so this is a type delete.
 - `EngineAssetSlots.structureCatalog` and `EngineGpuHandles.structureMarker*` go.
 - `data/sources.ts` imports `STRUCTURE_SOURCE_ROWS`; the eight entries leave `UNFORMED_SOURCE_REGISTRY`.
@@ -160,7 +165,7 @@ Everything in R12. Tests follow their files; the mirror root becomes `tests/laye
 ## 7. Testing
 
 - Existing 25 direct mirrors move with their files and must stay green with only import-path changes in PR 1.
-- PR 2 adds: `tests/layers/structure/layer.test.ts` (pass names unique, two guides rows on COSMO and NEAR0, sources array has eight rows); `load/structureSourceCounts.test.ts` (no report before the slot settles; eight reports after ready; eight after error with anchor-only counts); `present/structureApparentRadiusFade.test.ts`; the `watchFocusTweenSaga` deferral test re-pointed to `engineSourceCountReported`.
+- PR 2 adds: `tests/layers/structure/layer.test.ts` (pass names unique, two guides rows on COSMO and NEAR0, sources array has eight rows); `load/wireStructureProjection.test.ts` extended (anchor counts and `bulk: 'pending'` published at boot; `bulk: 'ready'` with merged counts after the slot resolves; `bulk: 'error'` with anchor-only counts after it rejects); `present/structureApparentRadiusFade.test.ts`; the `watchFocusTweenSaga` deferral test re-pointed to `factsReported` and `facts.bulk`.
 - Deleted with their code: the assertions in `engineSliceDispatches.test.ts` on the two deleted actions.
 
 ## 8. Risks
@@ -171,8 +176,8 @@ Everything in R12. Tests follow their files; the mirror root becomes `tests/laye
 
 ## 9. Behaviour changes, accepted
 
-1. Structures counts appear when the bulk catalog settles, not at frame 1 (R6).
-2. Engine status flips to `ready` when the structure catalog lands, as it does for any other catalog today; it never flips at frame 0.
+1. Structure label tie order on equal on-screen size may differ (R14).
+2. The deep-link saga's deferral key changes from a dedicated pulse to the Layer's `bulk` fact; the observable wait is the same.
 
 ## 10. Definition of done
 
