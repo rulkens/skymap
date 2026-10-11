@@ -79,11 +79,11 @@
   outline-offset: 2px;
 }
 
-/* Phone: the switch keeps its size; its hit area grows to the touch target. */
+/* Phone: the switch keeps its size; its hit area grows to the row height. */
 @media (max-width: 768px) {
   .pillToggle::after {
     content: '';
     position: absolute;
-    inset: calc(-1 * var(--space-7)) calc(-1 * var(--space-4));
+    inset: calc(-1 * var(--space-5)) calc(-1 * var(--space-4));
   }
 }

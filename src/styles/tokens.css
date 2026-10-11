@@ -322,6 +322,8 @@
   --mobile-sheet-peek: calc(var(--space-8) + var(--sheet-header-height) + var(--space-4));
   /** Minimum tap target on touch surfaces. */
   --touch-target: 44px;
+  /** Phone Layers list row: tighter than a touch target; a switch's hit area spans it exactly. */
+  --list-row-height: 36px;
   /** Detail-card thumbnail: full size in the card body, compact in the phone sheet header. */
   --thumbnail-size: 80px;
   --thumbnail-size-header: 48px;
