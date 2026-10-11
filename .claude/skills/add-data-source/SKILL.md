@@ -241,14 +241,17 @@ _nearer_ distance. Focus framing is uniform (`structureFocusDistance.ts`,
 ### Derived: no edit needed
 
 Everything below reads `STRUCTURE_IDS` or the registry and widens with your row:
-the Settings toggles and their counts, `emitCounts`, the pick decode, the
+the Settings toggles and their counts, the pick decode, the
 selection row's deep-link claim (`${category}-${seed.id}`, matched by category
 prefix; add a test only if your id could collide with another category's
 prefix), the search chip and palette rows, default marker and label visibility,
 `StructureId`, the marker renderers' buckets, and the marker and label passes
-(chosen by `scale`). `BULK_CATALOG_CATEGORIES` in `assetWiring.ts` is the one
-list not derived: add the category **only if** it has a bulk `.ccat`, which a
-seed-only category does not.
+(chosen by `scale`). Counts and the palette's search list are the structure
+Layer's facts (`counts`, `searchList`), published by
+`load/wireStructureProjection.ts` off the store, with no per-category row.
+`BULK_CATALOG_CATEGORIES` in `src/layers/structure/load/structureAssetRows.ts`
+is the one list not derived: add the category **only if** it has a bulk
+`.ccat`, which a seed-only category does not.
 
 ## Verify
 

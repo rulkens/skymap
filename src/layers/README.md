@@ -18,7 +18,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                            |
 | `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                          |
 | `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                   |
-| `planners?`     | `frame.ts`                                     | Per-frame content planning; joins `CORE_PLANNERS`                                                                     |
+| `planners?`     | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                            |
 | `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
 | `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
 | `sagas?`        | `sagas/`                                       | One saga per file                                                                                                     |
@@ -76,6 +76,6 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 ## Status
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
-`flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles` and
-`milkyWay` and `lightTime` are formed. The other two folders (`body`, `structure`) are settings-only
-stubs from prep step (c) and are filled in one Layer at a time.
+`flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
+`milkyWay`, `lightTime` and `structure` are formed. `body` is the one
+settings-only stub left from prep step (c).
