@@ -1,12 +1,13 @@
 /**
- * Tests every chunk root with the cut's own tests: frustum (every view's six planes, `cut.planes`,
- * rebased about `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen` grows a refine
- * candidate) and the refine proxy edge²/dist² ≥ thr². Roots alone decide what a walk from the
- * index root would: an ancestor box holds the root's with twice the edge (proxy ≥ 4× the root's)
- * and, as `worldSpread` ≥ 1, a sphere holding the root's. A root that would refine requests its
- * chunk (priority = its best root's proxy) when absent, touches it when resident. The plan cannot
- * see the GPU's budget bin, so it may fetch a chunk the budget then declines to open: bytes, never
- * correctness. A failed chunk asks for nothing. Only the `limit` best requests are kept.
+ * Walks the index from its root with the cut's own tests: frustum (every view's six planes,
+ * `cut.planes`, rebased about `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen` grows a
+ * refine candidate) and the refine proxy edge²/dist² ≥ thr². A row that fails either is skipped
+ * with its whole subtree, exactly: a child's proxy is ≤ ¼ its parent's, and, as `worldSpread` ≥ 1,
+ * its sphere lies inside its parent's. So the cost follows the visible, refining rows, not the
+ * catalog. A chunk root that would refine requests its chunk (priority = its best root's proxy)
+ * when absent, touches it when resident. The plan cannot see the GPU's budget bin, so it may fetch
+ * a chunk the budget then declines to open: bytes, never correctness. A failed chunk asks for
+ * nothing. Only the `limit` best requests are kept.
  */
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
@@ -14,6 +15,7 @@ import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctree
 import type { StarChunkPlan } from '../../layers/starCatalog/@types/StarChunkPlan';
 import type { StarChunkRequest } from '../../layers/starCatalog/@types/StarChunkRequest';
 import { SCALE_UNITS } from '../../data/scaleUnits';
+import { MAX_GRID_BITS, NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import {
   CUT_MAX_VIEWS,
   FLOATS_PER_VIEW,
@@ -29,6 +31,8 @@ let best = new Float64Array(0);
 const SEEN = -1;
 // The wanted chunks' proxies, sorted natively to find the `limit`-th best without sorting objects.
 let ranked = new Float64Array(0);
+// Depth-first with all children pushed holds at most seven siblings per level plus the root.
+const stack = new Int32Array(1 + (OCTANTS - 1) * (MAX_GRID_BITS + 1));
 
 export function planStarChunks(
   octree: StarOctree,
@@ -39,6 +43,7 @@ export function planStarChunks(
   limit: number,
 ): StarChunkPlan {
   const chunks = octree.chunks.length;
+  if (chunks === 0) return { requests: [], touched: [] };
   if (best.length < chunks) {
     best = new Float64Array(chunks);
     ranked = new Float64Array(chunks);
@@ -55,15 +60,20 @@ export function planStarChunks(
   const planeFloats = planes.length <= CUT_MAX_VIEWS * FLOATS_PER_VIEW ? planes.length : 0;
   const radiusPerEdgeMpc = SCALE_UNITS.PC_TO_MPC * HALF_DIAGONAL * cut.worldSpread;
   const toMpc = SCALE_UNITS.PC_TO_MPC;
-  const { boxOriginPc, boxEdgePc, chunkRoots } = index;
-  const { chunkRef } = octree.nodes;
+  const { boxOriginPc, boxEdgePc, childIndex } = index;
+  const { chunkRef, childMask, count: rows } = octree.nodes;
 
   const touched: number[] = [];
   const wanted: number[] = [];
-  roots: for (let r = 0; r < chunkRoots.length; r++) {
-    const i = chunkRoots[r]!;
+  let top = 0;
+  stack[top++] = rows - 1;
+  walk: while (top > 0) {
+    const i = stack[--top]!;
+    // A childless row holds no chunk and nothing below it.
+    if (childMask[i] === 0) continue;
     const ref = chunkRef[i]!;
-    const seen = best[ref]!;
+    const isChunkRoot = ref !== NO_CHUNK_REF;
+    const seen = isChunkRoot ? best[ref]! : 0;
     if (seen === SEEN) continue;
     const edgePc = boxEdgePc[i]!;
     const lx = boxOriginPc[i * AXES]! - cx;
@@ -73,7 +83,8 @@ export function planStarChunks(
     const dy = Math.max(ly, -(ly + edgePc), 0);
     const dz = Math.max(lz, -(lz + edgePc), 0);
     const proxy = (edgePc * edgePc) / Math.max(dx * dx + dy * dy + dz * dz, minDistSqPc);
-    // A weaker root of an already-wanted chunk changes nothing, seen or not.
+    // Below threshold, nothing under it refines; a weaker root of an already-wanted chunk
+    // changes nothing.
     if (proxy < thrSq || proxy <= seen) continue;
 
     // Planes are camera-relative Mpc; the box centre is rebased the same way.
@@ -90,7 +101,15 @@ export function planStarChunks(
         p += PLANE_FLOATS;
       }
       if (p === v + FLOATS_PER_VIEW) break;
-      if (v + FLOATS_PER_VIEW === planeFloats) continue roots;
+      if (v + FLOATS_PER_VIEW === planeFloats) continue walk;
+    }
+
+    if (!isChunkRoot) {
+      for (let k = 0; k < OCTANTS; k++) {
+        const child = childIndex[i * OCTANTS + k]!;
+        if (child >= 0) stack[top++] = child;
+      }
+      continue;
     }
 
     // A chunk with several roots is touched or requested once, at its best root's proxy.
