@@ -45,7 +45,15 @@ export function writeOctreeCatalog(
     );
     const hash = contentHash8(bytes);
     fs.writeFileSync(join(chunkDir, `${c.level}-${c.morton}.${hash}.bin`), bytes);
-    return { level: c.level, morton: c.morton, hash, bytes: bytes.length, nodes, records };
+    return {
+      level: c.level,
+      morton: c.morton,
+      roots: c.roots,
+      hash,
+      bytes: bytes.length,
+      nodes,
+      records,
+    };
   });
 
   const header: OctreeIndexHeader = {

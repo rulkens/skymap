@@ -42,25 +42,32 @@ function fixtureTree(): StratifiedOctree {
 
 describe('chunkOctree', () => {
   it('a chunk decodes without any other chunk', () => {
-    const objects = chunkOctree(fixtureTree(), CAPACITY, NODE_CAPACITY);
-    expect(objects.chunks.length).toBeGreaterThan(3);
-    for (const chunk of objects.chunks) {
-      const t = chunk.nodes;
-      const rows = new Set(Array.from(t.morton, (m, i) => key(t.level[i]!, m)));
+    const { index, chunks } = chunkOctree(fixtureTree(), CAPACITY, NODE_CAPACITY);
+    expect(chunks.length).toBeGreaterThan(3);
+    const t = index.nodes;
+    for (const chunk of chunks) {
+      const c = chunk.nodes;
+      const rows = new Set(Array.from(c.morton, (m, i) => key(c.level[i]!, m)));
+      const roots = chunk.roots.map((r) => ({ level: t.level[r]!, morton: t.morton[r]! }));
+      const rootKeys = new Set(roots.map((r) => key(r.level, r.morton)));
       let records = 0;
-      for (let i = 0; i < t.count; i++) {
-        const parent = key(t.level[i]! + 1, t.morton[i]! >>> 3);
-        expect(rows.has(parent) || parent === key(chunk.level, chunk.morton)).toBe(true);
-        expect(t.morton[i]! >>> (3 * (chunk.level - t.level[i]!))).toBe(chunk.morton);
-        expect(t.firstRecord[i]).toBe(records);
-        records += recordsOf(t, i);
+      for (let i = 0; i < c.count; i++) {
+        const parent = key(c.level[i]! + 1, c.morton[i]! >>> 3);
+        expect(rows.has(parent) || rootKeys.has(parent)).toBe(true);
+        const under = roots.filter(
+          (r) =>
+            r.level > c.level[i]! && c.morton[i]! >>> (3 * (r.level - c.level[i]!)) === r.morton,
+        );
+        expect(under.length).toBe(1);
+        expect(c.firstRecord[i]).toBe(records);
+        records += recordsOf(c, i);
       }
       expect(chunk.columns.get('absMag')!.length).toBe(records);
       expect(chunk.columns.get('offset')!.length).toBe(3 * records);
     }
   });
 
-  it('a node over either bound stays in the index and the split recurses', () => {
+  it('a node over either bound stays in the index; roots pack into chunks under both bounds', () => {
     const tree = fixtureTree();
     const below = descendantCounts(tree);
     const { index, chunks } = chunkOctree(tree, CAPACITY, NODE_CAPACITY);
@@ -75,25 +82,45 @@ describe('chunkOctree', () => {
     for (const [k, b] of below) {
       if (b.records > CAPACITY || b.rows > NODE_CAPACITY) expect(indexKeys.has(k)).toBe(true);
     }
-    expect(index.chunkNodeCap).toBeLessThanOrEqual(NODE_CAPACITY);
+    expect(index.chunkNodeCap).toBe(NODE_CAPACITY);
 
-    const roots: { level: number; morton: number }[] = [];
-    for (let i = 0; i < t.count; i++) {
-      if (t.chunkRef[i] === NO_CHUNK_REF) continue;
-      const chunk = chunks[t.chunkRef[i]!]!;
-      expect([chunk.level, chunk.morton]).toEqual([t.level[i], t.morton[i]]);
-      const b = below.get(key(t.level[i]!, t.morton[i]!))!;
-      expect(b.records).toBeLessThanOrEqual(CAPACITY);
-      expect(chunk.nodes.count).toBe(b.rows);
-      expect(chunk.columns.get('absMag')!.length).toBe(b.records);
-      roots.push({ level: t.level[i]!, morton: t.morton[i]! });
-    }
-    expect(roots.length).toBe(chunks.length);
+    const rootRows = Array.from(t.chunkRef, (ref, row) => (ref === NO_CHUNK_REF ? -1 : row));
+    expect(chunks.flatMap((c) => c.roots).sort((a, b) => a - b)).toEqual(
+      rootRows.filter((row) => row >= 0),
+    );
+    expect(chunks.some((c) => c.roots.length > 1)).toBe(true);
+    chunks.forEach((chunk, ref) => {
+      let rows = 0;
+      let records = 0;
+      for (const r of chunk.roots) {
+        expect(t.chunkRef[r]).toBe(ref);
+        const b = below.get(key(t.level[r]!, t.morton[r]!))!;
+        rows += b.rows;
+        records += b.records;
+      }
+      expect([chunk.level, chunk.morton]).toEqual([
+        t.level[chunk.roots[0]!],
+        t.morton[chunk.roots[0]!],
+      ]);
+      expect(chunk.nodes.count).toBe(rows);
+      expect(chunk.columns.get('absMag')!.length).toBe(records);
+      expect(rows).toBeLessThanOrEqual(NODE_CAPACITY);
+      expect(records).toBeLessThanOrEqual(CAPACITY);
+    });
+    const roots = rootRows.filter((row) => row >= 0);
     for (const a of roots) {
       for (const b of roots) {
-        if (a.level <= b.level) continue;
-        expect(b.morton >>> (3 * (a.level - b.level))).not.toBe(a.morton);
+        if (t.level[a]! <= t.level[b]!) continue;
+        expect(t.morton[b]! >>> (3 * (t.level[a]! - t.level[b]!))).not.toBe(t.morton[a]);
       }
+    }
+  });
+
+  it('packing closes a chunk on records when rows never bind', () => {
+    const { chunks } = chunkOctree(fixtureTree(), CAPACITY, Number.MAX_SAFE_INTEGER);
+    expect(chunks.some((c) => c.roots.length > 1)).toBe(true);
+    for (const chunk of chunks) {
+      expect(chunk.columns.get('absMag')!.length).toBeLessThanOrEqual(CAPACITY);
     }
   });
 

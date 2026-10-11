@@ -20,6 +20,7 @@ import type { OctreeRawColumn } from '../../../../tools/@types/octree/OctreeRawC
 const CHUNKS: readonly OctreeChunkRef[] = [0, 1, 2].map((morton) => ({
   level: 3,
   morton,
+  roots: [morton],
   hash: `hash000${morton}`,
   bytes: 0,
   nodes: 1,

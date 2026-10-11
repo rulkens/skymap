@@ -2,8 +2,10 @@
  * Capacity-bounded chunking (spec §4). From the root down, a node with children whose
  * strict-descendant records fit `capacity` and strict-descendant rows fit `nodeCapacity` becomes
  * a chunk root: its row stays in the index (own records + blob, so an absent chunk draws as a
- * glow) and every row below it moves into its chunk, renumbered object-local. Over either bound,
- * the node stays and the split recurses.
+ * glow) and every row below it moves into a chunk, renumbered object-local. Over either bound,
+ * the node stays and the split recurses. Roots then pack in Morton order into chunks under the
+ * same two bounds, so outskirt subtrees of a few rows share one object instead of each paying a
+ * request and a slot.
  */
 import type { ColumnId } from '../../src/@types/octree/ColumnId';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
@@ -12,6 +14,8 @@ import type { StratifiedOctree } from '../@types/octree/StratifiedOctree';
 import { MAX_OWN_COUNT, NO_CHUNK_REF } from '../../src/data/octree/octreeFormat';
 
 const OCTANTS = 8;
+/** A child's Morton key is its parent's shifted left by this. */
+const OCTANT_BITS = 3;
 const IN_INDEX = -1;
 
 export function chunkOctree(
@@ -70,29 +74,53 @@ export function chunkOctree(
   }
 
   const indexRows: number[] = [];
+  const indexRowOf = new Int32Array(count).fill(IN_INDEX);
   const roots: number[] = [];
-  const chunkOfRoot = new Int32Array(count).fill(IN_INDEX);
   for (let i = 0; i < count; i++) {
     if (owner[i] !== IN_INDEX) continue;
-    if (isChunkRoot[i]) chunkOfRoot[i] = roots.push(i) - 1;
-    indexRows.push(i);
+    if (isChunkRoot[i]) roots.push(i);
+    indexRowOf[i] = indexRows.push(i) - 1;
   }
-  const chunkRows: number[][] = roots.map(() => []);
+
+  // A box's leaf-cell Morton key orders disjoint subtrees depth-first, so a run of roots is a
+  // run of neighbouring space; `morton·8^level` stays below 2^(3·bits), exact in an f64.
+  const leafKey = (i: number) => nodes.morton[i]! * 2 ** (OCTANT_BITS * nodes.level[i]!);
+  roots.sort((a, b) => leafKey(a) - leafKey(b));
+  const chunkOfRoot = new Int32Array(count).fill(IN_INDEX);
+  const rootsOfChunk: number[][] = [];
+  let rows = 0;
+  let records = 0;
+  for (const r of roots) {
+    const open = rootsOfChunk.length > 0;
+    if (!open || rows + descendantRows[r]! > nodeCapacity || records + descendants[r]! > capacity) {
+      rootsOfChunk.push([]);
+      rows = 0;
+      records = 0;
+    }
+    rows += descendantRows[r]!;
+    records += descendants[r]!;
+    chunkOfRoot[r] = rootsOfChunk.length - 1;
+    rootsOfChunk[rootsOfChunk.length - 1]!.push(r);
+  }
+
+  const chunkRows: number[][] = rootsOfChunk.map(() => []);
   for (let i = 0; i < count; i++) {
     if (owner[i] !== IN_INDEX) chunkRows[chunkOfRoot[owner[i]!]!]!.push(i);
   }
 
   const index = gatherRows(tree, indexRows, recordsOf);
-  indexRows.forEach((row, k) => {
-    if (isChunkRoot[row]) index.nodes.chunkRef[k] = chunkOfRoot[row]!;
-  });
+  for (const r of roots) index.nodes.chunkRef[indexRowOf[r]!] = chunkOfRoot[r]!;
   return {
-    index: { ...index, chunkNodeCap: chunkRows.reduce((m, rows) => Math.max(m, rows.length), 0) },
-    chunks: chunkRows.map((rows, k) => ({
-      level: nodes.level[roots[k]!]!,
-      morton: nodes.morton[roots[k]!]!,
-      ...gatherRows(tree, rows, recordsOf),
-    })),
+    index: { ...index, chunkNodeCap: nodeCapacity },
+    chunks: chunkRows.map((rows, k) => {
+      const chunkRoots = rootsOfChunk[k]!;
+      return {
+        level: nodes.level[chunkRoots[0]!]!,
+        morton: nodes.morton[chunkRoots[0]!]!,
+        roots: chunkRoots.map((r) => indexRowOf[r]!),
+        ...gatherRows(tree, rows, recordsOf),
+      };
+    }),
   };
 }
 

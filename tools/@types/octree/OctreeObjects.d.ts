@@ -7,9 +7,9 @@ export type OctreeObjects = {
   readonly index: {
     readonly nodes: OctreeNodeTable;
     readonly columns: ReadonlyMap<ColumnId, Float32Array>;
-    /** The largest chunk's row count. */
+    /** The bake's row bound: no chunk holds more rows. */
     readonly chunkNodeCap: number;
   };
-  /** In index-row order of their roots, so `chunkRef` indexes this array. */
+  /** In Morton order of their roots; `chunkRef` indexes this array. */
   readonly chunks: readonly OctreeChunkObject[];
 };

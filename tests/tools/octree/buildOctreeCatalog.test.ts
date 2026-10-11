@@ -58,7 +58,8 @@ describe('buildOctreeCatalog → writeOctreeCatalog', () => {
 
     const index = decodeOctreeIndex(read(join(dir, 'stars.bin')));
     expect(index.header.chunks.length).toBe(objects.chunks.length);
-    expect(index.header.chunkNodeCap).toBe(Math.max(...objects.chunks.map((c) => c.nodes.count)));
+    expect(index.header.chunkNodeCap).toBe(objects.index.chunkNodeCap);
+    expect(index.header.chunks.map((c) => c.roots)).toEqual(objects.chunks.map((c) => c.roots));
     expect(index.header.stats.starCount).toBe(N);
 
     // Every real record lands in exactly one object: no blob counted, none lost.

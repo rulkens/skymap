@@ -112,7 +112,15 @@ describe('starCatalogFetcher', () => {
 
   it("fetches the v2 index by base name, with no tier, when the row's format is octree", async () => {
     row.format = 'octree';
-    const chunk = { level: 2, morton: 0, hash: 'abcd1234', bytes: 100, nodes: 1, records: 1 };
+    const chunk = {
+      level: 2,
+      morton: 0,
+      roots: [0],
+      hash: 'abcd1234',
+      bytes: 100,
+      nodes: 1,
+      records: 1,
+    };
     const bytes = synthIndex([chunk, { ...chunk, morton: 1 }]);
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(bytes.slice().buffer);
 
