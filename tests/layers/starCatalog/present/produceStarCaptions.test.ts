@@ -154,7 +154,7 @@ describe('produceStarCaptions', () => {
     // `bodyCaption`'s source/index packing ever drifts from the seed table
     // `seededStarCatalogsBySource.ts` tags picks against.
     const resolver = selectionResolverOver(
-      { structures: { byId: () => null, byCategory: () => [] } },
+      { byId: () => null, byCategory: () => [] },
       undefined,
       NO_STARS_LOADED,
     );

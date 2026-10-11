@@ -1,6 +1,6 @@
-import type { StructureStore } from '../../../@types/engine/data/StructureStore';
+import type { StructureStore } from '../@types/StructureStore';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
-import type { StructureGroupId } from '../../../@types/data/structure/StructureGroupId';
+import type { StructureGroupId } from '../@types/StructureGroupId';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 
 /**
@@ -42,7 +42,8 @@ export function createStructureStore(): StructureStore {
   let derived: ReturnType<typeof build> | null = null;
   const derive = () => (derived ??= build());
   const all = (): readonly StructureInfo[] => derive().all;
-  const byCategory = (category: StructureId): readonly StructureInfo[] => derive().byCategory.get(category) ?? [];
+  const byCategory = (category: StructureId): readonly StructureInfo[] =>
+    derive().byCategory.get(category) ?? [];
 
   return Object.freeze({
     setGroup(id: StructureGroupId, records: readonly StructureInfo[]): void {
@@ -54,7 +55,6 @@ export function createStructureStore(): StructureStore {
       derived = null;
     },
     all,
-    loaded: () => groups.size > 0,
     byId(id: string): StructureInfo | null {
       return all().find((r) => r.id === id) ?? null;
     },

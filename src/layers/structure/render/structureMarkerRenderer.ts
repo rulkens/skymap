@@ -3,7 +3,7 @@
  * `type:'structure'` categories of one slab; each slab gets its own instance
  * and buffers.
  * The producer (`produceStructureMarkers`) feeds it descriptors; the
- * store it visualises is `state.data.structures`.
+ * store it visualises is the Layer runtime's `store`.
  *
  * ### Why one renderer for three pipelines?
  *
@@ -50,8 +50,8 @@
 
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
-import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
+import type { StructureMarkerRenderer } from '../@types/StructureMarkerRenderer';
+import type { StructureMarkerDescriptor } from '../@types/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
 import type { StructureId } from '../../../@types/data/structure/StructureId';

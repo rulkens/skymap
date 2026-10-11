@@ -18,6 +18,7 @@ import { lightTimeLayer } from '../layers/lightTime/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
 import { milkyWayLayer } from '../layers/milkyWay/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
+import { structureLayer } from '../layers/structure/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
 export const APP_COMPOSITION = {
@@ -33,6 +34,7 @@ export const APP_COMPOSITION = {
     constellationsLayer,
     blackHolesLayer,
     milkyWayLayer,
+    structureLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -48,5 +50,6 @@ export const APP_COMPOSITION = {
     typeof constellationsLayer,
     typeof blackHolesLayer,
     typeof milkyWayLayer,
+    typeof structureLayer,
   ]
 >;

@@ -469,7 +469,6 @@ describe('renderFrame visual baseline', () => {
           selectionRingRenderer: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
-          structureMarkerCosmoRenderer: null,
           // Near-field handles null → the program's (hdr, NEAR0) render,
           // foreground:0 render, and NEAR0 caption render all select
           // nothing, and the foreground:0→swap composite is

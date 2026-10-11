@@ -95,7 +95,7 @@ describe('watchHashSaga', () => {
     // `createAppStore` runs the root saga INSIDE the factory, so an ungated
     // bridge reads the URL before any caller can reach `setSagaContext` — and
     // `requestSelect`/`requestFocus` wake reconcilers that dereference
-    // `getContext('resolveDeps')` and `reconcile.requestRender`. Those throws
+    // `getContext('selection')` and `reconcile.requestRender`. Those throws
     // propagate to the root and cancel every sibling watcher, so one deep link
     // costs the session its wake, tier transitions, selection resolution, tour
     // and keyboard.

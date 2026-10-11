@@ -164,10 +164,6 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRende
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
 }));
 
-vi.mock('../../../../src/layers/structure/render/structureMarkerRenderer', () => ({
-  createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
   createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
 }));
@@ -314,7 +310,6 @@ function makeState(): EngineState {
       markerLineRendererNear: null,
       markerLineRendererCosmo: null,
       selectionRingRenderer: null,
-      structureMarkerCosmoRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       horizonShellRenderer: null,

@@ -18,7 +18,6 @@ import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
-import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
@@ -234,19 +233,6 @@ export type EngineGpuHandles = {
    * two uniform buffers and bind group.
    */
   selectionRingRenderer: SelectionRingRenderer | null;
-  /**
-   * Structure-marker renderer — draws halo + ring overlays for every
-   * structure category (cluster / supercluster / void / group; per-source
-   * bind groups live inside the renderer).  Null until `initGpu` constructs it.
-   * Excluded from the `isEngineReady` predicate for the same reason as
-   * `markerLineRendererCosmo` — null-checked at point of use by the
-   * structure-marker frame pass.  Stored here so `destroy()` can release
-   * the renderer's GPU buffers (per-category bind groups + per-instance
-   * buffer + corner VBO).
-   */
-  structureMarkerCosmoRenderer: StructureMarkerRenderer | null;
-  /** The NEAR0-slab categories' marker renderer; same lifecycle, separate buffers. */
-  structureMarkerNearRenderer: StructureMarkerRenderer | null;
   /**
    * Cosmic-horizon shell renderer — translucent sphere at the
    * comoving particle-horizon radius.  Same lifecycle as the other

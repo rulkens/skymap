@@ -34,8 +34,7 @@ const bootes: StructureInfo = {
   physicalRadiusMpc: 50,
 };
 
-// Minimal store stub mirroring the helper's `PickStructureStore` projection.
-// Only `byCategory` is needed.  We branch on the category so each test can
+// Minimal store stub: the helper reads only `byCategory`.  We branch on the category so each test can
 // verify the helper indexes the RIGHT per-category bucket.
 const structures = {
   byCategory(category: StructureId): readonly StructureInfo[] {

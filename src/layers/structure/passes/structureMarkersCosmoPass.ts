@@ -4,10 +4,16 @@
  * cosmic-web-density upsample; see `createStructureMarkersPass`.
  */
 
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { StructureRuntime } from '../@types/StructureRuntime';
 import { createStructureMarkersPass } from '../render/createStructureMarkersPass';
+import { structureMarkersPlanner } from '../frame';
 
-export const structureMarkersCosmoPass = createStructureMarkersPass({
-  name: 'structure-markers-cosmo',
-  scale: 'cosmic',
-  rendererOf: (state) => state.gpu.structureMarkerCosmoRenderer,
-});
+export function structureMarkersCosmoPass(runtime: StructureRuntime): ContentPass {
+  return createStructureMarkersPass({
+    name: 'structure-markers-cosmo',
+    scale: 'cosmic',
+    renderer: runtime.cosmoRenderer,
+    planner: structureMarkersPlanner(runtime),
+  });
+}

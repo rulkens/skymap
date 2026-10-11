@@ -12,8 +12,6 @@ import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
-import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
-import { createStructureMarkerRenderer } from '../../../layers/structure/render/structureMarkerRenderer';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';
@@ -157,31 +155,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'labelPickRendererNear',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelPickRenderer(deps.ctx.device, pickDepthFormat(NEAR0), SLAB_REVERSED_Z[NEAR0]!),
-  },
-
-  {
-    key: 'structureMarkerCosmoRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStructureMarkerRenderer(
-        deps.ctx,
-        HDR_TARGET_FORMAT,
-        deps.fadeBgl,
-        COSMO,
-        STRUCTURE_IDS_BY_SCALE.cosmic,
-      ),
-  },
-  {
-    // Its own uniform + instance buffers: both marker passes record into one
-    // encoder, so a shared uniform would hand both draws the last-written matrix.
-    key: 'structureMarkerNearRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStructureMarkerRenderer(
-        deps.ctx,
-        HDR_TARGET_FORMAT,
-        deps.fadeBgl,
-        NEAR0,
-        STRUCTURE_IDS_BY_SCALE.milkyWay,
-      ),
   },
   {
     key: 'horizonShellRenderer',

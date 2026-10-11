@@ -1,9 +1,15 @@
 /** structureMarkersNearPass: the NEAR0-slab marker pass; see `createStructureMarkersPass`. */
 
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { StructureRuntime } from '../@types/StructureRuntime';
 import { createStructureMarkersPass } from '../render/createStructureMarkersPass';
+import { structureMarkersPlanner } from '../frame';
 
-export const structureMarkersNearPass = createStructureMarkersPass({
-  name: 'structure-markers-near',
-  scale: 'milkyWay',
-  rendererOf: (state) => state.gpu.structureMarkerNearRenderer,
-});
+export function structureMarkersNearPass(runtime: StructureRuntime): ContentPass {
+  return createStructureMarkersPass({
+    name: 'structure-markers-near',
+    scale: 'milkyWay',
+    renderer: runtime.nearRenderer,
+    planner: structureMarkersPlanner(runtime),
+  });
+}

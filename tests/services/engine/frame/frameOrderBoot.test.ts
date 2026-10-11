@@ -2,8 +2,9 @@
  * frameOrderBoot — `checkFrameOrder` over the REAL artifacts the app boots
  * with, which is the check `startLoop` runs once before the first frame. The
  * per-rule cases live in `checkFrameOrder.test.ts`; this one binds them to
- * production data, so a Layer that contributes a pass and forgets its
- * `FRAME_ORDER` line fails here instead of silently never drawing. Target ids
+ * production data, so a core pass that forgets its `FRAME_ORDER` line fails
+ * here instead of silently never drawing (a Layer's passes are pinned by that
+ * Layer's own test, e.g. `tests/layers/structure/layer.test.ts`). Target ids
  * include every Layer's `targets` too, via `composeRenderTargetRows` — the
  * same composed table the `renderTargets` GPU-handle row allocates.
  */
@@ -15,8 +16,7 @@ import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
-import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
-import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
@@ -24,10 +24,10 @@ import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional (Global Constraints), so PRELUDE's Layer-owned rows need a
-// stand-in here — this file checks core's artifacts alone, never the full
+// optional (Global Constraints), so PRELUDE's and SCENE's Layer-owned rows need
+// a stand-in here — this file checks core's artifacts alone, never the full
 // `createLayers` composition.
-const LAYER_PLANNER_STUBS = stubPlannersFor(PRELUDE);
+const LAYER_PLANNER_STUBS = [...stubPlannersFor(PRELUDE), ...stubPlannersFor(SCENE)];
 
 describe('checkFrameOrder — boot', () => {
   it('every ViewRig’s program passes the boot check', () => {
@@ -45,7 +45,7 @@ describe('checkFrameOrder — boot', () => {
         Object.values(VIEW_RIGS).map((rig) => rig.program),
         CONTENT_PASSES,
         CORE_COMPUTES,
-        [...CORE_PLANNERS, ...LAYER_PLANNER_STUBS],
+        LAYER_PLANNER_STUBS,
         targets,
       ),
     ).not.toThrow();

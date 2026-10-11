@@ -12,7 +12,6 @@
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
-import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
@@ -51,20 +50,6 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'scaleBar' }),
     seed: () => 1,
-  }),
-  fadeLayerRow({
-    key: 'structureRing',
-    expand: () => STRUCTURE_IDS,
-    handle: (id) => ({ kind: 'structure', id }),
-    seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
-    intent: (s, id) => s.structures.items[id].enabled,
-  }),
-  fadeLayerRow({
-    key: 'structureLabel',
-    expand: () => STRUCTURE_IDS,
-    handle: (id) => ({ kind: 'labelLayer', layer: 'structure', item: id }),
-    seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
-    intent: (s, id) => s.structures.items[id].labelEnabled,
   }),
   // The conic table is a compile-time constant with no asset slot, so no
   // demand-loaded guard and the seed follows the toggle: a default-on session must

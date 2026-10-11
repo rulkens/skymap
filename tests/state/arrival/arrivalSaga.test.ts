@@ -36,6 +36,7 @@ import {
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
@@ -58,7 +59,7 @@ import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness'
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
@@ -66,10 +67,7 @@ import type { BodyState } from '../../../src/@types/scene/BodyState';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-const resolveDeps = (): ResolveDeps =>
-  ({
-    structures: { byId: () => null, byCategory: () => [], loaded: () => true },
-  }) as unknown as ResolveDeps;
+const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 const LIVE: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
@@ -100,10 +98,10 @@ function build({
   const layerRows = { landed: milkyWayLanded };
   mw.setContext({
     nextFrame,
-    resolveDeps,
     selection: composeSelectionRows(
       () => [
-        ...coreSelectionRows(resolveDeps),
+        ...coreSelectionRows(),
+        structureSelectionRow(EMPTY_STRUCTURES),
         ...(layerRows.landed ? [milkyWaySelectionRow()] : []),
       ],
       () => ALL_KINDS_ENABLED,

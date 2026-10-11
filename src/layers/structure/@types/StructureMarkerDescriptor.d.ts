@@ -10,9 +10,9 @@
  * every per-frame, per-structure computation.
  */
 
-import type { Vec3 } from '../math/Vec3';
-import type { Vec4 } from '../math/Vec4';
-import type { StructureId } from '../data/structure/StructureId';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec4 } from '../../../@types/math/Vec4';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 
 export type StructureMarkerDescriptor = {
   /**

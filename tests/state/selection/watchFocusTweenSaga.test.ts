@@ -15,12 +15,14 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
-  engineStructureCountsChanged,
+  factsReported,
+  layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
@@ -28,10 +30,9 @@ import { Source } from '../../../src/data/sources';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
-import type { StarRowFixture } from '../../support/selectionResolverOver';
+import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -52,25 +53,27 @@ const SIRIUS_REF = {
 // (ref type, from-pose) — no engine cloud needed for the milkyWay case.
 const FROM: CameraPose = { target: [1, 1, 1], yaw: 0.5, pitch: -0.2, distance: 9 };
 
-// The live structure store the resolveDeps stub reads, modelling
+// The live structure records the store stub reads, modelling
 // `wireStructureProjection`'s anchors group landing mid-flight (Bug repro:
 // #focus=cluster-virgo-m87 races the boot window). Reset per test.
 let structureById: Record<string, StructureInfo> = {};
-let structuresLoadedStub = false;
 
-// resolveDeps stub — the milkyWay ref resolves without touching catalogs; the
-// `structures` getter reads the live stub above so a test can bring a
-// catalog online between dispatches. No `stars` field: core no longer
-// resolves the star kind at all — the starCatalog Layer's own row, appended
-// below, does, over a survey store that never lands (its seeded arm needs none).
-const resolveDeps = (): ResolveDeps =>
-  ({
-    structures: {
-      byId: (id: string) => structureById[id] ?? null,
-      byCategory: () => [],
-      loaded: () => structuresLoadedStub,
-    },
-  }) as unknown as ResolveDeps;
+const structures: StructureRowFixture = {
+  byId: (id: string) => structureById[id] ?? null,
+  byCategory: () => [],
+};
+
+function structureRecord(id: string): StructureInfo {
+  return {
+    type: 'structure',
+    category: 'galaxy-cluster',
+    id,
+    name: 'Virgo Cluster',
+    worldPos: [4, 5, 6],
+    featured: true,
+    physicalRadiusMpc: 2.2,
+  };
+}
 
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
@@ -90,10 +93,10 @@ describe('watchFocusTweenSaga', () => {
     mw.run(watchRequestFocusSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
-      resolveDeps,
       selection: composeSelectionRows(
         () => [
-          ...coreSelectionRows(resolveDeps),
+          ...coreSelectionRows(),
+          structureSelectionRow(structures),
           milkyWaySelectionRow(),
           starCatalogSelectionRow(NO_SURVEY_STARS),
         ],
@@ -105,7 +108,6 @@ describe('watchFocusTweenSaga', () => {
   }
   beforeEach(() => {
     structureById = {};
-    structuresLoadedStub = false;
     sagaErrors = [];
     store = build();
   });
@@ -177,34 +179,23 @@ describe('watchFocusTweenSaga', () => {
     expect(sagaErrors).toEqual([]);
   });
 
-  // Regression: `#focus=cluster-virgo-m87` (a durable structure id) resolves
-  // statically, so `updateSelectionFocus` fires at bootstrap — but
-  // `structureSelectionRow`'s `extractRow` (`structures.byId`) returns null
-  // until `wireStructureProjection`'s anchors group lands, which happens later
-  // in the async bootstrap phase sequence than `setSagaContext`. Before this
-  // fix the saga's deferral loop only covered `ref.type === 'star'`, so a
-  // structure ref fell straight to the no-op and the camera never moved. The
-  // saga must instead defer on `engineStructureCountsChanged` — the pulse
-  // `wireStructureProjection` dispatches on every group change — and
-  // re-extract once the store is fed.
+  // A durable structure id resolves at bootstrap, before the store holds its
+  // record; the wait is gated on `bulk === 'loading'`, the slot that will feed it.
   it('defers a structure focus whose store has not loaded, then plants it once the store is fed', async () => {
+    store.dispatch(
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
+    );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     // No structure store yet → row null → tween must not fire (and not be dropped).
     expect(store.getState()[cameraRoute].tween).toBeNull();
 
-    // The anchors group lands: the store is fed and the record resolves.
-    structureById['cluster-virgo-m87'] = {
-      type: 'structure',
-      category: 'galaxy-cluster',
-      id: 'cluster-virgo-m87',
-      name: 'Virgo Cluster',
-      worldPos: [4, 5, 6],
-      featured: true,
-      physicalRadiusMpc: 2.2,
-    };
-    structuresLoadedStub = true;
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
+    // The bulk group lands: the store is fed and the record resolves.
+    structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
 
     const tween = store.getState()[cameraRoute].tween;
@@ -215,12 +206,68 @@ describe('watchFocusTweenSaga', () => {
 
   it('a structure focus with a garbage id no-ops once the store is loaded (no infinite wait)', async () => {
     // A stale/unknown structure id resolves to null even with the store fed.
-    // The deferral guard checks store presence, not row-ness, so this exits
+    // The deferral guard checks the slot's status, not row-ness, so this exits
     // rather than looping forever waiting for a pulse that never recurs.
-    structuresLoadedStub = true;
+    store.dispatch(
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
+    );
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-does-not-exist' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    // A saga still parked on the pulse would re-extract here and plant a tween.
+    structureById['cluster-does-not-exist'] = structureRecord('cluster-does-not-exist');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // With no bulk category on, the slot is never demanded and sits 'idle';
+  // waiting on it would hold the focus forever.
+  it('a structure focus does not wait while the bulk slot is idle', async () => {
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, searchList: [], bulk: 'idle' } }),
+    );
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // `factsReported` pulses for every Layer (galaxyCatalog republishes its
+  // member count on each selection change), so the deferral must re-read
+  // `bulk` rather than end on the first pulse.
+  it("another Layer's facts report does not end a structure deferral", async () => {
+    store.dispatch(
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
+    );
+    store.dispatch(
+      layerFactsSeeded({ layer: 'galaxyCatalog', facts: { structureMemberCount: null } }),
+    );
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    await flush();
+
+    store.dispatch(
+      factsReported({ layer: 'galaxyCatalog', patch: { structureMemberCount: null } }),
+    );
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween!.to.target).toEqual([4, 5, 6]);
   });
 
   it('a null focus ref (release) resolves to no row → no tween', async () => {
