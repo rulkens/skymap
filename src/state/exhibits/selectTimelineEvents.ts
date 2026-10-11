@@ -4,7 +4,7 @@ import { selectMissionCraft } from '../settings/core/missions/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { MissionEvent } from '../../@types/missions/MissionEvent';
-import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
+import type { MissionTimeline } from '../../@types/exhibits/MissionTimeline';
 
 /**
  * The events of the running exhibit's timeline section, narrowed to the emphasised craft's
@@ -16,7 +16,7 @@ export const selectTimelineEvents = (state: RootState): readonly MissionEvent[] 
   for (const section of exhibitRegistry[source.id].body) {
     if (section.kind === missionTimelineKind) {
       const craft = selectMissionCraft(state);
-      return (section.data as ExhibitTimelineSection).events.filter((e) => e.bodyId === craft);
+      return (section.data as MissionTimeline).events.filter((e) => e.bodyId === craft);
     }
   }
   return null;

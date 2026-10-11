@@ -29,7 +29,7 @@ import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { missionTimelineKind } from '../../../src/components/ExhibitOverlay/kinds/missionTimelineKind';
-import type { ExhibitTimelineSection } from '../../../src/@types/exhibits/ExhibitTimelineSection';
+import type { MissionTimeline } from '../../../src/@types/exhibits/MissionTimeline';
 
 const missionAt = (speedIndex: number): CameraMission => ({
   craftId: 'voyager1',
@@ -41,7 +41,7 @@ const missionAt = (speedIndex: number): CameraMission => ({
 });
 
 const section = voyagerMissions.body.find((s) => s.kind === missionTimelineKind)!
-  .data as ExhibitTimelineSection;
+  .data as MissionTimeline;
 
 function mount(simIso: string) {
   const { store } = createTestStore();

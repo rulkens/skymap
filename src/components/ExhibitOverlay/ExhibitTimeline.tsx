@@ -22,12 +22,12 @@ import { timelineAxis } from '../../utils/exhibits/timeline/timelineAxis';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineClock } from '../../@types/exhibits/ExhibitTimelineClock';
-import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
+import type { MissionTimeline } from '../../@types/exhibits/MissionTimeline';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
 import styles from './ExhibitTimeline.module.css';
 
 export type ExhibitTimelineProps = {
-  readonly section: ExhibitTimelineSection;
+  readonly section: MissionTimeline;
   readonly lanes: readonly TimelineLane[];
   /** The craft shown; a lane's `bodyId`. */
   readonly selectedId: string;
@@ -84,7 +84,9 @@ function ExhibitTimeline({
         {`${lane.label} · ${current.label} · ${formatEventDate(current.iso)}`}
       </div>
 
-      <TimelineCraftTabs lanes={lanes} selectedId={lane.bodyId} onSelect={onSelect} />
+      {lanes.length > 1 ? (
+        <TimelineCraftTabs lanes={lanes} selectedId={lane.bodyId} onSelect={onSelect} />
+      ) : null}
       <div className={styles.story} style={{ '--lane': lane.color } as CSSProperties}>
         <TimelineEventCard event={current} />
         <TimelineTransport

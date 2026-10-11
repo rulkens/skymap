@@ -27,13 +27,14 @@ import { clockProfileRate } from '../../utils/time/clockProfileRate';
 import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
-import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
+import { timelineEndMs } from '../../utils/exhibits/timeline/timelineEndMs';
+import type { MissionTimeline } from '../../@types/exhibits/MissionTimeline';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 const REFRESH_MS = 250;
 
 export type ExhibitTimelineContainerProps = {
-  readonly data: ExhibitTimelineSection;
+  readonly data: MissionTimeline;
 };
 
 function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): ReactNode {
@@ -41,8 +42,8 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
   const time = useAppSelector(selectTimeState);
   const craft = useAppSelector(selectMissionCraft);
   const lanes = useMemo(() => timelineLanes(data.crafts), [data.crafts]);
-  // The axis ends at the wall clock as the exhibit opened; it does not creep.
-  const endMs = useMemo(() => Date.now(), []);
+  // An open end is the wall clock as the exhibit opened; it does not creep.
+  const endMs = useMemo(() => timelineEndMs(data), [data]);
 
   const { paused, profile } = time;
 

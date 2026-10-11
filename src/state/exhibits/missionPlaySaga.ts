@@ -1,5 +1,5 @@
 /**
- * missionPlaySaga — play the mission profile from the current instant to now, and pause at its
+ * missionPlaySaga — play the mission profile from the current instant to `endMs`, and pause at its
  * end. The pause is conditional on this profile still being on the clock: any visitor time
  * action drops it, and a delayed pause must not freeze a clock the visitor has since started
  * again. The hold loop cancels this saga on its next intent, so a superseded timer never fires.
@@ -21,9 +21,9 @@ const AT_END_DAYS = 1;
 export function* missionPlaySaga(
   mission: CameraMission,
   speedIndex: number,
-  options: { readonly replayAtEnd: boolean; readonly settleMs: number },
+  options: { readonly replayAtEnd: boolean; readonly settleMs: number; readonly endMs: number },
 ): Generator {
-  const endDays = unixMsToJulianDays(Date.now());
+  const endDays = unixMsToJulianDays(options.endMs);
   const at = deriveSimDays(yield* select(selectTimeState), performance.now());
   if (options.settleMs > 0) {
     yield* delay(options.settleMs);

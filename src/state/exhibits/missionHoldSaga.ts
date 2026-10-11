@@ -3,8 +3,8 @@
  * launch (or a linked `t=`) with the mission camera on it (flown to, unless the entry is a cut,
  * while the loop already listens). Run, resume, a flyby step and − / + or a scrub while playing
  * play the mission profile; a step or craft tab eases the camera to the new frame (keeping the
- * visitor's orbit), a tab lifting the clock to that craft's launch (or carrying it there from the
- * other's launch). `finally` clears the mission.
+ * visitor's orbit), a tab lifting the clock to that craft's launch (or carrying it there from any
+ * listed craft's launch). `finally` clears the mission.
  */
 import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
@@ -19,6 +19,7 @@ import { bodyPositionMpcAt } from '../../utils/exhibits/mission/bodyPositionMpcA
 import { missionStops } from '../../utils/exhibits/mission/missionStops';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
+import { timelineEndMs } from '../../utils/exhibits/timeline/timelineEndMs';
 import { clearMission, setMission, setMissionSpeed } from '../camera/cameraSlice';
 import { selectOrientation } from '../settings/selectors';
 import { selectMissionCraft } from '../settings/core/missions/selectors';
@@ -32,7 +33,7 @@ import { stepMissionSpeed } from './stepMissionSpeed';
 import type { CameraMission } from '../../@types/camera/CameraMission';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
-import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
+import type { MissionTimeline } from '../../@types/exhibits/MissionTimeline';
 import type { Transition } from '../../@types/navigation/Transition';
 import type { RootState, SagaContext } from '../../store/types';
 
@@ -46,7 +47,7 @@ const launchDays = (mission: CameraMission): number => unixMsToJulianDays(missio
 
 export function* missionHoldSaga(
   exhibit: Exhibit,
-  timeline: ExhibitTimelineSection,
+  timeline: MissionTimeline,
   entry: Transition,
   atLinkedTime: boolean,
 ): Generator {
@@ -71,7 +72,7 @@ export function* missionHoldSaga(
   // A linked `t=` is already on the clock; it wins over the launch, kept inside the mission.
   const entryDays = atLinkedTime
     ? Math.min(
-        unixMsToJulianDays(Date.now()),
+        unixMsToJulianDays(timelineEndMs(timeline)),
         Math.max(launchDays(mission), deriveSimDays(yield* select(selectTimeState), nowMs)),
       )
     : launchDays(mission);
@@ -118,8 +119,10 @@ export function* missionHoldSaga(
       if (next.tab) {
         const at = performance.now();
         const days = deriveSimDays(yield* select(selectTimeState), at);
-        // At one craft's launch, the other's launch: each tab then opens on Earth.
-        const atLaunch = Math.abs(days - launchDays(mission)) < LAUNCH_TOLERANCE_DAYS;
+        // At any listed craft's launch, this one's: each tab then opens on Earth.
+        const atLaunch = timeline.crafts.some(
+          (c) => Math.abs(days - launchDays(missionOf(c.bodyId))) < LAUNCH_TOLERANCE_DAYS,
+        );
         mission = missionOf(next.tab.payload!, offsets, true);
         if (atLaunch || days < launchDays(mission)) {
           yield* put(setSimDays({ simDays: launchDays(mission), nowMs: at }));
@@ -136,6 +139,7 @@ export function* missionHoldSaga(
         task = yield* fork(missionPlaySaga, mission, speedIndex, {
           replayAtEnd: run,
           settleMs: next.scrub ? SCRUB_SETTLE_MS : 0,
+          endMs: timelineEndMs(timeline),
         });
       }
     }

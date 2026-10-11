@@ -20,6 +20,7 @@ import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import { missionTimelineKind } from '../../components/ExhibitOverlay/kinds/missionTimelineKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import type { MissionTimeline } from '../../@types/exhibits/MissionTimeline';
 
 /** Held down so the trails read against the sky, as in the solar-system exhibit. */
 const STARFIELD_BRIGHTNESS = 0.3;
@@ -36,12 +37,23 @@ const FRAMING_RADIUS_AU = 190;
 const YAW = -1.9305;
 const PITCH = 0.26;
 
+const CRAFTS = [
+  { bodyId: 'voyager1', label: 'Voyager 1' },
+  { bodyId: 'voyager2', label: 'Voyager 2' },
+];
+
+const VOYAGER_TIMELINE: MissionTimeline = {
+  heading: 'Timeline',
+  crafts: CRAFTS,
+  events: MISSION_EVENTS.filter((e) => CRAFTS.some((c) => c.bodyId === e.bodyId)),
+};
+
 export const voyagerMissions: Exhibit = {
   id: 'voyager-missions',
   label: 'The Voyager missions',
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
-    missions: { ...missionsInitialState, trails: true, craft: 'voyager1' },
+    missions: { ...missionsInitialState, trails: true, craft: CRAFTS[0]!.bodyId },
     // Galaxies, star names and structure rings are landmarks for other scales; here they only
     // crowd the craft.
     galaxyCatalogs: {
@@ -95,11 +107,7 @@ export const voyagerMissions: Exhibit = {
       heading: 'The Voyager missions',
       text: 'NASA sent the twin Voyagers to study Jupiter and Saturn up close. Voyager 2 went on to Uranus and Neptune. Since 1989 both have been on an interstellar mission, measuring where the Sun’s influence ends and what lies beyond it.',
     }),
-    section(missionTimelineKind, {
-      heading: 'Timeline',
-      events: MISSION_EVENTS,
-      crafts: ['voyager1', 'voyager2'],
-    }),
+    section(missionTimelineKind, VOYAGER_TIMELINE),
     section(proseKind, {
       heading: 'The Grand Tour',
       text: 'In the late 1970s the outer planets lined up in a way that comes round about once every 175 years, so one craft could swing from each giant to the next. Voyager 2 flew the whole route. Voyager 1 left it for a close look at Titan.',
