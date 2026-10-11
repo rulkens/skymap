@@ -28,7 +28,6 @@ import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSa
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
 import { watchHashSaga } from '../state/url/watchHashSaga';
-import { loadSpacecraftTracksSaga } from '../state/missions/loadSpacecraftTracksSaga';
 import { arrivalSaga } from '../state/arrival/arrivalSaga';
 
 export function* mainSaga() {
@@ -52,6 +51,5 @@ export function* mainSaga() {
     watchGoHomeSaga(),
     watchHashSaga(),
     arrivalSaga(),
-    loadSpacecraftTracksSaga(),
   ]);
 }

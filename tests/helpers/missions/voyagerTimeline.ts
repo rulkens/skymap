@@ -1,6 +1,6 @@
 /** voyagerTimeline — the Voyager exhibit's timeline section data, as its hold and camera row get it. */
 
-import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';
+import { voyagerMissions } from '../../../src/layers/missions/exhibits/voyagerMissions';
 import type { MissionTimeline } from '../../../src/@types/exhibits/MissionTimeline';
 
 export function voyagerTimeline(): MissionTimeline {

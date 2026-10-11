@@ -1,6 +1,6 @@
 import type { LayerSettingsRow } from '../../../@types/engine/layer/LayerSettingsRow';
-import { selectMissionTrailsEnabled } from '../../../state/settings/core/missions/selectors';
-import { setMissionTrailsEnabled } from '../../../state/settings/core/missions/slice';
+import { selectMissionTrailsEnabled } from '../state/missions/selectors';
+import { setMissionTrailsEnabled } from '../state/missions/slice';
 
 /** The mission trails' on/off row in the shared "Labels & guides" section. */
 export const missionTrailsSettingsRow: LayerSettingsRow = {

@@ -38,7 +38,7 @@ import {
   commitCameraPose,
   startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
-import { setMissionCraft } from '../../../../src/state/settings/core/missions/slice';
+import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';

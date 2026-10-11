@@ -41,7 +41,7 @@ import { watchKeyboardEventsSaga } from '../../../src/state/input/watchKeyboardE
 import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
-import { stepMissionSpeed } from '../../../src/state/settings/core/missions/slice';
+import { stepMissionSpeed } from '../../../src/layers/missions/state/missions/slice';
 import { setRate } from '../../../src/state/time/timeSlice';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
