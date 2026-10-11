@@ -172,9 +172,11 @@ export function createStarCatalogRenderer(
   }
 
   function evictChunk(source: SourceType, slot: number): void {
-    cut.evictChunk(source, slot);
     const entry = sources.get(source);
-    if (entry !== undefined) entry.chunkOfSlot[slot] = -1;
+    const ref = entry?.chunkOfSlot[slot] ?? -1;
+    if (entry === undefined || ref < 0) return;
+    cut.evictChunk(source, slot, ref);
+    entry.chunkOfSlot[slot] = -1;
   }
 
   function snapshotPickSlots(): void {

@@ -13,8 +13,6 @@ export type StarCutSource = {
   readonly slotRows: GPUBuffer;
   /** The packed index rows as uploaded (chunk roots unresident), to rewrite a chunk's root rows. */
   readonly indexRows: Uint32Array;
-  /** The chunk ref each slot holds, −1 when empty: its roots are the rows a landing or eviction rewrites. */
-  readonly chunkOfSlot: Int32Array;
   readonly live: StarCutState;
   /** Built on the first capture: most sessions never bake a sky cubemap. */
   capture: StarCutState | null;

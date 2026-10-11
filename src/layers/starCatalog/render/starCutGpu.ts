@@ -237,7 +237,6 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       nodes,
       slotRows,
       indexRows: packed,
-      chunkOfSlot: new Int32Array(slots).fill(-1),
       live: createState(`${source}`, octree, slots, nodes, slotRows),
       capture: null,
     });
@@ -290,17 +289,13 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     }
     const deltas = chunkRootRefineDeltas(chunk, roots);
     roots.forEach((root, k) => writeRootRow(entry, root.rootRow, deltas[k]!));
-    entry.chunkOfSlot[slot] = chunk.ref;
   }
 
-  function evictChunk(source: SourceType, slot: number): void {
+  function evictChunk(source: SourceType, slot: number, chunkRef: number): void {
     const entry = slotOf(source, slot);
-    const ref = entry.chunkOfSlot[slot]!;
-    if (ref < 0) return;
     // Every root stops refining before its rows go; a landing rewrites every row of the slot.
-    for (const rootRow of entry.octree.chunks[ref]!.roots) writeRootRow(entry, rootRow, null);
+    for (const rootRow of entry.octree.chunks[chunkRef]!.roots) writeRootRow(entry, rootRow, null);
     writeSlotRows(entry, slot, 0);
-    entry.chunkOfSlot[slot] = -1;
   }
 
   function writeSlotRows(entry: StarCutSource, slot: number, rows: number): void {

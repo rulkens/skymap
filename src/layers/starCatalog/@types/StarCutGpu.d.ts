@@ -21,8 +21,8 @@ export type StarCutGpu = {
   upload(source: SourceType, octree: StarOctree, slots: number): void;
   /** Write a landed chunk's rows into `slot`, zero its fades, then mark its root resident. */
   uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
-  /** Mark the slot's root unresident, then zero the slot's rows. */
-  evictChunk(source: SourceType, slot: number): void;
+  /** Mark every root of `chunkRef` (the chunk the slot holds) unresident, then empty the slot. */
+  evictChunk(source: SourceType, slot: number, chunkRef: number): void;
   /** One compute pass: every source in `inputs` gets this frame's cut. */
   encode(
     encoder: GPUCommandEncoder,
