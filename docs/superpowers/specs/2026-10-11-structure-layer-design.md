@@ -24,7 +24,7 @@ Packaging: **two PRs**, each with its own plan. PR 1 is mechanical: file moves v
 | R5  | README unsettled 2: a declaration row's folder names the concern it describes. `load/` for `assets` and `sourceCounts`; `present/` for `fades`, `guides`, `selection`, `search`, `slabs`.                                                                                                                                                                                                                                                                                                                    |
 | R6  | Per-category counts, the palette search list and the bulk slot's status are the Layer's `facts` (`counts`, `searchList`, `bulk`). Anchors publish at boot, the bulk group when its slot settles. Not `sourceCounts`: anchors are module data, not a loaded catalog, and a count report flips engine status to `ready` (`createLayers.ts:73-76`); batching at bulk-settle was rejected because the bulk slot never loads while the three bulk categories are off (`assetWiring.ts:149-157`), which would leave every category countless. |
 | R7  | The palette search list is `facts.searchList`; the palette keeps its `structure` row kind, chip and thumbnail. `LayerSearchEntry` is not extended.                                                                                                                                                                                                                                                                                                                                                            |
-| R8  | `watchFocusTweenSaga` waits on `facts.bulk !== 'pending'` (pulse: `factsReported`) instead of `resolveDeps().structures`. `structures` was `ResolveDeps`' only field, so `ResolveDeps`, the saga-context field and every test fixture that builds one are deleted (about 22 test files, mechanical).                                                                                                                                                                                                       |
+| R8  | `watchFocusTweenSaga` waits while `facts.bulk === 'loading'` (pulse: `factsReported`) instead of `resolveDeps().structures`. `structures` was `ResolveDeps`' only field, so `ResolveDeps`, the saga-context field and every test fixture that builds one are deleted (about 22 test files, mechanical).                                                                                                                                                                                                       |
 | R9  | `MARKER_PRODUCERS` is deleted; the structure planner calls `produceStructureMarkers` directly.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | R10 | `utils/structure/structureMemberCount.ts` and `structureMembership.ts` move into `layers/galaxyCatalog/` (their only reader) in PR 1.                                                                                                                                                                                                                                                                                                                                                                         |
 | R11 | Prep commits sit at the head of PR 2, one per joint. PR 1 stays pure moves.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -42,7 +42,7 @@ export const structureLayer = defineLayer({
   name: 'structure',
   settings: structureLayerSettings, // exists
   sources: STRUCTURE_SOURCE_ROWS, // sources/: 8 rows + the array
-  facts: { counts: {}, searchList: [], bulk: 'pending' } as StructureFacts, // @types/StructureFacts.d.ts
+  facts: { counts: {}, searchList: [], bulk: 'idle' } as StructureFacts, // @types/StructureFacts.d.ts
   create, // store, 2 marker renderers, bulk slot, projection (publishes facts)
   destroy,
   assets: structureAssetRows, // load/: the 'structureCatalog' row
@@ -66,7 +66,8 @@ export const structureLayer = defineLayer({
 export type StructureFacts = {
   readonly counts: Partial<Record<StructureId, number>>;
   readonly searchList: readonly StructureSearchEntry[];
-  readonly bulk: 'pending' | 'ready' | 'error';
+  /** The bulk slot's `LoadState.kind`, mirrored. `committing` is folded into `loading`. */
+  readonly bulk: 'idle' | 'loading' | 'ready' | 'error';
 };
 
 // @types/StructureRuntime.d.ts (private guts)
@@ -78,7 +79,7 @@ export type StructureRuntime = {
 };
 ```
 
-Core after the move: `selectEngineFacts(state).structure` carries the Structures section's counts, the palette's list and the saga's loaded signal (`bulk !== 'pending'`). A facts key exists only once `createLayers` has seeded it, so every facts-reading change lands after the Layer is registered.
+Core after the move: `selectEngineFacts(state).structure` carries the Structures section's counts, the palette's list and the saga's wait signal (`bulk === 'loading'`: wait only while a catalog that could hold the id is in flight; today's `loaded()` is true from boot because the anchors group is set synchronously, so the deferral never actually waited, and an undemanded slot must not make it wait forever). A facts key exists only once `createLayers` has seeded it, so every facts-reading change lands after the Layer is registered.
 
 ### 3.2 Verdicts
 
@@ -100,9 +101,9 @@ P3 and P4 need no Layer and open PR 2. P1 and P2 write `facts`, so they follow t
 
 | #   | Commit                                                                                                                                                                                                                                                   | Deletes                                                                                            |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| P1  | The projection publishes `facts.counts` and `facts.bulk`; `StructuresSectionContainer` reads the facts key; `watchSelectionRowsSaga` swaps its structure pulse for `factsReported`.                                                                        | `structureCounts`, `engineStructureCountsChanged`, `selectStructureCounts`                           |
+| P1  | The projection publishes `facts.counts` and `facts.bulk` (the slot's kind); `selectStructureCounts` re-points to the facts key; `watchSelectionRowsSaga` and the P3 deferral swap their structure pulse for `factsReported`.                               | `structureCounts`, `engineStructureCountsChanged`                                                    |
 | P2  | Search list published as `facts.searchList`; `selectStructureSearchList` re-points to the facts key.                                                                                                                                                     | `structureSearchList`, `engineStructureSearchListChanged`                                           |
-| P3  | `structureSelectionRow` takes the store directly; `watchFocusTweenSaga` deferral: `empty` is `yield* select` of `facts.bulk === 'pending'`, `pulse` is `factsReported`.                                                                                  | `ResolveDeps`, `resolveDeps()`, the saga-context field in `store/types.ts`, their test fixtures      |
+| P3  | `structureSelectionRow` takes the store directly; `watchFocusTweenSaga` deferral reads `selectStructureCounts` with today's pulse for now (no facts key exists before registration); P1 moves it to `facts.bulk === 'loading'` via `yield* select`.      | `ResolveDeps`, `resolveDeps()`, the saga-context field in `store/types.ts`, their test fixtures      |
 | P4  | `structureMarkersPlanner` calls `produceStructureMarkers`; `runMarkerProducers` goes.                                                                                                                                                                    | `MARKER_PRODUCERS`, `markerProducers.ts`, `runMarkerProducers.ts`, `MarkerProducer` type if unused  |
 
 
@@ -165,7 +166,7 @@ Everything in R12. Tests follow their files; the mirror root becomes `tests/laye
 ## 7. Testing
 
 - Existing 25 direct mirrors move with their files and must stay green with only import-path changes in PR 1.
-- PR 2 adds: `tests/layers/structure/layer.test.ts` (pass names unique, two guides rows on COSMO and NEAR0, sources array has eight rows); `load/wireStructureProjection.test.ts` extended (anchor counts and `bulk: 'pending'` published at boot; `bulk: 'ready'` with merged counts after the slot resolves; `bulk: 'error'` with anchor-only counts after it rejects); `present/structureApparentRadiusFade.test.ts`; the `watchFocusTweenSaga` deferral test re-pointed to `factsReported` and `facts.bulk`.
+- PR 2 adds: `tests/layers/structure/layer.test.ts` (pass names unique, two guides rows on COSMO and NEAR0, sources array has eight rows); `load/wireStructureProjection.test.ts` extended (anchor counts and `bulk: 'idle'` published at boot; `'loading'` when the slot starts; `'ready'` with merged counts after it resolves; `'error'` with anchor-only counts after it rejects); `present/structureApparentRadiusFade.test.ts`; the `watchFocusTweenSaga` deferral test re-pointed to `factsReported` and `facts.bulk`.
 - Deleted with their code: the assertions in `engineSliceDispatches.test.ts` on the two deleted actions.
 
 ## 8. Risks
@@ -177,7 +178,7 @@ Everything in R12. Tests follow their files; the mirror root becomes `tests/laye
 ## 9. Behaviour changes, accepted
 
 1. Structure label tie order on equal on-screen size may differ (R14).
-2. The deep-link saga's deferral key changes from a dedicated pulse to the Layer's `bulk` fact; the observable wait is the same.
+2. The deep-link saga now actually waits while the bulk catalog is loading before giving up on an id. Today's `loaded()` was true from boot (anchors land synchronously), so it never waited; with the slot undemanded it still does not wait.
 
 ## 10. Definition of done
 
