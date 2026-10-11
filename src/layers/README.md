@@ -42,6 +42,10 @@ Three more folders hold the Runtime's private machinery — core never sees thes
   type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
   Layer stay under `src/@types/` instead.
 
+**`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
+
+**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
+
 ## Rules
 
 - **One symbol per file, filename = the symbol.** Deep relative imports, no barrels,
@@ -68,21 +72,6 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 - **Moving a file uses `npm run move-files`**, never `git mv` plus hand-edited
   imports — and grep afterwards, since it misses `.wesl` `package::` specifiers and
   string-literal paths.
-
-## Unsettled
-
-Two boundaries are not yet adjudicated. Follow the reference implementation for now
-and expect both to be ruled on when the Layer structure is cleaned up:
-
-1. **`subsystems/` vs `render/`.** `galaxyCatalog` has both, and the split is not
-   obviously principled — `proceduralDiskSubsystem.ts` and
-   `proceduralDiskRenderer.ts` sit in different folders. Either "stateful per-frame
-   machinery" is a real category distinct from "GPU pipeline object", or one folder
-   should absorb the other.
-2. **Where declarations live.** `assets?` sits in `load/` while `fades?`,
-   `guides?` and `selection?` sit in `present/`, though all four are the same kind
-   of thing: a plain row declaring a contribution. One of the two placements is
-   wrong.
 
 ## Status
 

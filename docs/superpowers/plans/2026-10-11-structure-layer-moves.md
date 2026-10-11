@@ -158,16 +158,16 @@ export const STRUCTURE_SOURCE_ROWS = [
 
 **Files:** `src/layers/README.md` (modify), `.claude/skills/add-data-source/SKILL.md` (modify), and every living doc the Task 1 search hit: `docs/backlog/2026-06-29-supercluster-shape-focus.md:12`, `docs/backlog/2026-07-07-emphasize-clip-cue.md:99`, plus any other hit under `docs/` that is not a historical record
 
-- [ ] `src/layers/README.md`: delete the `## Unsettled` section (the heading and its two numbered items). Under `## Where things go`, after the three-folder list, add these two paragraphs (spec §4):
+- [x] `src/layers/README.md`: delete the `## Unsettled` section (the heading and its two numbered items). Under `## Where things go`, after the three-folder list, add these two paragraphs (spec §4):
 
   > **`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
   >
   > **Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
 
   Two wording changes from the spec text, both for timelessness: "structure has none" is dropped (the README describes the rule, not one Layer), and "All eleven formed Layers match today; no file moves" becomes "Every formed Layer follows both rules".
-- [ ] Leave the `## Status` line alone. It changes in PR 2, when `structure` is actually formed; a README that calls it formed before `layer.ts` exists would be false for as long as PR 2 is open.
-- [ ] Rewrite every moved path in `.claude/skills/add-data-source/SKILL.md` (`:176`, `:179`, `:181`, `:183` today) and in the living `docs/` hits. Leave historical records alone: `docs/superpowers/plans/completed/`, `docs/superpowers/specs/completed/`, `docs/superpowers/plans/archive/`, `docs/research/`, `docs/audits/`, `docs/grill-sessions/`, and the spec of this feature.
-- [ ] Commit.
+- [x] Leave the `## Status` line alone. It changes in PR 2, when `structure` is actually formed; a README that calls it formed before `layer.ts` exists would be false for as long as PR 2 is open.
+- [x] Rewrite every moved path in `.claude/skills/add-data-source/SKILL.md` (`:176`, `:179`, `:181`, `:183` today) and in the living `docs/` hits. Leave historical records alone: `docs/superpowers/plans/completed/`, `docs/superpowers/specs/completed/`, `docs/superpowers/plans/archive/`, `docs/research/`, `docs/audits/`, `docs/grill-sessions/`, and the spec of this feature.
+- [x] Commit.
 
 ### Task 4: Backlog the Layer dependency DAG
 

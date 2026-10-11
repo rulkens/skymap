@@ -96,7 +96,7 @@ timeline, not the channel.
   the wiring precedent; reset sites in `resetState`/`stop`/`destroy`.
 - `src/@types/animation/SceneEffect.ts` — the cue union; `effectHelpers.ts`
   `focus()` for the `FocusId` addressing + resolution pattern.
-- `src/services/engine/presentation/produceStructureMarkers.ts` (~line 140)
+- `src/layers/structure/present/produceStructureMarkers.ts` (~line 140)
   and `produceStructureLabels.ts` (~line 165) — the recession composition the
   lerp slots into.
 - First consumer: staggered group highlights in
