@@ -50,6 +50,15 @@ export const COLUMN_STORE_BYTES: Readonly<Record<ColumnStore, number>> = {
   u10x3: 4,
   u16x3: 6,
 };
+export const U10X3_COMPONENT_MASK = 0x3ff;
+export const U10X3_Y_SHIFT = 10;
+export const U10X3_Z_SHIFT = 20;
+export const U16X3_Y_BYTE_OFFSET = 2;
+export const U16X3_Z_BYTE_OFFSET = 4;
+/** Components per packed-vector record. */
+export const PACKED_VECTOR_COMPONENTS = 3;
+/** ASCII space: the JSON header's right padding, which `JSON.parse` ignores. */
+export const OCTREE_JSON_PAD_BYTE = 0x20;
 
 /** `u16x3` raw / this = fraction of the owning node's box (not of the leaf cell). */
 export const OFFSET_FRACTION_LEVELS = 65536;

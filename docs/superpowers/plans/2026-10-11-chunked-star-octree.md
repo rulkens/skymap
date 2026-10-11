@@ -173,14 +173,14 @@ export function decodeOctreeChunk(buf: ArrayBuffer, index: OctreeIndexHeader): D
 
 Dequantisation: integer scalar stores yield `Float32Array` of `q0 + raw·q1`; `f32` and `f16` yield `Float32Array` (f16 via `DataView.getFloat16` where available, else the usual bit expansion in a private helper); `u10x3` and `u16x3` yield a `Uint16Array` of 3·n raw components; `u64` a `BigUint64Array`. The "regenerate" error text follows `starCatalogFormat.ts`'s pattern: `` `unsupported octree version: ${v} — please regenerate via "npm run build-stars"` ``.
 
-- [ ] Test `round-trips every column store field-for-field` — one schema with all nine stores, three nodes, five records, hand-written raw values (including the max of each packed component: 1023 for `u10x3`, 65535 for `u16x3`), `q0 = −6.0, q1 = 0.19` on the `u8` column; assert each decoded value equals the hand-computed dequantisation and both node tables are equal.
-- [ ] Test `pads the JSON header so the node table starts on a multiple of 8` — a header whose JSON length is not ≡ 6 mod 8; assert `nodeTableOffset % 8 === 0` and the decoded header equals the input (the padding is spaces, which `JSON.parse` ignores).
-- [ ] Test `every column starts on a multiple of 8` — a `u8` column of 5 records followed by a `u16x3` column; decode and assert the second column's values survive (a misaligned reader would read garbage).
-- [ ] Test `a chunk decodes against the index schema it carries none of` — encode a chunk with the same raw columns, decode it with the index header, assert equality.
-- [ ] Test `throws when a required star column is missing` — an index with `family: 'star'` whose `columns` lacks `absMag`; `expect(() => decodeOctreeIndex(buf)).toThrow(/absMag/)`.
-- [ ] Test `rejects a wrong magic and a stale version with the regenerate message` — `SKOC` bytes handed to `decodeOctreeIndex`, and a version-2 index.
-- [ ] Implement the encoder in `tools/octree/` and the three readers in `src/data/octree/`. The private framing writer/reader share `octreeFormat.ts`'s constants only.
-- [ ] `npm test -- octreeFormat` passes. Commit.
+- [x] Test `round-trips every column store field-for-field` — one schema with all nine stores, three nodes, five records, hand-written raw values (including the max of each packed component: 1023 for `u10x3`, 65535 for `u16x3`), `q0 = −6.0, q1 = 0.19` on the `u8` column; assert each decoded value equals the hand-computed dequantisation and both node tables are equal.
+- [x] Test `pads the JSON header so the node table starts on a multiple of 8` — a header whose JSON length is not ≡ 6 mod 8; assert `nodeTableOffset % 8 === 0` and the decoded header equals the input (the padding is spaces, which `JSON.parse` ignores).
+- [x] Test `every column starts on a multiple of 8` — a `u8` column of 5 records followed by a `u16x3` column; decode and assert the second column's values survive (a misaligned reader would read garbage).
+- [x] Test `a chunk decodes against the index schema it carries none of` — encode a chunk with the same raw columns, decode it with the index header, assert equality.
+- [x] Test `throws when a required star column is missing` — an index with `family: 'star'` whose `columns` lacks `absMag`; `expect(() => decodeOctreeIndex(buf)).toThrow(/absMag/)`.
+- [x] Test `rejects a wrong magic and a stale version with the regenerate message` — `SKOC` bytes handed to `decodeOctreeIndex`, and a version-2 index.
+- [x] Implement the encoder in `tools/octree/` and the three readers in `src/data/octree/`. The private framing writer/reader share `octreeFormat.ts`'s constants only.
+- [x] `npm test -- octreeFormat` passes. Commit.
 
 ### Task 3: Brightness stratification, `review: yes`
 
