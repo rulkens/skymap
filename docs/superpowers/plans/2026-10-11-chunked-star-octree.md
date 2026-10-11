@@ -579,10 +579,10 @@ export function collectStarChunks(dataDir: string): R2Upload[]; // localPath pub
 
 Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight lowercase hex characters before the extension, and `contentHash8` writes exactly that. The bulk row is never hashed, manifested or drift-guarded (`allowDataFile` is `transport === 'wrangler'`), so `buildDataManifest` leaves chunk files alone; `walkDataFiles` still walks the chunk directory for the drift guard (thousands of entries, filtered out) — acceptable, noted in DEPLOY.md. The index is written last by the bake, so an interrupted bake uploads nothing. `fetchPrebuiltData`: after the manifest files, if `star-catalog/v2/stars.bin` is among them, read its header and download every `starChunkPath` the same way (`.part` then rename); `--dry-run` lists them with HEAD sizes.
 
-- [ ] `dataFamilyOf.test.ts`: add `STARS_V2_INDEX` and `STARS_V2_CHUNKS` expectations; TRACKED rows `star-catalog/v2/stars.bin`, `star-catalog/v2/stars.a3f19c2e.bin`, `star-catalog/v2/stars/6-12345.a3f19c2e.bin`; UNTRACKED `star-catalog/v2/stars/6-12345.bin.part`, `stars/6-12345.a3f19c2e.bin` (wrong dir), `star-catalog/v1/stars.bin`.
-- [ ] Test `collectStarChunks lists exactly the chunks the index header names, under the stars/ dir` and `returns [] without an index` — a temp `public/data` with a manifest naming a hashed index written by `writeOctreeCatalog`.
+- [x] `dataFamilyOf.test.ts`: add `STARS_V2_INDEX` and `STARS_V2_CHUNKS` expectations; TRACKED rows `star-catalog/v2/stars.bin`, `star-catalog/v2/stars.a3f19c2e.bin`, `star-catalog/v2/stars/6-12345.a3f19c2e.bin`; UNTRACKED `star-catalog/v2/stars/6-12345.bin.part`, `stars/6-12345.a3f19c2e.bin` (wrong dir), `star-catalog/v1/stars.bin`.
+- [x] Test `collectStarChunks lists exactly the chunks the index header names, under the stars/ dir` and `returns [] without an index` — a temp `public/data` with a manifest naming a hashed index written by `writeOctreeCatalog`.
 - [ ] `npm run sync-r2 -- --dry-run` (no credentials, no network) lists the index under `public/data: star-catalog-v2-index` with `gzip=true` and every chunk under `Star octree chunks` as `bulk … gzip=true`, before `data/manifest.json`. Paste three lines into the ledger. Never run a real sync from this plan.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 17: Docs follow the format
 
