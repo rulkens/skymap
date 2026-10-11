@@ -148,11 +148,11 @@ export const STRUCTURE_SOURCE_ROWS = [
 
 `Layer.sources` is typing only (`src/@types/engine/layer/Layer.d.ts:56`); the registry is what folds the rows, by import. The Layer's `sources:` field itself is set in PR 2, when `layer.ts` exists.
 
-- [ ] Create the rows file. Its header says what the array is (the Layer's `sources` rows, folded into `SOURCE_REGISTRY` by `data/sources.ts`); import `Source` from `src/data/source`, never from `src/data/sources` (that would be a cycle).
-- [ ] `src/data/sources.ts`: delete the eight entry imports (`:17-24`) and the eight `UNFORMED_SOURCE_REGISTRY` lines (`:72-79`); add `...sourceRecordOf(STRUCTURE_SOURCE_ROWS)` to `SOURCE_REGISTRY` beside the other Layers' folds (`:85-96`). `UNFORMED_SOURCE_REGISTRY` keeps the three body rows.
-- [ ] No new test: the `satisfies` clause and `SOURCE_REGISTRY`'s `satisfies Readonly<Record<SourceType, SourceEntry>>` (`sources.ts:96`) make a missing or mistyped row a compile error. Key order is cosmetic: integer keys iterate in numeric order (`sources.ts:62-70`).
-- [ ] Verify: `npm run typecheck:fast`, `npm test -- tests/data/` (sources, selection encoding, structure anchors).
-- [ ] Commit.
+- [x] Create the rows file. Its header says what the array is (the Layer's `sources` rows, folded into `SOURCE_REGISTRY` by `data/sources.ts`); import `Source` from `src/data/source`, never from `src/data/sources` (that would be a cycle).
+- [x] `src/data/sources.ts`: delete the eight entry imports (`:17-24`) and the eight `UNFORMED_SOURCE_REGISTRY` lines (`:72-79`); add `...sourceRecordOf(STRUCTURE_SOURCE_ROWS)` to `SOURCE_REGISTRY` beside the other Layers' folds (`:85-96`). `UNFORMED_SOURCE_REGISTRY` keeps the three body rows.
+- [x] No new test: the `satisfies` clause and `SOURCE_REGISTRY`'s `satisfies Readonly<Record<SourceType, SourceEntry>>` (`sources.ts:96`) make a missing or mistyped row a compile error. Key order is cosmetic: integer keys iterate in numeric order (`sources.ts:62-70`).
+- [x] Verify: `npm run typecheck:fast`, `npm test -- tests/data/` (sources, selection encoding, structure anchors).
+- [x] Commit.
 
 ### Task 3: README rulings and living-doc paths
 
