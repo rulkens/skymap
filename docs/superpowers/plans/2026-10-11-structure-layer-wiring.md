@@ -94,28 +94,28 @@ export function selectionResolverOver(
 
 `ResolveDeps` holds one field, `structures`. It has two readers: `structureSelectionRow` (`:27,34,40`, through `coreSelectionRows` at `engine.ts:379`) and `watchFocusTweenSaga`'s `loaded?.()` (`:37,65`), the saga context's only `getContext('resolveDeps')`. The spec's target deferral reads `facts.bulk`, but the Layer has no facts key until Task 5. Until then the saga reads core's own `structureCounts` through `select`. That is behaviour-identical to `loaded()`: `wireStructureProjection` dispatches the anchor counts in the same synchronous call that installs the anchors (`wireStructureProjection.ts:78-79`). The saga has no store handle and the context offers none; `select` is already imported (`watchFocusTweenSaga.ts:19`).
 
-- [ ] Re-sign `structureSelectionRow` and `coreSelectionRows`; rewrite `coreSelectionRows`' header (it says "the two rows core owns" and describes `deps`).
-- [ ] `watchFocusTweenSaga.ts`: apply the interim deferral (`:49-68`, loop `:83`); drop the `resolveDeps` `getContext` (`:37`). Reword the comment block at `:49-57` so it does not name `resolveDeps`.
-- [ ] `engine.ts`: delete the `resolveDeps` thunk (`:366-371`; the comment above it, `:363-365`, covers every saga-context runner and stays), its import (`:67`), the `resolveDeps` entry in `setSagaContext` (`:416`); build `state.selectionKindRows` as in the contract.
-- [ ] Delete `StructureStore.loaded()` (its member and docblock) and `createStructureStore.ts:40`; nothing reads it now.
-- [ ] Delete `src/@types/engine/ResolveDeps.d.ts` with `npm run refactor -- delete` once nothing references it. Delete `SagaContext.resolveDeps` (`store/types.ts:152-153`) and its import (`:54`); reword the header paragraphs that describe it (`:20-24`, `:40`) and the two saga comments under **Files**.
-- [ ] Sweep: each `ResolveDeps` literal `{ structures: { byId, byCategory } }` becomes the inner `{ byId, byCategory }`, passed as `selectionResolverOver`'s first argument or to `structureSelectionRow` directly where a test composes rows by hand (`[...coreSelectionRows(), structureSelectionRow(store), …]`). Drop `resolveDeps` from every `setContext` call. `createTestStore.ts`'s `NOOP_SAGA_CONTEXT` loses `resolveDeps`; its `selection` keeps resolving static structure ids by composing `structureSelectionRow` over an empty store (`byId: () => null, byCategory: () => []`).
-- [ ] `watchFocusTweenSaga.test.ts`: the deferral tests (`:190`, `:216`) drop `structuresLoadedStub` (`:71`) and pulse with `engineStructureCountsChanged({ 'galaxy-cluster': 1 })` as today; the "loaded" state is now that dispatch having happened. Expected values unchanged.
-- [ ] Delete `tests/services/engine/selection/coreSelectionRows.test.ts`: it asserts the exact type list of a one-row array, a registry restatement (`docs/superpowers/conventions/testing.md`); `assertSelectionRowsDisjoint` at boot covers duplicates. Drop `loaded()` assertions from `createStructureStore.test.ts`.
-- [ ] No new test: a signature change, a selector swap with identical timing and a fixture sweep; every existing selection test keeps its expected values.
-- [ ] Verify: `npm run typecheck:fast`; `npm test -- tests/state tests/services/engine/selection tests/services/engine/animation tests/data/animation tests/layers/structure`.
-- [ ] Commit.
+- [x] Re-sign `structureSelectionRow` and `coreSelectionRows`; rewrite `coreSelectionRows`' header (it says "the two rows core owns" and describes `deps`).
+- [x] `watchFocusTweenSaga.ts`: apply the interim deferral (`:49-68`, loop `:83`); drop the `resolveDeps` `getContext` (`:37`). Reword the comment block at `:49-57` so it does not name `resolveDeps`.
+- [x] `engine.ts`: delete the `resolveDeps` thunk (`:366-371`; the comment above it, `:363-365`, covers every saga-context runner and stays), its import (`:67`), the `resolveDeps` entry in `setSagaContext` (`:416`); build `state.selectionKindRows` as in the contract.
+- [x] Delete `StructureStore.loaded()` (its member and docblock) and `createStructureStore.ts:40`; nothing reads it now.
+- [x] Delete `src/@types/engine/ResolveDeps.d.ts` with `npm run refactor -- delete` once nothing references it. Delete `SagaContext.resolveDeps` (`store/types.ts:152-153`) and its import (`:54`); reword the header paragraphs that describe it (`:20-24`, `:40`) and the two saga comments under **Files**.
+- [x] Sweep: each `ResolveDeps` literal `{ structures: { byId, byCategory } }` becomes the inner `{ byId, byCategory }`, passed as `selectionResolverOver`'s first argument or to `structureSelectionRow` directly where a test composes rows by hand (`[...coreSelectionRows(), structureSelectionRow(store), …]`). Drop `resolveDeps` from every `setContext` call. `createTestStore.ts`'s `NOOP_SAGA_CONTEXT` loses `resolveDeps`; its `selection` keeps resolving static structure ids by composing `structureSelectionRow` over an empty store (`byId: () => null, byCategory: () => []`).
+- [x] `watchFocusTweenSaga.test.ts`: the deferral tests (`:190`, `:216`) drop `structuresLoadedStub` (`:71`) and pulse with `engineStructureCountsChanged({ 'galaxy-cluster': 1 })` as today; the "loaded" state is now that dispatch having happened. Expected values unchanged.
+- [x] Delete `tests/services/engine/selection/coreSelectionRows.test.ts`: it asserts the exact type list of a one-row array, a registry restatement (`docs/superpowers/conventions/testing.md`); `assertSelectionRowsDisjoint` at boot covers duplicates. Drop `loaded()` assertions from `createStructureStore.test.ts`.
+- [x] No new test: a signature change, a selector swap with identical timing and a fixture sweep; every existing selection test keeps its expected values.
+- [x] Verify: `npm run typecheck:fast`; `npm test -- tests/state tests/services/engine/selection tests/services/engine/animation tests/data/animation tests/layers/structure`.
+- [x] Commit.
 
 ### Task 2 (spec P4): The planner calls `produceStructureMarkers` directly
 
 **Files:** `src/layers/structure/frame.ts`, `src/services/engine/presentation/markerProducers.ts` (delete), `src/services/engine/frame/runMarkerProducers.ts` (delete), `src/@types/engine/subsystems/MarkerProducer.d.ts` (delete), `src/services/engine/frame/runLabel3DProducers.ts:5` (comment)
 
-- [ ] `structureMarkersPlanner.plan` returns `produceStructureMarkers(state, view)` as its `value`, in place of `runMarkerProducers(state, view)` (`frame.ts`, `:19` before PR 1). The planner header (`:1-9`) states the pick-index rule now held by `runMarkerProducers.ts:3-5`: the list is emitted in `store.all()` order and never sorted, filtered or deduped. One sentence, citing `produceStructureMarkers`' header.
-- [ ] Delete the three files with `npm run refactor -- delete <file>#<symbol>` (refuses while a reference remains). `MarkerProducer` has no reader besides `markerProducers.ts`.
-- [ ] `runLabel3DProducers.ts:5` says it "Mirrors `runMarkerProducers`'s walk"; reword it to stand alone.
-- [ ] No new test: the producer's output is unchanged and its suite covers it.
-- [ ] Verify: `npm run typecheck:fast`; `npm test -- tests/layers/structure tests/services/engine/frame`.
-- [ ] Commit.
+- [x] `structureMarkersPlanner.plan` returns `produceStructureMarkers(state, view)` as its `value`, in place of `runMarkerProducers(state, view)` (`frame.ts`, `:19` before PR 1). The planner header (`:1-9`) states the pick-index rule now held by `runMarkerProducers.ts:3-5`: the list is emitted in `store.all()` order and never sorted, filtered or deduped. One sentence, citing `produceStructureMarkers`' header.
+- [x] Delete the three files with `npm run refactor -- delete <file>#<symbol>` (refuses while a reference remains). `MarkerProducer` has no reader besides `markerProducers.ts`.
+- [x] `runLabel3DProducers.ts:5` says it "Mirrors `runMarkerProducers`'s walk"; reword it to stand alone.
+- [x] No new test: the producer's output is unchanged and its suite covers it.
+- [x] Verify: `npm run typecheck:fast`; `npm test -- tests/layers/structure tests/services/engine/frame`.
+- [x] Commit.
 
 ### Task 3 (R3): One fade helper for ring and label
 
@@ -142,17 +142,17 @@ export function structureApparentRadiusFade(
 
 Close-approach: 1 below `max`; past it, `1 − smoothstep(min(1, (px − max) / maxBand))`. Far-distance: 0 below `min`; across `[min, min + minBand)`, `smoothstep((px − min) / minBand)`; 1 above. `smoothstep(t) = t²(3 − 2t)`. Today's two copies are `produceStructureMarkers.ts:100-137` and `produceStructureLabels.ts:170-206`. The backlog file's `:97-119` / `:138-174` citations are stale.
 
-- [ ] Extract `StructureMarkerStyle` into the Layer's `@types/` (types never inline) and import it in `structureMarkerStyles.ts`.
-- [ ] Tests, `style = { markerMaxApparentRadiusPx: 700, markerMaxApparentFadeBandPx: 400, markerMinApparentRadiusPx: 5, markerMinApparentFadeBandPx: 4 }`, every expected value worked by hand:
+- [x] Extract `StructureMarkerStyle` into the Layer's `@types/` (types never inline) and import it in `structureMarkerStyles.ts`.
+- [x] Tests, `style = { markerMaxApparentRadiusPx: 700, markerMaxApparentFadeBandPx: 400, markerMinApparentRadiusPx: 5, markerMinApparentFadeBandPx: 4 }`, every expected value worked by hand:
   - `is 1 between the two thresholds` (300 px → 1);
   - `fades out past the close-approach threshold` (800 px → t = 0.25 → 1 − 0.15625 = 0.84375);
   - `is 0 past the close-approach band` (1500 px → 0);
   - `fades in above the far threshold` (6 px → t = 0.25 → 0.15625);
   - `is 0 below the far threshold` (3 px → 0).
-- [ ] Implement, then replace both hand-rolled pairs with one call each. Each caller keeps its own zero-distance guard exactly as today (the marker emits alpha 0 at `distanceMpc <= 0`; the label skips the fade when `distanceMpc > 0` is false). The label `continue`s when the helper returns ≤ 0, which equals today's "either factor ≤ 0" skip, because both factors are ≥ 0. The comment "Mirrors the smoothstep `produceStructureMarkers` uses" (`produceStructureLabels.ts:173-174`) goes; the shared call replaces it.
-- [ ] Every existing `produceStructureMarkers` and `produceStructureLabels` test passes with unchanged expected values.
-- [ ] `docs/backlog/2026-08-22-label-entanglement-residuals.md`: delete finding 1 from "What it is", "Why it matters" and "Approach", renumber, and change "Three findings" to "Two findings". `docs/BACKLOG.md:167`: drop "duplicated structure fade curve" from the index line's clause.
-- [ ] Commit.
+- [x] Implement, then replace both hand-rolled pairs with one call each. Each caller keeps its own zero-distance guard exactly as today (the marker emits alpha 0 at `distanceMpc <= 0`; the label skips the fade when `distanceMpc > 0` is false). The label `continue`s when the helper returns ≤ 0, which equals today's "either factor ≤ 0" skip, because both factors are ≥ 0. The comment "Mirrors the smoothstep `produceStructureMarkers` uses" (`produceStructureLabels.ts:173-174`) goes; the shared call replaces it.
+- [x] Every existing `produceStructureMarkers` and `produceStructureLabels` test passes with unchanged expected values.
+- [x] `docs/backlog/2026-08-22-label-entanglement-residuals.md`: delete finding 1 from "What it is", "Why it matters" and "Approach", renumber, and change "Three findings" to "Two findings". `docs/BACKLOG.md:167`: drop "duplicated structure fade curve" from the index line's clause.
+- [x] Commit.
 
 ### Task 4: Register the structure Layer; core's copies go — `review: yes`
 
