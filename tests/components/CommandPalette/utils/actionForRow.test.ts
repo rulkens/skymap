@@ -31,6 +31,7 @@ const COMA: StructureSearchEntry = {
   category: 'galaxy-cluster',
   abell: 'A1656',
   description: '',
+  featured: true,
 };
 
 describe('actionForRow', () => {

@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs';
 import { CARD_SHOT_ID_BY_FOCUS_ID } from '../../../src/data/palette/cardShotIdByFocusId';
 
 describe('CARD_SHOT_ID_BY_FOCUS_ID', () => {
-  it("maps a renamed card's focus id to the id its shot is stored under", () => {
-    expect(CARD_SHOT_ID_BY_FOCUS_ID.get('galaxy-cluster-virgo-m87')).toBe('cluster-virgo-m87');
+  it('leaves out structure cards, whose shots are keyed by focus id under their own dir', () => {
+    expect(CARD_SHOT_ID_BY_FOCUS_ID.has('galaxy-cluster-virgo-m87')).toBe(false);
+    expect(CARD_SHOT_ID_BY_FOCUS_ID.get('body-earth')).toBe('body-earth');
   });
 
   it('every mapped card id has a captured shot on disk', () => {
