@@ -18,7 +18,7 @@ import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
 import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
-import { buildStaticAnchorStructures } from '../../../src/data/structure/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../src/layers/structure/load/buildStaticAnchorStructures';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { encodeBlackHoleFocusId } from '../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';

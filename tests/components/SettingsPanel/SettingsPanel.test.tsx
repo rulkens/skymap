@@ -31,7 +31,7 @@ vi.mock('../../../src/compositions/app', () => ({
 vi.mock('../../../src/components/containers/TierChipContainer', () => ({
   default: () => <div data-testid="tier-chip" />,
 }));
-vi.mock('../../../src/components/containers/StructuresSectionContainer', () => ({
+vi.mock('../../../src/layers/structure/ui/StructuresSectionContainer', () => ({
   default: () => <div data-testid="structures-section" />,
 }));
 vi.mock('../../../src/components/containers/LabelsAndGuidesSectionContainer', () => ({

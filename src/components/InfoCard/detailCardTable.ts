@@ -28,10 +28,10 @@ import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
-import StructureDetailCardContainer from '../containers/StructureDetailCardContainer';
+import StructureDetailCardContainer from '../../layers/structure/ui/StructureDetailCardContainer';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
-import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
+import CompactStructureCard from '../../layers/structure/ui/CompactStructureCard/CompactStructureCard';
 import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
 import CompactStarCard from './CompactStarCard/CompactStarCard';
 

@@ -11,8 +11,8 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
-import { structureMarkersCosmoPass } from '../../../../../src/services/engine/frame/passes/structureMarkersCosmoPass';
-import { structureMarkersPlanner } from '../../../../../src/services/engine/frame/planners/structureMarkersPlanner';
+import { structureMarkersCosmoPass } from '../../../../../src/layers/structure/passes/structureMarkersCosmoPass';
+import { structureMarkersPlanner } from '../../../../../src/layers/structure/frame';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';

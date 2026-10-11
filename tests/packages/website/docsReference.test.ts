@@ -208,7 +208,11 @@ describe('Settings page', () => {
       ),
     ].length;
     const layerFiles = new Set(
-      DOCS_SETTINGS.filter((group) => group.file.startsWith('src/layers/')).map((g) => g.file),
+      DOCS_SETTINGS.filter(
+        // Not a composed Layer yet: the panel draws it directly until PR 2 registers it.
+        (group) =>
+          group.file.startsWith('src/layers/') && !group.file.startsWith('src/layers/structure/'),
+      ).map((g) => g.file),
     );
     expect(layerFiles.size).toBe(drawn);
   });

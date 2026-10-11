@@ -68,7 +68,7 @@ vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () =
 // the test doesn't network.  An empty catalog is enough by default — the
 // merge test overrides this mock with a populated payload so wireStructureProjection
 // builds bulk records from the slot's ready value.
-vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () => ({
+vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => ({
   structureCatalogFetcher: vi.fn(async () => ({
     catalog: {
       count: 0,
@@ -137,7 +137,7 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
+import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
 import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';

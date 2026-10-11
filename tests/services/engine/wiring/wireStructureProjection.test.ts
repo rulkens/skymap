@@ -40,7 +40,7 @@ import type { StructureCatalogPayload } from '../../../../src/@types/loading/str
 
 // ── Module mocks ───────────────────────────────────────────────────────
 
-vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
+vi.mock('../../../../src/layers/structure/load/buildStaticAnchorStructures', () => ({
   buildStaticAnchorStructures: vi.fn((): StructureInfo[] => [
     {
       id: 'galaxy-cluster-virgo',

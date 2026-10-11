@@ -13,7 +13,7 @@ import { exhibitRegistry } from '../../../../src/data/exhibits/exhibitRegistry';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
 import { FEATURED_TABS } from '../../../../src/data/palette/featuredTabs';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
-import { buildStaticAnchorStructures } from '../../../../src/data/structure/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../../src/layers/structure/load/buildStaticAnchorStructures';
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';

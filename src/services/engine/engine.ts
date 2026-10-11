@@ -27,7 +27,7 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceStructureLabels } from './presentation/produceStructureLabels';
+import { produceStructureLabels } from '../../layers/structure/present/produceStructureLabels';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
