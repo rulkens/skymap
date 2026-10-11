@@ -281,6 +281,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const octree = { ...octreeOf(), recordOrdinalBase: Uint32Array.of(100, 103, 106, 109) };
     renderer.upload(Source.GaiaStars, octree, 2);
     renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    renderer.snapshotPickSlots();
     // Chunk 1's third record: pool 100 + 1·50 + 2, ordinal 103 + 2.
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
     expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBe(152);
@@ -289,8 +290,27 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(renderer.recordOrdinal(Source.GaiaStars, 100)).toBeNull(); // slot 0 is empty
 
     renderer.evictChunk(Source.GaiaStars, 1);
+    renderer.snapshotPickSlots();
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBeNull();
     expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
+  });
+
+  it('a slot evicted and refilled between the pick draw and its readback resolves to the star that was drawn', () => {
+    const { device } = recordingDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    const octree = { ...octreeOf(), recordOrdinalBase: Uint32Array.of(100, 103, 106, 109) };
+    renderer.upload(Source.GaiaStars, octree, 2);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    renderer.snapshotPickSlots();
+
+    renderer.evictChunk(Source.GaiaStars, 1);
+    renderer.uploadChunk(Source.GaiaStars, 1, {
+      ...CHUNK,
+      ref: 2,
+      nodes: { ...CHUNK.nodes, morton: Uint32Array.of(16) },
+    });
+    // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
+    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
   });
 
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {

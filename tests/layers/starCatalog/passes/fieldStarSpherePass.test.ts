@@ -109,6 +109,7 @@ function makeRuntime(
           loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }],
           // A v1 catalog has no chunks: its pool index is its ordinal.
           poolRecordIndex: (_source: unknown, ordinal: number) => ordinal,
+          snapshotPickSlots: () => {},
         };
   return {
     renderer,

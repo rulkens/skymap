@@ -271,6 +271,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
       if (!present) return;
       const poolIndex = runtime.renderer.poolRecordIndex(loaded.source, present.ordinal);
       if (poolIndex === null) return;
+      runtime.renderer.snapshotPickSlots();
 
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,

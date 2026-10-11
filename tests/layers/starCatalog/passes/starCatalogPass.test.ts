@@ -72,6 +72,7 @@ function makeRuntime(frame: StarCutInputs | null) {
   const renderer = {
     loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }][Symbol.iterator](),
     getFrameCut: () => frame,
+    snapshotPickSlots: () => {},
     drawCut,
   };
   const pickDraw = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogPickDrawArgs) => void>();

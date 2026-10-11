@@ -47,6 +47,8 @@ type LoadedStarSource = {
   slots: number;
   /** The chunk ref each slot holds, −1 when empty: the pick's pool index ↔ ordinal map. */
   chunkOfSlot: Int32Array;
+  /** `chunkOfSlot` as of the last pick draw: a readback names what was drawn, not what landed since. */
+  pickChunkOfSlot: Int32Array;
   /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
@@ -145,6 +147,7 @@ export function createStarCatalogRenderer(
       octree,
       slots: poolSlots,
       chunkOfSlot: new Int32Array(poolSlots).fill(-1),
+      pickChunkOfSlot: new Int32Array(poolSlots).fill(-1),
       recordsBuffer,
       recordsBindGroup,
     });
@@ -173,6 +176,10 @@ export function createStarCatalogRenderer(
     if (entry !== undefined) entry.chunkOfSlot[slot] = -1;
   }
 
+  function snapshotPickSlots(): void {
+    for (const entry of sources.values()) entry.pickChunkOfSlot.set(entry.chunkOfSlot);
+  }
+
   function recordOrdinal(source: SourceType, poolIndex: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
@@ -180,7 +187,7 @@ export function createStarCatalogRenderer(
     const indexRecords = octree.records.count;
     if (poolIndex < indexRecords) return poolIndex;
     const slot = Math.floor((poolIndex - indexRecords) / octree.chunkCapacity);
-    const ref = slot < entry.slots ? entry.chunkOfSlot[slot]! : -1;
+    const ref = slot < entry.slots ? entry.pickChunkOfSlot[slot]! : -1;
     if (ref < 0) return null;
     const local = poolIndex - indexRecords - slot * octree.chunkCapacity;
     return local < octree.chunks[ref]!.records ? starRecordOrdinal(octree, ref, local) : null;
@@ -267,6 +274,7 @@ export function createStarCatalogRenderer(
     upload,
     uploadChunk,
     evictChunk,
+    snapshotPickSlots,
     recordOrdinal,
     poolRecordIndex,
     loadedCatalogs,

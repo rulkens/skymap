@@ -23,10 +23,13 @@ export type StarCatalogRenderer = Renderer & {
   uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
   /** Free a slot: its root stops refining, then its rows are zeroed. */
   evictChunk(source: SourceType, slot: number): void;
+  /** Called by every star pick draw: `recordOrdinal` reads the slots as that draw saw them. */
+  snapshotPickSlots(): void;
   /**
    * A pool-absolute record index (what the pick draw stamps) as the catalog ordinal, or null
-   * when its slot is empty or the index names no record. Read through the renderer's own
-   * slot → chunk table, so a pick raced by an eviction resolves to null, never another star.
+   * when its slot was empty or the index names no record. Read through the slot → chunk table
+   * of the last pick draw, so a slot evicted and refilled before the readback still names the
+   * star that was drawn; the selection row then finds its chunk gone, never another star.
    */
   recordOrdinal(source: SourceType, poolIndex: number): number | null;
   /** The inverse: null when the ordinal's chunk is not resident. */
