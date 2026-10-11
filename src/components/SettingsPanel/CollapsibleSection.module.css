@@ -215,6 +215,15 @@ button.header {
   opacity: 1;
 }
 
+/* Phone: the header row (disclosure + switch) is a full touch target. */
+@media (max-width: 768px) {
+  button.header {
+    align-items: center;
+    min-height: var(--touch-target);
+    padding-block: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chevron,
   .bodyWrapper,

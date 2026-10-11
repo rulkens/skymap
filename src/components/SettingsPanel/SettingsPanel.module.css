@@ -18,6 +18,14 @@
   padding: var(--space-2) 0;
 }
 
+/* Phone: one touch target per row, so neighbouring switches' hit areas do not overlap. */
+@media (max-width: 768px) {
+  .panelRow {
+    min-height: var(--touch-target);
+    padding-block: 0;
+  }
+}
+
 /* Label inside a panelRow */
 .panelRow label {
   flex: 1;

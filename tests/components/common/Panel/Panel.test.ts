@@ -69,4 +69,21 @@ describe('Panel', () => {
     expect(controlledId).toBeTruthy();
     expect(document.getElementById(controlledId!)).not.toBeNull();
   });
+
+  // The phone sheet passes `bare` together with the phone's `defaultOpen: false`;
+  // bare has no title to tap, so honouring the collapse would hide the content for good.
+  it('bare shows its children even when defaultOpen is false, with no collapse control', () => {
+    render(
+      createElement(Panel, {
+        title: 'LAYERS',
+        defaultOpen: false,
+        bare: true,
+        headerExtra: createElement('span', null, 'EXTRA'),
+        children: createElement('span', null, 'BODY_CONTENT'),
+      }),
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByText('EXTRA')).toBeInTheDocument();
+    expect(screen.getByText('BODY_CONTENT').closest('[aria-hidden="true"]')).toBeNull();
+  });
 });

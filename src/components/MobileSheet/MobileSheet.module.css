@@ -92,7 +92,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-7) var(--space-4);
+  /* The close button's 44px box already holds the title off the content. */
+  padding: 0 var(--space-4) 0 var(--space-7);
 }
 
 .title {
