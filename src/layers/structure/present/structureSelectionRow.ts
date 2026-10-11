@@ -10,7 +10,7 @@ import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { structurePickId } from '../../../utils/picking/structurePickId';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
-import type { StructureStore } from '../../../@types/engine/data/StructureStore';
+import type { StructureStore } from '../@types/StructureStore';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SourceType } from '../../../@types/data/SourceType';

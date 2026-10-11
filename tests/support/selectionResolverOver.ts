@@ -7,7 +7,7 @@ import { milkyWaySelectionRow } from '../../src/layers/milkyWay/present/milkyWay
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StructureStore } from '../../src/@types/engine/data/StructureStore';
+import type { StructureStore } from '../../src/layers/structure/@types/StructureStore';
 import type { SelectionResolver } from '../../src/@types/engine/selection/SelectionResolver';
 
 /** What the structure selection row reads; the real store satisfies it. */

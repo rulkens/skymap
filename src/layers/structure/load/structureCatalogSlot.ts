@@ -23,7 +23,7 @@
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { structureCatalogFetcher } from './structureCatalogFetcher';
 import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
-import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
+import type { StructureCatalogReq } from '../@types/StructureCatalogReq';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 
 export function createStructureCatalogSlot(): AssetSlot<

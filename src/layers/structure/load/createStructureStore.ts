@@ -1,6 +1,6 @@
-import type { StructureStore } from '../../../@types/engine/data/StructureStore';
+import type { StructureStore } from '../@types/StructureStore';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
-import type { StructureGroupId } from '../../../@types/data/structure/StructureGroupId';
+import type { StructureGroupId } from '../@types/StructureGroupId';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 
 /**

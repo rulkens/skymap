@@ -13,7 +13,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
-import type { StructureMarkerDescriptor } from '../../../../src/@types/rendering/StructureMarkerDescriptor';
+import type { StructureMarkerDescriptor } from '../../../../src/layers/structure/@types/StructureMarkerDescriptor';
 
 const STATE_STUB = {} as EngineState;
 const VIEW_STUB = {} as SlabView;

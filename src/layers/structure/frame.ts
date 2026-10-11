@@ -11,7 +11,7 @@
  */
 
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
-import type { StructureMarkerDescriptor } from '../../@types/rendering/StructureMarkerDescriptor';
+import type { StructureMarkerDescriptor } from './@types/StructureMarkerDescriptor';
 import type { StructureRuntime } from './@types/StructureRuntime';
 import { produceStructureMarkers } from './present/produceStructureMarkers';
 

@@ -14,7 +14,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
-import type { StructureStore } from '../../../../src/@types/engine/data/StructureStore';
+import type { StructureStore } from '../../../../src/layers/structure/@types/StructureStore';
 import type { StructureScale } from '../../../../src/@types/data/structure/StructureScale';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.

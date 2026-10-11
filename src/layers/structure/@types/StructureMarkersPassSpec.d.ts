@@ -4,10 +4,10 @@
  * the renderer it drives, and the planner whose list it reads.
  */
 
-import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
+import type { StructureMarkerRenderer } from './StructureMarkerRenderer';
 import type { StructureScale } from '../../../@types/data/structure/StructureScale';
 import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
-import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
+import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
 
 export type StructureMarkersPassSpec = {
   readonly name: string;

@@ -53,7 +53,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
-import type { StructureStore } from '../../../@types/engine/data/StructureStore';
+import type { StructureStore } from '../@types/StructureStore';
 import { structurePickId } from '../../../utils/picking/structurePickId';
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../data/structureLabelAboveGapPx';

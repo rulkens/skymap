@@ -33,8 +33,8 @@
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec4 } from '../../../@types/math/Vec4';
-import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
-import type { StructureStore } from '../../../@types/engine/data/StructureStore';
+import type { StructureMarkerDescriptor } from '../@types/StructureMarkerDescriptor';
+import type { StructureStore } from '../@types/StructureStore';
 import {
   STRUCTURE_MARKER_STYLES,
   SIG_MIN_ALPHA,

@@ -1,6 +1,6 @@
-import type { StructureInfo } from '../../data/structure/StructureInfo';
-import type { StructureGroupId } from '../../data/structure/StructureGroupId';
-import type { StructureId } from '../../data/structure/StructureId';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import type { StructureGroupId } from './StructureGroupId';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 
 /**
  * StructureStore — the authoritative app-side home for extended-structure

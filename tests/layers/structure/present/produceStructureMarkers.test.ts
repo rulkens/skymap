@@ -5,7 +5,7 @@ import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../src/layers/structure/present/produceStructureMarkers';
 import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
-import type { StructureStore } from '../../../../src/@types/engine/data/StructureStore';
+import type { StructureStore } from '../../../../src/layers/structure/@types/StructureStore';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 

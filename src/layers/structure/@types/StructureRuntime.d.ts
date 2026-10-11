@@ -5,11 +5,11 @@
  * the passes read them without a null check.
  */
 
-import type { StructureStore } from '../../../@types/engine/data/StructureStore';
-import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
+import type { StructureStore } from './StructureStore';
+import type { StructureMarkerRenderer } from './StructureMarkerRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
-import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
+import type { StructureCatalogReq } from './StructureCatalogReq';
 
 export type StructureRuntime = {
   readonly store: StructureStore;
