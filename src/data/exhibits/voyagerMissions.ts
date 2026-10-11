@@ -10,6 +10,9 @@ import { initialState as starCatalogsInitialState } from '../../layers/starCatal
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
+import { initialState as structuresInitialState } from '../../layers/structure/state/structures/initialState';
+import type { StructureId } from '../../@types/data/structure/StructureId';
+import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import { MISSION_EVENTS } from '../missions/missionEvents.generated';
 import { SCALE_UNITS } from '../scaleUnits';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
@@ -35,7 +38,8 @@ export const voyagerMissions: Exhibit = {
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     missionTrails: { ...missionTrailsInitialState, enabled: true, emphasis: 'voyager1' },
-    // Galaxies and star names are landmarks for other scales; here they only crowd the craft.
+    // Galaxies, star names and structure rings are landmarks for other scales; here they only
+    // crowd the craft.
     galaxyCatalogs: {
       ...galaxyCatalogsInitialState,
       items: Object.fromEntries(
@@ -44,6 +48,14 @@ export const voyagerMissions: Exhibit = {
           { enabled: false, labelEnabled: false },
         ]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+    },
+    structures: {
+      items: Object.fromEntries(
+        Object.keys(structuresInitialState.items).map((id) => [
+          id,
+          { enabled: false, labelEnabled: false },
+        ]),
+      ) as Record<StructureId, StructureItemSettings>,
     },
     starCatalogs: {
       ...starCatalogsInitialState,
