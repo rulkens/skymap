@@ -1,12 +1,13 @@
 /*
- * Dock.module.css — the phone dock: three equal items on a glass strip pinned
+ * Dock.module.css — the phone dock: equal-width items on a glass strip pinned
  * to the bottom edge. Height comes from --dock-height (item row plus the larger
  * of the base gap and the safe-area inset), the figure BottomStack sums.
  */
 
 .root {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   box-sizing: border-box;
   height: var(--dock-height);
   padding-bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));

@@ -1,8 +1,7 @@
 /**
  * PhoneHudContainer — the phone's bottom HUD: dock, time row and the one sheet.
  *
- * Owns which dock item is open. Controls and Layers share the sheet (one at a
- * time) and win over the selection card while open; the time row is
+ * Owns which dock item is open. Layers wins over the selection card while open; the time row is
  * independent and can stay open under any sheet. A new selection closes the
  * open panel so the card it asked for shows. Selection is read by identity key,
  * not object, so unrelated selection-slice writes do not close a panel.
@@ -15,7 +14,6 @@ import MobileSheet from '../MobileSheet/MobileSheet';
 import DockContainer from './DockContainer';
 import TimeBarContainer from './TimeBarContainer';
 import ScaleBracketContainer from './ScaleBracketContainer';
-import NavigationPanelContainer from './NavigationPanelContainer';
 import LazyInfoCardContainer from './LazyInfoCardContainer';
 import LazySettingsPanelContainer from './LazySettingsPanelContainer';
 import { useAppSelector } from '../../store/hooks';
@@ -31,27 +29,17 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   const selected = useAppSelector(selectSelectedFocusable);
   const selectionKey = selected ? TARGET_IDENTITY_KEY[selected.type](selected) : null;
 
-  const [panel, setPanel] = useState<'controls' | 'layers' | null>(null);
+  const [panel, setPanel] = useState<'layers' | null>(null);
   const [timeOpen, setTimeOpen] = useState(false);
 
   useEffect(() => setPanel(null), [selectionKey]);
 
   const closePanel = useCallback(() => setPanel(null), []);
-  const onControls = useCallback(
-    () => setPanel((cur) => (cur === 'controls' ? null : 'controls')),
-    [],
-  );
   const onLayers = useCallback(() => setPanel((cur) => (cur === 'layers' ? null : 'layers')), []);
   const onTime = useCallback(() => setTimeOpen((cur) => !cur), []);
 
   let sheet: ReactNode = null;
-  if (panel === 'controls') {
-    sheet = (
-      <MobileSheet resetKey="panel:controls" panel={{ title: 'Controls', onClose: closePanel }}>
-        <NavigationPanelContainer bare />
-      </MobileSheet>
-    );
-  } else if (panel === 'layers') {
+  if (panel === 'layers') {
     sheet = (
       <MobileSheet resetKey="panel:layers" panel={{ title: 'Layers', onClose: closePanel }}>
         <Suspense>
@@ -77,10 +65,8 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
       timeRow={<TimeBarContainer hidden={hidden} row />}
       dock={
         <DockContainer
-          controlsOpen={panel === 'controls'}
           timeOpen={timeOpen}
           layersOpen={panel === 'layers'}
-          onControls={onControls}
           onTime={onTime}
           onLayers={onLayers}
         />

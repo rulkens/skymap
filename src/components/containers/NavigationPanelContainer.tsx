@@ -5,21 +5,16 @@
  * This is not a store subscription: `NavigationPanel` owns its own
  * expand/collapse settings reach internally. The one thing App used to carry
  * on its behalf was the one-shot `useInitialMobile` viewport sample that seeds
- * `defaultOpen`/`isMobile`; hoisting it here keeps App purely structural.
+ * `defaultOpen`; hoisting it here keeps App purely structural.
  */
 
 import { memo } from 'react';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import { useInitialMobile } from '../../hooks/useInitialMobile';
 
-export type NavigationPanelContainerProps = {
-  /** Render without the collapsible card (the phone sheet owns the surface). */
-  readonly bare?: boolean;
-};
-
-function NavigationPanelContainer({ bare }: NavigationPanelContainerProps): React.ReactElement {
+function NavigationPanelContainer(): React.ReactElement {
   const initialMobile = useInitialMobile();
-  return <NavigationPanel defaultOpen={!initialMobile} isMobile={initialMobile} bare={bare} />;
+  return <NavigationPanel defaultOpen={!initialMobile} />;
 }
 
 export default memo(NavigationPanelContainer);

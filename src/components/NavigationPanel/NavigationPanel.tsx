@@ -38,17 +38,7 @@ import styles from './NavigationPanel.module.css';
  * `tests/components/NavigationPanel/NavigationPanel.test.ts` — that's the
  * canary that keeps the cheatsheet in sync with the actual handlers.
  *
- * Two variants because the input model differs significantly:
- *
- *   - DESKTOP_ROWS lists keyboard + mouse affordances.  Laptop users
- *     benefit from knowing about Esc, F, H, and the Cmd-K palette.
- *   - MOBILE_ROWS lists touch gestures and the visible × close button —
- *     none of the keyboard accelerators apply on a phone, and showing
- *     them would be misleading.
- *
- * App.tsx picks which set to pass at mount time based on viewport width
- * (the same 768-px breakpoint as the small-tier auto-select).  No live
- * resize handling — first-paint signal is enough.
+ * Desktop only: the phone HUD has no cheatsheet.
  */
 const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'Drag', action: 'orbit camera' },
@@ -62,27 +52,8 @@ const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '⌘K / Ctrl+K / /', action: 'search galaxies' },
 ];
 
-const MOBILE_ROWS: ReadonlyArray<{ key: string; action: string }> = [
-  { key: 'One-finger drag', action: 'orbit camera' },
-  { key: 'Two-finger pinch', action: 'zoom' },
-  { key: 'Tap an object', action: 'see info' },
-  { key: 'Swipe the card up', action: 'more details' },
-  { key: 'Focus on the card', action: 'fly to the object' },
-  // Close button on the card is the touch-equivalent of Esc.
-  { key: '× on the card', action: 'clear selection' },
-  { key: 'Search at the top', action: 'find by name' },
-];
-
-/**
- * `defaultOpen` and `isMobile` come from App.tsx.  `isMobile` switches the
- * cheatsheet content between touch gestures and keyboard shortcuts; defaults
- * to `false` (desktop) so existing call sites and tests stay unchanged.
- */
 export type NavigationPanelProps = {
   defaultOpen?: boolean;
-  isMobile?: boolean;
-  /** Render without the collapsible card, for hosts that own the surface. */
-  bare?: boolean;
 };
 
 function NavigationPanel(props: NavigationPanelProps): ReactNode {
@@ -90,19 +61,13 @@ function NavigationPanel(props: NavigationPanelProps): ReactNode {
   // createElement TS overloads match the function-component signature
   // and thread `NavigationPanelProps` through.  With a defaulted
   // parameter, TS picks the no-args overload and rejects callers that
-  // try to pass `{ isMobile: true }` with a confusing
+  // try to pass `{ defaultOpen: true }` with a confusing
   // "Type 'X' has no properties in common with type 'Attributes'".
   // Callers that don't need any prop pass an explicit empty `{}`.
-  const { defaultOpen, isMobile = false, bare } = props;
-  const rows = isMobile ? MOBILE_ROWS : DESKTOP_ROWS;
+  const { defaultOpen } = props;
   return (
-    <Panel
-      title="NAVIGATION"
-      ariaLabel="Navigation cheatsheet"
-      defaultOpen={defaultOpen}
-      bare={bare}
-    >
-      {rows.map((row) => (
+    <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet" defaultOpen={defaultOpen}>
+      {DESKTOP_ROWS.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.key}>{row.key}</span>
           <span className={styles.action}>{row.action}</span>

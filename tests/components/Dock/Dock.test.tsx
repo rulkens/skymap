@@ -6,11 +6,9 @@ import type { DockProps } from '../../../src/components/Dock/Dock';
 
 function renderDock(overrides: Partial<DockProps> = {}) {
   const props: DockProps = {
-    controlsOpen: false,
     timeOpen: false,
     layersOpen: false,
     timeLabel: { text: 'Time', glyph: null },
-    onControls: vi.fn<() => void>(),
     onTime: vi.fn<() => void>(),
     onLayers: vi.fn<() => void>(),
     ...overrides,
@@ -20,20 +18,15 @@ function renderDock(overrides: Partial<DockProps> = {}) {
 }
 
 describe('Dock', () => {
-  // Three near-identical items: the bug to catch is one wired to its neighbour's flag or handler.
+  // Near-identical items: the bug to catch is one wired to its neighbour's flag or handler.
   it('marks only the open item as pressed and routes each tap to its own handler', () => {
     const props = renderDock({ layersOpen: true });
-    const controls = screen.getByRole('button', { name: 'Controls' });
     const time = screen.getByRole('button', { name: 'Time' });
     const layers = screen.getByRole('button', { name: 'Layers' });
 
-    expect(controls).toHaveAttribute('aria-pressed', 'false');
     expect(time).toHaveAttribute('aria-pressed', 'false');
     expect(layers).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.click(controls);
-    expect(props.onControls).toHaveBeenCalledTimes(1);
-    expect(props.onTime).not.toHaveBeenCalled();
     fireEvent.click(time);
     expect(props.onTime).toHaveBeenCalledTimes(1);
     expect(props.onLayers).not.toHaveBeenCalled();
