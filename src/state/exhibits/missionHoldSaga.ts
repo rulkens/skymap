@@ -170,7 +170,7 @@ function* entryPose(mission: CameraMission, days: number): Generator<unknown, Ca
   if (frame === null) return null;
   return {
     target: frame.aim,
-    ...orbitAnglesLookingAlong(frame.normal, basis),
+    ...orbitAnglesLookingAlong(frame.viewDirection, basis),
     distance: frame.distance,
   };
 }

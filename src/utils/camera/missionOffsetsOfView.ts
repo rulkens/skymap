@@ -14,7 +14,7 @@ export function missionOffsetsOfView(
   distance: number,
 ): MissionOffsets {
   return {
-    yaw: Math.atan2(dot3(viewDir, frame.right), dot3(viewDir, frame.normal)),
+    yaw: Math.atan2(dot3(viewDir, frame.right), dot3(viewDir, frame.viewDirection)),
     pitch: Math.asin(Math.max(-1, Math.min(1, dot3(viewDir, frame.up)))),
     zoom: distance / frame.distance,
   };

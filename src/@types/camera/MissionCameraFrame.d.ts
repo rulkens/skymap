@@ -10,7 +10,7 @@ import type { Vec3 } from '../math/Vec3';
 
 export type MissionCameraFrame = {
   readonly aim: Vec3;
-  readonly normal: Vec3;
+  readonly viewDirection: Vec3;
   readonly right: Vec3;
   readonly up: Vec3;
   readonly distance: number;

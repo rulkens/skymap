@@ -1,6 +1,6 @@
 /**
- * missionViewDirection — the unit direction the mission camera looks along: the frame's normal
- * turned by the visitor's yaw (toward `right`) and pitch (toward `up`). Zero offsets give the normal.
+ * missionViewDirection — the unit direction the mission camera looks along: the frame's viewDirection
+ * turned by the visitor's yaw (toward `right`) and pitch (toward `up`). Zero offsets give the viewDirection.
  */
 
 import type { MissionCameraFrame } from '../../@types/camera/MissionCameraFrame';
@@ -13,8 +13,8 @@ export function missionViewDirection(frame: MissionCameraFrame, offsets: Mission
   const b = Math.sin(offsets.yaw) * cp;
   const c = Math.sin(offsets.pitch);
   return [
-    frame.normal[0] * a + frame.right[0] * b + frame.up[0] * c,
-    frame.normal[1] * a + frame.right[1] * b + frame.up[1] * c,
-    frame.normal[2] * a + frame.right[2] * b + frame.up[2] * c,
+    frame.viewDirection[0] * a + frame.right[0] * b + frame.up[0] * c,
+    frame.viewDirection[1] * a + frame.right[1] * b + frame.up[1] * c,
+    frame.viewDirection[2] * a + frame.right[2] * b + frame.up[2] * c,
   ];
 }

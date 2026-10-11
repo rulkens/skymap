@@ -47,22 +47,22 @@ export function missionCameraFrame(
   // A flyby is seen from outside its bend at the cruise view's height above the planets' plane;
   // a stop without one (launch) keeps the cruise bearing.
   const outside = !cruise && frame.stop?.encounter && flybyOutsideBend(frame.stop.encounter);
-  let normal = cruiseDir;
+  let viewDirection = cruiseDir;
   if (outside) {
     const { yaw } = orbitAnglesLookingAlong([-outside[0], -outside[1], -outside[2]], ECLIPTIC);
     const eyeward = rotateVec3ByTightMat3(yawPitchToDir(yaw, mission.cruise.pitch), ECLIPTIC);
-    normal = [-eyeward[0], -eyeward[1], -eyeward[2]];
+    viewDirection = [-eyeward[0], -eyeward[1], -eyeward[2]];
   }
   // The orbit camera's own up, so the visitor's yaw turns about screen-up; its sideways axis
-  // stands in where the normal runs along up and the cross degenerates.
+  // stands in where the viewDirection runs along up and the cross degenerates.
   const camUp: Vec3 = [poseBasis[3], poseBasis[4], poseBasis[5]];
   const camSide: Vec3 = [poseBasis[0], poseBasis[1], poseBasis[2]];
-  const helper = Math.abs(dot3(normal, camUp)) < 0.99 ? camUp : camSide;
-  const right = normalize3(cross3(normal, helper));
-  const up = cross3(right, normal);
+  const helper = Math.abs(dot3(viewDirection, camUp)) < 0.99 ? camUp : camSide;
+  const right = normalize3(cross3(viewDirection, helper));
+  const up = cross3(right, viewDirection);
   return {
     aim: frame.aim,
-    normal,
+    viewDirection,
     right,
     up,
     distance: sphereFitDistance(frame.radiusMpc, fovYRad, aspect),
