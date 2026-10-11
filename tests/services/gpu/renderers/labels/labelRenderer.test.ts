@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { LABEL_DATA_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
 import { createTextLayout } from '../../../../../src/services/gpu/labelLayout/createTextLayout';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
@@ -255,10 +256,10 @@ describe('LabelRenderer capacity growth', () => {
     const binding1 = entries.find((e) => e.binding === 1)!;
     expect((binding1.resource as GPUBufferBinding).buffer).toBe(storageBuffers[1]!.buffer);
 
-    // No truncation: the upload after growth covers all 65 labels' f32s (96 B each).
+    // No truncation: the upload after growth covers all 65 labels' f32s.
     const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     const storageWrite = writeBuffer.mock.calls.find((c) => c[0] === storageBuffers[1]!.buffer)!;
-    expect(storageWrite[4]).toBe((65 * 96) / 4);
+    expect(storageWrite[4]).toBe((65 * LABEL_DATA_BYTES) / 4);
 
     expect(storageBuffers[0]!.buffer.destroy).toHaveBeenCalled();
     expect(instanceBuffers[0]!.buffer.destroy).toHaveBeenCalled();

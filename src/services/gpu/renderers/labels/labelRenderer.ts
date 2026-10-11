@@ -90,52 +90,11 @@ import {
   createOcclusionDepthFrameBuffer,
   writeOcclusionDepthFrame,
 } from './occlusionCoverageGroup';
-import {
-  LABEL_MAX_PX_DEFAULT,
-  LABEL_MIN_PX_DEFAULT,
-  LABEL_WORLD_EM_MPC_DEFAULT,
-} from '../../../../data/labels/labelSizingDefaults';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-
-// ─── buffer constants ──────────────────────────────────────────────────────
-
-/**
- * Per-label storage buffer stride, matching `struct LabelData` in io.wesl:
- *
- *   bytes  0..15  worldPos      vec4<f32>  — xyz = world Mpc, w = worldEmMpc
- *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
- *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
- *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
- *   bytes 64..67  occludeWeight f32        — share of the scene attenuation
- *   bytes 68..71  occludeNearKm f32        — the sampled-depth channel's cutoff
- *   bytes 80..95  subjectPos    vec4<f32>  — xyz = the depth verdict's own
- *                                             world point (falls back to
- *                                             worldPos), w unused
- *
- * The trailing vec4 needs 16-byte alignment, so bytes 72..79 are now genuine
- * padding ahead of it (not slack) and the stride is 96, not 72 rounded up.
- * `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the shader
- * since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a fresh
- * vec4 for one scalar.
- */
-const LABEL_DATA_BYTES = 96;
-
-/**
- * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
- *
- *   bytes  0..7   localOffset  vec2<f32>  — pen-relative top-left in atlas px
- *   bytes  8..15  localSize    vec2<f32>  — glyph width/height in atlas px
- *   bytes 16..31  uvRect       vec4<f32>  — (u0,v0,u1,v1) atlas UV
- *   bytes 32..35  labelIndex   u32        — index into labels[] storage buffer
- *   bytes 36..39  fontIndex    u32        — texture_2d_array layer index
- *                                            (= FONT_IDS.indexOf(label.font))
- *
- * Note: `corner` (location 0) comes from a separate 4-vertex unit-quad
- * buffer with `stepMode: 'vertex'`, not from this instance buffer.
- */
-const GLYPH_INSTANCE_BYTES = 40;
+import { GLYPH_INSTANCE_BYTES, LABEL_DATA_BYTES } from '../../../../data/labels/labelBufferStrides';
+import { packLabels } from './packLabels';
 
 // ─── uniform constants ────────────────────────────────────────────────────
 
@@ -523,105 +482,15 @@ export function createLabelRenderer(
       allocate(2 ** Math.ceil(Math.log2(labels.length)));
     }
 
-    currentGlyphCount = 0;
-
-    for (let li = 0; li < labels.length; li++) {
-      const label = labels[li]!;
-      // Each label specifies its own font; layout reads the font's
-      // metrics from the FontId-keyed record built at construction
-      // time.  No fallback — Label.font is required at the type level.
-      const quads = textLayout.layout(label);
-
-      // Write the per-label storage record unconditionally — even when
-      // `quads` is empty.  Keeping the per-label index stable
-      // across the outer loop matters because each glyph carries its
-      // labelIndex by position; if we skipped a label whose text produced
-      // no known glyphs, every subsequent glyph would point to the wrong
-      // label entry.  An unused storage slot is harmless (no glyph
-      // references it, the GPU never reads it).
-      //
-      //   [0..3]   worldPos     (x, y, z, worldEmMpc)
-      //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
-      //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
-      //   [12..15] outlineColor (r*a, g*a, b*a, a)
-      //   [16]     occludeWeight
-      //   [17]     occludeNearKm        ([18..19] are struct padding)
-      //   [20..23] subjectPos   (x, y, z, 0 — the depth verdict's own point)
-      const labelBase = li * (LABEL_DATA_BYTES / 4);
-      labelBuf[labelBase + 0] = label.worldPos[0];
-      labelBuf[labelBase + 1] = label.worldPos[1];
-      labelBuf[labelBase + 2] = label.worldPos[2];
-      labelBuf[labelBase + 3] = label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT;
-
-      // Public colour API is STRAIGHT RGBA — producers write the natural
-      // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment
-      // shader composites in premultiplied space, so we multiply r/g/b
-      // by a here on the write boundary.
-      const color = label.color ?? [1, 1, 1, 1];
-      const ca = color[3]!;
-      labelBuf[labelBase + 4] = color[0]! * ca;
-      labelBuf[labelBase + 5] = color[1]! * ca;
-      labelBuf[labelBase + 6] = color[2]! * ca;
-      labelBuf[labelBase + 7] = ca;
-
-      labelBuf[labelBase + 8] = label.outlineEmFrac ?? 0;
-      labelBuf[labelBase + 9] = label.minPixelSize ?? LABEL_MIN_PX_DEFAULT;
-      labelBuf[labelBase + 10] = label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT;
-      labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
-
-      // outline colour — same straight → premultiplied conversion as fill.
-      // Default [0,0,0,0] makes outlineEmFrac irrelevant (band alpha is 0).
-      const outlineColor = label.outlineColor ?? [0, 0, 0, 0];
-      const oa = outlineColor[3]!;
-      labelBuf[labelBase + 12] = outlineColor[0]! * oa;
-      labelBuf[labelBase + 13] = outlineColor[1]! * oa;
-      labelBuf[labelBase + 14] = outlineColor[2]! * oa;
-      labelBuf[labelBase + 15] = oa;
-
-      // Default 1 = today's per-pixel rule, so a producer that says nothing
-      // about its subject's depth keeps the behaviour it had.
-      labelBuf[labelBase + 16] = label.occludeWeight ?? 1;
-      // Default 0 leaves the sampled-depth channel inert: no scene texel is
-      // nearer than the eye, and at weight 1 the `max` already saturates.
-      labelBuf[labelBase + 17] = label.occludeNearKm ?? 0;
-
-      // Falls back to worldPos when unset (every label the director never
-      // lifts, where the two already coincide) — see Label2D.occludeSubjectPos.
-      const subjectPos = label.occludeSubjectPos ?? label.worldPos;
-      labelBuf[labelBase + 20] = subjectPos[0];
-      labelBuf[labelBase + 21] = subjectPos[1];
-      labelBuf[labelBase + 22] = subjectPos[2];
-      labelBuf[labelBase + 23] = 0; // w unused
-
-      // Resolve the label's font to its GPU texture-array layer index
-      // ONCE per label, outside the inner glyph loop — every glyph in
-      // a label shares the same layer.
-      const fontIndex = layerIndexOf[label.font];
-
-      // Write per-glyph instance records (40 bytes = 10 × 4 = 8 × f32 + 2 × u32).
-      for (const q of quads) {
-        if (currentGlyphCount >= maxGlyphs) break;
-        // f32 base index inside the shared ArrayBuffer view.  10 slots/glyph
-        // (8 floats + 2 uints reinterpreted via the u32 view at the same
-        // offsets — slots 8 and 9).
-        const f32Base = currentGlyphCount * (GLYPH_INSTANCE_BYTES / 4);
-        glyphF32[f32Base + 0] = q.localOffsetX;
-        glyphF32[f32Base + 1] = q.localOffsetY;
-        glyphF32[f32Base + 2] = q.localSizeW;
-        glyphF32[f32Base + 3] = q.localSizeH;
-        glyphF32[f32Base + 4] = q.uvU0;
-        glyphF32[f32Base + 5] = q.uvV0;
-        glyphF32[f32Base + 6] = q.uvU1;
-        glyphF32[f32Base + 7] = q.uvV1;
-        // labelIndex + fontIndex are u32; write them through the
-        // Uint32Array view so the bit patterns are exact (the
-        // Float32Array view would reinterpret an int payload as
-        // garbage floating-point bits).
-        glyphU32[f32Base + 8] = li;
-        glyphU32[f32Base + 9] = fontIndex;
-        currentGlyphCount++;
-      }
-    }
+    currentGlyphCount = packLabels({
+      labels,
+      textLayout,
+      layerIndexOf,
+      labelF32: labelBuf,
+      glyphF32,
+      glyphU32,
+      maxGlyphs,
+    });
 
     // Upload to GPU only when a real device is present.
     if (!device) return;
@@ -721,10 +590,5 @@ export function createLabelRenderer(
   // `satisfies Renderer` confirms the shared label+destroy contract at
   // compile time without widening the static type seen by consumers.
   renderer satisfies Renderer;
-  // Expose the CPU-side label storage scratch buffer for unit tests
-  // that need to assert pack-loop output.  The accessor is prefixed
-  // with `__debug` to flag it as test-only — production code should
-  // never read this; the GPU has the authoritative copy.
-  (renderer as unknown as { __debugLabelBuf: () => Float32Array }).__debugLabelBuf = () => labelBuf;
   return renderer;
 }
