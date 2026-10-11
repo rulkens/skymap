@@ -14,7 +14,7 @@ Packaging: three prep PRs (§8, P1 to P3), each landing on main before any featu
 
 ## 2. Container format
 
-Two object kinds share one framing: an **index object** per catalog and a **chunk object** per chunk, each holding the subtrees of one or more chunk roots (§4). All integers are little-endian.
+Two object kinds share one framing: an **index object** per catalog and a **chunk object** per chunk, each holding the subtrees of one or more chunk roots (§4). Chunks nest: a chunk's rows may be the roots of deeper chunks, so the index is the top object of a tree of objects, and every object lists only the chunks rooted in its own rows (amended 2026-10-11, §4.7). All integers are little-endian.
 
 ### 2.1 Framing (both objects)
 
@@ -41,13 +41,15 @@ type ColumnSchema = {
 };
 
 type OctreeChunkRef = {
+  readonly id: number; // catalog-global chunk id, 0 … chunkCount − 1; what a row's chunkRef holds
   readonly level: number;
   readonly morton: number; // the first root's key: with the hash, the object's name
-  readonly roots: readonly number[]; // index rows of the chunk's roots, in Morton order
+  readonly roots: readonly number[]; // rows of the object listing this ref (its parent), in Morton order
   readonly hash: string;
   readonly bytes: number; // object name and wire-size hint
   readonly nodes: number;
   readonly records: number;
+  readonly recordBase: number; // catalog-global ordinal of the chunk's first record
 };
 
 type OctreeIndexHeader = {
@@ -61,7 +63,7 @@ type OctreeIndexHeader = {
   readonly records: number; // this object's own counts
   readonly columns: readonly ColumnSchema[];
   readonly stats: Readonly<Partial<Record<StatId, number>>>;
-  readonly chunks: readonly OctreeChunkRef[]; // the index IS the chunk manifest (ruling D)
+  readonly chunks: readonly OctreeChunkRef[]; // chunks rooted in index rows only (ruling D, split with the tree)
 };
 
 type OctreeChunkHeader = {
@@ -70,14 +72,17 @@ type OctreeChunkHeader = {
   readonly morton: number;
   readonly nodes: number;
   readonly records: number;
+  readonly chunks: readonly OctreeChunkRef[]; // chunks rooted in this chunk's rows; [] at the bottom
 };
 ```
+
+The manifest is split with the tree: no object lists more chunks than it has rows, so every header is bounded by `chunkNodeCap` refs. Ids and `recordBase` are assigned by the bake breadth-first from the index (its chunks in Morton order, then theirs), so the runtime sizes its per-chunk tables once from `stats.chunkCount` and maps a pick ordinal to its chunk without a prefix sum over chunks it has never seen.
 
 A chunk carries no schema: `decodeOctreeChunk(buf, indexHeader)` reads the columns the index declares. Integer stores dequantise as `q0 + raw·q1`; float and packed-vector stores carry `q0 = 0, q1 = 1`. The decoder yields one typed array per column and throws when a family's required id is missing.
 
 **`ColumnId` registry** (`src/data/octree/columnIds.ts`, append-only, never renamed or reused): `offset`, `absMag`, `colourIndex`. Galaxy ids (`classByte`, `axisRatio`, `pa`, `logSize`, `specZ`, `logMass`, `objId`, research §8.1) append in their slice. The star family requires all three.
 
-**`StatId` registry** (append-only): `starCount`, the total of real (non-blob) records, read by the UI count (`starCatalogSourceCounts.ts:38`). Galaxy stats (`magOffset`, `medianAbsMag`) append in their slice.
+**`StatId` registry** (append-only): `starCount`, the total of real (non-blob) records, read by the UI count (`starCatalogSourceCounts.ts:38`); `chunkCount`, the number of chunk objects in the whole tree. Galaxy stats (`magOffset`, `medianAbsMag`) append in their slice.
 
 ### 2.3 Node row (24 B, same in both objects)
 
@@ -90,9 +95,9 @@ A chunk carries no schema: `decodeOctreeChunk(buf, indexHeader)` reads the colum
 | 8      | 4    | `firstRecord` (u32), **object-local** (ruling B)                                                     |
 | 12     | 4    | `ownCount` (u32): records owned at this level; the blob, if any, follows at `firstRecord + ownCount` |
 | 16     | 4    | `blobCount` (u32): real records the blob stands for (the shader's flux multiplier)                   |
-| 20     | 4    | `chunkRef` (u32): index into `header.chunks`, `0xFFFFFFFF` when none (always none in a chunk)        |
+| 20     | 4    | `chunkRef` (u32): catalog-global chunk id (`OctreeChunkRef.id`), `0xFFFFFFFF` when none             |
 
-Rows sort by `(level, morton)` ascending, as v1 does, so a forward scan visits children before parents. The index's root is its last row. A chunk's table holds only the nodes strictly below its roots; a top row is one whose parent key is a root's, and since roots may sit at different levels, top rows are not all last. Records lie in node-row order, each node's own records then its blob, so v1's two-region record layout is gone.
+Rows sort by `(level, morton)` ascending, as v1 does, so a forward scan visits children before parents. The index's root is its last row. A chunk's table holds only the nodes strictly below its roots, down to (and including) the roots of any deeper chunks; a top row is one whose parent key is a root's, and since roots may sit at different levels, top rows are not all last. Records lie in node-row order, each node's own records then its blob, so v1's two-region record layout is gone.
 
 ### 2.4 Record stores and the star schema
 
@@ -165,9 +170,10 @@ Chunks are capacity-bounded, not cut at a fixed level (research §8.2).
 1. Start at the root. A node with children whose descendant records number at most `chunkCapacity` (first guess **32,768**) and whose descendant rows number at most `CHUNK_NODE_CAPACITY` (**2,048**) becomes a **chunk root**.
 2. A chunk root stays in the index: its row keeps its own records and its blob, so an absent chunk draws as a glow, never a hole. Its `chunkRef` names its chunk.
 3. **Packing.** Chunk roots sort by leaf key (`morton·8^level`, depth-first order, so a run of roots is a run of neighbouring space) and fill chunks greedily: a chunk closes when the next root's rows or records would pass either bound. The manifest entry lists its roots' index rows; the first root's key names the object.
-4. Every node strictly below a chunk root goes into its root's chunk object, with that chunk's node table and records. A chunk decodes without any other chunk; chunks never nest.
+4. Every node strictly below a chunk root goes into its root's chunk object, with that chunk's node table and records. A chunk decodes without any other chunk.
 5. A node over either bound stays in the index and the split recurses into its children.
 6. **Dense-cell STOP.** The bake stops loudly when a level-0 node would land in the index (its parent's subtree exceeds `chunkCapacity`), or when any node's `ownCount` exceeds 8,192. The row bound never fires it: a level-1 node has at most 8 rows below it. A deeper grid or a dense-leaf split is the open alternative (§10).
+7. **Nesting (amended 2026-10-11; replaces "chunks never nest").** Steps 1 to 5 are one pass. While the rows left above the pass's roots (the roots included) exceed either bound, the next pass runs on those rows as the tree: a row whose descendants _among them_ fit both bounds becomes a root of a chunk one level up, and the rows below it, earlier roots included with their own records, blobs and `chunkRef`, move into that chunk. The top object that remains is the index; it obeys the same two bounds every chunk does, so the object fetched before first paint is bounded however large the catalog grows. A pass that finds no root while the top is still over a bound stops loudly (nesting STOP). L(M) puts the brightest records highest, so the index holds the brightest stars and its first paint draws fewer stars than the unnested index did, until its child chunks (top priority, nearest the eye) land; the user accepted that.
 
 `chunkNodeCap` is the row bound, written by the bake; the pool's node stride reads it. The row bound exists because the cut sweeps `slots·chunkNodeCap` rows every frame: with records alone bounding a chunk, one sparse outlier subtree (11,530 rows against a 547-row median on the first Gaia bake) set the stride for every slot. Packing exists because with one root per chunk the outskirts became hundreds of tiny objects, each paying a request and a whole slot. Both ruled 2026-10-11; the bakes' numbers and the floor that was measured and dropped are in §10.
 
@@ -180,15 +186,15 @@ Chunks are capacity-bounded, not cut at a fixed level (research §8.2).
 | index  | the existing `AssetSlot` (one value per source, `AssetSlot.d.ts`), fetched through the manifest                      |
 | chunks | `createTileStreamSubsystem<Chunk, BufferSlotStore>` over P1's `SlotPool`, not an `AssetSlot`; no sibling stream loop |
 
-Chunk URLs are `star-catalog/v2/stars/<level>-<morton>.<hash>.bin`; `resolveDataPath` passes names absent from the manifest through unchanged (`dataManifest.ts:36-37`). No `DecompressionStream`: R2 serves `Content-Encoding: gzip` and the browser inflates.
+Chunk URLs are `star-catalog/v2/stars/<level>-<morton>.<hash>.bin` at every depth; `resolveDataPath` passes names absent from the manifest through unchanged (`dataManifest.ts:36-37`). No `DecompressionStream`: R2 serves `Content-Encoding: gzip` and the browser inflates.
 
 The format switch is the source row's `format: 'skst' | 'octree'`, read where `starCatalogFetcher.ts:71-79` names and decodes the file today. The v1 reader stays and yields the same runtime shape with no chunks: a v1 leaf is a node with `ownCount = recordCount` and no blob; a v1 aggregate is a node with `ownCount = 0` whose blob is its aggregate record, already at its `firstRecord`. A v1 offset is 10 bits over the node's own box, so upload widens it `<< 6`. One cut and one vertex path draw both formats.
 
 ### 5.2 CPU planner over the index
 
-- Each frame walks the index tree over all views, as `cutSurfaceTiles` does: frustum test, then the cut's refine proxy `edge² / dist²` against `thr²`.
+- Each plan walks the index tree over all views, as `cutSurfaceTiles` does: frustum test, then the cut's refine proxy `edge² / dist²` against `thr²`; a row that fails either is skipped with its subtree.
 - A chunk root that wants to refine requests its chunk, priority = the largest proxy over views and over the chunk's roots; a chunk is requested once.
-- A resident chunk the walk reaches is touched (`lastSeenFrame`).
+- A resident chunk the walk reaches is touched (`lastSeenFrame`), and the walk continues into its rows under each passing root, with the same pruning; so a chunk is only ever requested while its parent object is resident, and the runtime learns a chunk's ref from its parent's header as that object decodes. Parents are therefore always at least as recent as their descendants in the LRU.
 - Concurrency 4, the `SURFACE_TILE_CONCURRENCY` precedent (`surfaceTileParams.ts:50`), on the existing `PriorityQueue` (`priorityQueue.ts:59`).
 - Slots recycle LRU by `lastSeenFrame`; allocation is refused when every slot was claimed this frame, so a stationary camera never evicts and refetches in a loop (`textureAtlas.ts:212-253`).
 
@@ -200,6 +206,7 @@ The CPU cannot see the GPU's budget bin, so it may fetch a chunk the budget then
 - A chunk's `CutNode` rows are composed on the CPU at upload (the wire columns are packed into GPU words there anyway), so that pass writes each row's `parent` and `firstRecord` pool-absolute: `nodeBase = indexNodes + slot·chunkNodeCap`, `recordBase = indexRecords + slot·chunkCapacity`; a chunk's top rows name their own root's index row directly. The shader reads them as plain indices; there is no per-node slot word, no base arithmetic and no `slotRoot` table. The index is never rewritten (ruling B's goal). **Ruled 2026-10-11 at plan review**: the spec's earlier `slot` word + shader bases + `slotRoot` sentinel bought nothing once the rows are CPU-composed, and cost a seventh word, two helpers and a binding.
 - The root comes from a `rootNode` uniform, replacing "root is the last node" (`cut.wesl:128`, `starCutLayout.ts:123-124`).
 - A `slotRows` table (one u32 per slot, written at land and evict) holds each slot's live row count; `histogram` and `emit` return on a row past it before reading `nodes` or `opacity`, so the padding up to `chunkNodeCap` (most of the pool: the row bound sets the stride) and an empty slot cost no memory traffic. A landing rewrites all of its slot's rows.
+- **Nested roots (amended 2026-10-11).** A chunk's roots live in its parent object's rows: index rows, or the rows of the parent chunk's slot. A landing writes its rows and records, then its roots' resident bit and `refineDelta` at `parentBase + root` (0 for the index); a chunk's top rows name that pool-absolute row as `parent`. A landing whose parent was evicted while it was in flight is dropped. **Eviction cascades**: evicting a chunk first evicts its resident descendant chunks, deepest first, each clearing its roots' resident bits before its row count; only then are its own roots cleared. The shader is unchanged.
 
 ### 5.4 Buffer sizing and budgets
 
@@ -215,7 +222,7 @@ Tiers become pool budgets (research §8.4). The source row's `budgets: Record<Ti
 
 ### 5.5 Pick, fade, wake
 
-- **Pick.** The vertex stage emits `firstRecord + local` (the row's `firstRecord` is already pool-absolute), a pool-absolute index (`pickFragment.wesl:58` is unchanged, 26-bit cap per §2.6). `resolveStarRecord` (`resolveStarRecord.ts:67`) maps it arithmetically to an object and reads that object's decoded columns; the owner node is a binary search on `firstRecord`, which is monotone in row order now.
+- **Pick.** The vertex stage emits `firstRecord + local` (the row's `firstRecord` is already pool-absolute), a pool-absolute index (`pickFragment.wesl:58` is unchanged, 26-bit cap per §2.6). `resolveStarRecord` (`resolveStarRecord.ts:67`) maps it arithmetically to an object and reads that object's decoded columns; the owner node is a binary search on `firstRecord`, which is monotone in row order now. The catalog-global ordinal of a chunk record is its ref's `recordBase` plus the local index, so an ordinal maps to the resident chunk whose `[recordBase, recordBase + records)` holds it, a scan of at most `slots` chunks, with no table over the whole catalog.
 - **Pick survives eviction.** Today `resolvePick` stores the raw index (`starCatalogSelectionRow.ts:57-60`). Under pooling, slot reuse would silently rename the selection, so `resolvePick` converts to an object-stable `(objectKey, localRecord)` and `extractRow` returns null when that object is not resident.
 - **Fade** stays keyed by node index (`cutOpacity[nodeIdx]`, `NODE_FADE_MS = 250`, `starNodeFade.ts:7`). Slot reuse zeroes the slot's opacity rows, so a newly landed chunk fades in. That reset is wanted.
 - **Wake.** The vote at `frame.ts:38` ORs in "chunks in flight" and restarts the fade window on any residency change, since a landing chunk changes the cut without changing `sameStarCut`'s inputs (`frame.ts:33`).
@@ -233,7 +240,7 @@ Both formats load on the same renderer, so the A/B isolates the format. It must 
 
 ## 6. Build
 
-- **`tools/octree/`**, family-agnostic: input is per-record position in the catalog unit plus typed column arrays, the schema and `stratify`. Steps: stratify (assign `L(M)`, build own and blob records) → chunk (§4) → write. Output: one index object and one object per chunk, named `<level>-<morton>.<hash>.bin` by content hash; the index lists every chunk hash.
+- **`tools/octree/`**, family-agnostic: input is per-record position in the catalog unit plus typed column arrays, the schema and `stratify`. Steps: stratify (assign `L(M)`, build own and blob records) → chunk (§4) → write. Output: one index object and one object per chunk, named `<level>-<morton>.<hash>.bin` by content hash; each object lists its child chunks' hashes, so objects are written children first and the index last, and tools (deploy collector, `fetch-data`) find every chunk by reading headers down the tree.
 - **`buildStars`** feeds it and drops the tier search: `TIER_BUDGET_BYTES` (`buildStars.ts:147-151`) and `buildTier`'s binary search (`:494`, `:530-553`). One bake per catalog serves every tier.
 - **`tools/stars-rs` deferred (ruling F).** The v2 emitter is TypeScript-only in this slice. Gate: time the full TS v2 bake on the 1.8 GB Gaia input, wall-clock and peak heap (today's TS v1 bake needs a 16 GB heap, `package.json:49`), and the user rules port-or-drop with that number.
 
@@ -242,7 +249,7 @@ Both formats load on the same renderer, so the A/B isolates the format. It must 
 - Chunks and index sit under `public/data/star-catalog/v2/`.
 - **Chunks:** one bulk sync group `star-catalog/v2/**` (rclone, `immutable`, no purge, gzip on the wire). It runs before the manifest group, as surface tiles do (`syncR2.ts:89-101`).
 - The bulk transport has no gzip path today (`R2Transport.ts:14-16`); P3 gives a sync group a `gzipOnWire` flag that both transports honour.
-- **Index:** one row in the global data manifest per catalog, on the hashed wrangler path. A re-bake rehashes the index because it lists every chunk hash (ruling D).
+- **Index:** one row in the global data manifest per catalog, on the hashed wrangler path. A re-bake rehashes the index: a changed chunk rehashes its parent, and so on up (ruling D).
 - The `stars-*` opt-outs (`allowDataFile.ts:34`, `shouldGzipOnWire.ts:15`) go with P3.
 - Old chunk objects stay in R2 after a re-bake; pruning is manual.
 
@@ -281,6 +288,10 @@ tools/deploy/r2/                 data-family sync groups; star-catalog/v2/** bul
 - **P2 per-source `budgets` row.** `budgets: Record<Tier, { drawBudget }>` replaces `tiered` (`SurveyStarCatalogSourceEntry.d.ts:21`, `gaia-stars.ts:29`) and `drawBudget` (`:23`, `gaia-stars.ts:36`). The fetcher names the file from the row, the cut reads the committed tier's budget. All three tiers carry today's 1.5 M, so it is behaviour-neutral. The five `binBaseName !== null` survey tests (`starCatalogFetcher.ts:58`, `starSourcesInBand.ts:23`, `starSourceDrawOpacity.ts:19`, `create.ts:77`, `starCatalogAssetRows.ts:16`) stay as they are.
 - **P3 data-family sync groups.** A family declares `{ prefix, transport, gzipOnWire }` in `tools/deploy/r2`, replacing the two regex lists; the bulk transport learns gzip. Existing families keep their keys and encodings.
 
+### 8.4 Nested chunks (2026-10-11)
+
+None needed, because every joint the nesting touches already exists in the shape it needs: the bake's pass is a function of a row set, so nesting re-runs it on the rows left above the roots; a chunk root is already a row with `chunkRef` and an unresident bit wherever it lives, and `packRows` already composes any object's rows; the planner's walk already pushes rows of one table, so it gains an object id per stack entry; and `SlotPool` gains one method, `evict(key)`, through which a cascade frees a slot exactly as LRU recycling does. One behaviour-neutral prep commit goes first: the cut writes a chunk root's two residency words (`bits`, `refineDelta`) from the node table that holds the root, instead of copying the whole row back from a CPU copy of the index rows, so a root in a chunk slot is written the same way as one in the index.
+
 ## 9. Testing
 
 Each test fails on a real bug that no other test or compiler check catches.
@@ -294,6 +305,8 @@ Each test fails on a real bug that no other test or compiler check catches.
 | `refineDelta` against a brute-force cut | the delta formula disagreeing with the instance count of a refine                                                                                |
 | Chunk self-containment                  | a chunk whose decode needs another chunk; a parent link leaving the chunk except through a root's index row; records outside the chunk root's box |
 | Dense-cell STOP                         | the bake writing a level-0 node into the index instead of stopping                                                                               |
+| Nesting                                 | a top object over either bound; a nested chunk listed by no header or by two; a `recordBase` or id that disagrees with the breadth-first order  |
+| Eviction cascade                        | a parent evicted before a resident descendant, so a root bit is written into a slot that already holds another chunk                            |
 | Planner request order                   | requests not in descending proxy, a culled chunk requested, a resident chunk not touched                                                         |
 | Slot-pool refusal                       | evicting a slot claimed this frame (the refetch loop)                                                                                            |
 | v1 adapter                              | a v1 aggregate not drawing its record as the blob; a v1 in-leaf offset not rescaled to the node box                                              |

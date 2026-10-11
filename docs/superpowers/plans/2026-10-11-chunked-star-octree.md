@@ -58,6 +58,7 @@ Rulings 1 to 8 were choices the spec left open; **all eight were accepted as-is 
 9. **No per-node slot word, no shader base helpers, no `slotRoot` table (user ruling, 2026-10-11).** A chunk's `CutNode` rows are composed on the CPU at upload, where the slot is known, so `parent` and `firstRecord` are written pool-absolute there; a chunk's top rows name the chunk root's index row directly. `CutNode` stays at six words, the shader reads plain indices, and the index is still never rewritten (ruling B's goal).
 10. **Chunk size floor + node bound, bake-side; re-bake (user ruling, 2026-10-11).** After the first real bake (2,017 chunks, `chunkNodeCap` 11,530 against a 547-row median, 94 % pool padding, 37 chunks under 10 KB), a chunk also closes on rows: `CHUNK_NODE_CAPACITY = 4_096` beside the 32,768-record capacity (spec §4). Measured on the real bake: 2,227 chunks, `chunkNodeCap` 4,082, 85 % padding, 83 chunks under 10 KB, index 2,545 rows / 318,133 records; stratified rows and records unchanged. The floor was measured and dropped: with one root per chunk a small subtree can only fold into the index, and a 1,024-record floor grows the index from 2.8 MB to about 4.5 MB. Sibling packing (a chunk with several roots) reaches both goals in simulation but changes the format and the runtime, so it stays open (spec §10).
 11. **Multi-root chunks in this PR (user ruling, 2026-10-11).** Chunk roots pack in Morton order into one chunk under a 2,048-row bound and the 32,768-record cap (spec §4.3); `chunkNodeCap` is the row bound. The manifest entry lists its roots' index rows; a landing writes rows, row count and fades, then every root's resident bit; eviction clears every root's bit first; the planner requests a chunk once, at its best root's priority; record ordinals stay index records, then chunks in header order, so the deep-link shape is unchanged, but ordinals are per bake (ruling 2) and a `#focus=star-<n>` link from an earlier bake names another star; the index is never rewritten. Real bake: 975 chunks, 1 under 10 KB, 33 % padding, index 3,561 rows / 343,872 records.
+12. **Nested chunks in this PR (user ruling, 2026-10-11).** The index splits into chunks too: the bake re-applies the chunking to the rows left above the roots until the top object fits the same two bounds, each object lists only the chunks rooted in its rows, a row's `chunkRef` is a catalog-global id, and each ref carries its `recordBase`; the runtime learns refs as objects decode, walks into resident chunks, and evicts in cascade. See "Nested chunks" below.
 
 ## Review focus
 
@@ -608,6 +609,67 @@ Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight l
 - [x] Perf: `npm run perf` and `perf:cpu` at `star-field`, `milky-way`, `solar-system`, `--frames 60`, `--url` this worktree, with the row at `format: 'octree'`, then at `format: 'skst'` (edit the row, HMR), alternating A-B-A-B (the `perf` skill's paired-baseline recipe), per tier via `--compare-tiers` once each. Same `drawBudget` for both.
 - [x] The A/B table (spec §5.6), one row per pose and tier: GPU ms, CPU ms, bytes on the wire to settle (index + chunks, cold, from the DEV log), chunks fetched / total, index size raw and gzipped. Put it in the ledger and summarise in the PR description.
 - [x] Report the first-bake findings against spec §10: node count under pure `L(M)` (does `chunkNodeCap` or the index size argue for path compression), tiny-chunk count (does capacity splitting leave many small chunks), and whether `slots` per tier and `chunkCapacity` want a retune. These are rulings for the user, not changes in this plan.
+
+## Nested chunks (2026-10-11)
+
+User directive after the pruned planner walk (`dcece6c79`): the index splits into chunks too, so the object fetched before first paint, and every header, stays bounded as Gaia grows. Spec §2 (intro, §2.2, §2.3), §4.7, §5.1 to §5.3, §5.5, §8.4 and §10 carry the design; the brief is `.superpowers/sdd/2026-10-11-chunked-star-octree/nested-brief.md`. One implementer, in order; each task is one commit.
+
+**Contract:**
+
+```ts
+type OctreeChunkRef = { readonly id: number; /* …as before… */ readonly roots: readonly number[] /* rows of the parent object */; readonly recordBase: number };
+type OctreeChunkHeader = { /* …as before… */ readonly chunks: readonly OctreeChunkRef[] };
+// STAT_IDS gains 'chunkCount'; a row's chunkRef is a catalog-global id in every object.
+type OctreeChunkObject = { /* …as before… */ readonly parent: number | null /* chunk id, null = index */; readonly recordBase: number };
+// OctreeObjects.chunks is indexed by id (breadth-first from the index, Morton order within a parent).
+type StarOctree = { /* …as before, minus recordOrdinalBase… */ readonly chunks: readonly OctreeChunkRef[] /* the index's own */; readonly chunkCount: number };
+type StarChunk = { readonly ref: OctreeChunkRef; readonly parent: number | null; readonly nodes; readonly records; readonly chunks: readonly OctreeChunkRef[] };
+/** The object whose rows hold a chunk's roots, as the pool addresses it. */
+type StarChunkHost = { readonly nodes: OctreeNodeTable; readonly nodeBase: number };
+type StarResidency = { readonly chunk: (id: number) => StarChunk | null; readonly chunkOfRecord: (ordinal: number) => StarChunk | null };
+class SlotPool { evict(key: string): void /* frees the slot through onEvict, as LRU recycling does */ }
+function planStarChunks(octree, index, cut, resident: (id: number) => StarChunk | null, hasFailed: (id: number) => boolean, limit: number): StarChunkPlan;
+StarCutGpu.uploadChunk(source, slot, chunk, host: StarChunkHost): void;
+StarCutGpu.evictChunk(source, slot, chunk: StarChunk, host: StarChunkHost): void;
+```
+
+### Task N0: Prep — a root's residency words come from its host table
+
+Behaviour-neutral. `writeRootRow` writes only `bits` and `refineDelta`, composed from the node table that holds the root (the index today); `StarCutSource.indexRows` goes. No new test: the pool test's write-order and root-row assertions already pin the words.
+
+- [ ] Implement, `typecheck:fast`, the star render tests. Commit.
+
+### Task N1: The bake nests
+
+**Files:** `tools/octree/chunkOctree.ts`, `tools/octree/writeOctreeCatalog.ts`, `tools/@types/octree/OctreeChunkObject.d.ts`, `tools/@types/octree/OctreeObjects.d.ts`, `src/@types/octree/OctreeChunkRef.d.ts`, `src/@types/octree/OctreeChunkHeader.d.ts`, `src/data/octree/statIds.ts`, tests.
+
+- [ ] Test `chunkOctree: nests until the top object fits both bounds` — a fixture that needs at least two nesting passes: the index and every chunk within both bounds; every chunk id listed by exactly one object, under rows of that object that carry its id; ids breadth-first; `recordBase` = index records + the records of every lower id.
+- [ ] Test `chunkOctree: STOPs when a nesting pass finds no root` — a top over the record bound whose every internal row is over it too.
+- [ ] Test `writeOctreeCatalog → decode: every object's header lists its own child refs, children written before parents` (round trip: `decodeOctreeChunk` yields `header.chunks` with global ids and `recordBase`; the index's `stats.chunkCount` is the object count; the last write is the index).
+- [ ] Implement. Commit.
+
+### Task N2: The runtime walks, lands and evicts nested chunks
+
+**Files:** `src/@types/data/starCatalog/{StarOctree,StarChunk,StarResidency}.d.ts`, `src/layers/starCatalog/@types/StarChunkHost.d.ts` (new), `src/utils/star/starOctreeFromIndex.ts`, `src/utils/star/planStarChunks.ts`, `src/utils/cache/slotPool.ts`, `src/layers/starCatalog/load/{starChunkStream,starResidency}.ts`, `src/layers/starCatalog/render/{starCatalogRenderer,starCutGpu}.ts`, `src/services/engine/helpers/{resolveStarRecord,nearestResolvableStar}.ts`, `src/layers/starCatalog/frame.ts`; deleted: `starRecordObject`, `starRecordOrdinal`, `StarRecordObject` (and the test).
+
+- [ ] Test `planStarChunks walks into a resident chunk and requests the chunk rooted in its rows` (and touches the resident parent once, and requests nothing under a culled root inside it).
+- [ ] Test `starChunkStream: evicting a parent first evicts its resident descendants, deepest first` (the evict calls' slot order; the freed slots are reusable); and `drops a landing whose parent was evicted in flight`.
+- [ ] Test `starCatalogRenderer: a nested chunk's roots are written in its parent's slot rows` (root words at `parentBase + root`; an eviction cascade writes the child's root words before the parent's).
+- [ ] Test `pick ordinal round-trips through a nested chunk` (`recordOrdinal` / `poolRecordIndex` / `resolveStarRecord` via `recordBase`).
+- [ ] Implement. Commit.
+
+### Task N3: Tools walk the object tree
+
+**Files:** `tools/deploy/r2/collectStarChunks.ts`, `tools/fetch/fetchPrebuiltData.ts`, tests.
+
+- [ ] Test `collectStarChunks lists the chunks of every depth, read off each header`.
+- [ ] Implement (`fetch-data` reads a header from disk, or from the download it just made, or over the wire under `--dry-run`). Commit.
+
+### Task N4: Re-bake, measure, docs
+
+- [ ] Only after `phone-ab-report.md` exists: `npm run build-stars` from this worktree (the user's standing approval), manifest from the main checkout with this worktree's `buildDataManifest`. Report objects per depth, index rows / records / bytes (raw, gzip), chunk count, padding, largest manifest header.
+- [ ] `perf:cpu` and `perf` against `dcece6c79`, A-B-A, at this worktree's `:5183`: `plan:star-catalog`, GPU frame ms at `milky-way` / `star-field` / `solar-system`, bytes and requests to settle, time to first stars cold. Neutral-or-negative halts the landing.
+- [ ] `DATA.md`, `RENDERER.md`, spec §10 numbers. Commit.
 
 ## Definition of Done
 
