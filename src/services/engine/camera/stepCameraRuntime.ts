@@ -36,6 +36,7 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { reencodePose } from '../../../utils/camera/reencodePose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
@@ -98,6 +99,11 @@ export function stepCameraRuntime(
     stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
   }
   const focus = stored.selectionRows.focus;
+  // A mission runs with no focus, so its craft stands in as the pivot: the wheel floors at the
+  // hull's standoff, not the surfaceless floor hundreds of km out.
+  const mission = stored.camera.mission;
+  const craft = mission && bodies.get(mission.craftId as BodyId);
+  const pivotRow = mission && craft ? bodyRowAt(mission.craftId, craft.positionMpc) : focus;
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
     fovYRad: stored.settings.camera.fovDeg * (Math.PI / 180),
@@ -119,7 +125,7 @@ export function stepCameraRuntime(
     bodies,
     poseBasis,
     focusBodyId: (selectionDriver(focus)?.poseId ?? null) as BodyId | null,
-    pivot: pivotFraming(focus),
+    pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
     fovYRad: projection.fovYRad,
     tuning,
@@ -188,7 +194,11 @@ export function stepCameraRuntime(
     drivers,
   });
 
-  const { pose, memory, actions: driverActions } = winner.pose(
+  const {
+    pose,
+    memory,
+    actions: driverActions,
+  } = winner.pose(
     {
       state: rootState,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),

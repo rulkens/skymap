@@ -33,7 +33,11 @@ import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadius
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import { commitCameraPose, startFrameTween } from '../../../../src/state/camera/cameraSlice';
+import {
+  commitCameraPose,
+  setMission,
+  startFrameTween,
+} from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -41,6 +45,13 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
+import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
+import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
+import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
+import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
+import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
@@ -382,5 +393,31 @@ describe('a commit mid-approach', () => {
     expect(h.store.getState().camera.base).toBe(bodyArm);
     expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
     expect(h.state.cameraRuntime.register.winner).not.toBe('followApproach');
+  });
+});
+
+describe('the wheel under a mission', () => {
+  it('zooms down to the craft’s own size, not the surfaceless floor', () => {
+    loadVoyagerStopWindows();
+    const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune')!;
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, fovDeg: 50 });
+    h.store.dispatch(
+      setSimDays({ simDays: unixMsToJulianDays(missionEventMs(neptune)), nowMs: 0 }),
+    );
+    h.store.dispatch(
+      setMission({
+        craftId: 'voyager2',
+        stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2')),
+        cruise: { yaw: 0, pitch: 0.26 },
+        offsets: { yaw: 0, pitch: 0, zoom: 1 },
+        speedIndex: 2,
+        retarget: 0,
+      }),
+    );
+    h.frame(4);
+    expect(h.state.cameraRuntime.register.winner).toBe('mission');
+    for (let i = 0; i < 250; i++) h.wheel(-100);
+    // The surfaceless floor is about 309 km; Voyager's hull standoff is metres.
+    expect(readFollowMemory(h.state).distanceTarget! / SCALE_UNITS.KM_TO_MPC).toBeLessThan(1);
   });
 });

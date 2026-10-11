@@ -141,12 +141,19 @@ describe('missionPose', () => {
       expect(dist(pose.target, craft)).toBeLessThan(dist(exact.target, craft));
     });
 
-    it('writes the floored zoom back so notches do not pile up below the floor', () => {
-      const ctx = ctxAt(zoomed, t, 'mission');
-      const dist0 = missionPose(ctx, null).memory!.distanceTarget!;
-      const out = missionPose({ ...ctx, followDistanceTarget: dist0 * 1e-6 }, null);
+    it('stops in front of the planet and writes that zoom back, so notches do not pile up', () => {
+      // Zoom 0.01 puts the eye inside Earth, on the far side of it from the craft.
+      const ctx = ctxAt(missionOf(undefined, 0, 'voyager1'), t, 'mission');
+      const dist1 = missionPose(ctx, null).memory!.distanceTarget!;
+      const out = missionPose({ ...ctx, followDistanceTarget: dist1 * 0.01 }, null);
       const zoom = (out.actions?.[0] as { payload: { zoom: number } }).payload.zoom;
-      expect(zoom).toBeGreaterThan(1e-8 * 2);
+      expect(zoom).toBeLessThan(0.01);
+      if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
+      const earth = deriveBodyStates(t).get('earth' as BodyId)!.positionMpc;
+      const eye = eyeMpcOf(out.pose.pose, BASIS);
+      expect(dist(eye, earth) / bodyRadiusMpc('earth')).toBeCloseTo(1.02, 6);
+      const again = worldPose(ctxAt(missionOf({ yaw: 0, pitch: 0, zoom }, 0, 'voyager1'), t));
+      expect(again.distance / out.pose.pose.distance).toBeCloseTo(1, 9);
     });
   });
 

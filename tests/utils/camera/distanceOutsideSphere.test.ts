@@ -13,4 +13,8 @@ describe('distanceOutsideSphere', () => {
   it('exits from a target inside the sphere', () => {
     expect(distanceOutsideSphere([0, 0, 0], [0, 1, 0], 0.1, centre, 1)).toBeCloseTo(1, 12);
   });
+  it('stops in front of the sphere when the target is outside it and the ray crosses it', () => {
+    // A notch must land closer than asked, never on the far side: that would pin it there.
+    expect(distanceOutsideSphere([3, 0, 0], [-1, 0, 0], 3, centre, 1)).toBeCloseTo(2, 12);
+  });
 });
