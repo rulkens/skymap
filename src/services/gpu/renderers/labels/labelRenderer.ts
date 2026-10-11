@@ -541,12 +541,7 @@ export function createLabelRenderer(
       // Each label specifies its own font; layout reads the font's
       // metrics from the FontId-keyed record built at construction
       // time.  No fallback — Label.font is required at the type level.
-      const quads = layoutLabel(
-        label.text,
-        metricsByFont[label.font],
-        label.alignX ?? 'left',
-        label.alignY ?? 'baseline',
-      );
+      const quads = layoutOf(label);
 
       // Write the per-label storage record unconditionally — even when
       // `quads` is empty.  Keeping the per-label index stable
@@ -739,6 +734,21 @@ export function createLabelRenderer(
   // steady-state cost is a Map lookup.  Unbounded by design: the key
   // space is the label catalog (~hundreds), not user input.
   const measureCache = new Map<string, LabelBBox | null>();
+  // Glyph quads share the key and the lifetime: setLabels re-lays-out every
+  // label on each moving-camera frame, but the quads depend only on
+  // (font, alignment, text). Callers only read the cached arrays.
+  const layoutCache = new Map<string, ReturnType<typeof layoutLabel>>();
+  function layoutOf(label: Label2D): ReturnType<typeof layoutLabel> {
+    const alignX = label.alignX ?? 'left';
+    const alignY = label.alignY ?? 'baseline';
+    const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
+    let quads = layoutCache.get(key);
+    if (quads === undefined) {
+      quads = layoutLabel(label.text, metricsByFont[label.font], alignX, alignY);
+      layoutCache.set(key, quads);
+    }
+    return quads;
+  }
   function measure(label: Label2D): LabelBBox | null {
     const alignX = label.alignX ?? 'left';
     const alignY = label.alignY ?? 'baseline';
