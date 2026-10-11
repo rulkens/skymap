@@ -20,12 +20,13 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Six formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Seven formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | SKMP   | `0x504D4B53` | 9       | Galaxy point cloud: position, photometry, shape, stellar mass. 16-byte header + 64 bytes/galaxy.                                                                  | [`galaxyCatalogFormat.ts`](../src/data/galaxyCatalog/galaxyCatalogFormat.ts)   |
 | SKST   | `0x54534B53` | 1       | Stars in a spatial octree, cell-quantized to 6-byte records; interior nodes carry flux-weighted aggregates as a built-in LOD mip. 64-byte header + 16 bytes/node. | [`starCatalogFormat.ts`](../src/data/starCatalog/starCatalogFormat.ts)         |
+| SKOI / SKOC | ASCII   | 1       | Chunked octree container: 10-byte framing + JSON header + 24 B node rows + columnar records; one index per catalog, one object per chunk. | [`octreeFormat.ts`](../src/data/octree/octreeFormat.ts) |
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
@@ -36,7 +37,8 @@ Six formats, each a magic + version header followed by fixed- or variable-size r
 Each format has its own `<family>/v<N>/` folder, where `N` is that format's current version. A version bump moves the family to a new folder so a CDN can never serve a stale `.bin` alongside code that expects the new layout (`max-age=86400` on these responses would otherwise pair mismatched bytes and code for up to a day):
 
 - `galaxy-catalog/v9/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
-- `star-catalog/v1/`: `stars-{small,medium,large}.bin`
+- `star-catalog/v1/`: `stars-{small,medium,large}.bin` (SKST, the `format: 'skst'` side of the A/B)
+- `star-catalog/v2/`: `stars.bin` (the index) + `stars/<level>-<morton>.<hash>.bin` (one per chunk). Chunk names carry the bake's own content hash, so `build-data-manifest` neither hashes nor lists them; the index names every chunk, and the runtime resolves a chunk path straight through.
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
 - `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
@@ -176,9 +178,9 @@ Flags: `--cut N` (persistence sigma, default 5), `--smooth N` (default 2), `--so
 npm run build-stars
 ```
 
-Consumes `data/raw/gaia/`: paged Gaia DR3 CSVs, the GCNS 100 pc supplement, the Hipparcos-2 bright-star patch. It emits the per-tier SKST binaries. The full build holds the Gaia superset in memory at once, so the npm script raises Node's heap to 16 GB (`NODE_OPTIONS=--max-old-space-size=16384`) accordingly.
+Consumes `data/raw/gaia/`: paged Gaia DR3 CSVs, the GCNS 100 pc supplement, the Hipparcos-2 bright-star patch. It emits the v2 octree under `star-catalog/v2/`: the index `stars.bin` and one object per chunk, from one bake that serves every tier (a tier picks the pool size at runtime, not a file). The index is written last, so an interrupted bake leaves the previous index pointing at its own chunks. The full build holds the Gaia superset in memory at once, so the npm script raises Node's heap to 16 GB (`NODE_OPTIONS=--max-old-space-size=16384`); the first full v2 bake peaked at 10.85 GB RSS and took 111 s.
 
-For real-scale runs the canonical builder is the Rust port, `npm run build-stars-rs` (requires a Rust toolchain). It shares the TypeScript builder's encode/quantize/tier pipeline but is not byte-identical: it adds two dedup rules the TypeScript reference doesn't have, so its output subtracts a few more stars from the same inputs. The TypeScript build stays the reference implementation the Vitest suite exercises. See [`tools/stars-rs/README.md`](../tools/stars-rs/README.md) for the parity contract and the constellation-resolution stage it also runs.
+The Rust port, `npm run build-stars-rs` (requires a Rust toolchain), still emits the v1 SKST tiers under `star-catalog/v1/`; a v2 port is its own later plan. It shares the TypeScript builder's encode/quantize/tier pipeline but is not byte-identical: it adds two dedup rules the TypeScript reference doesn't have, so its output subtracts a few more stars from the same inputs. The TypeScript build stays the reference implementation the Vitest suite exercises. See [`tools/stars-rs/README.md`](../tools/stars-rs/README.md) for the parity contract and the constellation-resolution stage it also runs.
 
 ## Cosmic-web volumes
 
@@ -251,6 +253,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
 | Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
+| Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 

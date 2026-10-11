@@ -588,13 +588,13 @@ Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight l
 
 **Files:** `docs/DATA.md`, `docs/DEPLOY.md`, `docs/RENDERER.md`, `ATTRIBUTIONS.md`, `tools/stars-rs/README.md` (one line), `docs/BACKLOG.md` (verify only)
 
-- [ ] `DATA.md` "Binary formats": a row `SKOI / SKOC | ASCII | 1 | Chunked octree container: 10-byte framing + JSON header + 24 B node rows + columnar records; index per catalog, one object per chunk | octreeFormat.ts`; "`public/data/` layout": `star-catalog/v2/`: `stars.bin` + `stars/<level>-<morton>.<hash>.bin`; "Stars (Gaia DR3)": `build-stars` emits the v2 index and chunks, one bake for every tier, and the 16 GB heap note updated with Task 6's measured peak; the re-run table gains a Stars row (`fetch-gaia` / `build-stars`).
-- [ ] `DEPLOY.md` "R2 sync architecture": the chunk bulk group, its gzip-on-wire, that it runs before the manifests, and that old chunk objects stay in R2 after a re-bake (pruning is manual). Cache Rule paragraph: chunks are `.bin` too, so every chunk fetch is an origin hit until the rule lands.
-- [ ] `RENDERER.md` "Renderer quick map": one bullet for the star cut over the pool (own + blob per node, the resident bit, chunk rows composed pool-absolute at upload, two fade channels, index never rewritten). "Things that have bitten us": the three traps this plan found — residency writes never inside an encode; rows and records before the root's resident bit; a pick index is pool-absolute and only the ordinal survives a slot reuse.
-- [ ] `ATTRIBUTIONS.md:401-402` Gaia "Enters skymap": `npm run build-stars` → `public/data/star-catalog/v2/`.
-- [ ] `tools/stars-rs/README.md`: one line noting it still emits SKST v1 (`star-catalog/v1/`) and that v2 is TS-only pending ruling F.
-- [ ] `docs/BACKLOG.md`: confirm no chunked-octree line remains (#868 removed it); leave `Star drawBudget small-tier mobile cap` (`:169`) as is.
-- [ ] Commit.
+- [x] `DATA.md` "Binary formats": a row `SKOI / SKOC | ASCII | 1 | Chunked octree container: 10-byte framing + JSON header + 24 B node rows + columnar records; index per catalog, one object per chunk | octreeFormat.ts`; "`public/data/` layout": `star-catalog/v2/`: `stars.bin` + `stars/<level>-<morton>.<hash>.bin`; "Stars (Gaia DR3)": `build-stars` emits the v2 index and chunks, one bake for every tier, and the 16 GB heap note updated with Task 6's measured peak; the re-run table gains a Stars row (`fetch-gaia` / `build-stars`).
+- [x] `DEPLOY.md` "R2 sync architecture": the chunk bulk group, its gzip-on-wire, that it runs before the manifests, and that old chunk objects stay in R2 after a re-bake (pruning is manual). Cache Rule paragraph: chunks are `.bin` too, so every chunk fetch is an origin hit until the rule lands.
+- [x] `RENDERER.md` "Renderer quick map": one bullet for the star cut over the pool (own + blob per node, the resident bit, chunk rows composed pool-absolute at upload, two fade channels, index never rewritten). "Things that have bitten us": the three traps this plan found — residency writes never inside an encode; rows and records before the root's resident bit; a pick index is pool-absolute and only the ordinal survives a slot reuse.
+- [x] `ATTRIBUTIONS.md:401-402` Gaia "Enters skymap": `npm run build-stars` → `public/data/star-catalog/v2/`.
+- [x] `tools/stars-rs/README.md`: one line noting it still emits SKST v1 (`star-catalog/v1/`) and that v2 is TS-only pending ruling F.
+- [x] `docs/BACKLOG.md`: confirm no chunked-octree line remains (#868 removed it); leave `Star drawBudget small-tier mobile cap` (`:169`) as is.
+- [x] Commit.
 
 ### Task 18: The real bake, eye checks, perf and the A/B table
 

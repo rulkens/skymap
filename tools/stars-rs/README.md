@@ -6,6 +6,8 @@ emits the per-tier SKST binaries `public/data/star-catalog/v1/stars-{small,
 medium,large}.bin` the browser renderer loads (`constellations.json` writes
 straight to the `--out` dir, unversioned).
 
+It still emits SKST v1 (`star-catalog/v1/`); the v2 octree (`star-catalog/v2/`) is baked by the TypeScript `npm run build-stars` only, until the Rust v2 port lands as its own plan.
+
 This is the **canonical builder for real-scale runs**. The TypeScript builder at
 `tools/stars/buildStars.ts` is the **reference implementation** — it is the
 executable spec, and the one the vitest suite exercises. This crate is a
