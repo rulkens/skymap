@@ -76,6 +76,10 @@ describe('StructureDetailCard', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toMatch(
       /\/images\/featured\/cluster-virgo-m87\.webp$/,
     );
+    // Every row moved beside the shot: no bordered section is left empty.
+    for (const div of container.querySelectorAll('div')) {
+      if (div.className.includes('cardSection')) expect(div.childElementCount).toBeGreaterThan(0);
+    }
     cleanup();
     const bare = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
     expect(bare.container.querySelector('img')).toBeNull();

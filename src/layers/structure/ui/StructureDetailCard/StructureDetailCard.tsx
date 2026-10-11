@@ -67,6 +67,22 @@ function StructureDetailCard({
       value: formatDistance(target.physicalRadiusMpc),
     },
   ];
+  // Rows below the top row; the section is dropped when the shot took them all.
+  const rows = [
+    ...(shot === undefined ? leadRows : []),
+    ...(target.category === 'nebula'
+      ? [{ label: 'Type', value: NEBULA_KIND_LABELS[target.nebulaKind] }]
+      : []),
+    ...(shot === undefined && countRow ? [countRow] : []),
+    ...(target.category === 'galaxy-cluster' && target.abell !== undefined
+      ? [
+          {
+            label: <InfoTip {...TIPS.abell!}>Abell</InfoTip>,
+            value: formatAbellDesignation(target.abell),
+          },
+        ]
+      : []),
+  ];
   const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
@@ -95,19 +111,13 @@ function StructureDetailCard({
         </div>
       )}
 
-      <div className={styles.cardSection}>
-        {shot === undefined && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
-        {target.category === 'nebula' && (
-          <CardRow label="Type" value={NEBULA_KIND_LABELS[target.nebulaKind]} />
-        )}
-        {shot === undefined && countRow && <CardRow {...countRow} />}
-        {target.category === 'galaxy-cluster' && target.abell !== undefined && (
-          <CardRow
-            label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}
-            value={formatAbellDesignation(target.abell)}
-          />
-        )}
-      </div>
+      {rows.length > 0 && (
+        <div className={styles.cardSection}>
+          {rows.map((row, i) => (
+            <CardRow key={i} {...row} />
+          ))}
+        </div>
+      )}
 
       {target.wikipediaTitle && (
         <div className={styles.cardSection}>
