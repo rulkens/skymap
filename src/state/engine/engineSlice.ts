@@ -23,7 +23,6 @@ import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceSta
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
@@ -40,7 +39,6 @@ const CORE_INITIAL: CoreEngineSliceState = {
   focusedBodyDistanceMpc: null,
   hdrCapable: false,
   sourceCounts: {},
-  structureCounts: {},
   loadProgress: null,
   structureSearchList: [],
   layerSearch: {},
@@ -63,16 +61,6 @@ const engineSlice = createSlice({
       action: PayloadAction<{ source: SourceType; count: number }>,
     ) => {
       state.sourceCounts[action.payload.source] = action.payload.count;
-    },
-
-    // ── per-structure counts ─────────────────────────────────────────────────
-    // Whole-map replace: structure counts are computed once per source load,
-    // not incrementally per structure.
-    engineStructureCountsChanged: (
-      state,
-      action: PayloadAction<Partial<Record<StructureId, number>>>,
-    ) => {
-      state.structureCounts = action.payload;
     },
 
     // ── load progress ────────────────────────────────────────────────────────
@@ -171,7 +159,6 @@ const engineSlice = createSlice({
 export const {
   engineStatusChanged,
   engineSourceCountReported,
-  engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineStructureSearchListChanged,
   layerSearchReported,

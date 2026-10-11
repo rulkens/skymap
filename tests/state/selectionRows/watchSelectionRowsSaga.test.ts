@@ -26,7 +26,8 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import {
   engineSourceCountReported,
-  engineStructureCountsChanged,
+  factsReported,
+  layerFactsSeeded,
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -199,14 +200,17 @@ describe('watchSelectionRowsSaga', () => {
     });
   });
 
-  it('a structure deep link fills on engineStructureCountsChanged (the structure store pulses neither catalog signal)', async () => {
+  it("a structure deep link fills on the structure Layer's facts report", async () => {
     structure = null;
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+    );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
     structure = { id: 'cluster-virgo-m87', category: 'galaxy-cluster' } as unknown as StructureInfo;
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
   });

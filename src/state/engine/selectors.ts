@@ -57,6 +57,7 @@ const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
 const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
+const NO_STRUCTURE_COUNTS: Partial<Record<StructureId, number>> = {};
 
 export const selectEngineStatus = (state: RootState): EngineStatus => selectEngine(state).status;
 
@@ -65,8 +66,17 @@ export const selectScale = (state: RootState): ScaleInfo => selectEngine(state).
 export const selectSourceCounts = (state: RootState): Partial<Record<SourceType, number>> =>
   selectEngine(state).sourceCounts;
 
+/** The structure Layer's counts, on the pre-seed contract of `selectFamousGalaxiesMeta`. */
 export const selectStructureCounts = (state: RootState): Partial<Record<StructureId, number>> =>
-  selectEngine(state).structureCounts;
+  selectEngineFacts(state).structure?.counts ?? NO_STRUCTURE_COUNTS;
+
+/**
+ * The structure Layer's bulk-slot status. Spelled inline because core never
+ * imports a Layer's `@types`; `'idle'` before the seed, since an undemanded
+ * slot must not hold a focus deferral.
+ */
+export const selectStructureBulk = (state: RootState): 'idle' | 'loading' | 'ready' | 'error' =>
+  selectEngineFacts(state).structure?.bulk ?? 'idle';
 
 /** The galaxyCatalog Layer's published tally (Ruling 12), empty until its first catalog lands. */
 export const selectProvenanceCounts = (

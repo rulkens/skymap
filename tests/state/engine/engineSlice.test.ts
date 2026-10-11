@@ -37,7 +37,6 @@ const base = (): CoreEngineSliceState => ({
   focusedBodyDistanceMpc: null,
   hdrCapable: false,
   sourceCounts: {},
-  structureCounts: {},
   loadProgress: null,
   structureSearchList: [],
   layerSearch: {},

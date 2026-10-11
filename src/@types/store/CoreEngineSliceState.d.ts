@@ -2,15 +2,13 @@
  * CoreEngineSliceState — the shape of the Redux 'engine' slice's core fields.
  * `EngineSliceState` widens this with each Layer's published facts.
  *
- * `sourceCounts`/`structureCounts` are sparse (Partial)
- * because the engine reports them one source/structure at a time; a missing
- * key means "not yet reported", not "zero".
+ * `sourceCounts` is sparse (Partial) because the engine reports it one source
+ * at a time; a missing key means "not yet reported", not "zero".
  */
 
 import type { EngineStatus } from '../engine/EngineStatus';
 import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceType } from '../data/SourceType';
-import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
@@ -37,13 +35,12 @@ export type CoreEngineSliceState = {
    */
   hdrCapable: boolean;
   sourceCounts: Partial<Record<SourceType, number>>;
-  structureCounts: Partial<Record<StructureId, number>>;
   loadProgress: LoadProgressState | null;
   /**
    * The command palette's structure search index — every loaded structure
    * (anchors + bulk) projected down to its lean searchable fields. Published
-   * by `wireStructureProjection` alongside `engineStructureCountsChanged`, on
-   * the same boot + group-change schedule, so a Cmd+K opened before any
+   * by `wireStructureProjection` with each `counts` fact, on the same boot +
+   * group-change schedule, so a Cmd+K opened before any
    * catalog lands still gets the anchor set.
    */
   structureSearchList: readonly StructureSearchEntry[];

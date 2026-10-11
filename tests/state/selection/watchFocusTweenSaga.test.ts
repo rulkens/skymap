@@ -15,7 +15,8 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
-  engineStructureCountsChanged,
+  factsReported,
+  layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
@@ -61,6 +62,18 @@ const structures: StructureRowFixture = {
   byId: (id: string) => structureById[id] ?? null,
   byCategory: () => [],
 };
+
+function structureRecord(id: string): StructureInfo {
+  return {
+    type: 'structure',
+    category: 'galaxy-cluster',
+    id,
+    name: 'Virgo Cluster',
+    worldPos: [4, 5, 6],
+    featured: true,
+    physicalRadiusMpc: 2.2,
+  };
+}
 
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
@@ -173,26 +186,21 @@ describe('watchFocusTweenSaga', () => {
   // in the async bootstrap phase sequence than `setSagaContext`. Before this
   // fix the saga's deferral loop only covered `ref.type === 'star'`, so a
   // structure ref fell straight to the no-op and the camera never moved. The
-  // saga must instead defer on `engineStructureCountsChanged` — the pulse
-  // `wireStructureProjection` dispatches on every group change — and
-  // re-extract once the store is fed.
+  // saga must instead defer while the Layer's `bulk` fact is 'loading', on
+  // `factsReported` — the pulse `wireStructureProjection` publishes through
+  // on every slot change — and re-extract once the store is fed.
   it('defers a structure focus whose store has not loaded, then plants it once the store is fed', async () => {
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+    );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     // No structure store yet → row null → tween must not fire (and not be dropped).
     expect(store.getState()[cameraRoute].tween).toBeNull();
 
-    // The anchors group lands: the store is fed and the record resolves.
-    structureById['cluster-virgo-m87'] = {
-      type: 'structure',
-      category: 'galaxy-cluster',
-      id: 'cluster-virgo-m87',
-      name: 'Virgo Cluster',
-      worldPos: [4, 5, 6],
-      featured: true,
-      physicalRadiusMpc: 2.2,
-    };
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
+    // The bulk group lands: the store is fed and the record resolves.
+    structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
 
     const tween = store.getState()[cameraRoute].tween;
@@ -203,26 +211,60 @@ describe('watchFocusTweenSaga', () => {
 
   it('a structure focus with a garbage id no-ops once the store is loaded (no infinite wait)', async () => {
     // A stale/unknown structure id resolves to null even with the store fed.
-    // The deferral guard checks store presence, not row-ness, so this exits
+    // The deferral guard checks the slot's status, not row-ness, so this exits
     // rather than looping forever waiting for a pulse that never recurs.
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+    );
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-does-not-exist' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
 
     // A saga still parked on the pulse would re-extract here and plant a tween.
-    structureById['cluster-does-not-exist'] = {
-      type: 'structure',
-      category: 'galaxy-cluster',
-      id: 'cluster-does-not-exist',
-      name: 'Late Arrival',
-      worldPos: [4, 5, 6],
-      featured: true,
-      physicalRadiusMpc: 2.2,
-    };
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 2 }));
+    structureById['cluster-does-not-exist'] = structureRecord('cluster-does-not-exist');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // With no bulk category on, the slot is never demanded and sits 'idle';
+  // waiting on it would hold the focus forever.
+  it('a structure focus does not wait while the bulk slot is idle', async () => {
+    store.dispatch(layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'idle' } }));
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+  });
+
+  // `factsReported` pulses for every Layer (galaxyCatalog republishes its
+  // member count on each selection change), so the deferral must re-read
+  // `bulk` rather than end on the first pulse.
+  it("another Layer's facts report does not end a structure deferral", async () => {
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+    );
+    store.dispatch(
+      layerFactsSeeded({ layer: 'galaxyCatalog', facts: { structureMemberCount: null } }),
+    );
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    await flush();
+
+    store.dispatch(
+      factsReported({ layer: 'galaxyCatalog', patch: { structureMemberCount: null } }),
+    );
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+
+    structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween!.to.target).toEqual([4, 5, 6]);
   });
 
   it('a null focus ref (release) resolves to no row → no tween', async () => {

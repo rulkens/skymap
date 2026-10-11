@@ -24,8 +24,8 @@ import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
-import { engineStatusChanged, engineStructureCountsChanged } from '../engine/engineSlice';
-import { selectStructureCounts } from '../engine/selectors';
+import { engineStatusChanged, factsReported } from '../engine/engineSlice';
+import { selectStructureBulk } from '../engine/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -51,22 +51,22 @@ export function* watchFocusTweenSaga() {
       // null until that store's first commit. `NOT_YET_LOADED` states the one
       // rule ("is this ref's store still empty?") once, keyed on `ref.type` —
       // each entry pairs a store-empty selector with the action that pulses
-      // the instant the store is fed. Structure counts are published in the
-      // same synchronous call that installs the anchors, so "no counts yet" is
-      // "store not fed yet". A garbage id/index (row null with the store
-      // already fed) falls through to the no-op below rather than waiting for
-      // a pulse that never recurs. `takeLatest` discards this waiter if a
+      // the instant the store is fed. A structure waits only while its bulk
+      // slot is loading: an idle (undemanded), ready or failed slot will not
+      // fill the row, so a garbage id falls through to the no-op below.
+      // `factsReported` pulses for every Layer's facts, which is why `empty`
+      // is re-read after each one. `takeLatest` discards this waiter if a
       // newer focus supersedes it.
       type Deferral = {
         /** True while the ref's store may still be filling. */
         empty(state: RootState): boolean;
-        pulse: typeof engineStructureCountsChanged;
+        pulse: typeof factsReported;
       };
       const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
         {
           structure: {
-            empty: (state) => Object.keys(selectStructureCounts(state)).length === 0,
-            pulse: engineStructureCountsChanged,
+            empty: (state) => selectStructureBulk(state) === 'loading',
+            pulse: factsReported,
           },
         };
       // `ref.type` never changes across retries, so the deferral (if any) is

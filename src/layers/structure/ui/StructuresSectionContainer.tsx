@@ -10,11 +10,9 @@
  * structure-group-local: it projects `items[cat].enabled` → the flat
  * `Record<StructureId, boolean>` the section's checkboxes read.
  *
- * `structureCounts` is read from the engine Redux slice via `useAppSelector`
- * (the engine dispatches `engineStructureCountsChanged` as each catalog lands).
- * This replaces the old prop-threading path through App → SettingsPanel →
- * StructuresSectionContainer, keeping engine state reach in the container layer
- * as the Container convention requires.
+ * `structureCounts` is the structure Layer's `counts` fact, read here rather
+ * than threaded down as a prop, keeping engine state reach in the container
+ * layer as the Container convention requires.
  *
  * Why the handler uses `[dispatch]` only: `dispatch` from `useAppDispatch()` is
  * the invariant `store.dispatch` — it never changes across the component's
@@ -35,8 +33,8 @@ import type { StructureId } from '../../../@types/data/structure/StructureId';
 function StructuresSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
 
-  // Per-category loaded structure counts from the engine slice.  The engine
-  // dispatches `engineStructureCountsChanged` after each catalog load.
+  // Per-category loaded structure counts: the structure Layer's `counts` fact,
+  // republished after each group write.
   const structureCounts = useAppSelector(selectStructureCounts);
 
   const structureItems = useAppSelector(selectStructureItems);

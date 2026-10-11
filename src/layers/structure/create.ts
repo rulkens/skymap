@@ -7,6 +7,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
+import type { StructureFacts } from './@types/StructureFacts';
 import type { StructureRuntime } from './@types/StructureRuntime';
 
 import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
@@ -17,7 +18,7 @@ import { createStructureMarkerRenderer } from './render/structureMarkerRenderer'
 import { createStructureCatalogSlot } from './load/structureCatalogSlot';
 import { wireStructureProjection } from './load/wireStructureProjection';
 
-export function create(deps: LayerCoreDeps): StructureRuntime {
+export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
   const store = createStructureStore();
   const cosmoRenderer = createStructureMarkerRenderer(
     deps.ctx,
@@ -36,6 +37,6 @@ export function create(deps: LayerCoreDeps): StructureRuntime {
     STRUCTURE_IDS_BY_SCALE.milkyWay,
   );
   const slot = createStructureCatalogSlot();
-  wireStructureProjection({ store, slot }, deps.store.dispatch);
+  wireStructureProjection({ store, slot }, deps.publish, deps.store.dispatch);
   return { store, cosmoRenderer, nearRenderer, slot };
 }
