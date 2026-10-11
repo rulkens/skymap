@@ -164,7 +164,7 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRende
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer', () => ({
+vi.mock('../../../../src/layers/structure/render/structureMarkerRenderer', () => ({
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 

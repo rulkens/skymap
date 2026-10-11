@@ -1,0 +1,17 @@
+import type { StructureSourceEntry } from '../../../@types/data/structure/StructureSourceEntry';
+import { Source } from '../../../data/source';
+
+export const SUPERCLUSTER_ENTRY = {
+  type: 'structure',
+  code: Source.Supercluster,
+  id: 'supercluster',
+  label: 'Supercluster',
+  allSky: true,
+  bearsLabel: true,
+  bearsMarker: true,
+  scale: 'cosmic',
+  labelLayer: 'structure',
+  detailLabel: 'Supercluster',
+  shortLabel: 'Supercluster',
+  plural: 'Superclusters',
+} as const satisfies StructureSourceEntry;

@@ -33,7 +33,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 
 // buildStaticAnchorStructures + structureCatalogToStructures: deterministic
 // minimal lists for wireStructureProjection tests.
-vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
+vi.mock('../../../../src/layers/structure/load/buildStaticAnchorStructures', () => ({
   buildStaticAnchorStructures: vi.fn(() => [
     {
       id: 'galaxy-cluster-virgo',
@@ -55,7 +55,7 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
   ]),
 }));
 
-vi.mock('../../../../src/services/engine/wiring/structureCatalogToStructures', () => ({
+vi.mock('../../../../src/layers/structure/load/structureCatalogToStructures', () => ({
   structureCatalogToStructures: vi.fn((payload: StructureCatalogPayload) =>
     payload.meta.map((m) => ({
       id: `galaxy-cluster-bulk-${m.id}`,
@@ -81,7 +81,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // ── Post-mock imports ───────────────────────────────────────────────────────
 
-import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
+import { wireStructureProjection } from '../../../../src/layers/structure/load/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 

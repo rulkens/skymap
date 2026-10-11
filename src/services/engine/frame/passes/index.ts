@@ -7,8 +7,8 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { horizonShellPass } from './horizonShellPass';
-import { structureMarkersCosmoPass } from './structureMarkersCosmoPass';
-import { structureMarkersNearPass } from './structureMarkersNearPass';
+import { structureMarkersCosmoPass } from '../../../../layers/structure/passes/structureMarkersCosmoPass';
+import { structureMarkersNearPass } from '../../../../layers/structure/passes/structureMarkersNearPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
 import { markerLinesPass } from './markerLinesPass';
