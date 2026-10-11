@@ -849,7 +849,7 @@ describe('label2DDirector', () => {
     });
 
     it('a zero-target caption does not occupy declutter space and cannot suppress a real caption', () => {
-      // Mirrors `foregroundLabelsPass.ts:269`'s candidate filter
+      // Mirrors `labelsNearPass.ts:269`'s candidate filter
       // (`baseTarget === 0 || screenPx === null` never enters the cull).
       // Without it, `zeroTarget`'s huge prominence would win the
       // screenSeparation contest and cull `visible` — which would then
@@ -906,7 +906,7 @@ describe('label2DDirector', () => {
       // ABSENT — its producer keeps emitting it every frame, so it must
       // stay in the exponential filter's universe (target 0) and ease
       // toward invisible, not vanish on the cull frame and re-seed at full
-      // target the instant the cull flips back (`foregroundLabelsPass.ts:306`
+      // target the instant the cull flips back (`labelsNearPass.ts:306`
       // sets a culled entry's TARGET to 0 while it stays in `entries`,
       // pruned only when the producer itself stops emitting it, `:325-328`).
       // Also pins the render-loop WAKE VOTE (`runFrame`'s boolean) across the
@@ -981,7 +981,7 @@ describe('label2DDirector', () => {
       // Distinct from the cull case above: this label is NEVER contested —
       // it always survives declutter — but the PRODUCER's own `fadeAlpha`
       // falls to 0 (e.g. a caption's distance-band fade closing), moved from
-      // `foregroundLabelsPass.ts`'s demand-drop tail
+      // `labelsNearPass.ts`'s demand-drop tail
       // (`declutterByScreenSeparationArm`'s target read is `label.fadeAlpha`
       // when a label survives, so this exercises that branch rather than the
       // `survivorIds`-driven one the cull test above pins). Must ease, not
@@ -1024,7 +1024,7 @@ describe('label2DDirector', () => {
     });
 
     it('the higher CAPTION_PRIORITY tier survives a screenSeparation collision', () => {
-      // Moved from `foregroundLabelsPass.ts`'s declutter, now exercised at
+      // Moved from `labelsNearPass.ts`'s declutter, now exercised at
       // the director directly: `prominencePx` composed exactly as
       // `produceSceneBodyCaptions`/`produceConstellationCaptions` do —
       // `CAPTION_PRIORITY[kind] * CAPTION_TIER_SCALE` — so the tier ordering

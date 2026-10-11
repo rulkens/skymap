@@ -461,8 +461,8 @@ describe('renderFrame visual baseline', () => {
         // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
         viewRig: 'mono',
         gpu: {
-          labelRenderer,
-          markerLineRenderer,
+          labelRendererCosmo: labelRenderer,
+          markerLineRendererCosmo: markerLineRenderer,
           // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
@@ -484,7 +484,7 @@ describe('renderFrame visual baseline', () => {
           // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
-          foregroundLabelRenderer: null,
+          labelRendererNear: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `renderFrame` input field duplication;

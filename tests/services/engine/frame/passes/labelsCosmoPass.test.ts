@@ -1,5 +1,5 @@
 /**
- * labelsPass — enable gate + the coverage-view thread-through (Task 12).
+ * labelsCosmoPass — enable gate + the coverage-view thread-through (Task 12).
  *
  * `draw` occludes captions per-pixel behind an opaque body by sampling
  * 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl) for
@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { labelsPass } from '../../../../../src/services/engine/frame/passes/labelsPass';
+import { labelsCosmoPass } from '../../../../../src/services/engine/frame/passes/labelsCosmoPass';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -42,7 +42,7 @@ function makeRenderer(): LabelRenderer {
 function makeState(renderer: LabelRenderer | null, flushedLabelCount = 0): EngineState {
   const labels = Array.from({ length: flushedLabelCount }) as Label2D[];
   return {
-    gpu: { labelRenderer: renderer },
+    gpu: { labelRendererCosmo: renderer },
     subsystems: { cosmoLabelDirector: { labels: () => labels } },
   } as unknown as EngineState;
 }
@@ -64,16 +64,16 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-describe('labelsPass.enabled', () => {
+describe('labelsCosmoPass.enabled', () => {
   it('is false when the director flushed no labels, true otherwise', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
-    expect(labelsPass.enabled(makeState(makeRenderer(), 0), ctx, VIEW_STUB)).toBe(false);
-    expect(labelsPass.enabled(makeState(makeRenderer(), 3), ctx, VIEW_STUB)).toBe(true);
-    expect(labelsPass.enabled(makeState(null, 3), ctx, VIEW_STUB)).toBe(false);
+    expect(labelsCosmoPass.enabled(makeState(makeRenderer(), 0), ctx, VIEW_STUB)).toBe(false);
+    expect(labelsCosmoPass.enabled(makeState(makeRenderer(), 3), ctx, VIEW_STUB)).toBe(true);
+    expect(labelsCosmoPass.enabled(makeState(null, 3), ctx, VIEW_STUB)).toBe(false);
   });
 });
 
-describe('labelsPass.draw', () => {
+describe('labelsCosmoPass.draw', () => {
   it("passes the foreground:0 colour view (not a depthViewOf lookup) in draw's joint when the body pass ran", () => {
     const renderer = makeRenderer();
     const sentinelColorView = {} as GPUTextureView;
@@ -81,7 +81,7 @@ describe('labelsPass.draw', () => {
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set(['foreground:0']), viewOf, depthViewOf);
 
-    labelsPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer));
+    labelsCosmoPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer));
 
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     expect(depthViewOf).not.toHaveBeenCalled();
@@ -106,7 +106,7 @@ describe('labelsPass.draw', () => {
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set<string>(), viewOf, vi.fn());
 
-    labelsPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer));
+    labelsCosmoPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer));
 
     expect(viewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;

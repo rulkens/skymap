@@ -86,7 +86,7 @@ export const GPU_HANDLE_ROWS = [
   },
   // ── The 8 swap-chain-format rows (buildSwapRenderers.ts order) ──────────
   {
-    key: 'labelRenderer',
+    key: 'labelRendererCosmo',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelRenderer(deps.ctx, {
@@ -96,7 +96,7 @@ export const GPU_HANDLE_ROWS = [
       }),
   },
   {
-    key: 'markerLineRenderer',
+    key: 'markerLineRendererCosmo',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
@@ -124,7 +124,7 @@ export const GPU_HANDLE_ROWS = [
       createPickDebugOverlay(deps.ctx.device, deps.ctx.format),
   },
   {
-    key: 'foregroundLabelRenderer',
+    key: 'labelRendererNear',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelRenderer(deps.ctx, {
@@ -134,7 +134,7 @@ export const GPU_HANDLE_ROWS = [
       }),
   },
   {
-    key: 'foregroundMarkerLineRenderer',
+    key: 'markerLineRendererNear',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
@@ -149,12 +149,12 @@ export const GPU_HANDLE_ROWS = [
   // `pickDepthFormat` — the same function the program sizes the target with —
   // plus that slab's depth convention.
   {
-    key: 'labelPickRenderer',
+    key: 'labelPickRendererCosmo',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelPickRenderer(deps.ctx.device, pickDepthFormat(COSMO), SLAB_REVERSED_Z[COSMO]!),
   },
   {
-    key: 'foregroundLabelPickRenderer',
+    key: 'labelPickRendererNear',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelPickRenderer(deps.ctx.device, pickDepthFormat(NEAR0), SLAB_REVERSED_Z[NEAR0]!),
   },

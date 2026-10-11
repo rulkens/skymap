@@ -13,7 +13,7 @@
  * leader-line endpoints) shifts every frame as the camera — hence the
  * matrix — moves.
  *
- * Moved from `foregroundLabelsPass.test.ts` (spec §5.2): the lift stage this
+ * Moved from `labelsNearPass.test.ts` (spec §5.2): the lift stage this
  * regression guards now lives in `label2DDirector.ts`'s `applyLift`, driven
  * here through the REAL `produceStarCaptions` producer (the star Layer's own,
  * since the famous-star map moved there) and a REAL Earth-zoom NEAR0 frustum,

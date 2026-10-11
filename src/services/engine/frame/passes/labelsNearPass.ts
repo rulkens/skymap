@@ -1,8 +1,8 @@
 /**
- * foregroundLabelsPass — issues the draw calls for the NEAR0 caption + leader
+ * labelsNearPass — issues the draw calls for the NEAR0 caption + leader
  * -line renderers `foregroundLabelDirector` uploads earlier in `runFrame`
  * (`enabled` therefore reads THIS frame's real demand, not a stale artifact of
- * its own draw). A second renderer pair, not the COSMO `labelsPass`'s pair,
+ * its own draw). A second renderer pair, not the COSMO `labelsCosmoPass`'s pair,
  * because one renderer draws with one view-projection and these anchors sit
  * AU-to-parsec away, inside COSMO's fixed 10-kpc near plane.
  */
@@ -15,14 +15,14 @@ import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
 
-export const foregroundLabelsPass: ContentPass = {
-  name: 'foreground-labels',
+export const labelsNearPass: ContentPass = {
+  name: 'labels-near',
   // Ranks a caption over the body disc it draws on — `ContentPass.pickTarget`.
   pickTarget: 'overlay',
 
   enabled(state, _ctx, _view) {
     return (
-      state.gpu.foregroundLabelRenderer !== null &&
+      state.gpu.labelRendererNear !== null &&
       state.subsystems.foregroundLabelDirector.labels().length > 0
     );
   },
@@ -31,14 +31,14 @@ export const foregroundLabelsPass: ContentPass = {
   // `pickId` (they name no selectable object), so a constellations-only frame
   // must not allocate the `pick:overlay` target for a draw that stamps nothing.
   pickEnabled(state) {
-    if (state.gpu.foregroundLabelRenderer === null) return false;
+    if (state.gpu.labelRendererNear === null) return false;
     return hasPickableLabel(state.subsystems.foregroundLabelDirector.labels());
   },
 
   draw(pass, view, ctx, state) {
-    const renderer = state.gpu.foregroundLabelRenderer;
+    const renderer = state.gpu.labelRendererNear;
     if (renderer === null) return;
-    const lineRenderer = state.gpu.foregroundMarkerLineRenderer;
+    const lineRenderer = state.gpu.markerLineRendererNear;
 
     const { vpF32, viewportPx } = near0LabelProjection(ctx);
 
@@ -67,7 +67,7 @@ export const foregroundLabelsPass: ContentPass = {
   // `bodyGlintsPass.drawPick` widens its own pick to this caption range for
   // the same affordance.
   drawPick(pass, _view, ctx, state) {
-    const pickRenderer = state.gpu.foregroundLabelPickRenderer;
+    const pickRenderer = state.gpu.labelPickRendererNear;
     const fontAtlases = state.gpu.fontAtlases;
     if (pickRenderer === null || fontAtlases === null) return;
 

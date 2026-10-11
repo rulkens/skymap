@@ -247,7 +247,7 @@ export const bodyGlintsPass: ContentPass = {
   // the visible AFFORDANCE, and within SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC the
   // affordance is the body's foreground LABEL. Planet / moon / Earth captions ride
   // a FLAT per-body `bodies.items[id].labelEnabled` gate in
-  // `foregroundLabelsPass` — full alpha
+  // `labelsNearPass` — full alpha
   // (declutter aside) out to the caption gate, with NO distance fade band (unlike
   // the star map, which keys on the star's own pc distance). So the label persists
   // across the ENTIRE `bodyGlintBackdrop` dissolve (which completes ~6 decades
@@ -349,7 +349,7 @@ export const bodyGlintsPass: ContentPass = {
 
       // Per-body visibility skip — but only BEYOND the caption range. Within it
       // the visible affordance is the body's LABEL, which rides a flat toggle in
-      // `foregroundLabelsPass` (no distance fade) and so stays on out to
+      // `labelsNearPass` (no distance fade) and so stays on out to
       // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC; pick follows the label and a
       // near-invisible glint stays clickable — a new-phase Venus, or a Jupiter
       // whose far-dissolve backdrop has zeroed, with a visible name must still be

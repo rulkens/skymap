@@ -35,7 +35,7 @@ function makeStub(name: string): Stub {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` never calls `setLabels` itself — `foregroundLabelsPass`
+    // `initGpu` never calls `setLabels` itself — `labelsNearPass`
     // uploads the live caption set on its own first draw. Kept on the stub
     // shape because other stubbed renderers built from the same factory
     // expose the method.
@@ -309,10 +309,10 @@ function makeState(): EngineState {
       pickProgram: null,
       renderTargets: null,
       compositor: null,
-      labelRenderer: null,
-      foregroundLabelRenderer: null,
-      foregroundMarkerLineRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      labelRendererNear: null,
+      markerLineRendererNear: null,
+      markerLineRendererCosmo: null,
       selectionRingRenderer: null,
       structureMarkerCosmoRenderer: null,
       texturedDiskRenderer: null,

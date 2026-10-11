@@ -369,8 +369,8 @@ function makeState(
       // Renderers are stubs — the slot commits we mint inside wireSlots
       // optional-chain through them.
       renderTargets: null,
-      labelRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      markerLineRendererCosmo: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
     },
     subsystems: {

@@ -24,13 +24,13 @@ type LabelDirectorAttachRow = {
 const LABEL_DIRECTOR_ATTACH_ROWS: readonly LabelDirectorAttachRow[] = [
   {
     director: (state) => state.subsystems.cosmoLabelDirector,
-    labelRenderer: (state) => state.gpu.labelRenderer,
-    markerLineRenderer: (state) => state.gpu.markerLineRenderer,
+    labelRenderer: (state) => state.gpu.labelRendererCosmo,
+    markerLineRenderer: (state) => state.gpu.markerLineRendererCosmo,
   },
   {
     director: (state) => state.subsystems.foregroundLabelDirector,
-    labelRenderer: (state) => state.gpu.foregroundLabelRenderer,
-    markerLineRenderer: (state) => state.gpu.foregroundMarkerLineRenderer,
+    labelRenderer: (state) => state.gpu.labelRendererNear,
+    markerLineRenderer: (state) => state.gpu.markerLineRendererNear,
   },
 ];
 
