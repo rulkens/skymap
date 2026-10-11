@@ -5,7 +5,7 @@
  * through `onStep`. A stop's events sit side by side on its boundary. The parent owns the clock.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import cx from 'classnames';
 
@@ -54,6 +54,7 @@ function TimelineTrack({
   onStep,
 }: TimelineTrackProps): ReactNode {
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const thumb = timelineFraction(simMs, axis);
   const firstMs = stops[0]!.ms;
   const seek = (ms: number) => onSeekMs(Math.min(endMs, Math.max(firstMs, ms)));
@@ -62,7 +63,8 @@ function TimelineTrack({
     stops.flatMap((stop) =>
       stop.events.map((e, k) => {
         const nudge = (k - (stop.events.length - 1) / 2) * DOT_GAP_PX;
-        return [e.id, `calc(${pct(timelineFraction(stop.ms, axis))} + ${nudge}px)`] as const;
+        const fraction = timelineFraction(stop.ms, axis);
+        return [e.id, { left: `calc(${pct(fraction)} + ${nudge}px)`, fraction }] as const;
       }),
     ),
   );
@@ -152,7 +154,8 @@ function TimelineTrack({
                   tabIndex={-1}
                   aria-hidden="true"
                   aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
-                  title={`${e.label} · ${formatEventDate(e.iso)}`}
+                  onPointerEnter={() => setHoveredId(e.id)}
+                  onPointerLeave={() => setHoveredId((id) => (id === e.id ? null : id))}
                   onPointerDown={(ev) => ev.stopPropagation()}
                   onClick={() => onStep(e.id)}
                   className={cx(
@@ -161,9 +164,24 @@ function TimelineTrack({
                     missionEventMs(e) <= simMs && styles.passed,
                     currentId === e.id && styles.current,
                   )}
-                  style={{ left: dotLeft.get(e.id) }}
+                  style={{ left: dotLeft.get(e.id)?.left }}
                 />
               ))}
+              {mine
+                .filter((e) => e.id === hoveredId)
+                .map((e) => {
+                  const at = dotLeft.get(e.id);
+                  return (
+                    <span
+                      key={e.id}
+                      className={styles.tip}
+                      // The anchor slides with the fraction, so an end label stays inside the column.
+                      style={{ left: at?.left, translate: `${-(at?.fraction ?? 0.5) * 100}% 0` }}
+                    >
+                      {e.label} · {formatEventDate(e.iso)}
+                    </span>
+                  );
+                })}
             </div>
           );
         })}

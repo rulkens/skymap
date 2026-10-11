@@ -98,7 +98,11 @@ describe('ExhibitTimelineContainer', () => {
   it('an event dot click steps to the event, a flyby two days early', () => {
     const store = mount('2026-01-01');
     const titanV1 = section.events.find((e) => e.id === 'voyager1-titan')!;
-    fireEvent.click(screen.getAllByTitle(`${titanV1.label} · 1980-11-12`).at(-1)!);
+    const dot = screen.getAllByLabelText(`${titanV1.label}, 1980-11-12`).at(-1)!;
+    expect(screen.queryByText(`${titanV1.label} · 1980-11-12`)).toBeNull();
+    fireEvent.pointerEnter(dot);
+    expect(screen.getByText(`${titanV1.label} · 1980-11-12`)).toBeInTheDocument();
+    fireEvent.click(dot);
 
     const time = selectTimeState(store.getState());
     expect(time.anchor.simDays).toBeCloseTo(unixMsToJulianDays(Date.parse(titanV1.iso)) - 2, 9);
@@ -126,7 +130,7 @@ describe('ExhibitTimelineContainer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Next/ }));
     // The track dot is aria-hidden (Previous / Next are the accessible twin) but still clickable.
-    const dot = screen.getAllByTitle(new RegExp(`^${v1[3]!.label} · `)).at(-1)!;
+    const dot = screen.getAllByLabelText(new RegExp(`^${v1[3]!.label}, `)).at(-1)!;
     fireEvent.click(dot);
     fireEvent.keyDown(screen.getByRole('slider'), { key: 'PageDown' });
     fireEvent.click(screen.getByRole('button', { name: /Previous/ }));
