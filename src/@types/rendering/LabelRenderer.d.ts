@@ -16,15 +16,7 @@ export type LabelRenderer = {
   readonly label: string;
   /**
    * Replace the current label set.  Calling `setLabels([])` clears all
-   * labels.  Re-packs the CPU-side glyph and label scratch buffers and,
-   * if a real GPU device is present, uploads to the GPU storage /
-   * instance buffers.
-   *
-   * Designed to be called by the label director after polling
-   * `produceMilkyWayLabel` + the structure/famous producers whenever the
-   * merged label set changes (e.g. camera distance crosses the Milky Way
-   * fade band threshold). For the "you are here" use-case there will
-   * typically be 1–3 labels so the cost is negligible.
+   * labels.  Re-packs the CPU-side scratch buffers and uploads to the GPU.
    */
   setLabels(labels: readonly Label2D[]): void;
   /**
@@ -51,6 +43,6 @@ export type LabelRenderer = {
     pxPerRad: number,
     extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
   ): void;
-  /** Release all GPU resources. No-op if constructed with a null device. */
+  /** Release all GPU resources. */
   destroy(): void;
 };

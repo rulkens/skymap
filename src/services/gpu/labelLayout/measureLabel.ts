@@ -1,32 +1,15 @@
 /**
- * measureLabel — the ink bounding box a label's text will occupy,
+ * measureLabel — the ink bounding box of already laid-out glyph quads,
  * anchor-relative in atlas pixels.
  *
- * Folds over `layoutLabel`'s glyph quads rather than re-implementing the
- * pen walk: layout is the single source of truth for advances, kerning,
- * line breaks, and the alignX/alignY shifts, so the measurement can
- * never drift from what the shader actually draws.  The extra quad
- * array allocation is irrelevant at label-set sizes (~50 labels of
- * ~20 glyphs), and callers that measure per frame memoize by
- * (font, text, align) anyway — see `textLayoutOf`.
- *
- * Returns null when the text lays out to zero quads (empty string,
- * whitespace-only, or every glyph missing from the atlas): there is no
- * ink, so there is nothing to collide with.
+ * Folding the quads (not re-walking the text) keeps the measurement identical
+ * to what the shader draws. Null when there are no quads: no ink, nothing to
+ * collide with.
  */
-import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
-import type { LabelAlignX } from '../../../@types/rendering/LabelAlignX';
-import type { LabelAlignY } from '../../../@types/rendering/LabelAlignY';
+import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
 import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
-import { layoutLabel } from './labelLayout';
 
-export function measureLabel(
-  text: string,
-  metrics: FontMetrics,
-  alignX: LabelAlignX = 'left',
-  alignY: LabelAlignY = 'baseline',
-): LabelBBox | null {
-  const quads = layoutLabel(text, metrics, alignX, alignY);
+export function measureLabel(quads: readonly GlyphQuad[]): LabelBBox | null {
   if (quads.length === 0) return null;
 
   let minX = Infinity;

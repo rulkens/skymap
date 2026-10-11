@@ -21,7 +21,6 @@ export function packLabels(args: PackLabelsArgs): number {
 
   for (let li = 0; li < labels.length; li++) {
     const label = labels[li]!;
-    // No font fallback — Label.font is required at the type level.
     const quads = textLayoutOf(metricsByFont, label).quads;
 
     // Write the per-label storage record unconditionally — even when
@@ -31,14 +30,7 @@ export function packLabels(args: PackLabelsArgs): number {
     // no known glyphs, every subsequent glyph would point to the wrong
     // label entry.  An unused storage slot is harmless (no glyph
     // references it, the GPU never reads it).
-    //
-    //   [0..3]   worldPos     (x, y, z, worldEmMpc)
-    //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
-    //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
-    //   [12..15] outlineColor (r*a, g*a, b*a, a)
-    //   [16]     occludeWeight
-    //   [17]     occludeNearKm        ([18..19] are struct padding)
-    //   [20..23] subjectPos   (x, y, z, 0 — the depth verdict's own point)
+    // Slot layout: see the byte table in labelBufferStrides.ts.
     const labelBase = li * (LABEL_DATA_BYTES / 4);
     labelF32[labelBase + 0] = label.worldPos[0];
     labelF32[labelBase + 1] = label.worldPos[1];
@@ -70,8 +62,7 @@ export function packLabels(args: PackLabelsArgs): number {
     labelF32[labelBase + 14] = outlineColor[2]! * oa;
     labelF32[labelBase + 15] = oa;
 
-    // Default 1 = today's per-pixel rule, so a producer that says nothing
-    // about its subject's depth keeps the behaviour it had.
+    // Default 1 = the per-pixel rule.
     labelF32[labelBase + 16] = label.occludeWeight ?? 1;
     // Default 0 leaves the sampled-depth channel inert: no scene texel is
     // nearer than the eye, and at weight 1 the `max` already saturates.
@@ -85,17 +76,10 @@ export function packLabels(args: PackLabelsArgs): number {
     labelF32[labelBase + 22] = subjectPos[2];
     labelF32[labelBase + 23] = 0; // w unused
 
-    // Resolve the label's font to its GPU texture-array layer index
-    // ONCE per label, outside the inner glyph loop — every glyph in
-    // a label shares the same layer.
     const fontIndex = layerIndexOf[label.font];
 
-    // Write per-glyph instance records (40 bytes = 10 × 4 = 8 × f32 + 2 × u32).
     for (const q of quads) {
       if (glyphCount >= maxGlyphs) break;
-      // f32 base index inside the shared ArrayBuffer view.  10 slots/glyph
-      // (8 floats + 2 uints reinterpreted via the u32 view at the same
-      // offsets — slots 8 and 9).
       const f32Base = glyphCount * (GLYPH_INSTANCE_BYTES / 4);
       glyphF32[f32Base + 0] = q.localOffsetX;
       glyphF32[f32Base + 1] = q.localOffsetY;

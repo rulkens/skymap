@@ -29,11 +29,8 @@ export function textLayoutOf(
   const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
   let laidOut = memo.get(key);
   if (laidOut === undefined) {
-    const metrics = metricsByFont[label.font];
-    laidOut = {
-      quads: layoutLabel(label.text, metrics, alignX, alignY),
-      bbox: measureLabel(label.text, metrics, alignX, alignY),
-    };
+    const quads = layoutLabel(label.text, metricsByFont[label.font], alignX, alignY);
+    laidOut = { quads, bbox: measureLabel(quads) };
     memo.set(key, laidOut);
   }
   return laidOut;
