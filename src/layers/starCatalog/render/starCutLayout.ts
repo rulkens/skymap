@@ -27,9 +27,17 @@ export const NODE_REFINE_DELTA_WORD = 5;
 /** Bits per axis of `CutNode.grid`, and of `CutNode.bits`'s level. */
 export const GRID_AXIS_BITS = 10;
 export const LEVEL_BITS = 4;
-/** `CutNode.bits`: level, then hasBlob, then childrenResident, then ownCount. */
+/** `CutNode.bits`: level, then hasBlob, childrenResident, folded, then ownCount. */
 export const NODE_BLOB_BIT = 1 << LEVEL_BITS;
 export const NODE_RESIDENT_BIT = 1 << (LEVEL_BITS + 1);
+export const NODE_FOLDED_BIT = 1 << (LEVEL_BITS + 2);
+/**
+ * A childful row whose subtree holds at most this many records is folded: it
+ * refines exactly when its nearest unfolded ancestor does, so the subtree draws
+ * as points, never as a box-filling blob. v1's fat-leaf capacity, so sparse
+ * outskirts cost what they cost under SKST.
+ */
+export const STAR_FOLD_RECORDS = 64;
 export const OWN_COUNT_SHIFT = 8;
 /** A child's Morton key is its parent's shifted left by this. */
 const OCTANT_BITS = 3;
@@ -123,15 +131,16 @@ function packRows(
   out: Uint32Array,
   bases: { readonly node: number; readonly record: number },
   outerParent: (i: number) => number,
+  foldRecords: number,
 ): void {
+  const isFolded = (i: number) => foldedRow(nodes, i, foldRecords);
   const n = nodes.count;
   const rowByKey = new Map<number, number>();
   for (let i = 0; i < n; i++)
     rowByKey.set(nodes.level[i]! * LEVEL_KEY_STRIDE + nodes.morton[i]!, i);
   const hasBlob = (i: number) => nodes.childMask[i] !== 0;
-  const drawn = (i: number) => nodes.ownCount[i]! + (hasBlob(i) ? 1 : 0);
 
-  const childDrawn = new Uint32Array(n);
+  const localParent = new Int32Array(n);
   for (let i = 0; i < n; i++) {
     const level = nodes.level[i]!;
     const own = nodes.ownCount[i]!;
@@ -141,10 +150,21 @@ function packRows(
     }
     const parentKey =
       (level + 1) * LEVEL_KEY_STRIDE + Math.floor(nodes.morton[i]! / 2 ** OCTANT_BITS);
-    const local = rowByKey.get(parentKey);
-    out[i * CUT_NODE_WORDS + NODE_PARENT_WORD] =
-      local === undefined ? outerParent(i) : bases.node + local;
-    if (local !== undefined) childDrawn[local]! += drawn(i);
+    localParent[i] = rowByKey.get(parentKey) ?? -1;
+  }
+
+  // A folded row names its nearest unfolded ancestor as parent, so `refines`
+  // reads one row's proxy, never a chain. Rows sort by level ascending, so a
+  // parent's row comes after its child's and a descending pass sees it first.
+  const childDrawn = new Uint32Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    const local = localParent[i]!;
+    const o = i * CUT_NODE_WORDS + NODE_PARENT_WORD;
+    if (local < 0) out[o] = outerParent(i);
+    else if (isFolded(local) && isFolded(i))
+      out[o] = out[local * CUT_NODE_WORDS + NODE_PARENT_WORD]!;
+    else out[o] = bases.node + local;
+    if (local >= 0) childDrawn[local]! += drawnOnRefine(nodes, i, foldRecords);
   }
 
   for (let i = 0; i < n; i++) {
@@ -155,15 +175,33 @@ function packRows(
     const o = i * CUT_NODE_WORDS;
     out[o + NODE_GRID_WORD] = cx | (cy << GRID_AXIS_BITS) | (cz << (2 * GRID_AXIS_BITS));
     out[o + NODE_FIRST_RECORD_WORD] = bases.record + nodes.firstRecord[i]!;
+    const folded = isFolded(i);
     out[o + NODE_BITS_WORD] =
       level |
       (hasBlob(i) ? NODE_BLOB_BIT : 0) |
       (resident ? NODE_RESIDENT_BIT : 0) |
+      (folded ? NODE_FOLDED_BIT : 0) |
       (nodes.ownCount[i]! << OWN_COUNT_SHIFT);
     out[o + NODE_BLOB_COUNT_WORD] = nodes.blobCount[i]!;
     // The −1 is the row's own blob; its own records stay drawn across a refine.
-    out[o + NODE_REFINE_DELTA_WORD] = hasBlob(i) && resident ? childDrawn[i]! - 1 : 0;
+    // A folded row's cost is already in its unfolded ancestor's delta.
+    out[o + NODE_REFINE_DELTA_WORD] = hasBlob(i) && resident && !folded ? childDrawn[i]! - 1 : 0;
   }
+}
+
+/** Never a chunk root: its children may be absent, and only an unfolded row reads residency. */
+function foldedRow(nodes: OctreeNodeTable, i: number, foldRecords: number): boolean {
+  return (
+    nodes.childMask[i] !== 0 &&
+    nodes.chunkRef[i] === NO_CHUNK_REF &&
+    nodes.ownCount[i]! + nodes.blobCount[i]! <= foldRecords
+  );
+}
+
+/** Instances a row adds when its parent refines: a folded row draws its whole subtree. */
+function drawnOnRefine(nodes: OctreeNodeTable, i: number, foldRecords: number): number {
+  if (foldedRow(nodes, i, foldRecords)) return nodes.ownCount[i]! + nodes.blobCount[i]!;
+  return nodes.ownCount[i]! + (nodes.childMask[i] !== 0 ? 1 : 0);
 }
 
 function checkGrid(bits: number): void {
@@ -172,11 +210,14 @@ function checkGrid(bits: number): void {
   }
 }
 
-/** The index's rows; a chunk root starts unresident (`refineDelta 0`) until its chunk lands. */
-export function packStarCutNodes(octree: StarOctree): Uint32Array {
+/**
+ * The index's rows; a chunk root starts unresident (`refineDelta 0`) until its chunk lands.
+ * `foldRecords` 0 disables the fold, for tests that pin the unfolded cut on tiny trees.
+ */
+export function packStarCutNodes(octree: StarOctree, foldRecords = STAR_FOLD_RECORDS): Uint32Array {
   checkGrid(octree.grid.bits);
   const out = new Uint32Array(octree.nodes.count * CUT_NODE_WORDS);
-  packRows(octree.nodes, out, { node: 0, record: 0 }, (i) => i);
+  packRows(octree.nodes, out, { node: 0, record: 0 }, (i) => i, foldRecords);
   return out;
 }
 
@@ -186,6 +227,7 @@ export function packStarChunkNodes(
   root: { readonly level: number; readonly morton: number; readonly rootRow: number },
   pool: { readonly nodeBase: number; readonly recordBase: number },
   chunkNodeCap: number,
+  foldRecords = STAR_FOLD_RECORDS,
 ): Uint32Array {
   if (chunk.nodes.count > chunkNodeCap) {
     throw new Error(
@@ -194,25 +236,32 @@ export function packStarChunkNodes(
   }
   const out = new Uint32Array(chunkNodeCap * CUT_NODE_WORDS);
   const { level, morton } = chunk.nodes;
-  packRows(chunk.nodes, out, { node: pool.nodeBase, record: pool.recordBase }, (i) => {
-    if (!isTopRow(level[i]!, morton[i]!, root)) {
-      throw new Error(`starCut: chunk row ${i} has no parent in the chunk and is not a top row`);
-    }
-    return root.rootRow;
-  });
+  packRows(
+    chunk.nodes,
+    out,
+    { node: pool.nodeBase, record: pool.recordBase },
+    (i) => {
+      if (!isTopRow(level[i]!, morton[i]!, root)) {
+        throw new Error(`starCut: chunk row ${i} has no parent in the chunk and is not a top row`);
+      }
+      return root.rootRow;
+    },
+    foldRecords,
+  );
   return out;
 }
 
-/** The chunk root's `refineDelta` once its chunk is resident: Σ top rows (ownCount + hasBlob) − 1. */
+/** The chunk root's `refineDelta` once its chunk is resident: Σ top rows' instances − 1. */
 export function chunkRootRefineDelta(
   chunk: StarChunk,
   root: { readonly level: number; readonly morton: number },
+  foldRecords = STAR_FOLD_RECORDS,
 ): number {
   const { nodes } = chunk;
   let sum = 0;
   for (let i = 0; i < nodes.count; i++) {
     if (!isTopRow(nodes.level[i]!, nodes.morton[i]!, root)) continue;
-    sum += nodes.ownCount[i]! + (nodes.childMask[i] !== 0 ? 1 : 0);
+    sum += drawnOnRefine(nodes, i, foldRecords);
   }
   return sum - 1;
 }

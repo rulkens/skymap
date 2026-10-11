@@ -42,7 +42,7 @@ const CATALOG = starOctreeFromSkst({
 });
 
 describe('packStarCutNodes', () => {
-  const words = packStarCutNodes(CATALOG);
+  const words = packStarCutNodes(CATALOG, 0);
   const at = (node: number) => words.subarray(node * CUT_NODE_WORDS, (node + 1) * CUT_NODE_WORDS);
 
   it('packs grid in LEAF cells, so a level-1 node is scaled by 2', () => {
@@ -122,7 +122,7 @@ describe('packStarChunkNodes', () => {
       },
     };
     const root = { level: 2, morton: 0, rootRow: 7 };
-    const words = packStarChunkNodes(chunk, root, { nodeBase: 40, recordBase: 1000 }, 6);
+    const words = packStarChunkNodes(chunk, root, { nodeBase: 40, recordBase: 1000 }, 6, 0);
     // Words: grid, firstRecord, bits (level | blob 16 | resident 32 | own << 8), blobCount,
     // parent, refineDelta.
     expect([...words]).toEqual([
@@ -132,6 +132,6 @@ describe('packStarChunkNodes', () => {
       ...[2, 1007, 1 | 32 | (4 << 8), 0, 7, 0],
       ...new Array(2 * CUT_NODE_WORDS).fill(0),
     ]);
-    expect(chunkRootRefineDelta(chunk, root)).toBe(1 + 1 + 4 - 1);
+    expect(chunkRootRefineDelta(chunk, root, 0)).toBe(1 + 1 + 4 - 1);
   });
 });

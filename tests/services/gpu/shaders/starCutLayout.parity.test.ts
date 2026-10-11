@@ -106,6 +106,7 @@ describe('starCatalog cut WESL constants <-> starCutLayout.ts', () => {
     NODE_LEVEL_MASK: 2 ** layout.LEVEL_BITS - 1,
     NODE_BLOB_BIT: layout.NODE_BLOB_BIT,
     NODE_RESIDENT_BIT: layout.NODE_RESIDENT_BIT,
+    NODE_FOLDED_BIT: layout.NODE_FOLDED_BIT,
     OPACITY_CHANNELS: layout.OPACITY_CHANNELS,
     OWN_OPACITY: layout.OWN_OPACITY,
     BLOB_OPACITY: layout.BLOB_OPACITY,
@@ -236,7 +237,7 @@ describe('struct CutNode', () => {
       ],
       records: new Uint8Array(6 * 44),
     });
-    const words = packStarCutNodes(catalog);
+    const words = packStarCutNodes(catalog, 0);
     const at = (node: number, name: string) =>
       words[node * CUT_NODE_WORDS + fields.find((f) => f.name === name)!.byteOffset / WORD_BYTES];
     expect(at(0, 'grid')).toBe(1);

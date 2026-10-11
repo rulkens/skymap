@@ -148,6 +148,7 @@ A record's level is `L(M)` alone: hoisting wins over v1's fat-leaf fold (`STAR_L
 - `refineDelta = Σ_children (ownCount + hasBlob) − 1`. The `−1` is the node's own blob; a refining node always has children, hence a blob. Its own records stay drawn across the refine, so they cancel.
 - `drawOwn = parentRefines` (the root counts its parent as refining).
 - `drawBlob = drawOwn && !refines(self)`.
+- **Fold** (runtime, added at the perf fix round): a childful row other than a chunk root whose subtree holds at most `STAR_FOLD_RECORDS = 64` records refines exactly when its nearest unfolded ancestor does, so a sparse outskirt draws as points, as v1's fat leaves did, instead of as a box-sized blob over a handful of stars. The format is unchanged; the CPU marks the row and writes the ancestor as its `parent` at upload.
 
 **Flux conservation.** A node in the cut draws own + blob, which is its whole subtree's flux. A refining node draws own, and each child contributes its own subtree's flux by induction. No level gains or loses light, and the cross-fade stays linear (`cut.wesl` header, "Fades").
 

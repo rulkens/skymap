@@ -22,6 +22,8 @@ import {
   NODE_BITS_WORD,
   NODE_REFINE_DELTA_WORD,
   NODE_RESIDENT_BIT,
+  NODE_BLOB_COUNT_WORD,
+  NODE_FOLDED_BIT,
   OWN_COUNT_SHIFT,
   chunkRootRefineDelta,
   packStarChunkNodes,
@@ -63,7 +65,7 @@ const CATALOG: SkstCatalog = {
   records: new Uint8Array(24 * 6),
 };
 const OCTREE = starOctreeFromSkst(CATALOG);
-const NODES = packStarCutNodes(OCTREE);
+const NODES = packStarCutNodes(OCTREE, 0);
 const LEAVES = [0, 1, 2, 3];
 
 type Over = {
@@ -305,7 +307,7 @@ describe('referenceStarCut over own records and blobs', () => {
       makeOctreeBuildInput(randomOctreeRecords(200, 7, 640, [-6, 14]), grid),
     );
     const octree = octreeOf(tree.nodes, grid);
-    const pool = packStarCutNodes(octree);
+    const pool = packStarCutNodes(octree, 0);
     const n = tree.nodes.count;
     const root = n - 1;
     const parent = (i: number) => pool[i * CUT_NODE_WORDS + NODE_PARENT_WORD]!;
@@ -336,6 +338,46 @@ describe('referenceStarCut over own records and blobs', () => {
     );
   });
 
+  it('a folded subtree draws as points with its anchor, conserving every record', () => {
+    const grid: OctreeGrid = { bits: 6, origin: [0, 0, 0], cellEdge: 10 };
+    const stars = 2000;
+    const tree = stratifyOctree(
+      makeOctreeBuildInput(randomOctreeRecords(stars, 11, 640, [-6, 14]), grid),
+    );
+    const octree = octreeOf(tree.nodes, grid);
+    const pool = packStarCutNodes(octree);
+    const word = (i: number, w: number) => pool[i * CUT_NODE_WORDS + w]!;
+    const folded = (i: number) => (word(i, NODE_BITS_WORD) & NODE_FOLDED_BIT) !== 0;
+    const rows = tree.nodes.count;
+    const childful = [...Array(rows).keys()].filter((i) => tree.nodes.childMask[i] !== 0);
+    expect(childful.some(folded)).toBe(true);
+    expect(childful.every(folded)).toBe(false);
+
+    const drawnRecords = (r: Cut) =>
+      [...new Set(r.leafEntries.map((e) => e & NODE_MASK))].reduce(
+        (sum, i) => sum + ownOf(pool, i),
+        0,
+      ) + r.aggregates.reduce((sum, i) => sum + word(i, NODE_BLOB_COUNT_WORD), 0);
+    for (const cam of [
+      [164.5, 32.5, 32.5],
+      [70.5, 3.5, 60.5],
+      [5.5, 5.5, 5.5],
+      [32.5, 32.5, 32.5],
+    ] as Vec3[]) {
+      const r = cutOver(octree, 0, pool, cam, { threshold: 0.5 });
+      expect(drawnRecords(r), `camera ${cam}`).toBe(stars);
+      expect(r.aggregates.filter(folded), `camera ${cam}`).toEqual([]);
+    }
+
+    const root = rows - 1;
+    const far: Vec3 = [164.5, 32.5, 32.5];
+    const none = cutOver(octree, 0, pool, far, { threshold: 0.5, budget: 0 });
+    const one = cutOver(octree, 0, pool, far, { threshold: 0.5 });
+    expect(instancesOf(pool, one) - instancesOf(pool, none)).toBe(
+      word(root, NODE_REFINE_DELTA_WORD),
+    );
+  });
+
   // Index: one chunk root (L1, x 0..2) holding 2 own records and a blob over 3 stars.
   // Its chunk: two L0 rows, 1 and 2 own records, in the pool's one slot (rows 1, 2).
   const grid: OctreeGrid = { bits: 1, origin: [0, 0, 0], cellEdge: 1 };
@@ -358,14 +400,14 @@ describe('referenceStarCut over own records and blobs', () => {
     chunk,
   );
   const root = { level: 1, morton: 0, rootRow: 0 };
-  const chunkRows = packStarChunkNodes(chunk, root, { nodeBase: 1, recordBase: 3 }, 2);
+  const chunkRows = packStarChunkNodes(chunk, root, { nodeBase: 1, recordBase: 3 }, 2, 0);
   const poolOf = (resident: boolean) => {
     const pool = new Uint32Array(3 * CUT_NODE_WORDS);
-    pool.set(packStarCutNodes(octree));
+    pool.set(packStarCutNodes(octree, 0));
     pool.set(chunkRows, CUT_NODE_WORDS);
     if (resident) {
       pool[NODE_BITS_WORD] = pool[NODE_BITS_WORD]! | NODE_RESIDENT_BIT;
-      pool[NODE_REFINE_DELTA_WORD] = chunkRootRefineDelta(chunk, root);
+      pool[NODE_REFINE_DELTA_WORD] = chunkRootRefineDelta(chunk, root, 0);
     }
     return pool;
   };

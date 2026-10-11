@@ -28,6 +28,7 @@ import {
   NODE_BITS_WORD,
   NODE_BLOB_BIT,
   NODE_COUNT_U32_INDEX,
+  NODE_FOLDED_BIT,
   NODE_GRID_WORD,
   NODE_PARENT_WORD,
   NODE_REFINE_DELTA_WORD,
@@ -131,8 +132,10 @@ export function referenceStarCut(
 
   // emit
   const refines = (i: number) => {
-    const proxy = proxyOf(i);
-    return wantsRefine(i, proxy) && binOf(proxy) >= cutBin;
+    const folded = (bitsOf(i) & NODE_FOLDED_BIT) !== 0;
+    const j = folded ? nodes[i * CUT_NODE_WORDS + NODE_PARENT_WORD]! : i;
+    const proxy = proxyOf(j);
+    return wantsRefine(j, proxy) && binOf(proxy) >= cutBin;
   };
   const fadeStep = f32[FADE_STEP_FLOAT_INDEX]!;
   const opacity = Float32Array.from(opacityIn);

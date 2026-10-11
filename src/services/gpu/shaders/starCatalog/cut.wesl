@@ -13,6 +13,14 @@
 // flux, so the cut conserves light level by level. A chunk root refines only
 // once its chunk is resident; an empty slot's zeroed rows emit nothing.
 //
+// ## Folded subtrees
+// Placement by brightness alone leaves sparse outskirts as chains of rows
+// whose blob stands for a handful of stars, each drawn as a box-sized glow. A
+// row whose subtree holds at most STAR_FOLD_RECORDS (starCutLayout.ts) is
+// folded: it refines exactly when its nearest unfolded ancestor does, and the
+// CPU writes that ancestor as its parent, so the subtree draws as points with
+// no blob and the ancestor's refineDelta carries the subtree's cost.
+//
 // ## Budget as a threshold
 // A best-first refine under an instance budget pops in descending proxy order,
 // so it stops at one proxy value. 'histogram' sums each visible candidate's
@@ -49,6 +57,7 @@ import package::starCatalog::cutIo::CutUniforms;
 import package::starCatalog::cutIo::nodeEdgeCells;
 import package::starCatalog::cutIo::nodeHasBlob;
 import package::starCatalog::cutIo::nodeChildrenResident;
+import package::starCatalog::cutIo::nodeFolded;
 import package::starCatalog::cutIo::nodeOwnCount;
 import package::starCatalog::cutIo::rootNode;
 import package::starCatalog::cutIo::OPACITY_CHANNELS;
@@ -157,8 +166,9 @@ fn pickThreshold() {
 }
 
 fn refines(i: u32, cutBin: u32) -> bool {
-  let proxy = proxyOf(i);
-  return wantsRefine(i, proxy) && binOf(proxy) >= cutBin;
+  let j = select(i, nodes[i].parent, nodeFolded(nodes[i].bits));
+  let proxy = proxyOf(j);
+  return wantsRefine(j, proxy) && binOf(proxy) >= cutBin;
 }
 
 @compute @workgroup_size(64)

@@ -18,6 +18,7 @@ const GRID_AXIS_MASK: u32 = (1u << GRID_AXIS_BITS) - 1u;
 const NODE_LEVEL_MASK: u32 = (1u << LEVEL_BITS) - 1u;
 const NODE_BLOB_BIT: u32 = 1u << LEVEL_BITS;
 const NODE_RESIDENT_BIT: u32 = 1u << (LEVEL_BITS + 1u);
+const NODE_FOLDED_BIT: u32 = 1u << (LEVEL_BITS + 2u);
 // Two fade channels per row: opacity[i * OPACITY_CHANNELS + c].
 const OPACITY_CHANNELS: u32 = 2u;
 const OWN_OPACITY: u32 = 0u;
@@ -29,11 +30,14 @@ const LEAF_ENTRY_NODE_MASK: u32 = (1u << LEAF_BLOCK_INDEX_SHIFT) - 1u;
 // pool-absolute on the CPU at upload, so both read as plain indices here.
 //   grid         box min corner in LEAF cells: x | y << 10 | z << 20
 //   firstRecord  first own record; the blob, if any, follows the own records
-//   bits         level | hasBlob << 4 | childrenResident << 5 | ownCount << 8
+//   bits         level | hasBlob << 4 | childrenResident << 5 | folded << 6
+//                | ownCount << 8
 //   blobCount    real records the blob stands for (its flux multiplier)
-//   parent       pool row of the parent; the index root names itself
-//   refineDelta  sum over children of (ownCount + hasBlob), minus 1 for the
-//                row's own blob; 0 when childless or the chunk is absent
+//   parent       pool row of the parent; the index root names itself; a folded
+//                row names its nearest unfolded ancestor instead
+//   refineDelta  sum over children of the instances each adds (a folded child:
+//                its whole subtree), minus 1 for the row's own blob; 0 when
+//                childless, folded, or the chunk is absent
 struct CutNode {
   grid: u32,
   firstRecord: u32,
@@ -92,6 +96,11 @@ fn nodeHasBlob(bits: u32) -> bool {
 // 0 only on a chunk root whose chunk is not in the pool.
 fn nodeChildrenResident(bits: u32) -> bool {
   return (bits & NODE_RESIDENT_BIT) != 0u;
+}
+
+// A small subtree that refines with its parent: see 'refines' in cut.wesl.
+fn nodeFolded(bits: u32) -> bool {
+  return (bits & NODE_FOLDED_BIT) != 0u;
 }
 
 fn nodeOwnCount(bits: u32) -> u32 {
