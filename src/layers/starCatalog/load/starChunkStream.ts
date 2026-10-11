@@ -13,7 +13,7 @@ import type { StarChunkRequest } from '../@types/StarChunkRequest';
 import { SlotPool } from '../../../utils/cache/slotPool';
 import { createTileStreamSubsystem } from '../../../services/engine/subsystems/tileStreamSubsystem';
 import { dataUrl } from '../../../services/loading/fetchWithProgress';
-import { STAR_CHUNK_CONCURRENCY } from '../../../data/starChunkStream';
+import { STAR_CHUNK_CONCURRENCY } from '../../../data/starChunkConcurrency';
 import { starChunkPath } from '../../../data/octree/octreeFormat';
 import { decodeOctreeChunk } from '../../../data/octree/decodeOctreeChunk';
 import { starColumnsOf } from '../../../utils/star/starColumnsOf';
