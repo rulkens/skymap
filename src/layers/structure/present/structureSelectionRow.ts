@@ -1,15 +1,16 @@
 /**
- * structureSelectionRow — the core `SelectionKindRow` for the marker-ring
- * structure categories. Pick identity resolves
- * the durable id via `resolveStructureFromPick`; focus ids are the durable
- * `${category}-${seed}` token already, so no cloud read is needed to encode.
+ * structureSelectionRow — the `SelectionKindRow` for the marker-ring structure
+ * categories. Pick identity resolves the durable id via
+ * `resolveStructureFromPick`; focus ids are the durable `${category}-${seed}`
+ * token already, so no cloud read is needed to encode. The store is read at
+ * call time, so records that land after boot resolve without rebuilding the row.
  */
 
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { structurePickId } from '../../../utils/picking/structurePickId';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
-import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
+import type { StructureStore } from '../../../@types/engine/data/StructureStore';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -25,27 +26,26 @@ const STRUCTURE_SOURCE_CODES: readonly SourceType[] = SOURCE_ENTRIES.filter(
 const SAFE_ID_RE = /^[a-z0-9_-]+$/i;
 
 export function structureSelectionRow(
-  deps: () => Pick<ResolveDeps, 'structures'>,
+  store: Pick<StructureStore, 'byId' | 'byCategory'>,
 ): SelectionKindRow<StructureRef> {
   return {
     type: 'structure',
     pickSources: STRUCTURE_SOURCE_CODES,
     resolvePick: (entry, pick) => {
       if (entry.type !== 'structure') return null;
-      const record = resolveStructureFromPick(deps().structures, {
+      const record = resolveStructureFromPick(store, {
         category: entry.id as StructureId,
         structureIndex: pick.localIdx,
       });
       return record ? { type: 'structure', id: record.id } : null;
     },
     encodePick: (ref) => {
-      const { structures } = deps();
-      const record = structures.byId(ref.id);
+      const record = store.byId(ref.id);
       if (!record) return null;
-      const index = structures.byCategory(record.category).findIndex((r) => r.id === ref.id);
+      const index = store.byCategory(record.category).findIndex((r) => r.id === ref.id);
       return index < 0 ? null : structurePickId(record.category, index);
     },
-    extractRow: (ref) => deps().structures.byId(ref.id),
+    extractRow: (ref) => store.byId(ref.id),
     focusId: {
       claims: (id) => STRUCTURE_IDS.some((cat) => id.startsWith(`${cat}-`)),
       decode: (id) => (SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),

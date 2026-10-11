@@ -64,8 +64,8 @@ import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
-import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import { coreSelectionRows } from './selection/coreSelectionRows';
+import { structureSelectionRow } from '../../layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 
@@ -363,20 +363,13 @@ export function createEngine(
   // Every runner below is registered in ONE `setSagaContext` call before the async
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
-  const resolveDeps = (): ResolveDeps => ({
-    structures: {
-      byId: (id) => state.data.structures.byId(id),
-      byCategory: (cat) => state.data.structures.byCategory(cat),
-      loaded: () => state.data.structures.loaded(),
-    },
-  });
-
+  //
   // The one row array core owns (D5); createLayers appends each Layer's rows
   // once, in tuple order, over the empty composition today. `selection` reads
   // it lazily (never rebuilds a list), so a deep link seen before createLayers
   // sees only core rows — a Layer-only id instead waits on
   // resolveFocusRefDeferringSaga's engineStatusChanged pulse to resolve.
-  state.selectionKindRows = coreSelectionRows(resolveDeps);
+  state.selectionKindRows = [...coreSelectionRows(), structureSelectionRow(state.data.structures)];
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.kinds,
@@ -413,7 +406,6 @@ export function createEngine(
   cb.setSagaContext({
     nextFrame: () => state.subsystems.scheduler.nextFrame(),
     reconcile: makeReconcileEffects(state, canvas),
-    resolveDeps,
     selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null

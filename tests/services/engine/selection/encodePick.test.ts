@@ -65,7 +65,7 @@ describe('SelectionKindRow.encodePick', () => {
   });
 
   it('structure: the index is per category, and matches the ring pick word', () => {
-    const row = structureSelectionRow(() => ({ structures: structureStore }));
+    const row = structureSelectionRow(structureStore);
     const ref = { type: 'structure', id: 'c1' } as const;
     expect(roundTrip(row, ref)).toEqual(ref);
     expect(row.encodePick(ref)).toBe(structurePickId('galaxy-cluster', 1));

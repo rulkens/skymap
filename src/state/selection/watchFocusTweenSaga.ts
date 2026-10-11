@@ -25,16 +25,16 @@ import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, engineStructureCountsChanged } from '../engine/engineSlice';
+import { selectStructureCounts } from '../engine/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import type { SagaContext } from '../../store/types';
+import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
-      const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
@@ -50,24 +50,27 @@ export function* watchFocusTweenSaga() {
       // durable id), before its backing store is fed, so the row comes back
       // null until that store's first commit. `NOT_YET_LOADED` states the one
       // rule ("is this ref's store still empty?") once, keyed on `ref.type` —
-      // each entry pairs the store-empty predicate with the action that
-      // pulses the instant the store is fed. A garbage id/index (row null
-      // with the store already fed) falls through to the no-op below rather
-      // than waiting for a pulse that never recurs. `takeLatest` discards this
-      // waiter if a newer focus supersedes it.
+      // each entry pairs a store-empty selector with the action that pulses
+      // the instant the store is fed. Structure counts are published in the
+      // same synchronous call that installs the anchors, so "no counts yet" is
+      // "store not fed yet". A garbage id/index (row null with the store
+      // already fed) falls through to the no-op below rather than waiting for
+      // a pulse that never recurs. `takeLatest` discards this waiter if a
+      // newer focus supersedes it.
       type Deferral = {
-        empty(): boolean;
+        /** A selector, read with `yield* select(deferral.empty)`: true while the ref's store may still be filling. */
+        empty(state: RootState): boolean;
         pulse: typeof engineStructureCountsChanged;
       };
       const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
         {
           structure: {
-            empty: () => resolveDeps().structures.loaded?.() === false,
+            empty: (state) => Object.keys(selectStructureCounts(state)).length === 0,
             pulse: engineStructureCountsChanged,
           },
         };
       // `ref.type` never changes across retries, so the deferral (if any) is
-      // looked up once; only `empty()` is re-polled per pulse.
+      // looked up once; only `empty` is re-selected per pulse.
       const deferral = action.payload ? NOT_YET_LOADED[action.payload.type] : undefined;
 
       // Off-frame resolve — same `deriveSimDays(time, nowMs)` derivation
@@ -80,7 +83,7 @@ export function* watchFocusTweenSaga() {
         action.payload,
         deriveSimDays(yield* select(selectTimeState), performance.now()),
       );
-      while (row === null && deferral?.empty()) {
+      while (row === null && deferral !== undefined && (yield* select(deferral.empty))) {
         yield* take(deferral.pulse);
         row = selection.extractRow(
           action.payload,

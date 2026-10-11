@@ -16,11 +16,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
-import { selectionResolverOver } from '../../../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../../../support/selectionResolverOver';
 import { localGroupDwell } from '../../../../../src/data/animation/tours/grandTour/localGroup';
 import { neighbourhoodReveal } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodReveal';
 import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
-import type { ResolveDeps } from '../../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
@@ -53,14 +55,12 @@ const M81_GROUP: StructureInfo = {
   physicalRadiusMpc: 0.5,
 } as StructureInfo;
 
-const DEPS: ResolveDeps = {
-  structures: {
-    byId: (id) =>
-      id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
-    byCategory: () => [],
-  },
+const STRUCTURES: StructureRowFixture = {
+  byId: (id) =>
+    id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
+  byCategory: () => [],
 };
-const RESOLVER = selectionResolverOver(DEPS);
+const RESOLVER = selectionResolverOver(STRUCTURES);
 
 /**
  * Find the yaw `spin` node's `by` anywhere in a resolved clip's timeline.

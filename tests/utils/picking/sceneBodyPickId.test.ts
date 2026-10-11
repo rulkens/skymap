@@ -14,9 +14,7 @@ import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { unpackPick } from '../../../src/data/selectionEncoding';
 import { Source } from '../../../src/data/sources';
 
-const resolver = selectionResolverOver({
-  structures: { byId: () => null, byCategory: () => [] },
-});
+const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] });
 
 describe('sceneBodyPickId', () => {
   // Not subsumed by the round-trip test below: a consistent row swap (e.g. earth

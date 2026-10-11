@@ -11,7 +11,7 @@
  * than in response to an action. The dispatches themselves are ordinary
  * settings/selection writes, but the watchers they wake reach the engine through
  * `getContext` — `watchWakeSaga` wants `reconcile.requestRender`, the selection
- * reconciler wants `resolveDeps`. Reached with an empty context bag they throw,
+ * reconciler wants `selection`. Reached with an empty context bag they throw,
  * and redux-saga propagates a watcher's throw to the root, cancelling every OTHER
  * watcher with it: one deep link would cost the session its wake, tier
  * transitions, selection resolution, tour and keyboard, and

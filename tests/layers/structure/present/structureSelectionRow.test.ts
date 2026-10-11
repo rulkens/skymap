@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { structureSelectionRow } from '../../../../src/layers/structure/present/structureSelectionRow';
 
-const row = structureSelectionRow(() => ({
-  structures: { byId: () => null, byCategory: () => [] },
-}));
+const row = structureSelectionRow({ byId: () => null, byCategory: () => [] });
 const claims = (id: string) => row.focusId!.claims(id);
 
 describe('structureSelectionRow focus claims', () => {

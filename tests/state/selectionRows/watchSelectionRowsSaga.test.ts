@@ -46,8 +46,11 @@ import {
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture, StarRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type {
+  GalaxyRowFixture,
+  StarRowFixture,
+  StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
 
@@ -105,9 +108,7 @@ describe('watchSelectionRowsSaga', () => {
       },
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
-    const deps: ResolveDeps = {
-      structures: { byId: () => structure, byCategory: () => [] },
-    };
+    const structures: StructureRowFixture = { byId: () => structure, byCategory: () => [] };
     // The starCatalog Layer's slice of the composed resolver, read LIVE like
     // `galaxies` above so the deferral case can land the bin mid-test.
     const stars = {
@@ -120,8 +121,7 @@ describe('watchSelectionRowsSaga', () => {
     } as unknown as StarRowFixture;
     sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({
-      resolveDeps: () => deps,
-      selection: selectionResolverOver(deps, galaxies, stars),
+      selection: selectionResolverOver(structures, galaxies, stars),
     });
     return s;
   }
