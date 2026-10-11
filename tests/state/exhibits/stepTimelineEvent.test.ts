@@ -17,7 +17,7 @@ const stateAt = (
   emphasis: string | null = 'voyager1',
 ): RootState =>
   ({
-    settings: { missionTrails: { enabled: true, emphasis } },
+    settings: { missions: { trails: true, craft: emphasis } },
     takeover: { active: exhibit ? { kind: 'exhibit', id: exhibit, entry: 'cut' } : null },
     time: {
       mode: 'manual',

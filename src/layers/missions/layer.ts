@@ -1,6 +1,6 @@
 /**
- * The missions Layer: the sampled craft's (Voyager's) trails. Its `missionTrails`
- * settings cluster stays core's: the exhibit sagas read and take its `emphasis`, and
+ * The missions Layer: the sampled craft's (Voyager's) trails. Its `missions`
+ * settings cluster stays core's: the exhibit sagas read and take its `craft`, and
  * nothing under `src/state` may import a Layer.
  */
 

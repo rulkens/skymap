@@ -21,8 +21,8 @@ import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { clearMission, setMission, setMissionSpeed } from '../camera/cameraSlice';
 import { selectOrientation } from '../settings/selectors';
-import { selectMissionEmphasis } from '../settings/core/missionTrails/selectors';
-import { setMissionEmphasis } from '../settings/core/missionTrails/slice';
+import { selectMissionCraft } from '../settings/core/missions/selectors';
+import { setMissionCraft } from '../settings/core/missions/slice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectTimeState } from '../time/selectors';
 import { pause, resume, setSimDays, stepToEvent } from '../time/timeSlice';
@@ -65,8 +65,8 @@ export function* missionHoldSaga(
       reaim,
     };
   };
-  // The exhibit's snapshot always sets the emphasis before this saga runs.
-  let mission = missionOf((yield* select(selectMissionEmphasis))!);
+  // The exhibit's snapshot always sets the craft before this saga runs.
+  let mission = missionOf((yield* select(selectMissionCraft))!);
   const nowMs = performance.now();
   // A linked `t=` is already on the clock; it wins over the launch, kept inside the mission.
   const entryDays = atLinkedTime
@@ -90,7 +90,7 @@ export function* missionHoldSaga(
       const next = yield* race({
         exit: take(exitTakeover),
         step: take(stepToEvent),
-        tab: take(setMissionEmphasis),
+        tab: take(setMissionCraft),
         play: take(playMission),
         resume: take(resume),
         speed: take(stepMissionSpeed),

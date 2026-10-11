@@ -11,8 +11,8 @@ import { Provider } from 'react-redux';
 import ExhibitTimelineContainer from '../../../src/components/containers/ExhibitTimelineContainer';
 import { createTestStore } from '../../support/createTestStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
-import { selectMissionEmphasis } from '../../../src/state/settings/core/missionTrails/selectors';
-import { setMissionEmphasis } from '../../../src/state/settings/core/missionTrails/slice';
+import { selectMissionCraft } from '../../../src/state/settings/core/missions/selectors';
+import { setMissionCraft } from '../../../src/state/settings/core/missions/slice';
 import { MISSION_SPEEDS } from '../../../src/data/exhibits/mission/missionSpeeds';
 import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
@@ -49,7 +49,7 @@ function mount(simIso: string) {
     setSimDays({ simDays: unixMsToJulianDays(Date.parse(simIso)), nowMs: performance.now() }),
   );
   // The exhibit's entry settings emphasise Voyager 1; the first lane alone would be Voyager 2.
-  store.dispatch(setMissionEmphasis('voyager1'));
+  store.dispatch(setMissionCraft('voyager1'));
   store.dispatch(resume({ nowMs: performance.now() }));
   vi.spyOn(store, 'dispatch');
   const wrapper = ({ children }: { children: ReactNode }) =>
@@ -96,7 +96,7 @@ describe('ExhibitTimelineContainer', () => {
     const store = mount('2026-01-01');
     expect(screen.getByRole('tab', { name: /Voyager 1/ })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
-    expect(selectMissionEmphasis(store.getState())).toBe('voyager2');
+    expect(selectMissionCraft(store.getState())).toBe('voyager2');
     expect(screen.getByRole('tab', { name: /Voyager 2/ })).toHaveAttribute('aria-selected', 'true');
   });
 

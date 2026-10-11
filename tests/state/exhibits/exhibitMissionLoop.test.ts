@@ -14,7 +14,7 @@ import { setMissionOffsets } from '../../../src/state/camera/cameraSlice';
 import { exhibitBodySaga } from '../../../src/state/exhibits/exhibitBodySaga';
 import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
-import { setMissionEmphasis } from '../../../src/state/settings/core/missionTrails/slice';
+import { setMissionCraft } from '../../../src/state/settings/core/missions/slice';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { pause, resume, setSimDays, goLive, stepToEvent } from '../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../src/store/rootReducer';
@@ -85,7 +85,7 @@ describe('mission hold loop', () => {
 
   it('steps to a flyby two days early and plays', async () => {
     const { store, step, simDays } = await hold();
-    store.dispatch(setMissionEmphasis('voyager2'));
+    store.dispatch(setMissionCraft('voyager2'));
     await tick();
     step('voyager2-neptune');
     await tick();
@@ -119,11 +119,11 @@ describe('mission hold loop', () => {
     const { store, simDays } = await hold();
     const nowMs = performance.now();
     store.dispatch(setSimDays({ simDays: eventDays('voyager2-launch'), nowMs }));
-    store.dispatch(setMissionEmphasis('voyager1'));
+    store.dispatch(setMissionCraft('voyager1'));
     await tick();
     expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
     store.dispatch(setSimDays({ simDays: eventDays('voyager1-jupiter'), nowMs }));
-    store.dispatch(setMissionEmphasis('voyager2'));
+    store.dispatch(setMissionCraft('voyager2'));
     await tick();
     expect(simDays()).toBeCloseTo(eventDays('voyager1-jupiter'), 9);
     expect(store.getState().camera.mission?.craftId).toBe('voyager2');
@@ -132,7 +132,7 @@ describe('mission hold loop', () => {
   it('carries a clock at one craft’s launch to the other’s launch on a tab switch', async () => {
     const { store, simDays } = await hold();
     expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
-    store.dispatch(setMissionEmphasis('voyager2'));
+    store.dispatch(setMissionCraft('voyager2'));
     await tick();
     expect(simDays()).toBeCloseTo(eventDays('voyager2-launch'), 9);
   });
@@ -184,7 +184,7 @@ describe('mission hold loop', () => {
 
   it('a tab click during the fly-in switches the followed craft', async () => {
     const { store } = await hold('fly', never());
-    store.dispatch(setMissionEmphasis('voyager2'));
+    store.dispatch(setMissionCraft('voyager2'));
     await tick();
     expect(store.getState().camera.mission?.craftId).toBe('voyager2');
   });
@@ -290,7 +290,7 @@ describe('mission hold loop', () => {
     const afterStep = store.getState().camera.mission!;
     expect(afterStep.reaim).toBe(true);
     expect(afterStep.stops).not.toBe(entry.stops);
-    store.dispatch(setMissionEmphasis('voyager2'));
+    store.dispatch(setMissionCraft('voyager2'));
     await tick();
     const afterTab = store.getState().camera.mission!;
     expect(afterTab.reaim).toBe(true);

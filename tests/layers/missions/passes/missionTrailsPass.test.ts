@@ -14,7 +14,7 @@ const ctx = { cam: { distance: 0 }, snapshot: { nowMs: 0, simDays: 0 } } as neve
 // wrong kind (orbitTrails) sees 0 and the test fails.
 function stateWith(opts: { orbit: boolean; mission: boolean; fadeKind: FadeId['kind'] }) {
   return {
-    settings: { orbitTrails: { enabled: opts.orbit }, missionTrails: { enabled: opts.mission } },
+    settings: { orbitTrails: { enabled: opts.orbit }, missions: { trails: opts.mission } },
     subsystems: { fades: { opacityOf: (h: FadeId) => (h.kind === opts.fadeKind ? 1 : 0) } },
   } as unknown as EngineState;
 }
@@ -22,7 +22,7 @@ function stateWith(opts: { orbit: boolean; mission: boolean; fadeKind: FadeId['k
 const pass = missionTrailsPass({ renderer: {} as never });
 
 describe('missionTrailsPass.enabled', () => {
-  it('follows missionTrails alone, not orbitTrails', () => {
+  it('follows missions.trails alone, not orbitTrails', () => {
     const on = stateWith({ orbit: false, mission: true, fadeKind: 'missionTrails' });
     expect(pass.enabled(on, ctx, null as never)).toBe(true);
     const off = stateWith({ orbit: true, mission: false, fadeKind: 'orbitTrails' });

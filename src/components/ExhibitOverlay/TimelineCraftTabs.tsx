@@ -1,5 +1,5 @@
 /**
- * TimelineCraftTabs — one tab per craft; the selection is the store's mission emphasis, so
+ * TimelineCraftTabs — one tab per craft; the selection is the store's mission craft, so
  * choosing a craft also dims the other in the 3D view. Arrow keys move between tabs.
  */
 

@@ -67,7 +67,7 @@ function makeSnapshot(
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
-      missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
+      missions: { ...f.missions, trails: !f.missions.trails },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
       blackHoles: { items: { 'sgr-a-star': { labelEnabled: false } } },

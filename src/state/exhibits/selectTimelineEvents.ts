@@ -1,5 +1,5 @@
 import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
-import { selectMissionEmphasis } from '../settings/core/missionTrails/selectors';
+import { selectMissionCraft } from '../settings/core/missions/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { MissionEvent } from '../../@types/missions/MissionEvent';
@@ -13,7 +13,7 @@ export const selectTimelineEvents = (state: RootState): readonly MissionEvent[] 
   if (source?.kind !== 'exhibit') return null;
   for (const section of exhibitRegistry[source.id].body) {
     if (section.kind === 'timeline') {
-      const craft = selectMissionEmphasis(state);
+      const craft = selectMissionCraft(state);
       return section.events.filter((e) => e.bodyId === craft);
     }
   }

@@ -82,7 +82,7 @@ describe('Settings page', () => {
   // changes: the debug panel's, a tour's or an exhibit's, or nobody's.
   const NOT_IN_PANEL = [
     /^debug\./,
-    /^missionTrails\.emphasis$/,
+    /^missions\.craft$/,
     /^picking\./,
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,

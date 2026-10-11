@@ -1,8 +1,8 @@
 /**
  * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant, paused
- * flag, mission profile and emphasised craft in; `setSimDays` (scrub), `stepToEvent`,
- * `setMissionEmphasis`, `playMission`, `stepMissionSpeed` and `pause` out (the craft tabs ARE the
- * store's emphasis, so the 3D view dims the other craft). The instant and the profile's live
+ * flag, mission profile and selected craft in; `setSimDays` (scrub), `stepToEvent`,
+ * `setMissionCraft`, `playMission`, `stepMissionSpeed` and `pause` out (the craft tabs ARE the
+ * store's craft, so the 3D view dims the other craft). The instant and the profile's live
  * speed are re-derived on a 4 Hz interval, as the TimeBar's readout is, so a running clock
  * re-renders this leaf and not the whole exhibit overlay.
  */
@@ -16,8 +16,8 @@ import { playMission } from '../../state/exhibits/playMission';
 import { stepMissionSpeed } from '../../state/exhibits/stepMissionSpeed';
 import { selectMissionSpeedIndex } from '../../state/camera/selectors';
 import { selectTimeState } from '../../state/time/selectors';
-import { selectMissionEmphasis } from '../../state/settings/core/missionTrails/selectors';
-import { setMissionEmphasis } from '../../state/settings/core/missionTrails/slice';
+import { selectMissionCraft } from '../../state/settings/core/missions/selectors';
+import { setMissionCraft } from '../../state/settings/core/missions/slice';
 import { pause, setSimDays, stepToEvent } from '../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -39,7 +39,7 @@ export type ExhibitTimelineContainerProps = {
 function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
-  const emphasis = useAppSelector(selectMissionEmphasis);
+  const craft = useAppSelector(selectMissionCraft);
   const lanes = useMemo(() => timelineLanes(section.crafts), [section.crafts]);
   // The axis ends at the wall clock as the exhibit opened; it does not creep.
   const endMs = useMemo(() => Date.now(), []);
@@ -93,13 +93,13 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
     atFastest: speedIndex === MISSION_SPEEDS.length - 1,
   };
 
-  const onSelect = useCallback((id: string) => dispatch(setMissionEmphasis(id)), [dispatch]);
+  const onSelect = useCallback((id: string) => dispatch(setMissionCraft(id)), [dispatch]);
 
   return (
     <ExhibitTimeline
       section={section}
       lanes={lanes}
-      selectedId={emphasis!}
+      selectedId={craft!}
       simDays={simDays}
       endMs={endMs}
       onSeek={onSeek}

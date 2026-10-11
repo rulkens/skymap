@@ -1,6 +1,6 @@
 /**
  * missionTrailsPass — Voyager-style sampled-craft trails, additive into HDR
- * beside `orbitTrailsPass` (same NEAR0 step) but on its own `missionTrails` setting and fade.
+ * beside `orbitTrailsPass` (same NEAR0 step) but on its own `missions.trails` setting and fade.
  * The renderer builds and uploads vertices once per `trajectoryRegistry.version()`;
  * per frame the pass only picks `k`, the vertices at or before the sim clock, and
  * ends the trail on the snapshot position so it welds to the mesh. The vp is
@@ -29,7 +29,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass {
 
     enabled(state, ctx, _view) {
       if (
-        !state.settings.missionTrails.enabled &&
+        !state.settings.missions.trails &&
         state.subsystems.fades.opacityOf({ kind: 'missionTrails' }, ctx.snapshot.nowMs) <= 0
       ) {
         return false;
@@ -58,7 +58,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass {
       for (const { id, trailColor } of SAMPLED_BODIES) {
         const track = tracks.get(id);
         if (track === undefined) continue;
-        const dim = emphasisDim(state.settings.missionTrails.emphasis, id);
+        const dim = emphasisDim(state.settings.missions.craft, id);
         const k = countAtOrBefore(track.tDays, ctx.snapshot.simDays);
         if (k === 0) continue;
         // Past the last vertex the craft is held on it: no head segment to draw.
