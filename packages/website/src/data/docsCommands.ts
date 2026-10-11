@@ -197,6 +197,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/loadtime/README.md',
       },
       {
+        scripts: ['phone'],
+        does: 'Serves the app to an Android phone on the same WiFi and, over USB, opens links there, takes pictures, lists what it downloads and times its frames.',
+        manual: 'tools/phone/README.md',
+      },
+      {
         scripts: ['structure-audit'],
         does: 'Writes one page of tables on the app’s source: which folder imports which, import cycles, unused exports and repeated code.',
         manual: 'tools/structure-audit/README.md',

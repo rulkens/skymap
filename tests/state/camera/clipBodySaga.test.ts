@@ -24,9 +24,11 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
-import { selectionResolverOver } from '../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
@@ -52,10 +54,8 @@ function blockingSeam(onCancel: () => void): PlayClipStub {
   });
 }
 
-// Default deps resolve nothing — fine for focus-free clips like flyout.
-const EMPTY_DEPS: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
+// The default store resolves nothing — fine for focus-free clips like flyout.
+const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
@@ -64,7 +64,7 @@ const RUNTIME: LiveCameraRuntime = {
   upBasisQuat: [0, 0, 0, 1],
 };
 
-function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS) {
+function buildHarness(seam: PlayClipStub, structures: StructureRowFixture = EMPTY_STRUCTURES) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
@@ -72,8 +72,7 @@ function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS)
   });
   sagaMiddleware.setContext({
     playClip: (clip: ClipData) => seam(clip),
-    resolveDeps: () => resolveDeps,
-    selection: selectionResolverOver(resolveDeps),
+    selection: selectionResolverOver(structures),
     cameraRuntime: () => RUNTIME,
   });
   sagaMiddleware.run(watchTakeoverSaga);
@@ -152,12 +151,13 @@ describe('clipBodySaga', () => {
         physicalRadiusMpc: 2,
       } as StructureInfo,
     };
-    const deps: ResolveDeps = {
-      structures: { byId: (id) => groups[id] ?? null, byCategory: () => [] },
+    const structures: StructureRowFixture = {
+      byId: (id) => groups[id] ?? null,
+      byCategory: () => [],
     };
 
     const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
-    const { store } = buildHarness(seam, deps);
+    const { store } = buildHarness(seam, structures);
 
     store.dispatch(startClip('flyPathDemo'));
     await flush();

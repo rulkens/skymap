@@ -48,6 +48,11 @@ struct Uniforms {
   // the CPU writer must zero them so future fields don't surprise existing
   // label buffers.
   cam: CameraUniforms,
+  // Clip units of the matrix in 'cam' relative to Mpc (1 for the COSMO matrix;
+  // the NEAR0 overlays rescale theirs). The vertex stage multiplies the em by
+  // it so 'worldEmMpc / clip.w' stays a ratio of like units. Bytes 80..83;
+  // WGSL rounds the struct up to 96.
+  emClipScale: f32,
 };
 
 struct LabelData {

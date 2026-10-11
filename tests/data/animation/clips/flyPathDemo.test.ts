@@ -5,7 +5,7 @@
  *
  * The clip mixes `atFocus` (catalog-resolved) and `atPoint` (hand-placed)
  * waypoints, so unlike `flyout` it must run through `resolveClipFoci` before it
- * can compile. We supply a minimal `ResolveDeps` that resolves the three group
+ * can compile. We supply a minimal structure store that resolves the three group
  * ids to known structures (mirroring the resolveClipFoci suite's fixture), so
  * the test does not depend on linked catalog data.
  */
@@ -13,12 +13,11 @@
 import { describe, it, expect } from 'vitest';
 import { flyPathDemo } from '../../../../src/data/animation/clips/flyPathDemo';
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
-import { selectionResolverOver } from '../../../support/selectionResolverOver';
+import { selectionResolverOver, type StructureRowFixture } from '../../../support/selectionResolverOver';
 import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
-import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
@@ -72,10 +71,8 @@ const GROUPS: Record<string, StructureInfo> = {
   } as StructureInfo,
 };
 
-const DEPS: ResolveDeps = {
-  structures: { byId: (id) => GROUPS[id] ?? null, byCategory: () => [] },
-};
-const RESOLVER = selectionResolverOver(DEPS);
+const STRUCTURES: StructureRowFixture = { byId: (id) => GROUPS[id] ?? null, byCategory: () => [] };
+const RESOLVER = selectionResolverOver(STRUCTURES);
 
 /** Resolve foci + live start, then compile — the play-time pipeline. */
 function prepared() {

@@ -6,6 +6,7 @@ const SWITCH = 'On or off';
 const PANEL = 'src/components/SettingsPanel';
 const GALAXIES = 'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx';
 const STARS = 'src/layers/starCatalog/ui/StarsSection.tsx';
+const STRUCTURES = 'src/layers/structure/ui/StructuresSection/StructuresSection.tsx';
 const LABELS = `${PANEL}/LabelsAndGuidesSection.tsx`;
 const DISPLAY = `${PANEL}/DisplaySection.tsx`;
 
@@ -449,7 +450,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'structures',
     title: 'Structures',
-    file: `${PANEL}/StructuresSection.tsx`,
+    file: STRUCTURES,
     rows: [
       {
         name: 'Structures',

@@ -103,7 +103,7 @@ export type Layer<
   /** Per-source counts on the same terms. Core dispatches `engineSourceCountReported`
    * per yield and keeps its ready-total / contentVersion side effects. */
   sourceCounts?(runtime: Runtime): AsyncIterable<SourceCountReport>;
-  /** Appended after `CORE_PLANNERS` in `createLayers`; a row's own `FrameSection`
+  /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
 };

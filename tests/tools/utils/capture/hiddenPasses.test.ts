@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CAPTURE_HIDDEN_PASSES } from '../../../../tools/utils/capture/hiddenPasses';
-import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/index';
+import { FRAME_ORDER_PASS_NAMES } from '../../../../src/services/engine/frame/frameOrderPassNames';
 
 describe('CAPTURE_HIDDEN_PASSES', () => {
-  it('every pass the capture hides is a real content pass', () => {
-    const knownNames = new Set(CONTENT_PASSES.map((pass) => pass.name));
+  // Core's and every Layer's passes alike: a Layer's pass exists only after
+  // boot, but its name is authored on a FRAME_ORDER line.
+  it('every pass the capture hides is a pass a FRAME_ORDER line draws', () => {
     for (const hidden of CAPTURE_HIDDEN_PASSES) {
-      expect(knownNames.has(hidden)).toBe(true);
+      expect(FRAME_ORDER_PASS_NAMES).toContain(hidden);
     }
   });
 });

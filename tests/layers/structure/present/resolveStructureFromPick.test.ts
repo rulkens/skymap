@@ -1,0 +1,67 @@
+import { describe, it, expect } from 'vitest';
+
+import { resolveStructureFromPick } from '../../../../src/layers/structure/present/resolveStructureFromPick';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
+
+// Minimal structure fixtures.  The helper only indexes the returned array by
+// identity, so each record needs only the fields that satisfy `StructureInfo`.
+const virgo: StructureInfo = {
+  type: 'structure',
+  id: 'virgo-m87',
+  name: 'Virgo Cluster',
+  category: 'galaxy-cluster',
+  worldPos: [10, 0, 0],
+  featured: true,
+  physicalRadiusMpc: 2.2,
+};
+const coma: StructureInfo = {
+  type: 'structure',
+  id: 'coma',
+  name: 'Coma Cluster',
+  category: 'galaxy-cluster',
+  worldPos: [0, 100, 0],
+  featured: true,
+  physicalRadiusMpc: 6,
+};
+const bootes: StructureInfo = {
+  type: 'structure',
+  id: 'bootes-void',
+  name: 'Boötes Void',
+  category: 'void',
+  worldPos: [0, 0, 100],
+  featured: true,
+  physicalRadiusMpc: 50,
+};
+
+// Minimal store stub: the helper reads only `byCategory`.  We branch on the category so each test can
+// verify the helper indexes the RIGHT per-category bucket.
+const structures = {
+  byCategory(category: StructureId): readonly StructureInfo[] {
+    if (category === 'galaxy-cluster') return [virgo, coma];
+    if (category === 'void') return [bootes];
+    return [];
+  },
+};
+
+describe('resolveStructureFromPick', () => {
+  it('resolves the 0th cluster index to the first record', () => {
+    expect(
+      resolveStructureFromPick(structures, { category: 'galaxy-cluster', structureIndex: 0 }),
+    ).toBe(virgo);
+  });
+
+  it('resolves a void index independently of the cluster bucket', () => {
+    // The per-category-local indexing invariant: a `structureIndex` of 0
+    // means "the 0th of THIS category", not "the 0th globally".
+    expect(resolveStructureFromPick(structures, { category: 'void', structureIndex: 0 })).toBe(
+      bootes,
+    );
+  });
+
+  it('returns null for out-of-bounds indices', () => {
+    expect(
+      resolveStructureFromPick(structures, { category: 'galaxy-cluster', structureIndex: 99 }),
+    ).toBe(null);
+  });
+});

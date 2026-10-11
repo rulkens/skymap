@@ -13,7 +13,7 @@
  * leader-line endpoints) shifts every frame as the camera — hence the
  * matrix — moves.
  *
- * Moved from `foregroundLabelsPass.test.ts` (spec §5.2): the lift stage this
+ * Moved from `labelsNearPass.test.ts` (spec §5.2): the lift stage this
  * regression guards now lives in `label2DDirector.ts`'s `applyLift`, driven
  * here through the REAL `produceStarCaptions` producer (the star Layer's own,
  * since the famous-star map moved there) and a REAL Earth-zoom NEAR0 frustum,
@@ -65,9 +65,6 @@ function makeLabelStub(): LabelRenderer {
     label: 'foregroundLabelRenderer',
     setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
-    measure: vi.fn<() => null>(() => null),
-    glyphCount: () => 0,
-    labelCount: () => 0,
     destroy: vi.fn(),
   } as unknown as LabelRenderer;
 }
@@ -217,7 +214,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub);
+    dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     const state = makeState();
 
@@ -257,7 +254,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub);
+    dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
@@ -299,7 +296,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub);
+    dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;

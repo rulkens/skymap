@@ -1,8 +1,8 @@
 /**
- * engineSliceDispatches — the core wiring sites that still dispatch an
- * engineSlice action of their own: `wireStructureProjection` and
- * `installLoadProgress`. Spin up a real Redux store, spy on `dispatch`, drive
- * the wiring function, assert the matching action creator was called.
+ * engineSliceDispatches — the core wiring site that still dispatches an
+ * engineSlice action of its own: `installLoadProgress`. Spin up a real Redux
+ * store, spy on `dispatch`, drive the wiring function, assert the matching
+ * action creator was called.
  *
  * `wireSlots`'s `loading` emission and `engine.ts`'s `initializing`/`error`
  * emissions are integration-level, exercised by `wireSlots.test.ts` and
@@ -11,62 +11,18 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../../src/store/createAppStore';
-import {
-  engineStructureCountsChanged,
-  engineLoadProgressChanged,
-} from '../../../../src/state/engine/engineSlice';
+import { engineLoadProgressChanged } from '../../../../src/state/engine/engineSlice';
 import { Source } from '../../../../src/data/sources';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { EngineAssetSlots } from '../../../../src/@types/engine/state/EngineAssetSlots';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
-import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
-import type { StructureCatalogPayload } from '../../../../src/@types/loading/structureCatalogPayload/StructureCatalogPayload';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks needed for wiring helpers ──────────────────────────────────
-
-// buildStaticAnchorStructures + structureCatalogToStructures: deterministic
-// minimal lists for wireStructureProjection tests.
-vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
-  buildStaticAnchorStructures: vi.fn(() => [
-    {
-      id: 'galaxy-cluster-virgo',
-      name: 'Virgo Cluster',
-      category: 'galaxy-cluster',
-      worldPos: [0, 0, 0.016],
-      physicalRadiusMpc: 2.2,
-      featured: true,
-    },
-    {
-      id: 'galaxy-group-local-group',
-      name: 'Local Group',
-      category: 'galaxy-group',
-      worldPos: [0, 0, 0],
-      physicalRadiusMpc: 0.16,
-      apparentRadiusMpc: 0.94,
-      featured: true,
-    },
-  ]),
-}));
-
-vi.mock('../../../../src/services/engine/wiring/structureCatalogToStructures', () => ({
-  structureCatalogToStructures: vi.fn((payload: StructureCatalogPayload) =>
-    payload.meta.map((m) => ({
-      id: `galaxy-cluster-bulk-${m.id}`,
-      name: m.names[0],
-      category: 'galaxy-cluster',
-      worldPos: [0, 0, 0],
-      physicalRadiusMpc: 2,
-      featured: false,
-    })),
-  ),
-}));
 
 // loadProgressAggregator: capture the emit callback so we can fire it
 // manually in the installLoadProgress tests.
@@ -81,44 +37,10 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // ── Post-mock imports ───────────────────────────────────────────────────────
 
-import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
-
-function makeStructureState(): {
-  state: EngineState;
-  fireSlot: (s: LoadState<StructureCatalogPayload>) => void;
-} {
-  const listeners = new Set<(s: LoadState<StructureCatalogPayload>) => void>();
-  const state = {
-    data: createEngineData(),
-    assetSlots: {
-      structureCatalog: {
-        name: 'structure-catalog',
-        subscribe: (fn: (s: LoadState<StructureCatalogPayload>) => void) => {
-          listeners.add(fn);
-          return () => listeners.delete(fn);
-        },
-        load: vi.fn(),
-        state: () => ({ kind: 'idle' }),
-        current: () => null,
-        lastRequest: () => null,
-        startedAtMs: () => null,
-        forceReload: vi.fn(),
-        cancel: vi.fn(),
-        release: vi.fn(),
-      },
-    },
-  } as unknown as EngineState;
-  return {
-    state,
-    fireSlot: (s) => {
-      for (const fn of listeners) fn(s);
-    },
-  };
-}
 
 function makeProgressState(): EngineState {
   const stubSlot = <T, Req>(name: string): AssetSlot<T, Req> => ({
@@ -138,7 +60,6 @@ function makeProgressState(): EngineState {
   // at RUNTIME, so a fixture carrying fields production dropped would still walk
   // — and pin a shape that no longer exists.
   const assetSlots: EngineAssetSlots = {
-    structureCatalog: stubSlot('structure-catalog'),
     bodyTextureAtlas: stubSlot('body-texture-atlas'),
     // Empty keyed families: installLoadProgress walks them like layerSlots.
     bodyTextures: new Map(),
@@ -155,34 +76,6 @@ function makeProgressState(): EngineState {
     layerSlots: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
   } as unknown as EngineState;
 }
-
-// ── wireStructureProjection: engineStructureCountsChanged ──────────────────
-
-describe('wireStructureProjection → engineStructureCountsChanged', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('dispatches engineStructureCountsChanged with four-category counts at boot', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const { state } = makeStructureState();
-    const cb = { store, sources: {} } as unknown as EngineCallbacks;
-
-    wireStructureProjection(state, cb);
-
-    expect(spy).toHaveBeenCalledWith(
-      engineStructureCountsChanged(
-        expect.objectContaining({
-          'galaxy-cluster': expect.any(Number),
-          supercluster: expect.any(Number),
-          void: expect.any(Number),
-          'galaxy-group': expect.any(Number),
-        }),
-      ),
-    );
-  });
-});
 
 // ── installLoadProgress: engineLoadProgressChanged ─────────────────────────
 

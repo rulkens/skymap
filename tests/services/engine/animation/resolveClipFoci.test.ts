@@ -12,7 +12,7 @@
  *
  * ### Fixture strategy
  *
- * We build a minimal `ResolveDeps` that resolves a single structure id
+ * We build a minimal structure store that resolves a single structure id
  * ('galaxy-cluster-virgo') to a known `StructureInfo` record. That structure's
  * `worldPos` and `physicalRadiusMpc` are chosen so `focusFraming` returns
  * predictable values we can assert against using `structureFocusDistance`.
@@ -21,12 +21,15 @@
  *
  * `resolveFocusId` and `extractSelectionRow` are NOT mocked — we use their
  * real implementations so the chain `id → ref → row → framing` is integration-
- * tested end to end. Only the `ResolveDeps` bag itself is a fixture.
+ * tested end to end. Only the structure store itself is a fixture.
  */
 
 import { describe, it, expect } from 'vitest';
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
-import { selectionResolverOver } from '../../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../../support/selectionResolverOver';
 import {
   moveTargetId,
   dollyToId,
@@ -50,7 +53,6 @@ import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { GALACTIC_DISC_FORWARD } from '../../../../src/services/engine/camera/cameraFraming';
-import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -90,17 +92,15 @@ const VIRGO: StructureInfo = {
 } as StructureInfo;
 
 /**
- * `ResolveDeps` that resolves 'galaxy-cluster-virgo' via the structure path used by
+ * A store that resolves 'galaxy-cluster-virgo' via the structure path used by
  * `resolveFocusId` (the `${category}-${seedId}` prefix test). No catalogs
  * are needed because no galaxy ids are tested here — only structures.
  */
-const DEPS: ResolveDeps = {
-  structures: {
-    byId: (id) => (id === 'galaxy-cluster-virgo' ? VIRGO : null),
-    byCategory: () => [],
-  },
+const STRUCTURES: StructureRowFixture = {
+  byId: (id) => (id === 'galaxy-cluster-virgo' ? VIRGO : null),
+  byCategory: () => [],
 };
-const RESOLVER = selectionResolverOver(DEPS);
+const RESOLVER = selectionResolverOver(STRUCTURES);
 
 // Pre-computed expected framing values (mirrors what focusFraming returns for VIRGO):
 const EXPECTED_TARGET: [number, number, number] = [10, 0, 0];
@@ -327,7 +327,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
 describe('resolveClipFoci throws on unresolvable id', () => {
   it('throws when a non-null focusId does not resolve', () => {
     // 'no-such-object' passes the [a-z0-9_-]+ char-class gate and routes to
-    // resolveFamous, which scans famousMeta (empty in DEPS) and returns null —
+    // resolveFamous, which scans famousMeta (none in RESOLVER) and returns null —
     // the only id format for which resolveFocusId itself returns null against
     // this fixture. Structure-prefixed ids (cluster-*, etc.) return a non-null
     // phantom ref without any existence check, so they would not trigger the throw.
@@ -494,14 +494,10 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
       featured: true,
       physicalRadiusMpc: 3,
     } as StructureInfo;
-    const deps: ResolveDeps = {
-      ...DEPS,
-      structures: {
-        byId: (sid) => (sid === 'galaxy-cluster-northstar' ? northStar : null),
-        byCategory: () => [],
-      },
-    };
-    const resolver = selectionResolverOver(deps);
+    const resolver = selectionResolverOver({
+      byId: (sid) => (sid === 'galaxy-cluster-northstar' ? northStar : null),
+      byCategory: () => [],
+    });
 
     const id = focusId('galaxy-cluster-northstar');
     const livePose: CameraPose = { target: [0, 0, 0], yaw: 1.0, pitch: 0, distance: 5 };

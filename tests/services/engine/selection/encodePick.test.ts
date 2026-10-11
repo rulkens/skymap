@@ -16,7 +16,7 @@ import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { bodySelectionRow } from '../../../../src/services/engine/selection/bodySelectionRow';
-import { structureSelectionRow } from '../../../../src/services/engine/selection/structureSelectionRow';
+import { structureSelectionRow } from '../../../../src/layers/structure/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -65,7 +65,7 @@ describe('SelectionKindRow.encodePick', () => {
   });
 
   it('structure: the index is per category, and matches the ring pick word', () => {
-    const row = structureSelectionRow(() => ({ structures: structureStore }));
+    const row = structureSelectionRow(structureStore);
     const ref = { type: 'structure', id: 'c1' } as const;
     expect(roundTrip(row, ref)).toEqual(ref);
     expect(row.encodePick(ref)).toBe(structurePickId('galaxy-cluster', 1));
