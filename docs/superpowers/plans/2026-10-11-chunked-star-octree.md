@@ -220,13 +220,13 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree;
 
 Node set: every record's node at `L(M)` (Morton of its cell at that level) plus every ancestor to the root; rows sorted `(level, morton)` ascending so a forward scan visits children before parents. A node with `childMask ≠ 0` gets one blob record built over every descendant record (flux `10^(−0.4·M)` weights; centroid is a fraction of the node's own box; `blobCount` = their number). A node with no children has no blob. `STAR_LEAF_CAPACITY`'s fat-leaf fold is not applied. Flux helpers already exist: `fluxFromAbsMag`, `aggregateMeanAbsMag` (`tools/stars/mergeFluxAggregate.ts`); reuse them.
 
-- [ ] Test `levelForMagnitude: hand-computed levels at known magnitudes` — `grid = { bits: 10, cellEdge: 23.4 }`, `stratify = { thr: 0.16, mLim: 10, refUnit: 10 }`: `M = 10 → 0` (clamped from negative), `M = −3 → 5`, `M = −6 → 7` (compute the expected values by hand in the test's comment, never by calling the function).
-- [ ] Test `levelForMagnitude: an octave of thr moves the level by exactly one` — same inputs at `thr` and `2·thr` for three magnitudes away from a rounding boundary.
-- [ ] Test `levelForMagnitude: clamps at 0 and at grid.bits` — `M = +20` and `M = −30`.
-- [ ] Test `stratifyOctree: a record lives at the level its magnitude earns` — four records at hand-chosen magnitudes landing at levels 0, 0, 2, 5 in one 10-bit grid; assert each record's owner row has that level and the row's Morton is the record's cell at that level.
-- [ ] Test `stratifyOctree: own + blob flux equals subtree flux at every node` (spec §9 "flux conservation") — a fixture of ~200 random records; for every row with a blob: `flux(blob.absMag)·blobCount` equals the sum of flux over every descendant record (own records of strict descendants) within 1e-6 relative; `blobCount` equals that descendant count, which excludes the node's own records.
-- [ ] Test `stratifyOctree: rows sort by (level, morton) and the root is last; records lie own-then-blob per row` — assert `firstRecord` is monotone and `firstRecord[i] + ownCount[i] + (childMask[i] ? 1 : 0) === firstRecord[i + 1]`.
-- [ ] Implement. `npm test -- tools/octree` passes. Commit.
+- [x] Test `levelForMagnitude: hand-computed levels at known magnitudes` — `grid = { bits: 10, cellEdge: 23.4 }`, `stratify = { thr: 0.16, mLim: 10, refUnit: 10 }`: `M = 10 → 0` (clamped from negative), `M = −3 → 5`, `M = −6 → 7` (compute the expected values by hand in the test's comment, never by calling the function).
+- [x] Test `levelForMagnitude: an octave of thr moves the level by exactly one` — same inputs at `thr` and `2·thr` for three magnitudes away from a rounding boundary.
+- [x] Test `levelForMagnitude: clamps at 0 and at grid.bits` — `M = +20` and `M = −30`.
+- [x] Test `stratifyOctree: a record lives at the level its magnitude earns` — four records at hand-chosen magnitudes landing at levels 0, 0, 2, 5 in one 10-bit grid; assert each record's owner row has that level and the row's Morton is the record's cell at that level.
+- [x] Test `stratifyOctree: own + blob flux equals subtree flux at every node` (spec §9 "flux conservation") — a fixture of ~200 random records; for every row with a blob: `flux(blob.absMag)·blobCount` equals the sum of flux over every descendant record (own records of strict descendants) within 1e-6 relative; `blobCount` equals that descendant count, which excludes the node's own records.
+- [x] Test `stratifyOctree: rows sort by (level, morton) and the root is last; records lie own-then-blob per row` — assert `firstRecord` is monotone and `firstRecord[i] + ownCount[i] + (childMask[i] ? 1 : 0) === firstRecord[i + 1]`.
+- [x] Implement. `npm test -- tools/octree` passes. Commit.
 
 ### Task 4: Capacity-bounded chunking and the object writer, `review: yes`
 

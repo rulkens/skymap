@@ -102,7 +102,7 @@ export function fluxFromAbsMag(absMag: number): number {
  * guaranteed to land inside the single-star LUT window and never clamps (unlike
  * `-2.5·log10(totalFlux)`, the summed magnitude, which does — see the header).
  */
-export function aggregateMeanAbsMag(node: FluxNode): number {
+export function aggregateMeanAbsMag(node: Pick<FluxNode, 'totalFlux' | 'starCount'>): number {
   return -2.5 * Math.log10(node.totalFlux / node.starCount);
 }
 
