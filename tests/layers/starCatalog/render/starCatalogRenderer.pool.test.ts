@@ -53,7 +53,9 @@ function recordingDevice() {
       submit: vi.fn(),
       writeBuffer: vi.fn(
         (buf: { label: string }, offset: number, data: ArrayBufferView | ArrayBuffer) => {
-          writes.push({ label: buf.label, offset, bytes: data.byteLength, data });
+          // writeBuffer copies at the call, so the record does too.
+          const copy = ArrayBuffer.isView(data) ? (data as Uint32Array).slice() : data.slice(0);
+          writes.push({ label: buf.label, offset, bytes: data.byteLength, data: copy });
         },
       ),
     },

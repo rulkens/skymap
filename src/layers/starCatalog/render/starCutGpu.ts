@@ -125,6 +125,10 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
 
   const sources = new Map<SourceType, StarCutSource>();
   const uniformScratch = new ArrayBuffer(CUT_UNIFORM_BYTES);
+  // writeBuffer copies at the call, so landings and evictions reuse these instead of allocating.
+  const rootRowScratch = new Uint32Array(CUT_NODE_WORDS);
+  const slotRowsScratch = new Uint32Array(1);
+  let zeroOpacity = new Float32Array(0);
   // The inputs whose capture cut is already submitted: six faces draw one cut.
   let capturedFor: StarCutInputs | null = null;
 
@@ -249,7 +253,8 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
 
   /** One index row as uploaded, or with its chunk marked resident. */
   function writeRootRow(entry: StarCutSource, row: number, refineDelta: number | null): void {
-    const words = entry.indexRows.slice(row * CUT_NODE_WORDS, (row + 1) * CUT_NODE_WORDS);
+    const words = rootRowScratch;
+    words.set(entry.indexRows.subarray(row * CUT_NODE_WORDS, (row + 1) * CUT_NODE_WORDS));
     if (refineDelta !== null) {
       words[NODE_BITS_WORD] = words[NODE_BITS_WORD]! | NODE_RESIDENT_BIT;
       words[NODE_REFINE_DELTA_WORD] = refineDelta;
@@ -276,7 +281,9 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     // root over another chunk's rows.
     device.queue.writeBuffer(entry.nodes, nodeBase * CUT_NODE_WORDS * WORD_BYTES, rows);
     writeSlotRows(entry, slot, chunk.nodes.count);
-    const zeros = new Float32Array(octree.chunkNodeCap * OPACITY_CHANNELS);
+    const opacityWords = octree.chunkNodeCap * OPACITY_CHANNELS;
+    if (zeroOpacity.length < opacityWords) zeroOpacity = new Float32Array(opacityWords);
+    const zeros = zeroOpacity.subarray(0, opacityWords);
     for (const state of [entry.live, entry.capture]) {
       if (state === null) continue;
       device.queue.writeBuffer(state.opacity, nodeBase * OPACITY_CHANNELS * WORD_BYTES, zeros);
@@ -297,7 +304,8 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   }
 
   function writeSlotRows(entry: StarCutSource, slot: number, rows: number): void {
-    device.queue.writeBuffer(entry.slotRows, slot * WORD_BYTES, Uint32Array.of(rows));
+    slotRowsScratch[0] = rows;
+    device.queue.writeBuffer(entry.slotRows, slot * WORD_BYTES, slotRowsScratch);
   }
 
   /** Write one cut's uniforms and record its three dispatches into `pass`. */
