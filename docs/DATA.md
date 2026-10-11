@@ -38,7 +38,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 
 - `galaxy-catalog/v9/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
 - `star-catalog/v1/`: `stars-{small,medium,large}.bin` (SKST, the `format: 'skst'` side of the A/B)
-- `star-catalog/v2/`: `stars.bin` (the index) + `stars/<level>-<morton>.<hash>.bin` (one per chunk). Chunk names carry the bake's own content hash, so `build-data-manifest` neither hashes nor lists them; the index names every chunk, and the runtime resolves a chunk path straight through.
+- `star-catalog/v2/`: `stars.bin` (the index) + `stars/<level>-<morton>.<hash>.bin` (one per chunk, named by its first root; a chunk packs several chunk roots' subtrees). Chunk names carry the bake's own content hash, so `build-data-manifest` neither hashes nor lists them; the index names every chunk, and the runtime resolves a chunk path straight through.
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
 - `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`

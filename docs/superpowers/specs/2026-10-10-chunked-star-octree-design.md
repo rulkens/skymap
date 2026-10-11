@@ -14,7 +14,7 @@ Packaging: three prep PRs (§8, P1 to P3), each landing on main before any featu
 
 ## 2. Container format
 
-Two object kinds share one framing: an **index object** per catalog and a **chunk object** per chunk root. All integers are little-endian.
+Two object kinds share one framing: an **index object** per catalog and a **chunk object** per chunk, each holding the subtrees of one or more chunk roots (§4). All integers are little-endian.
 
 ### 2.1 Framing (both objects)
 
@@ -42,7 +42,8 @@ type ColumnSchema = {
 
 type OctreeChunkRef = {
   readonly level: number;
-  readonly morton: number; // the chunk root's key
+  readonly morton: number; // the first root's key: with the hash, the object's name
+  readonly roots: readonly number[]; // index rows of the chunk's roots, in Morton order
   readonly hash: string;
   readonly bytes: number; // object name and wire-size hint
   readonly nodes: number;
@@ -55,7 +56,7 @@ type OctreeIndexHeader = {
   readonly grid: { readonly bits: number; readonly origin: Vec3; readonly cellEdge: number }; // catalog unit (pc for stars)
   readonly stratify: { readonly thr: number; readonly mLim: number; readonly refUnit: number };
   readonly chunkCapacity: number; // max records in one chunk object
-  readonly chunkNodeCap: number; // max node rows in one chunk object (pool row stride)
+  readonly chunkNodeCap: number; // the bake's row bound: max node rows in one chunk (pool row stride)
   readonly nodes: number;
   readonly records: number; // this object's own counts
   readonly columns: readonly ColumnSchema[];
@@ -65,7 +66,7 @@ type OctreeIndexHeader = {
 
 type OctreeChunkHeader = {
   readonly kind: 'chunk';
-  readonly level: number;
+  readonly level: number; // the first root's key, as in its OctreeChunkRef
   readonly morton: number;
   readonly nodes: number;
   readonly records: number;
@@ -91,7 +92,7 @@ A chunk carries no schema: `decodeOctreeChunk(buf, indexHeader)` reads the colum
 | 16     | 4    | `blobCount` (u32): real records the blob stands for (the shader's flux multiplier)                   |
 | 20     | 4    | `chunkRef` (u32): index into `header.chunks`, `0xFFFFFFFF` when none (always none in a chunk)        |
 
-Rows sort by `(level, morton)` ascending, as v1 does, so a forward scan visits children before parents. The index's root is its last row. A chunk's table holds only the nodes strictly below its root; its up-to-eight top rows are its last rows. Records lie in node-row order, each node's own records then its blob, so v1's two-region record layout is gone.
+Rows sort by `(level, morton)` ascending, as v1 does, so a forward scan visits children before parents. The index's root is its last row. A chunk's table holds only the nodes strictly below its roots; a top row is one whose parent key is a root's, and since roots may sit at different levels, top rows are not all last. Records lie in node-row order, each node's own records then its blob, so v1's two-region record layout is gone.
 
 ### 2.4 Record stores and the star schema
 
@@ -123,7 +124,7 @@ Columns bake into the GPU record at upload (research §8.5); the shader never de
 | Node index         | catalog-wide < 2²² (`:37`, `:100`)              | pool-wide: `indexNodes + slots·chunkNodeCap < 2²²`        | leaf-list entry `node \| block << 22` kept; the cap binds the resident set, not the catalog |
 | Records per node   | ≤ 8192 (`:108`)                                 | `ownCount ≤ 8192`, bake STOP above                        | 10-bit block index × 8                                                                      |
 | Records per chunk  | none                                            | `chunkCapacity` (32,768)                                  | pool slot stride                                                                            |
-| Rows per chunk     | none                                            | `chunkNodeCap` ≤ 4,096 (`CHUNK_NODE_CAPACITY`)            | pool slot row stride, swept by the cut every frame (§4)                                     |
+| Rows per chunk     | none                                            | `chunkNodeCap` = 2,048 (`CHUNK_NODE_CAPACITY`)            | pool slot row stride, swept by the cut every frame (§4)                                     |
 | Pick record index  | bin-global < 2²⁶ (`selectionEncoding.ts:15-18`) | pool-absolute: `indexRecords + slots·chunkCapacity < 2²⁶` | ⇒ about 2,040 slots at 32k, less the index records                                          |
 
 ## 3. Brightness stratification
@@ -161,13 +162,14 @@ A record's level is `L(M)` alone: hoisting wins over v1's fat-leaf fold (`STAR_L
 
 Chunks are capacity-bounded, not cut at a fixed level (research §8.2).
 
-1. Start at the root. A node with children whose descendant records number at most `chunkCapacity` (first guess **32,768**) and whose descendant rows number at most `CHUNK_NODE_CAPACITY` (**4,096**) becomes a **chunk root**.
-2. A chunk root stays in the index: its row keeps its own records and its blob, so an absent chunk draws as a glow, never a hole. Its `chunkRef` names the chunk.
-3. Every node strictly below a chunk root goes into that chunk object, with its own node table and records. A chunk decodes without any other chunk; chunks never nest.
-4. A node over either bound stays in the index and the split recurses into its children.
-5. **Dense-cell STOP.** The bake stops loudly when a level-0 node would land in the index (its parent's subtree exceeds `chunkCapacity`), or when any node's `ownCount` exceeds 8,192. The row bound never fires it: a level-1 node has at most 8 rows below it. A deeper grid or a dense-leaf split is the open alternative (§10).
+1. Start at the root. A node with children whose descendant records number at most `chunkCapacity` (first guess **32,768**) and whose descendant rows number at most `CHUNK_NODE_CAPACITY` (**2,048**) becomes a **chunk root**.
+2. A chunk root stays in the index: its row keeps its own records and its blob, so an absent chunk draws as a glow, never a hole. Its `chunkRef` names its chunk.
+3. **Packing.** Chunk roots sort by leaf key (`morton·8^level`, depth-first order, so a run of roots is a run of neighbouring space) and fill chunks greedily: a chunk closes when the next root's rows or records would pass either bound. The manifest entry lists its roots' index rows; the first root's key names the object.
+4. Every node strictly below a chunk root goes into its root's chunk object, with that chunk's node table and records. A chunk decodes without any other chunk; chunks never nest.
+5. A node over either bound stays in the index and the split recurses into its children.
+6. **Dense-cell STOP.** The bake stops loudly when a level-0 node would land in the index (its parent's subtree exceeds `chunkCapacity`), or when any node's `ownCount` exceeds 8,192. The row bound never fires it: a level-1 node has at most 8 rows below it. A deeper grid or a dense-leaf split is the open alternative (§10).
 
-`chunkNodeCap` is the largest chunk's row count, written by the bake; the pool's node stride reads it. The row bound exists because the cut sweeps `slots·chunkNodeCap` rows every frame: with records alone bounding a chunk, one sparse outlier subtree (11,530 rows against a 547-row median on the first Gaia bake) set the stride for every slot. Ruled 2026-10-11; the first bake's numbers and the floor that was measured and dropped are in §10.
+`chunkNodeCap` is the row bound, written by the bake; the pool's node stride reads it. The row bound exists because the cut sweeps `slots·chunkNodeCap` rows every frame: with records alone bounding a chunk, one sparse outlier subtree (11,530 rows against a 547-row median on the first Gaia bake) set the stride for every slot. Packing exists because with one root per chunk the outskirts became hundreds of tiny objects, each paying a request and a whole slot. Both ruled 2026-10-11; the bakes' numbers and the floor that was measured and dropped are in §10.
 
 ## 5. Runtime
 
@@ -185,7 +187,7 @@ The format switch is the source row's `format: 'skst' | 'octree'`, read where `s
 ### 5.2 CPU planner over the index
 
 - Each frame walks the index tree over all views, as `cutSurfaceTiles` does: frustum test, then the cut's refine proxy `edge² / dist²` against `thr²`.
-- A chunk root that wants to refine requests its chunk, priority = the largest proxy over views.
+- A chunk root that wants to refine requests its chunk, priority = the largest proxy over views and over the chunk's roots; a chunk is requested once.
 - A resident chunk the walk reaches is touched (`lastSeenFrame`).
 - Concurrency 4, the `SURFACE_TILE_CONCURRENCY` precedent (`surfaceTileParams.ts:50`), on the existing `PriorityQueue` (`priorityQueue.ts:59`).
 - Slots recycle LRU by `lastSeenFrame`; allocation is refused when every slot was claimed this frame, so a stationary camera never evicts and refetches in a loop (`textureAtlas.ts:212-253`).
@@ -194,8 +196,8 @@ The CPU cannot see the GPU's budget bin, so it may fetch a chunk the budget then
 
 ### 5.3 GPU cut over the resident set
 
-- `refines(i)` (`cut.wesl:146-149`) gains `&& childrenResident(i)`. The bit is 1 for every non-chunk-root row and is written for a chunk root's row (one word) when its chunk lands or is evicted.
-- A chunk's `CutNode` rows are composed on the CPU at upload (the wire columns are packed into GPU words there anyway), so that pass writes each row's `parent` and `firstRecord` pool-absolute: `nodeBase = indexNodes + slot·chunkNodeCap`, `recordBase = indexRecords + slot·chunkCapacity`; a chunk's top rows name the chunk root's index row directly. The shader reads them as plain indices; there is no per-node slot word, no base arithmetic and no `slotRoot` table. The index is never rewritten (ruling B's goal). **Ruled 2026-10-11 at plan review**: the spec's earlier `slot` word + shader bases + `slotRoot` sentinel bought nothing once the rows are CPU-composed, and cost a seventh word, two helpers and a binding.
+- `refines(i)` (`cut.wesl:146-149`) gains `&& childrenResident(i)`. The bit is 1 for every non-chunk-root row and is written for every root row of a chunk when it lands (after its rows, with each root's `refineDelta`) or is evicted (before its row count is cleared).
+- A chunk's `CutNode` rows are composed on the CPU at upload (the wire columns are packed into GPU words there anyway), so that pass writes each row's `parent` and `firstRecord` pool-absolute: `nodeBase = indexNodes + slot·chunkNodeCap`, `recordBase = indexRecords + slot·chunkCapacity`; a chunk's top rows name their own root's index row directly. The shader reads them as plain indices; there is no per-node slot word, no base arithmetic and no `slotRoot` table. The index is never rewritten (ruling B's goal). **Ruled 2026-10-11 at plan review**: the spec's earlier `slot` word + shader bases + `slotRoot` sentinel bought nothing once the rows are CPU-composed, and cost a seventh word, two helpers and a binding.
 - The root comes from a `rootNode` uniform, replacing "root is the last node" (`cut.wesl:128`, `starCutLayout.ts:123-124`).
 - A `slotRows` table (one u32 per slot, written at land and evict) holds each slot's live row count; `histogram` and `emit` return on a row past it before reading `nodes` or `opacity`, so the padding up to `chunkNodeCap` (most of the pool: the largest chunk sets the stride) and an empty slot cost no memory traffic. A landing rewrites all of its slot's rows.
 
@@ -303,8 +305,8 @@ The GPU cut over the pool, the fade reset on slot reuse and the wake on chunk la
 ## 10. Open questions this slice does not answer
 
 - Dense cells beyond the STOP: a deeper grid (Morton no longer fits 30 bits) or a dense-leaf split (research §6, §8).
-- Node count under pure `L(M)` placement with no fat-leaf fold. **Measured 2026-10-11** on the first Gaia bake: 1,350,992 rows for 17.07 M records (12.6 records per row), so the tree is not chain-bound and path compression is not needed. What hurt was the spread: `chunkNodeCap` 11,530 against a 547-row median, about 94 % padding at a full pool. The row bound (§4) brings it to 4,082 (2,227 chunks, index 2,545 rows / 318,133 records, 85 % padding).
-- Tiny chunks. **Measured 2026-10-11**: 37 of 2,017 chunks under 10 KB, 83 of 2,227 after the row bound. A floor can only fold a small subtree into the index, since its parent is an index row and has no chunk to join. A 1,024-record floor removes every chunk under 10 KB but grows the index, fetched before first paint, from 2.8 MB to about 4.5 MB (48,837 rows / 396,528 records), so it was dropped. Packing sibling subtrees into one chunk would meet both goals (simulated, row bound 2,048 plus packing in Morton order: 975 chunks, 1 under 10 KB, 33 % padding, index 3,561 rows / 343,872 records) but needs a chunk with several roots in the format and the runtime (one `chunkRef` per root row, a top row's parent found by key, a resident bit and `refineDelta` per root). Open.
+- Node count under pure `L(M)` placement with no fat-leaf fold. **Measured 2026-10-11** on the first Gaia bake: 1,350,992 rows for 17.07 M records (12.6 records per row), so the tree is not chain-bound and path compression is not needed. What hurt was the spread: `chunkNodeCap` 11,530 against a 547-row median, about 94 % padding at a full pool. The row bound (§4) brought it to 4,082 (2,227 chunks, index 2,545 rows / 318,133 records, 85 % padding); packing at a 2,048 bound to 2,048 at 33 % padding (pool rows at 128 slots 525k → 266k).
+- Tiny chunks. **Resolved 2026-10-11 by packing (§4.3).** 37 of 2,017 chunks were under 10 KB, 83 of 2,227 after the row bound. A floor can only fold a small subtree into the index, since its parent is an index row and has no chunk to join; a 1,024-record floor removes every chunk under 10 KB but grows the index, fetched before first paint, from 2.8 MB to about 4.5 MB (48,837 rows / 396,528 records), so it was dropped. Packing roots in Morton order under a 2,048-row bound gives 975 chunks, 1 under 10 KB (9.0 KB), 33 % padding, index 3,561 rows / 343,872 records / 2.95 MB on the real bake, as simulated.
 - `chunkCapacity`, pool slots per tier and planner concurrency are first guesses for the A/B to tune.
 - Galaxies: record packing, aggregate look and bias modes, SDSS/2MRS/DESI on the octree or on SKMP, `pgc-`/`sdss-` side index, search into non-resident chunks (research §7.2 to §7.5).
 - Whether stratification also drives galaxy thumbnails and procedural discs (research §9).
