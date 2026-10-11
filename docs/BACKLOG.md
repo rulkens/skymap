@@ -43,6 +43,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`npm run shot` intermittently fails to settle** `needs-repro` — three no-settle shots in three days, each clean on rerun; HMR mid-boot suspected, unproven. → [details](backlog/2026-10-07-shot-intermittent-no-settle.md)
 
 - [ ] **Star cut: planner value and capture cut are parked outside the frame program** `needs-design` — the cut inputs live on the renderer and the capture cut is submitted from a draw; both blocked by the pick context's empty plan store and capture-face ordering. → [details](backlog/2026-10-07-star-cut-planner-value-and-capture-cut.md)
+- [ ] **View centre avoids the UI (lens shift)** `ready` — panels register the rect they cover and the main camera shifts its frustum off-centre so the visual centre sits in the uncovered area (left of an exhibit sidebar, above mobile bottom UI). → [details](backlog/2026-10-10-view-insets-lens-shift.md)
 
 - [ ] **Faster `npm run shot`** `ready` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
