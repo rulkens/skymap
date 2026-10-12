@@ -5,7 +5,8 @@
  *
  * Referentially stable: an unrelated store write returns the same array, so the `memo` section behind it does not
  * re-render. The label homes are per-cluster selector outputs, never `state.settings` itself, which Immer
- * re-identifies on every write.
+ * re-identifies on every write. The memo has one slot: every caller must pass the same `layerRows` array, or
+ * alternating calls rebuild the rows each time.
  */
 import { createSelector } from '@reduxjs/toolkit';
 import { selectStructureItems } from '../layers/structure/state/structures/selectors';

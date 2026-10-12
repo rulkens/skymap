@@ -1,8 +1,6 @@
 /**
- * createGestureSink — builds the engine's single gesture entry point.
- *
- * `runFrame` replays the aggregator queue at the top of the frame, so waking the
- * loop is the sink's job. The two gesture-start STORE edges fire at push time,
+ * createGestureSink — the engine's single gesture entry point. `runFrame` replays
+ * the aggregator queue at the top of the frame, so waking the loop is the sink's job. The two gesture-start STORE edges fire at push time,
  * not at the drain: `onDoubleClick` dispatches focus synchronously and
  * `watchFocusTweenSaga` reaches `put(startCameraTween)` with no intervening
  * yield, so a `cancelCameraTween` deferred to the next frame would kill the tween

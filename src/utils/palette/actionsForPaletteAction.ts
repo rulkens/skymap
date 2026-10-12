@@ -11,32 +11,25 @@ import { startTour } from '../../state/tour/tourActions';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
-const ACTIONS_FOR: Record<PaletteAction['kind'], (action: PaletteAction) => UnknownAction[]> = {
-  focus: (action) => {
-    if (action.kind !== 'focus') return [];
-    return [requestSelect(action.focusId), requestFocus({ id: action.focusId, transition: 'fly' })];
-  },
-  exhibit: (action) => {
-    if (action.kind !== 'exhibit') return [];
-    return [openExhibit({ id: action.exhibitId, entry: 'fly' })];
-  },
-  tour: (action) => {
-    if (action.kind !== 'tour') return [];
-    return [startTour(action.tourId)];
-  },
-  flyTo: (action) => {
-    if (action.kind !== 'flyTo') return [];
-    return [
-      flyToLonLat({
-        lonDeg: action.lonDeg,
-        latDeg: action.latDeg,
-        body: 'earth',
-        altKm: action.altKm,
-      }),
-    ];
-  },
-};
-
 export function actionsForPaletteAction(action: PaletteAction): UnknownAction[] {
-  return ACTIONS_FOR[action.kind](action);
+  switch (action.kind) {
+    case 'focus':
+      return [
+        requestSelect(action.focusId),
+        requestFocus({ id: action.focusId, transition: 'fly' }),
+      ];
+    case 'exhibit':
+      return [openExhibit({ id: action.exhibitId, entry: 'fly' })];
+    case 'tour':
+      return [startTour(action.tourId)];
+    case 'flyTo':
+      return [
+        flyToLonLat({
+          lonDeg: action.lonDeg,
+          latDeg: action.latDeg,
+          body: 'earth',
+          altKm: action.altKm,
+        }),
+      ];
+  }
 }

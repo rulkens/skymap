@@ -34,7 +34,7 @@ type UsePaletteSearchInput = {
   onTabStep: (delta: 1 | -1) => void;
   open: boolean;
   onClose: () => void;
-  /** Fired with the picked row's action; the parent dispatches on `action.kind`. */
+  /** Fired with the picked row's action; the parent dispatches `actionsForPaletteAction(action)` in order. */
   onSelect: (action: PaletteAction) => void;
 };
 

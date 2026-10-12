@@ -94,7 +94,8 @@ export type CommandPaletteProps = {
   readonly onClose: () => void;
   /**
    * Selection handler — receives the picked row's `PaletteAction`.  The
-   * container dispatches on `action.kind`; the palette resolves nothing itself.
+   * container dispatches `actionsForPaletteAction(action)` in order; the palette
+   * resolves nothing itself.
    */
   readonly onSelect: (action: PaletteAction) => void;
 };
