@@ -16,12 +16,17 @@
   background: var(--surface-control);
   color: var(--color-fg);
   cursor: pointer;
-  transition: background 0.15s ease-out, border-color 0.15s ease-out, opacity 0.15s;
+  transition:
+    background 0.15s ease-out,
+    border-color 0.15s ease-out,
+    opacity 0.15s;
 }
 
-.root:hover:not(:disabled) {
-  background: var(--surface-control-hover);
-  border-color: var(--border-hover);
+@media (hover: hover) {
+  .root:hover:not(:disabled) {
+    background: var(--surface-control-hover);
+    border-color: var(--border-hover);
+  }
 }
 
 .root:active:not(:disabled) {

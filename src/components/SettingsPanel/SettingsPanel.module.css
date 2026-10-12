@@ -18,6 +18,14 @@
   padding: var(--space-2) 0;
 }
 
+/* Phone: one fixed-height row, so neighbouring switches' hit areas do not overlap. */
+@media (max-width: 768px) {
+  .panelRow {
+    min-height: var(--list-row-height);
+    padding-block: 0;
+  }
+}
+
 /* Label inside a panelRow */
 .panelRow label {
   flex: 1;

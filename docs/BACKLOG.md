@@ -230,7 +230,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Camera smooth wheel zoom + flick coast** `awaiting-decision` — Google Maps / Cesium feel via synthetic `InputStep`s in the aggregator; revises grill Q8 (no inertia), shape pre-ruled. Follow-up to #647. → [details](backlog/2026-09-09-camera-smooth-zoom-and-flick-coast.md)
 - [ ] **Wheel notch routed by last frame's winner** `needs-design` — the replay routes a notch before the frame has picked its winner; four defects follow. → [details](backlog/2026-09-10-wheel-notch-route-by-last-winner.md)
 - [ ] **Autorotate + mouse-move jitter** `needs-repro` — intermittent frame jitter seen on `refactor/debug-derivation`, diff-clean per investigation; falsify against base commit from a second worktree. → [details](backlog/2026-08-20-autorotate-mousemove-jitter.md)
-- [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The InfoCard bottom-sheet + SettingsPanel collapse-launcher already shipped.
+- [ ] **StatusBar mobile reflow** `ready` — reflow the StatusBar for narrow viewports (no media queries today). The phone dock, InfoCard sheet and Layers sheet already shipped.
 - [ ] **SettingsPanel polish** `needs-design` — visual cleanup + section re-ordering + per-section icons; 2.3k lines of hand-coded text-only rows today. → [details](backlog/2026-07-22-settings-panel-polish.md)
 - [ ] **Schema-driven slider rows** `needs-design` — a scalar knob costs ~9 hand-edited sites (default, type, seed, reducer, export, selector, container ×3, props, JSX, fixtures); VolumeFieldRow has 7, Display 6. → [details](backlog/2026-07-29-schema-driven-slider-rows.md)
 - [ ] **Label declutter toggle + hysteresis** `needs-design` — add `settings.labels.declutter` wired to `labelDirectorSubsystem` (replacing the `?nodeclutter` stopgap) and hysteresis-damp the cull so labels stop flickering under camera motion. → [details](backlog/2026-06-29-label-declutter-toggle.md)
@@ -243,6 +243,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Break up `tools/record/record.ts`** `ready` — move the ffmpeg pipe and the preview-build server into `tools/utils/record/`, leaving argv + the frame loop; own PR, smoke a clip before/after.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Path-based object links with share previews** `needs-design` — `/<kind>/<slug>` paths for identity, hash for view state, so shared links unfurl; needs Worker tag injection and permanent hash aliases. → [details](backlog/2026-10-05-path-based-object-links.md)
+- [ ] **Unify thumbnail lookups on `focusShotUrl`** `needs-verification` — `paletteRows.tsx` appears to build structure shot paths from the focus id, which would 404 (files are named by card id; not yet confirmed in a browser); then move Body/Star cards to the helper and delete `SHOT_CARD_IDS`. → [details](backlog/2026-10-11-thumbnail-lookup-unify.md)
 
 ## Docs & process
 
