@@ -23,6 +23,8 @@ npm run phone -- serve --build [--port 4443]              # HTTPS LAN preview of
 npm run phone -- open 'focus=body-saturn'                 # new tab at the link; prints its id
 npm run phone -- shot                                     # screenshot the last tab
 npm run phone -- shot 'focus=body-saturn' --wait 15000    # new tab, wait, screenshot
+npm run phone -- tap '[aria-label=Search]'                # touch an element (or x,y in CSS px) on the last tab
+npm run phone -- swipe 200,780 200,300 --ms 400           # drag between two CSS-pixel points
 npm run phone -- net 'focus=body-saturn' --for 20000      # cold load: /data/ requests + console
 npm run phone -- trace 'tour=long-way-out' --for 5000     # frame-time summary + raw trace
 ```
@@ -37,7 +39,13 @@ is dropped; the page always comes from `--url`, which defaults to `https://<lan-
 | `--build`     | off          | `serve` only: build and serve; without it `serve` prints the dev recipe.      |
 | `--wait <ms>` | 10000 / 0    | `shot`, `trace`: wait after loading a link (10 s), or before a bare shot (0). |
 | `--for <ms>`  | 15000 / 5000 | How long `net` listens (15 s) and `trace` records (5 s).                      |
+| `--ms <ms>`   | 300          | `swipe` only: how long the finger drags.                                      |
 | `--out <f>`   | see below    | `shot` only: output file.                                                     |
+
+`tap` and `swipe` act on the last tab (or load a link in a new one first, then wait `--wait`, default
+10 s) and print what they touched; chain `tap … && shot` on the same tab. A selector is resolved to its
+box centre through the DOM domain, and touches are `Input.dispatchTouchEvent`: real pointer events and
+native scrolling, in CSS pixels. A selector that matches nothing, or has no box, exits 1.
 
 `open` and `shot <link>` make a new tab. `net` and `trace` reuse the last tab the tool used (kept in
 `.phone/target`) and load the link there, or reload it when no link is given; with no such tab and
@@ -78,6 +86,6 @@ the front: a background tab draws nothing.
   `.certs/<lan-ip>+1.pem`, minted with mkcert when missing; the phone need not trust the CA.
 - **Never `adb reverse` the data.** Catalog downloads over it once took the phone's adbd offline.
 - **`Runtime.evaluate` can hang on the phone,** so the tool reads screenshots, network events and
-  traces only, and every DevTools call has a timeout.
+  traces and the DOM domain only (selectors, input), and every DevTools call has a timeout.
 - **Chrome and Brave share the `chrome_devtools_remote` socket.** With both running, the forward
   reaches one of them; `devices` prints which browser answered.

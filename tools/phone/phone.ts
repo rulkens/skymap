@@ -12,6 +12,8 @@ import { openCommand } from './openCommand';
 import { parsePhoneArgs } from './parsePhoneArgs';
 import { serveCommand } from './serveCommand';
 import { shotCommand } from './shotCommand';
+import { swipeCommand } from './swipeCommand';
+import { tapCommand } from './tapCommand';
 import { traceCommand } from './traceCommand';
 
 const COMMANDS: Record<PhoneCommand, (args: PhoneArgs) => Promise<void>> = {
@@ -21,6 +23,8 @@ const COMMANDS: Record<PhoneCommand, (args: PhoneArgs) => Promise<void>> = {
   shot: shotCommand,
   net: netCommand,
   trace: traceCommand,
+  tap: tapCommand,
+  swipe: swipeCommand,
 };
 
 async function main(): Promise<void> {

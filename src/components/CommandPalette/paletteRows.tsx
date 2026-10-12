@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
+import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import { cardShotUrl } from '../../utils/palette/cardShotUrl';
 import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
@@ -26,21 +27,27 @@ import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
 
-/**
- * A milkyWay/body/star/structure row's leading visual: the captured card shot
- * of the featured card that names the same focus id `actionForRow` resolves to
- * (the id grammar the URL deep-link layer uses), else today's letter glyph.
- */
-function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
-  const action = actionForRow(row);
-  if (action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId)) {
-    return <img className={styles.thumb} src={cardShotUrl(action.focusId)} alt="" loading="lazy" />;
+/** A row's leading visual: its captured shot when it has one, else a letter glyph. */
+function thumbOrGlyph(shotUrl: string | undefined, label: string): ReactNode {
+  if (shotUrl !== undefined) {
+    return <img className={styles.thumb} src={shotUrl} alt="" loading="lazy" />;
   }
   return (
     <span className={styles.glyph} aria-hidden="true">
       {label[0] ?? '·'}
     </span>
   );
+}
+
+/**
+ * A milkyWay/body/star row's leading visual: the captured card shot of the
+ * featured card that names the same focus id `actionForRow` resolves to (the
+ * id grammar the URL deep-link layer uses), else today's letter glyph.
+ */
+function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
+  const action = actionForRow(row);
+  const hasShot = action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId);
+  return thumbOrGlyph(hasShot ? cardShotUrl(action.focusId) : undefined, label);
 }
 
 /** What InfoCard's row renderer needs, computed per row kind. */
@@ -193,7 +200,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     m.kind !== 'starCatalog'
       ? EMPTY_ROW_VIEW
       : namedRowView(m, 'starCatalog', 'star-row', m.star.id, m.star.label),
-  // Structure row — captured card shot when one exists (see `shotOrGlyph`),
+  // Structure row — the captured shot of a featured anchor (bulk rows have none),
   // else a glyph placeholder, + a category chip (Cluster / Supercluster /
   // Void / Group) from the per-category display copy, plus the Abell
   // designation as a secondary name when present.
@@ -203,7 +210,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     return {
       key: `structure:${id}`,
       testid: `structure-row-${id}`,
-      leading: shotOrGlyph(m, name),
+      leading: thumbOrGlyph(m.entry.featured ? structureShotUrl(id) : undefined, name),
       primary: name,
       secondary: (
         <>

@@ -32,6 +32,7 @@ const COMA: StructureSearchEntry = {
   category: 'galaxy-cluster',
   abell: 'A1656',
   description: 'X-ray cluster · z = 0.023',
+  featured: true,
 };
 
 // Two tabs, one card each — enough to exercise tab filtering/switching

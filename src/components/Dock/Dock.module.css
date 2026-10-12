@@ -1,0 +1,83 @@
+/*
+ * Dock.module.css — the phone dock: equal-width items on a glass strip pinned
+ * to the bottom edge. Height comes from --dock-height (item row plus the larger
+ * of the base gap and the safe-area inset), the figure BottomStack sums.
+ */
+
+.root {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  box-sizing: border-box;
+  height: var(--dock-height);
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border-top: 1px solid var(--border-card);
+  color: var(--color-fg-muted);
+  font: var(--font-size-lg) / var(--line-height-tight) var(--font-family-mono);
+  user-select: none;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.item:focus-visible {
+  outline: var(--space-1) solid var(--color-accent);
+  outline-offset: calc(var(--space-1) * -1);
+}
+
+@media (hover: hover) {
+  .item:hover {
+    color: var(--color-fg);
+  }
+}
+
+/* Indicator bar: the open state does not rely on colour. */
+.itemOpen {
+  color: var(--color-accent);
+}
+
+.itemOpen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+}
+
+.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.labelAccent {
+  color: var(--color-accent);
+}

@@ -1,90 +1,50 @@
 /**
- * InfoCard — routes hovered/selected galaxy + structure state into the detail and
- * preview cards.  Renders nothing when both slots are null.
+ * InfoCard — routes hovered/selected state into the detail and preview cards.
  *
- * Always renders the same outer wrapper across all states.  An earlier version
- * returned a child unwrapped in the single-card case; the resulting tag change
- * across the single↔pair transition forced React to remount the detail card,
- * which lost the native `<details>` "More details" open state on every hover.
- *
- * Both `hovered` and `selected` accept the full `FocusableTarget` union
- * (`GalaxyInfo | StructureInfo | MilkyWayInfo`).  Dispatch is entirely
- * table-driven: `detailCardFor(DETAIL_CARD, target)` picks the detail + compact
- * card for whichever target lands in each slot, so there is no per-kind
- * branching and a new focusable kind is one table row.  The only logic here is
- * slot precedence — pinned target → detail, a different hovered target →
- * compact preview.
- *
- * On mobile (`useIsMobile`) hover has no cursor, so the card drops to a single
- * MobileSheet showing only the selected target's full detail — no compact slot.
+ * Always the same outer wrapper: a tag change across the single↔pair transition
+ * remounts the detail card and loses its `<details>` open state on every hover.
+ * Dispatch is table-driven (`detailCardFor(DETAIL_CARD, target)`): a new
+ * focusable kind is one table row. Slot precedence is the only logic here. On
+ * the phone there is no hover, so only the selected target renders, as the bare
+ * Detail body for the MobileSheet to wrap.
  */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { targetEq } from '../../services/engine/helpers/targetEq';
-import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { APP_COMPOSITION } from '../../compositions/app';
 import { detailCardTable } from './detailCardTable';
 import { detailCardFor } from '../../utils/infoCard/detailCardFor';
-import MobileSheet from './MobileSheet/MobileSheet';
 import styles from './InfoCard.module.css';
 
-// Folded once at module load, not per-render: the composition is static for
-// the app's lifetime, and a missing arm should throw at boot, not on the
-// first hover.
+// Folded at module load so a missing arm throws at boot, not on the first hover.
 const DETAIL_CARD = detailCardTable(APP_COMPOSITION.layers);
 
 export type InfoCardProps = {
-  /**
-   * The point currently under the cursor, or null when the cursor is on empty
-   * sky.  Can be either a galaxy or a structure — InfoCard dispatches via the
-   * `DETAIL_CARD` table to render the appropriate hover variant.
-   */
+  /** The target under the cursor, or null on empty sky. */
   hovered: FocusableTarget | null;
-  /**
-   * The pinned/selected target, or null when nothing is pinned.  Owns the detail
-   * slot; a hovered target naming a different thing renders beneath as a compact
-   * preview.  When `hovered` and `selected` are the same thing, the preview is
-   * suppressed (the detail card already shows it).
-   */
+  /** The pinned target, or null. Owns the detail slot; a different hovered target previews beneath. */
   selected: FocusableTarget | null;
-  /**
-   * Optional callback fired when the user clicks the "Focus" pill on the pinned
-   * card.  App dispatches `updateSelectionFocus(refOf(target))`.
-   */
+  /** The pinned card's "Focus" pill. */
   onFocus?: (target: FocusableTarget) => void;
-  /**
-   * Optional callback fired when the user clicks the Close (×) button on the
-   * pinned card.  Same effect as pressing Esc — App dispatches `clearSelection()`
-   * which tears down both galaxy AND structure selection in one call.
-   */
+  /** The pinned card's Close (×); same as Esc. */
   onClose?: () => void;
 };
 
 function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
 
-  // Mobile has no hover cursor: only the pinned target matters, and it shows as
-  // a single MobileSheet wrapping the same Detail card the desktop branch uses.
   if (isMobile) {
     if (selected === null) return null;
     const { Detail } = detailCardFor(DETAIL_CARD, selected);
-    return (
-      <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
-      </MobileSheet>
-    );
+    return <Detail target={selected} isPinned layout="phone" onFocus={onFocus} onClose={onClose} />;
   }
 
   if (!hovered && !selected) return null;
 
-  // Two slots, both dispatched by the target's union tag through DETAIL_CARD —
-  // no per-kind branching.  The selected target owns the detail card; a hovered
-  // target naming a *different* thing shows beneath it as a compact preview
-  // (`targetEq` suppresses the redundant preview of an already-pinned target).
-  // Adding a focusable kind is a DETAIL_CARD row, never a branch here.
+  // `targetEq` suppresses the redundant preview of an already-pinned target.
   const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
   const Detail = selected ? detailCardFor(DETAIL_CARD, selected).Detail : null;
   const Compact = compactTarget ? detailCardFor(DETAIL_CARD, compactTarget).Compact : null;
