@@ -18,8 +18,7 @@ import {
   FADE_STEP_FLOAT_INDEX,
   GRID_AXIS_BITS,
   HALF_DIAGONAL,
-  LEAF_BLOCK_INDEX_SHIFT,
-  LEAF_BLOCK_SHIFT,
+  LEAF_ENTRY_RECORD_SHIFT,
   LEAF_MARGIN_RAD_FLOAT_INDEX,
   BLOB_OPACITY,
   INDEX_NODES_U32_INDEX,
@@ -153,8 +152,7 @@ export function referenceStarCut(
     const blobOp = step(i * OPACITY_CHANNELS + BLOB_OPACITY, drawBlob ? 1 : 0);
     if (blobOp > 0 && hasBlob(i) && !offScreen(i, true)) aggregates.push(i);
     if (ownOp <= 0 || ownCount(i) === 0 || offScreen(i, false)) continue;
-    const blocks = (ownCount(i) + (1 << LEAF_BLOCK_SHIFT) - 1) >>> LEAF_BLOCK_SHIFT;
-    for (let k = 0; k < blocks; k++) leafEntries.push(i | (k << LEAF_BLOCK_INDEX_SHIFT));
+    for (let k = 0; k < ownCount(i); k++) leafEntries.push(i + k * 2 ** LEAF_ENTRY_RECORD_SHIFT);
   }
   return { cutBin, opacity, leafEntries, aggregates };
 }

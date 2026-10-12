@@ -38,7 +38,7 @@ Group A's Task 6 is a **checkpoint**: it reports numbers to the user and continu
 - Raw-data paths go through `rawDataPath(...)` (`tools/utils/io/rawDataRegistry.ts`). No new raw key is needed: every Gaia input is already registered (`gaia.dir`, `gaia.gcns`, `gaia.hipparcos`, `gaia.hip-xmatch`) and `ATTRIBUTIONS.md` already carries Gaia, Bailer-Jones, GCNS and Hipparcos entries. Task 17 only updates the Gaia entry's "Enters skymap" path.
 - Tests mirror `src/` and `tools/` under `tests/`. Only tests that fail on a real bug no other test or compiler check catches; type sweeps, deletions and plumbing get none, and the task says so.
 - Each task is one commit. `npx prettier --write` on touched files, never `npm run format`. Stage by path, never `git add -A`. No `Co-Authored-By` trailers.
-- Format values copied from the spec: magic `SKOI` / `SKOC`, version `1`, node row 24 B, columns 8-byte aligned, `u16x3` offsets as a fraction of the owning node's box, star record 8 B on the wire, `chunkCapacity = 32_768`, `CHUNK_NODE_CAPACITY = 2_048` rows per chunk (ruling 11; 4,096 under ruling 10), `ownCount ≤ 8192`, grid bits ≤ 10, node index cap 2²² pool-wide, pick cap 2²⁶ pool-wide, `thr = 0.16`, `refUnit = 10` pc, `NODE_FADE_MS = 250`, planner concurrency 4.
+- Format values copied from the spec: magic `SKOI` / `SKOC`, version `1`, node row 24 B, columns 8-byte aligned, `u16x3` offsets as a fraction of the owning node's box, star record 8 B on the wire, `chunkCapacity = 32_768`, `CHUNK_NODE_CAPACITY = 2_048` rows per chunk (ruling 11; 4,096 under ruling 10), `ownCount ≤ 4096`, grid bits ≤ 10, node index cap 2²⁰ pool-wide, pick cap 2²⁶ pool-wide, `thr = 0.16`, `refUnit = 10` pc, `NODE_FADE_MS = 250`, planner concurrency 4.
 - `public/data/` in this worktree is a symlink to the main checkout's tree (`/link-data`). The timing bake (Task 6) writes to a scratch `--out-dir`; the real bake (Task 18) is the user's call. `data/raw/gaia` is per-worktree: symlink it from the main checkout before any bake, read-only.
 - Read `docs/DATA.md` before Group A and Group D, `docs/RENDERER.md` and the `wesl-shaders` skill before Group B and Task 12, `docs/DEPLOY.md` before Task 16, and the `perf` skill before Tasks 10 and 18.
 - Out of scope, do not touch: GLADE / REGALADE on the octree, `tools/stars-rs`, deleting `starBinCodec.ts` or the v1 reader, galaxy column ids, the hi-res-famous substrate.
@@ -139,7 +139,7 @@ export type DecodedOctreeObject<H extends OctreeIndexHeader | OctreeChunkHeader>
 | `NO_CHUNK_REF`               | `0xffffffff` |                                                        |
 | `COLUMN_STORE_BYTES`         | per store    | `u10x3: 4`, `u16x3: 6`, scalars their natural size     |
 | `OFFSET_FRACTION_LEVELS`     | `65536`      | `u16x3` raw / this = fraction of the owning node's box |
-| `MAX_OWN_COUNT`              | `8192`       | bake STOP above (10-bit block index × 8)               |
+| `MAX_OWN_COUNT`              | `4096`       | bake STOP above (12-bit record index)                  |
 | `MAX_GRID_BITS`              | `10`         | Morton must fit 30 bits                                |
 | `STAR_OCTREE_DATA_PREFIX`    | `'star-catalog/v2'` | the v1 prefix stays `star-catalog/v1`            |
 | `STAR_COLUMN_SCHEMA`         | 3 rows       | `offset u16x3 (0, 1)`, `absMag u8 (STAR_ABSMAG_MIN + 0.5·STAR_ABSMAG_STEP, STAR_ABSMAG_STEP)`, `colourIndex u8 (STAR_COLORIDX_MIN + 0.5·STAR_COLORIDX_STEP, STAR_COLORIDX_STEP)` — imported from `starCatalogFormat.ts`, so the q pairs cannot drift from `lutIndexToAbsMag` / `colorIdxToBpRp` |
@@ -410,7 +410,7 @@ uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
 evictChunk(source: SourceType, slot: number): void;
 loadedCatalogs(): Iterable<{ source: SourceType; octree: StarOctree }>;
 // StarCutGpu mirrors: upload(source, octree, slots), uploadChunk, evictChunk
-export const POOL_NODE_INDEX_LIMIT = 2 ** LEAF_BLOCK_INDEX_SHIFT; // 2^22 rows pool-wide
+export const POOL_NODE_INDEX_LIMIT = 2 ** LEAF_ENTRY_RECORD_SHIFT; // 2^20 rows pool-wide
 export const POOL_RECORD_INDEX_LIMIT = 2 ** SELECTION_SOURCE_SHIFT; // 2^26 records pool-wide
 ```
 

@@ -90,7 +90,7 @@ import package::starCatalog::cutIo::nodeOwnCount;
 import package::starCatalog::cutIo::OPACITY_CHANNELS;
 import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::leafEntryNode;
-import package::starCatalog::cutIo::leafEntryBlock;
+import package::starCatalog::cutIo::leafEntryRecord;
 import package::starCatalog::tint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
@@ -169,26 +169,19 @@ const AGGREGATE_BOX_RADIUS_FACTOR: f32 = 0.5 * 0.57735;
 // sprite is long gone by framing distance.
 const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 
-// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 own records per
-// entry) and 0 for the aggregate list (one blob per entry, local 0).
+// One instance per list entry: an own record (its index among the row's own
+// records in the high bits) or a blob (high bits 0).
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
   @builtin(instance_index) ii: u32,
 ) -> VSOut {
-  let shift = cutStream.blockShift;
-  let entry = cutList[ii >> shift];
+  let entry = cutList[ii];
   let nodeIdx = leafEntryNode(entry);
   let bits = cutNodes[nodeIdx].bits;
-  let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
+  let local = leafEntryRecord(entry);
   let isAgg = cutStream.isBlob == 1u;
   let ownCount = nodeOwnCount(bits);
-  if (!isAgg && local >= ownCount) {
-    // A spare instance of the node's last block: outside the clip volume.
-    var skip: VSOut;
-    skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
-    return skip;
-  }
   let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
   let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
   // firstRecord is pool-absolute, so 'base' is too: the pick reads it as is.

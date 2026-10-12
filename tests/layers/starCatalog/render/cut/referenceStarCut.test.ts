@@ -25,6 +25,7 @@ import {
   NODE_BLOB_COUNT_WORD,
   NODE_FOLDED_BIT,
   OWN_COUNT_SHIFT,
+  LEAF_ENTRY_RECORD_SHIFT,
   chunkRootRefineDeltas,
   packStarChunkNodes,
   packStarCutNodes,
@@ -46,7 +47,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { starOctreeFromSkst } from '../../../../../src/utils/star/starOctreeFromSkst';
 
 const ROOT = 6;
-const NODE_MASK = 0x3fffff;
+const NODE_MASK = 2 ** LEAF_ENTRY_RECORD_SHIFT - 1;
 const CATALOG: SkstCatalog = {
   starCount: 21,
   nodeCount: 7,
@@ -103,7 +104,8 @@ function channelOf(i: number): number {
 type Cut = ReturnType<typeof run>;
 const drawnOpacity = (r: Cut) => CATALOG.nodes.map((_, i) => r.opacity[channelOf(i)]!);
 const members = (r: Cut) => drawnOpacity(r).flatMap((o, i) => (o === 1 ? [i] : []));
-const leafNodes = (r: Cut) => r.leafEntries.map((e) => e & NODE_MASK);
+/** The rows whose own records are listed, once each. */
+const leafNodes = (r: Cut) => [...new Set(r.leafEntries.map((e) => e & NODE_MASK))];
 const parentOf = (i: number) => NODES[i * CUT_NODE_WORDS + NODE_PARENT_WORD]!;
 
 /** One view whose first plane keeps `nx * x + offsetCells >= 0` (camera-relative); the rest never cut. */
@@ -126,7 +128,7 @@ describe('referenceStarCut membership', () => {
     const r = run([0.5, 0.5, 0.5]);
     expect(members(r)).toEqual([0, 1, 5]);
     expect(r.aggregates).toEqual([5]);
-    expect(leafNodes(r)).toEqual([0, 1, 1]);
+    expect(leafNodes(r)).toEqual([0, 1]);
   });
 
   it('is a partition: every leaf is covered exactly once, whatever the camera or budget', () => {
@@ -186,7 +188,7 @@ describe('referenceStarCut frustum prune', () => {
     const r = run([0.5, 0.5, 0.5], { planes: onePlaneView(-1, 1), worldSpread: 0.01 });
     expect(r.aggregates).toEqual([]);
     expect(drawnOpacity(r)[5]).toBe(1);
-    expect(leafNodes(r)).toEqual([0, 1, 1]);
+    expect(leafNodes(r)).toEqual([0, 1]);
   });
 
   it('an unlisted refined parent still makes its children members', () => {
@@ -199,10 +201,12 @@ describe('referenceStarCut frustum prune', () => {
   });
 });
 
-describe('referenceStarCut leaf blocks', () => {
-  it('claims ceil(records / 8) entries per leaf, with the block in the high bits', () => {
-    // Leaf 0 has 8 records (one block), leaf 1 has 9 (two).
-    expect(run([0.5, 0.5, 0.5]).leafEntries).toEqual([0, 1, 1 + 2 ** 22]);
+describe('referenceStarCut leaf entries', () => {
+  it('lists one entry per own record, the record in the high bits, so no instance is padding', () => {
+    // Leaf 0 has 8 records, leaf 1 has 9.
+    const entries = (node: number, n: number) =>
+      Array.from({ length: n }, (_, k) => node + k * 2 ** LEAF_ENTRY_RECORD_SHIFT);
+    expect(run([0.5, 0.5, 0.5]).leafEntries).toEqual([...entries(0, 8), ...entries(1, 9)]);
   });
 });
 
@@ -306,11 +310,7 @@ function cutOver(
 
 const ownOf = (pool: Uint32Array, i: number) =>
   pool[i * CUT_NODE_WORDS + NODE_BITS_WORD]! >>> OWN_COUNT_SHIFT;
-const instancesOf = (pool: Uint32Array, r: Cut) =>
-  [...new Set(r.leafEntries.map((e) => e & NODE_MASK))].reduce(
-    (sum, i) => sum + ownOf(pool, i),
-    0,
-  ) + r.aggregates.length;
+const instancesOf = (r: Cut) => r.leafEntries.length + r.aggregates.length;
 
 describe('referenceStarCut over own records and blobs', () => {
   it('refineDelta equals the instance count a refine adds, against a brute-force cut', () => {
@@ -343,9 +343,9 @@ describe('referenceStarCut over own records and blobs', () => {
     const none = cutOver(octree, 0, pool, cam, { threshold: 0.5, budget: 0 });
     const one = cutOver(octree, 0, pool, cam, { threshold: 0.5 });
     expect(one.aggregates).not.toContain(root);
-    expect(instancesOf(pool, none)).toBe(brute(new Set()));
-    expect(instancesOf(pool, one)).toBe(brute(new Set([root])));
-    expect(instancesOf(pool, one) - instancesOf(pool, none)).toBe(
+    expect(instancesOf(none)).toBe(brute(new Set()));
+    expect(instancesOf(one)).toBe(brute(new Set([root])));
+    expect(instancesOf(one) - instancesOf(none)).toBe(
       pool[root * CUT_NODE_WORDS + NODE_REFINE_DELTA_WORD],
     );
   });
@@ -385,9 +385,7 @@ describe('referenceStarCut over own records and blobs', () => {
     const far: Vec3 = [164.5, 32.5, 32.5];
     const none = cutOver(octree, 0, pool, far, { threshold: 0.5, budget: 0 });
     const one = cutOver(octree, 0, pool, far, { threshold: 0.5 });
-    expect(instancesOf(pool, one) - instancesOf(pool, none)).toBe(
-      word(root, NODE_REFINE_DELTA_WORD),
-    );
+    expect(instancesOf(one) - instancesOf(none)).toBe(word(root, NODE_REFINE_DELTA_WORD));
   });
 
   // Index: one chunk root (L1, x 0..2) holding 2 own records and a blob over 3 stars.
@@ -441,12 +439,12 @@ describe('referenceStarCut over own records and blobs', () => {
     const pool = poolOf(false);
     const r = cutOver(octree, 1, pool, inside);
     expect(r.aggregates).toEqual([0]);
-    expect(r.leafEntries.map((e) => e & NODE_MASK)).toEqual([0]);
+    expect(leafNodes(r)).toEqual([0]);
 
     // The same pool with the chunk resident refines the root into its chunk rows.
     const landed = cutOver(octree, 1, poolOf(true), inside);
     expect(landed.aggregates).toEqual([]);
-    expect(landed.leafEntries.map((e) => e & NODE_MASK)).toEqual([0, 1, 2]);
+    expect(leafNodes(landed)).toEqual([0, 1, 2]);
   });
 
   it('a refining node keeps drawing its own records while its blob fades out', () => {

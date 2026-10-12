@@ -12,8 +12,7 @@
 const GRID_AXIS_BITS: u32 = 10u;
 const LEVEL_BITS: u32 = 4u;
 const OWN_COUNT_SHIFT: u32 = 8u;
-const LEAF_BLOCK_SHIFT: u32 = 3u;
-const LEAF_BLOCK_INDEX_SHIFT: u32 = 22u;
+const LEAF_ENTRY_RECORD_SHIFT: u32 = 20u;
 const GRID_AXIS_MASK: u32 = (1u << GRID_AXIS_BITS) - 1u;
 const NODE_LEVEL_MASK: u32 = (1u << LEVEL_BITS) - 1u;
 const NODE_BLOB_BIT: u32 = 1u << LEVEL_BITS;
@@ -23,7 +22,7 @@ const NODE_FOLDED_BIT: u32 = 1u << (LEVEL_BITS + 2u);
 const OPACITY_CHANNELS: u32 = 2u;
 const OWN_OPACITY: u32 = 0u;
 const BLOB_OPACITY: u32 = 1u;
-const LEAF_ENTRY_NODE_MASK: u32 = (1u << LEAF_BLOCK_INDEX_SHIFT) - 1u;
+const LEAF_ENTRY_NODE_MASK: u32 = (1u << LEAF_ENTRY_RECORD_SHIFT) - 1u;
 
 // One pool row, 24 B, array stride 24 (all u32): the index's rows, then each
 // slot's chunkNodeCap rows. A chunk row's parent and firstRecord are written
@@ -77,11 +76,9 @@ struct CutUniforms {
   planes: array<vec4<f32>, 36>,
 };
 
-// Which draw list a pipeline reads: own records (blocks of 8 instances per
-// entry, blockShift 3, isBlob 0) or blobs (one per entry, 0 and 1). 16 B,
-// written once.
+// Which draw list a pipeline reads: own records (isBlob 0) or blobs (1), one
+// instance per entry either way. 16 B, written once.
 struct CutStream {
-  blockShift: u32,
   isBlob: u32,
 };
 
@@ -123,15 +120,16 @@ fn nodeMinCells(grid: u32, camCell: vec3<i32>, camFrac: vec3<f32>) -> vec3<f32> 
   return vec3<f32>(cell - camCell) - camFrac;
 }
 
-// A leaf-list entry: the node index, then which block of the node's records.
-fn packLeafEntry(node: u32, block: u32) -> u32 {
-  return node | (block << LEAF_BLOCK_INDEX_SHIFT);
+// A leaf-list entry: the node index, then which of the node's own records.
+fn packLeafEntry(node: u32, record: u32) -> u32 {
+  return node | (record << LEAF_ENTRY_RECORD_SHIFT);
 }
 
 fn leafEntryNode(entry: u32) -> u32 {
   return entry & LEAF_ENTRY_NODE_MASK;
 }
 
-fn leafEntryBlock(entry: u32) -> u32 {
-  return entry >> LEAF_BLOCK_INDEX_SHIFT;
+// 0 for a blob entry, whose high bits are clear.
+fn leafEntryRecord(entry: u32) -> u32 {
+  return entry >> LEAF_ENTRY_RECORD_SHIFT;
 }

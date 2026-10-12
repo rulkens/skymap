@@ -34,10 +34,9 @@
 // channel. Off-screen rows keep their fades; only the histogram and lists skip.
 //
 // ## Draw lists
-// A blob's entry is its row index. A row's own records number up to a few
-// thousand, so they claim 'ceil(ownCount / 8)' blocks of 8 instances, one entry
-// each: row | block << 22. The vertex stage finds its record from
-// 'instance >> 3' with no search and discards the last block's spare instances.
+// A blob's entry is its row index. Each own record gets an entry,
+// row | record << 20, so one instance is one record with no search and no
+// padding: folded subtrees spread their records over rows of one or two.
 //
 // ## Bindings: writer -> reader
 //   u         CPU each frame -> all three entry points, and vertex.wesl
@@ -66,7 +65,6 @@ import package::starCatalog::cutIo::OWN_OPACITY;
 import package::starCatalog::cutIo::BLOB_OPACITY;
 import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::packLeafEntry;
-import package::starCatalog::cutIo::LEAF_BLOCK_SHIFT;
 
 // Mirrors starCutLayout.ts (CUT_BINS, DRAW_RECORD_WORDS).
 const CUT_BINS: u32 = 1024u;
@@ -206,9 +204,8 @@ fn emit(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   let own = nodeOwnCount(bits);
   if (ownOp <= 0.0 || own == 0u || offScreen(i, false)) { return; }
-  let blocks = (own + (1u << LEAF_BLOCK_SHIFT) - 1u) >> LEAF_BLOCK_SHIFT;
-  let first = atomicAdd(&draws[LEAF_INSTANCES], blocks << LEAF_BLOCK_SHIFT) >> LEAF_BLOCK_SHIFT;
-  for (var k = 0u; k < blocks; k = k + 1u) {
+  let first = atomicAdd(&draws[LEAF_INSTANCES], own);
+  for (var k = 0u; k < own; k = k + 1u) {
     leafList[first + k] = packLeafEntry(i, k);
   }
 }

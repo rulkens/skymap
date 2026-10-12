@@ -100,8 +100,7 @@ describe('starCatalog cut WESL constants <-> starCutLayout.ts', () => {
     GRID_AXIS_BITS: layout.GRID_AXIS_BITS,
     LEVEL_BITS: layout.LEVEL_BITS,
     OWN_COUNT_SHIFT: layout.OWN_COUNT_SHIFT,
-    LEAF_BLOCK_SHIFT: layout.LEAF_BLOCK_SHIFT,
-    LEAF_BLOCK_INDEX_SHIFT: layout.LEAF_BLOCK_INDEX_SHIFT,
+    LEAF_ENTRY_RECORD_SHIFT: layout.LEAF_ENTRY_RECORD_SHIFT,
     GRID_AXIS_MASK: 2 ** layout.GRID_AXIS_BITS - 1,
     NODE_LEVEL_MASK: 2 ** layout.LEVEL_BITS - 1,
     NODE_BLOB_BIT: layout.NODE_BLOB_BIT,
@@ -110,7 +109,7 @@ describe('starCatalog cut WESL constants <-> starCutLayout.ts', () => {
     OPACITY_CHANNELS: layout.OPACITY_CHANNELS,
     OWN_OPACITY: layout.OWN_OPACITY,
     BLOB_OPACITY: layout.BLOB_OPACITY,
-    LEAF_ENTRY_NODE_MASK: 2 ** layout.LEAF_BLOCK_INDEX_SHIFT - 1,
+    LEAF_ENTRY_NODE_MASK: 2 ** layout.LEAF_ENTRY_RECORD_SHIFT - 1,
     CUT_MAX_VIEWS: layout.CUT_MAX_VIEWS,
   };
 
@@ -253,7 +252,6 @@ describe('struct CutStream', () => {
   it('declares the fields at the word slots the TS indices name, within its 16 bytes', () => {
     const { fields } = structFields(cutIo, 'CutStream');
     expect(fields.map((f) => [f.name, f.byteOffset / WORD_BYTES])).toEqual([
-      ['blockShift', layout.STREAM_BLOCK_SHIFT_WORD],
       ['isBlob', layout.STREAM_IS_BLOB_WORD],
     ]);
     expect(fields.length * WORD_BYTES).toBeLessThanOrEqual(layout.CUT_STREAM_BYTES);
