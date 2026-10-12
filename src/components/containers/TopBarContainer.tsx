@@ -1,13 +1,8 @@
 /**
- * TopBarContainer — store boundary for the top-center pill row.
- *
- * Owns the shared `paletteOpen || splashVisible` gate (the whole row fades
- * together) and the three inline pill dispatches (open palette, go home,
- * reopen splash), and renders the row's fixed children including the two
- * sibling pill containers (`AutoRotateToggleContainer`, `TourDebugPillContainer`),
- * so App no longer needs any of this reach. On a phone, search, home
- * and about live in the dock instead, and a full-screen pill joins the
- * right-aligned cluster.
+ * TopBarContainer — store boundary for the top-centre pill row. Owns the shared
+ * `paletteOpen || splashVisible` gate (the row fades together), the three inline
+ * pill dispatches, and the sibling pill containers. On a phone, search, home and
+ * about live in the dock; a full-screen pill joins the right-aligned cluster.
  */
 
 import { memo, useCallback } from 'react';

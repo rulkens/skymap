@@ -1,22 +1,13 @@
 /*
- * Thumbnail.module.css — square image cutout (.root, sized by --thumbnail-size) and its broken-image
- * fallback placeholder (.placeholder).  Two mutually-exclusive render branches,
- * so the placeholder is a sibling root rather than nested under .root.
- *
- * All atoms reference tokens from `src/styles/global.css`.
+ * Thumbnail.module.css — square image cutout (.root, sized by --thumbnail-size)
+ * and its broken-image placeholder, a sibling root since the two never co-render.
  */
 
-/* Thumbnail image — a rounded square */
 .root {
   width: var(--thumbnail-size);
   height: var(--thumbnail-size);
   border-radius: var(--radius-lg);
-  /*
-   * Slightly more visible border than the panel default — thumbnail images
-   * are mid-tone (galaxy backgrounds) and a fainter rim would disappear
-   * against them.  0.20 puts the border a notch above `--border-default`'s
-   * 0.16 without going as bright as `--border-control`'s 0.25.
-   */
+  /* A notch above --border-default: mid-tone galaxy backgrounds would swallow a fainter rim. */
   border: 1px solid rgba(160, 200, 255, 0.2);
   flex-shrink: 0;
   object-fit: cover;
@@ -24,7 +15,7 @@
   transition: filter 0.15s ease-out;
 }
 
-/* Wraps .root when the thumbnail links out to an external sky viewer */
+/* Wraps .root when the thumbnail links out to a sky viewer. */
 .link {
   cursor: pointer;
   display: block;
@@ -35,22 +26,17 @@
   filter: brightness(1.15);
 }
 
-/* Placeholder shown when the thumbnail fails to load — same dimensions */
 .placeholder {
   width: var(--thumbnail-size);
   height: var(--thumbnail-size);
   border-radius: var(--radius-lg);
-  /* Dashed variant signals "absence" vs. the solid border on a real image */
+  /* Dashed signals absence, against a real image's solid border. */
   border: 1px dashed var(--border-control);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  /*
-   * Even fainter than `--color-fg-ghost` — placeholder text shouldn't
-   * compete with the surrounding card content.  Inline because it's the
-   * only consumer of this opacity level.
-   */
+  /* Fainter than --color-fg-ghost, so it stays quiet beside the card text. */
   color: rgba(160, 180, 230, 0.35);
   font-size: var(--font-size-sm);
   text-align: center;

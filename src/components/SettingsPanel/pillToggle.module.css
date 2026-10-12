@@ -1,27 +1,12 @@
 /*
- * pillToggle.module.css — the shared iOS-style pill toggle vocabulary for the
- * SettingsPanel family.
+ * pillToggle.module.css — the shared iOS-style pill toggle for the settings
+ * family (section master toggle, per-row checkbox, per-cube enable). One source,
+ * so the controls cannot drift; consumers `composes: pillToggle from` it.
  *
- * ### Why a shared module
- *
- * Three controls draw the exact same pill: the section header's master toggle
- * (`CollapsibleSection`), every per-row on/off checkbox (`SettingsPanel`), and
- * the per-cube enable checkbox (`CosmicWebDensitySection`).  They MUST read as one
- * control family, so the look lived as three copy-pasted blocks that drifted
- * the moment one was tweaked.  This module is the single source: consumers
- * `composes: pillToggle from './pillToggle.module.css'` into their own class.
- *
- * It holds ONLY the pill *look* — appearance reset, track, thumb, and the
- * hover/checked/focus states.  Layout context (the header toggle's right
- * margin, a row's flex placement) is deliberately NOT here; each consumer owns
- * its own `margin`, so composing never fights a cross-module specificity tie.
- * There is no `.root` — this is a vocabulary, not a component.
- *
- * Built from a single `<input type=checkbox>` + a `::before` pseudo as the
- * thumb, so it stays a native form control (keyboard / a11y / Space-to-toggle
- * all work for free).  Sizing: 28×16 track, 12×12 thumb, 12px of travel — sits
- * next to 10px body text without dominating the row.  All atoms reference
- * tokens from `src/styles/global.css`.
+ * Only the pill *look* lives here: each consumer owns its `margin`/placement, so
+ * composing never loses a cross-module specificity tie. A native
+ * `<input type=checkbox>` with `::before` as the thumb keeps keyboard and a11y
+ * free. 28x16 track, 12x12 thumb, 12px of travel.
  */
 
 .pillToggle {

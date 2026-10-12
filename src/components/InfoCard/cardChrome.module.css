@@ -1,14 +1,10 @@
 /*
- * cardChrome.module.css — shared styling vocabulary for the detail cards
- * (galaxy / structure / Milky-Way).  The "loud" half of the InfoCard pair:
- * more padding, more opaque glass, a starlight gradient line along the top
- * edge.  Each detail card's own module composes the pieces it needs from here;
- * this file owns no component of its own.  All atoms reference tokens from
- * `src/styles/global.css`.
- *
- * CSS-modules note: the `pinned` variant is an extra class on the root —
- * `.infoCardFull.pinned` — and `.pinnedBadge` is always in the DOM, shown via
- * `.infoCardFull.pinned .pinnedBadge { display: inline }`.
+ * cardChrome.module.css — shared styling for the detail cards (galaxy /
+ * structure / Milky-Way): the "loud" half of the InfoCard pair, with more
+ * padding, opaque glass and a starlight line along the top edge. Each card's
+ * module composes the pieces it needs; this file owns no component. `.pinned`
+ * is an extra class on the root; `.pinnedBadge` is always in the DOM and shown
+ * by `.infoCardFull.pinned .pinnedBadge`.
  */
 
 /* ── Shared glass-panel base (shared by .infoCardFull and CompactCard) ──────── */

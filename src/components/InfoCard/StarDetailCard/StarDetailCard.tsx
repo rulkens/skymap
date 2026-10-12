@@ -1,15 +1,10 @@
 /**
- * StarDetailCard — rich panel for a selected star, from any catalog.
- *
- * Star variant of the shared galaxy/structure/Milky-Way detail layout: the rows
- * every star shares (headline, distance) and then the one block its `detail`
- * carries. A star that has a featured card shows it, with the lead rows beside
- * it as summary lines — the body card's layout. A star with nothing to add (a
- * seeded star whose sidecar has not landed) renders its headline alone: one
- * fail-soft path, no loading branch, and no image over an empty column.
- *
- * The outer wrapper's tag + className stays stable across hover ↔ pin
- * transitions so InfoCard's single-wrapper layout keeps its DOM identity.
+ * StarDetailCard — rich panel for a selected star, from any catalog: the shared
+ * detail layout, the rows every star has, then the one block its `detail`
+ * carries. A featured star shows its card shot with the lead rows beside it; a
+ * star with nothing to add renders its headline alone (one fail-soft path, no
+ * loading branch). The outer wrapper's tag + className stay stable across
+ * hover and pin so InfoCard keeps its DOM identity.
  */
 
 import type { ReactNode } from 'react';

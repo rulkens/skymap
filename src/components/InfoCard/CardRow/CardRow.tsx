@@ -1,15 +1,8 @@
 /**
- * CardRow — a row inside a detail card.  Two variants share the component so
- * every card composes from one row primitive:
- *   - default: a label/value pair (label accepts JSX so callers can wrap it in
- *     an InfoTip without a parallel component).
- *   - headline: the card's name cell (headlineRow + cardHeadline), with an
- *     optional trailing source/category badge, for the compact hover cards
- *     (the detail cards' name lives in CardHeader).
- *
- * The two variants are mutually-exclusive render branches, so each has its own
- * outermost element (.root for the row, .headline for the headline) — see
- * CardRow.module.css.
+ * CardRow — a row inside a detail card, in two variants: a label/value pair
+ * (the label accepts JSX, so callers wrap it in an InfoTip), and the headline
+ * name cell for the compact hover cards (detail cards' names live in
+ * CardHeader). Each variant has its own outermost element, see CardRow.module.css.
  */
 
 import type { ReactNode } from 'react';

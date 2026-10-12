@@ -1,23 +1,10 @@
 /**
  * BodyDetailCard — rich panel for a focused scene body (Earth, a planet/moon, a
- * mesh body). Stars have their own card (`StarDetailCard`).
- *
- * The engine hands React a lean `BodyInfo` (id + label + position) so a body is
- * always immediately selectable. The card reads the rest from the compiled-in
- * `BODY_FACTS` table (a tiny fixed set, no fetch), keyed by the same `id`: with
- * an entry it shows the full planetary fact sheet (radius first, then mass,
- * gravity, day, year, …); without one it falls back to the lean panel (radius
- * alone).
- *
- * The **camera distance** is time-dependent (it swings as the body orbits), so it
- * is NOT baked into the identity `BodyInfo`; it arrives as the `distanceMpc`
- * prop, which `BodyDetailCardContainer` reads live off the throttled
- * `engineBodyDistanceReported` pub. This card stays presentational: it renders
- * whatever distance it is handed and never derives or fetches it (the
- * store-boundary rule forbids a card reaching into the engine snapshot).
- *
- * Optional fields drop their row entirely when absent rather than showing a
- * blank — the same absent-row pattern the galaxy/structure cards use.
+ * mesh body); stars have `StarDetailCard`. The engine hands React a lean
+ * `BodyInfo`; the rest comes from the compiled-in `BODY_FACTS` table, keyed by
+ * `id` (no entry: radius alone). Camera distance swings as the body orbits, so
+ * it arrives as the `distanceMpc` prop, never read from the engine here.
+ * Optional fields drop their row rather than show a blank.
  */
 
 import type { ReactNode } from 'react';

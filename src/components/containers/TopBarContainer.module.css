@@ -1,14 +1,8 @@
 /*
- * `.root` — fixed-positioned flex container for the top-center row.
- *
- * Why a wrapper instead of each pill positioning itself?  Several pills
- * sharing one anchor used to mean copies of `position: fixed; top: …; left: 50%; translateX(-50%)`
- * with z-index juggling and a fresh source of truth for every companion
- * (tour-playback transport, etc.).  A single flex container owns the
- * placement once; children just say "I'm a pill".
- *
- * z-index sits one notch below the palette's z=50 backdrop so the
- * palette overlays the pills cleanly while their fade-out runs.
+ * `.root` — fixed flex container for the top-centre pill row, so children just
+ * say "I'm a pill" instead of each repeating the anchoring. z-index sits one
+ * below the palette's z=50 backdrop so the palette overlays the pills while
+ * their fade-out runs.
  */
 .root {
   position: fixed;
