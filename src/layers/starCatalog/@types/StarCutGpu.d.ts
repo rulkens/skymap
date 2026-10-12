@@ -24,10 +24,14 @@ export type StarCutGpu = {
   uploadChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
   /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
   evictChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
-  /** One compute pass: every source in `inputs` gets this frame's cut. */
+  /**
+   * One compute pass: every source in `inputs` gets this frame's cut, or with `recut` false
+   * only its uniforms, so the last cut's lists draw about this frame's eye.
+   */
   encode(
     encoder: GPUCommandEncoder,
     inputs: StarCutInputs,
+    recut: boolean,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void;
   /**

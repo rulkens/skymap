@@ -199,6 +199,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
         aggregate: drawBindGroup('aggregate', aggList),
       },
       lastMs: null,
+      skipped: false,
     };
   }
 
@@ -318,9 +319,9 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     device.queue.writeBuffer(entry.slotRows, slot * WORD_BYTES, slotRowsScratch);
   }
 
-  /** Write one cut's uniforms and record its three dispatches into `pass`. */
+  /** Write one cut's uniforms and, unless `pass` is null, record its three dispatches into it. */
   function dispatch(
-    pass: GPUComputePassEncoder,
+    pass: GPUComputePassEncoder | null,
     { octree, slots }: StarCutSource,
     state: StarCutState,
     inputs: StarCutInputs,
@@ -339,6 +340,8 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       planes,
     });
     device.queue.writeBuffer(state.uniforms, 0, uniformScratch);
+    state.skipped = pass === null;
+    if (pass === null) return;
     state.lastMs = inputs.nowMs;
 
     const groups = Math.ceil(poolRows(octree, slots) / CUT_WORKGROUP);
@@ -361,19 +364,22 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   function encode(
     encoder: GPUCommandEncoder,
     inputs: StarCutInputs,
+    recut: boolean,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void {
     const present = cutSources(inputs);
     if (present.length === 0) return;
     const pass = encoder.beginComputePass({ label: 'star-cut', ...claimTimestampWrites() });
     for (const { row, entry } of present) {
-      const { lastMs } = entry.live;
+      const { lastMs, skipped } = entry.live;
+      // A source's first cut always runs: it has no lists to keep.
+      const cuts = recut || lastMs === null;
       const dtMs =
         lastMs === null || inputs.nowMs < lastMs
           ? Infinity
-          : Math.min(inputs.nowMs - lastMs, NODE_FADE_MAX_DT_MS);
+          : Math.min(inputs.nowMs - lastMs, NODE_FADE_MAX_DT_MS * (skipped ? 2 : 1));
       dispatch(
-        pass,
+        cuts ? pass : null,
         entry,
         entry.live,
         inputs,

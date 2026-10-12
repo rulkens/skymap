@@ -204,7 +204,7 @@ describe('starCatalogRenderer chunk pool', () => {
     renderer.upload(Source.GaiaStars, octreeOf({ chunks: 0 }), 256);
     expect(sizeOf(NODES)).toBe(10 * 24);
     expect(sizeOf(RECORDS)).toBe(100 * 8);
-    renderer.setFrameCut(frame(0));
+    renderer.setFrameCut(frame(0), true);
     renderer.encodeCut(encoder, () => ({}));
     expect(renderer.pickResources().leafDraw(Source.GaiaStars)).not.toBeNull();
     expect([...renderer.loadedCatalogs()].map((c) => c.source)).toEqual([Source.GaiaStars]);
@@ -348,7 +348,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.setFrameCut(frame(0));
+    renderer.setFrameCut(frame(0), true);
     renderer.drawCut(
       {
         setPipeline: vi.fn(),

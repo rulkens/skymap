@@ -60,6 +60,7 @@ export function createStarCatalogRenderer(
 ): StarCatalogRenderer {
   // ONE fact for the whole frame, so plain closure state, not a map keyed per ctx.
   let frameCut: StarCutInputs | null = null;
+  let frameRecut = true;
   const cut = createStarCutGpu(device);
 
   const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
@@ -263,8 +264,9 @@ export function createStarCatalogRenderer(
     pass.drawIndirect(cutDraw.indirect, cutDraw.indirectOffset);
   }
 
-  function setFrameCut(next: StarCutInputs | null): void {
+  function setFrameCut(next: StarCutInputs | null, recut: boolean): void {
     frameCut = next;
+    frameRecut = recut;
   }
 
   function getFrameCut(): StarCutInputs | null {
@@ -272,7 +274,7 @@ export function createStarCatalogRenderer(
   }
 
   function encodeCut(encoder: GPUCommandEncoder, claimTimestampWrites: ClaimTimestampWrites): void {
-    if (frameCut !== null) cut.encode(encoder, frameCut, claimTimestampWrites);
+    if (frameCut !== null) cut.encode(encoder, frameCut, frameRecut, claimTimestampWrites);
   }
 
   function pickResources(): StarCatalogPickResources {

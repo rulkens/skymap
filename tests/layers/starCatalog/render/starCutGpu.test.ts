@@ -82,8 +82,9 @@ function setup() {
   const encoder = { beginComputePass: vi.fn(() => pass) } as unknown as GPUCommandEncoder;
   const gpu = createStarCutGpu(device as unknown as GPUDevice);
   gpu.upload(Source.GaiaStars, CATALOG, 0);
-  const encode = (nowMs: number) => gpu.encode(encoder, frame(nowMs), () => ({}));
-  return { gpu, device, encoder, encode, fadeSteps };
+  const encode = (nowMs: number, recut = true) =>
+    gpu.encode(encoder, frame(nowMs), recut, () => ({}));
+  return { gpu, device, encoder, pass, encode, fadeSteps };
 }
 
 describe('starCutGpu fade step', () => {
@@ -97,6 +98,21 @@ describe('starCutGpu fade step', () => {
     expect(fadeSteps[1]).toBeCloseTo(20 / NODE_FADE_MS, 6);
     expect(fadeSteps[2]).toBeCloseTo(NODE_FADE_MAX_DT_MS / NODE_FADE_MS, 6);
     expect(fadeSteps[3]).toBe(1);
+  });
+});
+
+describe('starCutGpu skipped re-cut', () => {
+  it('writes the eye with no dispatch, and the next cut steps its fades by the whole gap', () => {
+    const { encode, pass, fadeSteps } = setup();
+    encode(1000);
+    const perCut = pass.dispatchWorkgroups.mock.calls.length;
+    encode(1030, false);
+    expect(pass.dispatchWorkgroups.mock.calls.length).toBe(perCut);
+    encode(1060);
+    expect(pass.dispatchWorkgroups.mock.calls.length).toBe(2 * perCut);
+    // Uniforms go out every frame. 60 ms is past one frame's NODE_FADE_MAX_DT_MS but is two frames.
+    expect(fadeSteps).toHaveLength(3);
+    expect(fadeSteps[2]).toBeCloseTo(60 / NODE_FADE_MS, 6);
   });
 });
 

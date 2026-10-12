@@ -12,4 +12,6 @@ export type StarCutState = {
   readonly drawBindGroups: Record<StarDrawStream, GPUBindGroup>;
   /** `null` until the first encode, which snaps every fade to its target. */
   lastMs: number | null;
+  /** The last encode wrote uniforms only: the next cut's fade step spans two frames. */
+  skipped: boolean;
 };

@@ -37,6 +37,7 @@ export function starCatalogPlanner(
   let plannedCut: StarCutSpec | null = null;
   let plannedFrame = 0;
   let wantedChunks = false;
+  let recutLast = true;
   const observeEpoch = (stream: StarChunkStream): boolean => {
     const epoch = stream.epoch();
     if (seenEpoch.get(stream) === epoch) return false;
@@ -100,12 +101,18 @@ export function starCatalogPlanner(
         }
       }
 
+      // A moving cut re-cuts every other frame: the kept lists still draw about this frame's
+      // eye, and a skipped frame's fade time rides the next cut's step. A landing re-cuts at once.
+      let moving = false;
       if (inputs === null) anchor = null;
       else if (residencyChanged || anchor === null || !sameStarCut(inputs.cut, anchor)) {
+        moving = anchor !== null && !residencyChanged;
         anchor = inputs.cut;
         changedAtMs = nowMs;
       }
-      runtime.renderer.setFrameCut(inputs);
+      const recut = !(moving && recutLast);
+      recutLast = recut;
+      runtime.renderer.setFrameCut(inputs, recut);
       const awake = inputs !== null && (nowMs - changedAtMs < NODE_FADE_MS || inFlight > 0);
       return { value: undefined, awake, settling: false };
     },

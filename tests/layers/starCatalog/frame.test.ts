@@ -116,6 +116,35 @@ describe('starCatalogPlanner', () => {
     expect(plan(MID_BAND_PC + 10, 1000 + NODE_FADE_MS).awake).toBe(false);
   });
 
+  it('re-cuts every other frame while the cut moves, every frame at rest, and at once on a landing', () => {
+    const counters = { epoch: 0 };
+    const stream = {
+      update: vi.fn(),
+      resident: () => null,
+      hasFailed: () => false,
+      inFlightCount: () => 0,
+      epoch: () => counters.epoch,
+    } as unknown as StarChunkStream;
+    const runtime = makeRuntime(true, stream);
+    const planner = starCatalogPlanner(runtime);
+    const recut = (x: number, t: number) => {
+      planner.plan(SNAPSHOT, [makeView(camAtPc(x), t)], STATE);
+      return vi.mocked(runtime.renderer.setFrameCut).mock.calls.at(-1)![1];
+    };
+
+    expect(recut(MID_BAND_PC, 0)).toBe(true);
+    expect([1, 2, 3, 4].map((i) => recut(MID_BAND_PC + 10 * i, 16 * i))).toEqual([
+      false,
+      true,
+      false,
+      true,
+    ]);
+    expect([5, 6].map((i) => recut(MID_BAND_PC + 40, 16 * i))).toEqual([true, true]);
+    recut(MID_BAND_PC + 50, 16 * 7); // moved after a cut: skipped
+    counters.epoch = 1;
+    expect(recut(MID_BAND_PC + 60, 16 * 8)).toBe(true);
+  });
+
   describe('chunk residency', () => {
     function stubStream() {
       const counters = { inFlight: 0, epoch: 0 };

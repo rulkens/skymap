@@ -48,9 +48,10 @@ export type StarCatalogRenderer = Renderer & {
   pickResources(): StarCatalogPickResources;
   /**
    * The frame's one cut: set by the Layer's planner, encoded by `encodeCut`, read by every
-   * `drawCut` and the pick draw.
+   * `drawCut` and the pick draw. `recut` false keeps the last cut's lists and fades and moves
+   * only the eye the draws rebuild positions about.
    */
-  setFrameCut(cut: StarCutInputs | null): void;
+  setFrameCut(cut: StarCutInputs | null, recut: boolean): void;
   getFrameCut(): StarCutInputs | null;
   /** The frame cut's compute pass; nothing when no cut is set. */
   encodeCut(encoder: GPUCommandEncoder, claimTimestampWrites: ClaimTimestampWrites): void;
