@@ -7,7 +7,7 @@
  * No `commit` step: there is nothing to upload GPU-side here. The payload is
  * CPU-resident structure data — `wireStructureProjection` subscribes to this
  * same slot and converts the ready value into `StructureInfo`s, writing them
- * to `structureStore`. Mirrors `createFamousGalaxiesMetaSlot` in shape.
+ * to the Layer's structure store. Mirrors `createFamousGalaxiesMetaSlot` in shape.
  *
  * This subscriber's only job is to warn on failure (the render wake is
  * `installSlotReadyWake`'s job). It owns no state — the data flows through
@@ -23,13 +23,13 @@
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { structureCatalogFetcher } from './structureCatalogFetcher';
 import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
-import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
-import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import type { StructureCatalogReq } from '../@types/StructureCatalogReq';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 
-export const createStructureCatalogSlot: SlotFactory<
+export function createStructureCatalogSlot(): AssetSlot<
   StructureCatalogPayload,
   StructureCatalogReq
-> = (_state, _cb) => {
+> {
   const slot = createAssetSlot({
     name: 'structure-catalog',
     fetch: structureCatalogFetcher,
@@ -40,4 +40,4 @@ export const createStructureCatalogSlot: SlotFactory<
     }
   });
   return slot;
-};
+}

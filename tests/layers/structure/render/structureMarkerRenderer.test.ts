@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { createStructureMarkerRenderer } from '../../../../src/layers/structure/render/structureMarkerRenderer';
-import type { StructureMarkerDescriptor } from '../../../../src/@types/rendering/StructureMarkerDescriptor';
+import type { StructureMarkerDescriptor } from '../../../../src/layers/structure/@types/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 import { CAMERA_UNIFORM_BYTES } from '../../../../src/services/gpu/lib/cameraUniforms';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';

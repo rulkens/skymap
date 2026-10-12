@@ -1,15 +1,19 @@
 /**
  * StructureMarkersPassSpec — what the two structure-marker passes (cosmic and
- * Milky Way scale) vary on: pass name, which scale's visibility bands gate it, and
- * which renderer handle it drives.
+ * Milky Way scale) vary on: pass name, which scale's visibility bands gate it,
+ * the renderer it drives, and the planner whose list it reads.
  */
 
-import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
+import type { StructureMarkerRenderer } from './StructureMarkerRenderer';
 import type { StructureScale } from '../../../@types/data/structure/StructureScale';
-import type { PassState } from '../../../@types/engine/frame/PassState';
+import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
+import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
 
 export type StructureMarkersPassSpec = {
   readonly name: string;
   readonly scale: StructureScale;
-  rendererOf(state: PassState): StructureMarkerRenderer | null;
+  readonly renderer: StructureMarkerRenderer;
+  /** A read key only: results are filed by planner name, so a fresh
+   * `structureMarkersPlanner(runtime)` reads what `createLayers` registered. */
+  readonly planner: FrameContentPlanner<readonly StructureMarkerDescriptor[]>;
 };

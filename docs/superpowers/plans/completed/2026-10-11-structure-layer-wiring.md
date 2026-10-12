@@ -94,28 +94,28 @@ export function selectionResolverOver(
 
 `ResolveDeps` holds one field, `structures`. It has two readers: `structureSelectionRow` (`:27,34,40`, through `coreSelectionRows` at `engine.ts:379`) and `watchFocusTweenSaga`'s `loaded?.()` (`:37,65`), the saga context's only `getContext('resolveDeps')`. The spec's target deferral reads `facts.bulk`, but the Layer has no facts key until Task 5. Until then the saga reads core's own `structureCounts` through `select`. That is behaviour-identical to `loaded()`: `wireStructureProjection` dispatches the anchor counts in the same synchronous call that installs the anchors (`wireStructureProjection.ts:78-79`). The saga has no store handle and the context offers none; `select` is already imported (`watchFocusTweenSaga.ts:19`).
 
-- [ ] Re-sign `structureSelectionRow` and `coreSelectionRows`; rewrite `coreSelectionRows`' header (it says "the two rows core owns" and describes `deps`).
-- [ ] `watchFocusTweenSaga.ts`: apply the interim deferral (`:49-68`, loop `:83`); drop the `resolveDeps` `getContext` (`:37`). Reword the comment block at `:49-57` so it does not name `resolveDeps`.
-- [ ] `engine.ts`: delete the `resolveDeps` thunk (`:366-371`; the comment above it, `:363-365`, covers every saga-context runner and stays), its import (`:67`), the `resolveDeps` entry in `setSagaContext` (`:416`); build `state.selectionKindRows` as in the contract.
-- [ ] Delete `StructureStore.loaded()` (its member and docblock) and `createStructureStore.ts:40`; nothing reads it now.
-- [ ] Delete `src/@types/engine/ResolveDeps.d.ts` with `npm run refactor -- delete` once nothing references it. Delete `SagaContext.resolveDeps` (`store/types.ts:152-153`) and its import (`:54`); reword the header paragraphs that describe it (`:20-24`, `:40`) and the two saga comments under **Files**.
-- [ ] Sweep: each `ResolveDeps` literal `{ structures: { byId, byCategory } }` becomes the inner `{ byId, byCategory }`, passed as `selectionResolverOver`'s first argument or to `structureSelectionRow` directly where a test composes rows by hand (`[...coreSelectionRows(), structureSelectionRow(store), …]`). Drop `resolveDeps` from every `setContext` call. `createTestStore.ts`'s `NOOP_SAGA_CONTEXT` loses `resolveDeps`; its `selection` keeps resolving static structure ids by composing `structureSelectionRow` over an empty store (`byId: () => null, byCategory: () => []`).
-- [ ] `watchFocusTweenSaga.test.ts`: the deferral tests (`:190`, `:216`) drop `structuresLoadedStub` (`:71`) and pulse with `engineStructureCountsChanged({ 'galaxy-cluster': 1 })` as today; the "loaded" state is now that dispatch having happened. Expected values unchanged.
-- [ ] Delete `tests/services/engine/selection/coreSelectionRows.test.ts`: it asserts the exact type list of a one-row array, a registry restatement (`docs/superpowers/conventions/testing.md`); `assertSelectionRowsDisjoint` at boot covers duplicates. Drop `loaded()` assertions from `createStructureStore.test.ts`.
-- [ ] No new test: a signature change, a selector swap with identical timing and a fixture sweep; every existing selection test keeps its expected values.
-- [ ] Verify: `npm run typecheck:fast`; `npm test -- tests/state tests/services/engine/selection tests/services/engine/animation tests/data/animation tests/layers/structure`.
-- [ ] Commit.
+- [x] Re-sign `structureSelectionRow` and `coreSelectionRows`; rewrite `coreSelectionRows`' header (it says "the two rows core owns" and describes `deps`).
+- [x] `watchFocusTweenSaga.ts`: apply the interim deferral (`:49-68`, loop `:83`); drop the `resolveDeps` `getContext` (`:37`). Reword the comment block at `:49-57` so it does not name `resolveDeps`.
+- [x] `engine.ts`: delete the `resolveDeps` thunk (`:366-371`; the comment above it, `:363-365`, covers every saga-context runner and stays), its import (`:67`), the `resolveDeps` entry in `setSagaContext` (`:416`); build `state.selectionKindRows` as in the contract.
+- [x] Delete `StructureStore.loaded()` (its member and docblock) and `createStructureStore.ts:40`; nothing reads it now.
+- [x] Delete `src/@types/engine/ResolveDeps.d.ts` with `npm run refactor -- delete` once nothing references it. Delete `SagaContext.resolveDeps` (`store/types.ts:152-153`) and its import (`:54`); reword the header paragraphs that describe it (`:20-24`, `:40`) and the two saga comments under **Files**.
+- [x] Sweep: each `ResolveDeps` literal `{ structures: { byId, byCategory } }` becomes the inner `{ byId, byCategory }`, passed as `selectionResolverOver`'s first argument or to `structureSelectionRow` directly where a test composes rows by hand (`[...coreSelectionRows(), structureSelectionRow(store), …]`). Drop `resolveDeps` from every `setContext` call. `createTestStore.ts`'s `NOOP_SAGA_CONTEXT` loses `resolveDeps`; its `selection` keeps resolving static structure ids by composing `structureSelectionRow` over an empty store (`byId: () => null, byCategory: () => []`).
+- [x] `watchFocusTweenSaga.test.ts`: the deferral tests (`:190`, `:216`) drop `structuresLoadedStub` (`:71`) and pulse with `engineStructureCountsChanged({ 'galaxy-cluster': 1 })` as today; the "loaded" state is now that dispatch having happened. Expected values unchanged.
+- [x] Delete `tests/services/engine/selection/coreSelectionRows.test.ts`: it asserts the exact type list of a one-row array, a registry restatement (`docs/superpowers/conventions/testing.md`); `assertSelectionRowsDisjoint` at boot covers duplicates. Drop `loaded()` assertions from `createStructureStore.test.ts`.
+- [x] No new test: a signature change, a selector swap with identical timing and a fixture sweep; every existing selection test keeps its expected values.
+- [x] Verify: `npm run typecheck:fast`; `npm test -- tests/state tests/services/engine/selection tests/services/engine/animation tests/data/animation tests/layers/structure`.
+- [x] Commit.
 
 ### Task 2 (spec P4): The planner calls `produceStructureMarkers` directly
 
 **Files:** `src/layers/structure/frame.ts`, `src/services/engine/presentation/markerProducers.ts` (delete), `src/services/engine/frame/runMarkerProducers.ts` (delete), `src/@types/engine/subsystems/MarkerProducer.d.ts` (delete), `src/services/engine/frame/runLabel3DProducers.ts:5` (comment)
 
-- [ ] `structureMarkersPlanner.plan` returns `produceStructureMarkers(state, view)` as its `value`, in place of `runMarkerProducers(state, view)` (`frame.ts`, `:19` before PR 1). The planner header (`:1-9`) states the pick-index rule now held by `runMarkerProducers.ts:3-5`: the list is emitted in `store.all()` order and never sorted, filtered or deduped. One sentence, citing `produceStructureMarkers`' header.
-- [ ] Delete the three files with `npm run refactor -- delete <file>#<symbol>` (refuses while a reference remains). `MarkerProducer` has no reader besides `markerProducers.ts`.
-- [ ] `runLabel3DProducers.ts:5` says it "Mirrors `runMarkerProducers`'s walk"; reword it to stand alone.
-- [ ] No new test: the producer's output is unchanged and its suite covers it.
-- [ ] Verify: `npm run typecheck:fast`; `npm test -- tests/layers/structure tests/services/engine/frame`.
-- [ ] Commit.
+- [x] `structureMarkersPlanner.plan` returns `produceStructureMarkers(state, view)` as its `value`, in place of `runMarkerProducers(state, view)` (`frame.ts`, `:19` before PR 1). The planner header (`:1-9`) states the pick-index rule now held by `runMarkerProducers.ts:3-5`: the list is emitted in `store.all()` order and never sorted, filtered or deduped. One sentence, citing `produceStructureMarkers`' header.
+- [x] Delete the three files with `npm run refactor -- delete <file>#<symbol>` (refuses while a reference remains). `MarkerProducer` has no reader besides `markerProducers.ts`.
+- [x] `runLabel3DProducers.ts:5` says it "Mirrors `runMarkerProducers`'s walk"; reword it to stand alone.
+- [x] No new test: the producer's output is unchanged and its suite covers it.
+- [x] Verify: `npm run typecheck:fast`; `npm test -- tests/layers/structure tests/services/engine/frame`.
+- [x] Commit.
 
 ### Task 3 (R3): One fade helper for ring and label
 
@@ -142,17 +142,17 @@ export function structureApparentRadiusFade(
 
 Close-approach: 1 below `max`; past it, `1 − smoothstep(min(1, (px − max) / maxBand))`. Far-distance: 0 below `min`; across `[min, min + minBand)`, `smoothstep((px − min) / minBand)`; 1 above. `smoothstep(t) = t²(3 − 2t)`. Today's two copies are `produceStructureMarkers.ts:100-137` and `produceStructureLabels.ts:170-206`. The backlog file's `:97-119` / `:138-174` citations are stale.
 
-- [ ] Extract `StructureMarkerStyle` into the Layer's `@types/` (types never inline) and import it in `structureMarkerStyles.ts`.
-- [ ] Tests, `style = { markerMaxApparentRadiusPx: 700, markerMaxApparentFadeBandPx: 400, markerMinApparentRadiusPx: 5, markerMinApparentFadeBandPx: 4 }`, every expected value worked by hand:
+- [x] Extract `StructureMarkerStyle` into the Layer's `@types/` (types never inline) and import it in `structureMarkerStyles.ts`.
+- [x] Tests, `style = { markerMaxApparentRadiusPx: 700, markerMaxApparentFadeBandPx: 400, markerMinApparentRadiusPx: 5, markerMinApparentFadeBandPx: 4 }`, every expected value worked by hand:
   - `is 1 between the two thresholds` (300 px → 1);
   - `fades out past the close-approach threshold` (800 px → t = 0.25 → 1 − 0.15625 = 0.84375);
   - `is 0 past the close-approach band` (1500 px → 0);
   - `fades in above the far threshold` (6 px → t = 0.25 → 0.15625);
   - `is 0 below the far threshold` (3 px → 0).
-- [ ] Implement, then replace both hand-rolled pairs with one call each. Each caller keeps its own zero-distance guard exactly as today (the marker emits alpha 0 at `distanceMpc <= 0`; the label skips the fade when `distanceMpc > 0` is false). The label `continue`s when the helper returns ≤ 0, which equals today's "either factor ≤ 0" skip, because both factors are ≥ 0. The comment "Mirrors the smoothstep `produceStructureMarkers` uses" (`produceStructureLabels.ts:173-174`) goes; the shared call replaces it.
-- [ ] Every existing `produceStructureMarkers` and `produceStructureLabels` test passes with unchanged expected values.
-- [ ] `docs/backlog/2026-08-22-label-entanglement-residuals.md`: delete finding 1 from "What it is", "Why it matters" and "Approach", renumber, and change "Three findings" to "Two findings". `docs/BACKLOG.md:167`: drop "duplicated structure fade curve" from the index line's clause.
-- [ ] Commit.
+- [x] Implement, then replace both hand-rolled pairs with one call each. Each caller keeps its own zero-distance guard exactly as today (the marker emits alpha 0 at `distanceMpc <= 0`; the label skips the fade when `distanceMpc > 0` is false). The label `continue`s when the helper returns ≤ 0, which equals today's "either factor ≤ 0" skip, because both factors are ≥ 0. The comment "Mirrors the smoothstep `produceStructureMarkers` uses" (`produceStructureLabels.ts:173-174`) goes; the shared call replaces it.
+- [x] Every existing `produceStructureMarkers` and `produceStructureLabels` test passes with unchanged expected values.
+- [x] `docs/backlog/2026-08-22-label-entanglement-residuals.md`: delete finding 1 from "What it is", "Why it matters" and "Approach", renumber, and change "Three findings" to "Two findings". `docs/BACKLOG.md:167`: drop "duplicated structure fade curve" from the index line's clause.
+- [x] Commit.
 
 ### Task 4: Register the structure Layer; core's copies go — `review: yes`
 
@@ -251,40 +251,40 @@ The label producers keep their `StructureScale` argument (`'cosmic'` / `'milkyWa
 
 **Layer side**
 
-- [ ] First step: `npm run move-files -- src/services/engine/wiring/wireStructureProjection.ts src/layers/structure/load/wireStructureProjection.ts` (PR 1 left it in core, because it dispatches and the boundary ratchet forbids that in a Layer file; the test mirror follows). Fix `vi.mock` strings by hand.
-- [ ] `create`: `store = createStructureStore()`; `cosmoRenderer` and `nearRenderer` from the two rows now at `gpuHandleRegistry.ts:165-188` (same arguments, `deps.ctx` and `deps.fadeBgl` in place of the registry's deps); `slot = createStructureCatalogSlot()`; then `wireStructureProjection({ store, slot }, deps.store.dispatch)`. The projection's body is unchanged apart from reading `runtime.store`/`runtime.slot` in place of `state.data.structures`/`state.assetSlots.structureCatalog`.
-- [ ] `destroy`: both renderers' `destroy()`. No slot release: no Layer releases a slot at teardown and core releases none (`src/layers/galaxyCatalog/destroy.ts`, `engine.ts:455-482`). The slot holds CPU data only.
-- [ ] `structureAssetRows`: the `structureCatalog` row moved from `assetWiring.ts:145-159`, with `BULK_CATALOG_CATEGORIES` and its docblock (`:36-41`) beside it; `factory: () => runtime.slot`.
-- [ ] `structureFadeRows`: the `structureRing` and `structureLabel` rows moved verbatim from `fadeLayers.ts:55-68`, shaped like `src/layers/milkyWay/present/milkyWayFadeRows.ts`. Keys and handles are unchanged, so the tour's visibility actions see exactly what they saw.
-- [ ] `frame.ts`: the planner becomes the factory in the contract, name `'structure-markers'` unchanged (`frameSections.ts:93` plans it), value `produceStructureMarkers(runtime.store, state, view)`.
-- [ ] Passes: `createStructureMarkersPass` reads `spec.renderer` and `spec.planner` (drop the null check at `:25`). Each pass factory builds its own `structureMarkersPlanner(runtime)` as the read key. That works because the planner result store files results by planner name (`createFramePlannerResultStore.ts`), so it is the same key `createLayers` registered. Each pass file still exports only its one factory.
-- [ ] Producers: `produceStructureMarkers` and `produceStructureLabels` read the store argument instead of `state.data.structures` (`:78` and `:118` today). `produceStructureLabels` becomes a factory returning the `produceLabels` closure, the shape of `src/layers/galaxyCatalog/present/produceFamousGalaxyLabels.ts:165-168`.
-- [ ] `state/slices.ts` header: the tuple is the Layer's `settings`; drop any "settings-only" wording.
-- [ ] `compositions/app.ts`: append `structureLayer` last in `layers` and in the `satisfies` tuple. Last keeps the Structures section directly above Labels & Guides: `SettingsPanel` renders Layer `main` sections in composition order, then the core containers (`SettingsPanel.tsx:45-50`).
+- [x] First step: `npm run move-files -- src/services/engine/wiring/wireStructureProjection.ts src/layers/structure/load/wireStructureProjection.ts` (PR 1 left it in core, because it dispatches and the boundary ratchet forbids that in a Layer file; the test mirror follows). Fix `vi.mock` strings by hand.
+- [x] `create`: `store = createStructureStore()`; `cosmoRenderer` and `nearRenderer` from the two rows now at `gpuHandleRegistry.ts:165-188` (same arguments, `deps.ctx` and `deps.fadeBgl` in place of the registry's deps); `slot = createStructureCatalogSlot()`; then `wireStructureProjection({ store, slot }, deps.store.dispatch)`. The projection's body is unchanged apart from reading `runtime.store`/`runtime.slot` in place of `state.data.structures`/`state.assetSlots.structureCatalog`.
+- [x] `destroy`: both renderers' `destroy()`. No slot release: no Layer releases a slot at teardown and core releases none (`src/layers/galaxyCatalog/destroy.ts`, `engine.ts:455-482`). The slot holds CPU data only.
+- [x] `structureAssetRows`: the `structureCatalog` row moved from `assetWiring.ts:145-159`, with `BULK_CATALOG_CATEGORIES` and its docblock (`:36-41`) beside it; `factory: () => runtime.slot`.
+- [x] `structureFadeRows`: the `structureRing` and `structureLabel` rows moved verbatim from `fadeLayers.ts:55-68`, shaped like `src/layers/milkyWay/present/milkyWayFadeRows.ts`. Keys and handles are unchanged, so the tour's visibility actions see exactly what they saw.
+- [x] `frame.ts`: the planner becomes the factory in the contract, name `'structure-markers'` unchanged (`frameSections.ts:93` plans it), value `produceStructureMarkers(runtime.store, state, view)`.
+- [x] Passes: `createStructureMarkersPass` reads `spec.renderer` and `spec.planner` (drop the null check at `:25`). Each pass factory builds its own `structureMarkersPlanner(runtime)` as the read key. That works because the planner result store files results by planner name (`createFramePlannerResultStore.ts`), so it is the same key `createLayers` registered. Each pass file still exports only its one factory.
+- [x] Producers: `produceStructureMarkers` and `produceStructureLabels` read the store argument instead of `state.data.structures` (`:78` and `:118` today). `produceStructureLabels` becomes a factory returning the `produceLabels` closure, the shape of `src/layers/galaxyCatalog/present/produceFamousGalaxyLabels.ts:165-168`.
+- [x] `state/slices.ts` header: the tuple is the Layer's `settings`; drop any "settings-only" wording.
+- [x] `compositions/app.ts`: append `structureLayer` last in `layers` and in the `satisfies` tuple. Last keeps the Structures section directly above Labels & Guides: `SettingsPanel` renders Layer `main` sections in composition order, then the core containers (`SettingsPanel.tsx:45-50`).
 
 **Core side: delete**
 
-- [ ] `engine.ts`: the `produceStructureLabels` import (`:30`), the two renderer nulls (`:186-187`), `assetSlots.structureCatalog: null` (`:285`), the cosmo label registration and the comment above it (`:321-332`; the constellations remark goes with it, since no COSMO row is left here), the near registration (`:341-346`), and Task 1's `structureSelectionRow(...)` append and import. After this, `engine.ts` mentions structures only through `structureFocus`.
-- [ ] `EngineGpuHandles.d.ts`: `:21` import and `:237-249`. `gpuHandleRegistry.ts`: `:15-16` imports and the two rows `:165-188`. Drop the `vi.mock` of the renderer from `initGpu.hdrCapabilityWiring.test.ts:167`; the registry no longer constructs it.
-- [ ] `EngineAssetSlots.d.ts:13-14,21-22`. `createEngineData.ts:2,31` and its docblock's structure sentence (`:11-12`); `EngineData.d.ts:1,27` and its structure bullet (`:10-14`). `EngineData` keeps `bodies` only.
-- [ ] `assetWiring.ts:13-14,36-41,145-159`. Move the bug-fix pin `structureCatalog demand follows structure-category visibility` (`assetWiring.test.ts:105-150`) to `tests/layers/structure/load/structureAssetRows.test.ts`, unchanged in assertion. `createLayers.composition.test.ts:227-229` uses `'structureCatalog'` as "a key core owns"; switch it to another core key (`'bodyTextureAtlas'`).
-- [ ] `fadeLayers.ts:15,55-68`. Re-point `fadeLayers.test.ts` and `syncVisibilityFades.test.ts` structure cases (they drive the real `structureRing` row) to compose `structureFadeRows()` into the fade rows they walk; `makeFadeBridgeState.ts` follows whatever those tests need.
-- [ ] `passes/index.ts:10-11,40-41`. Move the structure blocks of `passes.test.ts` (`:172-242`, plus the imports at `:14-15,23`) to `tests/layers/structure/passes/structureMarkersCosmoPass.test.ts`, built over a stub runtime (`cosmoRenderer: { markerCount }`) instead of `state.gpu`; assertions unchanged.
-- [ ] `frame/planners/index.ts`: delete the file. `createLayers.ts`: drop the import (`:38`) and compose `state.planners` from Layer rows alone (`:152-155`). `frameOrderBoot.test.ts:18,48` and `startLoop.test.ts:56,107`: stub the `SCENE` section's planners the way `PRELUDE`'s are (`stubPlannersFor(SCENE)` beside `stubPlannersFor(PRELUDE)`). `frameFilePurity.test.ts:125,135`: drop the `frame/planners` sweep row, because the folder is gone. `Layer.d.ts:102`: the comment no longer says "after `CORE_PLANNERS`".
-- [ ] `wireSlots.ts`: the `wireStructureProjection` import and call (`:68,109-111`) and the docblock mentions (`:14-16,43,46`). Move `wireSlots.test.ts`'s two structure tests (`:735-817`) into `tests/layers/structure/load/wireStructureProjection.test.ts`, re-based on the new signature, and drop its `structureCatalogFetcher` mock (`:71`) if nothing else uses it. `engineSliceDispatches.test.ts`'s structure block (`:159-181`) moves there too, with its mocks (`:36`, `:58`). While rewriting that file, drop its dead mock of `src/services/engine/phases/structureCatalogToStructures` (a path that never existed).
-- [ ] `SettingsPanel.tsx`: `:17,49`, and the header's count of core containers (`:4-5`). `SettingsPanel.test.tsx`'s `vi.mock` of the container now has to reach it through the Layer's `ui` entry: mock the module at its Layer path.
-- [ ] `detailCardTable.ts`: `:31,34`, the `structure` arm `:46-52`, the header mention `:9-10`, and "The four focusable kinds" (`:36-38`) becomes three.
-- [ ] `tests/conventions/layerImportBoundary.test.ts`: delete every `ENGINE_AND_STATE_ALLOWED` row PR 1 added (the structure Layer block); core no longer imports the Layer.
-- [ ] `tests/packages/website/docsReference.test.ts`: drop the `!group.file.startsWith('src/layers/structure/')` exclusion in "covers every section the panel draws" (PR 1 added it because the panel drew the section directly); the registered Layer's `ui` slot now counts it.
+- [x] `engine.ts`: the `produceStructureLabels` import (`:30`), the two renderer nulls (`:186-187`), `assetSlots.structureCatalog: null` (`:285`), the cosmo label registration and the comment above it (`:321-332`; the constellations remark goes with it, since no COSMO row is left here), the near registration (`:341-346`), and Task 1's `structureSelectionRow(...)` append and import. After this, `engine.ts` mentions structures only through `structureFocus`.
+- [x] `EngineGpuHandles.d.ts`: `:21` import and `:237-249`. `gpuHandleRegistry.ts`: `:15-16` imports and the two rows `:165-188`. Drop the `vi.mock` of the renderer from `initGpu.hdrCapabilityWiring.test.ts:167`; the registry no longer constructs it.
+- [x] `EngineAssetSlots.d.ts:13-14,21-22`. `createEngineData.ts:2,31` and its docblock's structure sentence (`:11-12`); `EngineData.d.ts:1,27` and its structure bullet (`:10-14`). `EngineData` keeps `bodies` only.
+- [x] `assetWiring.ts:13-14,36-41,145-159`. Move the bug-fix pin `structureCatalog demand follows structure-category visibility` (`assetWiring.test.ts:105-150`) to `tests/layers/structure/load/structureAssetRows.test.ts`, unchanged in assertion. `createLayers.composition.test.ts:227-229` uses `'structureCatalog'` as "a key core owns"; switch it to another core key (`'bodyTextureAtlas'`).
+- [x] `fadeLayers.ts:15,55-68`. Re-point `fadeLayers.test.ts` and `syncVisibilityFades.test.ts` structure cases (they drive the real `structureRing` row) to compose `structureFadeRows()` into the fade rows they walk; `makeFadeBridgeState.ts` follows whatever those tests need.
+- [x] `passes/index.ts:10-11,40-41`. Move the structure blocks of `passes.test.ts` (`:172-242`, plus the imports at `:14-15,23`) to `tests/layers/structure/passes/structureMarkersCosmoPass.test.ts`, built over a stub runtime (`cosmoRenderer: { markerCount }`) instead of `state.gpu`; assertions unchanged.
+- [x] `frame/planners/index.ts`: delete the file. `createLayers.ts`: drop the import (`:38`) and compose `state.planners` from Layer rows alone (`:152-155`). `frameOrderBoot.test.ts:18,48` and `startLoop.test.ts:56,107`: stub the `SCENE` section's planners the way `PRELUDE`'s are (`stubPlannersFor(SCENE)` beside `stubPlannersFor(PRELUDE)`). `frameFilePurity.test.ts:125,135`: drop the `frame/planners` sweep row, because the folder is gone. `Layer.d.ts:102`: the comment no longer says "after `CORE_PLANNERS`".
+- [x] `wireSlots.ts`: the `wireStructureProjection` import and call (`:68,109-111`) and the docblock mentions (`:14-16,43,46`). Move `wireSlots.test.ts`'s two structure tests (`:735-817`) into `tests/layers/structure/load/wireStructureProjection.test.ts`, re-based on the new signature, and drop its `structureCatalogFetcher` mock (`:71`) if nothing else uses it. `engineSliceDispatches.test.ts`'s structure block (`:159-181`) moves there too, with its mocks (`:36`, `:58`). While rewriting that file, drop its dead mock of `src/services/engine/phases/structureCatalogToStructures` (a path that never existed).
+- [x] `SettingsPanel.tsx`: `:17,49`, and the header's count of core containers (`:4-5`). `SettingsPanel.test.tsx`'s `vi.mock` of the container now has to reach it through the Layer's `ui` entry: mock the module at its Layer path.
+- [x] `detailCardTable.ts`: `:31,34`, the `structure` arm `:46-52`, the header mention `:9-10`, and "The four focusable kinds" (`:36-38`) becomes three.
+- [x] `tests/conventions/layerImportBoundary.test.ts`: delete every `ENGINE_AND_STATE_ALLOWED` row PR 1 added (the structure Layer block); core no longer imports the Layer.
+- [x] `tests/packages/website/docsReference.test.ts`: drop the `!group.file.startsWith('src/layers/structure/')` exclusion in "covers every section the panel draws" (PR 1 added it because the panel drew the section directly); the registered Layer's `ui` slot now counts it.
 
 **Tests (new)**
 
-- [ ] `tests/layers/structure/layer.test.ts`, over a stub runtime (the factories touch no GPU at construction):
+- [x] `tests/layers/structure/layer.test.ts`, over a stub runtime (the factories touch no GPU at construction):
   - `each label row registers on the slab its categories draw on`: the `'cosmic'` row is on `COSMO`, the `'milkyWay'` row on `NEAR0`. A swapped slab projects every label off-screen; no other test sees it.
   - `the Layer's pass names are not core's, and each sits on a FRAME_ORDER line`: neither name is in `CONTENT_PASSES`, and each is in `FRAME_ORDER_PASS_NAMES` (`src/services/engine/frame/frameOrderPassNames.ts:11`). The first catches a core row left behind (it would draw twice); the second catches a rename that would silently never draw.
   - Spec §7's "sources array has eight rows" is **not** written. It restates a registry literal (`docs/superpowers/conventions/testing.md`, "No constant / registry restatements"), and PR 1's Task 2 made a missing row a compile error.
-- [ ] Verify: `npm run typecheck:fast`, `npm run build`, then `npm test -- tests/layers/structure tests/services/engine tests/components tests/state/tour`. Run the full `npm test` once before committing: this commit touches the boot path.
-- [ ] Commit.
+- [x] Verify: `npm run typecheck:fast`, `npm run build`, then `npm test -- tests/layers/structure tests/services/engine tests/components tests/state/tour`. Run the full `npm test` once before committing: this commit touches the boot path.
+- [x] Commit.
 
 ### Task 5 (spec P1): Counts and bulk status are Layer facts — `review: yes`
 
@@ -339,13 +339,13 @@ structure: {
 
 `create` runs after `createLayers` seeds the key (`createLayers.ts:106-123`), so the boot publish lands in a seeded key. The deferral waits only while the slot is actually loading. Today `loaded()` is true from boot, because the anchors land synchronously, so a slot nobody demands (`'idle'`) must not hold a focus. The pre-seed default is `'idle'` for the same reason. `factsReported` fires for every Layer's facts, which is why `empty` is re-read after each pulse. The spec lists `selectStructureCounts` among P1's deletions; this plan re-points it to the facts key instead, the same move P2 makes for `selectStructureSearchList`. A deleted name would only come back under another one for the container to read.
 
-- [ ] Add `StructureFacts`, the `facts` value, and `create`'s `deps.publish` hand-off to the projection.
-- [ ] `wireStructureProjection.ts`: `emitCounts` (`:58-69`) publishes counts per the contract and stops dispatching `engineStructureCountsChanged`. Rewrite the header's "Structure-count dispatches" section (`:21-29`) to describe the publishes and the four `bulk` states.
-- [ ] `StructuresSectionContainer.tsx`: reads `selectStructureCounts` as today; only its comment (`:36-39`) changes, to name the fact.
-- [ ] Delete `structureCounts` (`CoreEngineSliceState.d.ts:40` and its header note `:5-7`; `engineSlice.ts:43`) and `engineStructureCountsChanged` (`engineSlice.ts:68-76`, export `:174`; drop the `StructureId` import if unused). Re-point `selectStructureCounts` (`selectors.ts:68-69`) and add `selectStructureBulk`. Fix the stale mention in `UseEngineReturn.d.ts:5`.
-- [ ] `watchSelectionRowsSaga.ts`: swap `engineStructureCountsChanged` for `factsReported` in the pulse list (`:80`) and import (`:39`); reword the header lines naming it (`:10-11`).
-- [ ] `watchFocusTweenSaga.ts`: the deferral becomes the contract's final form (`Deferral.pulse` typed `typeof factsReported`); reword the comment block at `:49-57`.
-- [ ] Tests:
+- [x] Add `StructureFacts`, the `facts` value, and `create`'s `deps.publish` hand-off to the projection.
+- [x] `wireStructureProjection.ts`: `emitCounts` (`:58-69`) publishes counts per the contract and stops dispatching `engineStructureCountsChanged`. Rewrite the header's "Structure-count dispatches" section (`:21-29`) to describe the publishes and the four `bulk` states.
+- [x] `StructuresSectionContainer.tsx`: reads `selectStructureCounts` as today; only its comment (`:36-39`) changes, to name the fact.
+- [x] Delete `structureCounts` (`CoreEngineSliceState.d.ts:40` and its header note `:5-7`; `engineSlice.ts:43`) and `engineStructureCountsChanged` (`engineSlice.ts:68-76`, export `:174`; drop the `StructureId` import if unused). Re-point `selectStructureCounts` (`selectors.ts:68-69`) and add `selectStructureBulk`. Fix the stale mention in `UseEngineReturn.d.ts:5`.
+- [x] `watchSelectionRowsSaga.ts`: swap `engineStructureCountsChanged` for `factsReported` in the pulse list (`:80`) and import (`:39`); reword the header lines naming it (`:10-11`).
+- [x] `watchFocusTweenSaga.ts`: the deferral becomes the contract's final form (`Deferral.pulse` typed `typeof factsReported`); reword the comment block at `:49-57`.
+- [x] Tests:
   - `wireStructureProjection.test.ts`, with a `publish` spy over a real store and slot. Fixture: 2 anchor galaxy clusters, 3 bulk galaxy clusters.
     - `publishes anchor counts and bulk 'idle' at boot`: one publish after the synchronous call; galaxy-cluster 2, `bulk: 'idle'`.
     - `publishes bulk 'loading' while the slot loads or commits`: drive the slot through `loading` and `committing`; each publishes `bulk: 'loading'` and no `counts`.
@@ -357,8 +357,8 @@ structure: {
   - Add `another Layer's facts report does not end a structure deferral`: with the row null and `bulk: 'loading'`, dispatch `factsReported({ layer: 'galaxyCatalog', patch: { structureMemberCount: null } })` → tween stays null; then feed the stub and report `bulk: 'ready'` → the tween targets the record's `worldPos`.
   - `StructuresSectionContainer.test.ts:99`: seed the key and report `counts: { 'galaxy-cluster': 42 }` via `factsReported`; the "42" assertion stays.
   - `watchSelectionRowsSaga.test.ts:202`: re-point to `factsReported` and rename the test to `a structure deep link fills on the structure Layer's facts report`.
-- [ ] Verify: `npm run typecheck:fast`; the test files above plus `tests/state/engine`.
-- [ ] Commit.
+- [x] Verify: `npm run typecheck:fast`; the test files above plus `tests/state/engine`.
+- [x] Commit.
 
 ### Task 6 (spec P2): The palette's search list is a Layer fact — `review: yes`
 
@@ -387,11 +387,11 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
   selectEngineFacts(state).structure?.searchList ?? NO_STRUCTURE_SEARCH_LIST;
 ```
 
-- [ ] Add `searchList` to the type and the `facts` value. Each publish that carries `counts` (boot, `ready`, `error`) adds `searchList: store.all().map(toStructureSearchEntry)`; the `dispatch` parameter goes. The boot publish carries the anchors, so a palette opened before the bulk catalog lands still lists them, as today.
-- [ ] Delete `structureSearchList` (`CoreEngineSliceState.d.ts:42-49` and its import if unused; `engineSlice.ts:45`) and `engineStructureSearchListChanged` (`engineSlice.ts:83-91`, export `:176`, the `StructureSearchEntry` import if unused). Rewrite `selectStructureSearchList` (`selectors.ts:79-86`) as in the contract; `CommandPaletteContainer.tsx:64` is unchanged.
-- [ ] Tests: delete `engineSlice.test.ts`'s `engineStructureSearchListChanged` block (`:89-103`). In `wireStructureProjection.test.ts`, the boot, `ready` and `error` tests also assert `searchList` (boot and error: the two anchors' ids; after `ready`: five ids).
-- [ ] Verify: `npm run typecheck:fast`; `npm test -- tests/state/engine tests/layers/structure tests/components/CommandPalette`.
-- [ ] Commit.
+- [x] Add `searchList` to the type and the `facts` value. Each publish that carries `counts` (boot, `ready`, `error`) adds `searchList: store.all().map(toStructureSearchEntry)`; the `dispatch` parameter goes. The boot publish carries the anchors, so a palette opened before the bulk catalog lands still lists them, as today.
+- [x] Delete `structureSearchList` (`CoreEngineSliceState.d.ts:42-49` and its import if unused; `engineSlice.ts:45`) and `engineStructureSearchListChanged` (`engineSlice.ts:83-91`, export `:176`, the `StructureSearchEntry` import if unused). Rewrite `selectStructureSearchList` (`selectors.ts:79-86`) as in the contract; `CommandPaletteContainer.tsx:64` is unchanged.
+- [x] Tests: delete `engineSlice.test.ts`'s `engineStructureSearchListChanged` block (`:89-103`). In `wireStructureProjection.test.ts`, the boot, `ready` and `error` tests also assert `searchList` (boot and error: the two anchors' ids; after `ready`: five ids).
+- [x] Verify: `npm run typecheck:fast`; `npm test -- tests/state/engine tests/layers/structure tests/components/CommandPalette`.
+- [x] Commit.
 
 ### Task 7: The types core no longer reads move into the Layer
 
@@ -409,19 +409,19 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
 
 Spec §5.1 names `StructureStore`, `StructureMarkerRenderer` and `StructureMarkerDescriptor`; `StructureGroupId` and `StructureCatalogReq` follow by the same rule (their only readers are `StructureStore` and the structure slot and fetcher).
 
-- [ ] Before moving, run `npm run refactor -- refs <file>#<Type>` for each. Every `src/` reference must be inside `src/layers/structure/`. Tasks 1, 2 and 4 removed `ResolveDeps`, `MarkerProducer`, `EngineData`, `EngineGpuHandles` and `EngineAssetSlots` as readers. If a core reader remains, stop and report it; that type stays shared.
-- [ ] `npm run move-files -- --manifest <file> --dry`, then without `--dry`. R12's shared types (`StructureId`, `StructureInfo`, `StructureSearchEntry`, `StructureFocusSubsystem`, `StructureCatalogPayload`) do not move.
-- [ ] No new test.
-- [ ] Commit.
+- [x] Before moving, run `npm run refactor -- refs <file>#<Type>` for each. Every `src/` reference must be inside `src/layers/structure/`. Tasks 1, 2 and 4 removed `ResolveDeps`, `MarkerProducer`, `EngineData`, `EngineGpuHandles` and `EngineAssetSlots` as readers. If a core reader remains, stop and report it; that type stays shared.
+- [x] `npm run move-files -- --manifest <file> --dry`, then without `--dry`. R12's shared types (`StructureId`, `StructureInfo`, `StructureSearchEntry`, `StructureFocusSubsystem`, `StructureCatalogPayload`) do not move.
+- [x] No new test.
+- [x] Commit.
 
 ### Task 8: Docs
 
 **Files:** `src/layers/README.md`, `docs/RENDERER.md:27`, `.claude/skills/add-data-source/SKILL.md`
 
-- [ ] `src/layers/README.md`: the `planners?` row (`:21`) drops "joins `CORE_PLANNERS`" (say "appended to `state.planners` by `createLayers`"); the `## Status` paragraph lists `structure` among the formed Layers and `body` as the one settings-only stub.
-- [ ] `docs/RENDERER.md:27`: drop `engine/frame/planners/` from the planner paragraph; planners are Layer rows.
-- [ ] `.claude/skills/add-data-source/SKILL.md`: the structure-category edit surface (the table at `:176-185` and the notes after it) names the Layer's files: rows in `src/layers/structure/sources/` plus `structureSourceRows.ts`, styles in `present/structureMarkerStyles.ts`, the build switch in `load/buildStaticAnchorStructures.ts`, the card in `ui/StructureDetailCard/`. Counts and search come from the Layer's facts with no per-category row.
-- [ ] Commit.
+- [x] `src/layers/README.md`: the `planners?` row (`:21`) drops "joins `CORE_PLANNERS`" (say "appended to `state.planners` by `createLayers`"); the `## Status` paragraph lists `structure` among the formed Layers and `body` as the one settings-only stub.
+- [x] `docs/RENDERER.md:27`: drop `engine/frame/planners/` from the planner paragraph; planners are Layer rows.
+- [x] `.claude/skills/add-data-source/SKILL.md`: the structure-category edit surface (the table at `:176-185` and the notes after it) names the Layer's files: rows in `src/layers/structure/sources/` plus `structureSourceRows.ts`, styles in `present/structureMarkerStyles.ts`, the build switch in `load/buildStaticAnchorStructures.ts`, the card in `ui/StructureDetailCard/`. Counts and search come from the Layer's facts with no per-category row.
+- [x] Commit.
 
 ## Dispatch grouping
 

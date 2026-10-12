@@ -26,7 +26,8 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import {
   engineSourceCountReported,
-  engineStructureCountsChanged,
+  factsReported,
+  layerFactsSeeded,
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -46,8 +47,11 @@ import {
   decodeSkstCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture, StarRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type {
+  GalaxyRowFixture,
+  StarRowFixture,
+  StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarOctree } from '../../../src/@types/data/starCatalog/StarOctree';
 import { starOctreeFromSkst } from '../../../src/utils/star/starOctreeFromSkst';
@@ -108,9 +112,7 @@ describe('watchSelectionRowsSaga', () => {
       },
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
-    const deps: ResolveDeps = {
-      structures: { byId: () => structure, byCategory: () => [] },
-    };
+    const structures: StructureRowFixture = { byId: () => structure, byCategory: () => [] };
     // The starCatalog Layer's slice of the composed resolver, read LIVE like
     // `galaxies` above so the deferral case can land the bin mid-test.
     const stars = {
@@ -123,8 +125,7 @@ describe('watchSelectionRowsSaga', () => {
     } as unknown as StarRowFixture;
     sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({
-      resolveDeps: () => deps,
-      selection: selectionResolverOver(deps, galaxies, stars),
+      selection: selectionResolverOver(structures, galaxies, stars),
     });
     return s;
   }
@@ -202,14 +203,20 @@ describe('watchSelectionRowsSaga', () => {
     });
   });
 
-  it('a structure deep link fills on engineStructureCountsChanged (the structure store pulses neither catalog signal)', async () => {
+  it("a structure deep link fills on the structure Layer's facts report", async () => {
     structure = null;
+    store.dispatch(
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
+    );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
     structure = { id: 'cluster-virgo-m87', category: 'galaxy-cluster' } as unknown as StructureInfo;
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
+    store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
   });

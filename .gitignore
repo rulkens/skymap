@@ -19,6 +19,8 @@ __pycache__/
 dist/
 .vite/
 *.tsbuildinfo
+# `npm run phone` scratch: the LAN build, raw traces and the last tab id.
+/.phone/
 
 # ── Test artefacts ────────────────────────────────────────────────────────────
 coverage/

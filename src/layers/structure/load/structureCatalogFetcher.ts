@@ -30,7 +30,7 @@
  * honors the abort signal.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
+import type { StructureCatalogReq } from '../@types/StructureCatalogReq';
 import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
 import {
   decodeStructureCatalog,

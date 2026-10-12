@@ -23,10 +23,12 @@ import {
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { selectionResolverOver } from '../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
@@ -39,9 +41,7 @@ const EXPECTED = clipRegistry[CLIP_ID].data;
 // into the seam call — the default store's orientation seeds `DEFAULT_ORIENTATION`.
 const EXPECTED_FRAME_BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 
-const EMPTY_DEPS: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
+const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
@@ -74,8 +74,7 @@ function buildHarness() {
       pinnedClip: vi.fn<() => ClipData | null>(() => null),
       pinnedFrame: vi.fn<() => OrientationFrameId | null>(() => null),
     },
-    resolveDeps: () => EMPTY_DEPS,
-    selection: selectionResolverOver(EMPTY_DEPS),
+    selection: selectionResolverOver(EMPTY_STRUCTURES),
     cameraRuntime: () => RUNTIME,
   });
   sagaMiddleware.run(watchClipPathInspectSaga);

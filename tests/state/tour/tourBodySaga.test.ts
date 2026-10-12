@@ -41,11 +41,13 @@ import { setOrientation } from '../../../src/state/settings/core/orientationSlic
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
-import { selectionResolverOver } from '../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { BeatRange } from '../../../src/@types/animation/tour/BeatRange';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
@@ -60,11 +62,9 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
   upBasisQuat: [0, 0, 0, 1],
 };
 
-// Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
+// Store for narration clips — no id-bearing cues, so clipFociReady is trivially
 // true and waitUntilSaga exits on the first synchronous check.
-const immediateDeps: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
+const immediateStructures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 // Narration clip: empty timeline, no focus ids. clipFociReady returns true
 // immediately so waitUntilSaga does not poll.
@@ -76,11 +76,7 @@ const NARRATION_CLIP: ClipData = {
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 type SagaMiddleware = ReturnType<typeof createSagaMiddleware>;
 
-function buildStore(opts: {
-  playClip?: PlayClipStub;
-  resolveDeps?: ResolveDeps;
-  cameraRuntime?: LiveCameraRuntime | null;
-}) {
+function buildStore(opts: { playClip?: PlayClipStub; cameraRuntime?: LiveCameraRuntime | null }) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
@@ -90,12 +86,10 @@ function buildStore(opts: {
   const playClipFn: PlayClipStub =
     opts.playClip ??
     (vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined) as PlayClipStub);
-  const deps = opts.resolveDeps ?? immediateDeps;
   const cam = opts.cameraRuntime !== undefined ? opts.cameraRuntime : CAMERA_RUNTIME;
 
   sagaMiddleware.setContext({
-    resolveDeps: () => deps,
-    selection: selectionResolverOver(deps),
+    selection: selectionResolverOver(immediateStructures),
     cameraRuntime: () => cam,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
@@ -560,8 +554,7 @@ describe('tourBodySaga', () => {
       middleware: (g) => g().concat(recorder, sagaMiddleware),
     });
     sagaMiddleware.setContext({
-      resolveDeps: () => immediateDeps,
-      selection: selectionResolverOver(immediateDeps),
+      selection: selectionResolverOver(immediateStructures),
       cameraRuntime: () => CAMERA_RUNTIME,
       playClip: makeAutoFlyStub(),
     });

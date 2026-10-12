@@ -11,9 +11,9 @@
  *  - projects items → `markerCategoryVisibility` via `projectMarkerCategoryVisibility`
  *  - dispatches `setStructureItemEnabled` when a per-category checkbox is toggled
  *
- * `structureCounts` is no longer a prop — it is read from the engine Redux
- * slice via `selectStructureCounts`.  Tests that assert on count display seed
- * the engine slice via `engineStructureCountsChanged` before rendering.
+ * `structureCounts` is the structure Layer's `counts` fact, read via
+ * `selectStructureCounts`. Tests that assert on count display seed the Layer's
+ * facts key and report counts through `factsReported` before rendering.
  *
  * Tests assert on `store.getState()` via `selectStructureItems` rather than
  * re-reading the DOM: RTK `dispatch` is synchronous, so the store reflects the
@@ -33,7 +33,7 @@ import { Provider } from 'react-redux';
 import StructuresSectionContainer from '../../../../src/layers/structure/ui/StructuresSectionContainer';
 import { createTestStore as createAppStore } from '../../../support/createTestStore';
 import { selectStructureItems } from '../../../../src/layers/structure/state/structures/selectors';
-import { engineStructureCountsChanged } from '../../../../src/state/engine/engineSlice';
+import { factsReported, layerFactsSeeded } from '../../../../src/state/engine/engineSlice';
 import type { AppStore } from '../../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -92,11 +92,14 @@ describe('StructuresSectionContainer', () => {
     expect(selectStructureItems(store.getState())['galaxy-cluster'].enabled).toBe(false);
   });
 
-  it('reads structureCounts from the engine slice and forwards them to the section body', () => {
+  it("reads the structure Layer's counts fact and forwards it to the section body", () => {
     const { store } = createAppStore();
-    // Seed the engine slice with a known count — the container reads
-    // `selectStructureCounts` internally (no prop threading).
-    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 42 }));
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, searchList: [], bulk: 'idle' } }),
+    );
+    store.dispatch(
+      factsReported({ layer: 'structure', patch: { counts: { 'galaxy-cluster': 42 } } }),
+    );
 
     const { container } = render(createElement(StructuresSectionContainer, null), {
       wrapper: makeWrapper(store),
