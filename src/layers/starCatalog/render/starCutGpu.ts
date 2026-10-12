@@ -147,7 +147,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
         usage,
       });
     const rows = poolRows(octree, slots);
-    const opacity = make('opacity', rows * OPACITY_CHANNELS, STORAGE);
+    const opacity = make('opacity', rows * OPACITY_CHANNELS, STORAGE | GPUBufferUsage.COPY_DST);
     const leafList = make('leaf-list', leafListCapacity(octree, slots), STORAGE);
     const aggList = make('agg-list', rows, STORAGE);
     const draws = make(

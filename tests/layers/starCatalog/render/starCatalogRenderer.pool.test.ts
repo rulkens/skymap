@@ -40,7 +40,7 @@ function recordingDevice() {
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
     createBuffer: vi.fn((d: GPUBufferDescriptor) => {
-      const buffer = { label: d.label ?? '', size: d.size, destroy: vi.fn() };
+      const buffer = { label: d.label ?? '', size: d.size, usage: d.usage, destroy: vi.fn() };
       buffers.push(buffer);
       return buffer;
     }),
@@ -54,12 +54,16 @@ function recordingDevice() {
       submit: vi.fn(),
       writeBuffer: vi.fn(
         (
-          buf: { label: string },
+          buf: { label: string; usage: number },
           offset: number,
           data: ArrayBufferView | ArrayBuffer,
           from = 0,
           count?: number,
         ) => {
+          // WebGPU rejects a write into a buffer created without COPY_DST.
+          if ((buf.usage & GPUBufferUsage.COPY_DST) === 0) {
+            throw new Error(`writeBuffer into ${buf.label}, which lacks COPY_DST`);
+          }
           // writeBuffer copies at the call, so the record does too; a typed array's
           // `from`/`count` are in elements.
           const copy = ArrayBuffer.isView(data)
