@@ -15,6 +15,8 @@ const ICON_PATHS = {
   search: 'M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM16 16l5 5',
   time: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
   layers: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5',
+  about:
+    'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5Q9.5 7 12 7Q14.5 7 14.5 9.5Q14.5 11 12 12v2M12 17.2v.01',
 } as const;
 
 export type DockItemProps = {

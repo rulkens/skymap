@@ -1,8 +1,8 @@
 /**
- * Dock — the phone's bottom navigation: Home, Search, Time and Layers, each
+ * Dock — the phone's bottom navigation: Home, Search, Time, Layers and About, each
  * with an icon and a visible label. Presentational: which panels are open and
  * the Time label arrive as props; taps leave as callbacks. Time and Layers are
- * toggles; Home and Search are one-shot actions (see DockItem).
+ * toggles; Home, Search and About are one-shot actions (see DockItem).
  */
 
 import type { ReactNode, Ref } from 'react';
@@ -18,6 +18,7 @@ export type DockProps = {
   readonly onSearch: () => void;
   readonly onTime: () => void;
   readonly onLayers: () => void;
+  readonly onAbout: () => void;
   readonly searchRef?: Ref<HTMLButtonElement>;
   readonly layersRef?: Ref<HTMLButtonElement>;
 };
@@ -30,6 +31,7 @@ function Dock({
   onSearch,
   onTime,
   onLayers,
+  onAbout,
   searchRef,
   layersRef,
 }: DockProps): ReactNode {
@@ -52,6 +54,7 @@ function Dock({
         onClick={onLayers}
         buttonRef={layersRef}
       />
+      <DockItem icon="about" label="About" name="About skymap" onClick={onAbout} />
     </nav>
   );
 }

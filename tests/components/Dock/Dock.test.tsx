@@ -13,6 +13,7 @@ function renderDock(overrides: Partial<DockProps> = {}) {
     onSearch: vi.fn<() => void>(),
     onTime: vi.fn<() => void>(),
     onLayers: vi.fn<() => void>(),
+    onAbout: vi.fn<() => void>(),
     ...overrides,
   };
   render(<Dock {...props} />);
@@ -46,6 +47,15 @@ describe('Dock', () => {
     expect(props.onHome).not.toHaveBeenCalled();
     fireEvent.click(home);
     expect(props.onHome).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes About to its own handler under the splash name, as an action', () => {
+    const props = renderDock();
+    const about = screen.getByRole('button', { name: 'About skymap' });
+    expect(about).not.toHaveAttribute('aria-pressed');
+    fireEvent.click(about);
+    expect(props.onAbout).toHaveBeenCalledTimes(1);
+    expect(props.onHome).not.toHaveBeenCalled();
   });
 
   // The glyph is aria-hidden, so the run state has to be in the name or a screen reader never hears it.

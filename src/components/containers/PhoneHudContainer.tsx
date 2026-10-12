@@ -2,8 +2,8 @@
  * PhoneHudContainer — the phone's bottom HUD: dock, time row and the one sheet.
  *
  * Owns which dock item is open. Layers wins over the selection card while
- * open; the time row is independent and can stay open under any sheet. Home and
- * Search are actions, dispatched exactly as the desktop pill and key do. A NEW
+ * open; the time row is independent and can stay open under any sheet. Home,
+ * Search and About are actions, dispatched exactly as the desktop pill and key do. A NEW
  * selection closes Layers so its card shows; clearing the selection does not.
  * Selection is read by identity key, not object, so unrelated slice writes
  * close nothing. Closing Layers or the palette returns focus to its dock item.
@@ -21,7 +21,7 @@ import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
 import { selectPaletteOpen } from '../../state/ui/selectors';
-import { setPaletteOpen } from '../../state/ui/uiSlice';
+import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
 import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
 
@@ -70,6 +70,7 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
     searchedFromDock.current = true;
     dispatch(setPaletteOpen(true));
   }, [dispatch]);
+  const onAbout = useCallback(() => dispatch(reopenSplash()), [dispatch]);
   const onTime = useCallback(() => setTimeOpen((cur) => !cur), []);
 
   let sheet: ReactNode = null;
@@ -107,6 +108,7 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
           onSearch={onSearch}
           onTime={onTime}
           onLayers={onLayers}
+          onAbout={onAbout}
         />
       }
     />

@@ -10,6 +10,7 @@ import { Provider } from 'react-redux';
 import PhoneHudContainer from '../../../src/components/containers/PhoneHudContainer';
 import { createTestStore } from '../../support/createTestStore';
 import { setPaletteOpen, setUiHidden } from '../../../src/state/ui/uiSlice';
+import { selectSplashVisible } from '../../../src/state/ui/selectors';
 import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
 
 let selected: FocusableTarget | null = null;
@@ -100,6 +101,14 @@ describe('PhoneHudContainer', () => {
     fireEvent.click(dockButton('Home'));
     expect(await screen.findByText('card')).toBeInTheDocument();
     expect(screen.queryByText('layers content')).toBeNull();
+  });
+
+  it('reopens the splash from the About dock item', () => {
+    const { store } = setup();
+    store.dispatch({ type: 'ui/dismissSplash', payload: 1 });
+    expect(selectSplashVisible(store.getState())).toBe(false);
+    fireEvent.click(dockButton('About skymap'));
+    expect(selectSplashVisible(store.getState())).toBe(true);
   });
 
   it('keeps the time row independent of the sheet', async () => {

@@ -5,8 +5,9 @@
  * together) and the three inline pill dispatches (open palette, go home,
  * reopen splash), and renders the row's fixed children including the two
  * sibling pill containers (`AutoRotateToggleContainer`, `TourDebugPillContainer`),
- * so App no longer needs any of this reach. On a phone, search and home live
- * in the dock instead, and a full-screen pill joins the right-aligned cluster.
+ * so App no longer needs any of this reach. On a phone, search, home
+ * and about live in the dock instead, and a full-screen pill joins the
+ * right-aligned cluster.
  */
 
 import { memo, useCallback } from 'react';
@@ -53,7 +54,7 @@ function TopBarContainer(): React.ReactElement {
       {!isMobile && <HomeButton onClick={goHomeCb} hidden={hidden} />}
       <AutoRotateToggleContainer hidden={hidden} />
       <FullscreenToggleContainer hidden={hidden} />
-      <AboutPill onClick={reopenSplashScreen} hidden={hidden} />
+      {!isMobile && <AboutPill onClick={reopenSplashScreen} hidden={hidden} />}
       {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={hidden} />}
     </div>
   );
