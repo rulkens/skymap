@@ -1,8 +1,8 @@
 /**
- * SlotPool — fixed-capacity key → slot map, LRU by `lastSeenFrame`; callers
- * `touch` every frame an item is on screen to keep it alive. Asked for a new
- * key while full, it recycles the oldest slot, or refuses (null) when even
- * that slot was claimed this frame — see `allocate`.
+ * SlotPool — fixed-capacity key → slot map, LRU by `lastSeenFrame`, ties broken
+ * by touch order; callers `touch` every frame an item is on screen to keep it
+ * alive. Asked for a new key while full, it recycles the oldest slot, or refuses
+ * (null) when even that slot was claimed this frame — see `allocate`.
  *
  * A slot index is a fact about the frame that produced it: an evicted key
  * leaves the map, so it comes back in a different slot. Code holding an index
@@ -16,6 +16,7 @@ import type { SlotStore } from '../../@types/cache/SlotStore';
 export class SlotPool implements SlotStore {
   private readonly slots: Array<SlotEntry | undefined>;
   private readonly keyToSlot = new Map<string, number>();
+  private seq = 0;
   // One handler, not an array: a store has one owner.
   private onEvict: SlotEvictHandler | undefined;
 
@@ -45,18 +46,20 @@ export class SlotPool implements SlotStore {
     if (touched !== null) return touched;
     for (let i = 0; i < this.capacity; i++) {
       if (this.slots[i] === undefined) {
-        this.slots[i] = { key, lastSeenFrame: frame };
+        this.slots[i] = { key, lastSeenFrame: frame, seq: this.seq++ };
         this.keyToSlot.set(key, i);
         return i;
       }
     }
     let lruIdx = 0;
     let lruFrame = this.slots[0]!.lastSeenFrame;
+    let lruSeq = this.slots[0]!.seq;
     for (let i = 1; i < this.capacity; i++) {
-      const f = this.slots[i]!.lastSeenFrame;
-      if (f < lruFrame) {
+      const { lastSeenFrame: f, seq } = this.slots[i]!;
+      if (f < lruFrame || (f === lruFrame && seq < lruSeq)) {
         lruIdx = i;
         lruFrame = f;
+        lruSeq = seq;
       }
     }
     if (lruFrame === frame) return null;
@@ -66,7 +69,7 @@ export class SlotPool implements SlotStore {
     // BEFORE the overwrite, so the handler can still clear state keyed on
     // `evictedKey`.
     this.notifyEvict(evictedKey);
-    this.slots[lruIdx] = { key, lastSeenFrame: frame };
+    this.slots[lruIdx] = { key, lastSeenFrame: frame, seq: this.seq++ };
     this.keyToSlot.set(key, lruIdx);
     return lruIdx;
   }
@@ -97,7 +100,9 @@ export class SlotPool implements SlotStore {
   touch(key: string, frame: number): number | null {
     const idx = this.keyToSlot.get(key);
     if (idx === undefined) return null;
-    this.slots[idx]!.lastSeenFrame = frame;
+    const entry = this.slots[idx]!;
+    entry.lastSeenFrame = frame;
+    entry.seq = this.seq++;
     return idx;
   }
 

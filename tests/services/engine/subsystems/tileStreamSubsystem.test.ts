@@ -144,6 +144,30 @@ describe('createTileStreamSubsystem', () => {
     expect(evicted[0]).toBe('k0');
   });
 
+  it("drops an evicted key's queued fetch: its payload would have no slot", async () => {
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
+      requestRender: () => {},
+      ...makeBitmapDeps(),
+      concurrency: 1,
+    });
+    atlas.allocate('queued', 1);
+    atlas.allocate('running', 1);
+    for (let i = 2; i < TEST_SLOT_COUNT; i++) atlas.allocate(`k${i}`, 2);
+    let settle!: (bitmap: ImageBitmap | null) => void;
+    const running = () => new Promise<ImageBitmap | null>((resolve) => (settle = resolve));
+    atlas.enqueueFetch({ key: 'running', priority: 2, fetcher: running, onResult: () => {} });
+    const queued = vi.fn(async () => makeFakeBitmap());
+    atlas.enqueueFetch({ key: 'queued', priority: 1, fetcher: queued, onResult: () => {} });
+
+    atlas.allocate('new', 3);
+    settle(makeFakeBitmap());
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(atlas.slots.slotOf('queued')).toBeUndefined();
+    expect(queued).not.toHaveBeenCalled();
+  });
+
   it('upload reports the slot it wrote, and only then is the key loaded', () => {
     const deps = makeBitmapDeps();
     const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({

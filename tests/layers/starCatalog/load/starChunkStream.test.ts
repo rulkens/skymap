@@ -135,7 +135,6 @@ describe('starChunkStream', () => {
     expect(evict).toHaveBeenCalledWith(0);
     expect(stream.epoch()).toBe(2);
     expect(stream.resident(0)).toBeNull();
-    expect(stream.resident(0)).toBeNull();
   });
 
   it('a failed fetch marks the chunk failed and never re-enqueues it', async () => {
@@ -168,7 +167,7 @@ describe('starChunkStream', () => {
     await land(0);
     stream.update(2, [0], [{ chunkRef: 3, priority: 1 }]);
     await land(3);
-    stream.update(3, [0, 3], [{ chunkRef: 4, priority: 1 }]);
+    stream.update(3, [], [{ chunkRef: 4, priority: 1 }]);
     await land(4);
     expect(upload.mock.calls.map(([slot, chunk]) => [slot, chunk.ref.id, chunk.parent])).toEqual([
       [0, 0, null],
@@ -176,7 +175,8 @@ describe('starChunkStream', () => {
       [2, 4, 3],
     ]);
 
-    // Every slot was last seen at frame 3; LRU recycles slot 0, chunk 0, the root of the other two.
+    // Chunk 0, last touched at frame 2 before its child 3 was allocated, is the LRU: its
+    // descendants go first, deepest first.
     stream.update(
       4,
       [],
@@ -188,6 +188,29 @@ describe('starChunkStream', () => {
     expect(evict.mock.calls.map(([slot]) => slot)).toEqual([2, 1, 0]);
     expect([0, 3, 4].map((id) => stream.resident(id))).toEqual([null, null, null]);
     expect(fetchChunk.mock.calls.slice(3).map(([path]) => path)).toEqual([pathOf(1), pathOf(2)]);
+  });
+
+  it('a parent touched with its child outlives it in the LRU, so one free slot costs the child, not both', async () => {
+    const { stream, evict, land } = harness(3);
+    stream.update(1, [], [{ chunkRef: 0, priority: 1 }]);
+    await land(0);
+    stream.update(
+      2,
+      [0],
+      [
+        { chunkRef: 3, priority: 2 },
+        { chunkRef: 1, priority: 1 },
+      ],
+    );
+    await land(3);
+    await land(1);
+    // Walk order: chunk 1, then chunk 0 and the child 3 inside it.
+    stream.update(3, [1, 0, 3], []);
+    stream.update(4, [], [{ chunkRef: 2, priority: 1 }]);
+
+    expect(evict.mock.calls).toEqual([[1]]);
+    expect(stream.resident(0)).not.toBeNull();
+    expect(stream.resident(3)).toBeNull();
   });
 
   it('drops a landing whose parent was evicted while it was in flight, and frees its slot', async () => {

@@ -115,8 +115,9 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     requests: readonly StarChunkRequest[],
   ): void {
     // Every resident and in-flight key is stamped before any allocation, so a
-    // miss can never evict a chunk this same frame still wants.
-    for (const id of touched) stream.touch(String(id), frame);
+    // miss can never evict a chunk this same frame still wants. The walk lists a
+    // parent before its children, so reversed, a parent outlives them in the LRU.
+    for (let k = touched.length - 1; k >= 0; k--) stream.touch(String(touched[k]), frame);
     const misses = requests.filter(
       (r) => !failed.has(r.chunkRef) && stream.touch(String(r.chunkRef), frame) === null,
     );
