@@ -22,6 +22,7 @@ const COMA: StructureSearchEntry = {
   category: 'galaxy-cluster',
   abell: 'A1656',
   description: 'X-ray cluster · z = 0.023',
+  featured: true,
 };
 
 function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
@@ -29,7 +30,14 @@ function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
 }
 
 function structure(name: string, abell: string | null, idx: number): StructureSearchEntry {
-  return { id: `cluster-bulk-x${idx}`, name, category: 'galaxy-cluster', abell, description: '' };
+  return {
+    id: `cluster-bulk-x${idx}`,
+    name,
+    category: 'galaxy-cluster',
+    abell,
+    description: '',
+    featured: false,
+  };
 }
 
 describe('rankPaletteMatches', () => {

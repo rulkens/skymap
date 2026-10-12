@@ -22,7 +22,7 @@ describe('detail card thumbnail placement', () => {
   it('shows a body shot once, beside the rows, in the panel layout', () => {
     const { container } = render(createElement(BodyDetailCard, { target: body('mars', 'Mars') }));
     expect(container.querySelectorAll('img')).toHaveLength(1);
-    expect(container.querySelector('img')?.closest('[class*="cardTopRow"]')).not.toBeNull();
+    expect(container.querySelector('img')?.parentElement?.textContent).toContain('Radius');
   });
 
   it('moves the shot into the header, and out of the body, on the phone', () => {
@@ -30,7 +30,7 @@ describe('detail card thumbnail placement', () => {
       createElement(BodyDetailCard, { target: body('mars', 'Mars'), layout: 'phone' }),
     );
     expect(container.querySelectorAll('img')).toHaveLength(1);
-    expect(container.querySelector('img')?.closest('[class*="cardTopRow"]')).toBeNull();
+    expect(container.querySelector('img')?.parentElement?.textContent).not.toContain('Radius');
   });
 
   it('leaves no thumbnail slot for a body without a shot', () => {

@@ -22,6 +22,7 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import type { CardRowProps } from '../CardRow/CardRow';
+import ShotSummary from '../ShotSummary/ShotSummary';
 import Thumbnail from '../Thumbnail/Thumbnail';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
@@ -110,16 +111,7 @@ function BodyDetailCard({
       />
 
       {shotBeside && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          {thumbnail}
-          <div className={styles.cardSummary}>
-            {leadRows.map((row, i) => (
-              <div key={i} className={styles.cardDistLine}>
-                <span>{row.label}</span> {row.value}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ShotSummary url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} rows={leadRows} />
       )}
 
       {/*
