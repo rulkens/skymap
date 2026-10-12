@@ -147,6 +147,7 @@ const CHUNK: StarChunk = {
     chunkRef: Uint32Array.of(NO_CHUNK_REF),
   },
   records: columns(3),
+  chunks: [],
 };
 
 function frame(nowMs: number): StarCutInputs {
@@ -269,6 +270,7 @@ describe('starCatalogRenderer chunk pool', () => {
         chunkRef: Uint32Array.of(NO_CHUNK_REF, NO_CHUNK_REF),
       },
       records: columns(5),
+      chunks: [],
     };
     renderer.upload(Source.GaiaStars, octree, 2);
 
@@ -420,12 +422,14 @@ describe('starCatalogRenderer chunk pool', () => {
       parent: null,
       nodes: row(1, 1, 0, 1),
       records: columns(1),
+      chunks: [ref(1, 3, 3)],
     };
     const child: StarChunk = {
       ref: ref(1, 3, 3),
       parent: 0,
       nodes: row(0, 0, 3, NO_CHUNK_REF),
       records: columns(3),
+      chunks: [],
     };
     renderer.upload(Source.GaiaStars, octree, 2);
     renderer.uploadChunk(Source.GaiaStars, 1, parent);

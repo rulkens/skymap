@@ -12,14 +12,10 @@ import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
-import {
-  NO_CHUNK_REF,
-  OCTANT_BITS,
-  OCTANTS,
-  OFFSET_FRACTION_LEVELS,
-} from '../../../data/octree/octreeFormat';
+import { NO_CHUNK_REF, OCTANTS, OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
+import { lowerBoundNodeRow } from '../../../utils/octree/lowerBoundNodeRow';
 import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
@@ -54,14 +50,20 @@ export function nearestResolvableStar(
   let bestPos: Vec3 | null = null;
   let bestBpRp = 0;
 
-  /** Descend one object (the index, or a chunk) from `stack`; its record `r` is ordinal `ordinalBase + r`. */
+  /**
+   * Descend one object (the index, or a chunk) from rows `[from, to)`; its record `r` is ordinal
+   * `ordinalBase + r`.
+   */
   function scan(
     nodes: OctreeNodeTable,
     records: StarColumns,
-    stack: number[],
+    from: number,
+    to: number,
     ordinalBase: number,
   ): void {
     const { childIndex, boxOriginPc, boxEdgePc } = starOctreeIndex(nodes, octree.grid);
+    const stack: number[] = [];
+    for (let k = from; k < to; k++) stack.push(k);
     while (stack.length > 0) {
       const i = stack.pop()!;
 
@@ -86,15 +88,17 @@ export function nearestResolvableStar(
         const ref = nodes.chunkRef[i]!;
         const chunk = ref === NO_CHUNK_REF ? null : resident.chunk(ref);
         if (chunk !== null) {
-          const top: number[] = [];
           const c = chunk.nodes;
-          const topLevel = nodes.level[i]! - 1;
-          for (let k = c.count - 1; k >= 0 && c.level[k]! >= topLevel; k--) {
-            if (c.level[k] === topLevel && c.morton[k]! >>> OCTANT_BITS === nodes.morton[i]) {
-              top.push(k);
-            }
-          }
-          scan(c, chunk.records, top, chunk.ref.recordBase);
+          const level = nodes.level[i]! - 1;
+          const first = nodes.morton[i]! * OCTANTS;
+          const from = lowerBoundNodeRow(c, level, first);
+          scan(
+            c,
+            chunk.records,
+            from,
+            lowerBoundNodeRow(c, level, first + OCTANTS),
+            chunk.ref.recordBase,
+          );
         }
         const cbase = i * OCTANTS;
         for (let k = 0; k < OCTANTS; k++) {
@@ -136,7 +140,7 @@ export function nearestResolvableStar(
   }
 
   // Root last per the layout invariant.
-  scan(octree.nodes, octree.records, [n - 1], 0);
+  scan(octree.nodes, octree.records, n - 1, n, 0);
 
   if (bestOrdinal < 0 || bestPos === null) return null;
   return {

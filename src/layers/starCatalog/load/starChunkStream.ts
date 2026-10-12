@@ -97,6 +97,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
       parent: parent === IN_INDEX ? null : parent,
       nodes,
       records: starColumnsOf(columns, header.records),
+      chunks: header.chunks,
     };
   }
 

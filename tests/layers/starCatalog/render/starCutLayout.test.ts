@@ -127,6 +127,7 @@ describe('packStarChunkNodes', () => {
         absMag: new Float32Array(11),
         colourIndex: new Float32Array(11),
       },
+      chunks: [],
     };
     const root = { level: 2, morton: 0, rootRow: 7 };
     const words = packStarChunkNodes(chunk, [root], { nodeBase: 40, recordBase: 1000 }, 6, 0);

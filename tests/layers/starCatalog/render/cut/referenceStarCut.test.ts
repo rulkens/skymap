@@ -416,6 +416,7 @@ describe('referenceStarCut over own records and blobs', () => {
       absMag: new Float32Array(3),
       colourIndex: new Float32Array(3),
     },
+    chunks: [],
   };
   const octree = octreeOf(
     table([{ level: 1, morton: 0, childMask: 0b11, own: 2, blob: 3, chunkRef: 0 }]),

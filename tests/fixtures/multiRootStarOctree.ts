@@ -71,6 +71,7 @@ export function multiRootStarOctree(): { octree: StarOctree; chunk: StarChunk } 
       [1, 0, 0, 1, 1, 0, NO_CHUNK_REF],
     ]),
     records: columns([0.5, 0.5, 0.5, 0.25, 0.25, 0.25]),
+    chunks: [],
   };
   return { octree, chunk };
 }

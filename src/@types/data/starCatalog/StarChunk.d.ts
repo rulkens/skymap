@@ -10,4 +10,6 @@ export type StarChunk = {
   readonly parent: number | null;
   readonly nodes: OctreeNodeTable;
   readonly records: StarColumns;
+  /** The refs its header lists, rooted in its rows; empty for most chunks, which the planner never enters. */
+  readonly chunks: readonly OctreeChunkRef[];
 };

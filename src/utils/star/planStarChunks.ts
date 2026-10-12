@@ -1,13 +1,13 @@
 /**
- * Walks the index from its root, and on into every resident chunk the walk reaches, with the
- * cut's own tests: frustum (every view's six planes, `cut.planes`, rebased about
- * `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen` grows a refine candidate) and the
- * refine proxy edge²/dist² ≥ thr². A row that fails either is skipped with its whole subtree,
- * exactly: a child's proxy is ≤ ¼ its parent's and its sphere lies inside its parent's. A chunk
- * root that would refine requests its chunk (priority = its best root's proxy) when absent, and
- * is touched and walked into when resident, so a chunk is only requested under a resident parent.
- * The plan cannot see the GPU's budget bin: it may fetch a chunk the budget declines to open
- * (bytes, never correctness). A failed chunk asks for nothing. Only the `limit` best are kept.
+ * Walks the index, and on into resident chunks whose header lists chunks, with the cut's own tests:
+ * frustum (every view's planes about `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen`
+ * grows a refine candidate) and the refine proxy edge²/dist² ≥ thr². A failing row is skipped with
+ * its subtree, exactly: a child's proxy is ≤ ¼ its parent's and its sphere lies inside its
+ * parent's; so is a row with no chunk root at or below it (`holdsChunkRoot`). A refining chunk root
+ * requests its chunk (priority = its best root's proxy) when absent and is touched when resident,
+ * so a chunk is only requested under a resident parent. The plan cannot see the GPU's budget bin:
+ * it may fetch a chunk the budget declines to open (bytes, never correctness). A failed chunk asks
+ * for nothing. Only the `limit` best are kept.
  */
 import type { StarChunk } from '../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
@@ -29,8 +29,10 @@ import { starOctreeIndex } from './starOctreeIndex';
 
 const AXES = 3;
 // Per chunk, this plan: 0 unseen, TOUCHED (resident, walked into), FAILED, else its best root's
-// proxy (> 0). Shared across calls: the plan is synchronous.
+// proxy (> 0). Shared across calls: the plan is synchronous. `written` lists the ids set since
+// the last reset, so a plan clears what it saw, not the whole catalog.
 let best = new Float64Array(0);
+const written: number[] = [];
 const TOUCHED = -1;
 const FAILED = -2;
 /** A stack entry's object: the index, else a resident chunk's id. */
@@ -53,10 +55,9 @@ export function planStarChunks(
 ): StarChunkPlan {
   const chunks = octree.chunkCount;
   if (chunks === 0) return { requests: [], touched: [] };
-  if (best.length < chunks) {
-    best = new Float64Array(chunks);
-    ranked = new Float64Array(chunks);
-  } else best.fill(0, 0, chunks);
+  if (best.length < chunks) best = new Float64Array(chunks);
+  else for (const ref of written) best[ref] = 0;
+  written.length = 0;
 
   // Scalars hoisted out of the loop, which runs every frame the eye moves.
   const cx = cut.originMpc[0] * SCALE_UNITS.MPC_TO_PC;
@@ -72,7 +73,7 @@ export function planStarChunks(
   // The object being walked; depth-first, it switches about twice per chunk walked into.
   let object = INDEX;
   let nodes = octree.nodes;
-  let { boxOriginPc, boxEdgePc, childIndex } = index;
+  let { boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } = index;
 
   const touched: number[] = [];
   const wanted: number[] = [];
@@ -84,11 +85,9 @@ export function planStarChunks(
     if (stackObject[top] !== object) {
       object = stackObject[top]!;
       nodes = object === INDEX ? octree.nodes : resident(object)!.nodes;
-      ({ boxOriginPc, boxEdgePc, childIndex } =
+      ({ boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } =
         object === INDEX ? index : starOctreeIndex(nodes, octree.grid));
     }
-    // A childless row holds no chunk and nothing below it.
-    if (nodes.childMask[i] === 0) continue;
     const ref = nodes.chunkRef[i]!;
     const isChunkRoot = ref !== NO_CHUNK_REF;
     const seen = isChunkRoot ? best[ref]! : 0;
@@ -125,7 +124,7 @@ export function planStarChunks(
     if (!isChunkRoot) {
       for (let k = 0; k < OCTANTS; k++) {
         const child = childIndex[i * OCTANTS + k]!;
-        if (child < 0) continue;
+        if (child < 0 || holdsChunkRoot[child] === 0) continue;
         stack[top] = child;
         stackObject[top++] = object;
       }
@@ -142,30 +141,35 @@ export function planStarChunks(
     if (chunk !== null) {
       if (seen !== TOUCHED) {
         best[ref] = TOUCHED;
+        written.push(ref);
         touched.push(ref);
       }
-      // The root's children are the chunk's rows one level down under its key, adjacent in
-      // (level, morton) order.
+      // Only a chunk whose header lists chunks has rows worth walking. The root's children are
+      // its rows one level down under the root's key, adjacent in (level, morton) order.
+      if (chunk.chunks.length === 0) continue;
       const c = chunk.nodes;
+      const holds = starOctreeIndex(c, octree.grid).holdsChunkRoot;
       const level = nodes.level[i]! - 1;
-      const parentMorton = nodes.morton[i]!;
-      for (
-        let k = lowerBoundNodeRow(c, level, parentMorton * OCTANTS);
-        k < c.count && c.level[k] === level && Math.floor(c.morton[k]! / OCTANTS) === parentMorton;
-        k++
-      ) {
+      const first = nodes.morton[i]! * OCTANTS;
+      const end = lowerBoundNodeRow(c, level, first + OCTANTS);
+      for (let k = lowerBoundNodeRow(c, level, first); k < end; k++) {
+        if (holds[k] === 0) continue;
         stack[top] = k;
         stackObject[top++] = ref;
       }
-    } else if (hasFailed(ref)) best[ref] = FAILED;
-    else {
-      best[ref] = proxy;
-      wanted.push(ref);
+    } else {
+      written.push(ref);
+      if (hasFailed(ref)) best[ref] = FAILED;
+      else {
+        best[ref] = proxy;
+        wanted.push(ref);
+      }
     }
   }
 
   let floor = 0;
   if (wanted.length > limit) {
+    if (ranked.length < wanted.length) ranked = new Float64Array(wanted.length);
     for (let k = 0; k < wanted.length; k++) ranked[k] = best[wanted[k]!]!;
     floor = ranked.subarray(0, wanted.length).sort()[wanted.length - limit]!;
   }

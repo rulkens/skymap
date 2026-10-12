@@ -67,6 +67,7 @@ export function hoistedStarOctree(): { octree: StarOctree; chunk: StarChunk } {
     parent: null,
     nodes: chunkNodes,
     records: columns([0.25, 0.25, 0.25, 0.75, 0.75, 0.75], [4, 6]),
+    chunks: [],
   };
   return { octree, chunk };
 }

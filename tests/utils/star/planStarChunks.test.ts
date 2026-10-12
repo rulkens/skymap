@@ -53,7 +53,9 @@ function table(rows: readonly (readonly number[])[]): OctreeNodeTable {
   };
 }
 
-const chunkOf = (nodes: OctreeNodeTable) => ({ nodes }) as unknown as StarChunk;
+/** `children`: the chunk ids its header lists; only a chunk that lists some is walked into. */
+const chunkOf = (nodes: OctreeNodeTable, children: readonly number[] = []) =>
+  ({ nodes, chunks: children.map((id) => ({ id })) }) as unknown as StarChunk;
 const EMPTY_CHUNK = chunkOf(table([]));
 
 const pc = (v: number) => v * SCALE_UNITS.PC_TO_MPC;
@@ -144,6 +146,7 @@ describe('planStarChunks', () => {
         [3, 0, 0xff, 5],
         [3, 4, 0xff, 6],
       ]),
+      [5, 6],
     );
     const { requests, touched } = planStarChunks(
       OCTREE,
@@ -156,5 +159,20 @@ describe('planStarChunks', () => {
     expect(touched).toEqual([A]);
     expect(requests.map((r) => r.chunkRef)).toEqual([B, 5, E]);
     expect(requests[1]!.priority).toBeCloseTo(64 / 196, 6);
+  });
+
+  it('touches a resident chunk whose header lists no chunks, without walking its rows', () => {
+    // The rows name chunk 5 only to show the walk never reads them.
+    const leafChunk = chunkOf(table([[3, 0, 0xff, 5]]));
+    const { requests, touched } = planStarChunks(
+      OCTREE,
+      starOctreeIndex(OCTREE.nodes, OCTREE.grid),
+      cut(ONE_VIEW),
+      (ref) => (ref === A ? leafChunk : null),
+      () => false,
+      8,
+    );
+    expect(touched).toEqual([A]);
+    expect(requests.map((r) => r.chunkRef)).toEqual([B, E]);
   });
 });

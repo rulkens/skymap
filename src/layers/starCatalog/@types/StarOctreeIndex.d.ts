@@ -10,4 +10,6 @@ export type StarOctreeIndex = {
   readonly boxOriginPc: Float64Array;
   /** `cellEdge · 2^level`, parsecs. */
   readonly boxEdgePc: Float64Array;
+  /** 1 when row `i` is a chunk root or one lies below it in this object: the planner's prune. */
+  readonly holdsChunkRoot: Uint8Array;
 };
