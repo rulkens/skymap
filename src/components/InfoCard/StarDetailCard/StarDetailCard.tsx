@@ -27,7 +27,7 @@ import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import type { CardRowProps } from '../CardRow/CardRow';
-import Thumbnail from '../Thumbnail/Thumbnail';
+import ShotSummary from '../ShotSummary/ShotSummary';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
@@ -243,16 +243,11 @@ function StarDetailCard({
       {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
 
       {hasShot && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
-          <div className={styles.cardSummary}>
-            {leadRows.map((row, i) => (
-              <div key={i} className={styles.cardDistLine}>
-                <span>{row.label}</span> {row.value}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ShotSummary
+          url={cardShotUrl(shotId)}
+          alt={`${target.displayName} thumbnail`}
+          rows={leadRows}
+        />
       )}
 
       {detail.kind !== 'curated' && target.distancePc > 0 && (

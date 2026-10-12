@@ -35,7 +35,7 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import type { CardRowProps } from '../CardRow/CardRow';
-import Thumbnail from '../Thumbnail/Thumbnail';
+import ShotSummary from '../ShotSummary/ShotSummary';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
@@ -112,16 +112,7 @@ function BodyDetailCard({
       <CardRow type="headline">{target.label}</CardRow>
 
       {hasShot && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
-          <div className={styles.cardSummary}>
-            {leadRows.map((row, i) => (
-              <div key={i} className={styles.cardDistLine}>
-                <span>{row.label}</span> {row.value}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ShotSummary url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} rows={leadRows} />
       )}
 
       {/*

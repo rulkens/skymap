@@ -62,6 +62,33 @@ describe('StructureDetailCard', () => {
     expect(container.textContent).not.toMatch(/Wikipedia/);
   });
 
+  it('shows the structure shot for a featured structure and none for a bulk one', () => {
+    const { container } = render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, id: 'galaxy-cluster-virgo-m87' },
+        memberCount: 42,
+      }),
+    );
+    // The count rides in the summary column beside the shot, not below it.
+    expect(container.querySelector('img')?.nextElementSibling?.textContent).toMatch(
+      /Galaxies.*42$/,
+    );
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(
+      /^\/images\/structures\/galaxy-cluster-virgo-m87\.webp$/,
+    );
+    // Every row moved beside the shot: no bordered section is left empty.
+    for (const div of container.querySelectorAll('div')) {
+      if (div.className.includes('cardSection')) expect(div.childElementCount).toBeGreaterThan(0);
+    }
+    cleanup();
+    const bare = render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, id: 'galaxy-cluster-bulk-x1', featured: false },
+      }),
+    );
+    expect(bare.container.querySelector('img')).toBeNull();
+  });
+
   it('shows the Galaxies row when a member count is supplied', () => {
     render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 42 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
