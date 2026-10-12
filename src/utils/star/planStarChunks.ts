@@ -5,9 +5,10 @@
  * its subtree, exactly: a child's proxy is ≤ ¼ its parent's and its sphere lies inside its
  * parent's; so is a row with no chunk root at or below it (`holdsChunkRoot`). A refining chunk root
  * requests its chunk (priority = its best root's proxy) when absent and is touched when resident,
- * so a chunk is only requested under a resident parent. The plan cannot see the GPU's budget bin:
- * it may fetch a chunk the budget declines to open (bytes, never correctness). A failed chunk asks
- * for nothing. Only the `limit` best are kept.
+ * so a chunk is only requested under a resident parent; the budget bin it cannot see may decline
+ * a fetched chunk (bytes, never correctness). Only the `limit` best, resident or not, are kept: the
+ * stream stamps touched chunks before allocating, so a weaker touched resident would hold its slot
+ * against a nearer chunk forever. A child ranks below its parent, so the kept set keeps parents.
  */
 import type { StarChunk } from '../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
@@ -32,12 +33,14 @@ const AXES = 3;
 // proxy (> 0). Shared across calls: the plan is synchronous. `written` lists the ids set since
 // the last reset, so a plan clears what it saw, not the whole catalog.
 let best = new Float64Array(0);
+// A TOUCHED chunk's best root proxy, so it ranks against the wanted ones.
+let residentBest = new Float64Array(0);
 const written: number[] = [];
 const TOUCHED = -1;
 const FAILED = -2;
 /** A stack entry's object: the index, else a resident chunk's id. */
 const INDEX = -1;
-// The wanted chunks' proxies, sorted natively to find the `limit`-th best without sorting objects.
+// The ranked chunks' proxies, sorted natively to find the `limit`-th best without sorting objects.
 let ranked = new Float64Array(0);
 // Depth-first with all children pushed holds at most seven siblings per level plus the root,
 // whichever objects the levels lie in.
@@ -55,8 +58,10 @@ export function planStarChunks(
 ): StarChunkPlan {
   const chunks = octree.chunkCount;
   if (chunks === 0) return { requests: [], touched: [] };
-  if (best.length < chunks) best = new Float64Array(chunks);
-  else for (const ref of written) best[ref] = 0;
+  if (best.length < chunks) {
+    best = new Float64Array(chunks);
+    residentBest = new Float64Array(chunks);
+  } else for (const ref of written) best[ref] = residentBest[ref] = 0;
   written.length = 0;
 
   // Scalars hoisted out of the loop, which runs every frame the eye moves.
@@ -144,6 +149,7 @@ export function planStarChunks(
         written.push(ref);
         touched.push(ref);
       }
+      residentBest[ref] = Math.max(residentBest[ref]!, proxy);
       // Only a chunk whose header lists chunks has rows worth walking. The root's children are
       // its rows one level down under the root's key, adjacent in (level, morton) order.
       if (chunk.chunks.length === 0) continue;
@@ -168,17 +174,22 @@ export function planStarChunks(
   }
 
   let floor = 0;
-  if (wanted.length > limit) {
-    if (ranked.length < wanted.length) ranked = new Float64Array(wanted.length);
+  const ranks = wanted.length + touched.length;
+  if (ranks > limit) {
+    if (ranked.length < ranks) ranked = new Float64Array(ranks);
     for (let k = 0; k < wanted.length; k++) ranked[k] = best[wanted[k]!]!;
-    floor = ranked.subarray(0, wanted.length).sort()[wanted.length - limit]!;
+    for (let k = 0; k < touched.length; k++) ranked[wanted.length + k] = residentBest[touched[k]!]!;
+    floor = ranked.subarray(0, ranks).sort()[ranks - limit]!;
   }
+  // Walk order kept: the stream relies on a parent preceding its children.
+  const kept = touched.filter((ref) => residentBest[ref]! >= floor);
   const requests: StarChunkRequest[] = [];
   for (const ref of wanted) {
     const priority = best[ref]!;
     if (priority >= floor) requests.push({ chunkRef: ref, priority });
   }
   requests.sort((a, b) => b.priority - a.priority);
-  if (requests.length > limit) requests.length = limit;
-  return { requests, touched };
+  // A tie at the floor goes to the resident chunk: no churn between equals.
+  requests.length = Math.min(requests.length, Math.max(0, limit - kept.length));
+  return { requests, touched: kept };
 }

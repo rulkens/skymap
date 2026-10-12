@@ -109,6 +109,20 @@ describe('planStarChunks', () => {
     expect(requests[0]!.priority).toBeCloseTo(256 / 260, 6);
   });
 
+  it('a full pool keeps the limit best chunks, resident or not: a weaker resident is not touched', () => {
+    // The stream stamps every touched chunk before it allocates, so touching E (0.28) here
+    // would refuse A (1.31) for good: the near chunk never loads while the far one holds its slot.
+    const { requests, touched } = plan(ONE_VIEW, [E], 1);
+    expect(touched).toEqual([]);
+    expect(requests.map((r) => r.chunkRef)).toEqual([A]);
+  });
+
+  it('a full pool keeps a resident chunk over weaker wanted ones, requesting none', () => {
+    const { requests, touched } = plan(ONE_VIEW, [A], 1);
+    expect(touched).toEqual([A]);
+    expect(requests).toEqual([]);
+  });
+
   it('planStarChunks: with no planes (more than CUT_MAX_VIEWS) nothing is culled', () => {
     const { requests } = plan(new Float32Array(0), [A]);
     expect(requests.map((r) => r.chunkRef).sort()).toEqual([B, C, E]);
