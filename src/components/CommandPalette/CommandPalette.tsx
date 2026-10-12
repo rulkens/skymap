@@ -25,7 +25,7 @@
  * FocusableTarget rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
- * Selection: every row maps to a `PaletteAction` via `utils/actionForRow`; a
+ * Selection: every row maps to a `PaletteAction` via `utils/palette/actionForRow`; a
  * featured-grid card already carries its own.  Either way it reaches the
  * single `onSelect(action)` callback, and the container dispatches on
  * `action.kind` — for `focus`, `requestFocus({ id, transition })`, the one command→ref
@@ -33,7 +33,7 @@
  *
  * This file is the shell only: layout + subcomponent wiring.  The transient
  * search state + keyboard nav live in `usePaletteSearch`; the ranking pipeline
- * in `utils/rankPaletteMatches`; the row-render table in `paletteRows`; and the
+ * in `utils/palette/rankPaletteMatches`; the row-render table in `paletteRows`; and the
  * two views in `FeaturedGrid` / `ResultsList`.
  *
  * Why not a third-party command-palette library?  Same reasoning as

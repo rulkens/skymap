@@ -19,19 +19,19 @@
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
-import { MILKY_WAY_NAMES } from '../paletteRowModel';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
-import { BODY_SEARCH_NAMES } from '../../../data/bodies/bodySearchNames';
-import { isRegistryBodyId } from '../../../utils/scene/isRegistryBodyId';
-import { exhibitRegistry } from '../../../data/exhibits/exhibitRegistry';
-import { tourRegistry } from '../../../data/animation/tours/tourRegistry';
-import { EARTH_PLACES } from '../../../data/palette/earthPlaces';
-import type { ScoredRow } from '../paletteRowModel';
-import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
-import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
-import type { StructureSearchEntry } from '../../../@types/engine/StructureSearchEntry';
-import type { LayerSearchEntry } from '../../../@types/engine/layer/LayerSearchEntry';
+import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
+import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
+import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
+import { isRegistryBodyId } from '../scene/isRegistryBodyId';
+import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
+import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { EARTH_PLACES } from '../../data/palette/earthPlaces';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
+import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
+import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 /**
  * The maximum number of alias rows to include in the rendered list.

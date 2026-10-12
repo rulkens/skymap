@@ -78,7 +78,7 @@ tests/state/takeover tests/state/camera tests/support` pass.
 
 Pure moves; no logic changes, no new tests (the moved tests follow their files).
 
-- [ ] Split `src/components/CommandPalette/paletteRowModel.ts` (two exports) by its two symbols:
+- [x] Split `src/components/CommandPalette/paletteRowModel.ts` (two exports) by its two symbols:
 
       ```bash
       npm run refactor -- extract src/components/CommandPalette/paletteRowModel.ts#ScoredRow src/@types/palette/ScoredRow.ts
@@ -89,7 +89,7 @@ Pure moves; no logic changes, no new tests (the moved tests follow their files).
       (every other `src/@types/` file is `.d.ts`), and delete the emptied `paletteRowModel.ts`, moving its header's one
       useful sentence (why the row vocabulary is React-free) to `ScoredRow.d.ts`.
 
-- [ ] Move the four pure functions, dry run first:
+- [x] Move the four pure functions, dry run first:
 
       ```bash
       npm run move-files -- --dry --manifest <scratch>/palette-moves.json
@@ -99,11 +99,11 @@ Pure moves; no logic changes, no new tests (the moved tests follow their files).
       with the manifest mapping `src/components/CommandPalette/utils/{rankPaletteMatches,scoreFamousMatch,scoreAliasMatch,actionForRow}.ts`
       to `src/utils/palette/<same name>.ts`.
 
-- [ ] Search for each old basename (`paletteRowModel`, `CommandPalette/utils/rankPaletteMatches` and so on) in `src`,
+- [x] Search for each old basename (`paletteRowModel`, `CommandPalette/utils/rankPaletteMatches` and so on) in `src`,
       `tests`, `tools` and `docs`; fix any string-literal path the tool missed.
-- [ ] Confirm nothing under `src/utils/palette/` imports from `src/components/`.
-- [ ] `npm run typecheck:fast` and `npx vitest run tests/components/CommandPalette tests/utils/palette` pass.
-- [ ] Commit.
+- [x] Confirm nothing under `src/utils/palette/` imports from `src/components/`.
+- [x] `npm run typecheck:fast` and `npx vitest run tests/components/CommandPalette tests/utils/palette` pass.
+- [x] Commit.
 
 ---
 

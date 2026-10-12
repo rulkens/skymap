@@ -6,11 +6,8 @@
  * violates.
  */
 export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
-  'src/components/CommandPalette/paletteRowModel.ts',
   'src/components/CommandPalette/paletteRows.tsx',
   'src/components/CommandPalette/usePaletteSearch.ts',
-  'src/components/CommandPalette/utils/scoreAliasMatch.ts',
-  'src/components/CommandPalette/utils/scoreFamousMatch.ts',
   'src/components/DebugPanel/CameraBandBar.tsx',
   'src/components/DebugPanel/GpuTimingsSection.tsx',
   'src/components/InfoCard/tooltips.tsx',
@@ -123,6 +120,8 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/utils/gpu/packScatteringParams.ts',
   'src/utils/math/cubeSphereMesh.ts',
   'src/utils/occlusion/selectOccluderSpheresKm.ts',
+  'src/utils/palette/scoreAliasMatch.ts',
+  'src/utils/palette/scoreFamousMatch.ts',
   'src/utils/occlusion/subjectOccludedByBodies.ts',
   'src/utils/render/disk/byDistanceToCamera.ts',
   'src/utils/surfaceTiles/cutSurfaceTiles.ts',
