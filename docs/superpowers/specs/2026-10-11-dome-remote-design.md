@@ -21,13 +21,12 @@ A second device (phone, tablet or laptop) drives skymap while it runs on a dome 
 | Transport, local | A WebSocket relay inside the Vite server that already serves the app |
 | Transport, public site | A Durable Object relay in the existing Worker, as a second feature PR |
 | Pairing | QR on the dome, plus the remote's address printed in the terminal |
+| Room code | A long token on the public relay (QR only); a short typed code on the local relay |
 | Command wire shape | Named commands, each building existing actions (revised from "raw actions" after the ground check) |
 | Gesture wire shape | The pointer recognizer's events, with positions as fractions of the surface |
 | Toggle scope | The Labels & Guides rows only |
 | Prep packaging | Its own PR, before the feature |
 
-One statement made during brainstorming is revised here: the room code is 8 characters, not a 128-bit token. See
-"Pairing" for the reason.
 
 ## Ground preparation
 
@@ -38,7 +37,8 @@ before the feature. The spec below is written against the code as it stands afte
    closure at `src/services/engine/phases/wireInput.ts:191` (store edges on gesture start, queue, wake). It becomes
    one function, registered as `SagaContext.pushGesture`. Seven test stubs gain a no-op.
 2. **Palette search and its go-to runner leave the component folder.** `rankPaletteMatches`, `actionForRow`,
-   `paletteRowModel` and the `RUN_ACTION` table move out of `src/components/` (via `npm run move-files`), and the
+   `paletteRowModel` and the `RUN_ACTION` table move out of `src/components/` to `src/utils/palette/` (types to
+   `src/@types/palette/`, the name list to `src/data/palette/`) (via `npm run move-files`), and the
    runner changes from `(dispatch, action) => void` to `(action) => UnknownAction[]`. Nothing under `state/` imports
    from `components/` today, and that stays true.
 3. **Toggle rows are built by a selector.** The Labels & Guides row list, assembled today inside
@@ -59,7 +59,11 @@ export type ToggleRow = {
   readonly enabled: boolean;
   readonly set: (enabled: boolean) => UnknownAction;
 };
-export function selectToggleRows(state: RootState): readonly ToggleRow[];
+// in src/compositions/: it reads five Layers' label selectors, and state/ imports no Layer
+export function selectToggleRows(
+  state: RootState,
+  layerRows: readonly LayerSettingsRow[],
+): readonly ToggleRow[];
 ```
 
 The other seven touchpoints are plain additions. LAN binding needs no config change: Vite's own `--host` flag does it.
@@ -71,7 +75,7 @@ The other seven touchpoints are plain additions. LAN binding needs no config cha
 A transport moves text within a room and knows nothing else. Parsing and validation live once, above every transport.
 
 ```ts
-export type RoomCode = string; // 8 characters of Crockford base32
+export type RoomCode = string; // format chosen by the transport, see "Pairing"
 export type RemoteLinkStatus = 'connecting' | 'open' | 'closed';
 
 export type RemoteLink = {
@@ -82,6 +86,8 @@ export type RemoteLink = {
 };
 
 export type RemoteTransport = {
+  /** A fresh room for this dome session, in the transport's own format. */
+  newRoom: () => RoomCode;
   open: (room: RoomCode) => RemoteLink;
   /** Origins a remote can reach this dome on; the pairing QR encodes the first. */
   pairingOrigins: () => Promise<readonly string[]>;
@@ -222,14 +228,15 @@ A Vite plugin under `tools/utils/vite/`, active on the dev and preview servers.
 
 ### Pairing
 
-- **The code** is 8 random base32 characters (40 bits) from `crypto.getRandomValues`, new on every dome page load.
-  It is the room name. The QR encodes `<origin>/remote.html#<code>`.
-- **Why not the 128-bit token discussed earlier:** "both" needs a code a person can type on a laptop, and one
-  mechanism beats two. Forty bits is ample for a room that lives one show, as long as joins are rate-limited; that
-  limit matters on the public relay and is specified in its PR.
-- **What the code does not protect:** on a plain `ws://` LAN link anyone on that network can read it. The defence
-  there is the venue's network, and the command registry bounds what a stranger can do to moving the camera and
-  flipping labels.
+- **Each transport chooses its room format.** The room is created fresh on every dome page load from
+  `crypto.getRandomValues`, and the QR always encodes `<origin>/remote.html#<room>`.
+- **Public relay: a 128-bit token** (22 base64url characters), carried only in the QR. Nobody types it, and it is
+  not guessable, which matters on a relay the whole internet can reach.
+- **Local relay: an 8-character code** (Crockford base32, 40 bits), shown as text beside the QR so a laptop can type
+  it. A longer token buys nothing here: on a plain `ws://` link anyone on the network can read the room from the
+  traffic anyway.
+- **What protects the local link** is the venue's network, and the command registry bounds what a stranger can do to
+  moving the camera and flipping labels.
 
 ## Out of scope
 
