@@ -19,13 +19,14 @@ import { encodeBlackHoleFocusId } from '../../present/encodeBlackHoleFocusId';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
+import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import local from './BlackHoleDetailCard.module.css';
 
 export type BlackHoleDetailCardProps = {
   target: BlackHoleInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -33,23 +34,27 @@ export type BlackHoleDetailCardProps = {
 function BlackHoleDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: BlackHoleDetailCardProps): ReactNode {
   const facts = BODY_FACTS[target.id];
   const [x, y, z] = target.positionMpc;
   const shotUrl = focusShotUrl(encodeBlackHoleFocusId(target.id));
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Black hole"
         title={target.label}
         thumbnail={
-          !hasChrome && shotUrl !== undefined ? (
+          shotUrl !== undefined ? (
             <Thumbnail url={shotUrl} alt={`${target.label} thumbnail`} />
           ) : undefined
         }

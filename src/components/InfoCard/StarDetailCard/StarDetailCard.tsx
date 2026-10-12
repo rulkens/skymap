@@ -32,13 +32,14 @@ import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
+import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
 import styles from '../cardChrome.module.css';
 import local from './StarDetailCard.module.css';
 
 type StarDetailCardProps = {
   target: StarInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -182,11 +183,15 @@ function detailBlock(
 function StarDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: StarDetailCardProps): ReactNode {
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
   const { detail } = target;
   const aliases = detail.kind === 'curated' ? detail.meta.names.slice(1) : [];
 
@@ -198,7 +203,7 @@ function StarDetailCard({
   const shotId = target.id === null ? null : `${STAR_FOCUS_PREFIX}${target.id}`;
   const hasShot = detail.kind === 'curated' && shotId !== null && SHOT_CARD_IDS.has(shotId);
   // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
-  const shotBeside = hasShot && hasChrome;
+  const shotBeside = hasShot && layout === 'panel';
 
   // The "where / how bright" rows: beside the shot as summary lines, or heading
   // the curated block as CardRows. Distance is the star's own row for every
@@ -230,11 +235,11 @@ function StarDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Star"
         title={
           // The sheet's peek cuts below the header, so its aliases ride in the name.
-          hasChrome || aliases.length === 0 ? (
+          layout === 'panel' || aliases.length === 0 ? (
             target.displayName
           ) : (
             <>
@@ -245,7 +250,7 @@ function StarDetailCard({
         }
         badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
         thumbnail={
-          hasShot && !hasChrome ? (
+          hasShot ? (
             <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
           ) : undefined
         }
@@ -254,7 +259,7 @@ function StarDetailCard({
         onClose={isPinned ? onClose : undefined}
       />
 
-      {hasChrome && aliases.length > 0 && (
+      {layout === 'panel' && aliases.length > 0 && (
         <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>
       )}
 

@@ -27,13 +27,14 @@ import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../../../components/InfoTip/InfoTip';
 import { TIPS } from '../../../../components/InfoCard/tooltips';
+import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import mw from './MilkyWayDetailCard.module.css';
 
 export type MilkyWayDetailCardProps = {
   target: MilkyWayInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -49,28 +50,32 @@ const BLACK_HOLE_TEXT = `Sgr A* Â· ${(SGR_A_STAR_MASS_SOLAR / 1e6).toFixed(1)} Ã
 function MilkyWayDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: MilkyWayDetailCardProps): ReactNode {
-  const outerClass = cx(mw.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    mw.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   const thumbnail = <Thumbnail url={cardShotUrl(MILKY_WAY_FOCUS_ID)} alt="Milky Way thumbnail" />;
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Home Galaxy"
         title={target.displayName}
-        thumbnail={hasChrome ? undefined : thumbnail}
+        thumbnail={thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(MILKY_WAY_INFO) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        {hasChrome && thumbnail}
+        {layout === 'panel' && thumbnail}
         <div className={styles.cardSummary}>
           <div className={styles.cardTypeLine}>
             <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>

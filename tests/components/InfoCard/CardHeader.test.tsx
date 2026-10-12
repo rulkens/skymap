@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 //
-// The phone sheet (hasChrome=false) moves
+// The phone sheet (layout phone) moves
 // the card-shot into it. The contract pinned here: the image shows exactly once
-// per arrangement — beside the rows with chrome, in the header without — and a
+// per arrangement — beside the rows in the panel layout, in the header on the phone — and a
 // card with no shot gets no thumbnail slot at all.
 
 import { describe, it, expect } from 'vitest';
@@ -19,15 +19,15 @@ const body = (id: string, label: string): BodyInfo => ({
 });
 
 describe('detail card thumbnail placement', () => {
-  it('shows a body shot once, beside the rows, when the card has chrome', () => {
+  it('shows a body shot once, beside the rows, in the panel layout', () => {
     const { container } = render(createElement(BodyDetailCard, { target: body('mars', 'Mars') }));
     expect(container.querySelectorAll('img')).toHaveLength(1);
     expect(container.querySelector('img')?.closest('[class*="cardTopRow"]')).not.toBeNull();
   });
 
-  it('moves the shot into the header, and out of the body, when chromeless', () => {
+  it('moves the shot into the header, and out of the body, on the phone', () => {
     const { container } = render(
-      createElement(BodyDetailCard, { target: body('mars', 'Mars'), hasChrome: false }),
+      createElement(BodyDetailCard, { target: body('mars', 'Mars'), layout: 'phone' }),
     );
     expect(container.querySelectorAll('img')).toHaveLength(1);
     expect(container.querySelector('img')?.closest('[class*="cardTopRow"]')).toBeNull();
@@ -35,7 +35,7 @@ describe('detail card thumbnail placement', () => {
 
   it('leaves no thumbnail slot for a body without a shot', () => {
     const { container } = render(
-      createElement(BodyDetailCard, { target: body('ganymede', 'Ganymede'), hasChrome: false }),
+      createElement(BodyDetailCard, { target: body('ganymede', 'Ganymede'), layout: 'phone' }),
     );
     expect(container.querySelectorAll('img')).toHaveLength(0);
   });

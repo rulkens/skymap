@@ -20,13 +20,14 @@ import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
+import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
 import styles from '../cardChrome.module.css';
 import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {
   target: GalaxyInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: GalaxyInfo) => void;
   onClose?: () => void;
 };
@@ -34,11 +35,15 @@ export type GalaxyDetailCardProps = {
 function GalaxyDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: GalaxyDetailCardProps): ReactNode {
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   const famousAliases = target.famous?.names.filter((n) => n !== target.displayName) ?? [];
   const thumbnail = (
@@ -53,7 +58,7 @@ function GalaxyDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Galaxy"
         title={
           <>
@@ -67,7 +72,7 @@ function GalaxyDetailCard({
           </>
         }
         badge={target.sourceLabel}
-        thumbnail={hasChrome ? undefined : thumbnail}
+        thumbnail={thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
@@ -80,7 +85,7 @@ function GalaxyDetailCard({
       )}
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        {hasChrome && thumbnail}
+        {layout === 'panel' && thumbnail}
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
             <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {formatLookback(target.lookbackGyr)}{' '}

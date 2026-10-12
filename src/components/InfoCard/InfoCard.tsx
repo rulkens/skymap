@@ -70,9 +70,7 @@ function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): React
   if (isMobile) {
     if (selected === null) return null;
     const { Detail } = detailCardFor(DETAIL_CARD, selected);
-    return (
-      <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
-    );
+    return <Detail target={selected} isPinned layout="phone" onFocus={onFocus} onClose={onClose} />;
   }
 
   if (!hovered && !selected) return null;

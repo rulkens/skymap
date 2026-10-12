@@ -19,6 +19,7 @@ import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/D
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import { InfoTip } from '../../../../components/InfoTip/InfoTip';
 import { TIPS } from '../../../../components/InfoCard/tooltips';
+import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import local from './StructureDetailCard.module.css';
 
@@ -32,7 +33,7 @@ export type StructureDetailCardProps = {
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: StructureInfo) => void;
   onClose?: () => void;
 };
@@ -41,24 +42,28 @@ function StructureDetailCard({
   target,
   isPinned = false,
   memberCount,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: StructureDetailCardProps): ReactNode {
   const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
   // The structure's own id is its focus id (see URL_HASH_FOR).
   const shotUrl = focusShotUrl(target.id);
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Structure"
         title={target.name}
         badge={CATEGORY_DISPLAY_INFO[target.category].label}
         thumbnail={
-          !hasChrome && shotUrl !== undefined ? (
+          shotUrl !== undefined ? (
             <Thumbnail url={shotUrl} alt={`${target.name} thumbnail`} />
           ) : undefined
         }

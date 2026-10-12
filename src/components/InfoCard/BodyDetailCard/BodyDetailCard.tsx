@@ -40,13 +40,14 @@ import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
+import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
 import styles from '../cardChrome.module.css';
 import local from './BodyDetailCard.module.css';
 
 export type BodyDetailCardProps = {
   target: BodyInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   /**
    * Live camera→body distance in Mpc off the throttled time pub, or null when no
    * distance is published. Rendered as a row on the non-star body branch only.
@@ -59,7 +60,7 @@ export type BodyDetailCardProps = {
 function BodyDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   distanceMpc = null,
   onFocus,
   onClose,
@@ -74,7 +75,7 @@ function BodyDetailCard({
   const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
   const hasShot = SHOT_CARD_IDS.has(shotId);
   // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
-  const shotBeside = hasShot && hasChrome;
+  const shotBeside = hasShot && layout === 'panel';
 
   // The lead rows — the "where / how big" facts — sit beside the card shot as
   // summary lines (the galaxy card's layout, one line per 20 px of the 80 px
@@ -100,16 +101,20 @@ function BodyDetailCard({
     });
   }
 
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Body"
         title={target.label}
         thumbnail={
-          hasShot && !hasChrome ? (
+          hasShot ? (
             <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
           ) : undefined
         }

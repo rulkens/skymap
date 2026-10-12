@@ -3,13 +3,14 @@
  * "Pinned" badge (CSS toggles via the outer `.pinned` class), optional Focus +
  * Close buttons, and the name with its optional badge.  Buttons appear iff
  * their callback is passed; callers gate by `pinned` themselves.  Desktop
- * stacks the eyebrow bar over the name; `compact` (the phone sheet) re-flows the
+ * stacks the eyebrow bar over the name; the `phone` layout (the sheet) re-flows the
  * same nodes name-first, in CSS alone, and drops the Pinned badge (the sheet
  * only ever shows the pinned selection).
  */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
+import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
 import chrome from '../cardChrome.module.css';
 import styles from './CardHeader.module.css';
 
@@ -19,9 +20,9 @@ export type CardHeaderProps = {
   title: ReactNode;
   /** Source / category chip trailing the name. */
   badge?: ReactNode;
-  /** Phone-sheet arrangement: name first, meta line under it, fixed height. */
-  compact?: boolean;
-  /** Phone-sheet image left of the name; absent ⇒ no slot. */
+  /** `phone`: name first, meta line under it, fixed height, thumbnail left of the name. */
+  layout?: CardLayout;
+  /** Shown in the `phone` layout only; absent ⇒ no slot. */
   thumbnail?: ReactNode;
   /** When defined, renders the Focus button with this aria-label. */
   onFocus?: () => void;
@@ -34,23 +35,20 @@ function CardHeader({
   eyebrow,
   title,
   badge,
-  compact = false,
+  layout = 'panel',
   thumbnail,
   onFocus,
   focusAriaLabel,
   onClose,
 }: CardHeaderProps): ReactNode {
+  const phone = layout === 'phone';
+  const hasThumbnail = phone && thumbnail != null;
   return (
-    <div
-      className={cx(
-        compact && styles.compact,
-        compact && thumbnail != null && styles.withThumbnail,
-      )}
-    >
-      {thumbnail != null && <div className={styles.thumbnail}>{thumbnail}</div>}
+    <div className={cx(phone && styles.compact, hasThumbnail && styles.withThumbnail)}>
+      {hasThumbnail && <div className={styles.thumbnail}>{thumbnail}</div>}
       <div className={styles.bar}>
         <span className={styles.eyebrow}>{eyebrow}</span>
-        {!compact && <span className={chrome.pinnedBadge}>Pinned</span>}
+        {!phone && <span className={chrome.pinnedBadge}>Pinned</span>}
         <div className={styles.actions}>
           {onFocus && (
             <button

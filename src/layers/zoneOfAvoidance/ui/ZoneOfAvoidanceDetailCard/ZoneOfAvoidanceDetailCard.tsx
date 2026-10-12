@@ -17,35 +17,38 @@ import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
 import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
+import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import zoa from './ZoneOfAvoidanceDetailCard.module.css';
 
 export type ZoneOfAvoidanceDetailCardProps = {
   target: ZoneOfAvoidanceInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onClose?: () => void;
 };
 
 function ZoneOfAvoidanceDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onClose,
 }: ZoneOfAvoidanceDetailCardProps): ReactNode {
-  const outerClass = cx(zoa.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    zoa.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        compact={!hasChrome}
+        layout={layout}
         eyebrow="Guide Layer"
         title={target.displayName}
         // The band has no focus id; its picture is the exhibit card's shot.
         thumbnail={
-          hasChrome ? undefined : (
-            <Thumbnail url={cardShotUrl('zoneOfAvoidance')} alt="Zone of Avoidance thumbnail" />
-          )
+          <Thumbnail url={cardShotUrl('zoneOfAvoidance')} alt="Zone of Avoidance thumbnail" />
         }
         onClose={isPinned ? onClose : undefined}
       />
