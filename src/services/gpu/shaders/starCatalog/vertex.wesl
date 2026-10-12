@@ -226,7 +226,13 @@ fn vs(
   // luminance-conserving photometry wants. The absolute ceiling applies last and
   // bounds only the DRAWN radius.
   let rPxRaw = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
-  let rPx = min(STAR_GLOW_MAX_PX, rPxRaw);
+  // An aggregate past the refine threshold is one the cut could not open (its
+  // chunk not resident, or the budget spent): it draws at the footprint it had
+  // at the threshold, the largest a refining blob ever shows. Like the absolute
+  // ceiling it under-deposits, so it never out-shines the stars that replace it.
+  let refineCapPx = sqrt(cut.refineThresholdSq) * u.cam.pxPerRad
+    * AGGREGATE_BOX_RADIUS_FACTOR * sizeScale * overlap;
+  let rPx = min(select(STAR_GLOW_MAX_PX, min(STAR_GLOW_MAX_PX, refineCapPx), isAgg), rPxRaw);
 
   // Peak from the UNCAPPED radius in reference px (toRefPx), so light is
   // conserved per unit solid angle across canvas sizes: I_peak * K_GAUSS *
