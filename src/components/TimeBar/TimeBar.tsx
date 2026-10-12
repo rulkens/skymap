@@ -1,47 +1,13 @@
 /**
- * TimeBar — the sim clock's transport instrument.
+ * TimeBar — the sim clock's transport instrument, purely presentational.
  *
- * A pure presentational control: the current time readout, a rate stepper
- * (slower / faster), a play/pause toggle, the current rate label, and a
- * manual-mode "return to now" affordance. Every piece of state arrives as a
- * prop and every interaction leaves as a callback; the component reaches into
- * no store, engine, or clock module (Task 3's container wires those).
- *
- * ## Live vs manual
- *
- * In `live` mode the clock is pinned to real wall-time, so the bar collapses to
- * the readout alone and reveals its transport controls only on hover / focus —
- * the reveal is pure CSS (`:hover` / `:focus-within` on .root), which is why
- * it isn't (and can't be) unit-tested. In `manual` mode the user has taken the
- * wheel: the controls are always shown and the lit "now" button appears as the
- * way back to live. The `now` button is always mounted; live mode CSS-collapses
- * its wrapper (grid 1fr→0fr) and marks it `inert`, rather than conditionally
- * rendering it. Keeping the node alive lets the pill width *animate* the
- * hand-back-to-live moment — a React unmount would snap it, since the node is
- * gone before a transition can run — while `inert` preserves the "genuinely not
- * interactive when live" guarantee (unfocusable, out of the a11y tree).
- *
- * The step glyphs carry `aria-hidden` — the button's `aria-label` is the
- * accessible name, so screen readers announce "Slower" / "Faster" rather than a
- * chevron character.
- *
- * Slower/Faster step on pointer-down and auto-repeat on press-and-hold (see
- * `useHoldRepeat`), so both buttons run through the pointer path alone — no
- * onClick, no click/pointer double-fire. They disable at the ladder ends: a
- * clamped step there used to silently re-anchor a live clock into manual mode.
- * Native `disabled` blocks the interaction and drops the button from the tab
- * order; the hold-repeat also self-stops the instant the prop flips. A disabled
- * stepper carries NO hover hint at all: it renders bare, without its
- * CompactInfoTip wrapper — the wrapper's own box still reveals its label on
- * hover even when the child button is disabled (a disabled button doesn't
- * stop pointer events from reaching its parent), so omitting the wrapper is
- * the only way to keep a disabled step's hint from surfacing.
- *
- * Every hover hint here is a CompactInfoTip, not InfoTip: the pill's own
- * `backdrop-filter` makes it a containing block for `position: fixed`
- * descendants, which would trap InfoTip's viewport-fixed panel inside the
- * collapsing strip instead of the viewport. CompactInfoTip's plain
- * absolute-inside-relative label needs no such escape hatch.
+ * Live mode shows the readout alone and reveals the controls on hover / focus
+ * (pure CSS, hence untested). The `now` button stays mounted, collapsed and
+ * `inert` while live, so the pill width can animate on hand-back; an unmount
+ * would snap. Step buttons act on pointer-down and auto-repeat (`useHoldRepeat`),
+ * never onClick (no double-fire), and disable at the ladder ends; a disabled one
+ * renders without its CompactInfoTip, whose wrapper would still reveal the hint.
+ * CompactInfoTip, not InfoTip: the pill's `backdrop-filter` traps fixed descendants.
  */
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';

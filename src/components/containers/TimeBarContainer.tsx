@@ -1,14 +1,10 @@
 /**
  * TimeBarContainer — store boundary for the sim clock's transport bar.
  *
- * Owns every store reach the presentational `TimeBar` refuses to do itself: it
- * subscribes the time *intent* slice (mode / paused / rateIndex → ladder label /
- * anchor) and maps each control to the matching re-anchoring intent action,
- * mirroring the `[`/`]`/`\` entries in `KEYBOARD_SHORTCUTS`. `memo` localizes
- * an intent change's re-render to this leaf instead of cascading from App.
- *
- * The readout ticks locally (`useSimInstant`), not off an engine pub: the
- * engine's throttled pubs carry no sim clock and would leave it frozen.
+ * Owns the store reach `TimeBar` refuses: it subscribes the time *intent* slice
+ * and maps each control to its re-anchoring action, mirroring the `[`/`]`/`\`
+ * entries in `KEYBOARD_SHORTCUTS`. The readout ticks locally (`useSimInstant`):
+ * the engine's throttled pubs carry no sim clock and would freeze it.
  */
 
 import { memo, useCallback, useState } from 'react';
