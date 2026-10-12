@@ -128,9 +128,9 @@ export function actionsForPaletteAction(action: PaletteAction): UnknownAction[];
 No new test: this is a routing change with no branch logic of its own, and the palette's existing tests cover the
 selection path.
 
-- [ ] Implement; the container's `onSelect` becomes a loop over the result.
-- [ ] `npm run typecheck:fast` and `npx vitest run tests/components` pass.
-- [ ] Commit.
+- [x] Implement; the container's `onSelect` becomes a loop over the result.
+- [x] `npm run typecheck:fast` and `npx vitest run tests/components` pass.
+- [x] Commit.
 
 ---
 
