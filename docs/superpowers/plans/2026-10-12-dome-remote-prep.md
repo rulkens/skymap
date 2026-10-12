@@ -173,15 +173,15 @@ labels and order: one per label category (`set` = the `LABEL_HOME_BY_SOURCE_TYPE
 The result is memoised (`createSelector`, with `layerRows` as an input), so an unrelated store write returns the
 same array and the `memo` section does not re-render.
 
-- [ ] Test `returns the same array when an unrelated slice changes`: build state, call twice around a dispatch to a
+- [x] Test `returns the same array when an unrelated slice changes`: build state, call twice around a dispatch to a
       slice the rows do not read (for example `ui`), assert identity. This guards the re-render the container's
       `useMemo` chain prevents today.
-- [ ] Test `a row's set builds the action that flips its own value`: for the orbit-trails row and one label-category
+- [x] Test `a row's set builds the action that flips its own value`: for the orbit-trails row and one label-category
       row, reduce `set(!enabled)` into the state and assert the re-selected row's `enabled` flipped.
-- [ ] Implement; slim the container to the selector plus the `SectionRow` mapping.
-- [ ] `npm run typecheck:fast` and `npx vitest run tests/compositions tests/components/SettingsPanel
+- [x] Implement; slim the container to the selector plus the `SectionRow` mapping.
+- [x] `npm run typecheck:fast` and `npx vitest run tests/compositions tests/components/SettingsPanel
 tests/components/containers` pass.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
