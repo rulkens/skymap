@@ -1,3 +1,5 @@
+import { structureAngularDiameterDeg } from './structureAngularDiameterDeg';
+
 const MIN_FOV_DEG = 0.1;
 const MAX_FOV_DEG = 8;
 
@@ -11,6 +13,6 @@ export function structureCutoutFovDeg(
   distanceMpc: number,
   margin: number,
 ): number {
-  const diameterDeg = (2 * Math.atan(physicalRadiusMpc / distanceMpc) * 180) / Math.PI;
+  const diameterDeg = structureAngularDiameterDeg(physicalRadiusMpc, distanceMpc);
   return Math.min(MAX_FOV_DEG, Math.max(MIN_FOV_DEG, margin * diameterDeg));
 }

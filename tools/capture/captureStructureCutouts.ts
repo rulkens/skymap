@@ -1,12 +1,12 @@
 /**
- * captureStructureCutouts — writes the shot of every featured Milky Way-scale
- * structure (clusters, nebulae, Galactic Centre) as a DSS2 sky cutout, since
- * the app's own render of a star cluster is a handful of points. Cosmic-scale
- * structures are shot from the app by `capture.ts` instead.
+ * captureStructureCutouts — writes the shot of every featured anchor that
+ * `structureShotSource` sends to a sky cutout (Milky Way structures and
+ * compact galaxy clusters and groups), since the app's own render of those is
+ * a handful of points. The rest are shot from the app by `capture.ts`.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import { writeThumbnail } from '../utils/capture/writeThumbnail';
-import { featuredAnchorsOfScale } from './featuredAnchorsOfScale';
+import { featuredAnchorsByShotSource } from './featuredAnchorsByShotSource';
 import { STRUCTURE_OUTPUT_DIR } from './featuredDefaults';
 import { parseArgs } from './parseFeaturedArgs';
 import { structureCutoutUrl } from './structureCutoutUrl';
@@ -24,10 +24,10 @@ async function fetchJpeg(url: string): Promise<Buffer> {
 
 async function main(): Promise<void> {
   const { force } = parseArgs(process.argv.slice(2));
-  const anchors = featuredAnchorsOfScale('milkyWay');
+  const anchors = featuredAnchorsByShotSource('cutout');
   for (const id of force) {
     if (!anchors.some((s) => s.id === id))
-      throw new Error(`--force '${id}' is not a Milky Way anchor`);
+      throw new Error(`--force '${id}' is not a cutout anchor`);
   }
   mkdirSync(STRUCTURE_OUTPUT_DIR, { recursive: true });
   const todo = anchors.filter(

@@ -11,7 +11,7 @@ import { WARN_BYTES } from '../utils/capture/shotDefaults';
 import { selectCaptureTargets } from './selectCaptureTargets';
 import { parseArgs } from './parseFeaturedArgs';
 import { DEFAULT_CAPTURE_T, OUTPUT_DIR, STRUCTURE_OUTPUT_DIR } from './featuredDefaults';
-import { featuredAnchorsOfScale } from './featuredAnchorsOfScale';
+import { featuredAnchorsByShotSource } from './featuredAnchorsByShotSource';
 import { FEATURED_TABS } from '../../src/data/palette/featuredTabs';
 import type { CaptureTarget } from './@types/CaptureTarget';
 import type { SceneShot } from '../@types/capture/SceneShot';
@@ -45,7 +45,7 @@ async function main(): Promise<void> {
       if (name.endsWith('.webp')) existing.add(`${dir}/${name}`);
     }
   }
-  const structureIds = featuredAnchorsOfScale('cosmic').map((s) => s.id);
+  const structureIds = featuredAnchorsByShotSource('render').map((s) => s.id);
   const targets = selectCaptureTargets(FEATURED_TABS, structureIds, existing, options.force);
   console.log(`capture-featured: ${targets.length} target(s)`);
   if (targets.length === 0) return;
