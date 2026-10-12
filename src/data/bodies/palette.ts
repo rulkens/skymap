@@ -32,8 +32,9 @@ export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
 
 // Voyager trail tints (read by `SAMPLED_BODIES`): V1 lime, V2 green — a hue no planet
 // trail uses (the old gold was Saturn's own), with the two still apart where they run close.
-export const VOYAGER_1_LIME: Vec3 = [0.289, 0.5, 0.051];
-export const VOYAGER_2_GREEN: Vec3 = [0.038, 0.5, 0.135];
+// Muted a quarter of the way toward grey; at full saturation they read as neon.
+export const VOYAGER_1_LIME: Vec3 = [0.342, 0.5, 0.163];
+export const VOYAGER_2_GREEN: Vec3 = [0.154, 0.5, 0.226];
 
 // Hubble's aluminium skin, cool enough to stay off the probes' lime and green; unread
 // today — mesh bodies draw no trail.
