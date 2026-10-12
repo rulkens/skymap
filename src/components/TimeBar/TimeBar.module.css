@@ -284,6 +284,8 @@
   height: var(--time-row-height);
   width: 100%;
   background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
   border-top: 1px solid var(--border-card);
 }
 
