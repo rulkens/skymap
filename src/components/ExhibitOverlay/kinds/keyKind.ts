@@ -3,6 +3,5 @@ import type { ExhibitKeySection } from '../../../@types/exhibits/ExhibitKeySecti
 import type { ExhibitSectionKind } from '../../../@types/exhibits/ExhibitSectionKind';
 
 export const keyKind: ExhibitSectionKind<ExhibitKeySection> = {
-  id: 'key',
   Component: KeySection,
 };

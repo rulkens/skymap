@@ -48,7 +48,7 @@ export function* exhibitBodySaga(
   yield* put(mergeSnapshot(exhibit.settings));
   const held = exhibit.body.find((s) => s.kind.hold !== undefined);
   if (held) {
-    yield* call([held.kind, held.kind.hold!], exhibit, held.data, entry, atLinkedTime);
+    yield* call([held.kind, held.kind.hold!], held.data, entry, atLinkedTime);
     return;
   }
 

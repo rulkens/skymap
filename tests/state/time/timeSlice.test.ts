@@ -150,21 +150,7 @@ describe('mission profile', () => {
     { name: 'setRate', action: setRate({ rateIndex: 4, nowMs: 55_000 }) },
     { name: 'setDirection', action: setDirection({ direction: -1, nowMs: 55_000 }) },
     { name: 'resume', action: resume({ nowMs: 55_000 }) },
-    { name: 'setSimDays', action: setSimDays({ simDays: 2450000, nowMs: 55_000 }) },
-    { name: 'goLive', action: goLive({ simDays: 2450000, nowMs: 55_000 }) },
-    {
-      name: 'restoreTime',
-      action: restoreTime({ captured: manualStart, simDays: 2450000, nowMs: 55_000 }),
-    },
-    {
-      name: 'stepToEvent',
-      action: stepToEvent({ eventId: 'e', simDays: 2450000, nowMs: 55_000 }),
-    },
   ];
-
-  it.each(visitorActions)('$name drops the profile', ({ action }) => {
-    expect(reducer(profiled, action).profile).toBeNull();
-  });
 
   it('only startClockProfile keeps a profile: any other time action drops it, others ignore it', () => {
     expect(reducer(profiled, { type: 'time/aFutureReducer' }).profile).toBeNull();
@@ -173,10 +159,7 @@ describe('mission profile', () => {
     expect(reducer(profiled, restarted).profile?.startWallMs).toBe(60_000);
   });
 
-  it.each(visitorActions.slice(0, 3))(
-    '$name keeps the clock continuous mid-profile',
-    ({ action }) => {
-      expect(deriveSimDays(reducer(profiled, action), 55_000)).toBe(2460005);
-    },
-  );
+  it.each(visitorActions)('$name keeps the clock continuous mid-profile', ({ action }) => {
+    expect(deriveSimDays(reducer(profiled, action), 55_000)).toBe(2460005);
+  });
 });

@@ -29,7 +29,6 @@ import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from '../exhibits/timeline/playMission';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { MissionCourse } from '../../../@types/missions/MissionCourse';
-import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
 import type { Transition } from '../../../@types/navigation/Transition';
 import type { SagaContext } from '../../../store/types';
@@ -43,7 +42,6 @@ const LAUNCH_TOLERANCE_DAYS = 1 / 1440;
 const launchDays = (mission: MissionCourse): number => unixMsToJulianDays(mission.stops[0]!.ms);
 
 export function* missionHoldSaga(
-  _exhibit: Exhibit,
   timeline: MissionTimeline,
   entry: Transition,
   atLinkedTime: boolean,

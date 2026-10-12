@@ -10,7 +10,6 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 
 import StopIcon from '../TourOverlay/StopIcon';
 import EyeIcon from './EyeIcon';
-import EyeOffIcon from './EyeOffIcon';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
 import styles from './ExhibitOverlay.module.css';
 
@@ -54,11 +53,7 @@ function ExhibitOverlay({
             {body.map(({ kind, data }, i) => (
               // The group is what enters — a section and the hairline above it
               // are one beat, and `--i` is its place in the stagger.
-              <div
-                key={`${kind.id}-${i}`}
-                className={styles.sectionGroup}
-                style={{ '--i': i } as CSSProperties}
-              >
+              <div key={i} className={styles.sectionGroup} style={{ '--i': i } as CSSProperties}>
                 <kind.Component data={data} />
               </div>
             ))}
@@ -81,7 +76,7 @@ function ExhibitOverlay({
         aria-pressed={hidden}
         onClick={() => setHidden((h) => !h)}
       >
-        {hidden ? <EyeOffIcon /> : <EyeIcon />}
+        <EyeIcon struck={hidden} />
       </button>
     </div>
   );

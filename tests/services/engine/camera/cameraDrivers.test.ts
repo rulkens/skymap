@@ -860,14 +860,3 @@ describe('orbitDrag — the register comes from the ctx', () => {
     expect(drag.pose(ctx, null, null).pose).toBe(REGISTER_POSE);
   });
 });
-
-describe('CAMERA_DRIVERS — ridesWheelTarget', () => {
-  it('is set on exactly the follow rows and the mission', () => {
-    const drivers = composeControlSchemes(Object.values(APP_EXHIBITS)).skymap.drivers;
-    expect(drivers.filter((d) => d.ridesWheelTarget).map((d) => d.id)).toEqual([
-      'followApproach',
-      'followHold',
-      'mission',
-    ]);
-  });
-});

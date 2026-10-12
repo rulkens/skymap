@@ -7,7 +7,6 @@ import type { MissionTimeline } from '../../../../@types/exhibits/MissionTimelin
 
 /** A scrubbable mission timeline; its hold runs the clock, its camera row follows the craft. */
 export const missionTimelineKind: ExhibitSectionKind<MissionTimeline> = {
-  id: 'missionTimeline',
   Component: ExhibitTimelineContainer,
   hold: missionHoldSaga,
   shortcuts: missionShortcuts,

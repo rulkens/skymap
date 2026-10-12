@@ -5,8 +5,7 @@ import type { Exhibit } from '../../../src/@types/exhibits/Exhibit';
 import type { ExhibitId } from '../../../src/@types/exhibits/ExhibitId';
 import type { ExhibitSectionKind } from '../../../src/@types/exhibits/ExhibitSectionKind';
 
-const kind = (id: string, hold = false): ExhibitSectionKind<unknown> => ({
-  id,
+const kind = (hold = false): ExhibitSectionKind<unknown> => ({
   Component: () => null,
   ...(hold && { hold: function* () {} }),
 });
@@ -19,7 +18,7 @@ const exhibit = (id: string, kinds: ExhibitSectionKind<unknown>[]): Exhibit =>
 
 describe('exhibitsById', () => {
   it('keys the rows by id', () => {
-    const a = exhibit('solarSystem', [kind('prose')]);
+    const a = exhibit('solarSystem', [kind()]);
     expect(exhibitsById([a]).solarSystem).toBe(a);
   });
 
@@ -29,17 +28,9 @@ describe('exhibitsById', () => {
     );
   });
 
-  it('throws on two kinds sharing an id, but not on one kind used twice', () => {
-    const prose = kind('prose');
-    expect(() => exhibitsById([exhibit('solarSystem', [prose, prose])])).not.toThrow();
-    expect(() => exhibitsById([exhibit('solarSystem', [prose, kind('prose')])])).toThrow(
-      /share the id/,
-    );
-  });
-
   it('throws on an exhibit with two hold-bearing sections', () => {
-    expect(() =>
-      exhibitsById([exhibit('solarSystem', [kind('a', true), kind('b', true)])]),
-    ).toThrow(/more than one hold/);
+    expect(() => exhibitsById([exhibit('solarSystem', [kind(true), kind(true)])])).toThrow(
+      /more than one hold/,
+    );
   });
 });

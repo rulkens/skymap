@@ -55,7 +55,7 @@ export type Layer<
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];
   /** Exhibit rows, folded after core's into `APP_EXHIBITS` by import (`appExhibits`); the
-   * engine reads them here for their sections' camera rows. Ids unique, asserted at boot. */
+   * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
   readonly exhibits?: readonly Exhibit[];
   /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;

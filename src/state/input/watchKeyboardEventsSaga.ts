@@ -21,12 +21,6 @@
  * default (see `createKeyboardListener`'s "Why preventDefault here, not in the
  * saga"). The listener applies each shortcut's static `preventDefault` flag
  * itself; the channel reports only which key fired.
- *
- * ### Exhibit keys
- *
- * A running exhibit's section kinds' shortcuts are walked first, with their section's data;
- * the first non-null `run` wins, else the global row runs. Each key is bound once: hotkeys-js
- * fires a key bound twice twice, so a kind key the global table already binds is not re-bound.
  */
 import { take, call, put, select } from 'typed-redux-saga';
 
@@ -38,7 +32,10 @@ import { asArray } from '../../utils/asArray';
 import { shortcutKeys } from '../../utils/input/shortcutKeys';
 import type { RootState } from '../../store/types';
 
-/** The running exhibit's first kind shortcut on `key` that does something, else null. */
+/**
+ * The running exhibit's first kind shortcut on `key` that does something, else null. A key the
+ * global table binds is not re-bound: hotkeys fires a doubly bound key twice.
+ */
 function exhibitRun(state: RootState, key: string) {
   const source = selectTakeoverSource(state);
   if (source?.kind !== 'exhibit') return null;

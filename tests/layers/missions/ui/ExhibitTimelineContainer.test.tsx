@@ -25,26 +25,22 @@ import {
   startClockProfile,
   stepToEvent,
 } from '../../../../src/state/time/timeSlice';
-import { voyagerMissions } from '../../../../src/layers/missions/exhibits/voyagerMissions';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
-import { missionTimelineKind } from '../../../../src/layers/missions/exhibits/timeline/missionTimelineKind';
-import type { MissionTimeline } from '../../../../src/@types/exhibits/MissionTimeline';
+import { voyagerTimeline } from '../../../helpers/missions/voyagerTimeline';
 
 /** Steps the speed factor to one end of the ladder; the reducer clamps there. */
 const speedToEnd = (store: ReturnType<typeof mount>, step: -1 | 1) => {
   for (let i = 0; i < MISSION_SPEEDS.length; i++) store.dispatch(stepMissionSpeed({ step }));
 };
 
-const section = voyagerMissions.body.find((s) => s.kind === missionTimelineKind)!
-  .data as MissionTimeline;
+const section = voyagerTimeline();
 
 function mount(simIso: string) {
   const { store } = createTestStore();
   store.dispatch(
     setSimDays({ simDays: unixMsToJulianDays(Date.parse(simIso)), nowMs: performance.now() }),
   );
-  // The exhibit's entry settings emphasise Voyager 1; the first lane alone would be Voyager 2.
   store.dispatch(setMissionCraft('voyager1'));
   store.dispatch(resume({ nowMs: performance.now() }));
   vi.spyOn(store, 'dispatch');
@@ -88,7 +84,7 @@ describe('ExhibitTimelineContainer', () => {
     ]);
   });
 
-  it('a tab click sets the store emphasis and aria-selected follows it', () => {
+  it('a tab click sets the store craft and aria-selected follows it', () => {
     const store = mount('2026-01-01');
     expect(screen.getByRole('tab', { name: /Voyager 1/ })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
