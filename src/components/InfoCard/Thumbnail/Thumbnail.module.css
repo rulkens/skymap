@@ -1,12 +1,12 @@
 /*
- * Thumbnail.module.css — var(--thumbnail-size) square image cutout (.root) and its broken-image
+ * Thumbnail.module.css — square image cutout (.root, sized by --thumbnail-size) and its broken-image
  * fallback placeholder (.placeholder).  Two mutually-exclusive render branches,
  * so the placeholder is a sibling root rather than nested under .root.
  *
  * All atoms reference tokens from `src/styles/global.css`.
  */
 
-/* Thumbnail image — var(--thumbnail-size) square rounded square */
+/* Thumbnail image — a rounded square */
 .root {
   width: var(--thumbnail-size);
   height: var(--thumbnail-size);

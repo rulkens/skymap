@@ -4,8 +4,8 @@
  *   - default: a label/value pair (label accepts JSX so callers can wrap it in
  *     an InfoTip without a parallel component).
  *   - headline: the card's name cell (headlineRow + cardHeadline), with an
- *     optional trailing source/category badge.  One headline shape for the
- *     galaxy, structure, and Milky-Way cards — detail and hover alike.
+ *     optional trailing source/category badge, for the compact hover cards
+ *     (the detail cards' name lives in CardHeader).
  *
  * The two variants are mutually-exclusive render branches, so each has its own
  * outermost element (.root for the row, .headline for the headline) — see

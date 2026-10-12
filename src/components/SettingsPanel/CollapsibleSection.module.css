@@ -135,9 +135,11 @@ button.header {
  * enough at this scale and avoids competing with the panel's glass
  * texture.
  */
-.header:hover:not(:disabled) .title,
-.header:hover:not(:disabled) .chevron {
-  color: var(--color-fg-subtle);
+@media (hover: hover) {
+  .header:hover:not(:disabled) .title,
+  .header:hover:not(:disabled) .chevron {
+    color: var(--color-fg-subtle);
+  }
 }
 
 /*

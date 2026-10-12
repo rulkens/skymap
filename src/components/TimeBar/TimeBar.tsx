@@ -154,13 +154,12 @@ function TimeBar({
   const slowerHold = useHoldRepeat(onSlower, slowerDisabled);
   const fasterHold = useHoldRepeat(onFaster, fasterDisabled);
 
-  // Placement is the bottom-right HUD rail, stacked under the ScaleBar with the
-  // readout's right edge pinned at the corner (see .root / .pill).
+  // `.floating` places the pill on the bottom-right HUD rail under the ScaleBar,
+  // readout's right edge at the corner; `.row` is the full-width phone strip.
   return (
-    // Outer .root is the transparent hit surface at the full expanded width, so
-    // sweeping the cursor into the empty region left of the readout still wakes
-    // the reveal. The visible chrome lives on the inner .pill (row-reverse),
-    // which holds the readout on the right and grows leftward on hover.
+    // Outer .root is the transparent hit surface; in `.floating` it spans the
+    // full expanded width, so sweeping the cursor into the empty region left of
+    // the readout still wakes the reveal. The chrome lives on the inner .pill.
     <div
       className={cx(
         styles.root,
@@ -189,13 +188,11 @@ function TimeBar({
           </button>
         </CompactInfoTip>
 
-        {/* Grid 0fr→1fr collapses the controls' layout width so the pill hugs the
-            readout; the inner .group is clipped horizontally to mask the sliding
-            controls. The .group clip-path insets give the CompactInfoTip labels
-            room to escape above without being cropped. The pill's row-reverse
-            puts this block left of the readout, so the group is authored in its
-            left-to-right visual order: Now | rate | ‹ ⏯ › | (divider abutting
-            the readout). */}
+        {/* In `.floating`, grid 0fr→1fr collapses the controls' layout width so the
+            pill hugs the readout, and the inner .group is clipped to mask the
+            sliding controls (its clip-path insets leave the CompactInfoTip labels
+            room above). Row-reverse puts this block left of the readout, so the
+            group is authored in visual order: Now | rate | ‹ ⏯ › | (divider). */}
         <div className={styles.controls}>
           <div className={styles.group}>
             {/* Now collapser: the button is always mounted so the pill width can

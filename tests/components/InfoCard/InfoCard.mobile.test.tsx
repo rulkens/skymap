@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
-// InfoCard mobile branch — when `useIsMobile()` is true the card collapses to a
-// single MobileSheet showing ONLY the selected target's full detail body
+// InfoCard mobile branch — when `useIsMobile()` is true the card renders ONLY
+// the selected target's full detail body, chromeless (the sheet is PhoneHud's)
 // (hovered is ignored entirely; nothing renders without a selection).  Desktop
 // keeps today's hovered+selected stacking.
 //

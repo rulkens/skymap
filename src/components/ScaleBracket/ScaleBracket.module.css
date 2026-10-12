@@ -35,7 +35,7 @@
 
 .bracket {
   display: block;
-  height: 7px;
+  height: var(--space-3);
   box-sizing: border-box;
   border: 1px solid var(--color-fg-muted);
   border-top: none;

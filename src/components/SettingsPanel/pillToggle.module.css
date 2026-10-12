@@ -55,8 +55,10 @@
     background 0.18s ease;
 }
 
-.pillToggle:hover {
-  border-color: var(--border-hover);
+@media (hover: hover) {
+  .pillToggle:hover {
+    border-color: var(--border-hover);
+  }
 }
 
 .pillToggle:checked {

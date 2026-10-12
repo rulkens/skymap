@@ -414,9 +414,11 @@ details:not([open]) > .detailsSummary::before {
   text-transform: uppercase;
 }
 
-.focusButton:hover {
-  background: var(--surface-control-hover);
-  border-color: var(--border-hover);
+@media (hover: hover) {
+  .focusButton:hover {
+    background: var(--surface-control-hover);
+    border-color: var(--border-hover);
+  }
 }
 
 .focusButton:active {
@@ -456,10 +458,12 @@ details:not([open]) > .detailsSummary::before {
   padding-bottom: 1px;
 }
 
-.closeButton:hover {
-  background: var(--surface-control);
-  border-color: var(--border-control);
-  color: var(--color-fg);
+@media (hover: hover) {
+  .closeButton:hover {
+    background: var(--surface-control);
+    border-color: var(--border-control);
+    color: var(--color-fg);
+  }
 }
 
 .closeButton:active {

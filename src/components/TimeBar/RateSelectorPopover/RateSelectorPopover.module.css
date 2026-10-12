@@ -47,7 +47,7 @@
    * centering: the toolbar sits near the viewport's right edge, so centering
    * could overflow off-screen. Fallback pins to the corner rail. */
   right: anchor(right, var(--corner-offset));
-  z-index: 11;
+  z-index: var(--z-bottom-stack-popover);
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
@@ -73,10 +73,16 @@
     background var(--duration-color) ease;
 }
 
-.detent:hover,
 .detent:focus-visible {
   color: var(--color-accent);
   background: var(--surface-control);
+}
+
+@media (hover: hover) {
+  .detent:hover {
+    color: var(--color-accent);
+    background: var(--surface-control);
+  }
 }
 
 .detent:focus-visible {

@@ -1,13 +1,11 @@
 /**
- * BottomStack — the phone HUD's bottom layout: the dock on the edge, the time
- * row directly above it when open, and a sheet resting above both.
+ * BottomStack — the phone HUD's bottom layout: dock on the edge, the time row
+ * above it when open, a sheet above both.
  *
- * Coordination is one custom property, not per-element patches: `.root` sets
- * `--bottom-stack-height` (dock plus time row, from fixed token heights) and
- * `--sheet-lift` (the peek, while a sheet is showing). The sheet and the scale
- * bracket are fixed elements that offset themselves by those two values, so
- * none of them needs to know what the others are. `.root` takes no transform
- * or filter: either would become the containing block for its fixed children.
+ * `.root` sets `--bottom-stack-height` (dock plus time row) and `--sheet-lift`
+ * (the peek, while a sheet shows); the fixed sheet and scale bracket offset
+ * themselves by those. `.root` takes no transform or filter: either would
+ * become the containing block for its fixed children.
  */
 
 import type { ReactNode } from 'react';

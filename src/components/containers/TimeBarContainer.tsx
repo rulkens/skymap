@@ -42,7 +42,7 @@ const POPOVER_PLACEMENT: CSSProperties = {
   position: 'fixed',
   right: 'var(--corner-offset)',
   bottom: 'calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3))',
-  zIndex: 11,
+  zIndex: 'var(--z-bottom-stack-popover)',
 };
 
 // On the phone row the popover spans the screen width, just above the stack.
@@ -51,7 +51,7 @@ const ROW_POPOVER_PLACEMENT: CSSProperties = {
   left: 'var(--corner-offset)',
   right: 'var(--corner-offset)',
   bottom: 'calc(var(--bottom-stack-height) + var(--space-3))',
-  zIndex: 11,
+  zIndex: 'var(--z-bottom-stack-popover)',
 };
 
 function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
