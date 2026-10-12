@@ -246,6 +246,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Docs & process
 
+- [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
+
 - [ ] **Cosmic-zoom plan review** `process` — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review (memory `project_cosmic_zoom_plan`).
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
 - [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
