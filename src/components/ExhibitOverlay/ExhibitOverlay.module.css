@@ -406,7 +406,9 @@
   align-items: center;
   gap: 10px;
   padding: 6px 14px 6px 6px;
-  background: none;
+  background: var(--surface-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
   border: 2px solid rgba(168, 208, 255, 0.18);
   border-radius: 999px;
   cursor: pointer;
