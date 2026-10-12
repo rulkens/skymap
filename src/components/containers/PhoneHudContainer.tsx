@@ -17,7 +17,7 @@ import DockContainer from './DockContainer';
 import TimeBarContainer from './TimeBarContainer';
 import ScaleBracketContainer from './ScaleBracketContainer';
 import LazyInfoCardContainer from './LazyInfoCardContainer';
-import LazySettingsPanelContainer from './LazySettingsPanelContainer';
+import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
 import { selectPaletteOpen } from '../../state/ui/selectors';
@@ -77,7 +77,7 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
     sheet = (
       <MobileSheet resetKey="layers" panel={{ title: 'Layers', onClose: closeLayers }}>
         <Suspense>
-          <LazySettingsPanelContainer bare />
+          <LazyPhoneSettingsContainer />
         </Suspense>
       </MobileSheet>
     );

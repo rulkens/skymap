@@ -25,7 +25,7 @@ vi.mock('../../../src/state/selection/goHome', () => ({
 vi.mock('../../../src/components/containers/LazyInfoCardContainer', () => ({
   default: () => <div>card</div>,
 }));
-vi.mock('../../../src/components/containers/LazySettingsPanelContainer', () => ({
+vi.mock('../../../src/components/containers/LazyPhoneSettingsContainer', () => ({
   default: () => <div>layers content</div>,
 }));
 vi.mock('../../../src/components/containers/TimeBarContainer', () => ({

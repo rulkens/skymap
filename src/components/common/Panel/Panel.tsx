@@ -95,12 +95,6 @@ export type PanelProps = {
    * consumer; this prop is purely a placement slot.
    */
   headerExtra?: ReactNode;
-  /**
-   * Drop the card, title row and collapse — render `headerExtra` and the
-   * children on a plain surface. For hosts that supply their own surface and
-   * title (the phone sheet).
-   */
-  bare?: boolean;
   children: ReactNode;
 };
 
@@ -109,7 +103,6 @@ export function Panel({
   ariaLabel,
   defaultOpen = true,
   headerExtra,
-  bare = false,
   children,
 }: PanelProps): ReactNode {
   // Local UI state — no engine implications, no echo callback needed.
@@ -122,15 +115,6 @@ export function Panel({
   // a string.  The "body" suffix is purely for grep-friendliness; the
   // id itself is opaque.
   const bodyId = `${useId()}-body`;
-
-  if (bare) {
-    return (
-      <div className={styles.bare} aria-label={ariaLabel}>
-        {headerExtra}
-        {children}
-      </div>
-    );
-  }
 
   return (
     <div className={styles.panel} aria-label={ariaLabel}>
