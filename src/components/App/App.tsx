@@ -15,7 +15,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
-import NavigationPanelContainer from '../containers/NavigationPanelContainer';
+import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import TopBarContainer from '../containers/TopBarContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import PhoneHudContainer from '../containers/PhoneHudContainer';
@@ -102,7 +102,7 @@ export function App(): React.ReactElement {
             <ScaleBarContainer />
             <TimeBarContainer hidden={paletteOpen || splashVisible} />
             <div className={appStyles.leftStack}>
-              <NavigationPanelContainer />
+              <NavigationPanel />
               <Suspense>
                 <LazySettingsPanelContainer />
               </Suspense>

@@ -5,12 +5,11 @@
  * more than editing ~6 rows by hand. Re-evaluate at ~10.
  */
 
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
 import styles from './NavigationPanel.module.css';
 
-/** Desktop only: the phone HUD has no cheatsheet. */
-const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
+const ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'Drag', action: 'orbit camera' },
   { key: 'Wheel', action: 'zoom' },
   { key: 'H', action: 'home view' },
@@ -23,7 +22,7 @@ const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
 function NavigationPanel(): ReactNode {
   return (
     <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet">
-      {DESKTOP_ROWS.map((row) => (
+      {ROWS.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.key}>{row.key}</span>
           <span className={styles.action}>{row.action}</span>
@@ -33,4 +32,4 @@ function NavigationPanel(): ReactNode {
   );
 }
 
-export default NavigationPanel;
+export default memo(NavigationPanel);

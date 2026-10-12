@@ -204,6 +204,9 @@ function StarDetailCard({
   const hasShot = detail.kind === 'curated' && shotId !== null && SHOT_CARD_IDS.has(shotId);
   // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
   const shotBeside = hasShot && layout === 'panel';
+  const thumbnail = hasShot ? (
+    <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
+  ) : undefined;
 
   // The "where / how bright" rows: beside the shot as summary lines, or heading
   // the curated block as CardRows. Distance is the star's own row for every
@@ -249,11 +252,7 @@ function StarDetailCard({
           )
         }
         badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
-        thumbnail={
-          hasShot ? (
-            <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
-          ) : undefined
-        }
+        thumbnail={thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
@@ -265,7 +264,7 @@ function StarDetailCard({
 
       {shotBeside && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
+          {thumbnail}
           <div className={styles.cardSummary}>
             {leadRows.map((row, i) => (
               <div key={i} className={styles.cardDistLine}>

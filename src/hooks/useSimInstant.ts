@@ -7,12 +7,15 @@
  */
 import { useEffect, useState } from 'react';
 import type { TimeState } from '../@types/time/TimeState';
-import { simInstant } from '../utils/time/simInstant';
+import { deriveSimDays } from '../utils/time/deriveSimDays';
+import { julianDaysToUnixMs } from '../utils/time/julianDaysToUnixMs';
 
 const MS_PER_MINUTE = 60_000;
 
+// The `deriveSimDays` base MUST be `performance.now()`: `anchor.realMs` is one
+// of its stamps, `Date.now()` is not. The modulo form handles pre-1970 dates.
 function minuteInstant(time: TimeState): Date {
-  const ms = simInstant(time).getTime();
+  const ms = julianDaysToUnixMs(deriveSimDays(time, performance.now()));
   return new Date(ms - (((ms % MS_PER_MINUTE) + MS_PER_MINUTE) % MS_PER_MINUTE));
 }
 

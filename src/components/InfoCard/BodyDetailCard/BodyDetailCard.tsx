@@ -76,6 +76,9 @@ function BodyDetailCard({
   const hasShot = SHOT_CARD_IDS.has(shotId);
   // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
   const shotBeside = hasShot && layout === 'panel';
+  const thumbnail = hasShot ? (
+    <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
+  ) : undefined;
 
   // The lead rows — the "where / how big" facts — sit beside the card shot as
   // summary lines (the galaxy card's layout, one line per 20 px of the 80 px
@@ -113,11 +116,7 @@ function BodyDetailCard({
         layout={layout}
         eyebrow="Body"
         title={target.label}
-        thumbnail={
-          hasShot ? (
-            <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
-          ) : undefined
-        }
+        thumbnail={thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
@@ -125,7 +124,7 @@ function BodyDetailCard({
 
       {shotBeside && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
+          {thumbnail}
           <div className={styles.cardSummary}>
             {leadRows.map((row, i) => (
               <div key={i} className={styles.cardDistLine}>

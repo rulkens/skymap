@@ -17,7 +17,6 @@ import { Provider } from 'react-redux';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { createAppStore } from '../../../src/store/createAppStore';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
-import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
 // A pinned structure renders its Detail through StructureDetailCardContainer
 // (the member-count fact is a store read), so every render below needs a
@@ -45,45 +44,6 @@ const coma: StructureInfo = {
   featured: true,
   physicalRadiusMpc: 6,
 };
-
-// Minimal GalaxyInfo stub — GalaxyDetailCard reads many fields; supplying zero /
-// empty values keeps the galaxy branch from throwing.  Cast away the precise
-// type because populating every field would obscure the test's intent.
-const galaxyStub = {
-  type: 'galaxyCatalog',
-  index: 42,
-  displayName: 'NGC 1234',
-  sourceLabel: 'SDSS',
-  lookbackGyr: 0.5,
-  earthEra: 'Modern',
-  distanceMpc: 100,
-  galaxyType: { description: 'Spiral', category: 'spiral' },
-  objID: 0n,
-  x: 0,
-  y: 0,
-  z: 0,
-  ra: 0,
-  dec: 0,
-  raSexagesimal: '00h00m00s',
-  decSexagesimal: '+00d00m00s',
-  redshift: 0,
-  hubbleVelocityKmS: 0,
-  magU: 0,
-  magG: 0,
-  magR: 0,
-  magI: 0,
-  magZ: 0,
-  bands: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
-  colours: [],
-  absoluteMagG: 0,
-  iauName: 'IAU NGC 1234',
-  source: 0,
-  catalogues: [],
-  diameterKpc: 30,
-  diameterProvenance: 'fallback (30 kpc)',
-  orientation: { axisRatio: 1, positionAngleDeg: 0, provenance: 'fallback' },
-  thumbnailUrl: '',
-} as unknown as GalaxyInfo;
 
 // Stub matchMedia so useIsMobile resolves to the requested breakpoint state.
 function setMatchMedia(matches: boolean): void {

@@ -17,8 +17,6 @@ export type PanelProps = {
   title: string;
   /** Forwarded to the outer `<div>` as `aria-label`, for titles that aren't self-describing. */
   ariaLabel?: string;
-  /** Open on first mount. Defaults to `true`. */
-  defaultOpen?: boolean;
   /**
    * Placement slot in the title row after the title (SettingsPanel's Tier chip).
    * It sits outside the title `<button>` (no interactive content inside a
@@ -28,14 +26,8 @@ export type PanelProps = {
   children: ReactNode;
 };
 
-export function Panel({
-  title,
-  ariaLabel,
-  defaultOpen = true,
-  headerExtra,
-  children,
-}: PanelProps): ReactNode {
-  const [open, setOpen] = useState<boolean>(defaultOpen);
+export function Panel({ title, ariaLabel, headerExtra, children }: PanelProps): ReactNode {
+  const [open, setOpen] = useState<boolean>(true);
   const bodyId = `${useId()}-body`;
 
   return (

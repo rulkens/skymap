@@ -1,27 +1,6 @@
-/*
- * App.module.css — top-level layout primitives owned by App.tsx.
- *
- * Right now this stylesheet only defines `.leftStack`, the fixed wrapper
- * around the three left-column overlay panels (Navigation, Settings,
- * Stats).  We keep it scoped to App.tsx rather than scattering positional
- * rules across each panel's own module.css for two reasons:
- *
- *   1. The three panels share a single coordinate origin (bottom-left).
- *      Anchoring them individually would mean three copies of `bottom:
- *      16px; left: 16px` plus z-index juggling — and any change (e.g.
- *      to the bottom margin) would have to ripple through three files.
- *   2. Bottom-anchored stacking means we DON'T set `top:` — the column
- *      grows upward as panels are added.  Letting flex own that growth
- *      direction (`flex-direction: column`) makes the source order map
- *      directly to vertical position: first child = topmost, last child
- *      = closest to the viewport bottom edge.
- *
- * Children render in source order Navigation → Settings → Stats, so:
- *   - Navigation sits at the top of the stack
- *   - Settings is the visual anchor in the middle (most-touched panel)
- *   - Stats hugs the bottom edge (read-only telemetry, glances)
- */
+/* App.module.css — layout primitives owned by App.tsx: `.leftStack`, `.uiStack`. */
 
+/* Bottom-anchored column: DO NOT set `top:`, both anchors would stretch it. */
 .leftStack {
   position: fixed;
   bottom: var(--corner-offset);
@@ -30,42 +9,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /*
-   * `align-items: flex-start` keeps each panel hugging the left edge even
-   * when one renders narrower than another.  Today every panel is 300 px
-   * (NavigationPanel + SettingsPanel match), so this is insurance against
-   * future width drift rather than load-bearing now.
-   */
   align-items: flex-start;
-  /* DO NOT set `top:` — bottom-anchoring is what makes the column grow
-   * upward.  Setting both anchors would stretch the container and break
-   * the natural-height stack. */
 }
 
 /*
- * `.uiStack` — single wrapper around every overlay component, toggled
- * by the `Tab` keyboard shortcut for "hide UI" / clean-visual mode.
- *
- * Why a wrapper rather than a body class + DOM-traversal selector?
- * Cleaner: one element owns the fade; one transition; no dependency on
- * the React-root structure or per-component opt-in.
- *
- * The wrapper itself has no layout impact: it's a container with no
- * geometry of its own.  Each overlay child uses `position: fixed`
- * anchored to the viewport, and CSS `opacity` does NOT establish a
- * containing block for fixed descendants (only `transform`, `filter`,
- * `backdrop-filter`, etc. do), so wrapping doesn't disturb the
- * existing per-overlay positioning.
- *
- * `pointer-events: none` while hidden lets cursor / pinch / drag pass
- * straight through to the canvas — important: an InfoCard at zero
- * opacity but full pointer-events would still eat clicks on the right
- * half of the viewport.
- *
- * The transition lives on the base class so the fade animates in BOTH
- * directions: hide (1 → 0) and show (0 → 1) both on 0.3 s ease-out.
- * `prefers-reduced-motion` skips the transition; functional toggle is
- * unchanged, just instant.  WCAG 2.1 SC 2.3.3 best practice.
+ * Wrapper around every overlay, faded by the `Tab` hide-UI shortcut. Opacity
+ * (unlike transform/filter) creates no containing block, so the children's
+ * `position: fixed` is undisturbed. The fade runs both ways; reduced motion
+ * makes it instant.
  */
 .uiStack {
   transition: opacity 0.3s ease-out;

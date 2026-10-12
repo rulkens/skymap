@@ -145,18 +145,6 @@
   }
 }
 
-@media (hover: none) {
-  .pill .step:hover:not(:disabled),
-  .pill .now:hover:not(:disabled) {
-    background: transparent;
-  }
-
-  .pill .step:active:not(:disabled),
-  .pill .now:active:not(:disabled) {
-    background: var(--surface-control-active);
-  }
-}
-
 /* ── .floating: desktop pill ─────────────────────────────────────────── */
 
 .floating {

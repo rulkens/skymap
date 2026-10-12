@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import Dock from '../../../src/components/Dock/Dock';
 import type { DockProps } from '../../../src/components/Dock/Dock';
 
@@ -21,41 +21,14 @@ function renderDock(overrides: Partial<DockProps> = {}) {
 }
 
 describe('Dock', () => {
-  // Near-identical items: the bug to catch is one wired to its neighbour's flag or handler.
-  it('marks only the open item as pressed and routes each tap to its own handler', () => {
-    const props = renderDock({ layersOpen: true });
-    const time = screen.getByRole('button', { name: 'Time' });
-    const layers = screen.getByRole('button', { name: 'Layers' });
-
-    expect(time).toHaveAttribute('aria-pressed', 'false');
-    expect(layers).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(time);
-    expect(props.onTime).toHaveBeenCalledTimes(1);
-    expect(props.onLayers).not.toHaveBeenCalled();
-  });
-
-  // Home and Search act once; a stray aria-pressed would announce them as stuck toggles.
-  it('routes Home and Search to their own handlers and leaves them without a pressed state', () => {
-    const props = renderDock();
-    const home = screen.getByRole('button', { name: 'Home' });
-    const search = screen.getByRole('button', { name: 'Search' });
-    expect(home).not.toHaveAttribute('aria-pressed');
-    expect(search).not.toHaveAttribute('aria-pressed');
-    fireEvent.click(search);
-    expect(props.onSearch).toHaveBeenCalledTimes(1);
-    expect(props.onHome).not.toHaveBeenCalled();
-    fireEvent.click(home);
-    expect(props.onHome).toHaveBeenCalledTimes(1);
-  });
-
-  it('routes About to its own handler under the splash name, as an action', () => {
-    const props = renderDock();
-    const about = screen.getByRole('button', { name: 'About skymap' });
-    expect(about).not.toHaveAttribute('aria-pressed');
-    fireEvent.click(about);
-    expect(props.onAbout).toHaveBeenCalledTimes(1);
-    expect(props.onHome).not.toHaveBeenCalled();
+  // Routing is covered through PhoneHudContainer.test; what only this level sees is the pressed semantics.
+  it('presses only the open toggle; actions carry no pressed state', () => {
+    renderDock({ layersOpen: true });
+    expect(screen.getByRole('button', { name: 'Time' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Layers' })).toHaveAttribute('aria-pressed', 'true');
+    for (const name of ['Home', 'Search', 'About skymap']) {
+      expect(screen.getByRole('button', { name })).not.toHaveAttribute('aria-pressed');
+    }
   });
 
   // The glyph is aria-hidden, so the run state has to be in the name or a screen reader never hears it.

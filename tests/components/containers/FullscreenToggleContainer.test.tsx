@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import FullscreenToggleContainer from '../../../src/components/containers/FullscreenToggleContainer';
 import { useIsMobile } from '../../../src/hooks/useIsMobile';
 
@@ -58,5 +58,16 @@ describe('FullscreenToggleContainer', () => {
     expect(screen.queryByRole('button')).toBeNull();
     setFullscreen(document.documentElement);
     expect(screen.getByRole('button', { name: 'Exit full screen' })).toBeInTheDocument();
+  });
+
+  it('requests full screen on the root element and swallows a refusal', async () => {
+    stubApi(true);
+    const request = vi.fn(() => Promise.reject(new Error('denied')));
+    document.documentElement.requestFullscreen = request;
+    render(<FullscreenToggleContainer hidden={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter full screen' }));
+    expect(request).toHaveBeenCalledTimes(1);
+    // An unhandled rejection would fail the run here.
+    await Promise.resolve();
   });
 });

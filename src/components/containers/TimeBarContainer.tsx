@@ -19,7 +19,6 @@ import { enterManualPausedAt } from '../../state/time/enterManualPausedAt';
 import { goLiveNowAction } from '../../state/time/goLiveNowAction';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { formatSimClock } from '../../utils/time/formatSimClock';
-import { simInstant } from '../../utils/time/simInstant';
 import { useSimInstant } from '../../hooks/useSimInstant';
 
 export type TimeBarContainerProps = {
@@ -54,7 +53,8 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
   const rateStep = useAppSelector(selectRateStep);
-  const readout = formatSimClock(useSimInstant(time));
+  const instant = useSimInstant(time);
+  const readout = formatSimClock(instant);
 
   const { mode, paused, rateIndex } = time;
 
@@ -116,8 +116,8 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
   // lands the manual clock at the chosen instant, paused (a date jump lands
   // paused, not playing). The shared-`nowMs` invariant lives in that helper.
   const onPopoverCommit = useCallback(
-    (instant: Date) => {
-      enterManualPausedAt(dispatch, instant);
+    (picked: Date) => {
+      enterManualPausedAt(dispatch, picked);
       setOpenPopover('none');
     },
     [dispatch],
@@ -148,7 +148,7 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
       {openPopover === 'date' && !hidden && (
         <div style={row ? ROW_POPOVER_PLACEMENT : POPOVER_PLACEMENT}>
           <DateEntryPopover
-            initial={simInstant(time)}
+            initial={instant}
             onCommit={onPopoverCommit}
             onCancel={onPopoverClose}
           />
@@ -156,7 +156,7 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
       )}
       {/* The rate popover self-places via CSS Anchor Positioning (its .root anchors
           to TimeBar's rate label), so it needs no placement wrapper — rendered
-          bare. The date popover above keeps the fixed right-rail wrapper. */}
+          bare. The date popover above takes a fixed placement wrapper. */}
       {openPopover === 'rate' && !hidden && (
         <RateSelectorPopover
           currentIndex={rateIndex}
