@@ -36,7 +36,9 @@ import {
   CUT_STREAM_BYTES,
   CUT_UNIFORM_BYTES,
   CUT_WORKGROUP,
+  LEAF_BLOCK_SHIFT,
   OPACITY_CHANNELS,
+  STREAM_BLOCK_SHIFT_WORD,
   STREAM_IS_BLOB_WORD,
   WORD_BYTES,
   initialCutDraws,
@@ -103,21 +105,23 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   const pickThreshold = pipeline('pickThreshold');
   const emit = pipeline('emit');
 
-  // One per stream, shared by every source: whether its list draws blobs.
-  const streamUniform = (stream: StarDrawStream, isBlob: boolean): GPUBuffer => {
+  // One per stream, shared by every source: the list's instances-per-entry and
+  // whether it draws blobs.
+  const streamUniform = (stream: StarDrawStream, shift: number, isBlob: boolean): GPUBuffer => {
     const buffer = device.createBuffer({
       label: `star-cut-stream-${stream}`,
       size: CUT_STREAM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const words = new Uint32Array(CUT_STREAM_BYTES / WORD_BYTES);
+    words[STREAM_BLOCK_SHIFT_WORD] = shift;
     words[STREAM_IS_BLOB_WORD] = isBlob ? 1 : 0;
     device.queue.writeBuffer(buffer, 0, words);
     return buffer;
   };
   const streamShifts: Record<StarDrawStream, GPUBuffer> = {
-    leaf: streamUniform('leaf', false),
-    aggregate: streamUniform('aggregate', true),
+    leaf: streamUniform('leaf', LEAF_BLOCK_SHIFT, false),
+    aggregate: streamUniform('aggregate', 0, true),
   };
 
   const sources = new Map<SourceType, StarCutSource>();

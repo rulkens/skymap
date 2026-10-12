@@ -62,8 +62,8 @@ export const OCTREE_JSON_PAD_BYTE = 0x20;
 
 /** `u16x3` raw / this = fraction of the owning node's box (not of the leaf cell). */
 export const OFFSET_FRACTION_LEVELS = 65536;
-/** Bake STOP above: the cut's leaf list addresses a node's own records with a 12-bit index. */
-export const MAX_OWN_COUNT = 4096;
+/** Bake STOP above: the cut's leaf list addresses a node's records as a 10-bit block index × 8. */
+export const MAX_OWN_COUNT = 8192;
 /** Morton keys must fit 30 bits of a u32. */
 export const MAX_GRID_BITS = 10;
 /** Children per node; a child's Morton key is its parent's shifted left by `OCTANT_BITS`. */

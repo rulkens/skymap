@@ -55,13 +55,12 @@ export const BLOB_OPACITY = 1;
 /** Log-proxy budget bins (`CUT_BINS` in `cut.wesl`), plus the chosen threshold bin. */
 export const CUT_BINS = 1024;
 export const CUT_HIST_WORDS = CUT_BINS + 1;
-/**
- * A leaf-list entry is one own record, `node | record << LEAF_ENTRY_RECORD_SHIFT`: the
- * record's place among its row's own records takes the top bits, so `MAX_OWN_COUNT` must fit them.
- */
-export const LEAF_ENTRY_RECORD_SHIFT = 20;
+/** A leaf claims blocks of `1 << LEAF_BLOCK_SHIFT` instances (`LEAF_BLOCK_SHIFT`). */
+export const LEAF_BLOCK_SHIFT = 3;
+/** A leaf-list entry is `node | block << LEAF_BLOCK_INDEX_SHIFT`. */
+export const LEAF_BLOCK_INDEX_SHIFT = 22;
 /** Pool rows the leaf-list entry can name, and pool records the pick's 26-bit index can (strict `<`). */
-export const POOL_NODE_INDEX_LIMIT = 2 ** LEAF_ENTRY_RECORD_SHIFT;
+export const POOL_NODE_INDEX_LIMIT = 2 ** LEAF_BLOCK_INDEX_SHIFT;
 export const POOL_RECORD_INDEX_LIMIT = 2 ** SELECTION_SOURCE_SHIFT;
 /** Two indirect draw records (leaf, then aggregate), four u32 each. */
 export const CUT_DRAWS_WORDS = 8;
@@ -76,9 +75,10 @@ export const CUT_BINS_PER_OCTAVE = 64;
 export const MIN_DIST_SQ = 1e-15;
 export const HALF_DIAGONAL = 0.8660254;
 
-/** `struct CutStream`: one u32 padded to a uniform's 16 bytes. */
+/** `struct CutStream`: two u32 padded to a uniform's 16 bytes. */
 export const CUT_STREAM_BYTES = 16;
-export const STREAM_IS_BLOB_WORD = 0;
+export const STREAM_BLOCK_SHIFT_WORD = 0;
+export const STREAM_IS_BLOB_WORD = 1;
 
 /** Frusta one cut prunes against (`CUT_MAX_VIEWS`); more views ⇒ no prune. */
 export const CUT_MAX_VIEWS = 6;
@@ -308,15 +308,20 @@ export function checkStarPoolCaps(octree: StarOctree, slots: number): void {
   if (slots > fits) {
     const n = Math.max(0, fits);
     throw new Error(
-      `star pool: ${slots} slots overflow the ${LEAF_ENTRY_RECORD_SHIFT}-bit row or ` +
+      `star pool: ${slots} slots overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit row or ` +
         `${SELECTION_SOURCE_SHIFT}-bit record index; only ${n} slot${n === 1 ? '' : 's'} fit`,
     );
   }
 }
 
-/** Leaf-list entries the pool can ever hold: one per record of the index and of every slot. */
+/** Leaf-list entries the pool can ever hold: every own block of the index, and of every slot at worst. */
 export function leafListCapacity(octree: StarOctree, slots: number): number {
-  return octree.records.count + slots * octree.chunkCapacity;
+  let blocks = 0;
+  for (let i = 0; i < octree.nodes.count; i++) {
+    blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
+  }
+  // ceil(own / 8) ≤ own / 8 + 1 per row, summed over a chunk's records and rows.
+  return blocks + slots * (octree.chunkCapacity / (1 << LEAF_BLOCK_SHIFT) + octree.chunkNodeCap);
 }
 
 /**
