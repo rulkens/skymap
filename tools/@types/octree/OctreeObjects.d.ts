@@ -2,7 +2,7 @@ import type { ColumnId } from '../../../src/@types/octree/ColumnId';
 import type { OctreeNodeTable } from '../../../src/@types/octree/OctreeNodeTable';
 import type { OctreeChunkObject } from './OctreeChunkObject';
 
-/** A chunked catalog before encoding: the index (the top object) and every chunk, nested ones included. */
+/** A chunked catalog before encoding: the index (the top object) and chunks of every depth. */
 export type OctreeObjects = {
   readonly index: {
     readonly nodes: OctreeNodeTable;

@@ -20,10 +20,13 @@ export type StarCatalogRenderer = Renderer & {
    * size is returned for the chunk stream to match.
    */
   upload(source: SourceType, octree: StarOctree, slots: number): number;
-  /** Land a chunk in a slot: its records and rows, then every root's resident bit. */
-  uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
+  /**
+   * Land a chunk in a slot: its records and rows, then every root's resident bit, written in
+   * the rows of `hostSlot` (its parent's slot; null when the index holds its roots).
+   */
+  uploadChunk(source: SourceType, slot: number, chunk: StarChunk, hostSlot: number | null): void;
   /** Free a slot: every root of its chunk stops refining, then the slot's row count is cleared. */
-  evictChunk(source: SourceType, slot: number): void;
+  evictChunk(source: SourceType, slot: number, hostSlot: number | null): void;
   /**
    * Called by every star pick draw: `recordOrdinal` reads the slots as that draw saw them. The
    * DEV pick overlay records the same draws each frame, so with it on the snapshot follows the
@@ -43,7 +46,10 @@ export type StarCatalogRenderer = Renderer & {
   loadedCatalogs(): Iterable<{ source: SourceType; octree: StarOctree }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */
   pickResources(): StarCatalogPickResources;
-  /** The frame's one cut: set by the Layer's planner, encoded by `encodeCut`, read by every `drawCut` and the pick draw. */
+  /**
+   * The frame's one cut: set by the Layer's planner, encoded by `encodeCut`, read by every
+   * `drawCut` and the pick draw.
+   */
   setFrameCut(cut: StarCutInputs | null): void;
   getFrameCut(): StarCutInputs | null;
   /** The frame cut's compute pass; nothing when no cut is set. */

@@ -22,9 +22,6 @@ import { starChunkPath } from '../../../data/octree/octreeFormat';
 import { decodeOctreeChunk } from '../../../data/octree/decodeOctreeChunk';
 import { starColumnsOf } from '../../../utils/star/starColumnsOf';
 
-/** `parentOf` for a chunk rooted in the index. */
-const IN_INDEX = -1;
-
 async function fetchChunkBytes(path: string): Promise<ArrayBuffer | null> {
   try {
     const res = await fetch(dataUrl(path));
@@ -40,14 +37,17 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
   const failed = new Set<number>();
   // Every ref a decoded object has named, by id: immutable bake facts, so kept past eviction.
   const refs = new Array<OctreeChunkRef | undefined>(octree.chunkCount);
-  const parentOf = new Int32Array(octree.chunkCount).fill(IN_INDEX);
-  const learn = (named: readonly OctreeChunkRef[], parent: number) => {
+  const parentOf = new Array<number | null>(octree.chunkCount).fill(null);
+  const learn = (named: readonly OctreeChunkRef[], parent: number | null) => {
     for (const ref of named) {
       refs[ref.id] = ref;
       parentOf[ref.id] = parent;
     }
   };
-  learn(octree.chunks, IN_INDEX);
+  learn(octree.chunks, null);
+  // A child lands after and leaves before its parent, so the parent is resident at both.
+  const hostSlotOf = ({ parent }: StarChunk) =>
+    parent === null ? null : residents.get(parent)!.slot;
   let epoch = 0;
   // Bytes after the browser inflates them, not on the wire.
   let decodedBytes = 0;
@@ -61,7 +61,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     concurrency: STAR_CHUNK_CONCURRENCY,
     requestRender: deps.requestRender,
     upload: (_pool, slot, chunk) => {
-      deps.upload(slot, chunk);
+      deps.upload(slot, chunk, hostSlotOf(chunk));
       residents.set(chunk.ref.id, { slot, chunk });
       epoch++;
       landedSinceSettle = true;
@@ -79,7 +79,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
       if (chunk.parent === id) pool.evict(String(child));
     }
     residents.delete(id);
-    deps.evict(entry.slot);
+    deps.evict(entry.slot, hostSlotOf(entry.chunk));
     epoch++;
   });
 
@@ -91,10 +91,9 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     fetchedChunks++;
     const { header, nodes, columns } = decodeOctreeChunk(buf, octree);
     learn(header.chunks, id);
-    const parent = parentOf[id]!;
     return {
       ref,
-      parent: parent === IN_INDEX ? null : parent,
+      parent: parentOf[id] ?? null,
       nodes,
       records: starColumnsOf(columns, header.records),
       chunks: header.chunks,

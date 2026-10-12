@@ -20,9 +20,9 @@ export type StarCutGpu = {
    * an empty octree releases them. Throws, creating nothing, past a pool cap.
    */
   upload(source: SourceType, octree: StarOctree, slots: number): void;
-  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots in `host` resident. */
+  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
   uploadChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
-  /** Mark every root of `chunk` (the one the slot holds) in `host` unresident, then empty the slot. */
+  /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
   evictChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
   /** One compute pass: every source in `inputs` gets this frame's cut. */
   encode(

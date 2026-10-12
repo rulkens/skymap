@@ -51,8 +51,8 @@ export function createStarCatalogSlot(
           binBaseName,
           slots,
           requestRender,
-          upload: (s, chunk) => renderer.uploadChunk(source, s, chunk),
-          evict: (s) => renderer.evictChunk(source, s),
+          upload: (s, chunk, host) => renderer.uploadChunk(source, s, chunk, host),
+          evict: (s, host) => renderer.evictChunk(source, s, host),
         }),
       );
     },

@@ -631,6 +631,9 @@ class SlotPool { evict(key: string): void /* frees the slot through onEvict, as 
 function planStarChunks(octree, index, cut, resident: (id: number) => StarChunk | null, hasFailed: (id: number) => boolean, limit: number): StarChunkPlan;
 StarCutGpu.uploadChunk(source, slot, chunk, host: StarChunkHost): void;
 StarCutGpu.evictChunk(source, slot, chunk: StarChunk, host: StarChunkHost): void;
+// The stream holds residency, so it names the parent slot; the renderer never searches for it.
+StarCatalogRenderer.uploadChunk(source, slot, chunk, hostSlot: number | null): void;
+StarCatalogRenderer.evictChunk(source, slot, hostSlot: number | null): void;
 ```
 
 ### Task N0: Prep — a root's residency words come from its host table
@@ -663,7 +666,7 @@ Behaviour-neutral. `writeRootRow` writes only `bits` and `refineDelta`, composed
 **Files:** `tools/deploy/r2/collectStarChunks.ts`, `tools/fetch/fetchPrebuiltData.ts`, tests.
 
 - [ ] Test `collectStarChunks lists the chunks of every depth, read off each header`.
-- [ ] Implement (`fetch-data` reads a header from disk, or from the download it just made, or over the wire under `--dry-run`). Commit.
+- [ ] Implement (`fetch-data` and the collector read only headers: `readOctreeFileHeader` off disk, else a ranged GET; `--dry-run` moves no bodies). Commit.
 
 ### Task N4: Re-bake, measure, docs
 

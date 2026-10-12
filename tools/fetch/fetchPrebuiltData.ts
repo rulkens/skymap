@@ -44,7 +44,7 @@ import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { readOctreeFileHeader } from '../utils/io/readOctreeFileHeader';
 
 const DATA_DIR = 'public/data';
-// A leaf chunk's header fits; a parent's (up to ~20 KB on the real bake) takes a second, exact read.
+// A leaf's header fits; a parent's (≤ ~20 KB on the real bake) takes a second, exact read.
 const HEADER_PROBE_BYTES = 4096;
 
 async function fetchManifest(host: string): Promise<DataManifest> {

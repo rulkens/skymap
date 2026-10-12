@@ -1,4 +1,4 @@
-/** One root of a landing chunk: its key, which its top rows' parent keys match, and its pool row (in the index or its parent's slot). */
+/** A landing chunk's root: its key (its top rows' parent keys) and its pool row in its host. */
 export type StarChunkRoot = {
   readonly level: number;
   readonly morton: number;

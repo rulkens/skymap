@@ -42,7 +42,7 @@ const OCTREE = {
   columns: STAR_COLUMN_SCHEMA,
 } as unknown as StarOctree;
 
-/** Chunk `id` as its object: one row one level below its root, owning two records; its header names its children. */
+/** Chunk `id` as its object: one row a level below its root, two records, its children named. */
 function chunkBytes(id: number): ArrayBuffer {
   const { level, morton } = REFS[id]!;
   const children = CHILDREN[id] ?? [];
@@ -132,7 +132,7 @@ describe('starChunkStream', () => {
     expect(stream.resident(0)).toBe(upload.mock.calls[0]![1]);
 
     stream.update(2, [], [{ chunkRef: 1, priority: 1 }]);
-    expect(evict).toHaveBeenCalledWith(0);
+    expect(evict).toHaveBeenCalledWith(0, null);
     expect(stream.epoch()).toBe(2);
     expect(stream.resident(0)).toBeNull();
   });
@@ -169,10 +169,13 @@ describe('starChunkStream', () => {
     await land(3);
     stream.update(3, [], [{ chunkRef: 4, priority: 1 }]);
     await land(4);
-    expect(upload.mock.calls.map(([slot, chunk]) => [slot, chunk.ref.id, chunk.parent])).toEqual([
-      [0, 0, null],
-      [1, 3, 0],
-      [2, 4, 3],
+    // [slot, id, parent id, the parent's slot its roots are written in]
+    expect(
+      upload.mock.calls.map(([slot, chunk, host]) => [slot, chunk.ref.id, chunk.parent, host]),
+    ).toEqual([
+      [0, 0, null, null],
+      [1, 3, 0, 0],
+      [2, 4, 3, 1],
     ]);
 
     // Chunk 0, last touched at frame 2 before its child 3 was allocated, is the LRU: its
@@ -185,7 +188,11 @@ describe('starChunkStream', () => {
         { chunkRef: 2, priority: 1 },
       ],
     );
-    expect(evict.mock.calls.map(([slot]) => slot)).toEqual([2, 1, 0]);
+    expect(evict.mock.calls).toEqual([
+      [2, 1],
+      [1, 0],
+      [0, null],
+    ]);
     expect([0, 3, 4].map((id) => stream.resident(id))).toEqual([null, null, null]);
     expect(fetchChunk.mock.calls.slice(3).map(([path]) => path)).toEqual([pathOf(1), pathOf(2)]);
   });
@@ -208,7 +215,7 @@ describe('starChunkStream', () => {
     stream.update(3, [1, 0, 3], []);
     stream.update(4, [], [{ chunkRef: 2, priority: 1 }]);
 
-    expect(evict.mock.calls).toEqual([[1]]);
+    expect(evict.mock.calls).toEqual([[1, 0]]);
     expect(stream.resident(0)).not.toBeNull();
     expect(stream.resident(3)).toBeNull();
   });

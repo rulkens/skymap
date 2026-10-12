@@ -5,7 +5,7 @@ import type { OctreeGrid } from './OctreeGrid';
 import type { OctreeStratify } from './OctreeStratify';
 import type { StatId } from './StatId';
 
-/** The index object's JSON header: the catalog's facts, and the refs of the chunks rooted in its rows. */
+/** The index object's JSON header: the catalog's facts and the chunks rooted in its rows. */
 export type OctreeIndexHeader = {
   readonly kind: 'index';
   readonly family: OctreeFamily;

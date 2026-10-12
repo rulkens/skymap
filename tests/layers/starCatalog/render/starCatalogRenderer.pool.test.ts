@@ -218,7 +218,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const recordBase = 100 + 1 * 50;
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
     const landed = writes.map((w) => [w.label, w.offset, w.bytes]);
     expect(landed).toEqual([
       [RECORDS, recordBase * 8, 3 * 8],
@@ -231,7 +231,7 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(word(writes.at(-2)!) & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
 
     writes.length = 0;
-    renderer.evictChunk(Source.GaiaStars, 1);
+    renderer.evictChunk(Source.GaiaStars, 1, null);
     expect(writes.map((w) => [w.label, w.offset, w.bytes])).toEqual([
       ...rootWords(1).map((w) => [...w, WORD_BYTES]),
       [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
@@ -275,7 +275,7 @@ describe('starCatalogRenderer chunk pool', () => {
     renderer.upload(Source.GaiaStars, octree, 2);
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 0, chunk);
+    renderer.uploadChunk(Source.GaiaStars, 0, chunk, null);
     expect(writes.map((w) => [w.label, w.offset])).toEqual([
       [RECORDS, 100 * 8],
       [NODES, 10 * ROW_BYTES],
@@ -292,7 +292,7 @@ describe('starCatalogRenderer chunk pool', () => {
     expect([roots[1], roots[3]]).toEqual([3 - 1, 2 - 1]);
 
     writes.length = 0;
-    renderer.evictChunk(Source.GaiaStars, 0);
+    renderer.evictChunk(Source.GaiaStars, 0, null);
     expect(writes.map((w) => [w.label, w.offset])).toEqual([
       ...rootWords(1),
       ...rootWords(2),
@@ -307,7 +307,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
     renderer.snapshotPickSlots();
     // Chunk 1's third record: pool 100 + 1·50 + 2, ordinal 103 + 2.
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
@@ -316,7 +316,7 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(renderer.recordOrdinal(Source.GaiaStars, 153)).toBeNull(); // past the chunk's records
     expect(renderer.recordOrdinal(Source.GaiaStars, 100)).toBeNull(); // slot 0 is empty
 
-    renderer.evictChunk(Source.GaiaStars, 1);
+    renderer.evictChunk(Source.GaiaStars, 1, null);
     renderer.snapshotPickSlots();
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBeNull();
     expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
@@ -326,15 +326,20 @@ describe('starCatalogRenderer chunk pool', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
     renderer.snapshotPickSlots();
 
-    renderer.evictChunk(Source.GaiaStars, 1);
-    renderer.uploadChunk(Source.GaiaStars, 1, {
-      ...CHUNK,
-      ref: octreeOf().chunks[2]!,
-      nodes: { ...CHUNK.nodes, morton: Uint32Array.of(16) },
-    });
+    renderer.evictChunk(Source.GaiaStars, 1, null);
+    renderer.uploadChunk(
+      Source.GaiaStars,
+      1,
+      {
+        ...CHUNK,
+        ref: octreeOf().chunks[2]!,
+        nodes: { ...CHUNK.nodes, morton: Uint32Array.of(16) },
+      },
+      null,
+    );
     // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
   });
@@ -367,7 +372,7 @@ describe('starCatalogRenderer chunk pool', () => {
     );
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
     const at = (10 + 7) * OPACITY_CHANNELS * 4;
     const zeroed = writes.filter((w) => w.label.startsWith('star-cut-opacity-'));
     expect(zeroed.map((w) => [w.label, w.offset])).toEqual([
@@ -379,7 +384,7 @@ describe('starCatalogRenderer chunk pool', () => {
   it("a nested chunk's roots are written in its parent's slot rows, and its records pick through its record base", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    // Index: level-2 row 0 roots chunk 0; the level-3 root. Chunk 0's one level-1 row roots chunk 1.
+    // Index: level-2 row 0 roots chunk 0; the level-3 root. Chunk 0's level-1 row roots chunk 1.
     const row = (level: number, childMask: number, ownCount: number, chunkRef: number) => ({
       count: 1,
       morton: Uint32Array.of(0),
@@ -432,10 +437,10 @@ describe('starCatalogRenderer chunk pool', () => {
       chunks: [],
     };
     renderer.upload(Source.GaiaStars, octree, 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, parent);
+    renderer.uploadChunk(Source.GaiaStars, 1, parent, null);
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 0, child);
+    renderer.uploadChunk(Source.GaiaStars, 0, child, 1);
     // The parent's row sits in slot 1: pool row 2 + 1·7; the child's own row in slot 0, row 2.
     const parentRow = 2 + 1 * 7;
     expect(writes.slice(-2).map((w) => [w.label, w.offset])).toEqual(rootWords(parentRow));
@@ -450,7 +455,7 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(renderer.poolRecordIndex(Source.GaiaStars, 5)).toBe(4);
 
     writes.length = 0;
-    renderer.evictChunk(Source.GaiaStars, 0);
+    renderer.evictChunk(Source.GaiaStars, 0, 1);
     expect(writes.slice(0, 2).map((w) => [w.label, w.offset])).toEqual(rootWords(parentRow));
     expect(word(writes[0]!) & NODE_RESIDENT_BIT).toBe(0);
   });
