@@ -17,7 +17,7 @@ export type DockContainerProps = Omit<DockProps, 'timeLabel'>;
 function DockContainer(props: DockContainerProps): React.ReactElement {
   const time = useAppSelector(selectTimeState);
   const instant = useSimInstant(time);
-  return <Dock {...props} timeLabel={dockTimeLabel(time, instant)} />;
+  return <Dock {...props} timeLabel={dockTimeLabel(time, instant, new Date().getUTCFullYear())} />;
 }
 
 export default memo(DockContainer);

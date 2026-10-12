@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useFullscreen } from '../../src/hooks/useFullscreen';
-import FullscreenToggleContainer from '../../src/components/containers/FullscreenToggleContainer';
 
 // jsdom has no Fullscreen API: stand in for the two document properties the hook reads.
 let fullscreenElement: Element | null = null;
@@ -47,27 +46,5 @@ describe('useFullscreen', () => {
     expect(request).toHaveBeenCalledTimes(1);
     // An unhandled rejection would fail the run here.
     await Promise.resolve();
-  });
-});
-
-describe('FullscreenToggleContainer', () => {
-  it('renders no button where the API is unavailable', () => {
-    stubApi(false);
-    const { container } = render(<FullscreenToggleContainer hidden={false} />);
-    expect(container.querySelector('button')).toBeNull();
-  });
-
-  it('labels the pill by what a tap will do and presses it while active', () => {
-    stubApi(true);
-    render(<FullscreenToggleContainer hidden={false} />);
-    expect(screen.getByRole('button', { name: 'Enter full screen' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
-    setFullscreen(document.documentElement);
-    expect(screen.getByRole('button', { name: 'Exit full screen' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
   });
 });

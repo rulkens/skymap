@@ -334,14 +334,17 @@
    * (`--bottom-stack-height`, set by BottomStack) is derived from them in CSS,
    * so the sheet and scale bracket sit above it without any measuring.
    */
-  --dock-item-height: 3rem;
+  /* 3rem of icon and label plus a --space-6 breath split evenly above and below. */
   --dock-height: calc(
-    var(--dock-item-height) + max(var(--space-4), env(safe-area-inset-bottom, 0px))
+    3rem + var(--space-6) + max(var(--space-4), env(safe-area-inset-bottom, 0px))
   );
   --time-row-height: 2.75rem;
-  /** Panel sheets (Controls, Layers) leave a strip of canvas visible above them. */
+  /** Panel sheets (Layers) leave a strip of canvas visible above them. */
   --sheet-panel-max-height: 60dvh;
   --z-bottom-stack: 10;
+  /** The time popovers open above the stack they anchor to. */
+  --z-bottom-stack-popover: calc(var(--z-bottom-stack) + 1);
+  --sheet-handle-width: 36px;
 
   /* ── Glass blur ─────────────────────────────────────────────────────── */
   /*

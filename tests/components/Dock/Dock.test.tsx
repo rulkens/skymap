@@ -8,7 +8,7 @@ function renderDock(overrides: Partial<DockProps> = {}) {
   const props: DockProps = {
     timeOpen: false,
     layersOpen: false,
-    timeLabel: { text: 'Time', glyph: null },
+    timeLabel: { text: 'Time', glyph: null, name: 'Time' },
     onHome: vi.fn<() => void>(),
     onSearch: vi.fn<() => void>(),
     onTime: vi.fn<() => void>(),
@@ -48,10 +48,10 @@ describe('Dock', () => {
     expect(props.onHome).toHaveBeenCalledTimes(1);
   });
 
-  it('names the Time item by its date when the clock is off real time, glyph kept out of the name', () => {
-    renderDock({ timeLabel: { text: '22 Oct 2026', glyph: '❚❚' } });
-    const time = screen.getByRole('button', { name: '22 Oct 2026' });
-    expect(time).toHaveTextContent('22 Oct 2026 ❚❚');
-    expect(screen.queryByRole('button', { name: 'Time' })).toBeNull();
+  // The glyph is aria-hidden, so the run state has to be in the name or a screen reader never hears it.
+  it('names the Time item by what it says, including the run state the glyph shows', () => {
+    renderDock({ timeLabel: { text: '22 Oct', glyph: '❚❚', name: 'Time, 22 Oct 2026, paused' } });
+    const time = screen.getByRole('button', { name: 'Time, 22 Oct 2026, paused' });
+    expect(time).toHaveTextContent('22 Oct ❚❚');
   });
 });

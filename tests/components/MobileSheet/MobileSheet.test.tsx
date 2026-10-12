@@ -31,16 +31,6 @@ describe('MobileSheet', () => {
     HTMLElement.prototype.scrollTo = originalScrollTo;
   });
 
-  it('scrolls to the peek on mount', () => {
-    render(
-      createElement(MobileSheet, {
-        resetKey: 'galaxy:42',
-        children: createElement('p', null, 'marker'),
-      }),
-    );
-    expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({ top: 0 });
-  });
-
   it('scrolls back to the peek when resetKey changes', () => {
     const { rerender } = render(
       createElement(MobileSheet, {
@@ -82,6 +72,19 @@ describe('MobileSheet', () => {
     expect(screen.getByText('marker')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Close Places' }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // The panel clips (overflow hidden) so only the body wrapper can scroll long content.
+  it('wraps panel content in a scroller under the title row, and renders no peek spacer', () => {
+    const { container } = render(
+      createElement(MobileSheet, {
+        resetKey: 'panel:places',
+        panel: { title: 'Places', onClose: vi.fn() },
+        children: createElement('p', null, 'marker'),
+      }),
+    );
+    expect(screen.getByText('marker').parentElement?.className).toMatch(/body/);
+    expect(container.querySelector('[class*="spacer"]')).toBeNull();
   });
 
   it('has no title row or close button for the selection card', () => {

@@ -26,16 +26,12 @@
   display: none;
 }
 
-/* Panels have no peek snap: the sheet just rests on the stack. */
+/* Panels render no spacer, so there is no peek snap: the sheet rests on the stack. */
 .rootPanel {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   overflow: hidden;
-}
-
-.rootPanel .spacer {
-  display: none;
 }
 
 .spacer {
@@ -75,14 +71,16 @@
   max-height: min(var(--sheet-panel-max-height), calc(100% - var(--mobile-sheet-peek)));
 }
 
+/* The panel's scroller: .panel clips, so the content scrolls inside it under the title row. */
 .body {
+  flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
 }
 
 .handle {
-  width: 36px;
-  height: 4px;
+  width: var(--sheet-handle-width);
+  height: var(--space-2);
   margin: var(--space-2) auto var(--space-4);
   border-radius: var(--radius-md);
   background: var(--border-control);
@@ -92,7 +90,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* The close button's 44px box already holds the title off the content. */
+  /* The close button's touch-target box already holds the title off the content. */
   padding: 0 var(--space-4) 0 var(--space-7);
 }
 
@@ -106,8 +104,8 @@
 }
 
 .close {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
   padding: 0;
   background: transparent;
   border: none;

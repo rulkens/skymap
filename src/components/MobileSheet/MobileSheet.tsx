@@ -1,21 +1,12 @@
 /**
- * MobileSheet — the phone's single bottom sheet, built on CSS scroll-snap
- * rather than a JS drag handler.
+ * MobileSheet — the phone's single bottom sheet, on CSS scroll-snap, no drag handler.
  *
- * The root is a scroll container with `scroll-snap-type: y mandatory` and two
- * snap children: a transparent `.spacer` (scrolled to top = "peeking") and the
- * `.sheet` (snapped by its bottom edge = "expanded"). The browser supplies the
- * flick, momentum and rubber-banding, so there is no touch listener here.
- *
- * Content decides the behaviour. The selection card passes no `panel`: it rests
- * at the peek and swipes up. A panel (Controls, Layers) passes `panel`: no peek
- * snap, the sheet sits expanded on the stack under a fixed title row with a
- * close button, capped so a strip of canvas stays visible, and its body scrolls
- * inside. The sheet is non-modal: `.root` and `.spacer` ignore pointer events
- * so touches above the sheet reach the canvas.
- *
- * The root sits above the dock and time row via `--bottom-stack-height`, which
- * BottomStack sets; the sheet itself owns the glass surface (blur included).
+ * The root scrolls with `scroll-snap-type: y mandatory` over a transparent
+ * `.spacer` (top = peeking) and the `.sheet` (bottom edge = expanded). The
+ * selection card passes no `panel` and swipes between the two; a panel (Layers)
+ * has no peek: it rests on the stack under a title row and scrolls inside.
+ * Non-modal: touches above the sheet reach the canvas. The root sits above the
+ * dock via `--bottom-stack-height`, which BottomStack sets.
  */
 
 import { useEffect, useRef } from 'react';
@@ -35,30 +26,32 @@ export type MobileSheetProps = {
 function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Return to the peek snap (top = spacer) when the content changes. The ref is
-  // null before the first commit and after unmount.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [resetKey]);
 
   return (
     <div ref={scrollRef} className={cx(styles.root, panel && styles.rootPanel)}>
-      <div className={styles.spacer} />
-      <section className={cx(styles.sheet, panel && styles.panel, 'mobileSheet')}>
+      {!panel && <div className={styles.spacer} />}
+      <section className={cx(styles.sheet, panel && styles.panel)}>
         <div className={styles.handle} aria-hidden />
-        {panel && (
-          <div className={styles.header}>
-            <h2 className={styles.title}>{panel.title}</h2>
-            <Button
-              className={styles.close}
-              onClick={panel.onClose}
-              aria-label={`Close ${panel.title}`}
-            >
-              <span aria-hidden>×</span>
-            </Button>
-          </div>
+        {panel ? (
+          <>
+            <div className={styles.header}>
+              <h2 className={styles.title}>{panel.title}</h2>
+              <Button
+                className={styles.close}
+                onClick={panel.onClose}
+                aria-label={`Close ${panel.title}`}
+              >
+                <span aria-hidden>×</span>
+              </Button>
+            </div>
+            <div className={styles.body}>{children}</div>
+          </>
+        ) : (
+          children
         )}
-        {children}
       </section>
     </div>
   );

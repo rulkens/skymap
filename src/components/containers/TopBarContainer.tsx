@@ -52,7 +52,7 @@ function TopBarContainer(): React.ReactElement {
       {!isMobile && <SearchTrigger onClick={openPalette} hidden={hidden} />}
       {!isMobile && <HomeButton onClick={goHomeCb} hidden={hidden} />}
       <AutoRotateToggleContainer hidden={hidden} />
-      {isMobile && <FullscreenToggleContainer hidden={hidden} />}
+      <FullscreenToggleContainer hidden={hidden} />
       <AboutPill onClick={reopenSplashScreen} hidden={hidden} />
       {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={hidden} />}
     </div>

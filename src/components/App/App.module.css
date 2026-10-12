@@ -71,9 +71,17 @@
   transition: opacity 0.3s ease-out;
 }
 
+/*
+ * `visibility` after the fade, not `pointer-events` alone: a child that sets
+ * `pointer-events: auto` (the phone sheet) would otherwise still take taps.
+ */
 .uiStackHidden {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease-out,
+    visibility 0s linear 0.3s;
 }
 
 @media (prefers-reduced-motion: reduce) {
