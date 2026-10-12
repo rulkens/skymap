@@ -3,10 +3,11 @@
  *
  * Owns which dock item is open. Layers wins over the selection card while
  * open; the time row is independent and can stay open under any sheet. Home,
- * Search and About are actions, dispatched exactly as the desktop pill and key do. A NEW
- * selection closes Layers so its card shows; clearing the selection does not.
- * Selection is read by identity key, not object, so unrelated slice writes
- * close nothing. Closing Layers or the palette returns focus to its dock item.
+ * Search and About are actions, dispatched exactly as the desktop pill and key
+ * do. A NEW selection closes Layers so its card shows; clearing the selection
+ * does not. Selection is read by identity key, not object, so unrelated slice
+ * writes close nothing. Closing Layers or the palette returns focus to its dock
+ * item.
  */
 
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
