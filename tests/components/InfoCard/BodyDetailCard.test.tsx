@@ -52,7 +52,7 @@ describe('BodyDetailCard', () => {
   });
 
   it("renders Mars's card-shot thumbnail with its Radius and Distance relocated into the summary", () => {
-    // Mars is in CARD_SHOT_ID_BY_FOCUS_ID (public/images/featured/body-mars.webp exists),
+    // Mars is in SHOT_CARD_IDS (public/images/featured/body-mars.webp exists),
     // so the top row swaps in for the old radius/distance CardRow positions —
     // both must appear exactly once, not duplicated.
     const marsTarget: BodyInfo = {

@@ -20,7 +20,7 @@ import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo'
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import { cardShotUrl } from '../../utils/palette/cardShotUrl';
-import { CARD_SHOT_ID_BY_FOCUS_ID } from '../../data/palette/cardShotIdByFocusId';
+import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
 import { actionForRow } from './utils/actionForRow';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
@@ -46,8 +46,8 @@ function thumbOrGlyph(shotUrl: string | undefined, label: string): ReactNode {
  */
 function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
   const action = actionForRow(row);
-  const shot = action.kind === 'focus' ? CARD_SHOT_ID_BY_FOCUS_ID.get(action.focusId) : undefined;
-  return thumbOrGlyph(shot === undefined ? undefined : cardShotUrl(shot), label);
+  const hasShot = action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId);
+  return thumbOrGlyph(hasShot ? cardShotUrl(action.focusId) : undefined, label);
 }
 
 /** What InfoCard's row renderer needs, computed per row kind. */

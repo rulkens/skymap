@@ -14,7 +14,7 @@ import { structureShotUrl } from '../../../../utils/structure/structureShotUrl';
 import { NEBULA_KIND_LABELS } from '../../../../data/structure/nebulaKindLabels';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
-import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import ShotSummary from '../../../../components/InfoCard/ShotSummary/ShotSummary';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import { InfoTip } from '../../../../components/InfoTip/InfoTip';
@@ -98,16 +98,11 @@ function StructureDetailCard({
       </CardRow>
 
       {shot !== undefined && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={shot} alt={`${target.name} thumbnail`} />
-          <div className={styles.cardSummary}>
-            {[...leadRows, ...(countRow ? [countRow] : [])].map((row, i) => (
-              <div key={i} className={styles.cardDistLine}>
-                <span>{row.label}</span> {row.value}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ShotSummary
+          url={shot}
+          alt={`${target.name} thumbnail`}
+          rows={[...leadRows, ...(countRow ? [countRow] : [])]}
+        />
       )}
 
       {rows.length > 0 && (

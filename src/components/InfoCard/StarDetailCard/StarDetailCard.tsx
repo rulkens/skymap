@@ -22,12 +22,12 @@ import { formatDistance } from '../../../utils/format/formatDistance';
 import { formatScalar } from '../../../utils/format/formatScalar';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
 import { cardShotUrl } from '../../../utils/palette/cardShotUrl';
-import { CARD_SHOT_ID_BY_FOCUS_ID } from '../../../data/palette/cardShotIdByFocusId';
+import { SHOT_CARD_IDS } from '../../../data/palette/shotCardIds';
 import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import type { CardRowProps } from '../CardRow/CardRow';
-import Thumbnail from '../Thumbnail/Thumbnail';
+import ShotSummary from '../ShotSummary/ShotSummary';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
@@ -195,11 +195,8 @@ function StarDetailCard({
   // is nothing to put beside the image, and an image over an empty summary
   // column is worse than the headline-only fallback (a Gaia star has no id at
   // all, so it never has a shot).
-  const shot =
-    target.id === null
-      ? undefined
-      : CARD_SHOT_ID_BY_FOCUS_ID.get(`${STAR_FOCUS_PREFIX}${target.id}`);
-  const hasShot = detail.kind === 'curated' && shot !== undefined;
+  const shotId = target.id === null ? null : `${STAR_FOCUS_PREFIX}${target.id}`;
+  const hasShot = detail.kind === 'curated' && shotId !== null && SHOT_CARD_IDS.has(shotId);
 
   // The "where / how bright" rows: beside the shot as summary lines, or heading
   // the curated block as CardRows. Distance is the star's own row for every
@@ -246,16 +243,11 @@ function StarDetailCard({
       {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
 
       {hasShot && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shot)} alt={`${target.displayName} thumbnail`} />
-          <div className={styles.cardSummary}>
-            {leadRows.map((row, i) => (
-              <div key={i} className={styles.cardDistLine}>
-                <span>{row.label}</span> {row.value}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ShotSummary
+          url={cardShotUrl(shotId)}
+          alt={`${target.displayName} thumbnail`}
+          rows={leadRows}
+        />
       )}
 
       {detail.kind !== 'curated' && target.distancePc > 0 && (

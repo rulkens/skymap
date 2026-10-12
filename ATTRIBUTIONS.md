@@ -1040,7 +1040,7 @@ paying a fee."
 <!-- attribution: id=dss; hosts=alasky.cds.unistra.fr,aladin.cds.unistra.fr -->
 
 - **What:** A DSS2 colour cutout from the CDS `hips2fits` service: the
-  fallback when SDSS has no image, and the shot of 94 featured structures: every
+  fallback when SDSS has no image, and the shot of the featured structures: every
   open cluster, globular cluster, nebula and Galactic Centre anchor, and the
   galaxy clusters and groups under 5 degrees across. The cards also link
   to Aladin Lite.
@@ -1068,7 +1068,7 @@ paying a fee."
 - **Upstream:** `https://alasky.cds.unistra.fr/hips-image-services/hips2fits`
 - **Enters skymap:** `src/utils/math/dssThumbnailUrl.ts` →
   `src/utils/network/fetchGalaxyBitmap.ts`, in the visitor's browser; and
-  `tools/capture/captureStructureCutouts.ts`, which writes those 94 shots to
+  `tools/capture/captureStructureCutouts.ts`, which writes those shots to
   `public/images/structures/` that ship with the app.
 - **Modified:** Drawn on a disc with a faded edge. The structure shots are
   resampled to 204×204 pixels and re-encoded as webp.

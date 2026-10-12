@@ -1,0 +1,11 @@
+.root {
+  composes: cardSection cardTopRow from '../cardChrome.module.css';
+}
+
+.summary {
+  composes: cardSummary from '../cardChrome.module.css';
+}
+
+.line {
+  composes: cardDistLine from '../cardChrome.module.css';
+}
