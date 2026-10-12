@@ -194,10 +194,13 @@ fn emit(@builtin(global_invocation_id) gid: vec3<u32>) {
   let o = i * OPACITY_CHANNELS;
   let ownGoal = select(0.0, 1.0, drawOwn);
   let blobGoal = select(0.0, 1.0, drawBlob);
-  let ownOp = opacity[o + OWN_OPACITY] + clamp(ownGoal - opacity[o + OWN_OPACITY], -u.fadeStep, u.fadeStep);
-  let blobOp = opacity[o + BLOB_OPACITY] + clamp(blobGoal - opacity[o + BLOB_OPACITY], -u.fadeStep, u.fadeStep);
-  opacity[o + OWN_OPACITY] = ownOp;
-  opacity[o + BLOB_OPACITY] = blobOp;
+  let ownWas = opacity[o + OWN_OPACITY];
+  let blobWas = opacity[o + BLOB_OPACITY];
+  let ownOp = ownWas + clamp(ownGoal - ownWas, -u.fadeStep, u.fadeStep);
+  let blobOp = blobWas + clamp(blobGoal - blobWas, -u.fadeStep, u.fadeStep);
+  // A settled fade writes nothing: most rows sit at 0 or 1 every frame.
+  if (ownOp != ownWas) { opacity[o + OWN_OPACITY] = ownOp; }
+  if (blobOp != blobWas) { opacity[o + BLOB_OPACITY] = blobOp; }
 
   if (blobOp > 0.0 && nodeHasBlob(bits) && !offScreen(i, true)) {
     aggList[atomicAdd(&draws[AGG_INSTANCES], 1u)] = i;
