@@ -12,7 +12,7 @@
  *
  * There is no tour-level setup list: the establishing strip is authored inside
  * the first beat's clip as `hide()`/`scene()` cues, so a tour has one authoring
- * surface. `runTakeoverSaga`'s snapshot is taken before this body ever runs, so its
+ * surface. `withSceneSnapshotSaga`'s snapshot is taken before this body ever runs, so its
  * restore winds back every in-tour mutation regardless of which beat made it.
  *
  * ### Every beat entry reconstructs its derived scene
@@ -26,12 +26,11 @@
  *
  * ### tourStarted/tourEnded stay local, guarded the same way `runTakeoverSaga` is
  *
- * `runTakeoverSaga` (generic over tour and view) owns the takeover-wide
- * start/restore/end bracket and knows nothing about `tour.tourId`/`beatIndex`,
- * so this body dispatches its OWN `tourStarted`/`tourEnded` around the beat
- * loop. `cancelled()` guards the latter: a superseded run hands the takeover
- * on rather than ending it, so clearing `tourId` here would flash a tour-less
- * state between the two tours.
+ * `runTakeoverSaga` owns the takeover-wide start/end bracket and knows nothing
+ * about `beatIndex`, so this body dispatches its OWN `tourStarted`/`tourEnded`
+ * around the beat loop. `cancelled()` guards the latter: a superseded run hands
+ * the takeover on rather than ending it, so resetting the beat here would flash
+ * beat 0 between the two tours.
  */
 
 import { call, put, select, take, race, cancelled, delay } from 'typed-redux-saga';
@@ -68,14 +67,13 @@ import type { BeatRange } from '../../@types/animation/tour/BeatRange';
  * the tour on any background orbit-controls event.
  */
 export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
-  // Activate the tour's own bookkeeping (id + beat position). `runTakeoverSaga`
-  // already captured the pre-takeover snapshot and marked the takeover source
-  // before calling this body.
-  yield* put(tourStarted({ tourId: tour.id }));
+  // Reset the tour's own bookkeeping (beat position). The takeover source,
+  // which names the tour, is already marked and the scene already snapshotted.
+  yield* put(tourStarted());
 
   // Clear any pre-tour selection: the beats only ever write the `focus` slot,
   // so a clicked halo would otherwise float on screen through the whole run.
-  // Focus is cleared with it — `runTakeoverSaga`'s snapshot already holds the
+  // Focus is cleared with it — `withSceneSnapshotSaga`'s snapshot already holds the
   // user's value for the exit restore, and beat 1's own focus() re-establishes
   // the tour's. `select` is deliberately NOT restored: like `hover`, it is
   // ephemeral UI state (see `captureScene`).
@@ -103,7 +101,7 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
 
         // The fold's baseline is the settings half of the pre-takeover
         // snapshot — the same read `captureScene` (via `captureSettings`)
-        // takes, re-read here rather than threaded from `runTakeoverSaga` so
+        // takes, re-read here rather than threaded from `withSceneSnapshotSaga` so
         // this body stays a single self-contained saga.
         const baselineSettings = yield* select(captureSettings);
 

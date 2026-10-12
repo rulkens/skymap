@@ -74,8 +74,8 @@ export type EngineSubsystemHandles = {
    */
   assetQueue: PriorityQueue<void>;
   /**
-   * Label director — owns `labelRenderer.setLabels` /
-   * `markerLineRenderer.setLines`, polls every registered `Label2DProducer`
+   * Label director — owns `labelRendererCosmo.setLabels` /
+   * `markerLineRendererCosmo.setLines`, polls every registered `Label2DProducer`
    * each frame, merges outputs, and flushes once. Lets multiple overlays
    * (the Milky Way "you are here" pin, cluster structures, future
    * galaxy/void labels) coexist without stomping each other's full-set
@@ -93,14 +93,14 @@ export type EngineSubsystemHandles = {
    * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
    * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
    * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
-   * in `src/data/labels/`). Attaches `foregroundLabelRenderer` +
-   * `foregroundMarkerLineRenderer` at the same two sites `cosmoLabelDirector`
+   * in `src/data/labels/`). Attaches `labelRendererNear` +
+   * `markerLineRendererNear` at the same two sites `cosmoLabelDirector`
    * attaches its own pair.
    */
   foregroundLabelDirector: Label2DDirector;
   /**
-   * Cluster focus-mode subsystem — drives the "dim non-members of the
-   * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
+   * Structure focus-mode subsystem — drives the "dim everything outside the
+   * selected structure" effect. Selection-driven: `runFrame` calls
    * `update(selectedStructure, nowMs)` each frame and threads
    * `produceFocusUniforms(nowMs)` into the points draw. Constructed
    * eagerly; no GPU dep, non-null from t=0.

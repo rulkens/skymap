@@ -8,8 +8,8 @@
  * decomplection — the same reducer would own both fields either way.
  *
  * Tour caption / beat-progress state is NOT here — it lives in the dedicated
- * `tour` runtime slice (the overlay derives the caption from `tourId` +
- * `beatIndex`), keeping this slice to app-level chrome.
+ * `tour` runtime slice (the overlay derives the caption from the takeover's
+ * tour id + `beatIndex`), keeping this slice to app-level chrome.
  */
 
 import type { PaletteTabId } from '../palette/PaletteTabId';

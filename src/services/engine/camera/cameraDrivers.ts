@@ -31,9 +31,8 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
-import { bodyFocusDistance } from './bodyFocusDistance';
+import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
@@ -108,7 +107,7 @@ function followPose(
   const livePos = liveBodyPosition(focus, ctx.bodies);
   const driver = selectionDriver(focus);
   // Null-guard keeps the arm total; isActive already proved a moving body.
-  if (driver === null || driver.poseId === null || livePos === null) {
+  if (focus === null || driver === null || driver.poseId === null || livePos === null) {
     return { pose: s.camera.base, memory: mem };
   }
   // The pose eased TOWARD, in world terms whatever arm the regime is in — by
@@ -146,8 +145,8 @@ function followPose(
   }
 
   // Distance target, two sources (see FollowMemory): a fresh focus seeds
-  // the framing distance — `bodyFocusDistance` directly, allocation-free,
-  // only on this branch; follow re-winning after a drag committed a zoom
+  // the framing distance — `framingPose`'s, the one every arrival lands on,
+  // so the approach never glides off it; follow re-winning after a drag committed a zoom
   // (last frame's winner was some OTHER row, same focus ref) re-captures
   // `base.distance` so the zoom sticks.
   // A third source is the wheel: `base` is invisible while a follow row wins
@@ -161,7 +160,7 @@ function followPose(
     // only an owed one seeds the framing distance.
     distanceTarget = memory.saturated
       ? committed.distance
-      : bodyFocusDistance(driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC, ctx.projection.fovYRad);
+      : framingPose(focus, ctx.projection.fovYRad, from).distance;
   } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {

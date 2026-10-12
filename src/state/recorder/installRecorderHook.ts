@@ -8,14 +8,6 @@
  * mode this is a pure no-op — nothing is attached to `window`, no store
  * subscription is created.
  *
- * ### `ready` — a debounced predicate, not a first-true resolve
- *
- * "Capture-ready" is the debounced stability window shared with the perf
- * harness: `ready` is `whenStablyReady(store)` from `../lifecycle/whenStablyReady`,
- * whose module header explains why a first-true resolve would fire mid-bootstrap
- * (the load-progress aggregate is null before the first slot starts) and why the
- * predicate must instead HOLD for `READY_STABLE_MS`.
- *
  * ### `startTour` — dispatch the existing action, observe the slice
  *
  * No recorder-specific action exists: the hook dispatches the same
@@ -35,10 +27,10 @@
  *
  * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
  * `camera.clip` is only written by `clipStarted`, which `playClip` dispatches
- * AFTER `watchClipSaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
+ * AFTER `clipBodySaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
  * an arbitrarily long window (catalog/structure loads) during which
  * `selectClipActive` reads false. A second `startClip` in that window would
- * be accepted, `takeLatest` would cancel worker A while it's still inside
+ * be accepted, `watchTakeoverSaga` would cancel run A while it's still inside
  * `waitUntilSaga` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
  * gets no `clipEnded`), and B's normal activate/end cycle would resolve BOTH
  * latches — caller A reports success for a clip it never filmed. So `startClip`
@@ -59,7 +51,6 @@
  */
 
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
-import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { startTour } from '../tour/tourActions';
 import { selectTourActive } from '../tour/selectors';
 import { startClip } from '../camera/clipActions';
@@ -104,7 +95,7 @@ export function installRecorderHook(store: AppStore): void {
   // `selectClipActive` the way `runTour` uses `selectTourActive`.
   let clipInFlight = false;
 
-  // Same seen-active latch `runTour` uses, guarding against `watchClipSaga`'s
+  // Same seen-active latch `runTour` uses, guarding against `clipBodySaga`'s
   // foci/runtime `waitUntilSaga` gate: `camera.clip` stays null across however
   // many store updates land before the clip activates, so a latch that
   // resolved on any inactive reading would resolve instantly and film zero
@@ -141,7 +132,6 @@ export function installRecorderHook(store: AppStore): void {
   }
 
   const hook: SkymapRecorderHook = {
-    ready: whenStablyReady(store),
     startTour: (id: TourId, beats?: BeatRange) => runTour(store, id, beats),
     startClip: (id: ClipId) => runClip(id),
   };

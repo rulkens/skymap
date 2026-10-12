@@ -10,7 +10,7 @@
  *
  * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS` +
  * `SCENE_MESH_BODIES`), each tinted by its own authored colour: a planet's or
- * mesh body's `albedo`, and a fixed tint for Earth, which carries a texture
+ * mesh body's brightened `albedo`, and a fixed tint for Earth, which carries a texture
  * instead of a colour. Deriving the tints from the body records keeps this
  * file free of a parallel colour table that would drift from the seeds.
  *
@@ -19,7 +19,7 @@
  * The main camera projection is pinned at near = 0.01 Mpc.  At solar-system
  * zoom the bodies sit ~1e-13 Mpc from the camera — far inside that near
  * plane — so the normal label path (which projects with `ctx.vp`) would
- * clip them away.  `foregroundLabelsPass` instead draws these through the
+ * clip them away.  `labelsNearPass` instead draws these through the
  * NEAR0 slab view (`view.vp`), whose near plane is proportional to
  * `cam.distance` and so always contains the bodies.
  *
@@ -41,6 +41,7 @@ import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
+import { compressBrightness } from '../../../utils/color/compressBrightness';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
@@ -52,6 +53,13 @@ import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM'
  * the captions have always used.
  */
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
+
+/**
+ * A raw albedo makes a dark body's caption dark text on a black sky (Mercury
+ * and the Moon peak near 0.3). This exponent lifts them to ~0.7 while keeping
+ * them dimmer than Venus or Enceladus, so the captions still rank by albedo.
+ */
+const PLANET_TINT_GAMMA = 0.3;
 
 /**
  * Turn a seed's authored reveal distance into the caption's band: alpha 0 at
@@ -73,7 +81,7 @@ function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
  * captions FOLLOW them as the sim clock advances. The caller re-invokes this only
  * when the snapshot actually changes — a paused clock returns the same map by
  * reference, so a fresh instant is the only thing that rebuilds the captions
- * (see `foregroundLabelsPass`'s memo).
+ * (see `labelsNearPass`'s memo).
  */
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
@@ -89,7 +97,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
         planet,
         bodyFootprintRadiusM(planet),
         bodyStates.get(planet.id)!.positionMpc,
-        planet.albedo,
+        compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
         'planet',
       ),
     ),

@@ -10,6 +10,7 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
+import { Source } from '../../../src/data/source';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -43,10 +44,34 @@ describe('watchSelectionWakeSaga', () => {
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
-  it('hover does NOT wake the loop', async () => {
-    store.dispatch(updateSelectionHover({ type: 'milkyWay' }));
+  it('a hover onto or off a labelled kind wakes; between two survey refs it does not', async () => {
+    const survey = { type: 'galaxyCatalog', source: Source.SDSS, index: 1 } as const;
+    const survey2 = { type: 'galaxyCatalog', source: Source.SDSS, index: 2 } as const;
+    store.dispatch(updateSelectionHover(survey));
+    store.dispatch(updateSelectionHover(survey2));
     await flush();
     expect(requestRender).not.toHaveBeenCalled();
+
+    store.dispatch(updateSelectionHover({ type: 'body', id: 'earth' }));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(1);
+
+    store.dispatch(updateSelectionHover(survey));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(2);
+  });
+  it('a structure hover change requests a render', async () => {
+    store.dispatch(updateSelectionHover({ type: 'structure', id: 'cluster-virgo' }));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(1);
+
+    // Re-hovering the same structure is no change; leaving it is.
+    store.dispatch(updateSelectionHover({ type: 'structure', id: 'cluster-virgo' }));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(1);
+    store.dispatch(updateSelectionHover(null));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(2);
   });
   it('clearSelection wakes the loop so the focus ring redraws away', async () => {
     // Regression: clearSelection (Esc / InfoCard ×) drops the select+focus refs,

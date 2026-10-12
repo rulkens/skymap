@@ -67,7 +67,7 @@ const SNAP_COMMON = {
 } as const;
 
 function bodyState(positionMpc: Vec3): BodyState {
-  return { positionMpc, orientation: IDENTITY, meanAnomalyRad: 0 };
+  return { positionMpc, orientation: IDENTITY };
 }
 
 function eyeAt(radiusM: number, hOverR: number): Vec3 {

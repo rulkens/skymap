@@ -65,6 +65,8 @@ import { expandCompanionRows } from '../../../../src/utils/loading/expandCompani
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
+import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
 
 // ── Stub slot factory ────────────────────────────────────────────────────────
 
@@ -152,10 +154,10 @@ const BOOT_SETTINGS: SettingsLeaves = {
   structures: {
     enabled: true,
     items: {
-      cluster: { enabled: true, labelEnabled: true },
+      'galaxy-cluster': { enabled: true, labelEnabled: true },
       supercluster: { enabled: true, labelEnabled: true },
       void: { enabled: true, labelEnabled: true },
-      group: { enabled: true, labelEnabled: true },
+      'galaxy-group': { enabled: true, labelEnabled: true },
     },
   },
 };
@@ -244,6 +246,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
   layerSlots.set('pgcAlias', (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown>);
   layerSlots.set('hiResFamous', stubSlot() as AssetSlot<unknown, unknown>);
+  layerSlots.set(
+    'structureCatalog',
+    (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<unknown, unknown>,
+  );
+  const structureRuntime = {
+    slot: layerSlots.get('structureCatalog'),
+  } as unknown as StructureRuntime;
   // The Layer's rows hand back these same slots from their factories.
   const galaxyRuntime = {
     points,
@@ -286,10 +295,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       },
     },
     assetSlots: {
-      structureCatalog: (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<
-        unknown,
-        unknown
-      > as never,
       // Empty keyed family: the body-texture rows resolve to undefined slots
       // (far resting pose ⇒ none demanded anyway), so none fires.
       bodyTextures: new Map(),
@@ -300,12 +305,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
     // The composed lists `createLayers` would have written: core's authored
-    // registry plus the galaxyCatalog Layer's, folded once, with that Layer's
-    // slots in the map `slotFor` consults first.
+    // registry plus the Layers', folded once, with the Layers' slots in the map
+    // `slotFor` consults first.
     assetRows: expandCompanionRows([
       ...ASSET_WIRING,
       ...galaxyCatalogAssetRows(galaxyRuntime),
       ...cosmicWebDensityAssetRows(densityRuntime),
+      ...structureAssetRows(structureRuntime),
     ]),
     layerSlots,
   } as unknown as EngineState;
@@ -316,21 +322,14 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
 /**
  * The set of `AssetKey`s whose `load` spy has fired at least once. The mapping
  * from spy to key is built from the same stub objects inserted into
- * `state.assetSlots` — we inspect `load.mock.calls.length > 0` for each.
+ * `state.layerSlots` — we inspect `load.mock.calls.length > 0` for each.
  */
 function collectFired(state: EngineState): Set<AssetKey> {
   const fired = new Set<AssetKey>();
 
-  // The Layers' slots — point sources, sidecars and density cubes.
+  // The Layers' slots — point sources, sidecars, density cubes and the structure catalog.
   for (const [key, slot] of state.layerSlots) {
     if ((slot as StubSlot).load.mock.calls.length) fired.add(key);
-  }
-
-  // Core's named slots — the ones that might have fired.
-  const namedKeys = ['structureCatalog'] as const;
-  for (const key of namedKeys) {
-    const slot = state.assetSlots[key] as StubSlot | null | undefined;
-    if (slot?.load.mock.calls.length) fired.add(key);
   }
 
   return fired;
@@ -427,10 +426,10 @@ describe('reevaluateDemand demand-table regression', () => {
       structures: {
         enabled: true,
         items: {
-          cluster: { enabled: false, labelEnabled: false },
+          'galaxy-cluster': { enabled: false, labelEnabled: false },
           supercluster: { enabled: false, labelEnabled: false },
           void: { enabled: false, labelEnabled: false },
-          group: { enabled: false, labelEnabled: false },
+          'galaxy-group': { enabled: false, labelEnabled: false },
         },
       },
     };
@@ -503,10 +502,10 @@ describe('reevaluateDemand demand-table regression', () => {
       structures: {
         enabled: true,
         items: {
-          cluster: { enabled: false, labelEnabled: false },
+          'galaxy-cluster': { enabled: false, labelEnabled: false },
           supercluster: { enabled: false, labelEnabled: false },
           void: { enabled: false, labelEnabled: false },
-          group: { enabled: false, labelEnabled: false },
+          'galaxy-group': { enabled: false, labelEnabled: false },
         },
       },
     };

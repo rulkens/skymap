@@ -135,9 +135,9 @@ export const DEFAULT_FOV_DEG = 60;
  *
  * Ecliptic, not equatorial: the descent lands in the solar system, and the
  * ecliptic frame puts Earth's orbital plane flat so the planets read as a disk
- * and Earth's 23.44° obliquity is *desired* — the tilt between the equatorial
+ * and Earth's 23.439° obliquity is *desired* — the tilt between the equatorial
  * and ecliptic poles is exactly what makes the seasons legible in that view.
  * Booting equatorial would instead flatten Earth's equator and rake the orbital
- * plane at that same 23.44°, which is the wrong "up" for the arrival scene.
+ * plane at that same 23.439°, which is the wrong "up" for the arrival scene.
  */
 export const DEFAULT_ORIENTATION: OrientationFrameId = 'ecliptic';

@@ -16,6 +16,7 @@
  *   - `zoneOfAvoidance` — galactic-plane dust band + its lettering; the
  *                         Zone-of-Avoidance view drives it, and a viewer who
  *                         switched the band off must get that choice back.
+ *   - `lightTime`      — the light-time spheres guide's gate.
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
  *   - `localBubble`    — the Local Bubble shell's gate.
  *   - `constellations` — constellation figures + their lettering.
@@ -27,7 +28,7 @@
  *   - `picking`        — which selection kinds a scene click or hover may
  *                         resolve; a takeover drives it and the bracket must
  *                         restore it, exactly what this type is for.
- *   - `camera`         — the FOV. `runTakeoverSaga` pins it, because a takeover's
+ *   - `camera`         — the FOV. `withSceneSnapshotSaga` pins it, because a takeover's
  *                         poses are authored at one lens and a viewer who left
  *                         the slider narrow would otherwise get a framing that
  *                         silently clamps (`sphereFitDistance` → the
@@ -82,6 +83,7 @@ export type SettingsSnapshot = Readonly<
     | 'cosmicWebFilaments'
     | 'milkyWay'
     | 'zoneOfAvoidance'
+    | 'lightTime'
     | 'flow'
     | 'localBubble'
     | 'constellations'

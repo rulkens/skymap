@@ -14,17 +14,15 @@ export const C_KM_S = 299792.458;
  * Hubble constant H₀ in km/s/Mpc.
  *
  * 70 is a round, commonly-used value; the actual measured value is somewhere
- * around 67–73 depending on the method (the "Hubble tension"). Since we're
- * using the linear approximation anyway, the exact value doesn't matter much
- * for visualization.
+ * around 67–73 depending on the method (the "Hubble tension"). A distance
+ * derived from redshift scales as 1/H₀ (the ΛCDM integral is multiplied by
+ * c/H₀), so that range moves such a galaxy by up to about 4.5 %.
  */
 export const H0_KM_S_MPC = 70;
 
 /**
- * The Hubble distance c/H₀ ≈ 4282.75 Mpc.
- *
- * Precomputing means `redshiftToDistanceMpc` is a single multiplication
- * inside the hot loop that converts millions of catalog rows to xyz.
+ * The Hubble distance c/H₀ ≈ 4282.75 Mpc: the factor in front of the
+ * dimensionless ΛCDM integral in `redshiftToDistanceMpc`.
  */
 export const HUBBLE_DISTANCE_MPC = C_KM_S / H0_KM_S_MPC;
 

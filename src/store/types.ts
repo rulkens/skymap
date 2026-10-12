@@ -17,11 +17,9 @@
  *
  * The saga-context types describe the engine capabilities that cross into
  * store-land: `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of
- * render-wake / fade / reseed / bias closures the reconcile sagas invoke; `resolveDeps` is
- * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
- * into a `SelectionRow` (read lazily each call so the reconciler always sees the
- * current catalog and structure state — render-wake is reused from
- * `reconcile.requestRender`, not re-added here); `cameraRuntime` is the
+ * render-wake / fade / reseed / bias closures the reconcile sagas invoke; `selection`
+ * is the composed resolver the selection reconcilers use to turn a `SelectionRef`
+ * into a `SelectionRow`; `cameraRuntime` is the
  * live camera read `watchFocusTweenSaga` uses to build a focus tween — the visible
  * from-pose plus the lens FOV, or null when the camera is not ready; and
  * `playClip` is the engine's clip-player — the tour saga calls it with a
@@ -37,7 +35,7 @@
  * touch the address bar (see `sagaContextRegistered`), and a partial setter makes
  * that signal a lie it cannot detect: a caller registering only `reconcile` still
  * announces "the capabilities are here", and the first `#focus=` arrival then
- * calls an undefined `resolveDeps`, throws, and takes the whole root saga down
+ * calls an undefined `selection`, throws, and takes the whole root saga down
  * with it. Production has one registration site and it already passes all of them
  * in one call (`engine.ts`), so requiring the whole bag costs nothing there and
  * turns a convention into a compiler check. Callers with nothing behind a
@@ -51,7 +49,6 @@
 import type { rootReducer } from './rootReducer';
 import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
-import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { SelectionResolver } from '../@types/engine/selection/SelectionResolver';
 import type { CameraPose } from '../@types/camera/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
@@ -61,6 +58,7 @@ import type { Mat3 } from '../@types/math/Mat3';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
+import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -145,9 +143,9 @@ export type ClipPathInspectSeam = {
   pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
+  /** Resolves after the next frame callback returns; stays pending if no frame ever comes. */
+  readonly nextFrame: () => Promise<void>;
   reconcile: ReconcileEffects; // provides requestRender + fade/reseed/bias
-  /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
-  resolveDeps: () => ResolveDeps;
   /**
    * The composed `SelectionResolver` (D5) — the one object the pick path and
    * every selection-reconciling saga read for pick resolution, row extraction,
@@ -180,5 +178,7 @@ export type SagaContext = {
    * rather than omitting it.
    */
   clipPathInspect: ClipPathInspectSeam;
+  /** The composition's home — what a bare link arrives on (`navigateSaga`). */
+  home: EngineHomeConfig;
 };
 export type SetSagaContext = (ctx: SagaContext) => void;

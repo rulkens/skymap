@@ -46,14 +46,13 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { createEngine } from '../services/engine';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
 import { useRunSaga } from '../store/RunSagaProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
-import { APP_COMPOSITION } from '../compositions/app';
+import { installSkymapHook } from '../state/automation/installSkymapHook';
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
@@ -78,16 +77,28 @@ export function useEngine(): UseEngineReturn {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handle = createEngine(canvas, { store, setSagaContext, runSaga }, APP_COMPOSITION);
-    handleRef.current = handle;
+    // The engine is most of the bundle, so it loads as its own chunk: the UI
+    // renders from the entry chunk alone and the engine starts when it arrives.
+    let handle: EngineHandle | undefined;
+    let unmounted = false;
+    void Promise.all([import('../services/engine'), import('../compositions/app')]).then(
+      ([{ createEngine }, { APP_COMPOSITION }]) => {
+        if (unmounted) return;
+        handle = createEngine(canvas, { store, setSagaContext, runSaga }, APP_COMPOSITION);
+        handleRef.current = handle;
 
-    // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed
-    // here (not main.tsx) because it needs the live engine handle to reach the
-    // GPU timing service via `engine.debug.timingService`.
-    installPerfHook(store, handle);
+        // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed
+        // here (not main.tsx) because it needs the live engine handle to reach the
+        // GPU timing service via `engine.debug.timingService`.
+        installPerfHook(store, handle);
+        // After the mode-gated hooks: tools wait on `__skymap`, then read theirs at once.
+        installSkymapHook(store, handle);
+      },
+    );
 
     return () => {
-      handle.destroy();
+      unmounted = true;
+      handle?.destroy();
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.

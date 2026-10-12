@@ -1,5 +1,6 @@
 import type { ChromaCalibration } from '../../../src/@types/scene/ChromaCalibration';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { linearToSrgbByte } from './linearToSrgbByte';
 
 /** Rec.709 luminance weights — the `Y` every chroma quantity below divides by. */
 const LUM: Vec3 = [0.2126, 0.7152, 0.0722];
@@ -38,12 +39,6 @@ for (let i = 0; i < 256; i++) {
   DECODE[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
 }
 
-/** sRGB OETF, back to an encoded byte. */
-function encode(linear: number): number {
-  const v = linear <= 0 ? 0 : linear >= 1 ? 1 : linear;
-  return Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055));
-}
-
 /**
  * panSharpenRgb — luminance from a panchromatic source (one byte per pixel),
  * chroma from a colour source (three), on grids the caller has aligned;
@@ -51,7 +46,7 @@ function encode(linear: number): number {
  * inputs are display-referred sRGB and are linearised first: chroma as
  * `c = RGB_linear / Y - 1` is exposure-invariant and stays orthogonal to `LUM`
  * under any calibration, so in real arithmetic the pan luminance comes through
- * exactly — bar `encode`'s gamut clamp, which fires on 0.103% of Pluto's shipped
+ * exactly — bar `linearToSrgbByte`'s gamut clamp, which fires on 0.103% of Pluto's shipped
  * 4096x2048 pair and costs up to 79% of the luminance there.
  */
 export function panSharpenRgb(
@@ -90,9 +85,9 @@ export function panSharpenRgb(
     const q1 = gain * (m10 * p0 + m11 * p1);
 
     const lum = DECODE[luminance[i]!]!;
-    out[i * 3] = encode(lum * (1 + q0 * E1[0] + q1 * E2[0]));
-    out[i * 3 + 1] = encode(lum * (1 + q0 * E1[1] + q1 * E2[1]));
-    out[i * 3 + 2] = encode(lum * (1 + q0 * E1[2] + q1 * E2[2]));
+    out[i * 3] = linearToSrgbByte(lum * (1 + q0 * E1[0] + q1 * E2[0]));
+    out[i * 3 + 1] = linearToSrgbByte(lum * (1 + q0 * E1[1] + q1 * E2[1]));
+    out[i * 3 + 2] = linearToSrgbByte(lum * (1 + q0 * E1[2] + q1 * E2[2]));
   }
   return out;
 }

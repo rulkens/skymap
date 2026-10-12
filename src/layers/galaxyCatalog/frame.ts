@@ -21,7 +21,8 @@ import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
-import { structureMemberCount } from '../../utils/structure/structureMemberCount';
+import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
+import { structureMemberCount } from './present/structureMemberCount';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -63,10 +64,12 @@ export function galaxyCatalogPlanner(
         memberCountMask = snapshot.visibleSourceMask;
         memberCountVersion = runtime.catalogsVersion;
         runtime.publish({
-          // Narrowed on the row's own tag, never a structural sniff — only the
-          // `structure` arm is countable.
+          // Narrowed on the row's own tag, never a structural sniff — only a
+          // `structure` arm of a cosmic category (one with galaxy members) is countable.
           structureMemberCount:
-            selectRow !== null && selectRow.type === 'structure'
+            selectRow !== null &&
+            selectRow.type === 'structure' &&
+            STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
               ? structureMemberCount(
                   selectRow,
                   (source) => runtime.catalogs.get(source),
@@ -84,7 +87,7 @@ export function galaxyCatalogPlanner(
         void runtime.biasCorrection.setMode(biasMode);
       }
 
-      // The once row's rig-wide anchor (mirrors `computeStarCut.ts`'s
+      // The once row's rig-wide anchor (mirrors `starCutInputs.ts`'s
       // views[0]-is-anchor contract): the widest face sizes the walk, the
       // first view's camera aims it — the disk walk touches the whole visible
       // catalog (~2.5M rows), so a per-view re-walk would be a 5× CPU cost

@@ -5,8 +5,7 @@
  * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
- * SplashContainer, and `DebugPanel` (memo-boundary, its sections mount their
- * own containers).
+ * SplashContainer, ArrivalVeilContainer, and DebugPanelContainer.
  * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -31,29 +30,31 @@
  * feeds, not App.
  */
 
+import { Suspense } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
-import InfoCardContainer from '../containers/InfoCardContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
 import NavigationPanelContainer from '../containers/NavigationPanelContainer';
-import SettingsPanelContainer from '../containers/SettingsPanelContainer';
 import TopBarContainer from '../containers/TopBarContainer';
-import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import SplashContainer from '../containers/SplashContainer';
+import LazyInfoCardContainer from '../containers/LazyInfoCardContainer';
+import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer';
+import LazyCommandPaletteContainer from '../containers/LazyCommandPaletteContainer';
+import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
+import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
-import DebugPanel from '../DebugPanel/DebugPanel';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
-import { selectTakeoverActive, selectTakeoverSource } from '../../state/takeover/selectors';
+import { selectTakeoverSource } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
   selectUiHidden,
@@ -83,12 +84,11 @@ export function App(): React.ReactElement {
 
   // A running guided tour hides the whole HUD stack and mounts its own overlay
   // (caption + nav); an exhibit does the same through `ExhibitOverlay`.
-  // HUD-hidden is DERIVED from `takeoverActive` (any takeover, tour or
-  // exhibit), not a separate `setUiHidden` write — see runTakeoverSaga's module
-  // header. The overlay and beat rail below stay gated on `tourActive`
-  // specifically: they are tour chrome, not generic takeover chrome.
+  // HUD-hidden is DERIVED from a running tour or exhibit, not a separate
+  // `setUiHidden` write. A registry clip is a takeover too but keeps the HUD:
+  // it leaves the scene alone, and the debug panel's Stop must stay in reach.
+  // The overlay and beat rail below stay gated on `tourActive` specifically.
   const tourActive = useAppSelector(selectTourActive);
-  const takeoverActive = useAppSelector(selectTakeoverActive);
 
   // Exhibit takeover mirrors the tour branch above: App resolves which
   // exhibit (if any) owns the scene and hands the id down, so
@@ -145,13 +145,16 @@ export function App(): React.ReactElement {
       <div
         className={cx(
           appStyles.uiStack,
-          (uiHidden || splashVisible || takeoverActive) && appStyles.uiStackHidden,
+          (uiHidden || splashVisible || tourActive || exhibitId !== null) &&
+            appStyles.uiStackHidden,
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >
         <LoadingBarContainer />
         <StatusBarContainer />
-        <InfoCardContainer />
+        <Suspense>
+          <LazyInfoCardContainer />
+        </Suspense>
         <ScaleBarContainer />
         {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
             direct child rather than joining a flex row. */}
@@ -159,21 +162,20 @@ export function App(): React.ReactElement {
         {/* Flex column anchored bottom-left. */}
         <div className={appStyles.leftStack}>
           <NavigationPanelContainer />
-          <SettingsPanelContainer />
+          <Suspense>
+            <LazySettingsPanelContainer />
+          </Suspense>
         </div>
         <TopBarContainer />
-        <CommandPaletteContainer />
+        <Suspense>
+          <LazyCommandPaletteContainer />
+        </Suspense>
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
-          <DebugPanel
-            slots={handleRef.current.debug.assetSlots}
-            timingService={handleRef.current.debug.timingService}
-            frameStats={handleRef.current.debug.frameStats}
-            passNames={handleRef.current.debug.passOverrides.allNames}
-            assetPriorities={handleRef.current.debug.assetPriorities}
-            engineHandleRef={handleRef}
-          />
+          <Suspense>
+            <LazyDebugPanelContainer engineHandleRef={handleRef} />
+          </Suspense>
         )}
       </div>
       {tourOverlay}
@@ -183,6 +185,7 @@ export function App(): React.ReactElement {
           just like TourNav and the beat counter. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
+      <ArrivalVeilContainer />
     </>
   );
 }

@@ -12,7 +12,6 @@ import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
-import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';
@@ -31,7 +30,6 @@ import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/dom
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
-import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
@@ -86,15 +84,17 @@ export const GPU_HANDLE_ROWS = [
   },
   // ── The 8 swap-chain-format rows (buildSwapRenderers.ts order) ──────────
   {
-    key: 'labelRenderer',
+    key: 'labelRendererCosmo',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, {
+      createLabelRenderer(deps.ctx, {
+        targetFormat: deps.ctx.format,
+        atlases: deps.fontAtlases,
         occludeAgainstScene: true,
       }),
   },
   {
-    key: 'markerLineRenderer',
+    key: 'markerLineRendererCosmo',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
@@ -122,21 +122,17 @@ export const GPU_HANDLE_ROWS = [
       createPickDebugOverlay(deps.ctx.device, deps.ctx.format),
   },
   {
-    key: 'foregroundLabelRenderer',
+    key: 'labelRendererNear',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(
-        deps.ctx,
-        deps.ctx.format,
-        deps.fontAtlases,
-        // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
-        // packs must be in those clip units too — the pair the vertex stage
-        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
-        { occludeAgainstScene: true, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
-      ),
+      createLabelRenderer(deps.ctx, {
+        targetFormat: deps.ctx.format,
+        atlases: deps.fontAtlases,
+        occludeAgainstScene: true,
+      }),
   },
   {
-    key: 'foregroundMarkerLineRenderer',
+    key: 'markerLineRendererNear',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
@@ -151,25 +147,14 @@ export const GPU_HANDLE_ROWS = [
   // `pickDepthFormat` — the same function the program sizes the target with —
   // plus that slab's depth convention.
   {
-    key: 'labelPickRenderer',
+    key: 'labelPickRendererCosmo',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelPickRenderer(deps.ctx.device, pickDepthFormat(COSMO), SLAB_REVERSED_Z[COSMO]!),
   },
   {
-    key: 'foregroundLabelPickRenderer',
+    key: 'labelPickRendererNear',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelPickRenderer(deps.ctx.device, pickDepthFormat(NEAR0), SLAB_REVERSED_Z[NEAR0]!),
-  },
-
-  {
-    key: 'structureMarkerRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStructureMarkerRenderer(
-        deps.ctx,
-        HDR_TARGET_FORMAT,
-        deps.fadeBgl,
-        SLAB_REVERSED_Z[COSMO]!,
-      ),
   },
   {
     key: 'horizonShellRenderer',

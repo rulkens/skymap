@@ -14,7 +14,6 @@ import { Panel } from '../common/Panel/Panel';
 import { APP_COMPOSITION } from '../../compositions/app';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import TierChipContainer from '../containers/TierChipContainer';
-import StructuresSectionContainer from '../containers/StructuresSectionContainer';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
 import EarthSectionContainer from '../containers/EarthSectionContainer';
@@ -47,7 +46,6 @@ export const SettingsPanel = memo(function SettingsPanel({
       {mainSections.map((Section, index) => (
         <Section key={index} />
       ))}
-      <StructuresSectionContainer />
       <LabelsAndGuidesSectionContainer layerRows={labelsAndGuidesRows} />
       <DisplaySectionContainer>
         <EarthSectionContainer />

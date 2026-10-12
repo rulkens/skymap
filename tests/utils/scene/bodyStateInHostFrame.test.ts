@@ -23,12 +23,10 @@ describe('bodyStateInHostFrame', () => {
     const host: BodyState = {
       positionMpc: [...HOST_POSITION_MPC],
       orientation: IDENTITY_MAT3 as Mat3,
-      meanAnomalyRad: 0,
     };
     const body: BodyState = {
       positionMpc: [...BODY_POSITION_MPC],
       orientation: bodyOrientation,
-      meanAnomalyRad: 1,
     };
 
     const { posM, rotM } = bodyStateInHostFrame(body, host);
@@ -53,12 +51,10 @@ describe('bodyStateInHostFrame', () => {
     const host: BodyState = {
       positionMpc: [...HOST_POSITION_MPC],
       orientation: hostOrientation,
-      meanAnomalyRad: 0,
     };
     const body: BodyState = {
       positionMpc: [...BODY_POSITION_MPC],
       orientation: IDENTITY_MAT3 as Mat3,
-      meanAnomalyRad: 1,
     };
 
     const { posM, rotM } = bodyStateInHostFrame(body, host);

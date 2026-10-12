@@ -153,7 +153,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // The caption's own seam: `sceneBodyLabels`'s world position made
   // camera-relative (`produceSceneBodyCaptions`'s two lines, which need the
   // settings/fade graph this harness has no use for) projected through
-  // `near0LabelProjection`'s rebased vp — the pair `foregroundLabelsPass`, the
+  // `near0LabelProjection`'s rebased vp — the pair `labelsNearPass`, the
   // leader line and `labelPickQuads` all consume.
   const caption = sceneBodyLabels(states).find((l) => l.id === `sceneBody-${bodyId}`)!;
   const camRelAnchor: Vec3 = [

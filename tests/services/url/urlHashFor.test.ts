@@ -34,7 +34,7 @@ function makeStructure(id: string): StructureInfo {
     type: 'structure',
     id,
     name: id,
-    category: 'cluster',
+    category: 'galaxy-cluster',
     worldPos: [0, 0, 0],
     featured: true,
     physicalRadiusMpc: 2,
@@ -68,9 +68,7 @@ describe('URL_HASH_FOR', () => {
       label: 'Moon',
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
-    const resolver = selectionResolverOver({
-      structures: { byId: () => null, byCategory: () => [] },
-    });
+    const resolver = selectionResolverOver({ byId: () => null, byCategory: () => [] });
     const id = URL_HASH_FOR.body(moon);
     expect(id).toBe('body-moon');
     expect(resolver.resolveFocusId(id as string)).toEqual({ type: 'body', id: 'moon' });

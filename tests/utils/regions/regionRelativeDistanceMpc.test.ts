@@ -14,7 +14,6 @@ const PC = SCALE_UNITS.PC_TO_MPC;
 const anchorState = (positionMpc: Vec3): BodyState => ({
   positionMpc,
   orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-  meanAnomalyRad: 0,
 });
 
 // A synthetic Galactic Centre pins the off-origin case by hand, not by the

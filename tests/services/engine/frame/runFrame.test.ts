@@ -1025,7 +1025,6 @@ describe('runFrame — the label-director wake fold', () => {
         renderTargets: { reconcile: vi.fn() },
         compositor: {},
         starCatalogRenderer: null,
-        structureMarkerRenderer: null,
         label3DRenderer: { setLabels: vi.fn() },
       },
       subsystems: {
@@ -1094,7 +1093,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
         renderTargets: { reconcile: vi.fn() },
         compositor: {},
         starCatalogRenderer: null,
-        structureMarkerRenderer: null,
         label3DRenderer: { setLabels: vi.fn() },
       },
       subsystems: {

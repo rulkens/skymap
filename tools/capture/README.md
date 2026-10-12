@@ -30,11 +30,10 @@ from its first capturable copy.
 
 ## Exhibit cards
 
-A `kind: 'exhibit'` card (`cosmicFlows`, `cosmicWeb`, `solarSystem`, `observableUniverse`) is shot
-without running its takeover — no `openExhibit`, no fly-in, no `#exhibit=` boot. Its
-`exhibitRegistry` entry already carries what a shot needs: `settings` is merged in, and `pose`
-frames it, so no `capture` override is needed unless a card wants to frame it differently. A
-`capture.pose` on the card still wins over the registry's.
+A `kind: 'exhibit'` card (`cosmicFlows`, `cosmicWeb`, `solarSystem`, `observableUniverse`) boots on
+`#exhibit=<id>` — the same arrival a deep link gets — so its `exhibitRegistry` entry's `settings`
+and `pose` apply themselves before the shot is taken; no `capture` override is needed unless a
+card wants to frame it differently. A `capture.pose` on the card is applied afterward and wins.
 
 **Decluttering splits in two, and which half runs is the difference between the two card kinds.**
 `labelDeclutterActions` (every label, plus the selection passes) runs for every shot — no
@@ -54,7 +53,7 @@ Some cards carry a `capture` override on their `featuredTabs.ts` entry:
 
 | field             | what it does                                                                                                                                                                                               |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pose`            | Re-applied after the focus fly-in settles. Fly to the vantage in the app and press `l` to log one in the units it takes (Mpc, radians).                                                                    |
+| `pose`            | Applied once boot settles — the boot commits in place, so this lands and stays. Fly to the vantage in the app and press `l` to log one in the units it takes (Mpc, radians).                               |
 | `phaseDeg`        | Frames a focused body lit to this phase instead, computing `pose` from the body's place at `t` — 0 full, 180 new, under 180 lit on the right and over 180 on the left. The Solar System cards share `315`. |
 | `t`               | Pins the lit instant (the same string `#t=` takes).                                                                                                                                                        |
 | `keepFocus`       | Leaves the selection (focus dim) in the shot.                                                                                                                                                              |
@@ -64,8 +63,6 @@ Some cards carry a `capture` override on their `featuredTabs.ts` entry:
 
 ## Landmines
 
-- **The fly-in overwrites an early pose.** A focus always re-settles the camera after landing, so
-  `capture.pose` must be applied — and re-verified — AFTER the initial settle, never before.
 - **Selection chrome is hidden via `disabledPasses`,** not a dedicated capture mode: three render
   passes (`CAPTURE_HIDDEN_PASSES`) draw selection rings, and the tool disables them by name
   through the same debug-panel mechanism a developer would click.

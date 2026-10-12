@@ -11,6 +11,7 @@
 
 import { isPerfMode } from '../../utils/url/isPerfMode';
 import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
+import { cpuSpans } from '../../utils/perf/cpuSpans';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { clearSelection } from '../selection/selectionSlice';
@@ -51,14 +52,14 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
 // the arm is committed as authored — re-spelling a body-parented pose on the
 // world arm lands the right coordinates in the wrong frame (wrong host body,
 // wrong atmosphere).
-function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+function setPose(store: AppStore, engine: EngineHandle, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
   }
   store.dispatch(cancelCameraTween());
   store.dispatch(commitCameraPose(pose.framed));
   store.dispatch(setAutoRotate({ active: true, rate: pose.rate ?? PERF_AUTO_ROTATE_RATE }));
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  return engine.nextFrame();
 }
 
 function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSample[]> {
@@ -97,6 +98,24 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
   });
 }
 
+// A frame's spans are whatever `cpuSpans` summed between two `nextFrame`
+// resolutions; `requestRender` pumps the loop for the same reason as above.
+async function collectCpu(engine: EngineHandle, frames: number): Promise<Record<string, number>[]> {
+  const out: Record<string, number>[] = [];
+  cpuSpans.on = true;
+  try {
+    for (let i = 0; i < PERF_WARMUP_FRAMES + frames; i++) {
+      cpuSpans.ms.clear();
+      engine.debug.requestRender();
+      await engine.nextFrame();
+      if (i >= PERF_WARMUP_FRAMES) out.push(Object.fromEntries(cpuSpans.ms));
+    }
+  } finally {
+    cpuSpans.on = false;
+  }
+  return out;
+}
+
 // A FRESH `whenStablyReady` rather than a per-source wait: the same engine-ready
 // + loads-settled debounce that gates boot also detects a tier reload completing.
 function setTier(store: AppStore, tier: Tier): Promise<void> {
@@ -107,15 +126,13 @@ function setTier(store: AppStore, tier: Tier): Promise<void> {
 export function installPerfHook(store: AppStore, engine: EngineHandle): void {
   if (!isPerfMode()) return;
   const hook: SkymapPerfHook = {
-    ready: whenStablyReady(store),
-    setPose: (pose: PerfPose) => setPose(store, pose),
+    setPose: (pose: PerfPose) => setPose(store, engine, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
+    collectCpu: (frames: number) => collectCpu(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
     memory: (): MemorySnapshot => ({ gpu: engine.debug.gpuMemory(), jsHeapBytes: jsHeapBytes() }),
-    dispatch: store.dispatch,
-    getState: () => store.getState(),
     slotGroups: SLOT_GROUPS,
   };
   (window as PerfWindow).__skymapPerf = hook;

@@ -14,7 +14,7 @@ import { cubeSphereMesh } from '../../../../src/utils/math/cubeSphereMesh';
  * Sub-solar longitude at 14:00 UTC: the Sun crosses the Greenwich meridian near
  * 12:00 UTC and the sub-solar point moves 15°/hour westward, so at 14:00 it sits
  * near -30°. Cross-checked via sidereal time: GMST ≈ 149.3°, the Sun's apparent
- * right ascension ≈ 120.6° (ecliptic longitude ~118.5°, obliquity 23.44°), so the
+ * right ascension ≈ 120.6° (ecliptic longitude ~118.5°, obliquity 23.439°), so the
  * sub-solar geographic longitude = RA - GMST ≈ -28.7°. Sub-solar latitude ≈ +20.5°
  * (late-July solar declination). Denmark at (10°E, 56°N) is ~39° of longitude east
  * of that meridian — well inside the 90° day hemisphere — so it MUST be lit.

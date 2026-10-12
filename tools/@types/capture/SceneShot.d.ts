@@ -1,4 +1,5 @@
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { ExhibitId } from '../../../src/@types/exhibits/ExhibitId';
 import type { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 
 /**
@@ -7,13 +8,15 @@ import type { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAct
  * their own data onto this.
  */
 export type SceneShot = {
-  /** `#focus=` id to fly to; omit to boot with no selection (a view's own frame). */
+  /** `#focus=` id to open on; omit to boot with no selection (a view's own frame). */
   focusId?: string;
-  /** Merged in before the pose settles, e.g. a view's `settings` snapshot. */
+  /** `#exhibit=` id to open on arrival — its registry settings and pose apply themselves. */
+  exhibitId?: ExhibitId;
+  /** Merged in on top of whatever the boot (plain, `#focus=` or `#exhibit=`) already applied. */
   settings?: Parameters<typeof mergeSnapshot>[0];
   /** ISO instant, pinned via `#t=` (the same string `#t=` takes). */
   t: string;
-  /** Re-applied once the fly-in settles. Exclusive with `phaseDeg`. */
+  /** Applied once arrival settles, and stays. Exclusive with `phaseDeg`. */
   pose?: CameraPose;
   /** Frame a focused body at this phase instead; `bodyPhasePose` defines the turn. */
   phaseDeg?: number;

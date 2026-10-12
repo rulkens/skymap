@@ -7,6 +7,7 @@ import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMesh
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
+import { compressBrightness } from '../../../../src/utils/color/compressBrightness';
 
 // The caller passes the per-frame body snapshot; these tests use the J2000
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
@@ -52,10 +53,10 @@ describe('sceneBodyLabels', () => {
     expect(earthLater.worldPos).not.toEqual(earthNow.worldPos);
   });
 
-  it('tints each label from its body record (albedo / Earth blue)', () => {
+  it('tints each label from its body record (lifted albedo / Earth blue)', () => {
     const moon = SCENE_PLANETS.find((planet) => planet.id === 'moon')!;
     const moonLabel = labels.find((label) => label.id === 'sceneBody-moon')!;
-    expect(moonLabel.color).toEqual([...moon.albedo, 1]);
+    expect(moonLabel.color).toEqual([...compressBrightness(moon.albedo, 0.3), 1]);
     const earthLabel = labels.find((label) => label.id === 'sceneBody-earth')!;
     expect(earthLabel.color).toEqual([0.5, 0.72, 1, 1]);
   });

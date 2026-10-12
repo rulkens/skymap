@@ -8,13 +8,14 @@
  * clip-channel split; the shared fade-band / occlusion / registry-ramp
  * mechanics stay covered here, once, on core's bodies.
  *
- * Cases moved from `foregroundLabelsPass.test.ts` (Task 4, spec §12): the
+ * Cases moved from `labelsNearPass.test.ts` (Task 4, spec §12): the
  * producer emits EVERY candidate caption every frame — declutter and the
  * temporal envelope moved to the director — so each case now reads the
  * candidate's `fadeAlpha` (the producer's TARGET) instead of asking whether
  * the id survived into the drawn/decluttered set.
  */
 
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
@@ -33,6 +34,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrA
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
@@ -60,7 +62,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, nowMs: 0 },
+    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
     cam: { distance },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -72,7 +74,7 @@ function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
  * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
  * per-row cases pass the bits separately, which is the axis those rows buy.
- * Moved verbatim from `foregroundLabelsPass.test.ts`'s `makeState`.
+ * Moved verbatim from `labelsNearPass.test.ts`'s `makeState`.
  *
  * `starCatalogs` is a fixed, uninteresting fixture: `sceneOccluderBodies`
  * reads it (for the star-sphere occluder set), but no case here inspects a
@@ -315,7 +317,7 @@ describe('produceSceneBodyCaptions', () => {
       },
     } as unknown as EngineState;
     const ctx = {
-      snapshot: { focusBlend: 0, nowMs: 0 },
+      snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS },
       cam: { distance: 5e-4 },
       drawCamPos: camPos,
     } as unknown as FrameView;
@@ -396,5 +398,29 @@ describe('produceSceneBodyCaptions occlude weight', () => {
     // Earth's own caption is anchored at Earth's centre — it must never be
     // occluded by the body it names.
     expect(occludeWeightOf(camPos, EARTH_LABEL_ID)).toBe(0);
+  });
+});
+
+describe('produceSceneBodyCaptions focus pick', () => {
+  it('outside the focused sphere a caption draws but carries no pick; inside and at rest it keeps it', () => {
+    const earth = worldPosOf(EARTH_LABEL_ID);
+    const ctx = makeCtx(earth);
+    const focus: FocusUniformsValue = {
+      center: earth,
+      apparentRadiusMpc: 1e-13,
+      physicalRadiusMpc: 1e-13,
+      blend: 1,
+    };
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const pickOf = (labels: readonly Label2D[], id: string) =>
+      labels.find((l) => l.id === id)!.pickId;
+    const venus = 'sceneBody-venus';
+
+    const rest = produceSceneBodyCaptions(makeState(), ctx).labels;
+    expect(pickOf(rest, venus)).toBeDefined();
+
+    const under = produceSceneBodyCaptions(makeState(), focused).labels;
+    expect(pickOf(under, EARTH_LABEL_ID)).toBeDefined();
+    expect(pickOf(under, venus)).toBeUndefined();
   });
 });

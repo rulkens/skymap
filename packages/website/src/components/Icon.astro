@@ -1,0 +1,16 @@
+---
+/*
+ * Icon — one of the site's own line drawings (data/icons.ts), always beside a
+ * text label, so it is hidden from assistive technology. Sized and stroked by
+ * `.glyph` in styles/site.css, next to the ring it stands in for; `data-icon`
+ * lets that sheet set one drawing apart (the view mark is small and dim).
+ */
+import type { IconName } from '../@types/IconName';
+import { ICONS } from '../data/icons';
+
+type Props = { name: IconName };
+
+const { name } = Astro.props;
+---
+
+<svg class="glyph" data-icon={name} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d={ICONS[name]}></path></svg>

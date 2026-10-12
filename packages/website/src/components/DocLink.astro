@@ -1,0 +1,13 @@
+---
+/* DocLink — a Markdown link on a docs page. A path that starts at the site's root (`/docs/guide/time/`) is written without the base and gets it here. */
+import type { HTMLAttributes } from 'astro/types';
+
+import { sitePath } from '../utils/sitePath';
+
+type Props = HTMLAttributes<'a'>;
+
+const { href, ...rest } = Astro.props;
+const to = typeof href === 'string' && href.startsWith('/') ? sitePath(href) : href;
+---
+
+<a href={to} {...rest}><slot /></a>

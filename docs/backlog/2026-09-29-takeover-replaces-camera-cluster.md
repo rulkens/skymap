@@ -4,7 +4,7 @@
 
 ## What is true today
 
-- `src/state/takeover/runTakeoverSaga.ts:29` —
+- `src/state/takeover/withSceneSnapshotSaga.ts:23` —
   `yield* put(mergeSnapshot({ camera: { fovDeg: DEFAULT_FOV_DEG } }));`
   is the only field the takeover bracket sets on `camera` before running the
   body.
@@ -17,7 +17,7 @@
   intentional ("replace each cluster the snapshot carries, leave the rest
   untouched") for the tour-restore use case, where the snapshot always carries
   every field of a cluster it touches.
-- `runTakeoverSaga`'s patch is `{ camera: { fovDeg: DEFAULT_FOV_DEG } }` —
+- `withSceneSnapshotSaga`'s patch is `{ camera: { fovDeg: DEFAULT_FOV_DEG } }` —
   a partial `camera` cluster with only `fovDeg` set. Given the merge
   semantics above, this call replaces `settings.camera` with an object that
   has only `fovDeg`; every other current field of `CameraSettings` is
@@ -26,7 +26,7 @@
 So any field added to `CameraSettings` after this call was written is wiped
 to `undefined` for the duration of every takeover (tour or exhibit), unless
 that field happens to also be reasserted somewhere else in the same body.
-The comment in `runTakeoverSaga.ts` describes this as merging the FOV back
+The comment in `withSceneSnapshotSaga.ts` describes this as merging the FOV back
 "after this" for a body with different needs, but doesn't address that the
 call already destroyed the rest of `camera` before the body runs.
 

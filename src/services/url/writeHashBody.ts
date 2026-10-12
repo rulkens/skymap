@@ -58,9 +58,9 @@
  *
  * ### `mode`
  *
- * `'replace'` is for exactly one caller: the write saga's first settled
- * publish after a boot read that applied a non-empty URL, canonicalizing an
- * arrival (see `hashArrivalApplied`) in place instead of pushing over it.
+ * `'replace'` is for the boot arrival: every publish the write saga makes
+ * until the arrival has settled, and the one that settles it, canonicalize the
+ * link the visitor followed in place instead of pushing over it.
  */
 
 import { readHashBody } from './readHashBody';

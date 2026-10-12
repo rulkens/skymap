@@ -1,0 +1,200 @@
+---
+/*
+ * ShotCaption — a picture's label, set as a museum sets an object's: a rule
+ * with an arm that rises to the picture, the title, one sentence, then what is
+ * data and what is drawn, the credit for third-party imagery in frame, and the
+ * address the picture was taken at. Every picture being an address is the
+ * site's honesty device. It is set quietly, as a caption: nothing in it is
+ * brighter than the page's body text. It lays itself out by the room it is
+ * given: stacked under a narrow picture, in two columns along the foot of a wide one.
+ * `label` gives the words for a picture that is not in the manifest and is
+ * not a view of the app: it has no address to open.
+ */
+import ViewLink from './ViewLink.astro';
+import { appLink } from '../data/appLink';
+import { siteShot } from '../data/siteShot';
+import type { SiteShot } from '../@types/SiteShot';
+
+type Props = { id?: string; label?: Pick<SiteShot, 'title' | 'caption' | 'credit'>; open?: boolean };
+
+const { id, label, open = true } = Astro.props;
+const row = id === undefined ? undefined : siteShot(id);
+const shot: Pick<SiteShot, 'title' | 'caption' | 'drawn' | 'credit'> | undefined = row ?? label;
+if (!shot) throw new Error('ShotCaption needs the id of a shot or a label');
+// The view a manifest picture was taken at, where the label is to open it.
+const view = row && open ? row : undefined;
+const notes = Boolean(shot.drawn || shot.credit);
+---
+
+<div class="caption small">
+  <div class="plate">
+    <p class:list={['what', { alone: !notes }]}>
+      <strong>{shot.title}</strong>
+      {shot.caption && <span>{shot.caption}</span>}
+    </p>
+    {
+      notes && (
+        <div class="notes">
+          {shot.drawn && (
+            <dl>
+              <dt>Data and drawing</dt>
+              <dd>{shot.drawn}</dd>
+            </dl>
+          )}
+          {shot.credit && (
+            <dl>
+              <dt>Credit</dt>
+              <dd>{shot.credit}.</dd>
+            </dl>
+          )}
+        </div>
+      )
+    }
+    {
+      view &&
+        (view.link.startsWith('tour=') ? (
+          <ViewLink href={appLink(view.link, view.query)}>Start the tour</ViewLink>
+        ) : (
+          <ViewLink href={appLink(view.link, view.query)} />
+        ))
+    }
+    {!row && <div class="room" />}
+  </div>
+</div>
+
+<style>
+  .caption {
+    position: relative;
+    z-index: 0;
+    container-type: inline-size;
+    width: 100%;
+    margin: 0;
+    /* A size under the page's small text: the label is the quietest words on the page. */
+    font-size: 0.875rem;
+    text-align: left;
+  }
+
+  /* The rule is as faint as the page's dividers; the label stands where its picture has faded to black. */
+  .plate {
+    --rule: rgb(232 238 255 / 0.2);
+    position: relative;
+    display: grid;
+    gap: 0.375rem 2.5rem;
+    max-width: 34rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--rule);
+    line-height: 1.4;
+  }
+
+  /* The arm: the rule turns up at its left end and reaches for the picture above it. */
+  .plate::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    height: 0.5rem;
+    border-left: 1px solid var(--rule);
+  }
+
+  p,
+  dl,
+  dd {
+    max-width: none;
+    margin: 0;
+  }
+
+  strong {
+    display: block;
+    font-weight: inherit;
+    color: var(--site-text-muted);
+  }
+
+  .what,
+  dd {
+    color: var(--site-text-dim);
+  }
+
+  dt {
+    color: var(--site-text-faint);
+  }
+
+  .notes {
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  /* A label with no address keeps that line all the same: a docs figure sets "Enlarge" at its end (FigureFrame). */
+  .room {
+    height: 2.125rem;
+  }
+
+  /* The control keeps its 44px for the thumb; the margin takes back what the row of text does not need. */
+  .plate > :global(.ring) {
+    justify-self: start;
+    margin-block: 0 -0.625rem;
+    font-size: inherit;
+  }
+
+  /*
+   * In two columns, the label takes the page grid's: `--cols` is how many of them its place spans
+   * (styles/site.css). The title has five twelfths of those, to the nearest line, with the address under it;
+   * what is data and the credit stand beside them, one under the other. The second row takes whatever height
+   * the notes need, so the address stays under the title.
+   */
+  @container (min-width: 34rem) {
+    .plate {
+      --what: calc(var(--cols, 12) * 5 / 12);
+      grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+      grid-template-rows: auto 1fr;
+      gap: 0.25rem var(--col-gap);
+      max-width: none;
+    }
+
+    .what {
+      grid-area: 1 / 1 / 2 / span var(--what);
+    }
+
+    .notes {
+      grid-area: 1 / calc(var(--what) + 1) / span 2 / -1;
+      align-content: start;
+      gap: 0.25rem;
+    }
+
+    .plate > :global(.ring),
+    .room {
+      grid-area: 2 / 1 / 3 / span var(--what);
+    }
+
+    .plate > :global(.ring) {
+      margin-block: -0.625rem;
+    }
+
+    .what.alone {
+      grid-column: 1 / -1;
+    }
+
+    /*
+     * A docs figure sets "Enlarge" at the right end of the label's last line (FigureFrame), so the address
+     * takes a line of its own there, under both columns.
+     */
+    :global([data-embed] figcaption) .what:not(.alone) {
+      grid-row: 1 / span 2;
+    }
+
+    :global([data-embed] figcaption) .plate > :global(.ring),
+    :global([data-embed] figcaption) .room {
+      grid-area: 3 / 1 / 4 / -1;
+    }
+  }
+
+  @container (min-width: 58rem) {
+    .plate {
+      --what: 4;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: 8.5rem 1fr;
+    }
+  }
+</style>

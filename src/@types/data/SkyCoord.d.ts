@@ -1,8 +1,8 @@
 /**
  * SkyCoord — RA hours, declination degrees, distance Mpc.
  *
- * Base shape used by `data/seeds/structure_anchors.seed.json` entries,
- * parsed by `parseStructureSeed.ts` and consumed by `buildStructures.ts`.
+ * Position shape `raDecDistToEqCart` reads. Seed rows carry unit-tagged
+ * `Length`s; callers convert with `lengthToMpc` before building one.
  * RA in HOURS (not degrees) follows the astronomical convention for
  * catalogue tables; the standard
  * `raHours * 15 * π/180` conversion to radians lives in

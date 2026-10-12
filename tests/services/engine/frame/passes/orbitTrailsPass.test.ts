@@ -31,12 +31,11 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
 import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
-import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import { keplerianPositionMpc } from '../../../../../src/utils/orbit/keplerianPositionMpc';
-import { addVec3 } from '../../../../../src/utils/math/addVec3';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -76,16 +75,35 @@ vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
 }));
 import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
 
+// Lets one test hand the pass a snapshot that differs from raw Kepler; unset, the
+// real map passes through untouched.
+const snapshotOverride = vi.hoisted(() => ({ states: undefined as unknown }));
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../../../../../src/services/engine/frame/sceneBodyStates')
+    >();
+  return {
+    sceneBodyStates: ((...args: Parameters<typeof actual.sceneBodyStates>) =>
+      (snapshotOverride.states as ReturnType<typeof actual.sceneBodyStates> | undefined) ??
+      actual.sceneBodyStates(...args)) as typeof actual.sceneBodyStates,
+  };
+});
+
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
 // The J2000 oracle `SCENE_ORBIT_CONICS` used to provide, hand-derived here with
-// its own two helpers (`keplerianEllipse` for the ellipse, `keplerianPositionMpc`
-// to place a focus that is itself an orbiting body) so the expected values never
-// come from the layer under test.
-function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
+// its own helpers (`keplerianEllipse` for the ellipse, the snapshot body less its
+// raw Kepler offset for the focus the trail anchors on) so the expected values
+// never come from the layer under test.
+function conicAtJ2000(el: OrbitalElements) {
   const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(el);
+  const bodyMpc = deriveBodyStates(CONST_J2000).get(el.id)!.positionMpc;
+  const keplerMpc = keplerianPositionMpc(el);
   return {
-    centerMpc: addVec3(focusPositionMpc, centerOffsetMpc),
+    centerMpc: [0, 1, 2].map(
+      (i) => bodyMpc[i]! - keplerMpc[i]! + centerOffsetMpc[i]!,
+    ) as unknown as Vec3,
     semiMajorMpc,
     semiMinorMpc,
     eccentricity: el.eccentricity,
@@ -94,14 +112,9 @@ function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
   };
 }
 
-const SUN_POS_MPC = SCENE_ANCHORS.find((a) => a.id === 'sun')!.positionMpc;
-const EARTH_POS_MPC = addVec3(
-  SUN_POS_MPC,
-  keplerianPositionMpc(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'earth')!),
-);
 // Mercury is CORE_TRAIL_ELEMENTS[0] — the first ORBITAL_ELEMENTS row, unfiltered.
-const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!, SUN_POS_MPC);
-const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!, EARTH_POS_MPC);
+const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!);
+const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!);
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -205,6 +218,22 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
     viewportPx: [1280, 720],
     sampledDepth: { view: DEPTH_VIEW_STUB, row: sampledRow },
   };
+}
+
+/** Camera-at-`eye` frame at `simDays`, no body pose, deep-zoom distance. */
+function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
+  return {
+    snapshot: {
+      simDays,
+      focusBlend: 0,
+      nowMs: 0,
+      renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+    },
+    bodyPose: () => null,
+    drawCamPos: eye,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+    cam: { distance: 1e-13 },
+  } as unknown as FrameView;
 }
 
 function makeRendererSpy() {
@@ -583,6 +612,143 @@ describe('orbitTrailsPass.draw', () => {
       moon[2] - j2000Moon.centerMpc[2],
     );
     expect(drift).toBeGreaterThan(1e-13);
+  });
+
+  it('trail follows a snapshot position that differs from raw Kepler', () => {
+    const simDays = CONST_J2000 + 100;
+    const real = deriveBodyStates(simDays);
+    const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonState = real.get('moon')!;
+    // 1e6 km off raw Kepler, asymmetric so a dropped axis shows.
+    const shiftMpc = [1e6, -4e5, 2.5e5].map((km) => km * SCALE_UNITS.KM_TO_MPC);
+    const stubbed: Vec3 = [
+      moonState.positionMpc[0] + shiftMpc[0]!,
+      moonState.positionMpc[1] + shiftMpc[1]!,
+      moonState.positionMpc[2] + shiftMpc[2]!,
+    ];
+    snapshotOverride.states = new Map(real).set('moon', { ...moonState, positionMpc: stubbed });
+    try {
+      // Eye 100 km off the body. The basis is packed in f32, whose ulp at the Moon's
+      // ~4e5 km semi-major axis is 30 m, so 0.1 km is the tightest honest bound; the
+      // injected 1e6 km offset is four orders above it.
+      const eye: Vec3 = [stubbed[0] + 100 * SCALE_UNITS.KM_TO_MPC, stubbed[1], stubbed[2]];
+      const ctx = makeEyeCtx(simDays, eye);
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [moonEl],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      const { eccentricity, meanAnomalyRad } = propagateElements(moonEl, simDays);
+      const eAnom = eccentricAnomalyFromMean(meanAnomalyRad, eccentricity);
+      const [cosE, sinE] = [Math.cos(eAnom), Math.sin(eAnom)];
+      const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+      for (let axis = 0; axis < 3; axis++) {
+        const bodyKm =
+          staging[34 + axis]! + staging[38 + axis]! * cosE + staging[42 + axis]! * sinE;
+        expect(Math.abs(bodyKm - (stubbed[axis]! - eye[axis]!) * kmPerMpc)).toBeLessThan(0.1);
+      }
+    } finally {
+      snapshotOverride.states = undefined;
+    }
+  });
+
+  it('orbitTrailsPass reads the snapshot orbit, not its own propagation', () => {
+    // A snapshot whose orbit is 1 rad ahead of the row's own propagation, body on
+    // that orbit. Re-propagating would translate the centre by the 1 rad chord
+    // (~3.7e5 km); reading the snapshot keeps it at focus + the ellipse offset.
+    const simDays = CONST_J2000 + 100;
+    const real = deriveBodyStates(simDays);
+    const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const propagated = propagateElements(moonEl, simDays);
+    const stubbedOrbit = { ...propagated, meanAnomalyRad: propagated.meanAnomalyRad + 1 };
+    const focusMpc = real.get(moonEl.focusId)!.positionMpc;
+    const kepler = keplerianPositionMpc(stubbedOrbit);
+    const bodyMpc: Vec3 = [
+      focusMpc[0] + kepler[0],
+      focusMpc[1] + kepler[1],
+      focusMpc[2] + kepler[2],
+    ];
+    snapshotOverride.states = new Map(real).set('moon', {
+      ...real.get('moon')!,
+      positionMpc: bodyMpc,
+      orbit: stubbedOrbit,
+    });
+    try {
+      const offset = keplerianEllipse(stubbedOrbit).centerOffsetMpc;
+      const expectedCentre: Vec3 = [
+        focusMpc[0] + offset[0],
+        focusMpc[1] + offset[1],
+        focusMpc[2] + offset[2],
+      ];
+      // Eye 100 km off the expected centre: the packed f32 centre is then ~100 km,
+      // whose ulp sits far under the 1 m bound.
+      const eye: Vec3 = [
+        expectedCentre[0] + 100 * SCALE_UNITS.KM_TO_MPC,
+        expectedCentre[1],
+        expectedCentre[2],
+      ];
+      const ctx = makeEyeCtx(simDays, eye);
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [moonEl],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+      for (let axis = 0; axis < 3; axis++) {
+        const expectedKm = (expectedCentre[axis]! - eye[axis]!) * kmPerMpc;
+        expect(Math.abs(staging[34 + axis]! - expectedKm)).toBeLessThan(1e-3);
+      }
+      expect(staging[16]).toBe(Math.fround(stubbedOrbit.meanAnomalyRad));
+    } finally {
+      snapshotOverride.states = undefined;
+    }
+  });
+
+  it('Mimas and Titan trails stay centred on Saturn at the Voyager 1 Saturn flyby', () => {
+    // 1980-11-12 23:46 UT. The ΔM channel rides `orbit`, so the trail centre moves off
+    // Saturn + centerOffset only by the Cartesian residual (measured ≤ 0.058 a, Mimas).
+    // The body-on-trail check reads f32 staging, whose ulp at a ≈ 1.2e6 km is ~0.1 km:
+    // 5e-7·a is the honest bound there, not metres.
+    const simDays = 2_444_556.490277778;
+    const states = deriveBodyStates(simDays);
+    const saturnMpc = states.get('saturn')!.positionMpc;
+    const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+    for (const id of ['mimas', 'titan']) {
+      const el = CORE_TRAIL_ELEMENTS.find((e) => e.id === id)!;
+      const { positionMpc: bodyMpc, orbit } = states.get(id)!;
+      const semiMajorKm = orbit!.semiMajorMpc * kmPerMpc;
+      const offset = keplerianEllipse(orbit!).centerOffsetMpc;
+      const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
+      const ctx = makeEyeCtx(simDays, eye);
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [el],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      const centreOff = [0, 1, 2].map(
+        (a) => staging[34 + a]! - (saturnMpc[a]! + offset[a]! - eye[a]!) * kmPerMpc,
+      );
+      expect(Math.hypot(...centreOff) / semiMajorKm, id).toBeLessThan(0.06);
+
+      const eAnom = eccentricAnomalyFromMean(orbit!.meanAnomalyRad, orbit!.eccentricity);
+      const bodyOff = [0, 1, 2].map(
+        (a) =>
+          staging[34 + a]! +
+          staging[38 + a]! * Math.cos(eAnom) +
+          staging[42 + a]! * Math.sin(eAnom) -
+          (bodyMpc[a]! - eye[a]!) * kmPerMpc,
+      );
+      expect(Math.hypot(...bodyOff), id).toBeLessThan(5e-7 * semiMajorKm);
+    }
   });
 
   it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {

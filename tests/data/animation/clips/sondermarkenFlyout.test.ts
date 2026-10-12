@@ -81,7 +81,7 @@ describe('sondermarkenFlyout', () => {
   });
 
   it('ends the tilt looking straight down, from above the ground', () => {
-    // aimAlong resolves to angles at play time, as watchClipSaga does it.
+    // aimAlong resolves to angles at play time, as clipBodySaga does it.
     const start = clip.data.start as CameraPose;
     const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
     const pose = evaluateClip(resolved, 30, BASIS);

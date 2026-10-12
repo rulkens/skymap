@@ -16,7 +16,9 @@ what does each pass cost, is a pass fragment- or vertex-bound, what does a catal
    ```
 
    Without `--url` the harness assumes 5173 — which in a worktree may be a _different branch's_
-   server. If your numbers make no sense, check which server you actually measured.
+   server. If your numbers make no sense, check which server you actually measured. The harness
+   also prints a warning on stderr when the server reports a different checkout than the one the
+   tool runs from.
 
 2. **WebGPU `timestamp-query`** — present on Chrome/Metal (macOS dev machines). If the adapter
    lacks it the hook rejects loudly rather than returning zeros.
@@ -89,29 +91,26 @@ Two ways to author one:
 A body- or site-arm scenario is parented to its body, so it frames the same ground whatever the
 sim clock reads — the harness sets no time and none is needed.
 
-## CPU-side star-cut bench (`starCutCpuBench.mts`)
+## CPU frame cost (`npm run perf:cpu`)
 
-The GPU harness above measures render-pass time and is blind to the star renderer's **CPU**
-per-frame work (octree cut + LOD-fade partition + NodeParams pack). `starCutCpuBench.mts` drives
-that path headless in Node against the real large-tier bin, and A/Bs the octree walk with the
-off-screen frustum prune OFF vs ON — calling the same production `walkStarOctreeCut`, so the
-number is what the app ships.
+The GPU harness above is blind to **main-thread** cost: it times render passes, not the JS that
+fills them. `npm run perf:cpu` boots the same `?perf` page, sets each scenario's pose, and
+prints main-thread ms per frame row (`plan:` / `compute:` / `draw:` / `labels:`) as the mean over the sampled frames.
 
 ```bash
-npx tsx tools/perf/starCutCpuBench.mts               # fetches stars-large.bin from R2 into .cache/
-npx tsx tools/perf/starCutCpuBench.mts --bin foo.gz  # or point at a local gzipped bin
+npm run perf:cpu -- --url http://localhost:5174 --scenario star-field
 ```
 
-Reads: `walkOff` vs `walkOn` is the prune's walk-time win; `cutOff→cutOn` is the node-count shrink;
-`TOTAL(on)` is walk+partition+pack for the pruned path. Node runs ~1.5–2× faster than the browser,
-so treat the **deltas and cut-size ratios** as the portable results, not the absolute ms. The
-`.cache/` bin is a per-machine fetch cache (gitignored), not a source asset.
+Flags: `--url` (default :5173), `--scenario` (repeatable; default all), `--frames` (default 120),
+every row prints, slowest first. The clock ticks in 0.1 ms steps, so only a mean over many
+frames resolves a row below that.
+Headless Chromium on a dev box runs the same JS several times faster than a phone.
 
 ## Gotchas
 
 - **504 "Outdated Optimize Dep" → boot timeout.** A long-running Vite server whose dependency
   graph changed underneath it (branch switch, new imports) serves 504s to the headless page; the
-  perf hook never installs and the harness times out waiting for `__skymapPerf`. Fix: restart the
+  base hook never installs and the harness times out waiting for `__skymap`. Fix: restart the
   dev server. Diagnose with `.superpowers/sdd/probeBoot.ts`-style console dumping if in doubt.
 - **The harness measures whatever the server serves.** After editing renderer/shader code, make
   sure the dev server picked it up (HMR or restart) before trusting a comparison run.
@@ -120,7 +119,7 @@ so treat the **deltas and cut-size ratios** as the portable results, not the abs
 ## Architecture (for extending)
 
 The browser side is `window.__skymapPerf` (`src/state/perf/installPerfHook.ts`, gated behind
-`?perf`), a deliberately tiny seam: `ready`, `setPose`, `setStrategy`, `collectTimings`,
+`?perf`; boot waits on the always-on `window.__skymap`), a deliberately tiny seam: `setPose`, `setStrategy`, `collectTimings`, `collectCpu`,
 `setTier`, `getTier`, `slotGroups`, `memory`. The Node side (`tools/perf/measurePerf.ts`) may import
 Playwright, `tools/utils/*`, and **type-only** `src/@types/*` — never renderer/shader/
 frameProgram modules. Formatters are pure `(report, palette)` functions in `tools/utils/perf/`

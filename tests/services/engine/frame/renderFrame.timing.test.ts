@@ -341,11 +341,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
       viewRig: 'mono',
       gpu: {
-        labelRenderer: null,
-        markerLineRenderer: null,
+        labelRendererCosmo: null,
+        markerLineRendererCosmo: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
-        structureMarkerRenderer: null,
         // Near-field handles null → the (hdr, NEAR0) render, the
         // foreground:0 render, and the NEAR0 caption render all select
         // nothing, and the foreground:0→swap composite is
@@ -361,7 +360,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // atmosphereSkyView compute step early-outs, so it bills no work.
         atmosphereShellRenderer: null,
         orbitTrailRenderer: null,
-        foregroundLabelRenderer: null,
+        labelRendererNear: null,
         // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication). The milkyWay Layer's

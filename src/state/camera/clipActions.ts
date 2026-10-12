@@ -1,28 +1,13 @@
 /**
- * clipActions — the request signals that drive single-clip playback from the UI.
- *
- * `startClip(id)` asks the engine to play one registered Layer-1 clip by its
- * `ClipId`; `watchClipSaga` looks the id up in `clipRegistry`, runs the
- * clip-player seam (live-pose resolution + completion Promise), and tears it
- * down. `stopClip` aborts the active clip.
- *
- * Both are reducer-less: clip *state* lives in the camera slice — `clipStarted` /
- * `clipEnded` write `camera.clip` — and these are the higher-level intents the
- * saga translates into that lifecycle. Keeping them as request actions (the saga
- * resolves the id and the live camera pose, not the UI) means the dev panel only
- * names a clip; it never touches the registry or the player. The panel reads
- * `selectClipActive` for its readout rather than awaiting a Promise.
- *
- * `replayInspectedPath` is the deterministic sibling: it replays the clip-path
- * inspector's already-resolved, start-pinned route, so the camera flies the
- * EXACT path drawn in the overlay (no fresh `start: 'live'` resolution from the
- * current view). `watchReplayInspectedPathSaga` reads the pinned clip from the
- * inspector seam and runs the same clip-player; `stopClip` aborts it too.
+ * clipActions — reducer-less requests that name a clip; the sagas resolve it
+ * and run the player, so the UI never touches the registry or the player.
+ * `startClip(id)` starts a registry clip as a takeover (`watchTakeoverSaga`);
+ * `exitTakeover` ends it. `replayInspectedPath` replays the clip-path
+ * inspector's start-pinned route, a debug play outside the takeover system.
  */
 import { createAction } from '@reduxjs/toolkit';
 
 import type { ClipId } from '../../@types/animation/ClipId';
 
 export const startClip = createAction('clip/start', (id: ClipId) => ({ payload: id }));
-export const stopClip = createAction('clip/stop');
 export const replayInspectedPath = createAction('clip/replayInspected');

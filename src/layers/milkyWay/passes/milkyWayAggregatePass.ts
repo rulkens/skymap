@@ -37,7 +37,7 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass {
         vp: view.vp,
         viewportPx: [vw, vh],
         // A target spanning the same frustum in fewer rows scales the focal
-        // term with its height (as `drawStarStream` does for its half-res row).
+        // term with its height (as `drawStarCut` does for its half-res row).
         pxPerRad: ctx.drawPxPerRad * (vh / ctx.canvasSize.height),
         // The eye, not a view plane — see `milkyWayPass`.
         camPosModel: milkyWayCamPosModel(ctx.drawCamPos),

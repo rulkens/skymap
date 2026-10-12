@@ -1,10 +1,11 @@
 import type { TileStreamSubsystem } from './tileStreamSubsystem/TileStreamSubsystem';
+import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas';
 import type { HiResFamousSubsystem } from './hiResFamousSubsystem/HiResFamousSubsystem';
 
 /** Construction options for `createTexturedDiskSubsystem`. */
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
-  readonly atlas: TileStreamSubsystem<ImageBitmap>;
+  readonly atlas: TileStreamSubsystem<ImageBitmap, TextureAtlas>;
   /** For tests. Defaults to fetchGalaxyBitmap. */
   readonly fetcher?: (args: {
     ra: number;

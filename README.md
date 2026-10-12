@@ -31,7 +31,7 @@ The framing owes everything to [Powers of Ten](https://www.youtube.com/watch?v=0
 - **Solar system**: runs on a live clock. All the planets plus Pluto and Charon, Saturn's rings, orbit trails, the Sun with bloom.
 - **Earth**: PBR shading, night lights, relief, clouds, an atmosphere, and streamed surface tiles down to city scale.
 - **Time**: jump the simulation to any date, change its rate, and share the moment with a `#t=` link.
-- **Search**: Cmd+K reaches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets.
+- **Search**: Cmd+K reaches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets; `#exhibit=`, `#tour=`, and `#clip=` links open a curated view or set it playing.
 - **Opt-in**: DESI DR1 cones, the CF4++ flow field, constellations, and the CF-4 dark-matter volume are off by default in the Settings panel.
 - **Debug**: press `d` for per-pass GPU timings and render-pass toggles.
 - **Reproduce a view**: press `l` (the link prints to the console) or click `copy URL` in the debug panel's Camera section for a `#pose=` link that reopens the exact camera at the exact moment. Paste it into a bug report and the reader sees what you saw.
@@ -161,6 +161,6 @@ The live queue is [docs/BACKLOG.md](docs/BACKLOG.md).
 
 If you use skymap in a publication, talk, or derived work, please cite it via [CITATION.cff](CITATION.cff). GitHub's "Cite this repository" sidebar button exposes BibTeX and APA forms.
 
-Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms (CC-BY-SA, public domain, publication citation), all enumerated in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms: some are public domain or CC BY, some are non-commercial (Gaia's stars are CC BY-NC, the close-up Earth imagery CC BY-NC-SA), and several state no licence at all. So the MIT licence does not cover what skymap shows, or pictures taken of it. Each source is listed with its terms in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 [CLAUDE.md](CLAUDE.md) at the repo root is onboarding guidance for AI coding assistants. It isn't load-bearing for the build or runtime. It exists because parts of this project were developed with AI assistance, and that context helps future AI-assisted edits.

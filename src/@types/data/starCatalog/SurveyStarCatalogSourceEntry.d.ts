@@ -1,4 +1,5 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
+import type { StarSourceBudgets } from './StarSourceBudgets';
 
 /**
  * A star catalog streamed from disk — the survey-wide Gaia bin today.
@@ -17,10 +18,8 @@ export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   readonly code: number;
   /** Filename stem under public/data/; loader appends `-<tier>.bin`. */
   readonly binBaseName: string;
-  /** Ships per-tier `.bin` variants (always true for this source). */
-  readonly tiered: boolean;
-  /** Per-frame drawn-point budget: typical + hard cap. */
-  readonly drawBudget: { readonly typical: number; readonly hardCap: number };
+  /** Per-tier limits; every tier ships its own `.bin`. */
+  readonly budgets: StarSourceBudgets;
   /** Camera-distance crossfade band to the procedural MW cloud, parsecs. */
   readonly crossfadePc: { readonly inner: number; readonly outer: number };
 };

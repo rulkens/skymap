@@ -8,8 +8,8 @@
  * depend on this. The gap-fill re-extracts any slot whose row is still null but
  * whose ref is set (a deep link resolved before its data landed), and it fires
  * on three pulses: engineSourceCountReported (every source's commit — the
- * galaxy clouds and the Gaia star bin alike), engineStructureCountsChanged
- * (the structure store's only signal), and engineStatusChanged (`wireSlots`
+ * galaxy clouds and the Gaia star bin alike), factsReported (a Layer's facts,
+ * the structure store's only signal), and engineStatusChanged (`wireSlots`
  * fires 'loading' right after `createLayers` appends each Layer's selection
  * rows — a Layer-only id needs this one to resolve during boot).
  *
@@ -36,7 +36,7 @@ import {
 } from '../selection/selectionSlice';
 import {
   engineSourceCountReported,
-  engineStructureCountsChanged,
+  factsReported,
   engineStatusChanged,
 } from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
@@ -76,14 +76,11 @@ export function* watchSelectionRowsSaga() {
   // fired by `wireSlots` right after `createLayers`), makes a previously-
   // unresolvable ref resolvable — fill the gaps. Extra firings for
   // already-filled slots are guarded no-ops (row === null && ref !== null).
-  yield* takeEvery(
-    [engineSourceCountReported, engineStructureCountsChanged, engineStatusChanged],
-    function* () {
-      for (const slot of ['hover', 'select', 'focus'] as const) {
-        const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
-        const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
-        if (row === null && ref !== null) yield* reextract(slot);
-      }
-    },
-  );
+  yield* takeEvery([engineSourceCountReported, factsReported, engineStatusChanged], function* () {
+    for (const slot of ['hover', 'select', 'focus'] as const) {
+      const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
+      const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
+      if (row === null && ref !== null) yield* reextract(slot);
+    }
+  });
 }

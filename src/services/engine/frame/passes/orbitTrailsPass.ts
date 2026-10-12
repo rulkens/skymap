@@ -14,7 +14,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
 import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
-import { propagateElements } from '../../../../utils/orbit/propagateElements';
+import { keplerianPositionMpc } from '../../../../utils/orbit/keplerianPositionMpc';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { sampledDepthBinding } from '../sampledDepthBinding';
@@ -95,18 +95,22 @@ export const orbitTrailsPass: ContentPass = {
     let count = 0;
     for (let i = 0; i < limit; i++) {
       const elements = rows[i]!;
-      // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
-      // FRESH vectors per call, so the in-place focus fold below cannot alias a
-      // shared scratch across orbits.
-      const propagated = propagateElements(elements, ctx.snapshot.simDays);
-      const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
-      // The snapshot seeds anchors (the Sun) alongside every element row, so a
-      // heliocentric focus and a moving parent are the same lookup.
-      const focus = states.get(elements.focusId)!.positionMpc;
+      const body = states.get(elements.id)!;
+      // The snapshot's own elements, never a re-propagation: trail and body share one
+      // conic. `keplerianEllipse` returns FRESH vectors per call, so the in-place
+      // anchoring below cannot alias a shared scratch across orbits. Every trail row is an
+      // element row, and deriveBodyStates sets `orbit` for each of those.
+      const orbit = body.orbit!;
+      const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(orbit);
+      // Centre = the snapshot body position, less its Kepler offset, plus the
+      // ellipse centre offset: the body sits on its trail by construction, so any
+      // later correction to the snapshot position moves the trail with it.
+      const bodyMpc = body.positionMpc;
+      const keplerMpc = keplerianPositionMpc(orbit);
       const centerMpc = centerOffsetMpc;
-      centerMpc[0] += focus[0];
-      centerMpc[1] += focus[1];
-      centerMpc[2] += focus[2];
+      centerMpc[0] += bodyMpc[0] - keplerMpc[0];
+      centerMpc[1] += bodyMpc[1] - keplerMpc[1];
+      centerMpc[2] += bodyMpc[2] - keplerMpc[2];
 
       const dx = centerMpc[0] - camPos[0];
       const dy = centerMpc[1] - camPos[1];
@@ -135,10 +139,10 @@ export const orbitTrailsPass: ContentPass = {
       staging[base + 12] = elements.color[0];
       staging[base + 13] = elements.color[1];
       staging[base + 14] = elements.color[2];
-      staging[base + 15] = propagated.eccentricity;
-      // Falloff anchor: the PROPAGATED mean anomaly, so the trail fades behind
+      staging[base + 15] = orbit.eccentricity;
+      // Falloff anchor: the snapshot's mean anomaly, so the trail fades behind
       // where the body actually is at `t`.
-      staging[base + 16] = states.get(elements.id)!.meanAnomalyRad;
+      staging[base + 16] = orbit.meanAnomalyRad;
       staging[base + 17] = alpha;
       staging[base + 18] = view.viewportPx[0]; // ribbon vertex stage's divisor
       staging[base + 19] = view.viewportPx[1];

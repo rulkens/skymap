@@ -1,12 +1,12 @@
 /**
  * captureScene — unit tests for the widened tour scene-snapshot capture.
  *
- * A tour beat may mutate the sixteen settings clusters, `settings.orientation`
+ * A tour beat may mutate the seventeen settings clusters, `settings.orientation`
  * (via a `frameTo` cue), AND `selection.focus`; restore must wind all three
  * back. These tests pin the properties that make the scene-level capture
  * sound:
  *
- *   1. *Scope* — the snapshot carries all sixteen settings clusters (via
+ *   1. *Scope* — the snapshot carries all seventeen settings clusters (via
  *      `snap.settings`), `orientation` as a SIBLING of `settings` (not inside
  *      it — see `SceneSnapshot`'s header for why), AND the focus ref from
  *      `state.selection.focus`.
@@ -38,12 +38,13 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'structures',
   'cosmicWebDensity',
   'zoneOfAvoidance',
+  'lightTime',
 ].sort();
 
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
- * A minimal state carrying the sixteen tour-owned settings clusters plus a
+ * A minimal state carrying the seventeen tour-owned settings clusters plus a
  * non-null `selection.focus`. Cast through `unknown` rather than building
  * full cluster shapes — only the fields assertions touch are needed.
  */
@@ -57,6 +58,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       milkyWay: { enabled: true, labelEnabled: false },
       flow: { enabled: true, nested: { speed: 2 } },
       orbitTrails: { enabled: true },
+      lightTime: { enabled: true },
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
       blackHoles: { items: {} },
@@ -64,13 +66,20 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },
+    time: {
+      mode: 'manual',
+      anchor: { simDays: 2460000, realMs: 1000 },
+      rateIndex: 0,
+      direction: 1,
+      paused: false,
+    },
   } as unknown as RootState;
 }
 
 describe('captureScene', () => {
-  it('captures the sixteen settings clusters + orientation + selection.focus', () => {
+  it('captures the seventeen settings clusters + orientation + selection.focus', () => {
     const state = makeState(FOCUS_REF);
-    const snap = captureScene(state);
+    const snap = captureScene(state, 0);
 
     // Settings half carries exactly the tour-owned clusters — orientation
     // is NOT among them.
@@ -89,9 +98,15 @@ describe('captureScene', () => {
     expect(snap.focus).toEqual(FOCUS_REF);
   });
 
+  it('re-anchors the clock at capture so anchor.simDays is the instant it showed', () => {
+    const snap = captureScene(makeState(null), 1000 + 86_400_000);
+    // Rate index 0 is 1 s/s: one real day later is one sim day later.
+    expect(snap.time.anchor).toEqual({ simDays: 2460001, realMs: 1000 + 86_400_000 });
+  });
+
   it('captureScene is detached', () => {
     const state = makeState(FOCUS_REF);
-    const snap = captureScene(state);
+    const snap = captureScene(state, 0);
 
     // Settings detachment: mutation of a nested cluster field must not bleed
     // into the snapshot (structuredClone via captureSettings).

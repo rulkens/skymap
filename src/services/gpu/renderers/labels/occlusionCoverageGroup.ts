@@ -76,7 +76,7 @@ export const OCCLUSION_COVERAGE_LAYOUT_DESC: GPUBindGroupLayoutDescriptor = {
  * Byte offsets of the binding-2 uniform, mirroring `SampledDepthFrame` in
  * `shaders/lib/sceneDepth.wesl`. Named rather than inline because a silent
  * drift here writes the camera where the shader reads padding — the same trap
- * `OCCLUDER_*_OFFSET` in `orbitTrailRenderer.ts` names for its own twin. The
+ * `OCCLUDER_*_OFFSET` in `trailOcclusionUniforms.ts` names for its own twin. The
  * `vec3` ends at 76 and the following `vec2` aligns to 8, so 80, and WGSL
  * rounds the struct up to its 16-byte alignment.
  */

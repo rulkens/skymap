@@ -1,0 +1,12 @@
+/** A one-band ISIS cube decoded to row-major Float32, row 0 at the top. Special
+ *  pixels (NULL, LRS, ...) are NaN. `leftLonDeg` is the east longitude of the
+ *  left edge of column 0, from the label's projection, not the filename. */
+export type IsisCubeRaster = {
+  readonly data: Float32Array;
+  readonly width: number;
+  readonly height: number;
+  readonly leftLonDeg: number;
+  readonly topLatDeg: number; // latitude of the top edge of row 0, from UpperLeftCornerY
+  readonly degPerPixel: number; // from PixelResolution; the same in both axes
+  readonly equatorialRadiusM: number; // label EquatorialRadius, metres
+};

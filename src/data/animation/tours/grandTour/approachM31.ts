@@ -47,7 +47,7 @@ const M31 = focusId('m31');
 const DWELL_SEC = 10;
 
 export const approachM31Dwell: ClipData = dwellDrift(DWELL_SEC, {
-  spinTo: focusId('group-m81-group'),
+  spinTo: focusId('galaxy-group-m81-group'),
   turns: -1,
 });
 

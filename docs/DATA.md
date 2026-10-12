@@ -128,7 +128,7 @@ CF4's raw tables and the flow-field velocity cube share one upstream download; t
 
 ## Famous galaxies (curated atlas)
 
-A small hand-curated catalog of well-known galaxies (Messier + NGC greatest-hits, ~150 rows) ships as its own `Source`, searchable via Cmd+K with curated names and pre-processed transparent-WebP thumbnails. Most thumbnails come from the famous-galaxy curator (`npm run curate-famous`); the rest fall back to a Wikipedia → DESI Legacy auto-fetch. Credits are recorded in `data/seeds/famous_curated_overrides.json` and summarised in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md).
+A small hand-curated catalog of well-known galaxies (Messier + NGC greatest-hits, 81 rows) ships as its own `Source`, searchable via Cmd+K with curated names and pre-processed transparent-WebP thumbnails. Most thumbnails come from the famous-galaxy curator (`npm run curate-famous`); the rest fall back to a Wikipedia → DESI Legacy auto-fetch. Credits are recorded in `data/seeds/famous_curated_overrides.json` and summarised in [ATTRIBUTIONS.md](../ATTRIBUTIONS.md).
 
 ```bash
 npm run build-tiers            # the survey .bin files (build-famous's own docblock requires this order)
@@ -143,6 +143,12 @@ A parallel curated list of well-known stars follows the same seed → build shap
 ## Featured structures (clusters, superclusters)
 
 [`buildStructures.ts`](../tools/structures/buildStructures.ts) reads the MCXC X-ray cluster catalog and the MSCC supercluster catalog, filters each to a manageable set (mass/richness thresholds), lets curated anchors from `data/seeds/structure_anchors.seed.json` win over any catalog entry that falls inside their exclusion sphere, and writes the CCAT pair.
+
+Seed rows state `distance`, `physicalRadius` and `apparentRadius` as `{ "value": n, "unit": "pc" | "kpc" | "Mpc" }`, so a compact structure is written in its natural unit; the parser rejects an unknown unit and `lengthToMpc` converts at the two readers (`buildStaticAnchorStructures`, `buildStructures`).
+
+Two seed fields belong to the Milky Way categories (those whose registry `scale` is `milkyWay`): `nebulaKind` (`emission` | `reflection` | `planetary` | `supernova-remnant` | `dark`) is required on a `nebula` row and rejected elsewhere; `source` (a survey, paper or bibcode) is required and non-empty on every Milky Way row and says where its distance and radii came from. `source` is build-time documentation, never read at runtime.
+
+Any seed row may carry `wikipedia`, the exact English Wikipedia article title (canonical, after redirects) that the info card links to; it is never derived from the name, and a row without one shows no link.
 
 ```bash
 npm run fetch-structures    # MCXC + MSCC from CDS VizieR, verifies .sha256
@@ -192,6 +198,10 @@ Planet/moon/ring textures and Earth's imagery are gitignored raw pulls with comm
 
 Earth's whole-globe base texture and its surface tile pyramid are two publications of one Blue Marble month (a 21600×10800 equirect and eight 21600×21600 quadrants, ~421 MB). The month is chosen once in [`bmngVintage.ts`](../tools/utils/io/bmngVintage.ts) and every registry path, upstream URL, and attribution string reads it from there. The tile layer falls back to the base outside its baked window, so a vintage split between the two would draw a visible seasonal seam along the tile frontier.
 
+### Planet and moon positions (JPL Horizons)
+
+Each planet's position is its Keplerian row plus a fitted correction series that matches JPL DE to ≤ 1,000 km over 1900–2100; each Jupiter and Saturn moon, Neptune's Triton and Proteus, and Uranus's Miranda, Ariel, Umbriel, Titania and Oberon, matches to the same bound relative to its parent. The bodies, their Horizons centres and steps live in one table, `tools/bodies/horizonsBodies.ts`. `npm run fetch-horizons` pulls ICRF vectors (gitignored) into `data/raw/horizons/<centre>/` — the planets are 1-day heliocentric, 8 × ~3 MB in `500@10/`; the moons are centred on Jupiter (`500@599/`), Saturn (`500@699/`), Neptune (`500@899/`) or Uranus (`500@799/`) at ≤ P/16, ~8.5M rows — and `npm run build-ephemeris-corrections` fits them into the committed `src/data/bodies/ephemerisCorrections.generated.ts`. A moon's correction is a mean-anomaly series added before Kepler (it stays on its conic, so its trail stays centred) plus a small Cartesian residual. Each row carries its own out-of-span policy: planets hold the edge value, moons switch the correction off before 1900 and after 2100. Regenerate after any element-row or frame change. The exact query is in [`data/raw/horizons/README.md`](../data/raw/horizons/README.md).
+
 ### Earth surface tile pyramid
 
 The bake emits `public/data/images/earth-tiles/v10/albedo/<z>/<x>/<y>.webp`: 512 px lossy WebP tiles whose alpha channel doubles as the land mask, plus two sidecars, `index.txt` (one path per line) and `manifest.json` (the flat band list every product's planner filters by `builtFrom`). `npm run build-surface-tiles` is idempotent per tile (a tile whose output already exists is skipped, byte-identical, on a re-run) and refuses to write `index.txt`/`manifest.json` at all if any tile the prior index promised is missing on disk, leaving both untouched — an interrupted or partially-deleted bake never advances the pointer to half-baked data ([`buildSurfaceTiles.ts`](../tools/textures/buildSurfaceTiles.ts)).
@@ -204,7 +214,30 @@ At runtime [`surfaceTileSubsystem.ts`](../src/services/engine/subsystems/surface
 
 ### Mars surface sources
 
-`npm run build-surface-tiles -- --body mars` bakes `mars-tiles/` from files fetched by hand (no fetchers yet), one README each: MOLA 463 m heights and Viking MDIM 2.1 232 m colour globally ([`data/raw/mola/`](../data/raw/mola/README.md), [`data/raw/viking/`](../data/raw/viking/README.md)), and HiRISE 1 m DTM + 25 cm ortho pairs at the rover sites under `data/raw/hirise/{gale,jezero,gusev,meridiani-endeavour}/`. All are equirectangular on the 3,396,190 m sphere with areoid-relative heights; the bake adds +6,190 m to land them on the scene's 3,390 km datum. The strip-layout MOLA, Viking and Gale DTM files are read through tiled COG copies (each README records the `gdal_translate` line), because a window read on a strip TIFF decodes whole rows (~14 s per Viking box against ~9 ms on the COG). MOLA's copy is also Float32, since sharp clamps signed 16-bit samples to 0. The Gusev and Endeavour orthos are grey RED, colour-matched to Viking at bake time. A worktree reaches the rasters through per-file symlinks to main's `data/raw/`, never a directory symlink, so the READMEs stay committable.
+`npm run build-surface-tiles -- --body mars` bakes `mars-tiles/` from files fetched by hand (no fetchers yet), one README each: MOLA 463 m heights and Viking MDIM 2.1 232 m colour globally ([`data/raw/mola/`](../data/raw/mola/README.md), [`data/raw/viking/`](../data/raw/viking/README.md)), and HiRISE 1 m DTM + 25 cm ortho pairs at the rover sites under `data/raw/hirise/{gale,jezero,gusev,meridiani-endeavour}/`. All are equirectangular on the 3,396,190 m sphere with areoid-relative heights; the bake adds +6,190 m to land them on the scene's 3,390 km datum. The strip-layout MOLA, Viking and Gale DTM files are read through tiled COG copies (each README records the `gdal_translate` line), because a window read on a strip TIFF decodes whole rows (~14 s per Viking box against ~9 ms on the COG). MOLA's copy is also Float32, since sharp clamps signed 16-bit samples to 0. The Gusev, Endeavour and Jezero orthos are grey; all four sites, Gale's colour mosaic included, are colour-matched to Viking at bake time. A worktree reaches the rasters through per-file symlinks to main's `data/raw/`, never a directory symlink, so the READMEs stay committable.
+
+## Scene reconstruction (`tools/scene-recon/`)
+
+A second, offline pipeline turns Danish open data into 3D scenes of one place, Søndermarken in Copenhagen. Its inputs are the Skråfoto oblique aerial frames (`npm run fetch-skraafoto`, [`data/raw/skraafoto/README.md`](../data/raw/skraafoto/README.md)), the DHM Punktsky LiDAR tiles (`npm run fetch-dhm`, [`data/raw/dhm/README.md`](../data/raw/dhm/README.md)) and the GeoDanmark orthophoto. Each bake works on one scene group (`--group <id>`) and writes under `public/data/geo3d/groups/<id>/` with a `manifest.json`, registered in `scenes.json`:
+
+| Command               | External program                         | Output       |
+| --------------------- | ---------------------------------------- | ------------ |
+| `npm run bake-lidar`  | PDAL                                     | `points.bin` |
+| `npm run bake-splats` | Brush (`brush-cli`), PROJ                | `splats.bin` |
+| `npm run bake-mesh`   | COLMAP (workspace layout only), OpenMVS  | `mesh.glb`   |
+| `npm run crop-mesh`, `npm run repack-atlas` | none                 | a cropped `mesh.glb` with a re-packed atlas |
+
+The camera poses come from the flight's own metadata, so nothing is feature-matched: the LiDAR cloud projected into the known poses is the sparse model. These outputs are read by the `tools/scene-workbench/` dev tool. The app itself ships one of them: the cropped mesh, copied to `data/raw/meshes/soendermarken/mesh.glb` and baked by `npm run build-meshes` like any other mesh body ([its README](../data/raw/meshes/soendermarken/README.md)). Licences of the inputs and of the programs: [ATTRIBUTIONS.md](../ATTRIBUTIONS.md), "Skråfoto and the Søndermarken scan".
+
+## Hand-typed values and where they come from
+
+Some of what the app shows was typed by hand and has no fetcher. [ATTRIBUTIONS.md](../ATTRIBUTIONS.md) ("Hand-typed data") has one entry per file; this is the detail, as found on 2026-10-07.
+
+- **`data/seeds/planet_facts.seed.json`** (the fact sheet on each body's card, 43 rows). No source is recorded per value; they are rounded textbook figures held as display strings. The nine planet rows were compared with NASA's [Planetary Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) (last updated 18 March 2025) and agree to the rounding shown, except: Jupiter's gravity (seed 2.53 g, NASA 2.36), Saturn's gravity (1.07 g against 0.916), Saturn's moons (146 against 274), Saturn's distance (9.54 AU against 9.57), Neptune's distance (30.1 AU against 30.18) and gravity (1.14 g against 1.12), Pluto's gravity (0.063 g against 0.071) and mean temperature (−232 °C against −225). The seed was not changed. The 34 rows for moons, spacecraft and other bodies were not compared with anything. The file has no `source` field: `buildPlanetFacts.ts` copies every field of a row into the generated table, so adding one changes what the app compiles.
+- **Voids and groups** (`data/seeds/structure_anchors.seed.json`). Clusters come from MCXC and superclusters from MSCC, but the 3 voids and 16 groups exist only as hand-placed rows of this seed, as do the 15 clusters and 8 superclusters that override a catalogue row. A row holds a position, a distance, a physical and an apparent radius and a paragraph, and no reference. Treat every radius of a void or group as an editorial choice, not a measurement.
+- **Zone of Avoidance band** (`src/data/zoneOfAvoidance/zoneOfAvoidanceShell.ts`). The four shape constants (inner radius 3 Mpc, outer radius 380 Mpc, half-width 10° at the bulge and 3° at the anticentre) are, in the file's own words, "visual-pass placeholders". They come from no survey mask or extinction map.
+- **`data/seeds/local_volume_distances.seed.json`.** Each row's `method` field names its source (most were looked up in NED).
+- **`data/seeds/famous_stars.seed.json`, `sun.seed.json`.** Typed by hand; no source per value.
 
 ## Data-refresh re-run orders
 
@@ -216,6 +249,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Clusters/superclusters | `fetch-structures`                              | `build-structures` (after `build-tiers`)                         |
 | DESI                   | `fetch-desi`                                    | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)                      |
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
+| Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.

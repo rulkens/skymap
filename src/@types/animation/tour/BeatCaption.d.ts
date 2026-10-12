@@ -9,8 +9,8 @@
  * `bottom-left` (the splash's own corner) and its horizontal half also sets the
  * text alignment, so authoring a right anchor flips the alignment for free.
  *
- * The caption is derived tour state, not stored: the runtime slice holds only
- * `tourId` + `beatIndex`, and selectors resolve the active beat's caption from
+ * The caption is derived tour state, not stored: the takeover holds the tour
+ * id, the runtime slice `beatIndex`, and selectors resolve the active beat's caption from
  * the registry. A beat with no caption sets the field to `null` on `BeatData`.
  */
 

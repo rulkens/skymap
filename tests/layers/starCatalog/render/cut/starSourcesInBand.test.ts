@@ -1,7 +1,6 @@
 /**
  * `starSourcesInBand` — the one home of the two-part source gate
- * (`advanceStarFades`/`computeStarCut`/`starCatalogVisible` all delegate to
- * it): a loaded survey catalog draws only when the master toggle is on AND
+ * (`starCutInputs`/`starCatalogVisible` both delegate to it): a loaded survey catalog draws only when the master toggle is on AND
  * its crossfade at the camera's heliocentric distance is > 0.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -53,7 +52,6 @@ describe('starSourcesInBand', () => {
     );
     expect(result).toHaveLength(1);
     expect(result[0]!.source).toBe(Source.GaiaStars);
-    expect(result[0]!.catalog).toBe(catalog);
     expect(result[0]!.crossfade).toBe(1);
   });
 

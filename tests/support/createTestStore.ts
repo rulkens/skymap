@@ -28,7 +28,7 @@
  * whole `SagaContext`, and the reason is visible from this file — registering is
  * what fires `sagaContextRegistered`, which is what releases the hash bridge, so
  * a test store with a hash left on `window.location` by an earlier test in the
- * same file performs a real arrival read and reaches `resolveDeps`. With one
+ * same file performs a real arrival read and reaches `selection`. With one
  * member registered that read threw and cancelled every watcher in the root
  * saga, leaving the test's actual subject dead for reasons nothing on screen
  * explained.
@@ -37,10 +37,11 @@
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
 import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
+import { structureSelectionRow } from '../../src/layers/structure/present/structureSelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
-import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
+import type { StructureRowFixture } from './selectionResolverOver';
 
 // The narrow engine surface `watchWakeSaga` (and its sibling reconcile watchers)
 // reach for. Every method is a no-op: a test store has no scheduler, fade
@@ -58,9 +59,7 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 // for a catalog pulse that never comes — which is the correct behaviour for a
 // store with no data behind it, and the difference between a deferred deep link
 // and a TypeError that cancels the root saga.
-const EMPTY_RESOLVE_DEPS: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
+const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 /**
  * The whole context bag, every capability inert. A test store has no engine, so
@@ -72,15 +71,14 @@ const EMPTY_RESOLVE_DEPS: ResolveDeps = {
  * instead of hand-assembling the rest of the no-ops around it.
  */
 export const NOOP_SAGA_CONTEXT: SagaContext = {
+  nextFrame: () => Promise.resolve(),
   reconcile: NOOP_RECONCILE,
-  resolveDeps: () => EMPTY_RESOLVE_DEPS,
-  // The real core rows, over the empty bag above: a static id (body/star/
-  // cluster/…) resolves off its table exactly as the running app does, while
-  // a catalog-backed id (galaxy) still resolves to null with no engine
-  // resource in the path — the pre-branch behaviour `resolveFocusId` gave
-  // for free before it was folded into the composed resolver (Ruling 4).
+  // The real core and structure rows, over the empty store above: a static id
+  // (body/star/cluster/…) resolves off its table exactly as the running app
+  // does, while a catalog-backed id (galaxy) still resolves to null with no
+  // engine resource in the path.
   selection: composeSelectionRows(
-    () => coreSelectionRows(() => EMPTY_RESOLVE_DEPS),
+    () => [...coreSelectionRows(), structureSelectionRow(EMPTY_STRUCTURES)],
     () => ALL_KINDS_ENABLED,
   ),
   // Null is the same answer the engine gives pre-bootstrap and post-destroy, and
@@ -96,6 +94,8 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
     pinnedClip: () => null,
     pinnedFrame: () => null,
   },
+  // A home-less composition: a bare arrival frames the neutral pose and seeds nothing.
+  home: { focus: null, seedSelection: false },
 };
 
 export function createTestStore(preloadedState?: PreloadedState) {

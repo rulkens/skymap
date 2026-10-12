@@ -18,7 +18,6 @@ import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
-import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
@@ -74,13 +73,13 @@ export type EngineGpuHandles = {
   sourceBgl: SourceUniformsBgl | null;
   /**
    * Canonical FocusUniforms bind-group layout. Constructed once in
-   * `initGpu` and shared by every pipeline that renders the cluster-focus
+   * `initGpu` and shared by every pipeline that renders the structure-focus
    * dim — points (@group(3)), the impostor disks (@group(1)), and the
    * pick pass. Null until `initGpu` resolves.
    */
   focusBgl: FocusUniformsBgl | null;
   /**
-   * The single shared cluster-focus uniform (buffer + bind group + packer).
+   * The single shared structure-focus uniform (buffer + bind group + packer).
    * Only one structure is focused at a time, so one buffer serves the whole
    * engine: written once per frame in `renderFrame`, and its bind group —
    * built against `focusBgl` — is bound by every focus-aware pipeline at
@@ -155,71 +154,71 @@ export type EngineGpuHandles = {
    * `loadFontAtlas()` fetch and constructs the renderer against the
    * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate:
    * the atlas load is async and optional from the engine's perspective;
-   * the `labelsPass` null-checks this field at point of use.  Stored here
+   * the `labelsCosmoPass` null-checks this field at point of use.  Stored here
    * so `destroy()` can release the GPU buffers (uniform + storage +
    * instance + corner + atlas texture).
    */
-  labelRenderer: LabelRenderer | null;
+  labelRendererCosmo: LabelRenderer | null;
   /**
    * Second MSDF label renderer for the true-scale foreground bodies
-   * (zoom-to-Earth).  Separate from `labelRenderer` because the scene-body
+   * (zoom-to-Earth).  Separate from `labelRendererCosmo` because the scene-body
    * captions project through the NEAR0 slab view — whose near plane scales
    * with `cam.distance` so it always contains the bodies — rather than the
    * galaxy-scale `vp` the main labels use, and one renderer draws with one
    * view-projection.  Shared by core's `sceneBodyLabels` set (Earth, the
    * planets, the mesh bodies) and the star Layer's own producer (the
-   * curated map, the Sun); `foregroundLabelsPass` re-uploads both, merged,
+   * curated map, the Sun); `labelsNearPass` re-uploads both, merged,
    * camera-relative each frame.  Null until
    * `initGpu` builds it against the font atlas; excluded from
-   * `isEngineReady` and null-checked at use, like `labelRenderer`.
+   * `isEngineReady` and null-checked at use, like `labelRendererCosmo`.
    * Released and re-nulled by `destroy()`.
    */
-  foregroundLabelRenderer: LabelRenderer | null;
+  labelRendererNear: LabelRenderer | null;
   /**
    * The r32uint pick provider for the COSMO text labels — one screen-space
    * rectangle per legible label, stamping its subject's packed id so clicking
    * a name selects the thing it names. A SEPARATE instance from
-   * `foregroundLabelPickRenderer` for the reason the two label renderers are
+   * `labelPickRendererNear` for the reason the two label renderers are
    * separate, plus one more: the two slabs' pick targets carry different depth
    * formats and opposite depth conventions, both baked into the pipeline.
-   * Null until `initGpu` builds it; `labelsPass.drawPick` null-checks at use.
+   * Null until `initGpu` builds it; `labelsCosmoPass.drawPick` null-checks at use.
    */
-  labelPickRenderer: LabelPickRenderer | null;
+  labelPickRendererCosmo: LabelPickRenderer | null;
   /**
-   * The NEAR0 sibling of `labelPickRenderer`, for the foreground body
-   * captions. Same lifecycle and rationale; `foregroundLabelsPass.drawPick`
+   * The NEAR0 sibling of `labelPickRendererCosmo`, for the foreground body
+   * captions. Same lifecycle and rationale; `labelsNearPass.drawPick`
    * null-checks at use.
    */
-  foregroundLabelPickRenderer: LabelPickRenderer | null;
+  labelPickRendererNear: LabelPickRenderer | null;
   /**
    * Second thick screen-space line renderer, the leader-line sibling of
-   * `foregroundLabelRenderer`.  A SEPARATE instance from `markerLineRenderer`
-   * for the same reason `foregroundLabelRenderer` is separate from
-   * `labelRenderer`: the scene-body leader lines project through the NEAR0
+   * `labelRendererNear`.  A SEPARATE instance from `markerLineRendererCosmo`
+   * for the same reason `labelRendererNear` is separate from
+   * `labelRendererCosmo`: the scene-body leader lines project through the NEAR0
    * slab (whose near plane scales with `cam.distance` so it always contains
-   * the AU-scale bodies), while `markerLineRenderer`'s director-driven lines
+   * the AU-scale bodies), while `markerLineRendererCosmo`'s director-driven lines
    * project through the galaxy-scale COSMO `vp` that would clip the bodies
    * away — and one renderer draws with one view-projection.  Drawn by
-   * `foregroundLabelsPass`, which rebases its connectors into the
+   * `labelsNearPass`, which rebases its connectors into the
    * camera-relative frame each frame exactly as it rebases the captions.
    * Null until `initGpu` builds it (same UI ctx / swap-chain format as the
    * caption renderer, no atlas dep); excluded from `isEngineReady` and
    * null-checked at use.  Released and re-nulled by `destroy()`.
    */
-  foregroundMarkerLineRenderer: MarkerLineRenderer | null;
+  markerLineRendererNear: MarkerLineRenderer | null;
   /**
    * Thick screen-space line overlay renderer.  Null until `initGpu`
-   * constructs it alongside `labelRenderer` (same phase, no atlas dep).
+   * constructs it alongside `labelRendererCosmo` (same phase, no atlas dep).
    * Excluded from the `isEngineReady` predicate for the same reason as
-   * `labelRenderer`.  The `markerLinesPass` null-checks this field at
+   * `labelRendererCosmo`.  The `markerLinesPass` null-checks this field at
    * point of use.  Stored here so `destroy()` can release the GPU
    * buffers (uniform + instance + corner).
    */
-  markerLineRenderer: MarkerLineRenderer | null;
+  markerLineRendererCosmo: MarkerLineRenderer | null;
   /**
    * Dedicated debug-draw thick-line renderer — the substrate for the clip-path
    * inspector overlay (speed-coloured route + scrub gizmo). Constructed
-   * alongside `markerLineRenderer` (same UI ctx, swap-chain format, no atlas
+   * alongside `markerLineRendererCosmo` (same UI ctx, swap-chain format, no atlas
    * dep), but decoupled from the label director: the `clipPathDebugPass`
    * null-checks it and feeds it a freshly built `DebugLine[]` each frame.
    * Excluded from `isEngineReady`. Stored here so `destroy()` releases its GPU
@@ -234,17 +233,6 @@ export type EngineGpuHandles = {
    * two uniform buffers and bind group.
    */
   selectionRingRenderer: SelectionRingRenderer | null;
-  /**
-   * Structure-marker renderer — draws halo + ring overlays for every
-   * structure category (cluster / supercluster / void / group; per-source
-   * bind groups live inside the renderer).  Null until `initGpu` constructs it.
-   * Excluded from the `isEngineReady` predicate for the same reason as
-   * `markerLineRenderer` — null-checked at point of use by the
-   * structure-marker frame pass.  Stored here so `destroy()` can release
-   * the renderer's GPU buffers (per-category bind groups + per-instance
-   * buffer + corner VBO).
-   */
-  structureMarkerRenderer: StructureMarkerRenderer | null;
   /**
    * Cosmic-horizon shell renderer — translucent sphere at the
    * comoving particle-horizon radius.  Same lifecycle as the other

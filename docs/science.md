@@ -64,7 +64,7 @@ Three kinds of content share the scene; this section says which is which.
 
 ### Stars and the Sun
 
-- **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites ([walkStarOctreeCut.ts](../src/utils/star/walkStarOctreeCut.ts)).
+- **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites. The cut runs on the GPU: a node is in the cut when its parent refines and it does not ([cut.wesl](../src/services/gpu/shaders/starCatalog/cut.wesl)).
 - **Photometry**: Pogson flux `10^(−0.4·M)` anchored at 10 pc, inverse-square dimming, and a camera-distance exposure ramp ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/utils/star/starExposureRamp.ts)).
 - **True-scale spheres**: past 4 px of apparent disc a star becomes an emissive sphere ([partitionStarsByResolution.ts](../src/services/engine/frame/partitionStarsByResolution.ts)); the Sun is simply the nearest such star, with the bloom threshold calibrated so its disc blooms.
 - **Tint**: BP−RP through spectral-class anchors for points ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); a blackbody-locus polynomial in temperature for resolved spheres ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
@@ -89,7 +89,7 @@ Three kinds of content share the scene; this section says which is which.
 ### Large-scale overlays
 
 - **Filaments and constellations**: instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/layers/filaments/render/filamentRenderer.ts), [constellationRenderer.ts](../src/layers/constellations/render/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time.
-- **Structure markers**: world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts)).
+- **Structure markers**: world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/layers/structure/render/structureMarkerRenderer.ts)).
 - **Zone of avoidance**: a reduced-resolution analytic raymarch of a galactic-latitude wedge, captioned in curved MSDF lettering ([band.wesl](../src/services/gpu/shaders/zoneOfAvoidance/band.wesl)).
 - **Horizon shell**: the particle horizon at 14.3 Gpc, a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/services/gpu/renderers/horizonShell/horizonShellRenderer.ts)).
 

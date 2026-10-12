@@ -37,7 +37,7 @@ function makeWrapper(store: Store) {
 // `takeoverStarted` is what `selectTourActive` (and so `selectTourCanPrev`)
 // actually reads now — `tourStarted` alone only seeds the beat bookkeeping.
 function seedActiveTour(store: Store): void {
-  store.dispatch(tourStarted({ tourId: 'webShowcase' }));
+  store.dispatch(tourStarted());
   store.dispatch(takeoverStarted({ kind: 'tour', id: 'webShowcase' }));
   store.dispatch(beatChanged(1));
 }
@@ -96,7 +96,7 @@ describe('TourOverlayContainer', () => {
 
   it('disables Previous on the first beat (canPrev false at index 0)', () => {
     const { store } = createAppStore();
-    store.dispatch(tourStarted({ tourId: 'webShowcase' })); // index 0, no beatChanged
+    store.dispatch(tourStarted()); // index 0, no beatChanged
     const { container } = renderContainer(store);
     const prev = container.querySelector('[aria-label="Previous beat"]') as HTMLButtonElement;
     expect(prev.disabled).toBe(true);

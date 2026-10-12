@@ -14,7 +14,7 @@
  * `ClipId`, so the table must cover every id and may use no key outside the
  * union; the compiler enforces both directions.
  *
- * The play path (`watchClipSaga`) freezes the sim clock at clip start and
+ * The play path (`clipBodySaga`) freezes the sim clock at clip start and
  * resolves the factory at that frozen instant, so `earthFlyout` opens on the
  * Earth the frozen frame draws.
  *

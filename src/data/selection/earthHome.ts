@@ -1,4 +1,4 @@
-/** EARTH_HOME — the app's `EngineHomeConfig`, pure data (`wireInput` applies the cinema gate). */
+/** EARTH_HOME — the app's `EngineHomeConfig`, pure data (`navigateSaga`'s home arm applies the cinema gate). */
 
 import type { EngineHomeConfig } from '../../@types/engine/EngineHomeConfig';
 import { followedBodyHome } from '../../utils/scene/followedBodyHome';

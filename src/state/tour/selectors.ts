@@ -3,9 +3,9 @@
  * `RootState`, mirroring the camera/selection slice conventions (one read
  * surface per slice).
  *
- * The slice stores only `tourId / beatIndex / paused / dwellNonce / dwellSec`;
+ * The slice stores only `beatIndex / paused / dwellNonce / dwellSec`;
  * everything else the overlay renders — the kicker label, the beat count, the
- * active caption — is DERIVED here by resolving the active tour from
+ * active caption — is DERIVED here by resolving the takeover's tour id against
  * `tourRegistry` and indexing its beats. This is the whole reason the runtime
  * state can stay so small: the registry is already the single source of truth
  * for tour content, so duplicating any of it into the slice would only invite
@@ -13,9 +13,7 @@
  * RESOLVED dwellClip isn't derivable from the registry alone, so the saga
  * records it at dwell start.)
  *
- * `selectTourActive` derives from `selectTakeoverSource` (the `takeover`
- * slice) rather than a boolean here — see that slice's header for why a
- * tour's "is it running" fact moved there.
+ * Which tour runs, if any, is the `takeover` slice's one record of it.
  *
  * Every selector is `RootState`-scoped, so each drops unchanged into both the
  * React side (`useAppSelector(...)`) and the saga/engine side
@@ -44,13 +42,11 @@ export const selectTourBeatIndex = (state: RootState): number => selectTourRunti
 export const selectTourDwellNonce = (state: RootState): number =>
   selectTourRuntime(state).dwellNonce;
 
-// Resolve the active tour from the registry. Indexed by a plain string (the
-// slice stores `tourId` as a string); a stale or empty id resolves to null,
-// as does a `tourId` left over from a run the takeover has since moved past.
+// An id the registry no longer knows (a stale link) resolves to null.
 export const selectActiveTour = (state: RootState): Tour | null => {
-  if (!selectTourActive(state)) return null;
-  const runtime = selectTourRuntime(state);
-  return (tourRegistry as Record<string, Tour>)[runtime.tourId] ?? null;
+  const source = selectTakeoverSource(state);
+  if (source?.kind !== 'tour') return null;
+  return (tourRegistry as Record<string, Tour>)[source.id] ?? null;
 };
 
 export const selectTourLabel = (state: RootState): string | null =>

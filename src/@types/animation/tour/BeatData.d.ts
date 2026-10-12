@@ -16,7 +16,7 @@ import type { BeatCaption } from './BeatCaption';
  * anchor (`BeatCaption`); null for a silent beat. The overlay reveals it once
  * the establishing fly lands and clears it when the next beat begins. The
  * runtime slice does not store the caption — it is derived from this field via
- * the active `tourId` + `beatIndex`.
+ * the takeover's tour id + `beatIndex`.
  *
  * `dwellClip` is the ambient motion played while the beat holds — any clip
  * (`dwellDrift(8)` is the canonical gentle orbit+bob; a slow flyPath ring or a

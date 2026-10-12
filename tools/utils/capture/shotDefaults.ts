@@ -1,6 +1,6 @@
 /**
  * The knobs a shot is taken with: how big it is rendered, how hard it is
- * compressed, and how long the scene is given to settle between steps.
+ * compressed, and when a frame is worth warning about.
  */
 
 /** Rendered square; big enough that the downscale hides aliasing. */
@@ -15,9 +15,6 @@ export const WEBP_QUALITY = 82;
 
 /** Past this, a shot is probably framed on noise rather than on its subject. */
 export const WARN_BYTES = 40 * 1024;
-
-/** Clearing the focus re-settles the camera; this is that settle. */
-export const POST_ESC_WAIT_MS = 1500;
 
 /**
  * Fraction of the frame's half-height a computed pose gives the subject's disc.

@@ -1,0 +1,36 @@
+---
+/* RepoLink — `<Repo path="docs/DATA.md">the notes</Repo>` on a docs page: a link to a file or folder of the repository, whose address is written once (data/siteIdentity.ts). With no words inside, it prints the path as code. */
+import { REPO_BLOB } from '../data/siteIdentity';
+
+type Props = { path: string };
+
+const { path } = Astro.props;
+// A printed path breaks after a slash and nowhere else, so a hyphen at a line's end is never mistaken for part of a name.
+const parts = path.split('/');
+---
+
+<a href={[REPO_BLOB, path].join('/')}
+  ><slot
+    ><code
+      >{
+        parts.map((part, i) => (
+          <>
+            <span>{part + (i < parts.length - 1 ? '/' : '')}</span>
+            {i < parts.length - 1 && <wbr />}
+          </>
+        ))
+      }</code
+    ></slot
+  ></a
+>
+
+<style>
+  /* A path can run over two lines. As the inline block a link is in a note (site.css, .tap-links) it would be a box of its own, and the full stop after it would stand alone on a third line. `[href]` outweighs that rule. */
+  a[href] {
+    display: inline;
+  }
+
+  span {
+    white-space: nowrap;
+  }
+</style>

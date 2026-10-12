@@ -1,64 +1,13 @@
 /**
- * cameraFraming — unit tests for the pure initial-camera helper.
- *
- * The helper now boots into the Earth home pose (`bodyHomePose`), so the one
- * load-bearing invariant is that the snapshot's pose is that helper's pose at
- * the boot instant, wrapped in the near/far/fov envelope. Pinning the pose
- * against `bodyHomePose` regresses loudly if boot ever drifts back to the old
- * Milky-Way constants or clamps away the Earth-scale framing distance.
+ * cameraFraming — unit test for the eye-tuned bearing constant. The clip
+ * planes and FOV default are plain re-exported numbers, not worth a test.
  */
 
 import { describe, it, expect } from 'vitest';
 
-import {
-  computeInitialCamera,
-  FAR_CLIP_MPC,
-  GALACTIC_DISC_FORWARD,
-  INITIAL_DISTANCE_MPC,
-} from '../../../../src/services/engine/camera/cameraFraming';
-import { bodyHomePose } from '../../../../src/services/engine/camera/bodyHomePose';
-import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { GALACTIC_DISC_FORWARD } from '../../../../src/services/engine/camera/cameraFraming';
 import { orbitAnglesLookingAlong } from '../../../../src/utils/camera/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-
-describe('computeInitialCamera', () => {
-  const FOV = (Math.PI / 180) * 60;
-
-  it('boots into the Earth home pose at the given sim instant', () => {
-    const cam = computeInitialCamera({ bodyId: 'earth', fovYRad: FOV, simDays: CONST_J2000 });
-    const home = bodyHomePose('earth', CONST_J2000, FOV);
-
-    expect(cam.target).toEqual(home.target);
-    expect(cam.yaw).toBe(home.yaw);
-    expect(cam.pitch).toBe(home.pitch);
-    expect(cam.distance).toBe(home.distance);
-  });
-
-  it('wraps the home pose in the near/far/fov envelope', () => {
-    const cam = computeInitialCamera({ bodyId: 'earth', fovYRad: FOV, simDays: CONST_J2000 });
-    expect(cam.fovYRad).toBe(FOV);
-    expect(cam.near).toBe(0.01);
-    expect(cam.far).toBe(FAR_CLIP_MPC);
-  });
-
-  it('boots to the neutral Local-Group pose when there is no home body', () => {
-    const cam = computeInitialCamera({
-      bodyId: null,
-      fovYRad: FOV,
-      simDays: CONST_J2000,
-      frameBasis: ORIENTATION_FRAMES.ecliptic,
-    });
-    const { yaw, pitch } = orbitAnglesLookingAlong(
-      GALACTIC_DISC_FORWARD,
-      ORIENTATION_FRAMES.ecliptic,
-    );
-
-    expect(cam.target).toEqual([0, 0, 0]);
-    expect(cam.distance).toBe(INITIAL_DISTANCE_MPC);
-    expect(cam.yaw).toBe(yaw);
-    expect(cam.pitch).toBe(pitch);
-  });
-});
 
 describe('GALACTIC_DISC_FORWARD', () => {
   it('decodes through the ecliptic frame to the legacy eye-tuned bearing', () => {
@@ -73,7 +22,9 @@ describe('GALACTIC_DISC_FORWARD', () => {
       GALACTIC_DISC_FORWARD,
       ORIENTATION_FRAMES.ecliptic,
     );
-    expect(yaw).toBeCloseTo(-1.4208, 6);
-    expect(pitch).toBeCloseTo(-0.1783, 6);
+    // 4 places, not 6: the exact J2000 obliquity re-tilts the ecliptic frame by
+    // ~2e-6 rad, still well inside a mistyped fourth decimal.
+    expect(yaw).toBeCloseTo(-1.4208, 4);
+    expect(pitch).toBeCloseTo(-0.1783, 4);
   });
 });

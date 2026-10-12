@@ -2,7 +2,7 @@
  * TourOverlayContainer — store boundary for the guided-tour overlay.
  *
  * Resolves the active beat's caption + readout + dwell state from the `tour`
- * slice (all of it derived from the runtime `tourId` + `beatIndex` via the tour
+ * slice (all of it derived from the takeover's tour id + `beatIndex` via the tour
  * selectors) and turns the four nav controls into Intent dispatches. The
  * presentational `TourOverlay` imports nothing from `store/` or `state/`.
  *

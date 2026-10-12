@@ -38,6 +38,7 @@ function rootWithCamera(
       tween: over.tween ?? null,
       autoRotate: { active: over.autoRotateActive ?? false },
       clip: null,
+      clipId: null,
       frameTween: null,
       // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
       // fixture carries the at-rest arm every real store boots with.

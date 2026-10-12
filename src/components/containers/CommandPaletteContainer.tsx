@@ -32,11 +32,11 @@ const RUN_ACTION: Record<
   focus: (dispatch, action) => {
     if (action.kind !== 'focus') return;
     dispatch(requestSelect(action.focusId));
-    dispatch(requestFocus(action.focusId));
+    dispatch(requestFocus({ id: action.focusId, transition: 'fly' }));
   },
   exhibit: (dispatch, action) => {
     if (action.kind !== 'exhibit') return;
-    dispatch(openExhibit(action.exhibitId));
+    dispatch(openExhibit({ id: action.exhibitId, entry: 'fly' }));
   },
   tour: (dispatch, action) => {
     if (action.kind !== 'tour') return;

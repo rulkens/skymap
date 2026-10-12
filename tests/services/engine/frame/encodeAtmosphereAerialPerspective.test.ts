@@ -62,7 +62,6 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
         orientation: earth.orientation,
-        meanAnomalyRad: 0,
       });
     return m;
   }),

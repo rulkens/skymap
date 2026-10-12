@@ -6,27 +6,31 @@
 import type { FrameStep } from '../../../../@types/engine/frame/FrameStep';
 import type { TimedSlotRow } from '../../../../@types/engine/frame/TimedSlotRow';
 import { groupKeyOf, passTimingSlotName, renderStepTimingSlotName } from '../slabs';
-import { captureFaceViewId } from '../../../../utils/camera/captureFaceViewId';
+import { captureTimingSlotName } from './captureTimingSlotName';
 import { computeTimingSlotName } from './computeTimingSlotName';
 
 export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSlotRow[] {
   const rows: TimedSlotRow[] = [];
+  const captureSlotsSeen = new Set<string>();
   for (const step of program) {
     if (step.kind === 'render') {
       // `groupKeyOf` is the executor's own definition (slabs.ts) — shared so the two can't drift.
       const groupKey = groupKeyOf(step);
-      // This walk has no real `FrameView` to read `.id` off, so a capture
-      // face's id comes from the step's own `CaptureFaceRef` through the same
-      // minting `faceViewSpec` uses. The walk hardcodes `'canvas'` otherwise:
-      // a multi-view rig's extra views have no allocated slot yet (the dome PR
-      // adds them).
-      const viewId =
-        step.capture === undefined
-          ? 'canvas'
-          : captureFaceViewId(step.capture.key, step.capture.face);
+      if (step.capture !== undefined) {
+        // A capture's steps are contiguous, so one begin..end span bills the whole bake.
+        const name = captureTimingSlotName(step.capture.key);
+        if (!captureSlotsSeen.has(name)) {
+          captureSlotsSeen.add(name);
+          rows.push({ name, groupKey });
+        }
+        continue;
+      }
+      // The walk hardcodes `'canvas'`: a multi-view rig's extra views have no allocated slot yet
+      // (the dome PR adds them).
+      const viewId = 'canvas';
       for (const contentPass of step.passes) {
-        // Row + face ride in the slot NAME so two body rows sharing one pass, or a roster pass
-        // drawn per capture face, don't collide — see passTimingSlotName (slabs.ts).
+        // The row rides in the slot NAME so two body rows sharing one pass don't collide — see
+        // passTimingSlotName (slabs.ts).
         rows.push({
           name: passTimingSlotName(contentPass.name, step.slab, viewId),
           groupKey,
@@ -34,8 +38,8 @@ export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSl
       }
       // One slot per render STEP, named for the groupKey, so the `merged` executor has something
       // to hang `timestampWrites` on; the per-pass slots are `perLayerTimed`'s alone. AFTER the
-      // pass loop, so the total trails its passes. `groupKey` alone is NOT unique — the 6 capture
-      // faces share `('sgrAStar', NEAR0)`, several lines `(hdr, NEAR0)` — hence the suffix.
+      // pass loop, so the total trails its passes. `groupKey` alone is NOT unique — several lines
+      // share `(hdr, NEAR0)` — hence the authored `slot` suffix.
       rows.push({
         name: renderStepTimingSlotName(groupKey, viewId, step.slot),
         groupKey,

@@ -7,6 +7,7 @@
  */
 
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { extractGalaxyRow } from './extractGalaxyRow';
 import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
@@ -32,6 +33,7 @@ export function galaxyCatalogSelectionRow(runtime: Catalogs): SelectionKindRow<G
       source: pick.sourceCode as GalaxyCatalogSourceType,
       index: pick.localIdx,
     }),
+    encodePick: (ref) => packSelection(ref.source, ref.index + PICK_SENTINEL_OFFSET),
     extractRow: (ref) => {
       const row = extractGalaxyRow(
         runtime.catalogs.get(ref.source),

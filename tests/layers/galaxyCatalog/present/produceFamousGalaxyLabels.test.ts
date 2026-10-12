@@ -1,8 +1,10 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { mat4 } from 'wgpu-matrix';
 import { produceFamousGalaxyLabels } from '../../../../src/layers/galaxyCatalog/present/produceFamousGalaxyLabels';
-import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
@@ -22,12 +24,19 @@ import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/Famou
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
+// The producers only read the ink bbox; real glyph metrics would pin the
+// fixtures to a font file, so the layout is mocked to report a chosen box.
+const layout = vi.hoisted(() => ({ bbox: null as LabelBBox | null }));
+vi.mock('../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
+  textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
+}));
+
 // Convenience factory used wherever the test doesn't care about wake behavior.
 function makeRegistry(): FadeRegistry {
   return createFadeRegistry({ requestRender: () => {} });
 }
 
-// Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
+// Measured ink bbox the textLayoutOf mock reports (atlas px, anchor-relative,
 // +Y down). maxY = 12 puts the text's true bottom 12 atlas px BELOW the
 // baseline anchor (a descender), which the producer scales by the em clamp to
 // place the line top — nonzero so the tests bite on that scaling.
@@ -44,7 +53,7 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // and the positional catalog, `state.subsystems.fades` for the `galaxy` layer
 // opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
-// visibility gate, and `state.gpu.labelRenderer.measure` for the caption's ink
+// visibility gate, and the text layout bbox for the caption's ink
 // bbox (which places the leader-line top). The fixture supplies all four; the
 // `galaxy` handle is registered at 1 so the at-rest opacity is 1. The
 // famous label gate defaults visible.
@@ -58,10 +67,10 @@ function makeState(
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
   fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
-  const bbox = opts.bbox ?? MEASURED_BBOX;
+  layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
+    gpu: { fontAtlases: { metricsByFont: {} } },
     subsystems: {
       fades,
       // clipPlayer is non-nullable; return factor 1 so the clip channel is
@@ -99,7 +108,7 @@ function screenOf(p: readonly number[]): [number, number] {
 
 function makeCtx(over: { focusBlend?: number } = {}): FrameView {
   return {
-    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0 },
+    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, 0],
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },
@@ -330,7 +339,7 @@ describe('produceFamousGalaxyLabels', () => {
   });
 
   it('famous labels recede uniformly at blend > 0', () => {
-    // No per-member exemption: every famous label is scaled by LABEL_RECESSION
+    // No per-member exemption: every famous label is scaled by MILD_RECESSION
     // at full blend (there is no focused-famous-structure path here).
     const atRest = makeState();
     const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
@@ -344,7 +353,7 @@ describe('produceFamousGalaxyLabels', () => {
       makeCtx({ focusBlend: 1 }),
     ).labels[0]!.fadeAlpha!;
 
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
+    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
   });
 
   it('focusedOnly mode: emits only the focused famous galaxy', () => {
@@ -410,5 +419,35 @@ describe('produceFamousGalaxyLabels', () => {
       expect(pick.sourceCode).toBe(Source.FamousGalaxy);
       expect(runtime.famousMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
     }
+  });
+
+  it('outside the focused sphere a label draws but carries no pick; inside and at rest it keeps it', () => {
+    const runtime = seed(
+      [
+        { id: 'in', names: ['In'] },
+        { id: 'out', names: ['Out'] },
+      ],
+      [5, 0, 0, 5, 3, 0],
+      [120, 120],
+    );
+    const state = makeState();
+    const focus: FocusUniformsValue = {
+      center: [5, 0, 0],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    };
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const pickOf = (labels: readonly Label2D[], id: string) =>
+      labels.find((l) => l.id === id)!.pickId;
+
+    const rest = produceFamousGalaxyLabels(runtime)(state, ctx).labels;
+    expect(pickOf(rest, 'famous-out')).toBeDefined();
+
+    const under = produceFamousGalaxyLabels(runtime)(state, focused).labels;
+    expect(pickOf(under, 'famous-in')).toBeDefined();
+    expect(pickOf(under, 'famous-out')).toBeUndefined();
+    expect(under.find((l) => l.id === 'famous-out')!.fadeAlpha).toBeGreaterThan(0);
   });
 });

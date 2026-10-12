@@ -28,7 +28,7 @@
  */
 
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
-import { focusFraming } from '../../services/engine/camera/focusFraming';
+import { framingPose } from '../../services/engine/camera/framingPose';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
@@ -53,7 +53,7 @@ export function focusTweenDescriptor(
 ): CameraTweenDescriptor {
   return {
     from,
-    to: { yaw: from.yaw, pitch: from.pitch, ...focusFraming(row, fovYRad) },
+    to: framingPose(row, fovYRad, from),
     durationMs: FOCUS_TWEEN_MS,
     easing: 'easeOutCubic',
     frame,

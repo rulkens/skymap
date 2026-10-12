@@ -55,6 +55,8 @@ export type EngineState = {
   /** True once `wireInput` seeded the first real camera pose. The gate every
    * pre-bootstrap bail reads; there is no boot camera object to read from. */
   booted: boolean;
+  /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
+  fadesAnimating: boolean;
   /**
    * Live camera Resources, seeded with placeholders in `engine.ts` and filled
    * by `wireInput`'s bootstrap seed once the initial camera exists.

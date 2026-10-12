@@ -16,11 +16,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
-import { selectionResolverOver } from '../../../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../../../support/selectionResolverOver';
 import { localGroupDwell } from '../../../../../src/data/animation/tours/grandTour/localGroup';
 import { neighbourhoodReveal } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodReveal';
 import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
-import type { ResolveDeps } from '../../../../../src/@types/engine/ResolveDeps';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
@@ -35,8 +37,8 @@ const M81_POS: Vec3 = [-3.6 * Math.sin(0.6), 0, -3.6 * Math.cos(0.6)];
 
 const LOCAL_GROUP: StructureInfo = {
   type: 'structure',
-  category: 'group',
-  id: 'group-local-group',
+  category: 'galaxy-group',
+  id: 'galaxy-group-local-group',
   name: 'Local Group',
   worldPos: LG_POS,
   featured: true,
@@ -45,22 +47,20 @@ const LOCAL_GROUP: StructureInfo = {
 
 const M81_GROUP: StructureInfo = {
   type: 'structure',
-  category: 'group',
-  id: 'group-m81-group',
+  category: 'galaxy-group',
+  id: 'galaxy-group-m81-group',
   name: 'M81 Group',
   worldPos: M81_POS,
   featured: true,
   physicalRadiusMpc: 0.5,
 } as StructureInfo;
 
-const DEPS: ResolveDeps = {
-  structures: {
-    byId: (id) =>
-      id === 'group-local-group' ? LOCAL_GROUP : id === 'group-m81-group' ? M81_GROUP : null,
-    byCategory: () => [],
-  },
+const STRUCTURES: StructureRowFixture = {
+  byId: (id) =>
+    id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
+  byCategory: () => [],
 };
-const RESOLVER = selectionResolverOver(DEPS);
+const RESOLVER = selectionResolverOver(STRUCTURES);
 
 /**
  * Find the yaw `spin` node's `by` anywhere in a resolved clip's timeline.

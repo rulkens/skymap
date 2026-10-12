@@ -59,7 +59,7 @@ describe('exhibitBodySaga', () => {
     const { store, sagaMiddleware } = buildStore(playClip);
 
     sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(EXHIBIT);
+      yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -83,7 +83,7 @@ describe('exhibitBodySaga', () => {
     expect(store.getState().selection.focus).toEqual(EARTH_REF);
 
     sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(EXHIBIT);
+      yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -95,7 +95,7 @@ describe('exhibitBodySaga', () => {
     const { store, sagaMiddleware } = buildStore(playClip);
 
     const task = sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(EXHIBIT);
+      yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -122,7 +122,7 @@ describe('exhibitBodySaga', () => {
     expect(before.active).toBe(false);
 
     sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(EXHIBIT);
+      yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -149,7 +149,7 @@ describe('exhibitBodySaga', () => {
     const before = store.getState().camera.autoRotate;
 
     const task = sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(EXHIBIT);
+      yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
     expect(store.getState().camera.autoRotate.active).toBe(true);
@@ -181,7 +181,7 @@ describe('exhibitBodySaga', () => {
     const { sagaMiddleware } = buildStore(playClip, cameraRuntime);
 
     sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(fitExhibit);
+      yield* exhibitBodySaga(fitExhibit, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -202,7 +202,7 @@ describe('exhibitBodySaga', () => {
     const { sagaMiddleware } = buildStore(playClip); // default cameraRuntime returns null
 
     sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(fitExhibit);
+      yield* exhibitBodySaga(fitExhibit, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -219,7 +219,7 @@ describe('exhibitBodySaga', () => {
     const { store, sagaMiddleware } = buildStore(playClip);
 
     const task = sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga(EXHIBIT);
+      yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
 

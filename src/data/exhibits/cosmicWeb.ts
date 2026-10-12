@@ -7,7 +7,7 @@
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as volumesInitialState } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
-import { GALAXIES_OFF } from './utils/galaxiesOff';
+import { SURVEYS_OFF } from './utils/surveysOff';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The 2MRS Polyphorm run rides with MCPM here: same quantity, but an all-sky
@@ -30,7 +30,7 @@ const INFERNO_RAMP = ['#000004', '#3b0f70', '#8c2981', '#de4968', '#fe9f6d', '#f
 export const cosmicWeb: Exhibit = {
   id: 'cosmicWeb',
   label: 'Cosmic Web',
-  settings: { galaxyCatalogs: GALAXIES_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
+  settings: { galaxyCatalogs: SURVEYS_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
   // User-framed and verified live 2026-09-18 (docs/grill-sessions/search-palette-tabs-2026-09-18.md,
   // "Capture spike findings"): no focus, target/yaw/pitch/distance below.
   pose: {
@@ -49,7 +49,7 @@ export const cosmicWeb: Exhibit = {
     {
       kind: 'prose',
       heading: 'How it was made',
-      text: 'The web can’t be photographed. This map was computed from the positions of about 325,000 SDSS galaxies by a simulation modelled on a <a href="https://en.wikipedia.org/wiki/Physarum_polycephalum">slime mould</a>, <i>Physarum polycephalum</i>, which grows efficient networks between food sources. Here the galaxies are the food; the network the swarm settles into traces the filaments between them.',
+      text: 'The web cannot be photographed. This map was computed from the positions of about 325,000 galaxies in the Sloan Digital Sky Survey by a simulation of a <a href="https://en.wikipedia.org/wiki/Physarum_polycephalum">slime mould</a>, <i>Physarum polycephalum</i>, which grows networks between food sources. Here the galaxies are the food, and the network traces the filaments between them.',
     },
     {
       kind: 'key',
@@ -63,16 +63,17 @@ export const cosmicWeb: Exhibit = {
         onWord: 'shown',
         offWord: 'hidden in this view',
         on: [mergeSnapshot({ galaxyCatalogs: galaxyCatalogsInitialState })],
-        off: [mergeSnapshot({ galaxyCatalogs: GALAXIES_OFF })],
+        off: [mergeSnapshot({ galaxyCatalogs: SURVEYS_OFF })],
       },
     },
     {
       kind: 'facts',
       facts: [
-        { label: 'Galaxies traced', value: '~325,000' },
-        { label: 'Distance', value: '44–476 Mpc' },
-        { label: 'Voxel', value: '0.78 Mpc' },
-        { label: 'Grid', value: '712 × 1200 × 728' },
+        // 44 to 476 Mpc deep at 0.78 Mpc per cell, at 3.26 Mly per Mpc.
+        { label: 'Galaxies traced', value: 'About 325,000' },
+        { label: 'Finest detail', value: '2.5 million light-years' },
+        { label: 'Nearest part', value: '140 million light-years' },
+        { label: 'Farthest part', value: '1.6 billion light-years' },
       ],
     },
     {
