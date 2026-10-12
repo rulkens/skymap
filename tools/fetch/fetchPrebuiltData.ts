@@ -11,15 +11,13 @@
  * `<dest>.part`, renamed into place only on success, so a same-named file
  * on disk is always trustworthy as "already fetched". Star octree chunks are
  * never in the manifest: each manifested v2 index names its own, and each chunk
- * the next depth's, so they are listed by reading headers down the tree (a chunk
- * not yet on disk is downloaded to read its header, or under `--dry-run` read
- * over the wire and dropped) and the rest fetched after the manifest's files.
+ * the next depth's, so they are listed by reading headers down the tree (off
+ * disk, else by a ranged GET of the header alone) and fetched with the rest.
  */
 import {
   createWriteStream,
   existsSync,
   mkdirSync,
-  readFileSync,
   renameSync,
   statSync,
   writeFileSync,
@@ -35,14 +33,19 @@ import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
 import {
   OCTREE_CHUNK_MAGIC,
+  OCTREE_HEADER_BYTES_OFFSET,
   OCTREE_INDEX_MAGIC,
+  OCTREE_JSON_OFFSET,
   STAR_OCTREE_DATA_PREFIX,
   starChunkPath,
 } from '../../src/data/octree/octreeFormat';
 import { readOctreeHeader } from '../../src/data/octree/readOctreeHeader';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
+import { readOctreeFileHeader } from '../utils/io/readOctreeFileHeader';
 
 const DATA_DIR = 'public/data';
+// A leaf chunk's header fits; a parent's (up to ~20 KB on the real bake) takes a second, exact read.
+const HEADER_PROBE_BYTES = 4096;
 
 async function fetchManifest(host: string): Promise<DataManifest> {
   const url = `${host}/data/manifest.json`;
@@ -73,38 +76,48 @@ async function downloadFile(url: string, destPath: string): Promise<number> {
   return statSync(destPath).size;
 }
 
-/** A data file's bytes: from disk when present, else downloaded first, or under a dry run only read. */
-async function dataFileBytes(host: string, path: string, dryRun: boolean): Promise<ArrayBuffer> {
-  const destPath = join(DATA_DIR, path);
-  if (!existsSync(destPath) && !dryRun) await downloadFile(`${host}/data/${path}`, destPath);
-  if (existsSync(destPath)) {
-    const bytes = readFileSync(destPath);
-    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-  }
-  const res = await fetch(`${host}/data/${path}`);
-  if (!res.ok) throw new Error(`GET ${host}/data/${path} -> HTTP ${res.status}`);
-  return res.arrayBuffer();
+/** An octree object's header: off disk when present, else a ranged GET of its first bytes. */
+async function octreeHeader<H extends OctreeIndexHeader | OctreeChunkHeader>(
+  host: string,
+  dataDir: string,
+  path: string,
+  magic: string,
+): Promise<H> {
+  const localPath = join(dataDir, path);
+  if (existsSync(localPath)) return readOctreeFileHeader<H>(localPath, magic);
+  const url = `${host}/data/${path}`;
+  const head = async (bytes: number) => {
+    const res = await fetch(url, { headers: { Range: `bytes=0-${bytes - 1}` } });
+    if (!res.ok) throw new Error(`GET ${url} (ranged) -> HTTP ${res.status}`);
+    return res.arrayBuffer();
+  };
+  let buf = await head(HEADER_PROBE_BYTES);
+  const span = OCTREE_JSON_OFFSET + new DataView(buf).getUint32(OCTREE_HEADER_BYTES_OFFSET, true);
+  if (buf.byteLength < span) buf = await head(span);
+  return readOctreeHeader<H>(buf, magic).header;
 }
 
-/** Every chunk path one star index names, at every depth. */
-async function starChunkPaths(
+/** Every chunk path one star index names, at every depth, read off headers only. */
+export async function starChunkPaths(
   host: string,
+  dataDir: string,
   logicalPath: string,
   hashedPath: string,
-  dryRun: boolean,
 ): Promise<string[]> {
   const binBaseName = basename(logicalPath, '.bin');
-  const index = await dataFileBytes(host, hashedPath, dryRun);
   const paths: string[] = [];
   const walk = async (refs: readonly OctreeChunkRef[]) => {
     for (const ref of refs) {
       const path = starChunkPath(binBaseName, ref);
       paths.push(path);
-      const bytes = await dataFileBytes(host, path, dryRun);
-      await walk(readOctreeHeader<OctreeChunkHeader>(bytes, OCTREE_CHUNK_MAGIC).header.chunks);
+      await walk(
+        (await octreeHeader<OctreeChunkHeader>(host, dataDir, path, OCTREE_CHUNK_MAGIC)).chunks,
+      );
     }
   };
-  await walk(readOctreeHeader<OctreeIndexHeader>(index, OCTREE_INDEX_MAGIC).header.chunks);
+  await walk(
+    (await octreeHeader<OctreeIndexHeader>(host, dataDir, hashedPath, OCTREE_INDEX_MAGIC)).chunks,
+  );
   return paths;
 }
 
@@ -125,9 +138,9 @@ async function main(): Promise<void> {
     if (posix.dirname(logicalPath) !== STAR_OCTREE_DATA_PREFIX) continue;
     for (const chunkPath of await starChunkPaths(
       host,
+      DATA_DIR,
       logicalPath,
       manifest[logicalPath]!,
-      dryRun,
     )) {
       files.push({ logicalPath: chunkPath, hashedPath: chunkPath });
     }

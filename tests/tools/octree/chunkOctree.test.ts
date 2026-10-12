@@ -130,6 +130,17 @@ describe('chunkOctree', () => {
     expect(() => chunkOctree(tree, 1_000_000, NODE_CAPACITY)).toThrow(/MAX_OWN_COUNT/);
   });
 
+  it('a tree that already fits needs no root: it bakes as an index with no chunks', () => {
+    // Three stars bright enough to hoist into the root row: a one-row tree, nothing to nest.
+    const tree = stratifyOctree(
+      makeOctreeBuildInput(randomOctreeRecords(3, 3, 640, [-6, -6]), GRID),
+    );
+    expect(tree.nodes.count).toBe(1);
+    const { index, chunks } = chunkOctree(tree, CAPACITY, NODE_CAPACITY);
+    expect(chunks).toEqual([]);
+    expect(index.nodes.count).toBe(1);
+  });
+
   it('STOPs when the top cannot shrink under the record bound', () => {
     // Stars down to M = −6 hoist hundreds of records into the root row alone.
     const tree = stratifyOctree(

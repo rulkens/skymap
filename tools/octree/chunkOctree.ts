@@ -101,7 +101,7 @@ export function chunkOctree(
         topRecords += recordsOf(i);
       }
     }
-    if (found === 0) {
+    if (found === 0 && (topRows > nodeCapacity || topRecords > capacity)) {
       throw new Error(
         `nesting STOP: the top object holds ${topRows} rows / ${topRecords} records, over ` +
           `nodeCapacity ${nodeCapacity} or chunkCapacity ${capacity}, and no row's subtree in it fits`,

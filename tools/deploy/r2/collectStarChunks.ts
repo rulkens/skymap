@@ -16,14 +16,8 @@ import {
   STAR_OCTREE_DATA_PREFIX,
   starChunkPath,
 } from '../../../src/data/octree/octreeFormat';
-import { readOctreeHeader } from '../../../src/data/octree/readOctreeHeader';
+import { readOctreeFileHeader } from '../../utils/io/readOctreeFileHeader';
 import type { R2Upload } from '../@types/R2Upload';
-
-function headerOf<H extends OctreeIndexHeader | OctreeChunkHeader>(path: string, magic: string): H {
-  const bytes = readFileSync(path);
-  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  return readOctreeHeader<H>(buf as ArrayBuffer, magic).header;
-}
 
 export function collectStarChunks(dataDir: string): R2Upload[] {
   const manifestPath = join(dataDir, 'manifest.json');
@@ -39,10 +33,12 @@ export function collectStarChunks(dataDir: string): R2Upload[] {
           const rel = starChunkPath(binBaseName, ref);
           const localPath = join(dataDir, rel);
           uploads.push({ localPath, r2Key: `data/${rel}` });
-          walk(headerOf<OctreeChunkHeader>(localPath, OCTREE_CHUNK_MAGIC).chunks);
+          walk(readOctreeFileHeader<OctreeChunkHeader>(localPath, OCTREE_CHUNK_MAGIC).chunks);
         }
       };
-      walk(headerOf<OctreeIndexHeader>(join(dataDir, hashed), OCTREE_INDEX_MAGIC).chunks);
+      walk(
+        readOctreeFileHeader<OctreeIndexHeader>(join(dataDir, hashed), OCTREE_INDEX_MAGIC).chunks,
+      );
       return uploads;
     });
 }
