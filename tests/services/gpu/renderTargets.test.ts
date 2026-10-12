@@ -131,13 +131,13 @@ describe('createRenderTargets', () => {
     );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // cosmic-web-density @ scale 3 (colour), star-aggregates @ scale 2 (colour),
+    // cosmic-web-density @ scale 3 (colour), star-aggregates @ scale 4 (colour),
     // mw-aggregate @ scale 2 (colour), foreground:0 @ scale 1 (colour +
     // depth), the five bloom-pyramid mips bloom0..bloom4 @ scale 2/4/8/16/32
     // (colour only), and sky-cubemap @ fixedSizePx (colour) → 12 textures,
     // plus the far-depth placeholder (outside the spec table, never resized)
-    // → 13. hdr at full size, cosmic-web-density at floor(size/3), star-aggregates and
-    // mw-aggregate at floor(size/2).
+    // → 13. hdr at full size, cosmic-web-density at floor(size/3), star-aggregates at
+    // floor(size/4), mw-aggregate at floor(size/2).
     expect(create.mock.calls).toHaveLength(13);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find(
@@ -148,7 +148,7 @@ describe('createRenderTargets', () => {
     )![0];
     expect(hdrDesc.size).toEqual({ width: 900, height: 600, depthOrArrayLayers: 1 });
     expect(volDesc.size).toEqual({ width: 300, height: 200, depthOrArrayLayers: 1 });
-    expect(aggDesc.size).toEqual({ width: 450, height: 300, depthOrArrayLayers: 1 });
+    expect(aggDesc.size).toEqual({ width: 225, height: 150, depthOrArrayLayers: 1 });
     expect(hdrDesc.format).toBe('rgba16float');
     expect(volDesc.format).toBe('rgba16float');
     expect(aggDesc.format).toBe('rgba16float');
@@ -173,7 +173,7 @@ describe('createRenderTargets', () => {
       .at(-1)![0];
     expect(hdrResized.size).toEqual({ width: 1200, height: 900, depthOrArrayLayers: 1 });
     expect(volResized.size).toEqual({ width: 400, height: 300, depthOrArrayLayers: 1 });
-    expect(aggResized.size).toEqual({ width: 600, height: 450, depthOrArrayLayers: 1 });
+    expect(aggResized.size).toEqual({ width: 300, height: 225, depthOrArrayLayers: 1 });
     // New views replaced the old ones.
     expect(targets.viewOf('hdr')).not.toBe(hdrViewBefore);
     expect(targets.viewOf('cosmic-web-density')).not.toBe(volViewBefore);

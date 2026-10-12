@@ -1,11 +1,11 @@
-// starAggregateUpsample/fragment.wesl — composite the half-res survey-star
+// starAggregateUpsample/fragment.wesl — composite the low-res survey-star
 // aggregate offscreen back into the HDR accumulation, applying the star pass's
 // hue-preserving knee to the SUMMED aggregate field.
 //
 // ## What the offscreen holds
 //
 // The aggregate stream ('starCatalog/fragment.wesl' fsLinear) draws every
-// aggregate glow LINEAR into the half-res 'star-aggregates' target with one/one
+// aggregate glow LINEAR into the low-res 'star-aggregates' target with one/one
 // additive blend on BOTH colour and alpha. So each texel ends the frame with:
 //
 //   rgb = sum over covering glows of (tint_i * scalar_i)   -- summed tinted light

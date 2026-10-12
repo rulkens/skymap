@@ -5,7 +5,7 @@
  * `upload` commits a catalog once; the per-frame cut is taken on the GPU
  * (`starCutGpu`) from the inputs `setFrameCut` holds, and each stream draws with
  * one `drawIndirect`. Leaves go to full-res HDR (`fs`), aggregates LINEAR to the
- * half-res `star-aggregates` offscreen (`fsLinear`); both are rgba16float.
+ * low-res `star-aggregates` offscreen (`fsLinear`); both are rgba16float.
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -74,7 +74,7 @@ export function createStarCatalogRenderer(
   // each carry a different vp, all before one `submit()`, and a shared buffer
   // would hand every draw the LAST write (docs/RENDERER.md landmine #1).
   // And one ring per stream: in the real view the aggregate stream rasterises
-  // a half-res target, so its viewport and pxPerRad differ from the leaf's.
+  // a low-res target, so its viewport and pxPerRad differ from the leaf's.
   const makeCameraRing = (stream: StarDrawStream) =>
     createViewSlotUniformRing({
       device,

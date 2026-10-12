@@ -247,7 +247,7 @@ fn vs(
 
   // Focus dim: stars outside a focused structure's sphere recede by the rule the
   // survey galaxies use, at this record's own position (an aggregate dims by its
-  // box record, so the half-res glow dims too). Exactly 1.0 at rest.
+  // box record, so the low-res glow dims too). Exactly 1.0 at rest.
   let focus = FocusUniforms(
     vec4<f32>(u.focusCenterRelCam, u.focusApparentRadiusMpc),
     u.focusBlend,

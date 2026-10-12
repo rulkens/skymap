@@ -1,7 +1,7 @@
 /**
  * Draws the octree cut's LEAF stream (real stars) into HDR at full
  * resolution; the AGGREGATE stream (flux-mip glows) draws separately at
- * half-res via `starAggregatesPass`, sharing `drawStarCut` /
+ * low-res via `starAggregatesPass`, sharing `drawStarCut` /
  * `starCatalogVisible` so the two agree. Pick is leaf-only — an aggregate
  * stands for a subtree, no single star to name.
  */

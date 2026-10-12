@@ -1,5 +1,5 @@
 /**
- * starAggregateUpsample — fullscreen pass that upsamples the half-resolution
+ * starAggregateUpsample — fullscreen pass that upsamples the low-resolution
  * survey-star aggregate offscreen and additively blends it into the HDR
  * target, re-applying the star pass's hue-preserving knee to the summed
  * aggregate field on the way.
@@ -7,7 +7,7 @@
  * ### Why a sibling of `additiveUpsample` rather than another of its instances
  *
  * The two passes share their whole shape — a linear-sampled fullscreen blit of
- * a half-res offscreen, additive into HDR — but differ in the fragment math:
+ * a low-res offscreen, additive into HDR — but differ in the fragment math:
  * `additiveUpsample` is a 4-tap low-pass blit that reconstructs its source
  * unchanged, while this one is a single-tap composite that knees the SUMMED
  * scalar (carried in the offscreen alpha; see the shader). Folding both into one
@@ -73,15 +73,15 @@ export function createStarAggregateUpsample(
   });
 
   return {
-    draw(pass: GPURenderPassEncoder, halfResView: GPUTextureView): void {
-      // Bind group rebuilt per draw because the half-res view is recreated on
+    draw(pass: GPURenderPassEncoder, lowResView: GPUTextureView): void {
+      // Bind group rebuilt per draw because the low-res view is recreated on
       // every renderTargets.reconcile(). One alloc per frame is negligible against
       // the fullscreen composite it carries.
       const bindGroup = device.createBindGroup({
         label: 'starAggregateUpsample-bg',
         layout: bindGroupLayout,
         entries: [
-          { binding: 0, resource: halfResView },
+          { binding: 0, resource: lowResView },
           { binding: 1, resource: sampler },
         ],
       });
