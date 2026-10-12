@@ -1,20 +1,14 @@
 /**
- * NavigationPanelContainer — App-boundary for `NavigationPanel`'s mount-time
- * viewport read.
- *
- * This is not a store subscription: `NavigationPanel` owns its own
- * expand/collapse settings reach internally. The one thing App used to carry
- * on its behalf was the one-shot `useInitialMobile` viewport sample that seeds
- * `defaultOpen`; hoisting it here keeps App purely structural.
+ * NavigationPanelContainer — App-boundary for `NavigationPanel`, which is static
+ * and keeps its own expand/collapse state. Desktop only: the phone has no
+ * cheatsheet.
  */
 
 import { memo } from 'react';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
-import { useInitialMobile } from '../../hooks/useInitialMobile';
 
 function NavigationPanelContainer(): React.ReactElement {
-  const initialMobile = useInitialMobile();
-  return <NavigationPanel defaultOpen={!initialMobile} />;
+  return <NavigationPanel />;
 }
 
 export default memo(NavigationPanelContainer);

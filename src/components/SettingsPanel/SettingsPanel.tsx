@@ -4,8 +4,7 @@
  * Renders the composed Layers' own `ui` sections (in composition order, D13),
  * then the four core section containers, wrapped in the shared Panel chrome.
  * Zero store reach lives here — every selector and dispatch call belongs to
- * the containers/Layers this shell renders. `defaultOpen` is the one prop
- * beyond the Redux store's reach (false on mobile viewports).
+ * the containers/Layers this shell renders.
  */
 
 import { memo, useMemo } from 'react';
@@ -21,18 +20,13 @@ import EarthSectionContainer from '../containers/EarthSectionContainer';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 type SettingsPanelProps = {
-  /** Initial Panel open/closed state. App passes `false` on mobile viewports. */
-  defaultOpen?: boolean;
   /** Render without the collapsible card, for hosts that own the surface. */
   bare?: boolean;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
 
-export const SettingsPanel = memo(function SettingsPanel({
-  defaultOpen,
-  bare,
-}: SettingsPanelProps): ReactNode {
+export const SettingsPanel = memo(function SettingsPanel({ bare }: SettingsPanelProps): ReactNode {
   const mainSections = useMemo(() => layerUiContents(APP_COMPOSITION.layers, 'main'), []);
   const labelsAndGuidesRows = useMemo(
     () => layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides'),
@@ -42,7 +36,6 @@ export const SettingsPanel = memo(function SettingsPanel({
     <Panel
       title="Settings"
       ariaLabel="Renderer settings"
-      defaultOpen={defaultOpen}
       bare={bare}
       headerExtra={<TierChipContainer />}
     >

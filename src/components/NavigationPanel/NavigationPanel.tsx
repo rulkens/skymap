@@ -27,16 +27,14 @@
  * rows; collapse state is session-only and lives inside Panel.
  */
 
-import { memo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
 import styles from './NavigationPanel.module.css';
 
 /**
  * Cheatsheet rows, in display order.  Two columns: gesture/key on the left
  * (muted), action on the right.  Module-level constants so the JSX stays a
- * simple `.map`.  Renaming any string here breaks the matching test in
- * `tests/components/NavigationPanel/NavigationPanel.test.ts` — that's the
- * canary that keeps the cheatsheet in sync with the actual handlers.
+ * simple `.map`.
  *
  * Desktop only: the phone HUD has no cheatsheet.
  */
@@ -52,21 +50,9 @@ const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '⌘K / Ctrl+K / /', action: 'search galaxies' },
 ];
 
-export type NavigationPanelProps = {
-  defaultOpen?: boolean;
-};
-
-function NavigationPanel(props: NavigationPanelProps): ReactNode {
-  // Non-optional `props` parameter (no `= {}` default) so React's
-  // createElement TS overloads match the function-component signature
-  // and thread `NavigationPanelProps` through.  With a defaulted
-  // parameter, TS picks the no-args overload and rejects callers that
-  // try to pass `{ defaultOpen: true }` with a confusing
-  // "Type 'X' has no properties in common with type 'Attributes'".
-  // Callers that don't need any prop pass an explicit empty `{}`.
-  const { defaultOpen } = props;
+function NavigationPanel(): ReactNode {
   return (
-    <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet" defaultOpen={defaultOpen}>
+    <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet">
       {DESKTOP_ROWS.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.key}>{row.key}</span>
@@ -77,9 +63,4 @@ function NavigationPanel(props: NavigationPanelProps): ReactNode {
   );
 }
 
-// `React.memo` because every prop is a primitive — the panel content is
-// fully static after the first render, but App.tsx re-renders on every
-// camera update during animation.  Without memo the cheatsheet
-// would re-run its row-mapping for nothing.  Shallow compare on two
-// booleans is essentially free.
-export default memo(NavigationPanel);
+export default NavigationPanel;
