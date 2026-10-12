@@ -36,6 +36,12 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         does: 'Unpins the card and lets go of the focus. The camera stays where it is.',
         where: `${ANYWHERE}, and in a text field too`,
       },
+      {
+        input: ['Shift+C'],
+        shortcut: ['shift+c'],
+        does: 'Switches the mouse controls between the Skymap scheme and the OpenSpace scheme, where a drag sets the camera moving and it slows to a stop after you let go.',
+        where: ANYWHERE,
+      },
     ],
   },
   {
