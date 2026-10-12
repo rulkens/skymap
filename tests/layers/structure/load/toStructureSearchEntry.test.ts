@@ -32,6 +32,7 @@ describe('toStructureSearchEntry', () => {
       category: 'galaxy-cluster',
       abell: 'A1656',
       description: 'The nearest rich cluster.',
+      featured: true,
     });
   });
 
@@ -42,6 +43,7 @@ describe('toStructureSearchEntry', () => {
       category: 'supercluster',
       abell: null,
       description: '',
+      featured: true,
     });
   });
 });

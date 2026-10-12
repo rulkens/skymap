@@ -175,6 +175,13 @@
   top: 40px;
   right: 44px;
   width: 360px;
+  /* Keeps the column inside short windows; it scrolls instead of clipping. */
+  max-height: calc(100dvh - 40px - 32px);
+  overflow-y: auto;
+  pointer-events: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-fg-ghost) transparent;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -430,10 +437,10 @@
   background: var(--surface-soft);
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
-  border: 2px solid rgba(168, 208, 255, 0.18);
+  border: 2px solid var(--border-hover);
   border-radius: 999px;
   cursor: pointer;
-  color: var(--color-fg-tertiary);
+  color: var(--color-fg-base);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
   /* Fade only — the pill is centred by its own transform. */
   animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
@@ -454,7 +461,7 @@
   height: 24px;
   align-items: center;
   justify-content: center;
-  color: var(--color-fg-label);
+  color: var(--color-fg-tertiary);
 }
 
 .exitLabel {
@@ -467,12 +474,12 @@
 
 .exitKey {
   padding: 2px 5px;
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-control);
   border-radius: 3px;
   font-family: var(--font-family-mono);
   font-size: 9px;
   line-height: 1;
-  color: var(--color-fg-dim);
+  color: var(--color-fg-muted);
 }
 
 /* ── Hide toggle (top-right) ───────────────────────────────────────── */
@@ -532,9 +539,28 @@
 
 /* ── Mobile ────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* One scrolling column: the caption fills the first screen, notes follow. */
+  .root {
+    overflow-y: auto;
+    overflow-x: hidden;
+    pointer-events: auto;
+    overscroll-behavior: contain;
+  }
+  .vignetteCaption {
+    position: fixed;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 70%);
+  }
+  .vignetteNotes {
+    display: none;
+  }
   .caption {
-    left: 24px;
-    right: 24px;
+    position: relative;
+    left: auto;
+    bottom: auto;
+    box-sizing: border-box;
+    min-height: 100dvh;
+    justify-content: flex-end;
+    padding: var(--space-12) var(--space-12) calc(74px + env(safe-area-inset-bottom, 0px));
     max-width: none;
   }
   .title {
@@ -544,30 +570,32 @@
     font-size: 18px;
   }
   .notes {
-    top: 64px;
-    right: 24px;
-    left: 24px;
+    position: relative;
+    top: auto;
+    right: auto;
     width: auto;
-    max-height: 52vh;
+    max-height: none;
+    overflow: visible;
+    padding: var(--space-12) var(--space-12) calc(88px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.8) 48px);
+    animation: exhibitEnterFade 1.8s ease-out var(--exhibit-enter-delay) both;
   }
-  /* The centred pill sits under a manual-mode TimeBar at phone width. */
   .exitPill {
-    top: 16px;
-    right: 16px;
-    bottom: auto;
-    left: auto;
-    transform: none;
-    padding: 6px 12px 6px 6px;
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 0, 0, 0.7);
   }
-  .exitKey {
-    display: none;
+  /* The column scrolls here, so `.content` stays in flow and the toggle is pinned
+     to the viewport; hidden, the root lets touches through to the field again. */
+  .content {
+    position: static;
   }
-  /* Same row as the exit pill, immediately to its left. */
+  .hidden.root {
+    overflow: hidden;
+    pointer-events: none;
+  }
   .hideToggle {
-    top: 16px;
-    right: 160px;
-  }
-  .vignetteNotes {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
   }
 }

@@ -10,9 +10,11 @@ import type { StructureInfo } from '../../../../@types/data/structure/StructureI
 import { formatDistance } from '../../../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../../../utils/format/formatAbellDesignation';
 import { CATEGORY_DISPLAY_INFO } from '../../../../data/structure/categoryDisplayInfo';
+import { structureShotUrl } from '../../../../utils/structure/structureShotUrl';
 import { NEBULA_KIND_LABELS } from '../../../../data/structure/nebulaKindLabels';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
+import ShotSummary from '../../../../components/InfoCard/ShotSummary/ShotSummary';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import { InfoTip } from '../../../../components/InfoTip/InfoTip';
@@ -44,6 +46,42 @@ function StructureDetailCard({
   onClose,
 }: StructureDetailCardProps): ReactNode {
   const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
+  const shot = target.featured ? structureShotUrl(target.id) : undefined;
+  // With a shot the lead rows sit beside it as summary lines (as the body card
+  // does); without one they stay ordinary CardRows.
+  const countRow =
+    memberCount != null
+      ? {
+          label: <InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>,
+          value: memberCount.toLocaleString(),
+        }
+      : null;
+  const leadRows = [
+    {
+      label: <InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>,
+      value: formatDistance(distanceMpc),
+    },
+    {
+      label: <InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>,
+      value: formatDistance(target.physicalRadiusMpc),
+    },
+  ];
+  // Rows below the top row; the section is dropped when the shot took them all.
+  const rows = [
+    ...(shot === undefined ? leadRows : []),
+    ...(target.category === 'nebula'
+      ? [{ label: 'Type', value: NEBULA_KIND_LABELS[target.nebulaKind] }]
+      : []),
+    ...(shot === undefined && countRow ? [countRow] : []),
+    ...(target.category === 'galaxy-cluster' && target.abell !== undefined
+      ? [
+          {
+            label: <InfoTip {...TIPS.abell!}>Abell</InfoTip>,
+            value: formatAbellDesignation(target.abell),
+          },
+        ]
+      : []),
+  ];
   const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
@@ -59,31 +97,21 @@ function StructureDetailCard({
         {target.name}
       </CardRow>
 
-      <div className={styles.cardSection}>
-        <CardRow
-          label={<InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>}
-          value={formatDistance(distanceMpc)}
+      {shot !== undefined && (
+        <ShotSummary
+          url={shot}
+          alt={`${target.name} thumbnail`}
+          rows={[...leadRows, ...(countRow ? [countRow] : [])]}
         />
-        <CardRow
-          label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
-          value={formatDistance(target.physicalRadiusMpc)}
-        />
-        {target.category === 'nebula' && (
-          <CardRow label="Type" value={NEBULA_KIND_LABELS[target.nebulaKind]} />
-        )}
-        {memberCount != null && (
-          <CardRow
-            label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}
-            value={memberCount.toLocaleString()}
-          />
-        )}
-        {target.category === 'galaxy-cluster' && target.abell !== undefined && (
-          <CardRow
-            label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}
-            value={formatAbellDesignation(target.abell)}
-          />
-        )}
-      </div>
+      )}
+
+      {rows.length > 0 && (
+        <div className={styles.cardSection}>
+          {rows.map((row, i) => (
+            <CardRow key={i} {...row} />
+          ))}
+        </div>
+      )}
 
       {target.wikipediaTitle && (
         <div className={styles.cardSection}>

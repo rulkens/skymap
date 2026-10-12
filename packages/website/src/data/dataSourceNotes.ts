@@ -590,7 +590,11 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   dss: {
     description:
-      'The picture the app asks for when SDSS has none: a cutout of the Digitized Sky Survey, served by CDS.',
+      'The picture the app asks for when SDSS has none, and the pictures of star clusters and nebulae: cutouts of the Digitized Sky Survey, served by CDS.',
+  },
+  '2mass-images': {
+    description:
+      'The picture of the star cluster Trumpler 14: a cutout of the infrared 2MASS survey, served by CDS, where the Digitized Sky Survey saturates.',
   },
   ned: {
     description:
