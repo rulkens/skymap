@@ -895,7 +895,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-phone',
     about: 'app',
-    text: 'On a phone the foot of the screen is a dock of four buttons: Home, Search, Time and Layers. Layers opens the settings headings as a sheet above the dock, and the cross at its top right, or Layers again, closes it. Time opens the clock’s row above the dock; off real time, or while the clock is paused, its button shows the date. There is no Navigation panel. An open card sits above the dock too: drag it up by the bar at its top to read the rest, and tap the cross in its header to close it. While Layers is open it covers the card, and choosing another object brings the card back.',
+    text: 'On a phone the foot of the screen is a dock of five buttons: Home, Search, Time, Layers and About. About reopens the welcome screen. Layers opens the settings headings as a sheet above the dock, and the cross at its top right, or Layers again, closes it. Time opens the clock’s row above the dock; off real time, or while the clock is paused, its button shows the date. There is no Navigation panel. An open card sits above the dock too: drag it up by the bar at its top to read the rest, and tap the cross in its header to close it. While Layers is open it covers the card, and choosing another object brings the card back.',
     source: `${REPO_BLOB}/src/components/containers/PhoneHudContainer.tsx`,
     sourceLabel: `the phone layout, ${IN_REPO}`,
     checked: CHECKED,
