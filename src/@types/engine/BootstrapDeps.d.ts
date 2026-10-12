@@ -5,6 +5,7 @@ import type { Layer } from './layer/Layer';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
 import type { SelectionResolver } from './selection/SelectionResolver';
+import type { GestureSink } from './interaction/GestureSink';
 
 /**
  * Closure captures the bootstrap phases rely on.  Every entry was a
@@ -30,6 +31,9 @@ export type BootstrapDeps = {
    * if `composeSelectionRows` grows internal state later.
    */
   readonly selection: SelectionResolver;
+
+  /** The engine's one gesture sink; `wireInput` hands it to the DOM recognizer. */
+  readonly pushGesture: GestureSink;
 
   /**
    * Mutable: forward-declared `frame` binding from `engine.ts`.  The

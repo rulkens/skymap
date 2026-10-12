@@ -17,7 +17,7 @@ import { homePose } from '../camera/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import { commitCameraPose } from '../../../state/camera/cameraSlice';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
@@ -179,42 +179,26 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     });
   };
 
-  // The recognizer only emits; `runFrame` replays the queue at the top of
-  // `runFrame`, so waking the loop is this sink's job. The two gesture-start
-  // STORE edges fire here at DOM time, not at the drain: `onDoubleClick`
-  // dispatches focus synchronously and `watchFocusTweenSaga` reaches
-  // `put(startCameraTween)` with no intervening yield, so a `cancelCameraTween`
-  // deferred to the next frame would kill the tween double-tap-to-focus just
-  // started. `beginDrag` rides along to keep the pair atomic.
-  deps.detachControlsRef.current = attachOrbitControls(
-    canvas,
-    (event) => {
-      if (event.kind === 'gestureStart') {
-        store.dispatch(beginDrag());
-        store.dispatch(cancelCameraTween());
-      }
-      state.subsystems.inputAggregator.push(event);
-      state.subsystems.scheduler.requestRender();
+  // The recognizer only emits; the sink owns the DOM-time store edges and the
+  // wake (see `createGestureSink`).
+  deps.detachControlsRef.current = attachOrbitControls(canvas, deps.pushGesture, {
+    onClick: (xCss, yCss) => {
+      const pick = runPickAtCss(xCss, yCss);
+      if (!pick) return;
+      pick
+        .then((ref) => {
+          store.dispatch(updateSelectionSelect(ref));
+        })
+        .catch(() => {
+          // A failed pick readback must not crash input handling; the click is
+          // dropped and the prior selection stands.
+        });
     },
-    {
-      onClick: (xCss, yCss) => {
-        const pick = runPickAtCss(xCss, yCss);
-        if (!pick) return;
-        pick
-          .then((ref) => {
-            store.dispatch(updateSelectionSelect(ref));
-          })
-          .catch(() => {
-            // A failed pick readback must not crash input handling; the click is
-            // dropped and the prior selection stands.
-          });
-      },
-      onDoubleClick: () => {
-        // Read the select ref the preceding single-click wrote rather than
-        // running a second pick — racing readbacks resolve out of order.
-        const ref = selectSelectedRef(store.getState());
-        store.dispatch(updateSelectionFocus(ref));
-      },
+    onDoubleClick: () => {
+      // Read the select ref the preceding single-click wrote rather than
+      // running a second pick — racing readbacks resolve out of order.
+      const ref = selectSelectedRef(store.getState());
+      store.dispatch(updateSelectionFocus(ref));
     },
-  );
+  });
 }

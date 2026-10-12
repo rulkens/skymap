@@ -77,10 +77,6 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -149,9 +145,6 @@ function makeState(): EngineState {
       selection: { setHovered: vi.fn(), setSelected: vi.fn() },
       clickResolver: null,
       inputBindings: null,
-      // Real, not a stub: the emit-sink case below drains it to prove the
-      // recognizer's events actually reach the aggregator.
-      inputAggregator: createInputAggregator(),
     } as never,
     booted: false,
     cameraRuntime: {
@@ -192,6 +185,7 @@ function makeDeps(): BootstrapDeps {
       resolveFocusId: () => null,
       focusIdOf: () => null,
     },
+    pushGesture: vi.fn(),
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
@@ -277,56 +271,16 @@ describe('wireInput', () => {
     expect(attachOrbitControlsSpy).toHaveBeenCalled();
   });
 
-  it('wires the recognizer’s emit sink to the aggregator and the render wake', async () => {
-    // This four-line sink is the ONLY path from a DOM event to the camera. Wire
-    // it to a locally-built aggregator, or drop the requestRender, and all input
-    // dies with every other unit test still green — the halves either side of it
-    // (`orbitControls`, `inputAggregator`, `replayInput`) each test a fake.
+  it('hands the bootstrap gesture sink to the orbit controls', async () => {
+    // The sink is the ONLY path from a DOM event to the camera; a locally-built
+    // stand-in here would leave all input dead with every other test green.
     const state = makeState();
     const deps = makeDeps();
     attachOrbitControlsSpy.mockClear();
 
     await wireInput(state, deps);
 
-    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as
-      | ((e: InputGestureEvent) => void)
-      | undefined;
-    expect(emit).toBeTypeOf('function');
-
-    emit!({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
-
-    expect(state.subsystems.inputAggregator.drain()).toHaveLength(1);
-    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
-  });
-
-  it('cancels an in-flight tween on the gesture-start emission, at DOM time', async () => {
-    // B1: `cancelCameraTween` must not wait for the frame's drain. A double-tap
-    // runs pointerdown → … → dblclick → `watchFocusTweenSaga` → `startCameraTween`
-    // inside one inter-frame gap, so a deferred cancel would kill the tween the
-    // tap just requested and the camera would never fly.
-    const state = makeState();
-    const deps = makeDeps();
-    attachOrbitControlsSpy.mockClear();
-
-    await wireInput(state, deps);
-
-    const pose = { target: [0, 0, 0] as Vec3, yaw: 1, pitch: 0, distance: 5 };
-    deps.cb.store.dispatch(
-      startCameraTween({
-        from: pose,
-        to: pose,
-        durationMs: 800,
-        easing: 'linear',
-        frame: 'ecliptic',
-      }),
-    );
-
-    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as (e: InputGestureEvent) => void;
-    emit({ kind: 'gestureStart' });
-
-    const root = deps.cb.store.getState();
-    expect(root.camera.tween).toBeNull();
-    expect(root.camera.dragging).toBe(true);
+    expect(attachOrbitControlsSpy.mock.calls[0]?.[1]).toBe(deps.pushGesture);
   });
 
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {
