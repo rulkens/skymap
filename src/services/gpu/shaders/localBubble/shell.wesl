@@ -1,10 +1,11 @@
 // localBubble/shell.wesl — the Local Bubble cavity-wall shell: vertex stage
 // projects the baked mesh; fragment stage shades it with the same additive
-// Fresnel rim as horizonShell/fragment.wesl (pow(1 - |N·V|, 3)), renormalising
+// Fresnel rim as horizonShell/fragment.wesl (lib/fresnel.wesl), renormalising
 // the interpolated normal so flat per-vertex normals don't show as facets.
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
+import package::lib::fresnel::fresnelRim;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -41,7 +42,7 @@ fn vs(
 fn fs(input: VSOut) -> @location(0) vec4<f32> {
   let n = normalize(input.worldNormal);
   let v = normalize(u.eye - input.worldPos);
-  let rim = pow(1.0 - abs(dot(n, v)), RIM_POWER);
+  let rim = fresnelRim(n, v, RIM_POWER);
   let value = rim * u.opacity;
   return vec4<f32>(u.tint * value, value);
 }
