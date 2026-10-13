@@ -33,3 +33,23 @@ At the milky-way perf pose a Mac frame is ~18 ms (`npm run perf`), of which the 
 
 `npm run perf` per-pass at milky-way and solar (Mac), and `?gpuTimings` + the `d` timings panel on the phone
 (`phone` skill), main build — then pick between the options by the dominant pass.
+
+## Phone per-pass numbers (2026-10-12, #885 GPU pass)
+
+Far pose (`#focus=star-sun` plus 13 pinch-outs, 5 kpc), OnePlus 7T, `?gpuTimings`, panel average of 60 frames at
+rest; main and branch show the same rows. Total ~55 ms; no star row draws at this pose.
+
+| pass | ms |
+| ---- | -- |
+| point-sprites (galaxies) | 11.1 |
+| cosmic-web-density | 9.0 |
+| milky-way-aggregate | 7.5 |
+| milky-way | 4.0 |
+| bloom | 3.7–4.0 |
+| zone-of-avoidance | 2.0 |
+| structure-markers-cosmo | 2.0–2.2 |
+| cosmic-web and zoa upsamples | ~1.8–2.0 each |
+
+Mid-drag the touch boost roughly halves every pass (total ~21 ms). With the Milky Way and every galaxy catalogue
+off, the phone holds vsync (16.8 ms median, ~19 p95) on both builds and the total reads 20.8 ms at rest with
+cosmic-web-density 9.2 ms left. So the galaxy points and the cloud are the first lever, the cosmic web second.

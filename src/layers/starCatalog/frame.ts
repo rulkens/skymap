@@ -2,7 +2,7 @@
  * starCatalogPlanner — the Layer's once-per-frame CPU row: reduce the frame to
  * the GPU cut's inputs, set them on the renderer for `star-cut` to encode and
  * every pass to draw (capture faces read it too), and plan each octree
- * source's chunks. The cut and its LOD fades live on the GPU, so the wake vote
+ * source's chunks (every fourth frame; a moving cut re-cuts every other). The cut and its LOD fades live on the GPU, so the wake vote
  * is a timer: the fades can still be moving for `NODE_FADE_MS` after the cut
  * last moved past a slack, or a chunk landed or left; it also holds while a
  * chunk is in flight. `settling: false` always: a capture face draws its own

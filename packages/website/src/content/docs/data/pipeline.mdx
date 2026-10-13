@@ -108,7 +108,7 @@ What the app does to brightness and colour on the way to the screen is on the Sc
 
 ## Stars
 
-Stars go through the same steps with other tools: <Repo path="tools/stars" />, and a faster build in Rust, which is the one we run for the published files. The Rust build applies two more rules for duplicate stars, so its files hold a few stars fewer. The rows are <Source id="gaia">Gaia</Source>’s, each with a distance from the <Source id="bailer-jones">Bailer-Jones</Source> table.
+Stars go through the same steps with other tools: <Repo path="tools/stars" />. The build writes one index and about a thousand chunk files, which the app fetches as the camera needs them. A faster build in Rust writes the older single-file form only, with two more rules for duplicate stars, so its files hold a few stars fewer. The rows are <Source id="gaia">Gaia</Source>’s, each with a distance from the <Source id="bailer-jones">Bailer-Jones</Source> table.
 
 <Fact id="sci-star-observables" />
 

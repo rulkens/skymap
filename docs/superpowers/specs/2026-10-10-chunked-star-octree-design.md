@@ -192,10 +192,11 @@ The format switch is the source row's `format: 'skst' | 'octree'`, read where `s
 
 ### 5.2 CPU planner over the index
 
-- Each plan walks the index tree over all views, as `cutSurfaceTiles` does: frustum test, then the cut's refine proxy `edge² / dist²` against `thr²`; a row that fails either is skipped with its subtree.
+- Each plan (every `STAR_PLAN_INTERVAL_FRAMES` = 4 frames while the camera moves, one at rest) walks the index tree over all views, as `cutSurfaceTiles` does: frustum test, then the cut's refine proxy `edge² / dist²` against `thr²`; a row that fails either is skipped with its subtree.
 - A chunk root that wants to refine requests its chunk, priority = the largest proxy over views and over the chunk's roots; a chunk is requested once.
 - A resident chunk the walk reaches is touched (`lastSeenFrame`), and the walk continues into its rows under each passing root, with the same pruning; so a chunk is only ever requested while its parent object is resident, and the runtime learns a chunk's ref from its parent's header as that object decodes. Parents are therefore always at least as recent as their descendants in the LRU.
 - Concurrency 4, the `SURFACE_TILE_CONCURRENCY` precedent (`surfaceTileParams.ts:50`), on the existing `PriorityQueue` (`priorityQueue.ts:59`).
+- The plan keeps only the `limit` best chunks, resident and wanted ranked together, a child below its parent: the stream stamps every touched chunk before it allocates, so a weaker touched resident would hold its slot against a nearer chunk forever.
 - Slots recycle LRU by `lastSeenFrame`; allocation is refused when every slot was claimed this frame, so a stationary camera never evicts and refetches in a loop (`textureAtlas.ts:212-253`).
 
 The CPU cannot see the GPU's budget bin, so it may fetch a chunk the budget then declines to refine. That costs bytes, not correctness.
@@ -208,6 +209,11 @@ The CPU cannot see the GPU's budget bin, so it may fetch a chunk the budget then
 - A `slotRows` table (one u32 per slot, written at land and evict) holds each slot's live row count; `histogram` and `emit` return on a row past it before reading `nodes` or `opacity`, so the padding up to `chunkNodeCap` (most of the pool: the row bound sets the stride) and an empty slot cost no memory traffic. A landing rewrites all of its slot's rows.
 - **Nested roots (amended 2026-10-11).** A chunk's roots live in its parent object's rows: index rows, or the rows of the parent chunk's slot. A landing writes its rows and records, then its roots' resident bit and `refineDelta` at `parentBase + root` (0 for the index); a chunk's top rows name that pool-absolute row as `parent`. A landing whose parent was evicted while it was in flight is dropped. **Eviction cascades**: evicting a chunk first evicts its resident descendant chunks, deepest first, each clearing its roots' resident bits before its row count; only then are its own roots cleared. The shader is unchanged.
 
+### 5.3a Cadence and glows (added after the first phone A/B)
+
+- A moving cut re-cuts every other frame (`frame.ts`): the kept lists still draw about this frame's eye, a skipped frame's fade time rides the next cut's step, and a landing re-cuts at once.
+- Survey-star aggregates draw into a quarter-width, quarter-height target (`STAR_AGGREGATE_DIVISOR` 4, one sixteenth of the fragments), and an aggregate past the refine threshold, which the cut could not open, draws no larger than its threshold footprint (`vertex.wesl`).
+
 ### 5.4 Buffer sizing and budgets
 
 Buffers are created once per source at index load, replacing the catalog-sized ones (`starCutGpu.ts:113-123`):
@@ -218,7 +224,7 @@ Buffers are created once per source at index load, replacing the catalog-sized o
 | records                  | `indexRecords + slots·chunkCapacity`, 2 u32 each        |
 | leaf list                | index blocks + `slots·(chunkCapacity/8 + chunkNodeCap)` |
 
-Tiers become pool budgets (research §8.4). The source row's `budgets: Record<Tier, { slots: number; drawBudget: number }>` (P2 introduces it, the feature adds `slots`) picks the pool size and the cut's instance budget per tier. Starting values are tuned with `npm run perf`; large at 256 slots is about 67 MB of records.
+Tiers become pool budgets (research §8.4). The source row's `budgets: Record<Tier, { slots: number; drawBudget: number }>` (P2 introduces it, the feature adds `slots`) picks the pool size and the cut's instance budget per tier. `slots` is also a runtime override: a Debug-panel picker resizes the loaded pool without a refetch, and a size past the pool cap is refused with the reason shown (`resizeStarPools`). Starting values are tuned with `npm run perf`; large at 256 slots is about 67 MB of records.
 
 ### 5.5 Pick, fade, wake
 
@@ -321,7 +327,9 @@ The GPU cut over the pool, the fade reset on slot reuse and the wake on chunk la
 - Node count under pure `L(M)` placement with no fat-leaf fold. **Measured 2026-10-11** on the first Gaia bake: 1,350,992 rows for 17.07 M records (12.6 records per row), so the tree is not chain-bound and path compression is not needed. What hurt was the spread: `chunkNodeCap` 11,530 against a 547-row median, about 94 % padding at a full pool. The row bound (§4) brought it to 4,082 (2,227 chunks, index 2,545 rows / 318,133 records, 85 % padding); packing at a 2,048 bound to 2,048 at 33 % padding (pool rows at 128 slots 525k → 266k).
 - Tiny chunks. **Resolved 2026-10-11 by packing (§4.3).** 37 of 2,017 chunks were under 10 KB, 83 of 2,227 after the row bound. A floor can only fold a small subtree into the index, since its parent is an index row and has no chunk to join; a 1,024-record floor removes every chunk under 10 KB but grows the index, fetched before first paint, from 2.8 MB to about 4.5 MB (48,837 rows / 396,528 records), so it was dropped. Packing roots in Morton order under a 2,048-row bound gives 975 chunks, 1 under 10 KB (9.0 KB), 33 % padding, index 3,561 rows / 343,872 records / 2.95 MB on the real bake, as simulated.
 - Nesting. **Measured 2026-10-11** (the real Gaia inputs, a scratch bake identical to what `build-stars` writes): the index fell from 3,561 rows / 343,872 records / 2.95 MB (2.51 MB gzip, a 111 KB header naming 975 chunks) to 145 rows / 9,067 records / 80 KB (71 KB gzip, a 4.2 KB header naming 27 chunks). Two depths: 27 chunks under the index (26,009 rows, 374,143 records, 3.8 MB; 13 of them parents) and 966 under those; 993 chunks in all, 33.6 % padding at the 2,048-row stride, one under 10 KB, the largest 306 KB, the largest header 20 KB. Offline planner proxy (steady state, 128 slots, one 90° view): star-field 0.29 → 0.21 ms per plan, milky-way 0.011 → 0.008; with no frustum (a capture, or more than six views) 0.29 → 0.36 and 0.05 → 0.11, since the walk now also crosses resident parents' rows.
-- `chunkCapacity`, pool slots per tier and planner concurrency are first guesses for the A/B to tune.
+- Phone A/B (OnePlus 7T, 2026-10-11 and 12). Before the cadence and glow changes the branch ran 26-28 ms median at Earth against main's 19-20, all GPU-side (the main-thread frame callback was equal); the cause was the star-aggregates pass, ~20 ms against ~2 ms, from ~2,300 of ~3,300 blobs being near chunk roots the pool could not hold, each drawn box-sized. After the divisor, the threshold-footprint cap and the cut cadence the Earth median is 23.1-23.6 against main's 22.1-22.3, Proxima equal at 16.8, and the far view is the same rows on both (galaxy points and the Milky Way cloud). Bytes to settle at Earth, measured before nesting: 39-44 MB in 65 requests against main's 36-41 MB in 1. Per-pass tables are in the ledger (`phone-ab-report.md`, `gpu-report.md`).
+- A tier switch rebuilds the pool and refetches every chunk (a new request, new buffers, a new `SlotPool`); in production they are immutable HTTP-cache hits. Three index fetches at large were three request changes, not a defect. Milky-way fetched more chunks than it holds (218 against 128) because the jump from Earth wants a different set; a stationary camera never evicts.
+- `chunkCapacity`, pool slots per tier and planner concurrency are first guesses for the A/B to tune; `slots` is now also a Debug-panel override.
 - Galaxies: record packing, aggregate look and bias modes, SDSS/2MRS/DESI on the octree or on SKMP, `pgc-`/`sdss-` side index, search into non-resident chunks (research §7.2 to §7.5).
 - Whether stratification also drives galaxy thumbnails and procedural discs (research §9).
 - The production `.bin` Cache Rule is still a manual step (`DEPLOY.md:80`); until it lands, every chunk fetch is an R2 origin hit.

@@ -41,6 +41,10 @@ describe('rendering rows and the constants behind them', () => {
     expect(row).toContain('the cosmic web at a third');
     expect(one('src/layers/zoneOfAvoidance/layer.ts', 'scale')).toBe(5);
     expect(row).toContain('the Zone of Avoidance band at a fifth');
+    expect(
+      one('src/layers/starCatalog/render/starAggregatesTarget.ts', 'STAR_AGGREGATE_DIVISOR'),
+    ).toBe(4);
+    expect(row).toContain('distant stars at a quarter');
   });
 
   it('the selection image: bits for the row and for the catalogue', () => {
@@ -50,8 +54,7 @@ describe('rendering rows and the constants behind them', () => {
     );
   });
 
-  it('a star: bytes in the file and bits of a step inside its box', () => {
-    expect(text('render-star-tree')).toContain(`${one(STARS, 'RECORD_BYTES')} bytes a star`);
+  it('a star: bits of a step inside its box', () => {
     expect(text('render-local-origins')).toContain(
       `${Math.log2(one(STARS, 'STAR_OFFSET_LEVELS'))}-bit steps`,
     );

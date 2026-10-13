@@ -116,7 +116,7 @@ binary format family. Treat it as a sibling precedent, not a Path A instance:
   from `galaxyCatalogFormat.ts`: cell-quantized + compressed, sized for tens
   of millions of stars rather than millions of galaxies. Don't reuse
   `galaxyCatalogFormat.ts` machinery for star data — the encodings diverge.
-- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
+- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run build-stars`, emits the v2 octree: the index `public/data/star-catalog/v2/stars.bin` plus `stars/<level>-<morton>.<hash>.bin` chunk objects (see DATA.md). A survey star source row picks its container with `format: 'octree'` (the shipped default) or `'skst'` (the v1 tier bins).
 - **R2 sync** — a new binary family needs its own entries in
   `tools/deploy/r2/allowDataFile.ts`, same step as adding a new galaxy-catalog
   tier.
