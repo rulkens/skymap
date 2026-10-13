@@ -43,14 +43,17 @@ function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: Im
 
 /**
  * Free the resident texture on eviction — the family's eviction premise: a slot
- * leaving its proximity radius releases up to ~135 MB rather than leaking it. Only
- * the shared textured bodies have a clear surface (Earth's renderer has none, rings
- * share the host's resources), and the clear is per-KIND to match the per-(body,kind)
- * slot granularity: `surface` and `normal` clamp to independent tiers, so evicting
- * one kind must not destroy the sibling kind's still-demanded texture.
+ * leaving its proximity radius releases up to ~135 MB rather than leaking it. The
+ * clear is per-KIND to match the per-(body,kind) slot granularity: `surface` and
+ * `normal` clamp to independent tiers, so evicting one kind must not destroy the
+ * sibling kind's still-demanded texture. Ring strips stay resident: three small
+ * copies, not worth a clear surface on each consumer.
  */
 function releaseBodyTexture(state: EngineState, entry: BodyTextureKey): void {
-  if (isTexturedBodyKey(entry.bodyId)) {
+  if (entry.bodyId === 'earth') {
+    state.gpu.earthRenderer?.clearMap(entry.kind);
+    if (entry.kind === 'clouds') state.gpu.cloudShellRenderer?.clearTexture();
+  } else if (isTexturedBodyKey(entry.bodyId)) {
     state.gpu.texturedBodyRenderer?.clearMap(entry.bodyId, entry.kind);
   }
 }
@@ -67,7 +70,13 @@ export function wireBodyTextureSlots(state: EngineState): void {
     const slot = createAssetSlot<ImageBitmap, BodyTextureReq>({
       name: `${key}-texture`,
       fetch: bodyTextureFetcher,
-      commit: async (bitmap) => commitBodyTexture(state, entry, bitmap),
+      // Every sink copies into its own texture, so the decoded bitmap is dead weight
+      // (up to 128 MiB at 8k) once they have; the slot keeps the closed handle as
+      // its "resident" marker, which ringsPass/cloudShellPass test for presence only.
+      commit: async (bitmap) => {
+        commitBodyTexture(state, entry, bitmap);
+        bitmap.close();
+      },
       onRelease: () => releaseBodyTexture(state, entry),
     });
     state.assetSlots.bodyTextures.set(key, slot);

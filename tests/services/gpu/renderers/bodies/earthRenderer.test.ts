@@ -126,4 +126,26 @@ describe('createEarthRenderer', () => {
       .find((d) => d?.mipmapFilter === 'linear');
     expect(earthSampler).toBeDefined();
   });
+
+  // Earth is the boot body, so its maps used to stay resident (~270 MB at medium)
+  // for the whole session after the camera left: release must free them.
+  it('clearMap destroys the committed map and falls back to the placeholder', () => {
+    const made = new Map<string, { destroy: ReturnType<typeof vi.fn> }>();
+    const device = mockDevice();
+    (device.createTexture as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (desc: GPUTextureDescriptor) => {
+        const texture = { createView: () => ({ of: desc.label }), destroy: vi.fn() };
+        made.set(desc.label!, texture);
+        return texture;
+      },
+    );
+    const renderer = createEarthRenderer(device, 'rgba16float', 'depth32float', false);
+    renderer.setMap('surface', { width: 4, height: 2 } as unknown as ImageBitmap);
+
+    renderer.clearMap('surface');
+
+    expect(made.get('earth-surface')!.destroy).toHaveBeenCalledOnce();
+    expect(made.get('earth-placeholder-surface')!.destroy).not.toHaveBeenCalled();
+    expect(renderer.getMapView('surface')).toEqual({ of: 'earth-placeholder-surface' });
+  });
 });

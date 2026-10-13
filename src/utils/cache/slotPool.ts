@@ -32,6 +32,9 @@ export class SlotPool implements SlotStore {
     this.onEvict = handler;
   }
 
+  /** Pure bookkeeping: nothing GPU-side to free. */
+  destroy(): void {}
+
   /**
    * A resident key always gets its slot back; a NEW key is refused (null) only
    * when every slot carries `lastSeenFrame === frame`. Why refuse rather than

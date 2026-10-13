@@ -43,6 +43,8 @@ export const createBodyTextureAtlasSlot: SlotFactory<ImageBitmap, void> = (state
           state.gpu.texturedBodyRenderer?.setPlaceholderMap(bodyId, 'surface', atlas, rect);
         }
       }
+      // Every tile is cropped into its own texture above; the 2048×1792 source is spent.
+      atlas.close();
     },
   });
   slot.subscribe((s) => {

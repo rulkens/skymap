@@ -19,8 +19,11 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 const fetch = useFetchMock();
 
 type Gpu = {
-  earthRenderer: { setMap: ReturnType<typeof vi.fn> };
-  cloudShellRenderer: { setTexture: ReturnType<typeof vi.fn> };
+  earthRenderer: { setMap: ReturnType<typeof vi.fn>; clearMap: ReturnType<typeof vi.fn> };
+  cloudShellRenderer: {
+    setTexture: ReturnType<typeof vi.fn>;
+    clearTexture: ReturnType<typeof vi.fn>;
+  };
   texturedBodyRenderer: {
     setMap: ReturnType<typeof vi.fn>;
     clearMap: ReturnType<typeof vi.fn>;
@@ -38,8 +41,8 @@ function makeState(gpu: Gpu): EngineState {
 
 function makeGpu(): Gpu {
   return {
-    earthRenderer: { setMap: vi.fn() },
-    cloudShellRenderer: { setTexture: vi.fn() },
+    earthRenderer: { setMap: vi.fn(), clearMap: vi.fn() },
+    cloudShellRenderer: { setTexture: vi.fn(), clearTexture: vi.fn() },
     texturedBodyRenderer: { setMap: vi.fn(), clearMap: vi.fn(), setRingTexture: vi.fn() },
     atmosphereShellRenderer: { setRingTexture: vi.fn() },
   };
@@ -47,9 +50,10 @@ function makeGpu(): Gpu {
 
 describe('wireBodyTextureSlots', () => {
   let originalCreateImageBitmap: typeof globalThis.createImageBitmap | undefined;
-  const bitmap = { __bitmap: true } as unknown as ImageBitmap;
+  let bitmap: ImageBitmap;
 
   beforeEach(() => {
+    bitmap = { __bitmap: true, close: vi.fn() } as unknown as ImageBitmap;
     originalCreateImageBitmap = globalThis.createImageBitmap;
     globalThis.createImageBitmap = vi
       .fn()
@@ -112,6 +116,37 @@ describe('wireBodyTextureSlots', () => {
     slot.release();
     expect(gpu.texturedBodyRenderer.clearMap).toHaveBeenCalledTimes(1);
     expect(gpu.texturedBodyRenderer.clearMap).toHaveBeenCalledWith('mars', 'surface');
+  });
+
+  it("releasing 'earth:clouds' frees both copies: Earth's map and the cloud shell's", async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('earth:clouds')!;
+    slot.load({ bodyId: 'earth', kind: 'clouds', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    slot.release();
+
+    expect(gpu.earthRenderer.clearMap).toHaveBeenCalledWith('clouds');
+    expect(gpu.cloudShellRenderer.clearTexture).toHaveBeenCalledOnce();
+    expect(gpu.texturedBodyRenderer.clearMap).not.toHaveBeenCalled();
+  });
+
+  // Every sink copies the bitmap into its own texture, so a decoded copy kept past
+  // commit (up to 128 MiB at 8k) only doubles the map's footprint.
+  it('closes the bitmap once every sink has copied it', async () => {
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('earth:clouds')!;
+    slot.load({ bodyId: 'earth', kind: 'clouds', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    const closedAt = (bitmap.close as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
+    expect(gpu.cloudShellRenderer.setTexture.mock.invocationCallOrder[0]!).toBeLessThan(closedAt);
   });
 
   it("the ring slot's commit dispatches to texturedBodyRenderer.setRingTexture(hostBody, …)", async () => {
