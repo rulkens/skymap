@@ -1,23 +1,10 @@
 /**
  * BodyDetailCard — rich panel for a focused scene body (Earth, a planet/moon, a
- * mesh body). Stars have their own card (`StarDetailCard`).
- *
- * The engine hands React a lean `BodyInfo` (id + label + position) so a body is
- * always immediately selectable. The card reads the rest from the compiled-in
- * `BODY_FACTS` table (a tiny fixed set, no fetch), keyed by the same `id`: with
- * an entry it shows the full planetary fact sheet (radius first, then mass,
- * gravity, day, year, …); without one it falls back to the lean panel (radius
- * alone).
- *
- * The **camera distance** is time-dependent (it swings as the body orbits), so it
- * is NOT baked into the identity `BodyInfo`; it arrives as the `distanceMpc`
- * prop, which `BodyDetailCardContainer` reads live off the throttled
- * `engineBodyDistanceReported` pub. This card stays presentational: it renders
- * whatever distance it is handed and never derives or fetches it (the
- * store-boundary rule forbids a card reaching into the engine snapshot).
- *
- * Optional fields drop their row entirely when absent rather than showing a
- * blank — the same absent-row pattern the galaxy/structure cards use.
+ * mesh body); stars have `StarDetailCard`. The engine hands React a lean
+ * `BodyInfo`; the rest comes from the compiled-in `BODY_FACTS` table, keyed by
+ * `id` (no entry: radius alone). Camera distance swings as the body orbits, so
+ * it arrives as the `distanceMpc` prop, never read from the engine here.
+ * Optional fields drop their row rather than show a blank.
  */
 
 import type { ReactNode } from 'react';
@@ -36,17 +23,19 @@ import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import type { CardRowProps } from '../CardRow/CardRow';
 import ShotSummary from '../ShotSummary/ShotSummary';
+import Thumbnail from '../Thumbnail/Thumbnail';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
+import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
 import styles from '../cardChrome.module.css';
 import local from './BodyDetailCard.module.css';
 
 export type BodyDetailCardProps = {
   target: BodyInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   /**
    * Live camera→body distance in Mpc off the throttled time pub, or null when no
    * distance is published. Rendered as a row on the non-star body branch only.
@@ -59,7 +48,7 @@ export type BodyDetailCardProps = {
 function BodyDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   distanceMpc = null,
   onFocus,
   onClose,
@@ -73,6 +62,11 @@ function BodyDetailCard({
   const seed = SCENE_BODIES.find((b) => b.id === target.id);
   const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
   const hasShot = SHOT_CARD_IDS.has(shotId);
+  // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
+  const shotBeside = hasShot && layout === 'panel';
+  const thumbnail = hasShot ? (
+    <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
+  ) : undefined;
 
   // The lead rows — the "where / how big" facts — sit beside the card shot as
   // summary lines (the galaxy card's layout, one line per 20 px of the 80 px
@@ -98,20 +92,25 @@ function BodyDetailCard({
     });
   }
 
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        layout={layout}
         eyebrow="Body"
+        title={target.label}
+        thumbnail={thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
       />
 
-      <CardRow type="headline">{target.label}</CardRow>
-
-      {hasShot && (
+      {shotBeside && (
         <ShotSummary url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} rows={leadRows} />
       )}
 
@@ -121,9 +120,9 @@ function BodyDetailCard({
         distance / orbital-period rows relabel for a moon (`facts.parent`), which
         orbits its planet rather than the Sun.
       */}
-      {(!hasShot || facts) && (
+      {(!shotBeside || facts) && (
         <div className={styles.cardSection}>
-          {!hasShot && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
+          {!shotBeside && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
           {facts?.dayLength && (
             <CardRow
               label={<InfoTip {...TIPS.bodyDayLength!}>Day length</InfoTip>}

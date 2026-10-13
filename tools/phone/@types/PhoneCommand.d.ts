@@ -1,1 +1,9 @@
-export type PhoneCommand = 'serve' | 'open' | 'shot' | 'net' | 'trace' | 'devices';
+export type PhoneCommand =
+  | 'serve'
+  | 'open'
+  | 'shot'
+  | 'net'
+  | 'trace'
+  | 'devices'
+  | 'tap'
+  | 'swipe';

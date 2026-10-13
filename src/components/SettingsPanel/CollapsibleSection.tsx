@@ -123,7 +123,7 @@ function CollapsibleSection({
   }, [headerToggleIndeterminate, headerToggle]);
 
   return (
-    <div className={styles.root}>
+    <div>
       <button
         type="button"
         className={styles.header}

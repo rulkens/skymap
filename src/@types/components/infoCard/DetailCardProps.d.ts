@@ -1,4 +1,5 @@
 import type { FocusableTarget } from '../../engine/FocusableTarget';
+import type { CardLayout } from './CardLayout';
 import type { SelectionKind } from '../../engine/SelectionKind';
 
 /** Props InfoCard passes to a detail-card variant, identical across arms.
@@ -6,12 +7,8 @@ import type { SelectionKind } from '../../engine/SelectionKind';
 export type DetailCardProps<K extends SelectionKind = SelectionKind> = {
   target: Extract<FocusableTarget, { type: K }>;
   isPinned: boolean;
-  /**
-   * When false (mobile, in-sheet) the card drops its panel frame —
-   * background/border/positioning/width caps — so the surrounding sheet owns
-   * the surface. Defaults to true.
-   */
-  hasChrome?: boolean;
+  /** `phone` drops the panel frame (the sheet owns the surface). Defaults to `panel`. */
+  layout?: CardLayout;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };

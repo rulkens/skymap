@@ -1,21 +1,10 @@
 /*
- * SearchTrigger.module.css — the always-visible search pill at the
- * top-center of the viewport.
- *
- * Visual vocabulary mirrors InfoCard / CommandPalette / SettingsPanel:
- * frosted-glass dark blue surface, soft inner glow, the cosmic-blue
- * accent on hover/focus.  All atoms reference tokens from
- * `src/styles/global.css`.
+ * SearchTrigger.module.css — the always-visible search pill at the top centre.
+ * Softer glass than InfoCard: an entry point, not a content card.
  */
 
+/* Position is owned by the `.root` wrapper in TopBarContainer.module.css. */
 .trigger {
-  /*
-   * Positioning is owned by the parent `.root` wrapper in
-   * TopBarContainer.module.css — this rule only describes the pill's intrinsic
-   * appearance + sizing.
-   */
-
-  /* Sizing — wide enough for the placeholder and the shortcut chip. */
   width: 280px;
   padding: var(--space-4) var(--space-6);
 
@@ -23,15 +12,12 @@
   align-items: center;
   gap: var(--space-5);
 
-  /* Glassmorphism — softer than InfoCard's "loud" variant; this is
-   * an entry point, not a content card, so it shouldn't compete. */
   background: var(--surface-card-soft);
-  /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
 
   border: 1px solid var(--border-card);
-  border-radius: 999px; /* full-pill */
+  border-radius: 999px;
   box-shadow: var(--shadow-card);
 
   color: var(--color-fg-base);
@@ -39,12 +25,6 @@
   cursor: pointer;
   text-align: left;
 
-  /*
-   * The smooth scale-in animation when the palette closes back to the
-   * trigger.  Fast enough not to feel laggy (200 ms), eased so the
-   * end is gentle.  `opacity` and `transform` are GPU-accelerated and
-   * compose with the underlying glass blur without artefacting.
-   */
   transition:
     opacity 0.18s ease-out,
     transform 0.22s ease-out,
@@ -53,10 +33,6 @@
   opacity: 1;
 }
 
-/*
- * Hover / focus state — slightly brighter glass and a thicker rim, in
- * line with the rest of the UI's button family.
- */
 .trigger:hover,
 .trigger:focus-visible {
   background: var(--surface-card-strong);
@@ -64,18 +40,13 @@
   outline: none;
 }
 
-/*
- * Hidden state — palette is open; the trigger fades out and shrinks.
- * The wrapper owns horizontal centring now, so the transform only
- * needs `scale(0.92)` (no `translateX(-50%)` term to compose with).
- */
+/* Palette open: fade out and shrink. The wrapper centres, so no translateX to compose with. */
 .hidden {
   opacity: 0;
   transform: scale(0.92);
   pointer-events: none;
 }
 
-/* Search-icon SVG — small, dim until hover. */
 .icon {
   flex-shrink: 0;
   color: var(--color-fg-dim);
@@ -87,11 +58,7 @@
   color: var(--color-accent);
 }
 
-/*
- * Placeholder text — same dim tone as <input>::placeholder elsewhere
- * so the trigger looks input-like at a glance.  `flex-grow: 1` lets
- * the shortcut chip hug the right edge.
- */
+/* `flex-grow` pushes the shortcut chip to the right edge. */
 .placeholder {
   flex-grow: 1;
   color: var(--color-fg-dim);
@@ -101,11 +68,6 @@
   text-overflow: ellipsis;
 }
 
-/*
- * Shortcut chip — `⌘K`, small uppercase rounded badge using the same
- * surface as the alias-source chip in the palette.  Hidden on narrow
- * viewports if the trigger ever gets crowded; full-pill stays.
- */
 .shortcut {
   flex-shrink: 0;
   padding: var(--space-1) var(--space-3);
@@ -114,28 +76,4 @@
   color: var(--color-fg-dim);
   font-size: var(--font-size-xs);
   letter-spacing: var(--letter-spacing-wide);
-}
-
-/*
- * Mobile — the InfoCard occupies the top-right corner already; on
- * narrow viewports the trigger pill needs to stay below the corner
- * offset so it doesn't underlap the InfoCard when one is pinned.
- * The mobile breakpoint matches `initialTierFromViewport` for
- * consistency.
- */
-@media (max-width: 768px) {
-  .trigger {
-    /*
-     * Let the wrapper's flex layout drive the width: grow into
-     * available space, shrink without overflowing.  `min-width: 0`
-     * is the canonical "this flex child may shrink below its
-     * content-intrinsic size" escape hatch — without it the
-     * placeholder text's `text-overflow: ellipsis` doesn't kick in
-     * because the child refuses to shrink past its content.
-     */
-    flex: 1;
-    min-width: 0;
-    width: auto;
-    max-width: 280px;
-  }
 }

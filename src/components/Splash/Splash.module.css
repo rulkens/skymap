@@ -246,6 +246,7 @@
   .body  { font-size: 13px; max-width: none; }
   .ctas  { gap: 48px; }
   .cta   { min-height: 44px; padding: 12px 0; }
+  .credits { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
