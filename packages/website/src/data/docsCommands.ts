@@ -155,6 +155,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/capture/README.md',
       },
       {
+        scripts: ['capture-structures'],
+        does: 'Cuts the small pictures of star clusters, nebulae and the Galactic Centre out of a sky survey, one for each that has none.',
+        manual: 'tools/capture/README.md',
+      },
+      {
         scripts: ['record-tour', 'record-clip'],
         does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time, and the film stays smooth.',
         manual: RECORD,

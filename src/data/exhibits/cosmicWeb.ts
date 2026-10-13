@@ -49,7 +49,7 @@ export const cosmicWeb: Exhibit = {
     {
       kind: 'prose',
       heading: 'How it was made',
-      text: 'The web can’t be photographed. This map was computed from the positions of about 325,000 SDSS galaxies by a simulation modelled on a <a href="https://en.wikipedia.org/wiki/Physarum_polycephalum">slime mould</a>, <i>Physarum polycephalum</i>, which grows efficient networks between food sources. Here the galaxies are the food; the network the swarm settles into traces the filaments between them.',
+      text: 'The web cannot be photographed. This map was computed from the positions of about 325,000 galaxies in the Sloan Digital Sky Survey by a simulation of a <a href="https://en.wikipedia.org/wiki/Physarum_polycephalum">slime mould</a>, <i>Physarum polycephalum</i>, which grows networks between food sources. Here the galaxies are the food, and the network traces the filaments between them.',
     },
     {
       kind: 'key',
@@ -69,10 +69,11 @@ export const cosmicWeb: Exhibit = {
     {
       kind: 'facts',
       facts: [
-        { label: 'Galaxies traced', value: '~325,000' },
-        { label: 'Distance', value: '44–476 Mpc' },
-        { label: 'Voxel', value: '0.78 Mpc' },
-        { label: 'Grid', value: '712 × 1200 × 728' },
+        // 44 to 476 Mpc deep at 0.78 Mpc per cell, at 3.26 Mly per Mpc.
+        { label: 'Galaxies traced', value: 'About 325,000' },
+        { label: 'Finest detail', value: '2.5 million light-years' },
+        { label: 'Nearest part', value: '140 million light-years' },
+        { label: 'Farthest part', value: '1.6 billion light-years' },
       ],
     },
     {

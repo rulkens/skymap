@@ -4,7 +4,7 @@
  *
  * ### Why this widens SettingsSnapshot
  *
- * The ten-cluster `SettingsSnapshot` covers the tour's appearance knobs
+ * `SettingsSnapshot` covers the tour's appearance knobs
  * (brightness, visibility gates, look dials). But a beat's `focus()` call also
  * mutates `selection.focus`, which drives the camera tween and the member-isolation
  * dim in the render pass. Without snapshotting focus, a restore that puts the

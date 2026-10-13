@@ -712,7 +712,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'card-phone-sheet',
     about: 'app',
     text: 'On a phone, and on any screen 768 pixels wide or narrower, the card is a sheet at the foot of the screen that shows its first lines; drag it up to read the rest. There is no hover card.',
-    source: `${REPO_BLOB}/src/components/InfoCard/MobileSheet/MobileSheet.tsx`,
+    source: `${REPO_BLOB}/src/components/MobileSheet/MobileSheet.tsx`,
     sourceLabel: `the card on a phone, ${IN_REPO}`,
     checked: CHECKED,
   },
@@ -895,9 +895,9 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-phone',
     about: 'app',
-    text: 'On a phone the Navigation and Settings panels are two folded titles at the lower left. Tap the word Settings to open the panel and tap it again to fold it. While a card is open neither panel is shown. To close the card, drag it up by the bar at its top and tap the cross, which the clock covers while the card is folded. The panels then come back.',
-    source: `${REPO_BLOB}/src/components/App/App.module.css`,
-    sourceLabel: `the phone layout of the panels, ${IN_REPO}`,
+    text: 'On a phone the foot of the screen is a dock of five buttons: Home, Search, Time, Layers and About. About reopens the welcome screen. Layers opens the settings headings as a sheet above the dock, and the cross at its top right, or Layers again, closes it. Time opens the clock’s row above the dock; off real time, or while the clock is paused, its button shows the date. There is no Navigation panel. An open card sits above the dock too: drag it up by the bar at its top to read the rest, and tap the cross in its header to close it. While Layers is open it covers the card, and choosing another object brings the card back.',
+    source: `${REPO_BLOB}/src/components/containers/PhoneHudContainer.tsx`,
+    sourceLabel: `the phone layout, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -1047,7 +1047,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-no-fullscreen',
     about: 'app',
-    text: 'The app has no full-screen button and no key for it. Use the browser’s own full screen.',
+    text: 'On a computer the app has no full-screen button and no key for it. Use the browser’s own full screen. A phone has a full-screen button among the buttons at the top right.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: `the app’s keyboard shortcuts, ${IN_REPO}`,
     checked: CHECKED,
