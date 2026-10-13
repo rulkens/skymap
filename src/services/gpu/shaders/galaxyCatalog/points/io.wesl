@@ -224,7 +224,7 @@ struct Uniforms {
 // These fields are filled from the *instance* vertex buffer — one
 // record per catalog point, not one record per vertex. The numbers
 // here (0, 1, 2 …) must exactly match the @location values in
-// galaxyPointRenderer.ts's vertex.buffers[].attributes array. If they
+// galaxyPointVertexLayout.ts's GALAXY_POINT_VERTEX_ATTRIBUTES. If they
 // disagree the GPU silently reads garbage.
 
 struct PerVertex {
@@ -278,9 +278,10 @@ struct PerVertex {
   // 'NaN < 0.0' is false, so a NaN radius reads as non-fallback.
   @location(5) radiusMpc: f32,
 
-  // Per-galaxy angular re-weight in [0.1, 10], baked by the tier build
-  // (bakeBiasWeights) into SKMP byte 55 and decoded at upload; 1.0 when
-  // the cloud carries none. Read only when 'u.biasMode == 2u'.
+  // Per-galaxy angular re-weight, codec range [0.1, 10]; the angular bake
+  // clamps to [0.3, 1.2]. Baked by the tier build (bakeBiasWeights) into
+  // SKMP byte 55 and decoded at upload; 1.0 when the cloud carries none.
+  // Read only when 'u.biasMode == 2u'.
   @location(6) angularWeight: f32,
 
   // Absolute magnitude, baked at upload from the offset-normalised
@@ -330,7 +331,7 @@ struct VSOut {
   //        With a provenance highlight active, .rgb is instead the FINAL
   //        colour: the flat audit hue times intensity times a boost.
   //        intensity already folds in the magnitude clamp, brightness
-  //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
+  //        slider, the mode-2 angular weight, depth fade, and the
   //        procedural-disk crossfade-out.
   // .w   = colorIndex — the galaxy's rest-frame, K-corrected colour
   //        index, forwarded unchanged from 'PerVertex.colorIndex' so the

@@ -15,7 +15,7 @@ import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
 } from '../../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
-import { expectedNumberDensity } from '../../../src/utils/math/index';
+import { expectedNumberDensity } from '../../../src/utils/math/expectedNumberDensity';
 
 const RATIO_MIN = 0.3;
 const RATIO_MAX = 1.2;

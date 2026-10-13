@@ -11,7 +11,7 @@
  */
 
 import type { ComputeAngularWeightsInput } from '../../@types/catalog/ComputeAngularWeightsInput';
-import { cartesianToRaDec } from '../../../src/utils/math/index';
+import { cartesianToRaDec } from '../../../src/utils/math/cartesianToRaDec';
 import { healpixNest } from '../../../src/utils/math/healpixNest';
 
 const NSIDE = 32;

@@ -101,15 +101,10 @@ function defaultWorkerRunner(
 //
 // The public key is the string `GalaxyCatalogId`, but the GPU-facing
 // identity (the 6-bit `sourceCode` packed into the pick texture) and the
-// draw order (`GALAXY_CATALOG_SOURCES`) are numeric.  Both maps are derived
+// draw order (`GALAXY_CATALOG_SOURCES`) are numeric.  Both are derived
 // from `SOURCE_REGISTRY` so the catalog set + codes stay defined in exactly
 // one place — adding a galaxy catalog there extends both without a hardcoded
 // list here.
-
-/** Numeric `Source` code → string `GalaxyCatalogId`. */
-const ID_OF_CODE = new Map<SourceType, GalaxyCatalogId>(
-  GALAXY_CATALOG_SOURCES.map((code) => [code, SOURCE_REGISTRY[code].id as GalaxyCatalogId]),
-);
 
 /** String `GalaxyCatalogId` → numeric `Source` code. */
 const CODE_OF_ID = new Map<GalaxyCatalogId, SourceType>(
@@ -123,7 +118,10 @@ const CODE_OF_ID = new Map<GalaxyCatalogId, SourceType>(
  * `sourceCode` per draw.
  */
 const CATALOG_DRAW_ORDER: readonly { code: SourceType; id: GalaxyCatalogId }[] =
-  GALAXY_CATALOG_SOURCES.map((code) => ({ code, id: ID_OF_CODE.get(code)! }));
+  GALAXY_CATALOG_SOURCES.map((code) => ({
+    code,
+    id: SOURCE_REGISTRY[code].id as GalaxyCatalogId,
+  }));
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 

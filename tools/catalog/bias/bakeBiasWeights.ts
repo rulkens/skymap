@@ -17,6 +17,8 @@ import { computeSchechterRatios } from './computeSchechterRatios';
 /** 1/V_max reference distance, Mpc: galaxies visible beyond it are dimmed by (D_REF / d_max)³. */
 const D_REF_MPC = 750;
 
+// The byte-55 codec floors at 0.1, so vmax lands in [0.1, 1]: NaN-photometry
+// rows (vMaxWeight 0) draw at 0.1×, not hidden.
 function vMaxWeights(cloud: GalaxyCatalog, source: SourceType): Float32Array {
   const mLim = galaxyCatalogFluxLimit(source);
   const p = cloud.positions;
@@ -37,7 +39,7 @@ export function bakeBiasWeights(
   kind: BiasWeightKind,
 ): Map<ParsedRecord, number> {
   let weights: Float32Array;
-  if (kind === 'angular') weights = computeAngularWeights({ cloud, source });
+  if (kind === 'angular') weights = computeAngularWeights({ cloud });
   else if (kind === 'schechter') weights = computeSchechterRatios({ cloud, source });
   else if (kind === 'vmax') weights = vMaxWeights(cloud, source);
   else weights = new Float32Array(records.length).fill(1);

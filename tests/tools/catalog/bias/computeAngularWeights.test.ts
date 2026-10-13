@@ -5,7 +5,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { computeAngularWeights } from '../../../../tools/catalog/bias/computeAngularWeights';
-import { Source } from '../../../../src/data/sources';
 import { raDecZToCartesian } from '../../../../src/utils/math/index';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -47,7 +46,7 @@ describe('computeAngularWeights', () => {
       const z = 0.01 + rand() * 0.1;
       setPos(cloud, i, ra, dec, z);
     }
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
     for (let i = 0; i < 50; i++) {
       expect(Number.isFinite(w[i]!)).toBe(true);
       // f32 rounding slack — `Math.min(1.2, …)` stored as Float32 can
@@ -62,7 +61,7 @@ describe('computeAngularWeights', () => {
     // fast path should kick in and produce identity weights.
     const cloud = emptyCloud(5);
     for (let i = 0; i < 5; i++) setPos(cloud, i, i * 70, 0, 0.05);
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
     for (let i = 0; i < 5; i++) {
       expect(w[i]!).toBeCloseTo(1, 5);
     }
@@ -95,7 +94,7 @@ describe('computeAngularWeights', () => {
       setPos(cloud, N_CONE + i, ra, dec, 0.085 + (i % 7) * 0.001);
     }
 
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
 
     // The first N_CONE rows are the dense cluster — their weights should
     // average BELOW 1 (down-weighted for over-density).
@@ -115,7 +114,7 @@ describe('computeAngularWeights', () => {
 
   it('returns identity weights for an empty cloud', () => {
     const cloud = emptyCloud(0);
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
     expect(w.length).toBe(0);
   });
 });

@@ -9,6 +9,7 @@
  *     --glade   path/to/glade2.3.dat \
  *     --out-dir public/data \
  *     --bias-weight angular   # angular (default) | schechter | vmax | none
+ *                             # (vmax clamps to [0.1, 1] in byte 55: NaN-photometry rows draw at 0.1×)
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
  * written under `public/data/galaxy-catalog/v10/` — the epoch-prefixed
@@ -871,12 +872,10 @@ async function runCli(): Promise<void> {
   const written = new Set<string>();
 
   for (const [source, records] of bySource) {
-    const biasWeights = bakeBiasWeights(
-      records,
-      recordsToCloud(records, overrides),
-      source,
-      biasWeight,
-    );
+    const biasWeights =
+      biasWeight === 'none'
+        ? null
+        : bakeBiasWeights(records, recordsToCloud(records, overrides), source, biasWeight);
     for (const tier of TIER_LADDER) {
       const filename = tierFilenameForSource(source, tier);
       if (written.has(filename)) continue;

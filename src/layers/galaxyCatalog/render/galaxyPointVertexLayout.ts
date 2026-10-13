@@ -164,9 +164,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 180..183: galaxyFalloffStrength f32      (resolved-fraction exponent)    }
  *   bytes 184..191: _padU0 / _padU1       f32×2    (written as 0)                  }
  *
- * Byte 172 was the former `_padFade1` pad word, repurposed to `galaxySbScale`
- * when the three galaxy surface-brightness calibration knobs became live
- * uniforms; the two trailing pad words round the struct out to 192.
+ * The two trailing pad words round the struct out to 192.
  *
  * Total: 192 bytes — a multiple of 16 ✓
  *
