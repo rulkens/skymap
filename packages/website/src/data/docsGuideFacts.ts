@@ -518,7 +518,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'exhibit-views',
     about: 'app',
     text: 'Solar System looks down on the planets’ orbits from 42 astronomical units. Cosmic Flows hides the galaxies and shows the flow ribbons round the Milky Way. Cosmic Web hides the galaxies and shows the glow of the cosmic web, with a second glow made from the 2MRS catalogue switched on. Zone of Avoidance looks along the plane of the Milky Way from 1.2 megaparsecs with the band switched on. Observable Universe pulls back until the whole sphere fits the window.',
-    source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
+    source: `${REPO_BLOB}/src/compositions/appExhibits.ts`,
     sourceLabel: `the list of exhibits, ${IN_REPO}`,
     checked: CHECKED,
   },

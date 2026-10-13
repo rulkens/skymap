@@ -33,6 +33,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `selection?`    | `present/`                                     |                                                                                                                       |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
+| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import              |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -41,6 +42,16 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 - **`@types/`** — the Layer's **own** contract types, one per file, filename = the
   type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
   Layer stay under `src/@types/` instead.
+
+An exhibit's notes are sections, each `section(kind, data)`. A **section kind**
+(`ExhibitSectionKind`) carries its `Component`, and optionally a `hold` (the saga that
+replaces the exhibit's default hold), `shortcuts` (walked ahead of the global table
+while the exhibit runs, handed the section's data) and a `cameraDriver`
+(`ExhibitCameraDriver`: core lifts it into the driver table, turns it on only while an
+exhibit carrying the kind runs, hands `pose` that exhibit's data, and lets it own the
+drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reaches that
+read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
+exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 **`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
 
@@ -77,5 +88,5 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
-`milkyWay`, `lightTime` and `structure` are formed. `body` is the one
+`milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
 settings-only stub left from prep step (c).

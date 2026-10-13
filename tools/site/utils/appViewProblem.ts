@@ -1,7 +1,7 @@
 import { OBJECT_ROWS } from '../../../packages/website/src/data/objectCatalogue';
 import { clipFactories } from '../../../src/data/animation/clips/clipRegistry';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
-import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { parseHashParams } from '../../../src/utils/url/parseHashParams';
@@ -11,7 +11,7 @@ const NAMED = new Set(OBJECT_ROWS.map((row) => row.id));
 // Ids the app resolves against its data files, which no table here lists: a catalogue galaxy, a sky position, a star by row, a catalogue's cluster.
 const FROM_DATA = /^(?:pgc-\d+|sdss-\d+|pos@.+|star-\d+|[a-z]+-bulk-.+)$/;
 const TAKEOVERS = {
-  exhibit: exhibitRegistry,
+  exhibit: APP_EXHIBITS,
   tour: tourRegistry,
   clip: clipFactories,
 };

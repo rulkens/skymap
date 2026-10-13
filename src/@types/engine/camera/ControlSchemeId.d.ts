@@ -1,3 +1,3 @@
-/** ControlSchemeId — the keys of the `CONTROL_SCHEMES` registry. */
+/** ControlSchemeId — the keys of the `composeControlSchemes` registry. */
 
 export type ControlSchemeId = 'skymap';

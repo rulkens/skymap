@@ -168,7 +168,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
       <CopyButton
         text={viewPoseText}
         label="copy view pose"
-        title="Paste into an exhibitRegistry.ts entry's pose field (world arm only)"
+        title="Paste into an exhibit file's pose field (world arm only)"
       />
     </DebugSection>
   );

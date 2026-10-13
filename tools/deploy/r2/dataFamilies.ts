@@ -85,6 +85,15 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     gzipOnWire: false,
   },
   {
+    // Voyager 1/2 Horizons tracks (tools/bodies/buildSpacecraftTracks.ts).
+    label: 'spacecraft-tracks',
+    dir: null,
+    fileName: /^spacecraftTracks\.bin$/,
+    transport: 'wrangler',
+    // Unmeasured.
+    gzipOnWire: false,
+  },
+  {
     label: 'sidecar-json',
     dir: null,
     fileName:

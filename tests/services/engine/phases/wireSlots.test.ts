@@ -338,6 +338,7 @@ function makeState(
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
+      missions: { trails: false },
       cosmicWebDensity: {
         enabled: true,
         items: {

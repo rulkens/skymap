@@ -33,7 +33,8 @@ const byKeys = (keys: string) => {
 // Minimal RootState-shaped fixtures — only the slice each case's selector
 // reads, hand-rolled the way sibling slice tests do (e.g. tourSlice.test.ts's
 // `asState`).
-const stateWith = (partial: Partial<RootState>): RootState => partial as unknown as RootState;
+const stateWith = (partial: Partial<RootState>): RootState =>
+  ({ takeover: { active: null }, ...partial }) as unknown as RootState;
 
 const ui = (paletteOpen: boolean): UiState => ({
   paletteOpen,
@@ -56,6 +57,7 @@ const time = (rateIndex: number, paused: boolean): TimeState => ({
   rateIndex,
   direction: 1,
   paused,
+  profile: null,
 });
 
 const TOUR: TourRuntimeState = {

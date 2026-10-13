@@ -21,6 +21,7 @@ import type { VisibilityLayerKey } from '../../../../src/@types/animation/Visibi
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
+import { missionTrailsFadeRows } from '../../../../src/layers/missions/present/missionTrailsFadeRows';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
@@ -82,6 +83,7 @@ function makeState(
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+      missions: { trails: false },
       // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
       // labels reuse the galaxy layer), so seedFades indexes this leaf.
       galaxyCatalogs: {
@@ -148,6 +150,7 @@ function makeSettings(
     cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+    missions: { trails: false },
   } as unknown as EngineSettingsState;
 }
 
@@ -241,6 +244,7 @@ describe('FADE_LAYERS intent subset', () => {
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...zoneOfAvoidanceFadeRows(),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...missionTrailsFadeRows(),
       ...structureFadeRows(),
     ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;

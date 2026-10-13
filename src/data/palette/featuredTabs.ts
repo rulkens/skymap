@@ -6,6 +6,7 @@
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
 import { COSMIC_WEB_DENSITY_OFF } from '../exhibits/utils/cosmicWebDensityOff';
+import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
@@ -96,6 +97,13 @@ const M31_CAPTURE: PaletteCardCapture = {
 // terminator down the right of the disc — see `bodyPhasePose` for the turn.
 const WANING_GIBBOUS: PaletteCardCapture = { phaseDeg: 315 };
 
+const VOYAGER_CARD: PaletteCard = {
+  id: 'voyager-missions',
+  label: 'The Voyager missions',
+  blurb: 'Both Voyagers from launch to today, with every flyby on a timeline you can scrub.',
+  action: { kind: 'exhibit', exhibitId: 'voyager-missions' },
+};
+
 export const FEATURED_TABS: readonly PaletteTab[] = [
   {
     id: 'highlights',
@@ -153,6 +161,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'focus', focusId: 'body-voyager1' },
         capture: VOYAGER1_CAPTURE,
       },
+      VOYAGER_CARD,
       {
         id: 'blackhole-sgr-a-star',
         label: 'Sgr A*',
@@ -340,6 +349,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
     id: 'missions',
     label: 'Missions',
     cards: [
+      VOYAGER_CARD,
       {
         id: 'body-hubble',
         label: 'Hubble',

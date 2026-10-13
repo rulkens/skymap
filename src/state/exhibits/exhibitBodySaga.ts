@@ -4,7 +4,7 @@
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
- * end it.
+ * end it. A section whose kind carries a `hold` takes the whole hold, fly-in included.
  */
 import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 
@@ -32,7 +32,11 @@ import type { Transition } from '../../@types/navigation/Transition';
  */
 const EXHIBIT_SPIN_RATE = -0.0003;
 
-export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator {
+export function* exhibitBodySaga(
+  exhibit: Exhibit,
+  entry: Transition,
+  atLinkedTime = false,
+): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks
@@ -42,6 +46,11 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // exit restore, and an exhibit authors no focus of its own.
   yield* put(clearSelection());
   yield* put(mergeSnapshot(exhibit.settings));
+  const held = exhibit.body.find((s) => s.kind.hold !== undefined);
+  if (held) {
+    yield* call([held.kind, held.kind.hold!], held.data, entry, atLinkedTime);
+    return;
+  }
 
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
   const orientation = yield* select(selectOrientation);
@@ -53,13 +62,16 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // any other exhibit.
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const rt = cameraRuntime();
+  const authored = exhibit.pose;
+  if (authored === undefined)
+    throw new Error(`exhibit ${exhibit.id} has neither a hold kind nor a pose`);
   const pose =
     exhibit.fitRadiusMpc !== undefined && rt !== null
       ? {
-          ...exhibit.pose,
+          ...authored,
           distance: sphereFitDistance(exhibit.fitRadiusMpc, rt.fovYRad, rt.aspect),
         }
-      : exhibit.pose;
+      : authored;
 
   if (entry === 'cut') {
     yield* put(commitCameraPose(absoluteArm(pose)));

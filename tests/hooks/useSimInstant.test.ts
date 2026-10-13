@@ -12,6 +12,7 @@ const RUNNING: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: false,
+  profile: null,
 };
 
 function renderCounted(time: TimeState) {

@@ -54,7 +54,7 @@ function makeCtx(bodyId: string, offsetKm: number): FrameView {
   const p = STATES.get(bodyId)!.positionMpc;
   const drawCamPos: Vec3 = [p[0] + offsetKm * KM_TO_MPC, p[1], p[2]];
   return {
-    snapshot: { simDays: CONST_J2000 },
+    snapshot: { simDays: CONST_J2000, meshBodies: SCENE_MESH_BODIES },
     drawCamPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;

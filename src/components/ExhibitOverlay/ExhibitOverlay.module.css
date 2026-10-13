@@ -14,6 +14,27 @@
 }
 
 /*
+ * Everything the hide toggle takes away lives in `.content`, so one opacity
+ * fades the lot. It cannot go on the pieces themselves: their entrance
+ * animations fill `both` and would pin opacity at 1. `visibility` flips after
+ * the fade, which is what makes the hidden notes unscrollable and unfocusable.
+ */
+.content {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s;
+}
+.hidden .content {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s 0.3s;
+}
+
+/*
  * The overlay mounts when the takeover starts, but the copy is about where
  * the camera ENDS up, so nothing appears until `--exhibit-enter-delay` (the
  * fly-in's near-landing, set inline by the container off the clip's own
@@ -165,6 +186,15 @@
   flex-direction: column;
   gap: 16px;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
+  /* A long column scrolls instead of running off the viewport. It opts back into
+     pointer events so the wheel scrolls it; the text column no longer orbits the
+     camera, which is the trade. The mask fades the cut edge. */
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  padding-bottom: 28px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
 
 /* One section and the hairline above it enter together, `--i` beats after the
@@ -404,7 +434,9 @@
   align-items: center;
   gap: 10px;
   padding: 6px 14px 6px 6px;
-  background: none;
+  background: var(--surface-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
   border: 2px solid var(--border-hover);
   border-radius: 999px;
   cursor: pointer;
@@ -450,10 +482,55 @@
   color: var(--color-fg-muted);
 }
 
+/* ── Hide toggle (top-right) ───────────────────────────────────────── */
+/* Just the icon: a bare button for the a11y (label, pressed, focus ring). It
+   is the one control that survives `hidden`, so it never fades with the rest. */
+.hideToggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-fg-tertiary);
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.85));
+  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
+}
+.hideToggle svg {
+  width: 18px;
+  height: 18px;
+}
+/* Dimmer at rest while everything else is gone, still readable. */
+.hidden .hideToggle {
+  color: var(--color-fg-dim);
+}
+@media (hover: hover) {
+  .hideToggle:hover {
+    color: var(--color-fg);
+  }
+}
+.hideToggle:focus-visible {
+  color: var(--color-fg);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* ── Reduced motion ─────────────────────────────────────────────────── */
 /* The slide goes, the wait does not: the copy is still about where the camera
  * ends up, so it still arrives with the landing — just by fading. */
 @media (prefers-reduced-motion: reduce) {
+  .content,
+  .hidden .content {
+    transition: none;
+  }
   .caption > *,
   .sectionGroup {
     animation-name: exhibitEnterFade;
@@ -507,5 +584,18 @@
     position: fixed;
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     background: rgba(0, 0, 0, 0.7);
+  }
+  /* The column scrolls here, so `.content` stays in flow and the toggle is pinned
+     to the viewport; hidden, the root lets touches through to the field again. */
+  .content {
+    position: static;
+  }
+  .hidden.root {
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .hideToggle {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
   }
 }

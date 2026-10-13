@@ -58,6 +58,7 @@ function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
     snapshot: {
       simDays: CONST_J2000,
       nowMs: 0,
+      meshBodies: SCENE_MESH_BODIES,
       focusBlend,
       focus: { ...ZERO_FOCUS, blend: focusBlend },
     },

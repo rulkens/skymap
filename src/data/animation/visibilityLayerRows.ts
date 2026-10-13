@@ -25,6 +25,7 @@ export const VISIBILITY_LAYER_ROWS = {
   flow: {},
   constellations: {},
   orbitTrails: {},
+  missionTrails: {},
   cosmicWebDensityField: {},
   zoneOfAvoidance: {},
   lightTime: {},

@@ -3,21 +3,26 @@
 import type { DriverActivity } from './DriverActivity';
 import type { DriverCtx } from './DriverCtx';
 import type { DriverId } from './DriverId';
+import type { DriverOutput } from './DriverOutput';
 import type { EpochRow } from './EpochRow';
 import type { FollowMemory } from './FollowMemory';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { RootState } from '../../../store/types';
 
-export type CameraDriver = {
+export type CameraDriver<Own = unknown> = {
   readonly id: DriverId;
   readonly priority: number;
+  // This row re-asserts a moving target every frame, so a committed `base` is invisible
+  // under it: a wheel notch resolves to the row's own distance target instead, and the
+  // keep-ticking wake reads the row's ease.
+  readonly ridesWheelTarget?: true;
   // The epoch this row's `ctx.elapsedMs` measures on; unset for the rows that
   // read no clock (orbitDrag, resting). Both follow rows name `follow`, so the
   // approach's ease and the hold's saturation share one epoch.
   readonly epoch?: EpochRow;
-  // Bake this row's final register into `camera.base` as it DEACTIVATES, so the
-  // loop freezes the saturated pose instead of snapping back to the old base.
-  readonly commitsOnEdge?: boolean;
+  // Bake this row's final pose into `camera.base` as it DEACTIVATES, so the loop
+  // freezes the saturated pose instead of snapping back to the old base: the
+  // authored register, or the displayed pose when that is what a successor eases from.
+  readonly commitsOnEdge?: 'register' | 'displayed';
   // This row authors ORBIT terms, so `applyFocusedBodyPivot` re-centres its `target`
   // on the focused body; clip / tween keyframe a target of their own and leave it unset.
   readonly pivotsOnFocusedBody?: boolean;
@@ -25,10 +30,10 @@ export type CameraDriver = {
   // pose), so it settles the follow approach's debt instead of leaving it owed
   // for the approach to undo at the row's exit.
   readonly deliversFraming?: boolean;
+  // Set only by `composeControlSchemes` on a lifted exhibit row: while one is active it owns
+  // the drag (`DriverActivity.dragClaimed`), reading the gesture itself.
+  readonly ridesExhibit?: true;
   isActive(s: RootState, activity: DriverActivity): boolean;
-  // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
-  pose(
-    ctx: DriverCtx,
-    mem: FollowMemory | null,
-  ): { readonly pose: FramedCameraPose; readonly memory: FollowMemory | null };
+  /** `own`: this row's private slot as it last returned it, null before its first. */
+  pose(ctx: DriverCtx, mem: FollowMemory | null, own: Own | null): DriverOutput<Own>;
 };

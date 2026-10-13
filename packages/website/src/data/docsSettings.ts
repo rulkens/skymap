@@ -533,6 +533,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: true,
       },
       {
+        name: 'Mission trails',
+        control: 'switch',
+        does: 'Shows the trails of the Voyager spacecraft. The Voyager exhibit turns it on.',
+        values: SWITCH,
+        first: OFF,
+        state: 'missions.trails',
+        firstValue: false,
+      },
+      {
         name: 'Zone of Avoidance',
         control: 'switch',
         does: 'Shows the blue band along the plane of the Milky Way, behind which the catalogues are short of galaxies.',

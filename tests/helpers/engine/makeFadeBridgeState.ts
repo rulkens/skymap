@@ -18,6 +18,7 @@ import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/sta
 import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 import { cosmicWebDensityFadeRows } from '../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
 import { milkyWayFadeRows } from '../../../src/layers/milkyWay/present/milkyWayFadeRows';
+import { missionTrailsFadeRows } from '../../../src/layers/missions/present/missionTrailsFadeRows';
 import { structureFadeRows } from '../../../src/layers/structure/present/structureFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
@@ -100,6 +101,7 @@ export function makeFadeBridgeState(): {
     cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: true },
+    missions: { trails: false },
   } as unknown as EngineSettingsState;
 
   const state = {
@@ -121,6 +123,7 @@ export function makeFadeBridgeState(): {
       ...flowFadeRows(FLOW_RUNTIME),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
       ...milkyWayFadeRows(),
+      ...missionTrailsFadeRows(),
       ...structureFadeRows(),
     ],
   } as unknown as FadeBridgeState;

@@ -29,6 +29,9 @@ import type { CaptionKind } from './captionPriority';
 export type ForegroundCaption = Label2D &
   Required<Pick<Label2D, 'color' | 'worldEmMpc' | 'minPixelSize' | 'maxPixelSize'>> & {
     readonly kind: CaptionKind;
+    /** The body this caption names, where the producer knows it (mesh bodies); read by the
+     *  craft-emphasis dim, which must not parse it back out of the `sceneBody-` id. */
+    readonly bodyId?: string;
     /** Per-caption approach reveal, in Mpc of anchor-to-camera distance,
      *  multiplied on top of the kind's `CAPTION_FADE_RULES` band. Any kind may
      *  carry one; a caption without it rides its kind's reach alone. */
