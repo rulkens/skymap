@@ -75,10 +75,10 @@ review: yes (Redux state and sagas: the restore path)
 
 **Behaviour:** for each key of `VISIBILITY_ACTION_ROW`, both `actions(true, settings)` and `actions(false, settings)` (with `settings = makeSettingsFixture()`, so per-item rows enumerate real ids) return actions whose `type` is `settings/<cluster>/<…>` with `<cluster>` a key of `captureSettings({ settings })`. Slice names are pinned to `settings/<reducerPath>` by `tests/compositions/appSettingsSlices.test.ts`, so parsing the cluster out of the type is sound; a `type` not matching `settings/<cluster>/…` fails the test too.
 
-- [ ] Write the test `every visibility cue writes only captured clusters`, one `it.each` row per key so a failure names the cue. Header (≤ 5 lines): why it exists (a cue writes visibility intent into settings; a cluster outside the snapshot stays changed after the tour restores; the core list is still hand-kept).
-- [ ] Run it: passes.
-- [ ] Mutation check: temporarily drop `orbitTrails` from `CORE_SNAPSHOT_CLUSTERS`, confirm the `orbitTrails` row fails; restore.
-- [ ] `npx prettier --write`; commit `test(scene): visibility cues write only captured clusters`.
+- [x] Write the test `every visibility cue writes only captured clusters`, one `it.each` row per key so a failure names the cue. Header (≤ 5 lines): why it exists (a cue writes visibility intent into settings; a cluster outside the snapshot stays changed after the tour restores; the core list is still hand-kept).
+- [x] Run it: passes.
+- [x] Mutation check: temporarily drop `orbitTrails` from `CORE_SNAPSHOT_CLUSTERS`, confirm the `orbitTrails` row fails; restore.
+- [x] `npx prettier --write`; commit `test(scene): visibility cues write only captured clusters`.
 
 ### Task 3: Docs and backlog
 
