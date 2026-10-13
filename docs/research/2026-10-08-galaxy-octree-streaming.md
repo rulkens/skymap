@@ -125,6 +125,8 @@ Branch `regalade-octree` (teleported from the cloud session): REGALADE parser + 
 
 Next in order: (1) decide whether to close a PR at the parser or carry the octree work on its own branch; (2) run `refactor-ground` over §5's prep candidates; (3) write the spec from §8 with a "Ground preparation" section. Undecided, raised last: whether the brightness stratification should also drive galaxy thumbnails/procedural discs (retiring `diskPlannerWalk`'s full-catalog stride) — couples thumbnail LOD to the octree level assignment.
 
+**2026-10-13 (cloud session, branch `ccr-8bd3aafd-pb6n7w`, docs-only):** #874 (parser), #868 (this doc + spec + prep plans) and #885 (Gaia on the chunked octree, streaming from R2) have all merged; the spec is at `docs/superpowers/specs/completed/2026-10-10-chunked-star-octree-design.md`, galaxies are its stated non-goal. Follow-ups live in `docs/BACKLOG.md`: delete the v1 SKST path (`ready`), port stars-rs (`ready`), cancel stale chunk fetches + raise concurrency (`ready`, filed this session), path compression (`needs-design`), wire REGALADE (`needs-design`). Ruled order for galaxies: GLADE onto the octree first, REGALADE after GLADE streams. Open for the user: start the GLADE-on-octree brainstorm, or clear the two `ready` star items first. Production probe: the v2 index is edge-cached (`cf-cache-status: HIT`), so `docs/DEPLOY.md:80` is stale.
+
 ## 10. Refactor-ground checkpoint — Gaia-first slice (2026-10-10)
 
 First build target is Gaia (same renderer and data as SKST v1, so the A/B isolates the format); GLADE second; REGALADE only after GLADE streams.
