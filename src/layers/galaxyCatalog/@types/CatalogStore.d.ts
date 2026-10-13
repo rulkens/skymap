@@ -7,11 +7,6 @@ import type { CatalogDrawEntry } from './CatalogDrawEntry';
 export type CatalogStore = {
   upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
   unload(id: GalaxyCatalogId): void;
-  setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void;
-  setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void;
-  spliceSchechterRatios(source: SourceType, ratios: Float32Array): void;
-  spliceAngularWeights(source: SourceType, weights: Float32Array): void;
-  clearBiasOverlays(source?: SourceType): void;
   totalCount(): number;
   hasCatalog(id: GalaxyCatalogId): boolean;
   /** Narrow public projection consumed by the pick program. */

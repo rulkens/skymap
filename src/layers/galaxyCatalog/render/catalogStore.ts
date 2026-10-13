@@ -2,10 +2,9 @@
  * CatalogStore — the per-catalog GPU resources behind the point pipeline.
  *
  * A loaded galaxy catalog is a small cluster of coupled things: the
- * interleaved vertex buffer, the CPU mirror of those bytes (so the
- * bias-correction subsystem can splice two slots and re-upload), the
- * per-source FadeUniforms buffer + bind group, and the per-source
- * SourceUniforms buffer + bind group carrying the 6-bit GPU identity.
+ * interleaved vertex buffer, the per-source FadeUniforms buffer + bind
+ * group, and the per-source SourceUniforms buffer + bind group carrying
+ * the 6-bit GPU identity.
  * They are created together at upload, destroyed together at unload, and
  * every one of them outlives the frame that drew them.
  *
@@ -61,7 +60,6 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 import { createViewSlotUniformRing } from '../../../utils/gpu/createViewSlotUniformRing';
-import { SLOTS_PER_GALAXY_POINT } from './galaxyPointVertexLayout';
 
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
@@ -164,23 +162,6 @@ export function createCatalogStore(init: {
   // volume renderer uses for its fields) rather than the numeric source code.
   const galaxyCatalogs = new Map<GalaxyCatalogId, LoadedSource>();
 
-  // Optional callbacks invoked at the end of `upload` / `unload`.  The
-  // bias-correction subsystem installs them so a per-source bake fires
-  // when a new source arrives mid-mode.  Uni-directional: the store
-  // doesn't know what they do.  Null when no subsystem is attached.
-  let biasUploadCallback: ((source: SourceType, cloud: GalaxyCatalog) => void) | null = null;
-  let biasUnloadCallback: ((source: SourceType) => void) | null = null;
-
-  function setBiasUploadCallback(
-    cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null,
-  ): void {
-    biasUploadCallback = cb;
-  }
-
-  function setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void {
-    biasUnloadCallback = cb;
-  }
-
   // ─── Data upload ────────────────────────────────────────────────────────────
 
   /** Free the catalog's GPU buffers and forget it; a no-op for one never uploaded. */
@@ -196,7 +177,6 @@ export function createCatalogStore(init: {
       stale.sourceBuffer.destroy();
     }
     galaxyCatalogs.delete(id);
-    biasUnloadCallback?.(source);
   }
 
   /**
@@ -207,9 +187,7 @@ export function createCatalogStore(init: {
    *
    * The public key is the string `GalaxyCatalogId`, but the numeric
    * source code (resolved from the registry) is what the bake input and
-   * the GPU-facing `sourceCode` need — so the bias callbacks still carry
-   * the numeric source, keeping the subsystem's source-keyed caches and
-   * pick-identity packing untouched.
+   * the GPU-facing `sourceCode` need.
    *
    * Last-writer-wins on parallel uploads of the same catalog: both
    * workers spawn, both `galaxyCatalogs.set` calls run in resolution
@@ -233,10 +211,7 @@ export function createCatalogStore(init: {
 
     // `buildRunner` is either the worker spawner (production) or an
     // inline pure-function (Node tests, via the factory's `buildRunner`).
-    // The store always uploads in 'fast' mode; the bias-correction
-    // subsystem fires a per-source bake via `biasUploadCallback`
-    // below if a mode is active when this resolves.
-    const result = await buildRunner({ cloud: galaxyCatalog, source, mode: 'fast' });
+    const result = await buildRunner({ cloud: galaxyCatalog, source });
     const { interleaved } = result;
 
     // GPU buffers are fixed-size — destroy and reallocate on replace.
@@ -289,90 +264,10 @@ export function createCatalogStore(init: {
     galaxyCatalogs.set(id, {
       buffer,
       count: galaxyCatalog.count,
-      interleaved,
       fade,
       sourceBuffer,
       sourceBindGroup,
     });
-
-    biasUploadCallback?.(source, galaxyCatalog);
-  }
-
-  // ─── Bias-correction splice surface ──────────────────────────────────────
-  //
-  // Layout-aware writes into the interleaved CPU mirror + re-upload of
-  // the whole GPU buffer.  Slot indices are `SCHECHTER_RATIO_BYTE_OFFSET
-  // / 4` and `ANGULAR_WEIGHT_BYTE_OFFSET / 4`.  The bias-correction
-  // subsystem owns the state machine and calls these once its async
-  // bakes resolve.
-  //
-  // No-op on unloaded sources: a subsystem bake can race against
-  // `unload()`, and re-checking the map after every await would
-  // duplicate this safety net.  Length mismatch is a programmer error
-  // (not a race) and throws.
-  //
-  // These keep the numeric `source` in their public signature (the
-  // bias subsystem's caches are source-keyed); the id-keyed map is
-  // reached via `ID_OF_CODE`.
-
-  /**
-   * Slot 10 ← `ratios[i]`, then re-upload.  `ratios.length` must equal
-   * the source's `count`.
-   */
-  function spliceSchechterRatios(source: SourceType, ratios: Float32Array): void {
-    const id = ID_OF_CODE.get(source);
-    const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
-    if (!entry) return;
-    if (ratios.length !== entry.count) {
-      throw new Error(
-        `spliceSchechterRatios: length mismatch — got ${ratios.length} ratios, expected ${entry.count}`,
-      );
-    }
-    for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = ratios[i]!;
-    }
-    device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
-  }
-
-  /** Slot 11 ← `weights[i]`, then re-upload.  Length must equal `count`. */
-  function spliceAngularWeights(source: SourceType, weights: Float32Array): void {
-    const id = ID_OF_CODE.get(source);
-    const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
-    if (!entry) return;
-    if (weights.length !== entry.count) {
-      throw new Error(
-        `spliceAngularWeights: length mismatch — got ${weights.length} weights, expected ${entry.count}`,
-      );
-    }
-    for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = weights[i]!;
-    }
-    device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
-  }
-
-  /**
-   * Zero slots 10 (Schechter ratio) and 11 (angular weight) for one
-   * source or all of them.  Written as 0 rather than 1.0 because the
-   * shader's `select(1.0, slot, mode==N)` gate substitutes 1.0 when
-   * the mode is inactive — so the slot is dead in those modes, and 0
-   * is a cleaner "obviously cleared" sentinel for debug overlays.
-   */
-  function clearBiasOverlays(source?: SourceType): void {
-    const targets: LoadedSource[] =
-      source !== undefined
-        ? (() => {
-            const id = ID_OF_CODE.get(source);
-            const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
-            return entry ? [entry] : [];
-          })()
-        : Array.from(galaxyCatalogs.values());
-    for (const entry of targets) {
-      for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = 0;
-        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = 0;
-      }
-      device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
-    }
   }
 
   // ─── Public API for the engine + picker ─────────────────────────────────────
@@ -467,11 +362,6 @@ export function createCatalogStore(init: {
   return {
     upload,
     unload,
-    setBiasUploadCallback,
-    setBiasUnloadCallback,
-    spliceSchechterRatios,
-    spliceAngularWeights,
-    clearBiasOverlays,
     totalCount,
     hasCatalog,
     loadedSources,

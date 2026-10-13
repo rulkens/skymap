@@ -20,8 +20,6 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 // varies, which is what the votes read.
 function makeRuntime(fading: boolean) {
   return {
-    biasLastApplied: 0,
-    biasCorrection: { setMode: vi.fn() },
     hiResFamous: { committed: () => null },
     catalogs: new Map(),
     famousMeta: [],

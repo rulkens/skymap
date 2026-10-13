@@ -19,9 +19,8 @@
  * mask).  The per-catalog GPU resources — one vertex buffer, fade and
  * source uniforms, and their bind groups per loaded catalog — live in
  * `catalogStore`, which the factory composes.  The renderer's public
- * surface still exposes the store's methods (the engine, picker and
- * bias-correction subsystem all talk to the renderer), but they are
- * delegations, not implementations.
+ * surface still exposes the store's methods (the engine and picker talk
+ * to the renderer), but they are delegations, not implementations.
  *
  * An engine-supplied bitmask decides which catalogs draw each frame.
  * Each catalog's `@group(2)` SourceUniforms carries a 6-bit `sourceCode`
@@ -293,11 +292,6 @@ export function createGalaxyPointRenderer(init: {
     label: 'galaxyPointRenderer',
     upload: store.upload,
     unload: store.unload,
-    setBiasUploadCallback: store.setBiasUploadCallback,
-    setBiasUnloadCallback: store.setBiasUnloadCallback,
-    spliceSchechterRatios: store.spliceSchechterRatios,
-    spliceAngularWeights: store.spliceAngularWeights,
-    clearBiasOverlays: store.clearBiasOverlays,
     totalCount: store.totalCount,
     hasCatalog: store.hasCatalog,
     loadedSources: store.loadedSources,
