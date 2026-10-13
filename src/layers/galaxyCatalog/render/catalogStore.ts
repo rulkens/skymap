@@ -183,12 +183,27 @@ export function createCatalogStore(init: {
 
   // ─── Data upload ────────────────────────────────────────────────────────────
 
+  /** Free the catalog's GPU buffers and forget it; a no-op for one never uploaded. */
+  function unload(id: GalaxyCatalogId): void {
+    const source = CODE_OF_ID.get(id);
+    if (source === undefined) {
+      throw new Error(`catalogStore cannot unload unknown galaxy catalog id '${id}'`);
+    }
+    const stale = galaxyCatalogs.get(id);
+    if (stale) {
+      stale.buffer.destroy();
+      stale.fade.destroy();
+      stale.sourceBuffer.destroy();
+    }
+    galaxyCatalogs.delete(id);
+    biasUnloadCallback?.(source);
+  }
+
   /**
    * Bake `galaxyCatalog` into an interleaved GPU vertex buffer for the
    * catalog `id`, replacing any previous buffer.  Async because the bake
    * runs in a worker — 3.5 M galaxies inline would freeze the main thread
-   * for ~10 s.  `galaxyCatalog.count === 0` is the unload signal: destroy
-   * the catalog's buffers and remove the Map entry.
+   * for ~10 s.  Freeing a catalog is `unload`'s job, not an empty upload's.
    *
    * The public key is the string `GalaxyCatalogId`, but the numeric
    * source code (resolved from the registry) is what the bake input and
@@ -214,21 +229,6 @@ export function createCatalogStore(init: {
       throw new Error(
         `catalogStore cannot upload non-galaxy catalog id '${id}' (type=${entry.type})`,
       );
-    }
-
-    // Empty cloud is the unload signal (used by tier changes that drop
-    // a catalog).  Short-circuit before the bake; `createBuffer({size:0})`
-    // is forbidden by the spec.
-    if (galaxyCatalog.count === 0) {
-      const stale = galaxyCatalogs.get(id);
-      if (stale) {
-        stale.buffer.destroy();
-        stale.fade.destroy();
-        stale.sourceBuffer.destroy();
-      }
-      galaxyCatalogs.delete(id);
-      biasUnloadCallback?.(source);
-      return;
     }
 
     // `buildRunner` is either the worker spawner (production) or an
@@ -466,6 +466,7 @@ export function createCatalogStore(init: {
 
   return {
     upload,
+    unload,
     setBiasUploadCallback,
     setBiasUnloadCallback,
     spliceSchechterRatios,

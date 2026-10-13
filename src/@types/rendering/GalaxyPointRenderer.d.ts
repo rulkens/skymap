@@ -29,6 +29,8 @@ export type GalaxyPointRenderer = {
    * the factory body for the off-thread bake / race-condition rationale.
    */
   upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
+  /** Destroy the catalog's buffers, drop its entry and fire the bias unload callback. */
+  unload(id: GalaxyCatalogId): void;
   /**
    * Install the upload-tail callback used by the bias-correction
    * subsystem.  Pass `null` to detach.  Idempotent.

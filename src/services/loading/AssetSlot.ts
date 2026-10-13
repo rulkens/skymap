@@ -267,7 +267,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       for (const sub of subscribers) sub(state);
     },
     release(): void {
-      // The evict edge of two-way demand — distance eviction only; a request
+      // The evict edge of two-way demand — eviction only (distance or tier); a request
       // that drifts reloads the slot in place instead.
       //
       // The generation bump composes with the slot's race machinery: a fetch or

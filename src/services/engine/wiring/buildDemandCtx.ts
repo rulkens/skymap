@@ -33,5 +33,6 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // The instant the last frame derived its bodies at, so demand-time body
     // positions match the frame that drew them.
     simDays: state.cameraRuntime.outputs.simDays,
+    tier: state.tier,
   };
 }

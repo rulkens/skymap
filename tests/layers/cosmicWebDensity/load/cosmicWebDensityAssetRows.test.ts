@@ -34,6 +34,7 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
     slotState: () => 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
+    tier: 'medium',
   };
 }
 
