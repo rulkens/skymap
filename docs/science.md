@@ -21,13 +21,13 @@ One right-handed equatorial Cartesian frame for everything, axes on the ICRS (J2
 
 ### Survey bias
 
-Flux-limited surveys over-represent nearby galaxies, because faint ones are only detectable when close (the Malmquist bias). Five runtime-selectable correction modes respond to it ([biasMode.ts](../src/data/galaxyCatalog/biasMode.ts)):
+Flux-limited surveys over-represent nearby galaxies, because faint ones are only detectable when close (the Malmquist bias). Three runtime-selectable correction modes respond to it ([biasMode.ts](../src/data/galaxyCatalog/biasMode.ts)):
 
 - **None**: raw catalogue.
 - **Volume-limited**: only galaxies brighter than a threshold `M_lim` (default −19), a uniformly-detectable subsample.
-- **1/V_max**: dim each galaxy by its inverse maximum-detection volume ([Schmidt 1968](https://ui.adsabs.harvard.edu/abs/1968ApJ...151..393S/abstract)), as alpha instead of a discard.
-- **Schechter LF**: dim by the inverse expected number density from each survey's Schechter luminosity function.
-- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins ([computeAngularWeights.ts](../tools/catalog/bias/computeAngularWeights.ts)). Corrects footprint artifacts such as GLADE's pencil-beam jets.
+- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins. Corrects footprint artifacts such as GLADE's pencil-beam jets.
+
+The angular weight is computed when the catalogues are built ([computeAngularWeights.ts](../tools/catalog/bias/computeAngularWeights.ts)) over each survey's full cross-matched set and stored with every galaxy, so it is the same at every tier. The build also offers two luminosity weightings the published files do not use (`--bias-weight`): **1/V_max**, the inverse maximum-detection volume ([Schmidt 1968](https://ui.adsabs.harvard.edu/abs/1968ApJ...151..393S/abstract)), and **Schechter LF**, the inverse expected number density from each survey's Schechter luminosity function.
 
 Per-survey flux limits and Schechter parameters live in the source modules under [src/data/sources/](../src/data/sources/), with their literature origins noted there ([Blanton et al. 2003](https://arxiv.org/abs/astro-ph/0210215), [Kochanek et al. 2001](https://arxiv.org/abs/astro-ph/0011456), [Norberg et al. 2002](https://arxiv.org/abs/astro-ph/0111011)).
 

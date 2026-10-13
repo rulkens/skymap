@@ -196,12 +196,11 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Density correction',
         control: 'list',
-        does: 'Chooses how the galaxies are thinned or dimmed to make up for what the surveys missed. None draws every galaxy as catalogued. Volume-limited hides every galaxy less luminous than M_lim, the limit the slider under it sets. 1/V_max and Schechter LF dim each galaxy by a weight computed from its luminosity: the first from the volume in which the survey could have seen it, the second from a standard curve of how many galaxies there are at each luminosity. Angular re-weight dims the directions a catalogue sampled more densely than its median; HEALPix is the grid of equal patches of sky it counts in.',
-        values:
-          'None — raw catalogue, Volume-limited, 1/V_max, Schechter LF, Angular re-weight (HEALPix)',
+        does: 'Chooses how the galaxies are thinned or dimmed to make up for what the surveys missed. None draws every galaxy as catalogued. Volume-limited hides every galaxy less luminous than M_lim, the limit the slider under it sets. Angular re-weight dims the directions a catalogue sampled more densely than its median; HEALPix is the grid of equal patches of sky it counts in. The weight is computed when the catalogue files are built, not in the app.',
+        values: 'None — raw catalogue, Volume-limited, Angular re-weight (HEALPix)',
         first: 'Angular re-weight (HEALPix)',
         state: 'bias.mode',
-        firstValue: 4,
+        firstValue: 2,
       },
       {
         name: 'M_lim',

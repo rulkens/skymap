@@ -211,7 +211,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-other-corrections',
-    text: 'The luminosity-function parameters behind the 1/V_max and Schechter choices are working values of our own. For SDSS they are M* = −21.18, α = −1.16 and a density of 0.0093 per cubic megaparsec; the paper the code names gives, for the r band at our Hubble constant of 70, −21.21, −1.05 and 0.0051. GLADE’s values also differ from the fit its code names, and the quasars and DESI borrow the SDSS values. Use those two choices as a way of looking at the map.',
+    text: 'The luminosity-function parameters behind the 1/V_max and Schechter weightings, two options of the catalogue build that the published files do not use, are working values of our own. For SDSS they are M* = −21.18, α = −1.16 and a density of 0.0093 per cubic megaparsec; the paper the code names gives, for the r band at our Hubble constant of 70, −21.21, −1.05 and 0.0051. GLADE’s values also differ from the fit its code names, and the quasars and DESI borrow the SDSS values.',
     source: 'https://arxiv.org/abs/astro-ph/0210215',
     sourceLabel: 'Blanton et al. 2003, the galaxy luminosity function at redshift 0.1',
     checked: CHECKED,
