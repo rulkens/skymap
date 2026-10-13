@@ -1,7 +1,7 @@
 /**
  * The settings reducer: the RTK combine, plus the one write no slice can make.
  * A snapshot restore replaces whole clusters at once, so it runs ABOVE the
- * combine rather than as a case in each of the twenty-two slices.
+ * combine rather than as a case in each slice.
  */
 
 import type { Action } from '@reduxjs/toolkit';
