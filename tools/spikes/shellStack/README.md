@@ -34,7 +34,43 @@ texture fetches per pixel for the last two against truth. The transfer function 
 `src/services/gpu/shaders/scalarVolume/fragment.wesl` with `MCPM_ENTRY`'s knobs, minus the
 per-fragment jitter and the exposure boost.
 
-## Findings
+## Findings (2026-10-13, d4 tier, 178×300×182 voxels of 3.1 Mpc)
 
-See the session notes / backlog entry that lands with this spike; the numbers are printed by
-the run and the strips are the evidence.
+Verdict: **the shell stack loses to the existing 128-step march on every axis** for a free
+camera. PSNR is against the 1024-step truth; fetches are texture reads per pixel.
+
+| Stack                                                      | Bytes  | Pose      | March PSNR | Shell PSNR | March fetches | Shell fetches |
+| ---------------------------------------------------------- | ------ | --------- | ---------- | ---------- | ------------- | ------------- |
+| cube-centred, K=96, 384²                                   | 28 MB  | home      | 39.8       | 32.5       | 128           | 197           |
+|                                                            |        | near home | 39.4       | 33.6       | 128           | 198           |
+|                                                            |        | orbit     | 44.6       | 40.7       | 84            | 183           |
+|                                                            |        | inside    | 41.2       | 32.3       | 128           | 182           |
+| observer-centred, K=256, 1024² (≈1 voxel bands and texels) | 181 MB | home      | 39.8       | 32.7       | 128           | 255           |
+|                                                            |        | near home | 39.4       | 34.2       | 128           | 508           |
+|                                                            |        | orbit     | 44.6       | 40.0       | 84            | 534           |
+|                                                            |        | inside    | 41.2       | 33.1       | 128           | 365           |
+
+The cube itself is 19.4 MB at f16.
+
+Why it loses, in order of weight:
+
+1. **Grazing rays.** A band texel holds the medium along the radial direction. A ray that
+   crosses the band obliquely sees a different segment of medium, and a nearly tangential
+   segment sweeps across many texels, so it has to be sub-sampled (up to 16 reads). That is
+   where the fetch counts above come from, and where the arc streaks in the inside and home
+   strips come from. Only the orbit view, where most rays are near radial, stays clean.
+2. **No storage win at matched resolution.** Spherical resampling at one voxel per texel
+   needs as many samples as the cube has voxels. Octahedral maps cover the whole sky while
+   the data covers part of it, so the observer-centred stack is 9× the cube; cropping the
+   maps to the data's solid angle would at best break even.
+3. **Radial averaging blurs.** Collapsing a band to one opacity and one mean palette
+   coordinate softens filaments that cross the band, visible as the softer third panel
+   even at one-voxel bands.
+
+Where it would win: a camera pinned near the shells' centre with small excursions, which is
+the VR use case the multi-sphere-image papers target. Skymap's camera is free, so the
+representation does not fit. The one honest gain left is a _radially coarser_ cube for the
+home view, which is just a lower tier along one axis, not a new representation.
+
+Not run here: GPU frame time. The fetch counts make the outcome predictable, and the CPU
+numbers already settle the quality and bytes questions.
