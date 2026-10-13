@@ -157,7 +157,12 @@ export function* navigateSaga(
       // The fitted pose reads the live lens, so the cut waits for it.
       yield* call(liveCameraRuntimeSaga);
       yield* put(
-        openExhibit({ id: view.id, entry: transition, atLinkedTime: intent.t !== undefined }),
+        openExhibit({
+          id: view.id,
+          entry: transition,
+          atLinkedTime: intent.t !== undefined,
+          fromLink: true,
+        }),
       );
       return OK;
     case 'tour':

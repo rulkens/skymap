@@ -206,6 +206,14 @@ describe('navigateSaga', () => {
     });
   });
 
+  it('opens an exhibit link flagged fromLink, so its exit lands on the live clock', async () => {
+    const h = build();
+    await h.navigate({ view: { kind: 'exhibit', id: 'observableUniverse' } }, 'cut');
+    await flush();
+
+    expect(h.recorded.find(openExhibit.match)?.payload.fromLink).toBe(true);
+  });
+
   it('exhibit link selects nothing even with a focus key', async () => {
     const h = build();
     await h.navigate(linkIntentFrom(`exhibit=cosmicWeb&focus=${MILKY_WAY_FOCUS_ID}`), 'cut');
