@@ -167,11 +167,12 @@ export const SCENE: FrameSection = {
     // extinction — the shell's additive Fresnel glow would otherwise darken
     // along with the cosmological background behind it.
     //
-    // The rest is additive and so a listing choice: `light-time-spheres` sits
-    // with the other faint shell, `star-upsample` sits beside
-    // the `star-catalog` leaf draw for GPU-timing legibility, and the
-    // constellation figures trail the star streams they connect. `constellations`
-    // is the LAST roster row the lens line below samples.
+    // The additive rows are a listing choice: `light-time-spheres` sits with the
+    // other faint shell, `star-upsample` sits beside the `star-catalog` leaf
+    // draw for GPU-timing legibility, and the constellation figures trail the
+    // star streams they connect. `structure-markers-near` is NOT one of them:
+    // its rings blend premultiplied-over, so what precedes it is what they
+    // cover. `constellations` is the LAST roster row the lens line below samples.
     {
       kind: 'render',
       target: 'hdr',
@@ -294,7 +295,7 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails'],
+      passes: ['orbit-trails', 'mission-trails'],
       slot: 'POST_FOREGROUND',
     },
   ],
@@ -362,7 +363,7 @@ export const OVERLAYS: FrameSection = {
       target: 'swap',
       slab: COSMO,
       depth: { sample: 'foreground:0' },
-      passes: ['selection-ring', 'marker-lines', 'labels'],
+      passes: ['selection-ring', 'marker-lines', 'labels-cosmo'],
     },
     // The near-field overlays, last, so the scene-body captions land on top of
     // the bodies. `near0-selection-ring` is the NEAR0 sibling of the COSMO ring
@@ -376,7 +377,7 @@ export const OVERLAYS: FrameSection = {
       target: 'swap',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['near0-selection-ring', 'foreground-labels', 'clip-path-debug'],
+      passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
     },
   ],
 };

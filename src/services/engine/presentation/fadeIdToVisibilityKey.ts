@@ -87,6 +87,7 @@ const VISIBILITY_KEY_BY_KIND = {
   flow: 'flow',
   constellations: 'constellations',
   orbitTrails: 'orbitTrails',
+  missionTrails: 'missionTrails',
   zoneOfAvoidance: 'zoneOfAvoidance',
   lightTime: 'lightTime',
   // Always-on GPU overlays (`proceduralDisks`, `texturedDisks`) have a

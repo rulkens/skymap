@@ -9,8 +9,8 @@
  * A `take`-based wait would require the engine to dispatch a specific "cloud
  * loaded" action for each source, coupling the loading machinery to the tour
  * machinery. Polling a pure predicate every POLL_MS avoids that coupling:
- * the predicate reads the already-available `resolveDeps()` snapshot, the
- * same call the reconciler saga uses.
+ * the predicate reads the composed `selection` resolver, the same one the
+ * reconciler saga uses.
  *
  * ### Why it returns immediately when the predicate is already true
  *

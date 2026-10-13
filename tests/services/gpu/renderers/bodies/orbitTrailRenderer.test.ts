@@ -17,8 +17,8 @@ import {
   createOrbitTrailRenderer,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
-  OCCLUDER_VIEWPORT_OFFSET,
 } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
+import { OCCLUDER_VIEWPORT_OFFSET } from '../../../../../src/services/gpu/renderers/bodies/trailOcclusionUniforms';
 import {
   MAX_ORBIT_OCCLUDERS,
   RIBBON_SEGMENTS,

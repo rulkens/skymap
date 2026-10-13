@@ -2,28 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { starNodeOriginRelCamMpc } from '../../../src/utils/star/starNodeOriginRelCamMpc';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogNode } from '../../../src/@types/data/starCatalog/StarCatalogNode';
+import type { OctreeGrid } from '../../../src/@types/octree/OctreeGrid';
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC; // 1e-6
 
-// A catalog carrying only the geometry this seam reads: a 78 pc leaf grid whose
-// corner sits [1000, 2000, 3000] pc from the Sun.
-function catalogFixture(): StarCatalog {
-  return {
-    starCount: 0,
-    nodeCount: 0,
-    mortonBitsPerAxis: 10,
-    cellEdgePc: 78,
-    gridOrigin: [1000, 2000, 3000],
-    nodes: [],
-    records: new Uint8Array(0),
-  };
-}
-
-function node(mortonIndex: number, level: number): StarCatalogNode {
-  return { mortonIndex, level, childMask: 0, firstRecord: 0, recordCount: 0 };
-}
+// A 78 pc leaf grid whose corner sits [1000, 2000, 3000] pc from the Sun.
+const GRID: OctreeGrid = { bits: 10, cellEdge: 78, origin: [1000, 2000, 3000] };
 
 // mortonIndex 53 decodes to grid cell [1, 2, 3]:
 //   x=1 (bit0) → code bit 0  = 1
@@ -44,8 +28,9 @@ describe('starNodeOriginRelCamMpc', () => {
     //                   = [7.8e-5, 1.56e-4, 2.34e-4] Mpc
     //   cellScaleMpc = 78 · 1 · 1e-6 = 7.8e-5 Mpc
     const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
-      catalogFixture(),
-      node(MORTON_1_2_3, 0),
+      GRID,
+      MORTON_1_2_3,
+      0,
       camPosMpc,
     );
 
@@ -66,8 +51,9 @@ describe('starNodeOriginRelCamMpc', () => {
     //                   = [3.12e-4, 6.24e-4, 9.36e-4] Mpc
     //   cellScaleMpc = 78 · 4 · 1e-6 = 3.12e-4 Mpc (4× the leaf's 7.8e-5)
     const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
-      catalogFixture(),
-      node(MORTON_1_2_3, 2),
+      GRID,
+      MORTON_1_2_3,
+      2,
       camPosMpc,
     );
 
@@ -89,8 +75,9 @@ describe('starNodeOriginRelCamMpc', () => {
     const camPosMpc: Vec3 = [1078 * PC_TO_MPC, 2156 * PC_TO_MPC, 3234 * PC_TO_MPC];
 
     const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
-      catalogFixture(),
-      node(MORTON_1_2_3, 0),
+      GRID,
+      MORTON_1_2_3,
+      0,
       camPosMpc,
     );
 

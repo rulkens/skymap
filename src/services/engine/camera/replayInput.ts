@@ -22,7 +22,6 @@ import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 
@@ -52,6 +51,8 @@ export function replayInput(
     readonly rootState: RootState;
     readonly nowMs: number;
     readonly winnerLastFrame: DriverId;
+    /** That row's `ridesWheelTarget`. */
+    readonly lastWinnerRidesWheel: boolean;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
   },
 ): {
@@ -62,7 +63,7 @@ export function replayInput(
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
 } {
-  const { ctx, rootState, nowMs, winnerLastFrame } = args;
+  const { ctx, rootState, nowMs, winnerLastFrame, lastWinnerRidesWheel } = args;
   const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
@@ -209,7 +210,7 @@ export function replayInput(
         // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         const ridesTheFollow =
-          !step.duringGesture && isFollowDriverId(winnerLastFrame) && followTargetBefore !== null;
+          !step.duringGesture && lastWinnerRidesWheel && followTargetBefore !== null;
         if (!ridesTheFollow && stepRegister(step)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);

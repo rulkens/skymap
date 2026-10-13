@@ -6,6 +6,7 @@
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarDrawStream } from './StarDrawStream';
+import type { StarFocusSphere } from './StarFocusSphere';
 
 export type StarCatalogCutDrawArgs = {
   readonly source: SourceType;
@@ -20,5 +21,6 @@ export type StarCatalogCutDrawArgs = {
   readonly brightness: number;
   readonly glowOverlap: number;
   readonly aggregateIntensityCap: number;
+  readonly focus: StarFocusSphere;
   readonly viewSlot: number;
 };

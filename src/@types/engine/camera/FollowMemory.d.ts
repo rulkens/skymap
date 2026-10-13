@@ -2,7 +2,8 @@
  * FollowMemory — what the follow rows carry for ONE focus row; `null` = none yet.
  * `stepCameraRuntime` drops it on a follow-epoch ref change; the produce refills.
  * `from` is captured eye-preserving against the NEW body (R12b-1); `saturated` is
- * the approach's hand-off signal, set on the frame its ease reached 1.
+ * the approach's hand-off signal, set on the frame its ease reached 1; an exhibit row keeps it
+ * false while its own camera still eases.
  */
 
 import type { CameraPose } from '../../camera/CameraPose';

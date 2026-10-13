@@ -59,6 +59,10 @@
  *      the fly-to-Earth tween all converge to `CameraPose`), and a
  *      one-frame-stale position is immaterial for a multi-frame async fetch.
  *
+ *   5. `tier` — the live data-volume preset. A catalog whose tier target is 0
+ *      (SDSS at `small`) has no file at that tier, so its row gates on this
+ *      to never demand it and to release a resident copy on a downward swap.
+ *
  * Singleton overlay layers (filaments, milkyWay, flow) need no surface of
  * their own: their enable gate lives in `settings.<layer>.enabled`, read
  * through surface 1. See
@@ -76,6 +80,7 @@ import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
 import type { UiState } from '../ui/UiState';
+import type { Tier } from '../data/Tier';
 import type { Vec3 } from '../math/Vec3';
 
 export type DemandCtx = {
@@ -109,4 +114,6 @@ export type DemandCtx = {
    * proximity reads the same body positions the frame drew.
    */
   simDays: number;
+  /** The live tier (`state.tier`). */
+  tier: Tier;
 };

@@ -21,16 +21,14 @@ import { Source } from '../../../../src/data/sources';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
+import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
-import {
-  engineStatusChanged,
-  engineStructureCountsChanged,
-} from '../../../../src/state/engine/engineSlice';
+import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -64,10 +62,9 @@ vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () =
 }));
 
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
-// the test doesn't network.  An empty catalog is enough by default — the
-// merge test overrides this mock with a populated payload so wireStructureProjection
-// builds bulk records from the slot's ready value.
-vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () => ({
+// the test doesn't network.  An empty catalog is enough: only whether it
+// fetched is asserted here.
+vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => ({
   structureCatalogFetcher: vi.fn(async () => ({
     catalog: {
       count: 0,
@@ -136,7 +133,9 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
+import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
+import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
+import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
 import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
@@ -281,12 +280,15 @@ function makeState(
   for (const [code, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
     layerSlots.set(code, densityRuntime.slots[entry.id] as never);
   }
+  // The structure Layer's real slot, so its (mocked) fetcher observes the load.
+  const structureRuntime = { slot: createStructureCatalogSlot() };
+  layerSlots.set('structureCatalog', structureRuntime.slot as never);
   const allVisible: Record<string, boolean> = {
-    cluster: true,
+    'galaxy-cluster': true,
     supercluster: true,
     void: true,
     famousGalaxy: true,
-    group: true,
+    'galaxy-group': true,
   };
   // Translate the per-axis override maps into the per-category item rows the
   // structureCatalog demand predicate reads (ring axis = `enabled`, label axis
@@ -294,7 +296,7 @@ function makeState(
   const markerVis = overrides.markerCategoryVisibility ?? allVisible;
   const labelVis = overrides.labelCategoryVisibility ?? allVisible;
   const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const cat of ['cluster', 'supercluster', 'void', 'group']) {
+  for (const cat of STRUCTURE_IDS) {
     structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
   }
   const data = createEngineData();
@@ -336,6 +338,7 @@ function makeState(
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
+      missions: { trails: false },
       cosmicWebDensity: {
         enabled: true,
         items: {
@@ -368,8 +371,8 @@ function makeState(
       // Renderers are stubs — the slot commits we mint inside wireSlots
       // optional-chain through them.
       renderTargets: null,
-      labelRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      markerLineRendererCosmo: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
     },
     subsystems: {
@@ -378,9 +381,7 @@ function makeState(
       // rather than calling `slot.load()` directly.
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
       loadProgress: null,
-      // wireStructureProjection (called from wireSlots) writes the static
-      // anchors + bulk clusters into `state.data.structures`; tests read them
-      // back from that real store. wireSlots calls fades.register on filament
+      // wireSlots calls fades.register on filament
       // + overlay + label-layer handles after the slot mints — stub so it
       // doesn't crash.
       fades: {
@@ -416,19 +417,19 @@ function makeState(
       // slots here, so the fixture must carry the destination.
       starCatalogs: new Map(),
       filaments: null,
-      structureCatalog: null,
       // Real (empty) map: installLoadProgress walks it, and the body-texture
       // rows are `built: 'external'` so the construction pass skips them.
       bodyTextures: new Map(),
       meshBodies: new Map(),
     },
     // The composed lists `createLayers` would have written: core's registries
-    // plus the galaxyCatalog Layer's rows, with its slots in `layerSlots` —
+    // plus the Layers' rows, with their slots in `layerSlots` —
     // wireSlots itself no longer mints any of them.
     assetRows: expandCompanionRows([
       ...ASSET_WIRING,
       ...galaxyCatalogAssetRows(galaxyRuntime),
       ...cosmicWebDensityAssetRows(densityRuntime),
+      ...structureAssetRows(structureRuntime),
     ]),
     fadeRows: [
       ...FADE_LAYERS,
@@ -655,7 +656,12 @@ describe('wireSlots', () => {
     // demand pass must skip structureCatalog entirely.
     vi.mocked(structureCatalogFetcher).mockClear();
 
-    const allHidden = { cluster: false, supercluster: false, void: false, famousGalaxy: false };
+    const allHidden = {
+      'galaxy-cluster': false,
+      supercluster: false,
+      void: false,
+      famousGalaxy: false,
+    };
     const state = makeState({
       points: bootPointSlots(),
       markerCategoryVisibility: allHidden,
@@ -698,8 +704,8 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // Registry includes the Layer's slots (the per-source point slots and its
-    // two sidecars, by `.name`) plus the sidecars wireSlots itself mints
-    // (structure catalog, MCPM). Asserted as a superset so additive
+    // two sidecars, by `.name`) plus the structure Layer's catalog slot.
+    // Asserted as a superset so additive
     // changes don't break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
@@ -709,104 +715,5 @@ describe('wireSlots', () => {
     expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
-  });
-
-  it('wires static cluster/supercluster/void anchors unconditionally (no URL gate)', async () => {
-    // No URL gate: wireStructureProjection always publishes the static anchors
-    // synchronously into the structure store's 'anchors' group at boot.
-    delete (globalThis as { location?: unknown }).location;
-    (globalThis as { location: { search: string } }).location = { search: '' };
-
-    const state = makeState();
-    const deps = makeDeps();
-    await wireSlots(state, deps);
-    // The real structure store reflects setGroup writes immediately.
-    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
-    expect(state.data.structures.byCategory('supercluster').length).toBeGreaterThan(0);
-    expect(state.data.structures.byCategory('void').length).toBeGreaterThan(0);
-  });
-
-  it('lands bulk clusters + superclusters in the structure store, keeping anchors', async () => {
-    // The structure-catalog slot's boot load resolves with one cluster + one
-    // supercluster; wireStructureProjection builds bulk records (via the real
-    // structureCatalogToStructures) and writes them to the structure store's
-    // 'bulk' group, alongside the static-anchor group from boot.
-    delete (globalThis as { location?: unknown }).location;
-    (globalThis as { location: { search: string } }).location = { search: '' };
-
-    vi.mocked(structureCatalogFetcher).mockResolvedValueOnce({
-      catalog: {
-        count: 2,
-        positions: new Float32Array([1, 2, 3, 4, 5, 6]),
-        physicalRadiusMpc: new Float32Array([1.5, 30]),
-        apparentRadiusMpc: new Float32Array([3, 30]),
-        significance: new Float32Array([10, 25]),
-        category: new Uint8Array([0, 1]),
-      },
-      meta: [
-        { id: 'coma', names: ['Coma'], abell: 'A1656', description: '' },
-        { id: 'shapley', names: ['Shapley'], abell: null, description: '' },
-      ],
-    } as never);
-
-    // Idle galaxy catalog fakes keep demand to a single run.
-    const state = makeState({ points: bootPointSlots() });
-    const deps = makeDeps();
-    await wireSlots(state, deps);
-    // Let the async structure-catalog fetch + its subscriber settle.
-    await new Promise((r) => setTimeout(r, 0));
-
-    // Bulk records land in the structure store.
-    expect(state.data.structures.byId('cluster-bulk-coma')).not.toBeNull();
-    expect(state.data.structures.byId('supercluster-bulk-shapley')).not.toBeNull();
-    // Static anchors survive the bulk write (separate group).
-    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
-  });
-
-  it('emits per-category structure counts that grow when the bulk catalog lands', async () => {
-    // The Structures panel reads these counts to annotate its toggles.
-    // rebuildAllStructures fires onStructureCountsChange on every merge: once at
-    // boot (static anchors only) and again when the bulk .ccat resolves.
-    // Asserting the DELTA (one extra cluster + one extra SC, voids
-    // unchanged) keeps the test robust to seed-anchor count changes.
-    delete (globalThis as { location?: unknown }).location;
-    (globalThis as { location: { search: string } }).location = { search: '' };
-
-    vi.mocked(structureCatalogFetcher).mockResolvedValueOnce({
-      catalog: {
-        count: 2,
-        positions: new Float32Array([1, 2, 3, 4, 5, 6]),
-        physicalRadiusMpc: new Float32Array([1.5, 30]),
-        apparentRadiusMpc: new Float32Array([3, 30]),
-        significance: new Float32Array([10, 25]),
-        category: new Uint8Array([0, 1]),
-      },
-      meta: [
-        { id: 'coma', names: ['Coma'], abell: 'A1656', description: '' },
-        { id: 'shapley', names: ['Shapley'], abell: null, description: '' },
-      ],
-    } as never);
-
-    // Idle galaxy catalog fakes keep demand to a single run — a double-run
-    // would re-trigger the (non-idempotent) structure-catalog load
-    // and race the mock once-value against its empty default.
-    const state = makeState({ points: bootPointSlots() });
-    const deps = makeDeps();
-    const dispatchSpy = vi.spyOn(deps.cb.store, 'dispatch');
-    await wireSlots(state, deps);
-    await new Promise((r) => setTimeout(r, 0));
-
-    const counts = dispatchSpy.mock.calls
-      .map((c) => c[0] as ReturnType<typeof engineStructureCountsChanged>)
-      .filter((a) => a.type === engineStructureCountsChanged.type)
-      .map((a) => a.payload);
-    expect(counts.length).toBeGreaterThanOrEqual(2);
-    const first = counts[0]!;
-    const last = counts[counts.length - 1]!;
-    // Bulk adds one cluster (Coma) + one supercluster (Shapley); voids
-    // come only from the static seed, so that count is unchanged.
-    expect(last.cluster!).toBe(first.cluster! + 1);
-    expect(last.supercluster!).toBe(first.supercluster! + 1);
-    expect(last.void!).toBe(first.void!);
   });
 });

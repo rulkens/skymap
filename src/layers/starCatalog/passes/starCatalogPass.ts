@@ -1,7 +1,7 @@
 /**
  * Draws the octree cut's LEAF stream (real stars) into HDR at full
  * resolution; the AGGREGATE stream (flux-mip glows) draws separately at
- * half-res via `starAggregatesPass`, sharing `drawStarCut` /
+ * low-res via `starAggregatesPass`, sharing `drawStarCut` /
  * `starCatalogVisible` so the two agree. Pick is leaf-only — an aggregate
  * stands for a subtree, no single star to name.
  */
@@ -27,7 +27,8 @@ export function starCatalogPass(runtime: StarCatalogRuntime): ContentPass {
     drawPick(pass, view, ctx) {
       const inputs = runtime.renderer.getFrameCut();
       if (inputs === null) return;
-      drawStarPick(runtime.pickRenderer, pass, view, inputs, ctx.drawPxPerRad);
+      runtime.renderer.snapshotPickSlots();
+      drawStarPick(runtime.pickRenderer, pass, view, inputs, ctx.drawPxPerRad, ctx.snapshot.focus);
     },
   };
 }

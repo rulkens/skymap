@@ -43,8 +43,8 @@ describe('scopedVisibilityActions', () => {
   });
 
   it('label:<category> dispatches one label action for that category only', () => {
-    expect(scopedVisibilityActions('label:group', true, settings)).toEqual([
-      setStructureLabelEnabled({ id: 'group', enabled: true }),
+    expect(scopedVisibilityActions('label:galaxy-group', true, settings)).toEqual([
+      setStructureLabelEnabled({ id: 'galaxy-group', enabled: true }),
     ]);
   });
 

@@ -1,16 +1,8 @@
 /*
- * CommandPalette — the shell chrome for the Cmd+K / Ctrl+K / `/` modal overlay:
- * the backdrop, the glass panel, and the search input.  The featured grid, the
- * results list, and the per-row internals own their own modules
- * (`FeaturedGrid`, `FeaturedCardTip`, `ResultsList`, `paletteRows`).
- *
- * Wears the same cosmic-blue glassmorphic identity as the rest of the
- * skymap UI: monospace typography, blue-tinted dark glass, the same
- * border / shadow / radius family used by the InfoCard pair.  Earlier
- * drafts used a plain dark-grey modal (Linear / Spotlight idiom), but
- * that pulled the search affordance out of the overall visual system
- * and looked grafted on.  All atoms reference tokens from
- * `src/styles/global.css`.
+ * CommandPalette — shell chrome for the Cmd+K / Ctrl+K / `/` modal: backdrop,
+ * glass panel and search input. The featured grid, results list and row
+ * internals own their own modules (`FeaturedGrid`, `FeaturedCardTip`,
+ * `ResultsList`, `paletteRows`).
  */
 
 .root {
@@ -121,6 +113,13 @@
   padding: var(--space-6) var(--space-7);
   outline: none;
   border-bottom: 1px solid var(--border-default);
+}
+
+/* iOS Safari zooms the page on focusing an input under 16px. */
+@media (max-width: 768px) {
+  .input {
+    font-size: var(--font-size-input);
+  }
 }
 
 .input::placeholder {

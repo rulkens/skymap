@@ -35,7 +35,6 @@ import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
-import { CORE_PLANNERS } from '../frame/planners';
 import { ASSET_WIRING } from '../wiring/assetWiring';
 import { FADE_LAYERS } from '../wiring/fadeLayers';
 
@@ -149,10 +148,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     CORE_COMPUTES,
     ...instances.map((instance) => instance.computes),
   ]);
-  state.planners = concatUniqueRows('createLayers: planner rows', (planner) => planner.name, [
-    CORE_PLANNERS,
-    ...instances.map((instance) => instance.planners),
-  ]);
+  state.planners = concatUniqueRows(
+    'createLayers: planner rows',
+    (planner) => planner.name,
+    instances.map((instance) => instance.planners),
+  );
   // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
   // first — so a duplicate would silently SHADOW the other rather than surface,
   // leaving whichever slot core still mints loading into nothing. One fold over

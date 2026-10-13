@@ -2,8 +2,8 @@
  * navigateSaga — the one path from a `LinkIntent` to the screen, for the boot
  * arrival (`'cut'`) and every later hash change (`'fly'`). `t` and
  * `orientation` land first, so a subject framed below is framed at the linked
- * instant and in the linked frame; the arrival lands them itself, before the
- * runtime is seeded, and passes only the view. Every camera commit waits for
+ * instant and in the linked frame; the arrival lands them itself before the
+ * runtime is seeded, so here they land a second time, unchanged. Every camera commit waits for
  * the camera runtime (`liveCameraRuntimeSaga`).
  */
 import { all, call, cancelled, delay, getContext, put, race, select, take } from 'typed-redux-saga';
@@ -25,7 +25,8 @@ import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
 import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
 import { startClip } from '../camera/clipActions';
-import { exitTakeover } from '../takeover/takeoverActions';
+import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
+import { selectTakeoverSource } from '../takeover/selectors';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { startTour } from '../tour/tourActions';
 import { selectCameraBase } from '../camera/selectors';
@@ -36,7 +37,7 @@ import { homePose } from '../../services/engine/camera/homePose';
 import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { isKeyOf } from '../../utils/object/isKeyOf';
@@ -123,9 +124,16 @@ export function* navigateSaga(
   intent: LinkIntent,
   transition: Transition,
 ): SagaGenerator<NavigateOutcome> {
+  const { view } = intent;
+  // A superseded takeover restores the clock it captured, inside the supersede,
+  // which would overwrite a link's `t`. Ending it first lets the link clock land
+  // after that restore; orientation rides the same call and benefits equally.
+  const startsTakeover = view.kind === 'exhibit' || view.kind === 'tour' || view.kind === 'clip';
+  if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
+    yield* all([take(takeoverEnded), put(exitTakeover())]);
+  }
   yield* call(applyLinkClockAndFrameSaga, intent);
 
-  const { view } = intent;
   switch (view.kind) {
     case 'home':
       // A hash change back to a bare URL keeps the camera where it is; the
@@ -145,10 +153,17 @@ export function* navigateSaga(
       return yield* call(frameFocusSaga, yield* call(liveCameraRuntimeSaga));
     }
     case 'exhibit':
-      if (!isKeyOf(exhibitRegistry, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_EXHIBITS, view.id)) return UNKNOWN_ID;
       // The fitted pose reads the live lens, so the cut waits for it.
       yield* call(liveCameraRuntimeSaga);
-      yield* put(openExhibit({ id: view.id, entry: transition }));
+      yield* put(
+        openExhibit({
+          id: view.id,
+          entry: transition,
+          atLinkedTime: intent.t !== undefined,
+          fromLink: true,
+        }),
+      );
       return OK;
     case 'tour':
       if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;

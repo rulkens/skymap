@@ -1,0 +1,27 @@
+/*
+ * BottomStack.module.css — owns the two custom properties the phone's bottom
+ * elements offset themselves by. Both resolve from tokens, so no measuring.
+ */
+
+.root {
+  --bottom-stack-height: var(--dock-height);
+  --sheet-lift: 0px;
+}
+
+.timeOpen {
+  --bottom-stack-height: calc(var(--dock-height) + var(--time-row-height));
+}
+
+.hasSheet {
+  --sheet-lift: var(--mobile-sheet-peek);
+}
+
+.column {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-bottom-stack);
+  display: flex;
+  flex-direction: column;
+}

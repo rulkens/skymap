@@ -7,7 +7,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * One `type` across all of them because they share every axis that matters to
  * the registry: seeded in code (a body's identity is its stable seed id, never
  * persisted), drawn by a content layer over a durable seed table, and captioned
- * through the foreground-labels layer. What differs between them — texture
+ * through the labels-near layer. What differs between them — texture
  * sets, orbital elements, lighting, which layer draws them — lives in the body
  * store and the layers, not here. Splitting them into separate registry types
  * bought nothing but repeated copies of this shape, and cost the uniform

@@ -1,7 +1,7 @@
 /**
- * Exhibit — an `exhibitRegistry` row: a scene takeover addressed by a pose
+ * Exhibit — an `APP_EXHIBITS` row: a scene takeover addressed by a pose
  * rather than a focus. `openExhibit` applies `settings` via `mergeSnapshot`,
- * flies to `pose`, and shows `body` in the `ExhibitOverlay`; `withSceneSnapshotSaga`
+ * flies to `pose` (or hands the camera to its hold kind), and shows `body` in the `ExhibitOverlay`; `withSceneSnapshotSaga`
  * owns restore.
  */
 
@@ -15,7 +15,8 @@ export type Exhibit = {
   label: string;
   /** Applied through `mergeSnapshot`; the takeover bracket restores it on exit. */
   settings: Partial<SettingsSnapshot>;
-  pose: CameraPose;
+  /** Where the camera flies to. A hold kind owns the camera, so only exhibits without one need it. */
+  pose?: CameraPose;
   /** When set, `pose.distance` is re-derived at fly time so a sphere of this
    *  radius fits the live viewport — see `sphereFitDistance`. */
   fitRadiusMpc?: number;

@@ -1,0 +1,17 @@
+---
+/*
+ * View — `<View to="focus=body-saturn">Saturn</View>` on a docs page: the
+ * control that opens a view in the app, from what follows the `#` (and
+ * `query`, a flag before it, as in `query="dome"`). A page's text needs no
+ * import for it. Alone in the text it takes a line of its own; several in a
+ * row go inside `<Links>`.
+ */
+import ViewLink from './ViewLink.astro';
+import { appLink } from '../data/appLink';
+
+type Props = { to: string; query?: string };
+
+const { to, query } = Astro.props;
+---
+
+<ViewLink href={appLink(to, query)}><slot>Open this view</slot></ViewLink>

@@ -16,14 +16,13 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
-  emptyStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
   packStarRecord,
   VERSION,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { compressStarBin, decompressStarBin } from '../../../src/data/starCatalog/starBinCodec';
-import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
+import type { SkstCatalog } from '../../../src/@types/data/starCatalog/SkstCatalog';
 
 /**
  * A small hand-authored catalog: one aggregate node standing in for two
@@ -31,7 +30,7 @@ import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatal
  * is a non-axis-aligned, irrational-ish triple so the f64 round-trip is
  * exercised against real fractional bits, not zeros.
  */
-function synthCatalog(): StarCatalog {
+function synthCatalog(): SkstCatalog {
   const records = new Uint8Array([
     ...packStarRecord([12, 340, 7], 63, 31),
     ...packStarRecord([1023, 0, 512], 100, 5),
@@ -59,10 +58,10 @@ function synthCatalog(): StarCatalog {
   };
 }
 
-describe('encodeStarCatalog / decodeStarCatalog', () => {
+describe('encodeSkstCatalog / decodeSkstCatalog', () => {
   it('round-trips a synthetic catalog field-for-field', async () => {
     const cat = synthCatalog();
-    const decoded = await decodeStarCatalog(await encodeStarCatalog(cat));
+    const decoded = await decodeSkstCatalog(await encodeSkstCatalog(cat));
 
     expect(decoded.starCount).toBe(cat.starCount);
     expect(decoded.nodeCount).toBe(cat.nodeCount);
@@ -76,42 +75,34 @@ describe('encodeStarCatalog / decodeStarCatalog', () => {
   });
 
   it('rejects a wrong magic', async () => {
-    const packed = new Uint8Array(await encodeStarCatalog(synthCatalog()));
+    const packed = new Uint8Array(await encodeSkstCatalog(synthCatalog()));
     const plain = await decompressStarBin(packed);
     plain[0] = plain[0]! ^ 0xff; // corrupt the magic post-decompress
     const recompressed = await compressStarBin(plain);
-    await expect(decodeStarCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
+    await expect(decodeSkstCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
       /not a SKST file/,
     );
   });
 
   it('rejects a stale version with the regenerate message', async () => {
-    const packed = new Uint8Array(await encodeStarCatalog(synthCatalog()));
+    const packed = new Uint8Array(await encodeSkstCatalog(synthCatalog()));
     const plain = await decompressStarBin(packed);
     new DataView(plain.buffer, plain.byteOffset, plain.byteLength).setUint32(4, VERSION + 1, true);
     const recompressed = await compressStarBin(plain);
-    await expect(decodeStarCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
+    await expect(decodeSkstCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
       /regenerate the \.bin via "npm run build-stars"/,
     );
-  });
-
-  it('encodes and decodes an empty catalog', async () => {
-    const decoded = await decodeStarCatalog(await encodeStarCatalog(emptyStarCatalog()));
-    expect(decoded.starCount).toBe(0);
-    expect(decoded.nodeCount).toBe(0);
-    expect(decoded.nodes).toEqual([]);
-    expect(decoded.records.length).toBe(0);
   });
 
   it('rejects a truncated record region', async () => {
     // Snip one byte off the record blob so it is no longer a whole number
     // of 6-byte records; decode must fail loudly, not mis-parse the tail.
     const cat = synthCatalog();
-    const packed = new Uint8Array(await encodeStarCatalog(cat));
+    const packed = new Uint8Array(await encodeSkstCatalog(cat));
     const plain = await decompressStarBin(packed);
     const truncated = plain.slice(0, plain.byteLength - 1);
     const recompressed = await compressStarBin(truncated);
-    await expect(decodeStarCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
+    await expect(decodeSkstCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
       /truncated SKST file/,
     );
   });

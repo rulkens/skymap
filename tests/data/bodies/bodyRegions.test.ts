@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
+import { POSITION_DRIVERS } from '../../../src/data/bodies/positionDrivers';
+import { regionOfBody } from '../../../src/utils/regions/regionOfBody';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -11,6 +13,14 @@ import { regionRelativeDistanceMpc } from '../../../src/utils/regions/regionRela
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('BODY_REGIONS', () => {
+  it('every position driver belongs to exactly one region', () => {
+    for (const driver of POSITION_DRIVERS) {
+      const holders = BODY_REGIONS.filter((r) => r.memberIds.includes(driver.id));
+      expect(holders, driver.id).toHaveLength(1);
+      expect(regionOfBody(driver.id), driver.id).not.toBeNull();
+    }
+  });
+
   it('solar-system and solar-neighbourhood share an anchor but not an extent', () => {
     // The distinction the whole plan rests on: anchor is a position, extent is a
     // scale. Collapsing the two rows — or deriving one extent for both — passes
@@ -71,17 +81,29 @@ describe('BODY_REGIONS', () => {
     expect(galacticCentre.extentMpc).toBeGreaterThan(s2ApoapsisMpc * 10);
   });
 
-  it('the solar-system extent ignores the hyperbolic rows', () => {
-    // A hyperbola has no envelope, so `max |member − anchor|` at J2000 is a
-    // clock reading rather than a scale: Voyager 1 sat 76 au out at the epoch
-    // and is 172 au out today, against Pluto's ~30. The rows stay MEMBERS —
-    // `regionOfBody` and the palette chip still say "Solar System" — but are
-    // excluded from the extent, which `scaleFadeBands.bodyGlintBackdrop` reads.
-    // Pluto's aphelion is 49 au and Voyager 2's J2000 distance 60 au, so a
-    // bound between the two fails on either probe joining the max.
-    const solarSystem = regionById('solar-system');
+  it('the solar-system extent ignores the sampled rows', async () => {
+    // An escaping craft has no envelope, so `max |member − anchor|` is a clock
+    // reading rather than a scale. With a 150 au track loaded at J2000 the rows
+    // would dominate the max; they stay MEMBERS (`regionOfBody`, the palette chip)
+    // but are excluded from the extent `scaleFadeBands.bodyGlintBackdrop` reads.
+    // Fresh modules, so the track is in the registry when BODY_REGIONS snapshots J2000
+    // and nothing leaks into this file's other tests.
+    vi.resetModules();
+    const { trajectoryRegistry } = await import(
+      '../../../src/services/bodies/trajectoryRegistry'
+    );
+    const au150Km = 150 * 1.495978707e8;
+    trajectoryRegistry.set({
+      id: 'voyager1',
+      tDays: Float64Array.from([CONST_J2000 - 1, CONST_J2000 + 1]),
+      posKm: Float64Array.from([au150Km, 0, 0, au150Km, 0, 0]),
+      velKmS: new Float32Array(6),
+    });
+    const { BODY_REGIONS: fresh } = await import('../../../src/data/bodies/bodyRegions');
+    const solarSystem = fresh.find((r) => r.id === 'solar-system')!;
 
     expect(solarSystem.memberIds).toContain('voyager1');
+    // Pluto's aphelion is 49 au.
     expect(solarSystem.extentMpc).toBeLessThan(55 * SCALE_UNITS.AU_TO_MPC);
   });
 

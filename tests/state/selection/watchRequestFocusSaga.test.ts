@@ -10,8 +10,7 @@ import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -49,11 +48,9 @@ describe('watchRequestFocusSaga', () => {
       },
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
-    const deps: ResolveDeps = {
-      structures: { byId: () => null, byCategory: () => [] },
-    };
+    const structures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
     mw.run(watchRequestFocusSaga);
-    mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps, galaxies) });
+    mw.setContext({ selection: selectionResolverOver(structures, galaxies) });
     return s;
   }
   beforeEach(() => {
@@ -62,11 +59,11 @@ describe('watchRequestFocusSaga', () => {
   });
 
   it('resolves a structure id immediately (prefix-only, no cloud needed)', async () => {
-    store.dispatch(requestFocus({ id: 'cluster-virgo', transition: 'fly' }));
+    store.dispatch(requestFocus({ id: 'galaxy-cluster-virgo', transition: 'fly' }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({
       type: 'structure',
-      id: 'cluster-virgo',
+      id: 'galaxy-cluster-virgo',
     });
   });
 

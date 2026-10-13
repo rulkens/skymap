@@ -11,7 +11,7 @@ export const PLANET_ENTRY = {
   // logic only consults this flag for galaxy-catalog footprints).
   allSky: true,
   // The planets caption themselves on the final descent, so this row bears
-  // labels like any other named source — the foreground-labels layer draws the
+  // labels like any other named source — the labels-near layer draws the
   // captions on the NEAR0 slab rather than the COSMO one, which is a routing
   // detail. The Moon rides this row's 'planet' caption kind, so it follows the
   // same gate.

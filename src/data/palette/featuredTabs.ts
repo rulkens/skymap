@@ -6,8 +6,13 @@
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
 import { COSMIC_WEB_DENSITY_OFF } from '../exhibits/utils/cosmicWebDensityOff';
+import type { PaletteCard } from '../../@types/palette/PaletteCard';
+import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
+
+// A card's `id` keys its thumbnail file, independent of its `focusId`: ids like
+// 'cluster-virgo-m87' keep their old names so the captured images stay valid.
 
 // A tour card has no registry pose to inherit, so its whole framing lives here.
 // Both mirror their tour's opening scene strip rather than the default sky, so
@@ -92,6 +97,13 @@ const M31_CAPTURE: PaletteCardCapture = {
 // terminator down the right of the disc — see `bodyPhasePose` for the turn.
 const WANING_GIBBOUS: PaletteCardCapture = { phaseDeg: 315 };
 
+const VOYAGER_CARD: PaletteCard = {
+  id: 'voyager-missions',
+  label: 'The Voyager missions',
+  blurb: 'Both Voyagers from launch to today, with every flyby on a timeline you can scrub.',
+  action: { kind: 'exhibit', exhibitId: 'voyager-missions' },
+};
+
 export const FEATURED_TABS: readonly PaletteTab[] = [
   {
     id: 'highlights',
@@ -149,6 +161,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'focus', focusId: 'body-voyager1' },
         capture: VOYAGER1_CAPTURE,
       },
+      VOYAGER_CARD,
       {
         id: 'blackhole-sgr-a-star',
         label: 'Sgr A*',
@@ -177,16 +190,16 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Local Group',
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
-        action: { kind: 'focus', focusId: 'group-local-group' },
-        capture: { keepFocus: true },
+        action: { kind: 'focus', focusId: 'galaxy-group-local-group' },
+        image: structureShotUrl('galaxy-group-local-group'),
       },
       {
         id: 'cluster-virgo-m87',
         label: 'Virgo Cluster',
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
-        action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
-        capture: { keepFocus: true },
+        action: { kind: 'focus', focusId: 'galaxy-cluster-virgo-m87' },
+        image: structureShotUrl('galaxy-cluster-virgo-m87'),
       },
       {
         id: 'cosmicFlows',
@@ -336,6 +349,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
     id: 'missions',
     label: 'Missions',
     cards: [
+      VOYAGER_CARD,
       {
         id: 'body-hubble',
         label: 'Hubble',
@@ -620,24 +634,24 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Local Group',
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
-        action: { kind: 'focus', focusId: 'group-local-group' },
-        capture: { keepFocus: true },
+        action: { kind: 'focus', focusId: 'galaxy-group-local-group' },
+        image: structureShotUrl('galaxy-group-local-group'),
       },
       {
         id: 'group-m81-group',
         label: 'M81 Group',
         blurb:
           'A nearby group of about 30 galaxies around M81 and M82, some 12 million light-years away.',
-        action: { kind: 'focus', focusId: 'group-m81-group' },
-        capture: { keepFocus: true },
+        action: { kind: 'focus', focusId: 'galaxy-group-m81-group' },
+        image: structureShotUrl('galaxy-group-m81-group'),
       },
       {
         id: 'cluster-virgo-m87',
         label: 'Virgo Cluster',
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
-        action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
-        capture: { keepFocus: true },
+        action: { kind: 'focus', focusId: 'galaxy-cluster-virgo-m87' },
+        image: structureShotUrl('galaxy-cluster-virgo-m87'),
       },
       {
         id: 'supercluster-laniakea-sc',
@@ -645,7 +659,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The supercluster that contains the Milky Way, defined by the way its galaxies flow. It spans about 500 million light-years and holds some 100,000 galaxies.',
         action: { kind: 'focus', focusId: 'supercluster-laniakea-sc' },
-        capture: { keepFocus: true },
+        image: structureShotUrl('supercluster-laniakea-sc'),
       },
       {
         id: 'supercluster-coma-sc',
@@ -653,7 +667,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A supercluster about 300 million light-years away, built around the Coma and Leo clusters.',
         action: { kind: 'focus', focusId: 'supercluster-coma-sc' },
-        capture: { keepFocus: true },
+        image: structureShotUrl('supercluster-coma-sc'),
       },
       {
         id: 'void-bootes-void',
@@ -661,7 +675,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A nearly empty region about 330 million light-years across, holding only a few dozen known galaxies.',
         action: { kind: 'focus', focusId: 'void-bootes-void' },
-        capture: { keepFocus: true },
+        image: structureShotUrl('void-bootes-void'),
       },
       {
         id: 'cosmicFlows',

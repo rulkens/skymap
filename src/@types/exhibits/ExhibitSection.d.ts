@@ -1,17 +1,12 @@
 /**
- * ExhibitSection — one block of an `Exhibit`'s on-scene notes, discriminated
- * by `kind`. The four kinds are structurally different (prose, a legend, a
- * figure grid, a link list), so `ExhibitOverlay` branches on `kind` rather
- * than flattening them into a common heading+text shape.
+ * ExhibitSection — one block of an `Exhibit`'s on-scene notes: a kind and the data it draws.
+ * The pairing is type-checked once, where `section()` builds it; past that the data is opaque.
  */
 
-import type { ExhibitProseSection } from './ExhibitProseSection';
-import type { ExhibitKeySection } from './ExhibitKeySection';
-import type { ExhibitFactsSection } from './ExhibitFactsSection';
-import type { ExhibitSourcesSection } from './ExhibitSourcesSection';
+import type { ExhibitSectionKind } from './ExhibitSectionKind';
 
-export type ExhibitSection =
-  | ExhibitProseSection
-  | ExhibitKeySection
-  | ExhibitFactsSection
-  | ExhibitSourcesSection;
+export type ExhibitSection = {
+  // `any`: a kind is contravariant in its data, so no narrower parameter admits every kind.
+  readonly kind: ExhibitSectionKind<any>;
+  readonly data: unknown;
+};

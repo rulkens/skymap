@@ -49,6 +49,7 @@ import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/e
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
+import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
@@ -316,8 +317,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
   // short-circuits.
+  const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
   const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
+  const nearStartMs = cpuSpans.on ? performance.now() : 0;
   const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
@@ -340,15 +345,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
-  const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    surfaceTilesAnimating,
-    labelsAnimating,
-    probeDue: state.cubemapCaptures.probe.due,
-    // Read AFTER `renderFrame`: every planner row — core's and every Layer's
-    // — ran inside it, so this is this frame's whole OR-fold, not a stale
-    // pre-render snapshot.
-    layersAwake: snapshot.plans.awake,
-  });
+  const keepTicking = shouldKeepTicking(
+    state,
+    rootState,
+    nowMs,
+    {
+      surfaceTilesAnimating,
+      labelsAnimating,
+      probeDue: state.cubemapCaptures.probe.due,
+      // Read AFTER `renderFrame`: every planner row — core's and every Layer's
+      // — ran inside it, so this is this frame's whole OR-fold, not a stale
+      // pre-render snapshot.
+      layersAwake: snapshot.plans.awake,
+    },
+    deps.controlSchemes.skymap.drivers,
+  );
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();

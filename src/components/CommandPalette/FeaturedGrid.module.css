@@ -1,9 +1,10 @@
 /*
- * FeaturedGrid — 5-column card grid that replaces the results list when the
- * palette opens with no query. Card-level styling (image/text tile, hover,
- * active) lives in `FeaturedCard.module.css`; this file owns only the grid
- * layout. No scroll box: a tab holds at most 15 cards (three rows), and a
- * scroll box would clip the card tooltips.
+ * FeaturedGrid — card grid that replaces the results list when the palette
+ * opens with no query: 5 columns, 3 on a phone so a card's name fits. Card-level
+ * styling (image/text tile, hover, active) lives in `FeaturedCard.module.css`;
+ * this file owns only the grid layout. No scroll box: a tab holds at most 15
+ * cards (three rows, five on a phone, both inside the palette's height cap),
+ * and a scroll box would clip the card tooltips.
  */
 
 .root {
@@ -14,4 +15,10 @@
   grid-template-columns: repeat(5, 1fr);
   gap: var(--space-3);
   border-bottom: 1px solid var(--border-default);
+}
+
+@media (max-width: 768px) {
+  .root {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }

@@ -39,7 +39,7 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * the shared `id`/`label` fields) and `starCatalog` a seeded star with the
  * source + index its ref needs; both are scored and ranked in like a famous
  * row (see `rankPaletteMatches`).  `exhibit` and `tour` carry a registry row each
- * (`exhibitRegistry`, `tourRegistry`); `place` carries an `EarthPlace` — a
+ * (`APP_EXHIBITS`, `tourRegistry`); `place` carries an `EarthPlace` — a
  * search-only point, not a focusable ref — ranked the same way. Those three
  * are the kinds that resolve to something other than a focus. `layer` carries a
  * row a Layer published through its `search` feed, whose `id` is the durable

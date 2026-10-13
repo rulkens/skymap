@@ -39,6 +39,8 @@ export function seedCameraRuntime(args: {
     follow: null,
     gesture: { key: frameKey(pose.frame), value: rowFor(pose.frame).emptyMemory },
     tilt: EMPTY_TILT_MEMORY,
+    own: {},
+    pivotBody: null,
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,

@@ -1,3 +1,4 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/layers/milkyWay/present/produceMilkyWayLabel';
@@ -13,10 +14,16 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
-// Measured ink bbox the labelRenderer stub reports (atlas px, anchor-relative,
+// The producers only read the ink bbox; real glyph metrics would pin the
+// fixtures to a font file, so the layout is mocked to report a chosen box.
+const layout = vi.hoisted(() => ({ bbox: null as LabelBBox | null }));
+vi.mock('../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
+  textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
+}));
+
+// Measured ink bbox the textLayoutOf mock reports (atlas px, anchor-relative,
 // +Y down). maxY = 12 puts the text's true bottom 12 atlas px below the
 // baseline anchor (a descender — 'You are here' has one), which the producer
 // scales by the em clamp to place the stem top.
@@ -31,21 +38,21 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // Minimal state: the producer reads settings.milkyWay.labelEnabled,
 // settings.labels.focusedOnly (+ selection.focus for the solo gate), the fade
 // registry (opacityOf only — the producer is a pure reader), and
-// state.gpu.labelRenderer.measure for the caption's ink bbox (which places
+// the text layout bbox for the caption's ink bbox (which places
 // the stem top).
 function makeState(
   labelEnabled: boolean,
   layerOpacity: number,
   opts: { focusedOnly?: boolean; focus?: { type: string } | null; bbox?: LabelBBox } = {},
 ): EngineState {
-  const bbox = opts.bbox ?? MEASURED_BBOX;
+  layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     settings: {
       milkyWay: { enabled: true, labelEnabled },
       labels: { focusedOnly: opts.focusedOnly ?? false },
     },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
+    gpu: { fontAtlases: { metricsByFont: {} } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,
@@ -74,7 +81,7 @@ function makeCtx(
   return {
     // resolveLayerOpacity lerps its recession factor on snapshot.focusBlend;
     // an absent one makes the composed alpha NaN.
-    snapshot: { nowMs: 0, focusBlend: 0 },
+    snapshot: { nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
     drawCamPos: [camDistMpc, 0, 0],
     vp,
     canvasSize: { width, height },
@@ -119,6 +126,23 @@ const distanceFadeAt = (camDistMpc: number): number =>
   fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
 describe('produceMilkyWayLabel', () => {
+  it('outside the focused sphere the label draws but carries no pick; inside and at rest it keeps it', () => {
+    const ctx = makeCtx(0.5);
+    const at = (center: Vec3) =>
+      ({
+        ...ctx,
+        snapshot: {
+          ...ctx.snapshot,
+          focus: { center, apparentRadiusMpc: 0.1, physicalRadiusMpc: 0.05, blend: 1 },
+        },
+      }) as FrameView;
+    const pickOf = (c: FrameView) => produceMilkyWayLabel(makeState(true, 1), c).labels[0]!.pickId;
+
+    expect(pickOf(ctx)).toBeDefined();
+    expect(pickOf(at([0, 0, 0]))).toBeDefined();
+    expect(pickOf(at([5, 0, 0]))).toBeUndefined();
+  });
+
   it('emits one label carrying a leader at the composed distance fade when close and enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);

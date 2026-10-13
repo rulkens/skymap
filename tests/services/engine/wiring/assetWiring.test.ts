@@ -6,10 +6,6 @@
  * the membership set and exercise every row's demand predicate against a stub
  * `DemandCtx`, so the load policy for each asset is verified in isolation
  * without a full engine.
- *
- * `structureCatalog`'s predicate is a bug-fix pin (see the module docstring on
- * `assetWiring.ts`): it loads when any category has its ring
- * (`structures.items[cat].enabled`) OR its label (`.labelEnabled`) on.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -67,6 +63,7 @@ function makeCtx(over: {
     // epoch so `bodyPosOf` below (also J2000) and the gate agree unless a test
     // moves the clock.
     simDays: over.simDays ?? CONST_J2000,
+    tier: 'medium',
   };
 }
 
@@ -102,55 +99,6 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
-    const cluster = rowFor('structureCatalog');
-    // Every category's ring + label off — both axes read from the item rows.
-    const allHidden = {
-      structures: {
-        enabled: true,
-        items: {
-          cluster: { enabled: false, labelEnabled: false },
-          supercluster: { enabled: false, labelEnabled: false },
-          void: { enabled: false, labelEnabled: false },
-          group: { enabled: false, labelEnabled: false },
-        },
-      },
-    };
-    expect(cluster.demand(makeCtx({ settings: allHidden }))).toBe(false);
-
-    // Any single structure category visible in EITHER its ring or its label ⇒ true.
-    expect(
-      cluster.demand(
-        makeCtx({
-          settings: {
-            structures: {
-              enabled: true,
-              items: {
-                ...allHidden.structures.items,
-                cluster: { enabled: true, labelEnabled: false },
-              },
-            },
-          },
-        }),
-      ),
-    ).toBe(true);
-    expect(
-      cluster.demand(
-        makeCtx({
-          settings: {
-            structures: {
-              enabled: true,
-              items: {
-                ...allHidden.structures.items,
-                void: { enabled: false, labelEnabled: true },
-              },
-            },
-          },
-        }),
-      ),
-    ).toBe(true);
-  });
-
   it('body-texture rows encode load/evict hysteresis via demand vs release', () => {
     // Hand-place the camera along +x from a known body's position at three
     // distances relative to its load radius. `demand` fires inside X, `release`

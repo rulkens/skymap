@@ -74,7 +74,9 @@ import { famousDisplayName } from '../../../services/engine/helpers/famousDispla
 import { FAMOUS_LABEL_STYLE } from '../../../services/engine/presentation/famousLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
 import { focusRecession } from '../../../services/engine/presentation/focusRecession';
+import { textLayoutOf } from '../../../services/gpu/labelLayout/textLayoutOf';
 import { smoothstep } from '../../../utils/math/smoothstep';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -200,11 +202,11 @@ export function produceFamousGalaxyLabels(
     // Hoisted once — every label this frame lifts through the same vp/viewport.
     const vp: Float32Array = ctx.vp;
     const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
-    // The renderer owns the font metrics, so its memoized `measure` is the one
-    // source for the caption's true ink bbox (which places the line top). Null
-    // only during bootstrap, when the director isn't flushing anyway — the
-    // chain then degrades to a bottom at the label anchor.
-    const labelRenderer = state.gpu.labelRenderer;
+    // The memoized text layout is the one source for the caption's true ink
+    // bbox (which places the line top). Null only during bootstrap, when the
+    // director isn't flushing anyway — the chain then degrades to a bottom at
+    // the label anchor.
+    const fontAtlases = state.gpu.fontAtlases;
 
     // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
     // identical for every famous label (the `galaxy` handle is shared, and
@@ -266,7 +268,9 @@ export function produceFamousGalaxyLabels(
         // Byte-identical to what the famous point batch's pick fragment writes:
         // the meta ⋈ catalog join is index-aligned, so this loop index IS the
         // catalog row the GPU stamps as `@builtin(instance_index)`.
-        pickId: packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET),
+        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)
+          ? packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET)
+          : undefined,
         worldPos: p.worldPos,
         text: p.name,
         font: 'cormorant',
@@ -296,7 +300,7 @@ export function produceFamousGalaxyLabels(
         viewportPx,
         pxPerRad: ctx.drawPxPerRad,
         subjectSizePx: sizePx,
-        textBbox: labelRenderer?.measure(label) ?? null,
+        textBbox: fontAtlases ? textLayoutOf(fontAtlases.metricsByFont, label).bbox : null,
         worldEmMpc: p.labelWorldEmMpc,
         minPixelSize: style.minPixelSize,
         maxPixelSize,

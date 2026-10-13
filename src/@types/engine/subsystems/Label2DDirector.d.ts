@@ -1,12 +1,18 @@
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
+import type { Label2D } from '../../rendering/Label2D';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
+import type { LabelBBox } from '../../rendering/LabelBBox';
 import type { FrameView } from '../frame/FrameView';
 import type { EngineState } from '../state/EngineState';
 import type { Label2DProducer } from './Label2DProducer';
 
 export type Label2DDirector = {
   /** Wire in the renderers once initGpu has constructed them. Idempotent. */
-  attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void;
+  attachRenderers(
+    label: LabelRenderer,
+    line: MarkerLineRenderer,
+    measure: (label: Label2D) => LabelBBox | null,
+  ): void;
   /** Register a producer.  Order of registration = order of merging. */
   registerProducer(producer: Label2DProducer): void;
   /**
@@ -16,6 +22,8 @@ export type Label2DDirector = {
    * never wakes the loop itself.
    */
   runFrame(state: EngineState, ctx: FrameView): boolean;
+  /** The label set last flushed to the renderer; empty before the first flush. */
+  labels(): readonly Label2D[];
   /**
    * Tear down the director.  No-op — the director holds renderer refs
    * and a producers list, but the renderers' lifecycle is the engine's

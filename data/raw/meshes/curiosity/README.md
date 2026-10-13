@@ -12,7 +12,7 @@ them is what `npm run build-meshes` reads.
 | Model      | "Curiosity Rover (MSL) (Clean)"                                    |
 | Author     | Brian Kumanchik, NASA/JPL-Caltech                                  |
 | Source     | <https://science.nasa.gov/3d-resources/curiosity-rover-msl/>       |
-| Licence    | Public domain — NASA 3D Resources are "free and without copyright" |
+| Licence    | NASA media guidelines; the collection calls its assets "free and without copyright" |
 | Fetch date | 2026-09-11                                                         |
 | File       | `Curiosity Rover (MSL) (Clean).zip`, 6,123,157 bytes               |
 | sha256     | `d48c61a9f2e6873ce4662706f49470edb4f040b7374750ab59f990b3ecc2a836` |
@@ -100,7 +100,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 `npm run build-meshes` copies the string below onto the generated
 `MESH_ASSETS.curiosity` row:
 
-> Curiosity Rover (MSL) by Brian Kumanchik, NASA/JPL-Caltech — NASA 3D Resources, public domain (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)
+> Curiosity Rover (MSL) by Brian Kumanchik, NASA/JPL-Caltech — NASA 3D Resources (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)
 
 ## As inspected (2026-09-11)
 

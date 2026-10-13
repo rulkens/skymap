@@ -1,5 +1,10 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { meshBody, type MeshBodySeed } from './makers/meshBody';
+import { SAMPLED_BODIES } from '../missions/spacecraftBodies';
+import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
+
+const launchIso = (id: string): string =>
+  findByIdOrThrow(SAMPLED_BODIES, id, 'sceneMeshBodies').launchIso;
 
 /**
  * SCENE_MESH_BODIES — seeded mesh-drawn bodies (the fifth `SceneBody` arm).
@@ -26,13 +31,41 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
   // real objects on the default caption reach, not easter eggs to stumble on.
   // Half a radius: the 13 m magnetometer boom sets the bounding sphere, so two
   // radii would park the camera 29 m from a 4 m bus.
-  { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager', standoffRadii: 0.5 },
-  { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager', standoffRadii: 0.5 },
-  { id: 'hubble', label: 'Hubble', meshKey: 'hubble' },
-  { id: 'curiosity', label: 'Curiosity', meshKey: 'curiosity' },
-  { id: 'perseverance', label: 'Perseverance', meshKey: 'perseverance' },
-  { id: 'spirit', label: 'Spirit', meshKey: 'mer' },
-  { id: 'opportunity', label: 'Opportunity', meshKey: 'mer' },
+  // `presentFromIso`: Hubble's release from Discovery's arm; each rover's landing (UTC).
+  {
+    id: 'voyager1',
+    label: 'Voyager 1',
+    meshKey: 'voyager',
+    standoffRadii: 0.5,
+    presentFromIso: launchIso('voyager1'),
+  },
+  {
+    id: 'voyager2',
+    label: 'Voyager 2',
+    meshKey: 'voyager',
+    standoffRadii: 0.5,
+    presentFromIso: launchIso('voyager2'),
+  },
+  { id: 'hubble', label: 'Hubble', meshKey: 'hubble', presentFromIso: '1990-04-25T19:38:00Z' },
+  {
+    id: 'curiosity',
+    label: 'Curiosity',
+    meshKey: 'curiosity',
+    presentFromIso: '2012-08-06T05:17:00Z',
+  },
+  {
+    id: 'perseverance',
+    label: 'Perseverance',
+    meshKey: 'perseverance',
+    presentFromIso: '2021-02-18T20:55:00Z',
+  },
+  { id: 'spirit', label: 'Spirit', meshKey: 'mer', presentFromIso: '2004-01-04T04:35:00Z' },
+  {
+    id: 'opportunity',
+    label: 'Opportunity',
+    meshKey: 'mer',
+    presentFromIso: '2004-01-25T05:05:00Z',
+  },
   // ~170 m bounding radius: the default 2-radii standoff would park the
   // camera the better part of a km up, well past where the park reads.
   { id: 'soendermarken', label: 'Søndermarken', meshKey: 'soendermarken', standoffRadii: 1.5 },

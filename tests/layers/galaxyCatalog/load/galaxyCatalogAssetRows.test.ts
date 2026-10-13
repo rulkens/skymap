@@ -15,6 +15,7 @@ import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { Tier } from '../../../../src/@types/data/Tier';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
@@ -33,6 +34,7 @@ function makeCtx(over: {
   settings?: unknown;
   paletteOpen?: boolean;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
+  tier?: Tier;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
@@ -40,6 +42,7 @@ function makeCtx(over: {
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
+    tier: over.tier ?? 'large',
   };
 }
 
@@ -53,6 +56,15 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
     expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
+  });
+
+  it('a catalog the tier excludes is not demanded even when enabled, and is released', () => {
+    const sdss = rowFor(Source.SDSS);
+    const settings = { galaxyCatalogs: { items: { sdss: { enabled: true } } } };
+    expect(sdss.demand(makeCtx({ settings, tier: 'small' }))).toBe(false);
+    expect(sdss.release?.(makeCtx({ settings, tier: 'small' }))).toBe(true);
+    expect(sdss.demand(makeCtx({ settings, tier: 'medium' }))).toBe(true);
+    expect(sdss.release?.(makeCtx({ settings, tier: 'medium' }))).toBe(false);
   });
 
   it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {

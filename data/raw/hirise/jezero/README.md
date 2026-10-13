@@ -111,7 +111,8 @@ extracted loose from `MSR_TRN_HiRISE_soc_003_USGS_release_aug2024_mosaics.zip`
 | `MSR_hirise_soc_003_Orthomosaic_0.25m_Eqc_latTs0_lon0_First_NoBlend.tif`          | 4,674,976,833 B |
 
 - Upstream: DOI <https://doi.org/10.5066/P13CPYYU>, fetched by hand 2026-09-15.
-  Public domain (US government work).
+  The Astropedia record gives access constraints "None" and use constraints
+  "Please cite authors" (read 2026-10-07).
 - Equirectangular, lat_ts 0, lon0 0, on a 3,396,190 m sphere; edge-registered.
   Both share the footprint 77.058–77.381 E, 18.136–18.588 N; LZW, 256² tiles
   (already tiled, so no COG conversion).

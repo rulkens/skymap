@@ -9,7 +9,7 @@
 import { runFrame } from '../frame/runFrame';
 import { checkFrameOrder } from '../frame/checkFrameOrder';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
-import { CONTROL_SCHEMES } from '../camera/controlSchemes';
+import { composeControlSchemes } from '../camera/composeControlSchemes';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -42,7 +42,9 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     device: phaseLocals.device,
     context: phaseLocals.context,
     timingService: state.gpu.timingService,
-    controlSchemes: CONTROL_SCHEMES,
+    controlSchemes: composeControlSchemes(
+      deps.composition.layers.flatMap((layer) => layer.exhibits ?? []),
+    ),
   };
 
   // The scheduler was wired with `onFrame: () => frameRef.current()`, reading the

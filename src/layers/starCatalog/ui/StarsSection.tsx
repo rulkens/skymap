@@ -7,9 +7,8 @@
  * curated famous-star map and the survey-wide Gaia bin), plus a default-closed
  * "Advanced" sub-section carrying the shared star-size and star-brightness
  * sliders — the star-catalog twins of the Galaxies section's point-size and
- * brightness controls — plus two lattice controls unique to the octree-cut star
- * renderer: "Detail" (the CPU refine threshold) and "Glow overlap" (the
- * aggregate glow spread). It renders NO per-catalog label toggle — mirroring the
+ * brightness controls. The engine-tuning sliders live in the Debug panel's
+ * `StarCatalogTuningSection`. It renders NO per-catalog label toggle — mirroring the
  * Galaxies section, star-label visibility lives in the separate Labels section.
  *
  * ### Master: a real gate, not a per-source fan-out
@@ -67,18 +66,6 @@ type StarsSectionProps = {
   sizePx: number;
   /** Current star-brightness trim (shared; 1.0 = identity). */
   brightness: number;
-  /** Current octree-cut refine threshold — the "Detail" knob (lower = more detail). */
-  refineThreshold: number;
-  /** Current aggregate glow-overlap spread (shared; 1.0 = identity). */
-  glowOverlap: number;
-  /** Current near-anchor display exposure — the "Exposure (near)" tuning knob. */
-  exposureNearX: number;
-  /** Current middle-anchor display exposure — the "Exposure (mid)" tuning knob. */
-  exposureMidX: number;
-  /** Current far-anchor display exposure — the "Exposure (far)" tuning knob. */
-  exposureFarX: number;
-  /** Current aggregate surface-brightness cap — the "Fog cap" tuning knob. */
-  aggregateIntensityCap: number;
   /** Called when the user toggles the master gate on or off. */
   onToggleMaster: (enabled: boolean) => void;
   /** Called when the user toggles a single star catalog on or off. */
@@ -87,18 +74,6 @@ type StarsSectionProps = {
   onSizeChange: (v: number) => void;
   /** Called when the user moves the star-brightness slider. */
   onBrightnessChange: (v: number) => void;
-  /** Called when the user moves the Detail (refine-threshold) slider. */
-  onRefineThresholdChange: (v: number) => void;
-  /** Called when the user moves the glow-overlap slider. */
-  onGlowOverlapChange: (v: number) => void;
-  /** Called when the user moves the Exposure (near) slider. */
-  onExposureNearXChange: (v: number) => void;
-  /** Called when the user moves the Exposure (mid) slider. */
-  onExposureMidXChange: (v: number) => void;
-  /** Called when the user moves the Exposure (far) slider. */
-  onExposureFarXChange: (v: number) => void;
-  /** Called when the user moves the Fog cap slider. */
-  onAggregateIntensityCapChange: (v: number) => void;
 };
 
 // ── StarsSection ─────────────────────────────────────────────────────────────
@@ -113,22 +88,10 @@ function StarsSection({
   counts,
   sizePx,
   brightness,
-  refineThreshold,
-  glowOverlap,
-  exposureNearX,
-  exposureMidX,
-  exposureFarX,
-  aggregateIntensityCap,
   onToggleMaster,
   onToggleCatalog,
   onSizeChange,
   onBrightnessChange,
-  onRefineThresholdChange,
-  onGlowOverlapChange,
-  onExposureNearXChange,
-  onExposureMidXChange,
-  onExposureFarXChange,
-  onAggregateIntensityCapChange,
 }: StarsSectionProps) {
   // Tri-state master: `checked` follows the real gate; `indeterminate` flags
   // "gate on, but not every catalog is individually enabled" (mixed).
@@ -202,97 +165,6 @@ function StarsSection({
             step={0.05}
             onChange={onBrightnessChange}
             format={(v) => `${v.toFixed(1)}×`}
-          />
-        </div>
-
-        {/* Detail — the octree-cut refine threshold (a uniform of the cut compute).
-            LOWER = far boxes split earlier = fewer visible lattice cells (more
-            detail), at the cost of more drawn nodes. Range 0.01–0.30. */}
-        <div className={styles.panelRow}>
-          <Slider
-            label="Detail"
-            value={refineThreshold}
-            min={0.01}
-            max={0.3}
-            step={0.01}
-            onChange={onRefineThresholdChange}
-            format={(v) => v.toFixed(2)}
-          />
-        </div>
-
-        {/* Glow overlap — spreads far aggregate glows past their octree-box
-            footprint so the box lattice dissolves. 1.0 = identity (flux-
-            conserving; the shader divides the peak by the square). Range 1.0–6.0. */}
-        <div className={styles.panelRow}>
-          <Slider
-            label="Glow overlap"
-            value={glowOverlap}
-            min={1.0}
-            max={6.0}
-            step={0.1}
-            onChange={onGlowOverlapChange}
-            format={(v) => `${v.toFixed(1)}×`}
-          />
-        </div>
-
-        {/* Exposure (near) — the absolute display exposure the scale-dependent
-            starExposureRamp targets at its near (solar-system) anchor. A live
-            tuning knob; the value gets frozen once re-eye-tuned. Range 1–60. */}
-        <div className={styles.panelRow}>
-          <Slider
-            label="Exposure (near)"
-            value={exposureNearX}
-            min={1}
-            max={60}
-            step={0.5}
-            onChange={onExposureNearXChange}
-            format={(v) => `${v.toFixed(1)}×`}
-          />
-        </div>
-
-        {/* Exposure (mid) — the absolute display exposure the ramp targets at its
-            middle (few-kpc) anchor. Pull it down to darken the over-exposed
-            central clump without touching either end. Range 5–150. */}
-        <div className={styles.panelRow}>
-          <Slider
-            label="Exposure (mid)"
-            value={exposureMidX}
-            min={5}
-            max={150}
-            step={1}
-            onChange={onExposureMidXChange}
-            format={(v) => `${v.toFixed(0)}×`}
-          />
-        </div>
-
-        {/* Exposure (far) — the absolute display exposure the ramp targets at its
-            far (whole-galaxy) anchor, where the field reads as diffuse surface
-            brightness. Live tuning knob; range 5–300. */}
-        <div className={styles.panelRow}>
-          <Slider
-            label="Exposure (far)"
-            value={exposureFarX}
-            min={5}
-            max={300}
-            step={1}
-            onChange={onExposureFarXChange}
-            format={(v) => `${v.toFixed(0)}×`}
-          />
-        </div>
-
-        {/* Fog cap — ceiling on an AGGREGATE glow's per-pixel peak intensity
-            (leaves uncapped). Tames the box-filling glow a near sub-threshold
-            aggregate deposits as luminous fog around the Sun. Deliberately
-            non-physical: light above the cap is discarded. Range 0.01–0.5. */}
-        <div className={styles.panelRow}>
-          <Slider
-            label="Fog cap"
-            value={aggregateIntensityCap}
-            min={0.01}
-            max={0.5}
-            step={0.01}
-            onChange={onAggregateIntensityCapChange}
-            format={(v) => v.toFixed(2)}
           />
         </div>
       </CollapsibleSection>

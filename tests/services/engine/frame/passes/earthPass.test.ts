@@ -187,6 +187,7 @@ function makeCtx(distance: number): FrameView {
     SEEDED_EARTH.positionMpc[2],
   ];
   return {
+    snapshot: { meshBodies: [] },
     cam: { distance, position: drawCamPos, target: SEEDED_EARTH.positionMpc },
     drawCamPos,
     bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
@@ -571,6 +572,7 @@ describe('earthPass.draw', () => {
       SEEDED_EARTH.positionMpc[2],
     ];
     const closeCtx = {
+      snapshot: { meshBodies: [] },
       cam: {
         distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,
@@ -726,6 +728,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
       SEEDED_EARTH.positionMpc[2],
     ];
     return {
+      snapshot: { meshBodies: [] },
       cam: {
         distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,

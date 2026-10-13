@@ -1,0 +1,95 @@
+---
+/*
+ * PageSections — a docs page's own second-level headings as a list of jumps:
+ * beside the text on a wide window (layouts/Docs.astro) and at the head of the
+ * contents on a narrow one (DocsNav). Headings of a letter or two, a
+ * glossary's A to Z, run along a line instead of one under another. The link
+ * of the section being read is marked by scripts/initSectionMark.ts.
+ */
+import type { MarkdownHeading } from 'astro';
+
+type Props = { sections: readonly MarkdownHeading[] };
+
+const { sections } = Astro.props;
+const short = (section: MarkdownHeading) => section.text.length <= 2;
+---
+
+<ol data-sections>
+  {
+    sections.map((section) => (
+      <li class:list={{ letter: short(section) }}>
+        <a href={`#${section.slug}`}>{section.text}</a>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    flex: 0 0 100%;
+  }
+
+  /* A letter is a square the size of a thumb's target, so a row of them is easy to hit. */
+  li.letter {
+    flex: none;
+    min-width: 2rem;
+  }
+
+  a {
+    position: relative;
+    display: block;
+    padding-block: 0.375rem;
+    color: var(--site-text-muted);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--color-fg);
+    text-decoration: underline;
+  }
+
+  /* The section being read: the app's point, hung left of the text edge as the contents hang theirs. */
+  a[aria-current] {
+    color: var(--color-fg);
+  }
+
+  a[aria-current]::before {
+    content: '';
+    position: absolute;
+    left: -0.875rem;
+    top: 50%;
+    width: 0.3125rem;
+    height: 0.3125rem;
+    margin-top: -0.15625rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
+  .letter a[aria-current]::before {
+    left: -0.5rem;
+  }
+
+  /* A list the object catalogue's filter has emptied of its section (scripts/initObjectFinder.ts). */
+  a[aria-disabled] {
+    color: var(--site-text-faint);
+    pointer-events: none;
+  }
+
+  @media (max-width: 900px) {
+    a {
+      padding-block: 0.75rem;
+    }
+
+    li.letter {
+      min-width: var(--tap);
+    }
+  }
+</style>

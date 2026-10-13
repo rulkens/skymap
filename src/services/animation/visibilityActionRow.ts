@@ -23,6 +23,7 @@ import {
 } from '../../layers/milkyWay/state/milkyWay/slice';
 import { setCosmicWebFilamentsEnabled } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
+import { setMissionTrailsEnabled } from '../../layers/missions/state/missions/slice';
 import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
 import {
   setCosmicWebDensityEnabled,
@@ -55,6 +56,7 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
   cosmicWebFilaments: { actions: (on) => [setCosmicWebFilamentsEnabled(on)] },
   localBubble: { actions: (on) => [setLocalBubbleEnabled(on)] },
   orbitTrails: { actions: (on) => [setOrbitTrailsEnabled(on)] },
+  missionTrails: { actions: (on) => [setMissionTrailsEnabled(on)] },
   cosmicWebDensity: { actions: (on) => [setCosmicWebDensityEnabled(on)] },
   flow: { actions: (on) => [setFlowEnabled(on)] },
   constellations: { actions: (on) => [setConstellationsEnabled(on)] },

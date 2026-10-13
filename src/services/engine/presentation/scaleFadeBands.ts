@@ -93,7 +93,7 @@ export const SCALE_FADE_BANDS = {
 
   // Keyed on: CAMERA distance from the render origin, Mpc (the Sun sits there,
   // so this IS the caption's own distance). A fade-IN toward the solar system;
-  // `goneAt` equals `foregroundLabelsPass`'s enable gate BY IMPORT so the
+  // `goneAt` equals `labelsNearPass`'s enable gate BY IMPORT so the
   // fade-in cannot pop; `fullAt` = half the gate is the taste knob.
   sunCaption: {
     fullAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2,
@@ -122,6 +122,12 @@ export const SCALE_FADE_BANDS = {
     fullAt: CONSTELLATIONS_FULL_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
     goneAt: CONSTELLATIONS_GONE_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
   },
+
+  // Keyed on: CAMERA distance from the render origin, Mpc. A RECEDE fade — the
+  // Milky Way's own marked places (clusters, nebulae, Centre sites) are full
+  // from inside the galaxy out to two radii, and gone at the foreground gate,
+  // so the marker passes' inputs vanish as the survey markers take over. Eye-tuned.
+  milkyWayStructures: { fullAt: MILKY_WAY_RADIUS_MPC * 2, goneAt: FOREGROUND_MAX_DISTANCE_MPC },
 
   // Keyed on: CAMERA distance from the render origin, Mpc. An APPROACH fade —
   // full at the far edge — the veil explains a COSMIC-scale catalog gap.

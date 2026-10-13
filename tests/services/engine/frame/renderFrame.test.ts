@@ -554,14 +554,13 @@ function makeInput(
         // galaxyPointSpritesPass binds its group; a no-op write + opaque bind
         // group keeps the mock encoder happy.
         gpu: {
-          labelRenderer: null,
-          markerLineRenderer: null,
+          labelRendererCosmo: null,
+          markerLineRendererCosmo: null,
           // clipPathDebugPass.enabled short-circuits on a null renderer.
           debugLineRenderer: null,
           selectionRingRenderer: null,
-          structureMarkerCosmoRenderer: null,
           // Near-field handles null → the body layers and
-          // foregroundLabelsPass all report enabled=false, so the program's
+          // labelsNearPass all report enabled=false, so the program's
           // (hdr, NEAR0) render and foreground:0 render select nothing and
           // the foreground:0→swap composite is touched-set-skipped. These
           // fixtures stay a pure cosmological-frame trace (see the
@@ -575,7 +574,7 @@ function makeInput(
           // stay a pure cosmological-frame trace (like the other body handles).
           atmosphereShellRenderer: null,
           orbitTrailRenderer: null,
-          foregroundLabelRenderer: null,
+          labelRendererNear: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see
@@ -901,7 +900,7 @@ describe('renderFrame', () => {
   it('encodes no foreground pass or composite while the foreground handles are null', () => {
     // The program carries the near-field steps ((hdr, NEAR0), then the tail:
     // foreground:0 render → foreground:0→swap composite → NEAR0 swap render).
-    // With the fixture's body/star renderers and foregroundLabelRenderer all
+    // With the fixture's body/star renderers and labelRendererNear all
     // null, the (hdr, NEAR0) group selects only the cloud's dust + upsample
     // rows (one extra hdr pass) and the (mw-aggregate, NEAR0) step opens the
     // cloud's own offscreen pass; the foreground:0 render selects nothing, so

@@ -1,33 +1,11 @@
 /**
- * App — the root React component for Skymap.
- *
- * Layout and container-mounting: renders the engine canvas and mounts the HUD
- * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
- * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
- * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
- * SplashContainer, ArrivalVeilContainer, and DebugPanelContainer.
- * Each container owns its own store reach; App just arranges them.
- *
- * `handleRef` is a ref, not state: engine hooks call methods on it, and
- * putting the handle in state would re-render every consumer at startup.
- *
- * No `React.StrictMode`: the engine creates GPU resources and starts a render
- * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
- * cleanup still runs on real unmounts.
- *
- * Cinema mode (`?cinema`): the recorder's capture surface. App renders only
- * the canvas + the tour overlay; every other piece of HUD chrome is absent
- * from the DOM, not merely CSS-hidden — see the branch above the main return.
- *
- * Store reach: App itself keeps only shell-level reach. `selectSelectedFocusable`
- * drives the `uiStack` "has a pinned mobile selection" className;
- * `selectPaletteOpen`, `selectUiHidden`,
- * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX;
- * `selectTourActive` picks the tour-overlay/beat-rail branch; and
- * `selectTakeoverSource` picks the exhibit-overlay branch the same way. Everything
- * else — hover/selection detail, engine status/scale/load-progress, settings,
- * navigation, the top-pill row's dispatches — is owned by the container it
- * feeds, not App.
+ * App — the root component: the engine canvas plus the HUD, mounted as leaf
+ * containers that each own their store reach. On a phone the card, scale, time
+ * and panels give way to PhoneHudContainer. `handleRef` is a ref, not state, so
+ * the engine handle doesn't re-render every consumer at startup. No
+ * `React.StrictMode`: the engine's GPU resources and render loop can't survive
+ * the synthetic double-mount. Cinema mode (`?cinema`, the recorder's surface)
+ * renders only canvas + tour overlay; the rest is absent from the DOM.
  */
 
 import { Suspense } from 'react';
@@ -37,9 +15,10 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
-import NavigationPanelContainer from '../containers/NavigationPanelContainer';
+import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import TopBarContainer from '../containers/TopBarContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
+import PhoneHudContainer from '../containers/PhoneHudContainer';
 import SplashContainer from '../containers/SplashContainer';
 import LazyInfoCardContainer from '../containers/LazyInfoCardContainer';
 import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer';
@@ -48,7 +27,6 @@ import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
-import { selectSelectedFocusable } from '../../state/selection/selectors';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
@@ -65,67 +43,32 @@ import {
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
 
-  // The only selection-slice read App keeps: it drives the `uiStack`
-  // "pinned selection on mobile" className. All other selection reach (hover,
-  // InfoCard detail, member count) lives in InfoCardContainer.
-  const selected = useAppSelector(selectSelectedFocusable);
-
-  // Reactive companion to the containers' one-shot `useInitialMobile`: the
-  // `hasSelection` className must update live when the viewport crosses the
-  // breakpoint (rotation), so it reads the `matchMedia`-backed hook.
+  // matchMedia-backed, so the HUDs swap live on rotation.
   const isMobile = useIsMobile();
 
-  // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice; App
-  // reads them only to gate its own render (TimeBar visibility, HUD fade,
-  // DebugPanel mount).
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const uiHidden = useAppSelector(selectUiHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
-  // A running guided tour hides the whole HUD stack and mounts its own overlay
-  // (caption + nav); an exhibit does the same through `ExhibitOverlay`.
-  // HUD-hidden is DERIVED from a running tour or exhibit, not a separate
-  // `setUiHidden` write. A registry clip is a takeover too but keeps the HUD:
-  // it leaves the scene alone, and the debug panel's Stop must stay in reach.
-  // The overlay and beat rail below stay gated on `tourActive` specifically.
+  // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
+  // write). A registry clip keeps the HUD: the debug panel's Stop must stay in reach.
   const tourActive = useAppSelector(selectTourActive);
 
-  // Exhibit takeover mirrors the tour branch above: App resolves which
-  // exhibit (if any) owns the scene and hands the id down, so
-  // ExhibitOverlayContainer does not re-derive `kind` from the takeover slice
-  // itself.
   const takeoverSource = useAppSelector(selectTakeoverSource);
   const exhibitId = takeoverSource?.kind === 'exhibit' ? takeoverSource.id : null;
 
-  // The full splash state surface lives in `SplashContainer` so its churn
-  // re-renders only that subtree. App needs just one fact: whether the splash
-  // is up (to hide the HUD stack / gate TimeBar / mark the canvas inert).
+  // Only "is it up" lives here; the rest of the splash state stays in SplashContainer.
   const splashVisible = useAppSelector(selectSplashVisible);
 
-  // Shared between BOTH return branches (cinema + normal) so the `id="c"`
-  // contract and the mount-only-while-touring rule each live in one place.
-  //
-  // The engine takes over this canvas's GPU context; React never writes to it
-  // after the initial render. `id="c"` matches the fullscreen CSS rule in
-  // index.html. `aria-hidden` is inert in cinema mode — gate 0 of
-  // buildInitialUiState pins the splash hidden there, so it stays undefined.
+  // Shared by both return branches. The engine owns this canvas's GPU context;
+  // `id="c"` matches the fullscreen CSS rule in index.html.
   const canvas = <canvas ref={canvasRef} id="c" aria-hidden={splashVisible || undefined} />;
-  // Tour overlay (caption + nav) — mounted only while a tour runs. In the
-  // normal branch it sits as a SIBLING of the HUD stack, not inside it, so the
-  // `uiStackHidden` fade (which the tour triggers) doesn't also fade it.
+  // A sibling of the HUD stack, not inside it: the tour's own `uiStackHidden` fade must not fade it.
   const tourOverlay = tourActive && <TourOverlayContainer />;
-  // Exhibit overlay — mounted only while an exhibit owns the scene. Not part
-  // of the cinema-mode capture surface below: the recorder only ever plays
-  // tours.
   const exhibitOverlay = exhibitId && <ExhibitOverlayContainer id={exhibitId} />;
 
-  // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
-  // the tour overlay (captions + nav), nothing else. The recorder harness
-  // screenshots this page, so the HUD chrome must not EXIST in the DOM;
-  // CSS-hiding it (the `uiStackHidden` route) would still leave it findable
-  // and able to bleed into captures. Every hook above still runs — `useEngine`
-  // is what makes the page playable — only the JSX diverges, which also keeps
-  // the hook order unconditional.
+  // The HUD must not exist in the DOM here: CSS-hiding could bleed into captures.
+  // Every hook above still runs (`useEngine` makes the page playable); only the JSX diverges.
   if (isCinemaMode()) {
     return (
       <>
@@ -139,39 +82,38 @@ export function App(): React.ReactElement {
     <>
       {canvas}
 
-      {/* HUD wrapper.  All overlay chrome lives inside this single
-          `<div>` so `Tab` can fade the whole stack via one CSS
-          opacity transition.  Splash also forces the HUD hidden. */}
+      {/* One wrapper so `Tab` fades the whole stack with a single opacity transition. */}
       <div
         className={cx(
           appStyles.uiStack,
           (uiHidden || splashVisible || tourActive || exhibitId !== null) &&
             appStyles.uiStackHidden,
-          selected != null && isMobile && appStyles.hasSelection,
         )}
       >
         <LoadingBarContainer />
         <StatusBarContainer />
-        <Suspense>
-          <LazyInfoCardContainer />
-        </Suspense>
-        <ScaleBarContainer />
-        {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
-            direct child rather than joining a flex row. */}
-        <TimeBarContainer hidden={paletteOpen || splashVisible} />
-        {/* Flex column anchored bottom-left. */}
-        <div className={appStyles.leftStack}>
-          <NavigationPanelContainer />
-          <Suspense>
-            <LazySettingsPanelContainer />
-          </Suspense>
-        </div>
+        {isMobile ? (
+          <PhoneHudContainer hidden={paletteOpen || splashVisible} />
+        ) : (
+          <>
+            <Suspense>
+              <LazyInfoCardContainer />
+            </Suspense>
+            <ScaleBarContainer />
+            <TimeBarContainer hidden={paletteOpen || splashVisible} />
+            <div className={appStyles.leftStack}>
+              <NavigationPanel />
+              <Suspense>
+                <LazySettingsPanelContainer />
+              </Suspense>
+            </div>
+          </>
+        )}
         <TopBarContainer />
         <Suspense>
           <LazyCommandPaletteContainer />
         </Suspense>
-        {/* `handleRef.current` set means the engine finished constructing,
-            so the panel can subscribe to slots without racing. */}
+        {/* `handleRef.current` set means the engine finished constructing: no subscribe race. */}
         {debugPanelOpen && handleRef.current && (
           <Suspense>
             <LazyDebugPanelContainer engineHandleRef={handleRef} />
@@ -180,9 +122,7 @@ export function App(): React.ReactElement {
       </div>
       {tourOverlay}
       {exhibitOverlay}
-      {/* Beat rail rides the interactive session only — it is progress
-          chrome, so the cinema branch (captions-only film frames) omits it
-          just like TourNav and the beat counter. */}
+      {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
       <ArrivalVeilContainer />

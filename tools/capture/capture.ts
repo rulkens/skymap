@@ -1,7 +1,8 @@
 /**
- * capture — writes one thumbnail per capturable palette card, by mapping
- * each card onto a `SceneShot` and handing it to the generic capturer. This is
- * the only file here that knows what a palette card is.
+ * capture — writes one thumbnail per capturable palette card and per cosmic
+ * featured structure, by mapping each target onto a `SceneShot` and handing it
+ * to the generic capturer. The targets carry their own output path, so this
+ * file never branches on which kind it is writing.
  */
 import { mkdirSync, readdirSync } from 'node:fs';
 import { launchChromium } from '../utils/browser/launchChromium';
@@ -9,7 +10,8 @@ import { captureScene } from '../utils/capture/captureScene';
 import { WARN_BYTES } from '../utils/capture/shotDefaults';
 import { selectCaptureTargets } from './selectCaptureTargets';
 import { parseArgs } from './parseFeaturedArgs';
-import { DEFAULT_CAPTURE_T, OUTPUT_DIR } from './featuredDefaults';
+import { DEFAULT_CAPTURE_T, OUTPUT_DIR, STRUCTURE_OUTPUT_DIR } from './featuredDefaults';
+import { featuredAnchorsByShotSource } from './featuredAnchorsByShotSource';
 import { FEATURED_TABS } from '../../src/data/palette/featuredTabs';
 import type { CaptureTarget } from './@types/CaptureTarget';
 import type { SceneShot } from '../@types/capture/SceneShot';
@@ -28,7 +30,7 @@ function shotFor(target: CaptureTarget): SceneShot {
     phaseDeg: target.capture.phaseDeg,
     keepFocus: target.capture.keepFocus,
     hideGalaxyField: target.capture.hideGalaxyField,
-    outPath: `${OUTPUT_DIR}/${target.cardId}.webp`,
+    outPath: target.outPath,
     label: target.cardId,
   };
 }
@@ -36,13 +38,15 @@ function shotFor(target: CaptureTarget): SceneShot {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  mkdirSync(OUTPUT_DIR, { recursive: true });
-  const existing = new Set(
-    readdirSync(OUTPUT_DIR)
-      .filter((name) => name.endsWith('.webp'))
-      .map((name) => name.slice(0, -'.webp'.length)),
-  );
-  const targets = selectCaptureTargets(FEATURED_TABS, existing, options.force);
+  const existing = new Set<string>();
+  for (const dir of [OUTPUT_DIR, STRUCTURE_OUTPUT_DIR]) {
+    mkdirSync(dir, { recursive: true });
+    for (const name of readdirSync(dir)) {
+      if (name.endsWith('.webp')) existing.add(`${dir}/${name}`);
+    }
+  }
+  const structureIds = featuredAnchorsByShotSource('render').map((s) => s.id);
+  const targets = selectCaptureTargets(FEATURED_TABS, structureIds, existing, options.force);
   console.log(`capture-featured: ${targets.length} target(s)`);
   if (targets.length === 0) return;
 

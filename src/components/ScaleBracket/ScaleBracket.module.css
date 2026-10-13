@@ -1,0 +1,49 @@
+/*
+ * ScaleBracket.module.css — boxless scale legend. Opacity is the only thing
+ * that animates, and reduced-motion drops even that.
+ */
+
+.root {
+  position: fixed;
+  left: var(--corner-offset);
+  bottom: calc(var(--bottom-stack-height) + var(--sheet-lift) + var(--space-4));
+  z-index: var(--z-bottom-stack);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-fg-muted);
+  /* A dark halo stands in for a scrim: the label sits on the bare canvas, stars included. */
+  text-shadow:
+    0 0 var(--space-2) var(--shadow-card-outer),
+    0 0 var(--space-1) var(--shadow-card-outer);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.visible {
+  opacity: 1;
+}
+
+.label {
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.bracket {
+  display: block;
+  height: var(--space-3);
+  box-sizing: border-box;
+  border: 1px solid var(--color-fg-muted);
+  border-top: none;
+  filter: drop-shadow(0 0 var(--space-1) var(--shadow-card-outer));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

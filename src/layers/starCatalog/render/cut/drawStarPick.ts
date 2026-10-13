@@ -2,6 +2,8 @@ import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogPickRenderer } from '../../@types/StarCatalogPickRenderer';
 import type { StarCutInputs } from '../../@types/StarCutInputs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import type { FocusUniformsValue } from '../../../../@types/rendering/FocusUniformsValue';
+import { starFocusRelCam } from './starFocusRelCam';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
 /**
@@ -16,8 +18,10 @@ export function drawStarPick(
   view: SlabView,
   inputs: StarCutInputs,
   pxPerRad: number,
+  focus: FocusUniformsValue,
 ): void {
   const vp = narrowMat4(rebaseViewProj(view.slab.vp, inputs.cut.originMpc));
+  const focusSphere = starFocusRelCam(focus, inputs.cut.originMpc);
   for (const { source } of inputs.cut.sources) {
     pickRenderer.draw(pass, {
       source,
@@ -25,6 +29,7 @@ export function drawStarPick(
       viewportPx: view.viewportPx,
       pxPerRad,
       sizePx: inputs.sizePx,
+      focus: focusSphere,
     });
   }
 }

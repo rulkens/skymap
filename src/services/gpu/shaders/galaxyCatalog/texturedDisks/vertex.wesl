@@ -55,7 +55,7 @@ import package::lib::billboard::quadUv;
 // fallback (|dot(north, los)| > 0.99, ~8° from pole).
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
-// Shared cluster-focus dim — same lib the points pass uses, so textured
+// Shared structure-focus dim — same lib the points pass uses, so textured
 // disks fade in lockstep with their companion point sprites. Membership is
 // per-galaxy (constant across the quad's corners), so we evaluate it once
 // here and forward the scalar via VsOut.focusDim.
@@ -63,7 +63,7 @@ import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
-// @group(1) cluster-focus uniform — the impostor pipelines have no fade /
+// @group(1) structure-focus uniform — the impostor pipelines have no fade /
 // source groups, so focus takes the first free slot (the points pipeline
 // parks it at @group(3)). Single shared binding: one structure focused at a time.
 @group(1) @binding(0) var<uniform> focus: FocusUniforms;

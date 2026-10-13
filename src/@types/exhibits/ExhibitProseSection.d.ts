@@ -3,4 +3,4 @@
  * and `<a href="…">…</a>`; those two are all the overlay parses (`inlineSegments`).
  */
 
-export type ExhibitProseSection = { kind: 'prose'; heading: string; text: string };
+export type ExhibitProseSection = { heading: string; text: string };

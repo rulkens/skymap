@@ -4,8 +4,8 @@
  *
  * ### What is proven
  *
- *   1. Beat 2 (`flyAndFocusOnClip('cluster-virgo-m87')`) resolves to a clip
- *      that carries a `{ kind:'focus', ref: { type:'structure', id:'cluster-virgo-m87' } }`
+ *   1. Beat 2 (`flyAndFocusOnClip('galaxy-cluster-virgo-m87')`) resolves to a clip
+ *      that carries a `{ kind:'focus', ref: { type:'structure', id:'galaxy-cluster-virgo-m87' } }`
  *      cue — the Virgo focus fires at beat start.
  *
  *   2. Beat 3 (`flyToClip('m87')`) resolves to a clip with NO `kind:'focus'` /
@@ -51,8 +51,7 @@ import { Source } from '../../../src/data/source';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -95,25 +94,22 @@ const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
 });
 
 /**
- * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via
- * `famousMeta` + the one-row FamousGalaxy cloud. All other catalogs return
- * undefined.
+ * Structure store stub: Virgo resolves via `byId`, M87 via `famousMeta` +
+ * the one-row FamousGalaxy cloud. All other catalogs return undefined.
  */
-const DIVE_DEPS: ResolveDeps = {
-  structures: {
-    byId: (id) =>
-      ({
-        type: 'structure',
-        id,
-        name: id === 'cluster-virgo-m87' ? 'Virgo Cluster' : 'Unknown',
-        category: 'cluster',
-        worldPos: [16.5, 12.3, -1.2] as [number, number, number],
-        physicalRadiusMpc: 2,
-        apparentRadiusMpc: 4,
-        featured: true,
-      }) as const,
-    byCategory: () => [],
-  },
+const DIVE_STRUCTURES: StructureRowFixture = {
+  byId: (id) =>
+    ({
+      type: 'structure',
+      id,
+      name: id === 'galaxy-cluster-virgo-m87' ? 'Virgo Cluster' : 'Unknown',
+      category: 'galaxy-cluster',
+      worldPos: [16.5, 12.3, -1.2] as [number, number, number],
+      physicalRadiusMpc: 2,
+      apparentRadiusMpc: 4,
+      featured: true,
+    }) as const,
+  byCategory: () => [],
 };
 
 /** The galaxyCatalog Layer's slice: the one-row M87 famous cloud + its sidecar. */
@@ -129,7 +125,7 @@ const DIVE_GALAXIES = {
   ],
 } as unknown as GalaxyRowFixture;
 
-const DIVE_SELECTION = selectionResolverOver(DIVE_DEPS, DIVE_GALAXIES);
+const DIVE_SELECTION = selectionResolverOver(DIVE_STRUCTURES, DIVE_GALAXIES);
 
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
@@ -154,8 +150,8 @@ describe('webShowcase dive invariants', () => {
 
   // ── Assertion 1: beat 2 resolved clip carries a focus cue for Virgo ───────
 
-  it('beat 2 resolved clip carries a { kind:"focus", ref: { type:"structure", id:"cluster-virgo-m87" } } cue', () => {
-    // flyAndFocusOnClip('cluster-virgo-m87') prepends a focusId cue before
+  it('beat 2 resolved clip carries a { kind:"focus", ref: { type:"structure", id:"galaxy-cluster-virgo-m87" } } cue', () => {
+    // flyAndFocusOnClip('galaxy-cluster-virgo-m87') prepends a focusId cue before
     // the camera-move block. resolveClipFoci rewrites it to a concrete focus cue.
     const beat2Clip: ClipData = webShowcase.beats[1]!.enterClip!;
     const resolved = resolveClipFoci(
@@ -175,7 +171,7 @@ describe('webShowcase dive invariants', () => {
     expect(focusCues.length).toBeGreaterThan(0);
     expect(focusCues[0]).toEqual({
       kind: 'focus',
-      ref: { type: 'structure', id: 'cluster-virgo-m87' },
+      ref: { type: 'structure', id: 'galaxy-cluster-virgo-m87' },
     });
   });
 
@@ -212,10 +208,9 @@ describe('webShowcase dive invariants', () => {
       middleware: (getDefault) => getDefault().concat(sagaMiddleware),
     });
 
-    // Provide resolveDeps and cameraRuntime so the tween-build path has what
+    // Provide selection and cameraRuntime so the tween-build path has what
     // it needs — if suspendDuringClip did NOT guard, these would be used.
     sagaMiddleware.setContext({
-      resolveDeps: () => DIVE_DEPS,
       selection: DIVE_SELECTION,
       cameraRuntime: () => CAMERA_RUNTIME,
       playClip: vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined),
@@ -230,7 +225,7 @@ describe('webShowcase dive invariants', () => {
 
     // Dispatch a focus update — this is what an in-clip focus() cue would
     // trigger when applySceneEffect processes it during playback.
-    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'galaxy-cluster-virgo-m87' }));
 
     // Give the saga worker a chance to run (it won't reach startCameraTween).
     await flush();

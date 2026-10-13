@@ -1,0 +1,129 @@
+// @vitest-environment jsdom
+//
+// StructureDetailCard — rendering tests for the rich focused-structure panel.
+//
+// Mirrors the sibling InfoCard component tests: jsdom env +
+// @testing-library/react + createElement so the file stays .ts and is
+// picked up by Vitest's `include: ['tests/**/*.test.ts']` glob.
+
+import { describe, it, expect } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { createElement } from 'react';
+import StructureDetailCard from '../../../../../src/layers/structure/ui/StructureDetailCard/StructureDetailCard';
+import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
+
+// Coma carries an Abell number ('A1656'); the card should expand it.
+const comaWithAbell: StructureInfo = {
+  type: 'structure',
+  id: 'coma',
+  name: 'Coma Cluster',
+  category: 'galaxy-cluster',
+  worldPos: [0, 100, 0],
+  featured: true,
+  physicalRadiusMpc: 6,
+  abell: 'A1656',
+};
+
+// Virgo has no Abell designation — the row must be absent.
+const virgoNoAbell: StructureInfo = {
+  type: 'structure',
+  id: 'virgo-m87',
+  name: 'Virgo Cluster',
+  category: 'galaxy-cluster',
+  worldPos: [10, 0, 0],
+  featured: true,
+  physicalRadiusMpc: 2.2,
+};
+
+describe('StructureDetailCard', () => {
+  it('shows the expanded Abell designation for a cluster carrying one', () => {
+    render(createElement(StructureDetailCard, { target: comaWithAbell }));
+    expect(screen.getByText('Abell')).toBeInTheDocument();
+    expect(screen.getByText('Abell 1656')).toBeInTheDocument();
+  });
+
+  it('omits the Abell row for a cluster without an Abell designation', () => {
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Abell/);
+  });
+
+  it('shows a Wikipedia link when the record has a title and none when it does not', () => {
+    render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, wikipediaTitle: 'Virgo Cluster' },
+      }),
+    );
+    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+      'href',
+      'https://en.wikipedia.org/wiki/Virgo_Cluster',
+    );
+    cleanup();
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Wikipedia/);
+  });
+
+  it('shows the structure shot for a featured structure and none for a bulk one', () => {
+    const { container } = render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, id: 'galaxy-cluster-virgo-m87' },
+        memberCount: 42,
+      }),
+    );
+    // The count rides in the summary column beside the shot, not below it.
+    expect(container.querySelector('img')?.nextElementSibling?.textContent).toMatch(
+      /Galaxies.*42$/,
+    );
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(
+      /^\/images\/structures\/galaxy-cluster-virgo-m87\.webp$/,
+    );
+    // Every row moved beside the shot: no bordered section is left empty.
+    for (const div of container.querySelectorAll('div')) {
+      if (div.className.includes('cardSection')) expect(div.childElementCount).toBeGreaterThan(0);
+    }
+    cleanup();
+    const bare = render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, id: 'galaxy-cluster-bulk-x1', featured: false },
+      }),
+    );
+    expect(bare.container.querySelector('img')).toBeNull();
+  });
+
+  it('shows the Galaxies row when a member count is supplied', () => {
+    render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 42 }));
+    expect(screen.getByText('Galaxies')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
+
+  it('omits the Galaxies row when the count is null (not yet computable)', () => {
+    const { container } = render(
+      createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: null }),
+    );
+    expect(container.textContent).not.toMatch(/Galaxies/);
+  });
+
+  it('renders a zero count truthfully (empty sphere over loaded data)', () => {
+    render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 0 }));
+    expect(screen.getByText('Galaxies')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('a nebula card shows its kind; a cluster card has no Type row', () => {
+    const orion: StructureInfo = {
+      type: 'structure',
+      id: 'nebula-orion',
+      name: 'Orion Nebula',
+      category: 'nebula',
+      nebulaKind: 'emission',
+      worldPos: [0, 0.0004, 0],
+      featured: true,
+      physicalRadiusMpc: 4e-6,
+    };
+    render(createElement(StructureDetailCard, { target: orion }));
+    expect(screen.getByText('Type')).toBeInTheDocument();
+    expect(screen.getByText('Emission nebula')).toBeInTheDocument();
+    cleanup();
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Type/);
+  });
+});

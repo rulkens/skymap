@@ -10,6 +10,7 @@
 
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
+import { SAMPLED_BODIES } from '../missions/spacecraftBodies';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
 import type { PositionDriver } from '../../@types/scene/PositionDriver';
 
@@ -24,6 +25,7 @@ export const POSITION_DRIVERS: readonly PositionDriver[] = [
   ...ORBITAL_ELEMENTS.map(
     (elements): PositionDriver => ({ kind: 'orbit', id: elements.id, elements }),
   ),
+  ...SAMPLED_BODIES.map((body): PositionDriver => ({ kind: 'sampled', id: body.id, focusId: 'sun' })),
   ...SURFACE_FIXED_SITES.map((site): PositionDriver => ({ kind: 'surfaceFixed', ...site })),
 ];
 
@@ -38,7 +40,7 @@ export function positionDriverById(id: string): PositionDriver {
 }
 
 /**
- * The body this one hangs off: an orbit's focus, a site's host. Anchors hang
+ * The body this one hangs off: an orbit's focus, a sampled craft's Sun, a site's host. Anchors hang
  * off nothing. Not `utils/bodyTextures/hostBodyId`, which resolves a TEXTURE key's host.
  */
 export function bodyHostId(id: string): string | null {
@@ -48,6 +50,8 @@ export function bodyHostId(id: string): string | null {
       return null;
     case 'orbit':
       return driver.elements.focusId;
+    case 'sampled':
+      return driver.focusId;
     case 'surfaceFixed':
       return driver.hostId;
   }

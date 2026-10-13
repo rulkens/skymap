@@ -57,6 +57,8 @@ const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
 const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
+const NO_STRUCTURE_COUNTS: Partial<Record<StructureId, number>> = {};
+const NO_STRUCTURE_SEARCH_LIST: readonly StructureSearchEntry[] = [];
 
 export const selectEngineStatus = (state: RootState): EngineStatus => selectEngine(state).status;
 
@@ -65,8 +67,16 @@ export const selectScale = (state: RootState): ScaleInfo => selectEngine(state).
 export const selectSourceCounts = (state: RootState): Partial<Record<SourceType, number>> =>
   selectEngine(state).sourceCounts;
 
+/** The structure Layer's counts, on the pre-seed contract of `selectFamousGalaxiesMeta`. */
 export const selectStructureCounts = (state: RootState): Partial<Record<StructureId, number>> =>
-  selectEngine(state).structureCounts;
+  selectEngineFacts(state).structure?.counts ?? NO_STRUCTURE_COUNTS;
+
+/**
+ * The structure Layer's bulk-slot status; `'idle'` before the seed, as an
+ * undemanded slot must not hold a focus deferral.
+ */
+export const selectStructureBulk = (state: RootState) =>
+  selectEngineFacts(state).structure?.bulk ?? 'idle';
 
 /** The galaxyCatalog Layer's published tally (Ruling 12), empty until its first catalog lands. */
 export const selectProvenanceCounts = (
@@ -78,12 +88,11 @@ export const selectLoadProgress = (state: RootState): LoadProgressState | null =
   selectEngine(state).loadProgress;
 
 /**
- * The command palette's structure search index — published by
- * `wireStructureProjection` at boot (anchors) and on every later group
- * change (the bulk catalog landing or clearing).
+ * The command palette's structure search index, a structure Layer fact on the
+ * same pre-seed contract: the anchors from boot, the bulk catalog once it lands.
  */
 export const selectStructureSearchList = (state: RootState): readonly StructureSearchEntry[] =>
-  selectEngine(state).structureSearchList;
+  selectEngineFacts(state).structure?.searchList ?? NO_STRUCTURE_SEARCH_LIST;
 
 /**
  * Every Layer's published palette rows, flattened for the ranker. The one
@@ -127,6 +136,10 @@ export const selectStructureMemberCount = (state: RootState): number | null =>
  */
 export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
   selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
+
+/** Why the Debug panel's last star chunk-pool resize failed, or null. */
+export const selectStarChunkSlotsError = (state: RootState): string | null =>
+  selectEngineFacts(state).starCatalog?.chunkSlotsError ?? null;
 
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no

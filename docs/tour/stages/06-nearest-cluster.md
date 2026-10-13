@@ -5,7 +5,7 @@ title:        The nearest cluster
 narration:    >
   Virgo, the nearest big cluster. Over a thousand galaxies, pulled together
   by gravity, 50 million light-years away.
-focus:        structure:cluster-virgo-m87
+focus:        structure:galaxy-cluster-virgo-m87
 distance_mpc: 16
 motion:       log-dolly+orbit
 travel_s:     7

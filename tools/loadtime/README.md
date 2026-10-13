@@ -41,7 +41,7 @@ A milestone not reached within `--timeout` prints as `>90`.
   measures stale code.
 - Every profile also throttles the CPU 4×, which is roughly a mid-range phone against a desktop.
 - The server gzips what production gzips (the shell's text assets, and data files per
-  `tools/deploy/r2/shouldGzipOnWire.ts`). It serves everything from one origin, so the extra
+  `DATA_FAMILIES` in `tools/deploy/r2/dataFamilies.ts`). It serves everything from one origin, so the extra
   connection to the R2 data host is not in the numbers, and Cloudflare's Brotli would make the
   chunks a little smaller than gzip does.
 - With a mkcert pair in `.certs/` (`mkdir -p .certs && cd .certs && mkcert localhost`) the server

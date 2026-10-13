@@ -10,6 +10,10 @@ import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyC
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { COSMIC_WEB_DENSITY_OFF } from './utils/cosmicWebDensityOff';
+import { section } from '../../utils/exhibits/section';
+import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
+import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The band is the subject, so the exhibit forces it on rather than inheriting
@@ -78,27 +82,23 @@ export const zoneOfAvoidance: Exhibit = {
   },
   lede: 'About a fifth of the extragalactic sky is blocked by our own galaxy. The band marks where the dust and stars of the Milky Way’s disc hide whatever lies behind them.',
   body: [
-    {
-      kind: 'prose',
+    section(proseKind, {
       heading: 'What you’re seeing',
       text: 'The haze follows the plane of the Milky Way, where the galaxy catalogues thin out and stop. That gap is not empty space; it is the part of the sky optical surveys cannot see through. The band is a guide drawn over the gap, not measured data.',
-    },
-    {
-      kind: 'prose',
+    }),
+    section(proseKind, {
       heading: 'Why it is there',
       text: 'Dust in the galactic disc absorbs visible light, and the disc’s own stars crowd out anything faint behind them. Longer wavelengths get through: neutral hydrogen radiates at 21 cm, where the Milky Way is effectively transparent, and near-infrared surveys recover much of what optical ones lose. The first two galaxies found this way, <a href="https://en.wikipedia.org/wiki/Maffei_1">Maffei 1 and 2</a>, turned up in 1968.',
-    },
-    {
-      kind: 'facts',
+    }),
+    section(factsKind, {
       facts: [
         { label: 'Obscured sky', value: '~20%' },
         { label: 'Sees through', value: '21 cm (H I)' },
         { label: 'First detections', value: 'Maffei 1 & 2, 1968' },
         { label: 'First described', value: 'Proctor, 1878' },
       ],
-    },
-    {
-      kind: 'sources',
+    }),
+    section(sourcesKind, {
       heading: 'Sources',
       links: [
         {
@@ -108,6 +108,6 @@ export const zoneOfAvoidance: Exhibit = {
           href: 'https://arxiv.org/abs/astro-ph/0005501',
         },
       ],
-    },
+    }),
   ],
 };

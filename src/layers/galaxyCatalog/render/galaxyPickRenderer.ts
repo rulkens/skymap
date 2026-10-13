@@ -52,7 +52,7 @@ import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
  * uniform bytes per call rather than sharing the point renderer's live GPU
  * buffer.
  *
- * `focusBindGroup` is the engine's shared cluster-focus bind group (live
+ * `focusBindGroup` is the engine's shared structure-focus bind group (live
  * buffer, written once per frame in renderFrame).  Bound at @group(3) so the
  * pick pass sees the same focus state the visual pass does and the shared
  * vertex shader can cull non-members of a focused structure from hit-testing.

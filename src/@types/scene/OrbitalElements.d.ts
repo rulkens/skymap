@@ -37,7 +37,7 @@ export type OrbitalElements = {
   readonly focusId: string;
   /** Semi-major axis a, in Mpc (authored via `SCALE_UNITS`). */
   readonly semiMajorMpc: number;
-  /** Eccentricity e. Circular at 0, elliptical below 1, hyperbolic above (the probes). */
+  /** Eccentricity e. Circular at 0, elliptical below 1. Bound orbits only. */
   readonly eccentricity: number;
   /** Inclination i, in radians. */
   readonly inclinationRad: number;

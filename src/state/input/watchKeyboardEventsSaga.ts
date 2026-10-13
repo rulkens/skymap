@@ -25,19 +25,45 @@
 import { take, call, put, select } from 'typed-redux-saga';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from './keyboardShortcuts';
+import { selectTakeoverSource } from '../takeover/selectors';
 import { asArray } from '../../utils/asArray';
+import { shortcutKeys } from '../../utils/input/shortcutKeys';
 import type { RootState } from '../../store/types';
 
+/**
+ * The running exhibit's first kind shortcut on `key` that does something, else null. A key the
+ * global table binds is not re-bound: hotkeys fires a doubly bound key twice.
+ */
+function exhibitRun(state: RootState, key: string) {
+  const source = selectTakeoverSource(state);
+  if (source?.kind !== 'exhibit') return null;
+  for (const { kind, data } of APP_EXHIBITS[source.id].body) {
+    for (const shortcut of kind.shortcuts ?? []) {
+      if (!shortcutKeys(shortcut.keys).includes(key)) continue;
+      const actions = shortcut.run(state, data);
+      if (actions !== null) return actions;
+    }
+  }
+  return null;
+}
+
 export function* watchKeyboardEventsSaga() {
-  const channel = yield* call(createKeyboardListener, KEYBOARD_SHORTCUTS);
+  const kindShortcuts = [
+    ...new Set(Object.values(APP_EXHIBITS).flatMap((e) => e.body.map((s) => s.kind))),
+  ].flatMap((kind) => kind.shortcuts ?? []);
+  const bound = [
+    ...KEYBOARD_SHORTCUTS,
+    ...kindShortcuts.filter((s) => !shortcutKeys(s.keys).some((k) => k in SHORTCUTS_BY_KEY)),
+  ];
+  const channel = yield* call(createKeyboardListener, bound);
   try {
     while (true) {
       const key = yield* take(channel);
-      const shortcut = SHORTCUTS_BY_KEY[key];
-      if (!shortcut) continue;
       const state = yield* select((s: RootState) => s);
-      for (const action of asArray(shortcut.run(state))) yield* put(action);
+      const actions = exhibitRun(state, key) ?? SHORTCUTS_BY_KEY[key]?.run(state) ?? null;
+      for (const action of asArray(actions)) yield* put(action);
     }
   } finally {
     channel.close();

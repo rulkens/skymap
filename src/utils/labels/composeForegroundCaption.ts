@@ -10,6 +10,8 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { CaptionComposeContext } from '../../@types/rendering/CaptionComposeContext';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
+import { isPickableUnderFocus } from '../structure/isPickableUnderFocus';
+import { focusRecession } from '../../services/engine/presentation/focusRecession';
 import { CAPTION_FADE_RULES } from '../../services/engine/presentation/captionFadeRules';
 import {
   CAPTION_PRIORITY,
@@ -53,14 +55,20 @@ export function composeForegroundCaption(
     revealAlpha *
     overflowFade(subjectSizePx, ctx.viewportShortSidePx) *
     registryOpacity *
-    clipFactor;
+    clipFactor *
+    (rule.fadeHandle === null ? 1 : focusRecession(rule.fadeHandle, ctx.focus.blend));
 
   const prominencePx =
     CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +
     Math.min(subjectSizePx, CAPTION_TIER_SCALE - 1);
 
+  // A name is a click target for its subject, so it leaves the pick with it:
+  // nothing the focus dims is selectable.
+  const pickable = isPickableUnderFocus(label.worldPos, ctx.focus);
+
   return {
     ...label,
+    pickId: pickable ? label.pickId : undefined,
     worldPos: anchor,
     fadeAlpha,
     occludeWeight: subjectOccludedByBodies({

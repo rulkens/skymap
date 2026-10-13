@@ -5,6 +5,7 @@
  */
 
 import { Source } from '../../../data/sources';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 
@@ -15,6 +16,7 @@ export function zoneOfAvoidanceSelectionRow(): SelectionKindRow<ZoneOfAvoidanceR
     type: 'zoneOfAvoidance',
     pickSources: [Source.ZoneOfAvoidance],
     resolvePick: () => ({ type: 'zoneOfAvoidance' }),
+    encodePick: () => packSelection(Source.ZoneOfAvoidance, 0 + PICK_SENTINEL_OFFSET),
     extractRow: () => ({ type: 'zoneOfAvoidance' }),
   };
 }

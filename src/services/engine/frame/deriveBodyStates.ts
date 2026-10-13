@@ -6,7 +6,7 @@
  * a moon's correction also shifts M before Kepler, so it stays on its conic.
  * `orbit` is the PROPAGATED element set at `t` the body was placed with, so
  * the orbit trail draws the same conic instead of re-deriving its own.
- * Memoized on `simDays`: every pass (draw, pick, labels) reads the same
+ * Memoized on `simDays` and the trajectory registry version: every pass (draw, pick, labels) reads the same
  * snapshot each frame, so recomputing per reader would tear a mid-frame
  * clock tick between passes.
  */
@@ -20,17 +20,16 @@ import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodie
 import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
-import { propagateElements } from '../../../utils/orbit/propagateElements';
-import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
 import { siteGroundRadiusM } from '../../../utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { EPHEMERIS_CORRECTIONS } from '../../../data/bodies/ephemerisCorrections.generated';
-import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../data/bodies/barycentricPairs';
-import { correctionSeriesAt } from '../../../utils/orbit/correctionSeriesAt';
+import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
+import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
+import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -38,15 +37,16 @@ import { correctionSeriesAt } from '../../../utils/orbit/correctionSeriesAt';
 // mistake belongs — instead of on whichever frame first reaches the bad row.
 const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 
-// The last computed snapshot, keyed by the instant it was computed at. A frame
-// re-reads the same instant from several passes and a paused clock re-reads it
-// every frame, so a one-deep cache makes both free; a new instant recomputes.
-let cachedSimDays: number | undefined;
-let cachedStates: ReadonlyMap<string, BodyState> | undefined;
+// The last computed snapshot, keyed by the instant and the trajectory registry
+// version it was computed at. A frame re-reads the same instant from several
+// passes and a paused clock re-reads it every frame, so a one-deep cache makes
+// both free; a new instant, or a track arriving on a paused clock, recomputes.
+let cache: { simDays: number; version: number; states: ReadonlyMap<string, BodyState> } | undefined;
 
 export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
-  if (cachedStates !== undefined && simDays === cachedSimDays) {
-    return cachedStates;
+  const version = trajectoryRegistry.version();
+  if (cache !== undefined && simDays === cache.simDays && version === cache.version) {
+    return cache.states;
   }
 
   // Phase 1 — positions only, so phase 2 can orient a body against where the
@@ -66,30 +66,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   // focus id throws — so the lookup here is total.
   for (const el of FOCUS_ORDER) {
     const focus = positions.get(el.focusId)!;
-    const correction = EPHEMERIS_CORRECTIONS[el.id];
-    let propagated = propagateElements(el, simDays);
-    const dM =
-      correction?.meanAnomalyRad &&
-      correctionSeriesAt(correction.meanAnomalyRad, simDays, correction.outside);
-    if (dM) propagated = { ...propagated, meanAnomalyRad: propagated.meanAnomalyRad + dM[0]! };
-    const position = addVec3(focus, keplerianPositionMpc(propagated));
-    const km =
-      correction?.positionKm &&
-      correctionSeriesAt(correction.positionKm, simDays, correction.outside);
-    if (km) {
-      const k = SCALE_UNITS.KM_TO_MPC;
-      position[0] += km[0]! * k;
-      position[1] += km[1]! * k;
-      position[2] += km[2]! * k;
-    }
-    // The secondary is propagated inline: `FOCUS_ORDER` places it after its primary.
-    const reflex = BARYCENTRIC_REFLEX_BY_PRIMARY.get(el.id);
-    if (reflex !== undefined) {
-      const s = keplerianPositionMpc(propagateElements(reflex.secondary, simDays));
-      position[0] -= reflex.k * s[0];
-      position[1] -= reflex.k * s[1];
-      position[2] -= reflex.k * s[2];
-    }
+    const { positionMpc: position, orbit: propagated } = orbitRowPlacement(el, focus, simDays);
     positions.set(el.id, position);
     orbits.set(el.id, propagated);
   }
@@ -122,6 +99,11 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     positions.set(site.id, addVec3(hostPos, offsetMpc));
   }
 
+  // 1d — sampled craft, off the same walk the mission camera samples. With no track the
+  // craft sits at Earth, so the state always exists (22 sites do `states.get(id)!`) and the
+  // presence gate, not this phase, decides whether the craft is drawn.
+  for (const { id } of SAMPLED_BODIES) positions.set(id, bodyPositionMpcAt(id, simDays));
+
   // Phase 2 — orientations over the finished position map. Anchors go through
   // `orientationForBody` too, so the rotation-row gate stays one gate.
   const states = new Map<string, BodyState>();
@@ -133,7 +115,6 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     });
   }
 
-  cachedSimDays = simDays;
-  cachedStates = states;
+  cache = { simDays, version, states };
   return states;
 }

@@ -31,7 +31,7 @@ describe('wireInput structure wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
 
   it('passes the composed resolver to createClickResolver', () => {
-    // Structure hits reach `state.data.structures` through the composed
+    // Structure hits reach the structure Layer's store through the composed
     // resolver's structure row (`composeSelectionRows` → `resolvePick`), not
     // a direct field on the click-resolver input (D5). The resolver is
     // threaded in from `deps.selection` (engine.ts's one instance), not

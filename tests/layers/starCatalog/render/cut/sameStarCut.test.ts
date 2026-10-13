@@ -12,7 +12,7 @@ function cut(over: Partial<StarCutSpec> = {}): StarCutSpec {
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,
-    sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
+    sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 100 }],
     ...over,
   };
 }
@@ -41,7 +41,7 @@ describe('sameStarCut', () => {
 
   it('differs on any other field, including a source fade multiplier', () => {
     expect(sameStarCut(cut(), cut({ refineThreshold: 0.06 }))).toBe(false);
-    const row = { source: Source.GaiaStars, opacity: 0.5, budgetTypical: 100 };
+    const row = { source: Source.GaiaStars, opacity: 0.5, drawBudget: 100 };
     expect(sameStarCut(cut(), cut({ sources: [row] }))).toBe(false);
   });
 });

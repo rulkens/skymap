@@ -6,7 +6,7 @@ function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
   return {
     id: 'virgo',
     name: 'Virgo Cluster',
-    category: 'cluster',
+    category: 'galaxy-cluster',
     worldPos: [10, 0, 0],
     physicalRadiusMpc: 2,
     featured: true,
@@ -34,13 +34,12 @@ describe('structureFocusSubsystem', () => {
     expect(settled.physicalRadiusMpc).toBe(7);
   });
 
-  it('a structure whose category has no galaxy members produces no ActiveFocus', () => {
-    const sub = createStructureFocusSubsystem(
-      { requestRender: () => {}, hasGalaxyMembers: () => false },
-      0,
-    );
+  it('lastFocusUniforms returns the produced value without advancing the fade', () => {
+    const sub = makeStructureFocus(0);
+    expect(sub.lastFocusUniforms().blend).toBe(0);
     sub.update(makeCluster(), 0);
-    expect(sub.produceFocusUniforms(500).blend).toBe(0);
+    const mid = sub.produceFocusUniforms(200);
+    expect(sub.lastFocusUniforms()).toBe(mid);
   });
 
   it('emits apparent (fade outer edge) and physical (core) radii independently', () => {

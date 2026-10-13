@@ -23,12 +23,9 @@ import package::lib::camera::worldToClip;
 import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
-import package::lib::fadeUniforms::FadeUniforms;
-import package::lib::fadeUniforms::applyFade;
 
 @group(0) @binding(0) var<uniform> u: CameraUniforms;
-// @group(1) FadeUniforms — see halo.wesl for the contract.
-@group(1) @binding(0) var<uniform> fade: FadeUniforms;
+// No @group(1) — see halo.wesl.
 
 // Ring width in CSS pixels (full visible band, halved for the AA
 // smoothstep on each side).
@@ -85,6 +82,7 @@ fn vs(
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
   out.structureIndex = ii;
+  out.pickable = input.pickable;
   return out;
 }
 
@@ -116,9 +114,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let bandOuter = bandHalfUv + aaUv;
   let bandAlpha = 1.0 - smoothstep(bandInner, bandOuter, distFromRing);
 
-  // applyFade folds in the per-renderer FadeUniforms.opacity
-  // (alpha-only; never attenuates RGB).  Mirrors filaments/fragment.wesl.
-  let a = applyFade(bandAlpha * input.alpha, fade.opacity);
+  let a = bandAlpha * input.alpha;
   // Premultiplied alpha — pipeline blend state is OVER:
   //   (src.color * 1, dst.color * (1 - src.alpha)).
   return vec4<f32>(input.color * a, a);

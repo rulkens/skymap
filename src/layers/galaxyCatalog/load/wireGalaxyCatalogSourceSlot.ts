@@ -58,19 +58,30 @@ export function wireGalaxyCatalogSourceSlot(
         `[engine] upload done  ${id} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
     },
+    // Search, picking and bias correction read `catalogs`, so a released
+    // catalog must leave it with the GPU buffers or they would find galaxies
+    // that are no longer drawn.
+    onRelease: () => {
+      galaxy.pointRenderer.unload(id);
+      galaxy.catalogs.delete(source);
+      galaxy.bumpCatalogsVersion();
+    },
   });
 
   slot.subscribe((s) => {
+    if (s.kind !== 'ready' && s.kind !== 'idle') return;
     if (s.kind === 'ready') {
       // One O(rows) pass paid here per commit rather than lazily in React, so the
       // debug panel never reaches into the raw cloud.
       galaxy.provenanceCounts.set(source, countEstimatedProvenance(s.value));
-      // A COPY of the whole tally: immer freezes what the reducer stores, and a
-      // shared reference would freeze the runtime's own map on the next write.
-      const published: Partial<Record<SourceType, ProvenanceCounts>> = {};
-      for (const [code, counts] of galaxy.provenanceCounts) published[code] = counts;
-      deps.publish({ provenanceCounts: published });
+    } else {
+      galaxy.provenanceCounts.delete(source);
     }
+    // A COPY of the whole tally: immer freezes what the reducer stores, and a
+    // shared reference would freeze the runtime's own map on the next write.
+    const published: Partial<Record<SourceType, ProvenanceCounts>> = {};
+    for (const [code, counts] of galaxy.provenanceCounts) published[code] = counts;
+    deps.publish({ provenanceCounts: published });
   });
 
   return slot;

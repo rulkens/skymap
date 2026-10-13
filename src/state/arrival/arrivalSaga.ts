@@ -42,7 +42,8 @@ export function* arrivalSaga() {
     return;
   }
   const { done } = yield* race({
-    done: call(navigateSaga, { view: intent.view }, 'cut' as const),
+    // The whole intent: an exhibit opens at a linked `t` only if it sees one (re-landing it is a no-op).
+    done: call(navigateSaga, intent, 'cut' as const),
     timeout: delay(ARRIVAL_TIMEOUT_MS),
   });
   const failure: ArrivalState['reason'] =

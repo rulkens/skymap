@@ -19,9 +19,10 @@ const M31: FamousGalaxyMetaEntry = {
 const COMA: StructureSearchEntry = {
   id: 'cluster-coma',
   name: 'Coma Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   abell: 'A1656',
   description: 'X-ray cluster · z = 0.023',
+  featured: true,
 };
 
 function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
@@ -29,7 +30,14 @@ function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
 }
 
 function structure(name: string, abell: string | null, idx: number): StructureSearchEntry {
-  return { id: `cluster-bulk-x${idx}`, name, category: 'cluster', abell, description: '' };
+  return {
+    id: `cluster-bulk-x${idx}`,
+    name,
+    category: 'galaxy-cluster',
+    abell,
+    description: '',
+    featured: false,
+  };
 }
 
 describe('rankPaletteMatches', () => {

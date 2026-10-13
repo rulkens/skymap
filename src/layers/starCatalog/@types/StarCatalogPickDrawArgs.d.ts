@@ -5,6 +5,7 @@
 
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarFocusSphere } from './StarFocusSphere';
 
 export type StarCatalogPickDrawArgs = {
   readonly source: SourceType;
@@ -13,4 +14,5 @@ export type StarCatalogPickDrawArgs = {
   readonly viewportPx: Vec2;
   readonly pxPerRad: number;
   readonly sizePx: number;
+  readonly focus: StarFocusSphere;
 };
