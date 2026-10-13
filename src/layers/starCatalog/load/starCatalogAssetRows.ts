@@ -19,7 +19,11 @@ export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly Asse
       return {
         key: source,
         factory: () => runtime.catalogs.get(source)!,
-        req: (tier) => ({ source, tier }),
+        req: (tier, settings) => ({
+          source,
+          tier,
+          slotsOverride: settings.starCatalogs.chunkSlotsOverride,
+        }),
         demand: (ctx) =>
           ctx.settings.starCatalogs.enabled &&
           ctx.settings.starCatalogs.items[id]?.enabled === true,

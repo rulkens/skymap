@@ -39,9 +39,13 @@ export function createStarCatalogSlot(
       // Replaces any previous upload for this source — a tier reload
       // re-commits at the new tier's pool size. The slot's race-check ran just
       // before this call, so `lastRequest()` is this commit's own request.
-      const tier = slot.lastRequest()!.tier;
+      const req = slot.lastRequest()!;
       // Upload first: a pool past its caps throws here and leaves the old stream valid.
-      const slots = renderer.upload(source, octree, entry.budgets[tier].slots);
+      const slots = renderer.upload(
+        source,
+        octree,
+        req.slotsOverride ?? entry.budgets[req.tier].slots,
+      );
       dropStream();
       if (slots === 0) return;
       chunkStreams.set(

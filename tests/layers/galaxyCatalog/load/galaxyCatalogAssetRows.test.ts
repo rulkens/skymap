@@ -17,6 +17,7 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { NO_SETTINGS } from '../../../support/noSettings';
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
 // core's authored table plus every Layer's, and the fold is per-key local.
@@ -74,14 +75,20 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
 
 describe('galaxyCatalogAssetRows req builders', () => {
   it('a tiered row carries its tier; an untiered one carries only its source', () => {
-    expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
-    expect(rowFor(Source.TwoMRS).req('large')).toEqual({ source: Source.TwoMRS });
+    expect(rowFor(Source.SDSS).req('medium', NO_SETTINGS)).toEqual({
+      source: Source.SDSS,
+      tier: 'medium',
+    });
+    expect(rowFor(Source.TwoMRS).req('large', NO_SETTINGS)).toEqual({ source: Source.TwoMRS });
   });
 
   it("an untiered point source's request is identical across tiers", () => {
     for (const source of [Source.TwoMRS, Source.FamousGalaxy]) {
       const row = rowFor(source);
-      expect(sameRequest(row.req('small'), row.req('large')), `${source} drifted`).toBe(true);
+      expect(
+        sameRequest(row.req('small', NO_SETTINGS), row.req('large', NO_SETTINGS)),
+        `${source} drifted`,
+      ).toBe(true);
     }
   });
 
@@ -89,7 +96,10 @@ describe('galaxyCatalogAssetRows req builders', () => {
     const meta = rowFor('famousGalaxiesMeta');
     const point = rowFor(Source.FamousGalaxy);
     for (const tier of ['small', 'medium', 'large'] as const) {
-      expect(sameRequest(meta.req(tier), point.req(tier)), `drifted at ${tier}`).toBe(true);
+      expect(
+        sameRequest(meta.req(tier, NO_SETTINGS), point.req(tier, NO_SETTINGS)),
+        `drifted at ${tier}`,
+      ).toBe(true);
     }
   });
 });

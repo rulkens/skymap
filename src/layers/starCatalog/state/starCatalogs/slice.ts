@@ -55,6 +55,9 @@ export const starCatalogsSlice = createSlice({
     // The "Fog cap" knob — ceiling on the per-pixel peak intensity of AGGREGATE
     // glows only (leaves uncapped). Rides the shared GPU uniform; tames the
     // box-filling fog a near sub-threshold aggregate deposits around the Sun.
+    setStarCatalogChunkSlotsOverride: (starCatalogs, action: PayloadAction<number | null>) => {
+      starCatalogs.chunkSlotsOverride = action.payload;
+    },
     setStarCatalogAggregateIntensityCap: (starCatalogs, action: PayloadAction<number>) => {
       starCatalogs.aggregateIntensityCap = action.payload;
     },
@@ -83,6 +86,7 @@ export const {
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
   setStarCatalogAggregateIntensityCap,
+  setStarCatalogChunkSlotsOverride,
   setStarCatalogVisible,
   setStarCatalogLabelEnabled,
 } = starCatalogsSlice.actions;

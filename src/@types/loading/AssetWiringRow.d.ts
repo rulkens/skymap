@@ -10,6 +10,7 @@ import type { AssetSlot } from './AssetSlot';
 import type { SlotDeps } from './SlotDeps';
 import type { DemandCtx } from './DemandCtx';
 import type { Tier } from '../data/Tier';
+import type { EngineSettingsState } from '../settings/EngineSettingsState';
 
 export type AssetWiringRow<T = unknown, R = unknown> = {
   key: AssetKey;
@@ -18,8 +19,8 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
    * `state.assetSlots` and must NOT call `slot.load()` — `wireSlots` does both.
    */
   factory: (deps: SlotDeps) => AssetSlot<T, R>;
-  /** Build the request from the current tier (void/empty for tier-agnostic). */
-  req: (tier: Tier) => R;
+  /** Build the request from the current tier and settings (void/empty for tier-agnostic). */
+  req: (tier: Tier, settings: Readonly<EngineSettingsState>) => R;
   demand: (ctx: DemandCtx) => boolean;
   /**
    * Fetch rank on the one bounded-concurrency queue; LOWER is fetched first,

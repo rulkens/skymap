@@ -13,6 +13,7 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
+import { NO_SETTINGS } from '../../../support/noSettings';
 
 // Only `factory` closes over the runtime, and nothing here calls it.
 const ROWS = cosmicWebDensityAssetRows({} as CosmicWebDensityRuntime);
@@ -46,9 +47,9 @@ describe('cosmicWebDensityAssetRows', () => {
 
   it('a tiered row carries the tier, an untiered row carries none', () => {
     const mcpm = ROWS.find((row) => row.key === Source.Mcpm)!;
-    expect(mcpm.req('medium')).toEqual({ binBaseName: 'mcpm', tier: 'medium' });
+    expect(mcpm.req('medium', NO_SETTINGS)).toEqual({ binBaseName: 'mcpm', tier: 'medium' });
     const workbench = ROWS.find((row) => row.key === Source.McpmWorkbench)!;
-    const untiered = workbench.req('medium');
+    const untiered = workbench.req('medium', NO_SETTINGS);
     expect(untiered).toEqual({ binBaseName: 'mcpm-workbench' });
     expect(untiered).not.toHaveProperty('tier');
   });

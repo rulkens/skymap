@@ -127,7 +127,7 @@ describe('starCatalogFetcher', () => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(bytes.slice().buffer);
 
     const decoded = await starCatalogFetcher(
-      { source: Source.GaiaStars, tier: 'large' },
+      { source: Source.GaiaStars, tier: 'large', slotsOverride: null },
       new AbortController().signal,
       () => {},
     );
@@ -141,7 +141,7 @@ describe('starCatalogFetcher', () => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(await encodeSkstCatalog(cat));
 
     const decoded = await starCatalogFetcher(
-      { source: Source.GaiaStars, tier: 'medium' },
+      { source: Source.GaiaStars, tier: 'medium', slotsOverride: null },
       new AbortController().signal,
       () => {},
     );
@@ -159,7 +159,7 @@ describe('starCatalogFetcher', () => {
   it('throws when the requested source is not a star catalog', async () => {
     await expect(
       starCatalogFetcher(
-        { source: Source.SDSS, tier: 'medium' },
+        { source: Source.SDSS, tier: 'medium', slotsOverride: null },
         new AbortController().signal,
         () => {},
       ),
