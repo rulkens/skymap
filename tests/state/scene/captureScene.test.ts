@@ -1,12 +1,12 @@
 /**
  * captureScene — unit tests for the widened tour scene-snapshot capture.
  *
- * A tour beat may mutate the seventeen settings clusters, `settings.orientation`
+ * A tour beat may mutate the snapshot's settings clusters, `settings.orientation`
  * (via a `frameTo` cue), AND `selection.focus`; restore must wind all three
  * back. These tests pin the properties that make the scene-level capture
  * sound:
  *
- *   1. *Scope* — the snapshot carries all seventeen settings clusters (via
+ *   1. *Scope* — the snapshot carries every snapshot settings cluster (via
  *      `snap.settings`), `orientation` as a SIBLING of `settings` (not inside
  *      it — see `SceneSnapshot`'s header for why), AND the focus ref from
  *      `state.selection.focus`.
@@ -20,51 +20,25 @@ import { describe, it, expect } from 'vitest';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import { captureScene } from '../../../src/state/scene/captureScene';
+import { APP_SETTINGS_SLICES } from '../../../src/compositions/appSettingsSlices';
+import { CORE_SNAPSHOT_CLUSTERS } from '../../../src/data/settings/coreSnapshotClusters';
+import { makeSettingsFixture } from '../settings/makeSettingsFixture';
 
 const SNAPSHOT_SETTINGS_KEYS = [
-  'bodies',
-  'blackHoles',
-  'cosmicWebFilaments',
-  'flow',
-  'localBubble',
-  'constellations',
-  'galaxyCatalogs',
-  'labels',
-  'milkyWay',
-  'orbitTrails',
-  'picking',
-  'camera',
-  'starCatalogs',
-  'structures',
-  'cosmicWebDensity',
-  'zoneOfAvoidance',
-  'lightTime',
+  ...APP_SETTINGS_SLICES.map((slice) => slice.reducerPath),
+  ...CORE_SNAPSHOT_CLUSTERS,
 ].sort();
 
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
- * A minimal state carrying the seventeen tour-owned settings clusters plus a
+ * A minimal state carrying the full settings fixture plus a
  * non-null `selection.focus`. Cast through `unknown` rather than building
  * full cluster shapes — only the fields assertions touch are needed.
  */
 function makeState(focus: SelectionRef | null = FOCUS_REF) {
   return {
-    settings: {
-      galaxyCatalogs: { enabled: true, sizePx: 4, brightness: 1 },
-      structures: { enabled: true, items: {} },
-      cosmicWebDensity: { enabled: false, items: {} },
-      cosmicWebFilaments: { enabled: true, intensity: 0.5 },
-      milkyWay: { enabled: true, labelEnabled: false },
-      flow: { enabled: true, nested: { speed: 2 } },
-      orbitTrails: { enabled: true },
-      lightTime: { enabled: true },
-      starCatalogs: { enabled: true, items: {} },
-      bodies: { items: {} },
-      blackHoles: { items: {} },
-      orientation: 'galactic',
-      tonemap: { exposure: 1.2 },
-    },
+    settings: { ...makeSettingsFixture(), orientation: 'galactic' },
     selection: { hover: null, select: null, focus },
     time: {
       mode: 'manual',
@@ -77,7 +51,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the seventeen settings clusters + orientation + selection.focus', () => {
+  it('captures every snapshot settings cluster + orientation + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state, 0);
 
@@ -110,8 +84,9 @@ describe('captureScene', () => {
 
     // Settings detachment: mutation of a nested cluster field must not bleed
     // into the snapshot (structuredClone via captureSettings).
-    state.settings.flow.enabled = !state.settings.flow.enabled;
-    expect(snap.settings.flow.enabled).toBe(true);
+    const captured = snap.settings.flow.enabled;
+    state.settings.flow.enabled = !captured;
+    expect(snap.settings.flow.enabled).toBe(captured);
 
     // Focus detachment: replacing state.selection.focus with a new ref must
     // not change the captured value. SelectionRef is an immutable identity
