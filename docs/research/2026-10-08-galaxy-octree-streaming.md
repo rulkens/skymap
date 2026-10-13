@@ -192,3 +192,38 @@ A JSON header · B object-local `firstRecord` + slot base in the shader · C blo
 ### Prep status (2026-10-11)
 
 P1 #872 (`prep-slot-pool`), P2 #871 (`prep-star-budgets`), P3 #873 (`prep-r2-sync-groups`): implemented, reviewed, CI green, ready for review; merge is the user's word. P3's bucket probe (plan Task 5) is NOT run: the sandbox refuses the credential step; run it by hand from the plan's recipe before the first `gzipOnWire` bulk sync. Next after the preps land: `/wt` a feature worktree off the new main, rebase `regalade-octree` (parser + docs) onto it or merge #868 first, then write the feature plan against spec §2–§7.
+
+## 11. GLADE slice brainstorm (2026-10-13)
+
+What exists on main after #885 and what the GLADE migration touches. Plumbing that needs no edit: `src/data/octree/` (header, schema, decoders), `SlotPool`, the tile-stream subsystem, `budgets`, R2 sync groups, `cut.wesl` (reads node rows only; uniforms are already Mpc, `starCutLayout.ts:353` is the one unit factor) and the emitter's stratify/chunk stages (column-blind).
+
+### Ground prep (mechanical)
+
+- `StarOctree` / `StarChunk` (20 + 11 files) carry one star-specific member, `StarColumns`: make the catalog type generic over its columns and drop the `Star` prefix from `starChunkStream`, `starCutGpu`, `starCutLayout`, `installStarPool`, `resizeStarPools`, `starResidency`, `planStarChunks` and the `shaders/starCatalog/cut*` pair — `npm run refactor -- rename`, no design change.
+- `OctreeFamily` gains `'galaxy'`; `COLUMN_IDS` gains the galaxy ids (append-only); `columnAggregate` gains flux-weighted rules for the shape columns; the quantiser covers the new stores.
+
+### Consumer dispositions (from the dependency map)
+
+| Consumer (today: whole GLADE array)                                                             | Disposition                                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bias: `computeSchechterRatios`, `computeAngularWeights` (positions, whole cloud, worker clone)  | **Build side.** Catalog properties, not tier properties: bake per record as `schechterRatio` / `angularWeight` columns (u8); the blob gets the flux-weighted mean. The worker and `catalogStore.splice*` go.   |
+| Load stats: `galaxyMedianAbsMag`, `magOffset`, `countEstimatedProvenance`                      | **Header stats** (decision 7).                                                                                                                                              |
+| Alias index (`buildAliasIndex` walks objIDs + `pgc_aliases.json`), `resolvePgc` linear scan     | **Side index** baked once: `pgc → { chunkId, local, position }`, fetched by the palette on open and by the `pgc-` decoder. Palette keys rows by pgc instead of `localIdx`.    |
+| `resolvePos` brute-force position scan                                                         | **Octree walk**: descend the index to the cell, request that chunk if absent; the deferring saga retries on residency changes as it retries on source-count pulses today.     |
+| Pick, `extractRow`, InfoCard, `selectedPacked` highlight                                        | **Resident set.** Pool-absolute record → `recordOrdinal` (the star path's `resolveStarRecord` shape); `captureGalaxyFocusIds` already turns a selection into a durable id.     |
+| Disk planners (`diskPlannerWalk` stride over `[0, count)`, sticky maps by row index)            | **Resident set.** Walk the resident chunks the planner already ranks near the camera; sticky maps keyed by record ordinal. Stratification-driven thumbnail LOD stays open.     |
+| Structure member count (`structureMembership` scans every position per selected structure)      | **Build side.** Structures are static: `build-structures` already runs after the catalogs; count members there.                                                              |
+| Tier switch (refetch + whole re-upload, `selectTierRecords`, `fluxSupplementMagLimit`)         | **Pool resize**, as `resizeStarPools`. The flux supplement's job (keep the local volume at small/medium) is what stratification does by construction.                         |
+| Filaments build (`glade.bin`, untiered, already skipped), mcpm-workbench `loadCatalogPoints`     | **Out of this slice.** Both are tools wanting positions only; the bake can emit a flat positions side file, or they read index + chunks. Filaments is already a backlog item. |
+| Tour, famous, hi-res famous, labels                                                             | No GLADE dependency.                                                                                                                                                        |
+
+### Record (proposed)
+
+Wire, per record: `offset` u16x3, `absMag` u8, `colourIndex` u8, `axisRatio` u8 (fallback flag in the flags byte), `pa` u8, `logSize` u8, `flags` u8, `schechterRatio` u8, `angularWeight` u8, `specZ` f32, `logMass` u8, four band mags f16 (InfoCard only), `objId` u64 (CPU-only) — about 36 B against 64 today; GLADE large 1.67 M records ≈ 60 MB raw across chunks, most never fetched. GPU record 16 B (four u32) against the 56 B vertex interleave; `paCos/paSin` and `sbAmp` return to the vertex stage, which reads the pool through the cut's lists like `vertex.wesl` does for stars.
+
+### Open for the user
+
+1. Blob look: a plain brighter billboard (same draw as an own record, `blobCount` scaling flux) first; disc-shaped splats only if the A/B shows the need.
+2. SDSS, 2MRS, DESI, Milliquas stay on SKMP in this slice; unification is revisited when REGALADE's replace-vs-add is ruled, since that changes what the flat family holds.
+3. `GLADE_ENTRY.mLim` (18, apparent) and `OctreeStratify.mLim` (absolute, resolves at `refUnit`) share a name and differ in meaning — the galaxy row needs its own stratify triple.
+4. Production: `galaxy-catalog/v9/*.bin` is `cf-cache-status: DYNAMIC` while `star-catalog/v2` is `HIT`; the galaxy octree wants the star family's cache rule.
