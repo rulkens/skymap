@@ -432,4 +432,48 @@ describe('missionPose', () => {
       expect(r.poses[2]).toEqual(worldPose(ctxAt(missionOf(), after)));
     });
   });
+
+  describe('approaching the framed planet with the clock running', () => {
+    const DAYS = [-20, -16, -12, -8, -4].map((d) => tc + d);
+    /** Frames over `DAYS`, no input after the first; the shown distance and zoom each frame. */
+    const approach = (zoom: number) => {
+      const mission = missionOf({ yaw: 0, pitch: 0, zoom });
+      const store = storeOf(mission);
+      let own = ownOf(store, mission);
+      let shown: CameraPose | undefined;
+      return DAYS.map((simDays, f) => {
+        const ctx = makeDriverCtx({
+          state: store.getState(),
+          simDays,
+          elapsedMs: f * FRAME_MS,
+          poseBasis: BASIS,
+          projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+          winnerLastFrame: 'mission',
+          ...(shown && { authoredWorld: shown }),
+        });
+        const out = missionPose(ctx, null, own, TIMELINE);
+        if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
+        own = out.own!;
+        shown = out.pose.pose;
+        return { distance: shown.distance, zoom: own.offsets.zoom };
+      });
+    };
+
+    it('holds a zoomed-in distance while the frame shrinks', () => {
+      const run = approach(0.1);
+      run.forEach((r) => expect(r.distance / run[0]!.distance).toBeCloseTo(1, 9));
+    });
+
+    it('lets a zoomed-out view scale with the frame', () => {
+      const run = approach(2);
+      expect(run.at(-1)!.distance).toBeLessThan(run[0]!.distance * 0.9);
+      run.forEach((r) => expect(r.zoom).toBe(2));
+    });
+
+    it('rides the auto framing once the frame shrinks below the held distance', () => {
+      const run = approach(0.95);
+      expect(run.at(-1)!.zoom).toBe(1);
+      expect(run.at(-1)!.distance).toBeLessThan(run[0]!.distance);
+    });
+  });
 });

@@ -4,7 +4,8 @@
  * times are on that token's epoch, ms. `offsets` are the visitor's orbit and zoom as of their last
  * input; an easing re-aim keeps them, an entry drops them. In `view`, `stop` / `cruise` are the
  * view last shown; `from` the pose an in-progress ease started on at `easeAtMs`, with `shortfall`
- * its distance over the craft's fit (≤ 1, 1 = the craft was in view).
+ * its distance over the craft's fit (≤ 1, 1 = the craft was in view); `distance` the exact
+ * distance last written, Mpc, which a zoomed-in view holds as the frame shrinks.
  */
 
 import type { CameraAim } from '../../../@types/camera/CameraAim';
@@ -21,5 +22,6 @@ export type MissionCameraMemory = {
     readonly from: CameraPose | null;
     readonly easeAtMs: number;
     readonly shortfall: number;
+    readonly distance: number;
   } | null;
 };

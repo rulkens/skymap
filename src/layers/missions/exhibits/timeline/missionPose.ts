@@ -94,6 +94,11 @@ export function missionPose(
   } else if (ctx.followDistanceTarget !== null) {
     offsets = { ...offsets, zoom: ctx.followDistanceTarget / frame.distance };
   }
+  // Zoomed in past the auto framing, the eye keeps its distance instead of riding the frame as it
+  // shrinks toward the next planet, so the craft holds its size; once the frame has shrunk to that
+  // distance the view rides it (zoom 1). Written back, or the next frame re-reads the stale zoom.
+  const holding = !touched && !viewChanged && prev !== null && offsets.zoom < 1;
+  if (holding) offsets = { ...offsets, zoom: Math.min(1, prev.distance / frame.distance) };
 
   // The distance that fits the craft's frame sphere about `target`, as the exact frame does.
   const craft = positionOf(mission.craftId);
@@ -173,8 +178,15 @@ export function missionPose(
     },
     own: {
       aim: token,
-      offsets: touched || viewChanged ? offsets : kept,
-      view: { stop: frame.stop, cruise: frame.cruise, from, easeAtMs, shortfall },
+      offsets: touched || viewChanged || holding ? offsets : kept,
+      view: {
+        stop: frame.stop,
+        cruise: frame.cruise,
+        from,
+        easeAtMs,
+        shortfall,
+        distance: frame.distance * offsets.zoom,
+      },
     },
     pivotBody: craftId,
   };
