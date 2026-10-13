@@ -44,22 +44,10 @@ function baseProps() {
     items: items(true),
     sizePx: 2.5,
     brightness: 1.0,
-    refineThreshold: 0.05,
-    glowOverlap: 1.0,
-    exposureNearX: 15,
-    exposureMidX: 57,
-    exposureFarX: 70,
-    aggregateIntensityCap: 0.06,
     onToggleMaster: vi.fn<(enabled: boolean) => void>(),
     onToggleCatalog: vi.fn<(id: StarCatalogId, enabled: boolean) => void>(),
     onSizeChange: vi.fn<(v: number) => void>(),
     onBrightnessChange: vi.fn<(v: number) => void>(),
-    onRefineThresholdChange: vi.fn<(v: number) => void>(),
-    onGlowOverlapChange: vi.fn<(v: number) => void>(),
-    onExposureNearXChange: vi.fn<(v: number) => void>(),
-    onExposureMidXChange: vi.fn<(v: number) => void>(),
-    onExposureFarXChange: vi.fn<(v: number) => void>(),
-    onAggregateIntensityCapChange: vi.fn<(v: number) => void>(),
   };
 }
 
