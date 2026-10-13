@@ -270,7 +270,11 @@ describe('starCatalogPlanner', () => {
     const publish = vi.fn();
     Object.assign(runtime, {
       publish,
-      requestRender: () => {},
+      poolHost: {
+        renderer: runtime.renderer,
+        chunkStreams: runtime.chunkStreams,
+        requestRender: () => {},
+      },
       catalogs: new Map([
         [
           Source.GaiaStars,

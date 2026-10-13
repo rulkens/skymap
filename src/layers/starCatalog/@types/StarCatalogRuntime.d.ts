@@ -17,6 +17,7 @@ import type { StarPointRenderer } from './StarPointRenderer';
 import type { StarAggregateUpsample } from './StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
 import type { StarChunkStream } from './StarChunkStream';
+import type { StarPoolHost } from './StarPoolHost';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source (today `EngineAssetSlots.starCatalogs`). */
@@ -29,6 +30,7 @@ export type StarCatalogRuntime = {
   readonly starRenderer: StarRenderer; // spheres (starSpheresPass, fieldStarSpherePass)
   readonly starPointRenderer: StarPointRenderer; // starPointsPass
   readonly aggregateUpsample: StarAggregateUpsample;
-  readonly requestRender: () => void;
+  /** Read by `resizeStarPools` (via `frame.ts`) to re-install pools; the slots hold the same object. */
+  readonly poolHost: StarPoolHost;
   readonly publish: (patch: Partial<StarCatalogFacts>) => void;
 };

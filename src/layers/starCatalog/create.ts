@@ -24,6 +24,7 @@ import { createStarCatalogPickRenderer } from './render/starCatalogPickRenderer'
 import { createStarRenderer } from './render/starRenderer';
 import { createStarPointRenderer } from './render/starPointRenderer';
 import { createStarAggregateUpsample } from './render/starAggregateUpsample';
+import type { StarPoolHost } from './@types/StarPoolHost';
 import { createStarCatalogSlot } from './load/starCatalogSlot';
 import { createFamousStarsMetaSlot } from './load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
@@ -76,6 +77,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
   const chunkStreams = new Map<SourceType, StarChunkStream>();
+  const poolHost: StarPoolHost = { renderer, chunkStreams, requestRender: deps.requestRender };
   const catalogs = new Map(
     STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
       ([source]) =>
@@ -83,7 +85,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
           source,
           createStarCatalogSlot(
             source,
-            { renderer, chunkStreams, requestRender: deps.requestRender },
+            poolHost,
             () => deps.store.getState().settings.starCatalogs.chunkSlotsOverride,
           ),
         ] as const,
@@ -101,7 +103,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     starRenderer,
     starPointRenderer,
     aggregateUpsample,
-    requestRender: deps.requestRender,
+    poolHost,
     publish: deps.publish,
   };
 }

@@ -32,7 +32,7 @@ function setup(override: { value: number | null }) {
     requestRender: () => {},
   };
   const slot = createStarCatalogSlot(Source.GaiaStars, host, () => override.value);
-  const runtime = { ...host, catalogs: new Map([[Source.GaiaStars, slot]]) };
+  const runtime = { poolHost: host, catalogs: new Map([[Source.GaiaStars, slot]]) };
   return { slot, upload, chunkStreams, runtime: runtime as unknown as StarCatalogRuntime };
 }
 
