@@ -1,13 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  utimesSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -27,6 +19,11 @@ const TRANSFERS = 32;
  *
  * rclone sets `Content-Encoding` but never compresses, so a `gzipOnWire` group
  * is copied from a staged tree of gzipped files under the same relative paths.
+ *
+ * `--checksum` compares size and MD5 against the ETag the bucket listing already carries
+ * (MD5 for every single-part upload, which is anything under rclone's 200 MiB cutoff). The
+ * default size+mtime check reads each object's mtime metadata with one HEAD per file:
+ * minutes for ~40k tiles where nothing changed.
  *
  * `copy` never deletes, so a stale remote object outlives a shrinking local
  * tree. That is the right default for immutable content and the reason a
@@ -54,6 +51,7 @@ export function uploadViaRclone(
         'copy',
         sourceRoot,
         `${RCLONE_REMOTE}:${bucket}/${keyRoot}`,
+        '--checksum',
         '--files-from',
         listPath,
         '--header-upload',
@@ -78,9 +76,6 @@ function stageGzipped(localRoot: string, relatives: readonly string[], stageRoot
     const staged = join(stageRoot, rel);
     mkdirSync(dirname(staged), { recursive: true });
     writeFileSync(staged, gzipSync(readFileSync(source)));
-    // Fresh mtimes would make every later run re-hash and server-side-copy each object.
-    const { atime, mtime } = statSync(source);
-    utimesSync(staged, atime, mtime);
   }
   return stageRoot;
 }
