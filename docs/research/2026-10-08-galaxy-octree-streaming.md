@@ -221,6 +221,10 @@ What exists on main after #885 and what the GLADE migration touches. Plumbing th
 
 Wire, per record: `offset` u16x3, `absMag` u8, `colourIndex` u8, `axisRatio` u8 (fallback flag in the flags byte), `pa` u8, `logSize` u8, `flags` u8, `schechterRatio` u8, `angularWeight` u8, `specZ` f32, `logMass` u8, four band mags f16 (InfoCard only), `objId` u64 (CPU-only) — about 36 B against 64 today; GLADE large 1.67 M records ≈ 60 MB raw across chunks, most never fetched. GPU record 16 B (four u32) against the 56 B vertex interleave; `paCos/paSin` and `sbAmp` return to the vertex stage, which reads the pool through the cut's lists like `vertex.wesl` does for stars.
 
+### Ruled 2026-10-13: bias correction moves to the bake
+
+Only `AngularReweight` ships (the default; the mode is not persisted, not in the URL, not used by tours), so the runtime bakes go. The bake computes the HEALPix angular weight over the full cross-matched catalog per source, before tier selection, and stores it as a u8 in the SKMP record's reserved byte 55 (v10) and as a column on the octree. The Schechter and 1/V_max computations stay available in the bake behind a build flag, in case the shipped weight is ever switched; the runtime loses `biasCorrectionSubsystem`, both workers, the transfer clone, the splice path and the dropdown's two modes. Its own prep PR ahead of the GLADE slice.
+
 ### Open for the user
 
 1. Blob look: a plain brighter billboard (same draw as an own record, `blobCount` scaling flux) first; disc-shaped splats only if the A/B shows the need.
