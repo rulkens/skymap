@@ -42,8 +42,11 @@ export function createTileStreamSubsystem<T, S extends SlotStore>(
   let userEvictHandler: ((key: string) => void) | undefined;
   // Wire the store's eviction notification: clear our own membership
   // sets AND forward to the consumer-supplied handler (the LOD-2
-  // planner uses that to clear its bitmapReadyTime map).
+  // planner uses that to clear its bitmapReadyTime map). A queued (not yet
+  // started) fetch for the key is dropped: its payload would have no slot, and
+  // a consumer that wants the key again allocates and enqueues it anew.
   slots.setEvictHandler((key) => {
+    queue.drop(key);
     loadedKeys.delete(key);
     failedKeys.delete(key);
     userEvictHandler?.(key);

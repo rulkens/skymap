@@ -183,7 +183,7 @@ tools/deploy/r2            sync group `star-catalog/v2/**` (bulk, gzip-on-wire);
 
 ### Rulings (2026-10-10)
 
-Corrections found while writing the spec: `tiered` is read at one site only (`starCatalogFetcher.ts:71`; the five lines above test `binBaseName !== null`), so P2 is narrower; 16-bit node-relative offsets replace the `u20x3` store (spec §2.4). Spec: `docs/superpowers/specs/2026-10-10-chunked-star-octree-design.md`.
+Corrections found while writing the spec: `tiered` is read at one site only (`starCatalogFetcher.ts:71`; the five lines above test `binBaseName !== null`), so P2 is narrower; 16-bit node-relative offsets replace the `u20x3` store (spec §2.4). Spec: `docs/superpowers/specs/completed/2026-10-10-chunked-star-octree-design.md`.
 
 A JSON header · B object-local `firstRecord` + slot base in the shader · C blob as a schema record (kept) · D index header is the chunk manifest · E **keep the SKST v1 reader behind the format switch** (both formats loadable side by side for the A/B; revisit deletion at `/feature-done`) · F stars-rs: decide after timing a TS bake · shape agreed · prep lands as separate PR(s) ahead of the feature.
 

@@ -9,6 +9,8 @@ import { dataFamilyOf } from '../../../../tools/deploy/r2/dataFamilyOf';
 
 const GALAXY = { label: 'galaxy-catalog', transport: 'wrangler', gzipOnWire: true };
 const STARS = { label: 'star-catalog-v1', transport: 'wrangler', gzipOnWire: false };
+const STARS_V2_INDEX = { label: 'star-catalog-v2-index', transport: 'wrangler', gzipOnWire: true };
+const STARS_V2_CHUNKS = { label: 'star-catalog-v2-chunks', transport: 'bulk', gzipOnWire: true };
 const SCALAR = { label: 'scalar-field', transport: 'wrangler', gzipOnWire: true };
 const FLOW = { label: 'flowfield', transport: 'wrangler', gzipOnWire: false };
 const FILAMENT = { label: 'filament', transport: 'wrangler', gzipOnWire: true };
@@ -30,6 +32,9 @@ const TRACKED: [string, typeof GALAXY][] = [
   ['stars-small.bin', STARS],
   ['stars-medium.a3f19c2e.bin', STARS],
   ['star-catalog/v1/stars-large.bin', STARS],
+  ['star-catalog/v2/stars.bin', STARS_V2_INDEX],
+  ['star-catalog/v2/stars.a3f19c2e.bin', STARS_V2_INDEX],
+  ['star-catalog/v2/stars/6-12345.a3f19c2e.bin', STARS_V2_CHUNKS],
   ['mcpm-small.scfd', SCALAR],
   ['polyphorm-2mrs-medium.a3f19c2e.scfd', SCALAR],
   ['scalar-field/v3/edenhofer-dust-large.scfd', SCALAR],
@@ -71,6 +76,10 @@ const UNTRACKED = [
   'desi-wedge-large.bin',
   'desi-sgw-large.bin',
   'stars-huge.bin',
+  // A download in flight, a chunk outside its dir, and a v2 name in the v1 epoch.
+  'star-catalog/v2/stars/6-12345.bin.part',
+  'stars/6-12345.a3f19c2e.bin',
+  'star-catalog/v1/stars.bin',
   'images/famous/x.webp',
   'whale.mesh',
   'other/whale_albedo.webp',

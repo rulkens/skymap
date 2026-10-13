@@ -27,9 +27,8 @@
  * never clamp. The record then carries `meanMag = -2.5·log10(Σf / N)`, and the
  * renderer reconstructs the physically-correct summed flux on the GPU by
  * multiplying the record's per-star flux back up by the subtree star count `N`
- * (which the runtime derives from the node table — see the vertex shader and
- * `starOctreeIndex`'s `subtreeCounts`). Summing on read rather than on write keeps the
- * additive-flux photometry exact while keeping every stored magnitude inside
+ * (the node row's `blobCount` — see the vertex shader). Summing on read rather
+ * than on write keeps the additive-flux photometry exact while keeping every stored magnitude inside
  * the single-star window.
  *
  * So this merge carries `(totalFlux, starCount)` up the tree as a running f64
@@ -102,7 +101,7 @@ export function fluxFromAbsMag(absMag: number): number {
  * guaranteed to land inside the single-star LUT window and never clamps (unlike
  * `-2.5·log10(totalFlux)`, the summed magnitude, which does — see the header).
  */
-export function aggregateMeanAbsMag(node: FluxNode): number {
+export function aggregateMeanAbsMag(node: Pick<FluxNode, 'totalFlux' | 'starCount'>): number {
   return -2.5 * Math.log10(node.totalFlux / node.starCount);
 }
 

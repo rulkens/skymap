@@ -30,6 +30,22 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     gzipOnWire: false,
   },
   {
+    label: 'star-catalog-v2-index',
+    dir: 'star-catalog/v2',
+    fileName: /^stars\.bin$/,
+    transport: 'wrangler',
+    gzipOnWire: true,
+  },
+  // Chunk names carry the bake's own content hash, so the manifest never hashes or names
+  // them; the index lists every chunk, and `collectStarChunks` uploads them from it.
+  {
+    label: 'star-catalog-v2-chunks',
+    dir: 'star-catalog/v2/stars',
+    fileName: /^\d+-\d+\.bin$/,
+    transport: 'bulk',
+    gzipOnWire: true,
+  },
+  {
     label: 'scalar-field',
     dir: null,
     fileName:

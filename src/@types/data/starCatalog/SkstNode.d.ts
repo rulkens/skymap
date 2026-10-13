@@ -1,5 +1,5 @@
 /**
- * StarCatalogNode — one entry in the star catalog's in-file octree.
+ * SkstNode — one entry in the star catalog's in-file octree.
  *
  * The star format hangs its 6-byte records off a spatial octree so the
  * renderer can draw a flux mip: at a distance where thousands of leaf
@@ -21,7 +21,7 @@
  * On disk each node is a fixed 16 bytes (`NODE_BYTES`); this is the
  * decoded, renderer-facing shape.
  */
-export type StarCatalogNode = {
+export type SkstNode = {
   /**
    * Morton (Z-order) index locating and sizing the node's box within the
    * quantization grid. Interleaved x/y/z bits at `mortonBitsPerAxis`

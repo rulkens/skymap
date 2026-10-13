@@ -3,10 +3,10 @@
 export type ReferenceStarCut = {
   /** Bins at or above this refine (`hist[CUT_BINS]`). */
   readonly cutBin: number;
-  /** Every node's opacity after this frame's fade step. */
+  /** Every row's two fade channels after this frame's step, `i * 2 + (own 0 | blob 1)`. */
   readonly opacity: Float32Array;
-  /** Leaf-list entries, `node | block << LEAF_BLOCK_INDEX_SHIFT`, in emission order. */
+  /** Leaf-list entries from own records, `node | block << LEAF_BLOCK_INDEX_SHIFT`, in emission order. */
   readonly leafEntries: readonly number[];
-  /** Aggregate-list entries: node indices. */
+  /** Aggregate-list entries from blobs: row indices. */
   readonly aggregates: readonly number[];
 };

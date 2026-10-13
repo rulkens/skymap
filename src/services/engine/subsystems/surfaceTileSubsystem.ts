@@ -285,7 +285,11 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       release: (image) => closeBitmap(image.bitmap),
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
-    created.setEvictHandler((key) => resident.delete(key));
+    // A queued fetch dropped on eviction never reports back, so its pending row goes here.
+    created.setEvictHandler((key) => {
+      resident.delete(key);
+      pendingLevelOf.delete(key);
+    });
     createdHeight.setEvictHandler((key) => heightResident.delete(key));
     atlas = { stream: created, heightStream: createdHeight, slotsPerRow, bodyId };
     return atlas;

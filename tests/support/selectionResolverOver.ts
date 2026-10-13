@@ -17,7 +17,7 @@ export type StructureRowFixture = Pick<StructureStore, 'byId' | 'byCategory'>;
 export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
 
 /** What the starCatalog Layer's selection row reads; the real runtime satisfies it. */
-export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer'>;
+export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
 
 /**
  * A composed `SelectionResolver` over fixed fixtures — the one-line fixture a

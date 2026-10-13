@@ -11,6 +11,8 @@ from close up (e.g. distance `0.00020426082`, same direction — "completely
 fine"). The aggregate LOD representation *looks* non-flux-conserving even
 though it isn't.
 
+> Measured on the v1 `stars-large.bin`; the shipped v2 bake carries ~17 M records, so re-run `fluxFill.ts` before relying on the 0.58 figure.
+
 ## Verified current state (2026-07-17, `stars-large.bin`, 12.85M stars)
 
 Diagnostic script: scratch `fluxFill.ts` (reconstructs the orbit pose, runs the

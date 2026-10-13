@@ -1,5 +1,5 @@
 /**
- * StarCatalog — the decoded, renderer-ready star catalog.
+ * SkstCatalog — a decoded SKST v1 star catalog; `starOctreeFromSkst` adapts it to `StarOctree`.
  *
  * Where `GalaxyCatalog` is a flat struct-of-arrays of absolute-cartesian
  * floats, a star catalog is an *octree over cell-quantized 6-byte
@@ -21,9 +21,9 @@
  * on-disk header round-trips it losslessly for exactly this reason.
  */
 import type { Vec3 } from '../../math/Vec3';
-import type { StarCatalogNode } from './StarCatalogNode';
+import type { SkstNode } from './SkstNode';
 
-export type StarCatalog = {
+export type SkstCatalog = {
   /**
    * Number of leaf star records — the real stars, excluding aggregates.
    * Stored in the header so a reader knows the population size without
@@ -51,7 +51,7 @@ export type StarCatalog = {
   readonly gridOrigin: Vec3;
 
   /** The octree, in on-disk order; every node slices into `records`. */
-  readonly nodes: readonly StarCatalogNode[];
+  readonly nodes: readonly SkstNode[];
 
   /**
    * Packed record blob — `totalRecords × RECORD_BYTES` bytes, leaf stars

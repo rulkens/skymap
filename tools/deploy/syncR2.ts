@@ -15,6 +15,7 @@ import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
 import { collectSurfaceTiles } from './r2/collectSurfaceTiles';
+import { collectStarChunks } from './r2/collectStarChunks';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectMeshSources } from './r2/collectMeshSources';
@@ -27,11 +28,13 @@ import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv'
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
 import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
+import { STAR_OCTREE_DATA_PREFIX } from '../../src/data/octree/octreeFormat';
 
 const DATA_DIR = 'public/data';
 const HIRES_DIR = 'public/data/images/famous-hires';
 const TEXTURES_DIR = 'public/data/images/textures';
 const IMAGES_DIR = 'public/data/images';
+const STAR_OCTREE_DIR = `public/data/${STAR_OCTREE_DATA_PREFIX}`;
 
 const BUCKET = 'skymap-data';
 /**
@@ -115,6 +118,20 @@ function buildGroups(): R2SyncGroup[] {
         gzipOnWire: false,
       }),
     ),
+    // Content-hashed by the bake and named only by their index, which the data manifest
+    // below points at. The roots are the epoch dir, so a second index's subtree rides here too.
+    {
+      label: 'Star octree chunks',
+      files: collectStarChunks(DATA_DIR),
+      transport: {
+        kind: 'bulk',
+        localRoot: STAR_OCTREE_DIR,
+        keyRoot: `data/${STAR_OCTREE_DATA_PREFIX}`,
+      },
+      cacheControl: IMMUTABLE,
+      purge: false,
+      gzipOnWire: true,
+    },
     // Each row's manifest is the pointer the runtime reads to discover that
     // row's tiles, so it must never name tiles this same run hasn't
     // finished uploading — hence every tiles group above every manifest

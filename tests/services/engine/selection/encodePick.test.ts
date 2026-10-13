@@ -52,7 +52,12 @@ describe('SelectionKindRow.encodePick', () => {
 
   it('starCatalog and galaxyCatalog pack their own source and index', () => {
     const star = { type: 'starCatalog', source: Source.FamousStar, index: 3 } as const;
-    expect(roundTrip(starCatalogSelectionRow({ renderer: null as never }), star)).toEqual(star);
+    expect(
+      roundTrip(
+        starCatalogSelectionRow({ renderer: null as never, chunkStreams: new Map() }),
+        star,
+      ),
+    ).toEqual(star);
     const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12345 } as const;
     const row = galaxyCatalogSelectionRow({ catalogs: new Map(), famousMeta: [] });
     expect(roundTrip(row, galaxy)).toEqual(galaxy);

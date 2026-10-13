@@ -399,7 +399,7 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://gea.esac.esa.int/tap-server/tap/sync> (the Gaia
   archive's TAP service).
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/gaia_page_*.csv` →
-  `npm run build-stars` → `public/data/star-catalog/`.
+  `npm run build-stars` → `public/data/star-catalog/v2/`.
 - **Modified:** Yes. Selected, given distances, deduplicated, quantised into an
   octree.
 - **Checked:** 2026-10-07: <https://www.cosmos.esa.int/web/gaia-users/license>,

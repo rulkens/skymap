@@ -43,8 +43,8 @@ import {
   type StarOctreeGrid,
 } from '../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type {
@@ -53,7 +53,8 @@ import type {
   StructureRowFixture,
 } from '../../support/selectionResolverOver';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../src/utils/star/starOctreeFromSkst';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -79,12 +80,14 @@ function makeCloud(): GalaxyCatalog {
 // index 0 to a real row. Two stars keep the leaf non-degenerate; index 0 lands
 // in the dense leaf at grid origin, an exact reconstruction.
 const STAR_GRID: StarOctreeGrid = { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] };
-async function makeStarCatalog(): Promise<StarCatalog> {
+async function makeStarCatalog(): Promise<StarOctree> {
   const stars: OctreeLeafStar[] = [
     { mortonIndex: 0, offset: [1, 2, 3], absMag: 5, bpRp: 0.3 },
     { mortonIndex: 0, offset: [4, 5, 6], absMag: 5, bpRp: 0.3 },
   ];
-  return decodeStarCatalog(await encodeStarCatalog(buildStarOctree(stars, STAR_GRID)));
+  return starOctreeFromSkst(
+    await decodeSkstCatalog(await encodeSkstCatalog(buildStarOctree(stars, STAR_GRID))),
+  );
 }
 
 describe('watchSelectionRowsSaga', () => {
@@ -92,7 +95,7 @@ describe('watchSelectionRowsSaga', () => {
   // Mutable: the cloud is absent at first (deep-link), then arrives.
   let cloudPresent = false;
   // Mutable star catalog: null until the star bin commits (deep-link race).
-  let starCatalog: StarCatalog | null = null;
+  let starCatalog: StarOctree | null = null;
   let structure: StructureInfo | null = null;
 
   function build() {
@@ -115,7 +118,7 @@ describe('watchSelectionRowsSaga', () => {
     const stars = {
       renderer: {
         loadedCatalogs: () =>
-          (starCatalog ? [{ source: Source.GaiaStars, catalog: starCatalog }] : [])[
+          (starCatalog ? [{ source: Source.GaiaStars, octree: starCatalog }] : [])[
             Symbol.iterator
           ](),
       },

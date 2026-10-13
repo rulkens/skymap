@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
+import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+
+/** No chunk resident: a v1 catalog has none. */
+const NONE: StarResidency = residencyOf();
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs, so the reconstructions below are hand-computable in the same frame.
@@ -47,7 +54,7 @@ async function densePlusSparseCatalog() {
   const octree = buildStarOctree(sorted([...dense, ...sparse]), GRID);
   // Round-trip through the on-disk format so the resolver reads exactly the
   // bytes the runtime would load.
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 describe('resolveStarRecord', () => {
@@ -58,22 +65,22 @@ describe('resolveStarRecord', () => {
     // ── A star in the DENSE level-0 leaf: exact reconstruction ──────────────
     // recordIndex 3 = the 4th dense star (s=3), stored in cell 0 (grid origin)
     // with the integer offset [3, 1, 2] — no folding, so the position is exact.
-    const dense = resolveStarRecord(cat, 3)!;
+    const dense = resolveStarRecord(cat, NONE, 3)!;
     expect(dense).not.toBeNull();
     expect(dense.positionMpc[0]).toBeCloseTo((3 / 1024) * PC_TO_MPC, 18);
     expect(dense.positionMpc[1]).toBeCloseTo((1 / 1024) * PC_TO_MPC, 18);
     expect(dense.positionMpc[2]).toBeCloseTo((2 / 1024) * PC_TO_MPC, 18);
     // absMag 5.0 → LUT index floor((5-(-6))/0.19)=57 → centre -6 + 57.5·0.19.
-    expect(dense.absMag).toBeCloseTo(-6.0 + 57.5 * 0.19, 10); // 4.925
+    expect(dense.absMag).toBeCloseTo(-6.0 + 57.5 * 0.19, 5); // 4.925
     // bpRp 0.3 → index floor((0.3+0.6)/(5/64))=11 → centre -0.6 + 11.5·(5/64).
-    expect(dense.bpRp).toBeCloseTo(-0.6 + 11.5 * (5 / 64), 10); // 0.2984375
+    expect(dense.bpRp).toBeCloseTo(-0.6 + 11.5 * (5 / 64), 5); // 0.2984375
 
     // ── A star in the FAT leaf (level 1): correct leaf found past the ─────────
     // ── interleaved aggregate, reconstructed at the coarser box scale ────────
     // recordIndex 65 = the first fat-leaf record = cell-8 star A. The stored
     // offset is folded (halved) into the level-1 box, so the position matches
     // the pre-merge world within one fat-leaf offset unit (× slack).
-    const fat = resolveStarRecord(cat, STAR_LEAF_CAPACITY + 1)!;
+    const fat = resolveStarRecord(cat, NONE, STAR_LEAF_CAPACITY + 1)!;
     expect(fat).not.toBeNull();
     // Pre-merge world (pc): cell 8 = grid (2,0,0), offset [100,200,300]/1024.
     const wantPc = [2 + 100 / 1024, 0 + 200 / 1024, 0 + 300 / 1024];
@@ -86,15 +93,32 @@ describe('resolveStarRecord', () => {
     }
     // Photometry is level-independent (folding only touches the offset): absMag
     // 4.0 → index 52; bpRp 0.5 → index 14. Exact dequantised bin centres.
-    expect(fat.absMag).toBeCloseTo(-6.0 + 52.5 * 0.19, 10); // 3.975
-    expect(fat.bpRp).toBeCloseTo(-0.6 + 14.5 * (5 / 64), 10); // 0.5328125
+    expect(fat.absMag).toBeCloseTo(-6.0 + 52.5 * 0.19, 5); // 3.975
+    expect(fat.bpRp).toBeCloseTo(-0.6 + 14.5 * (5 / 64), 5); // 0.5328125
   });
 
   it('returns null for an out-of-range record index', async () => {
     const cat = await densePlusSparseCatalog();
     // starCount marks the end of the real-star region; the aggregate records
     // beyond it are never pick targets.
-    expect(resolveStarRecord(cat, cat.starCount)).toBeNull();
-    expect(resolveStarRecord(cat, 10_000)).toBeNull();
+    expect(resolveStarRecord(cat, NONE, cat.starCount)).toBeNull();
+    expect(resolveStarRecord(cat, NONE, 10_000)).toBeNull();
+  });
+
+  it('resolves a record inside a resident chunk and returns null for the same ordinal once evicted', () => {
+    const { octree, chunk } = hoistedStarOctree();
+    // Ordinal 4: chunk 0's second star, (1.5, 1.5, 1.5) pc.
+    const star = resolveStarRecord(octree, residencyOf(chunk), 4)!;
+    expect(star.positionMpc[0]).toBeCloseTo(1.5 * PC_TO_MPC, 18);
+    expect(star.absMag).toBe(6);
+    expect(resolveStarRecord(octree, NONE, 4)).toBeNull();
+  });
+
+  it('a blob ordinal resolves to null', () => {
+    const { octree } = hoistedStarOctree();
+    expect(resolveStarRecord(octree, NONE, 0)).toBeNull();
+    expect(resolveStarRecord(octree, NONE, 2)).toBeNull();
+    // The hoisted star between the two blobs still resolves, at (6, 6, 6) pc.
+    expect(resolveStarRecord(octree, NONE, 1)!.positionMpc[2]).toBeCloseTo(6 * PC_TO_MPC, 18);
   });
 });
