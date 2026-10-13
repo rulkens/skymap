@@ -10,7 +10,7 @@
  *     --out-dir public/data
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
- * written under `public/data/galaxy-catalog/v9/` — the epoch-prefixed
+ * written under `public/data/galaxy-catalog/v10/` — the epoch-prefixed
  * path `tierFilenameForSource` returns (see `src/data/tierTargets.ts`).
  *
  * Cross-match dedup:
@@ -157,6 +157,7 @@ export function recordsToCloud(
     spectroscopicZ: new Float32Array(count),
     orientationIsFallback: new Uint8Array(count),
     diameterIsFallback: new Uint8Array(count),
+    angularWeight: new Uint8Array(count),
     log10StellarMass: new Float32Array(count),
   };
   let overridesApplied = 0;
@@ -885,7 +886,7 @@ async function runCli(): Promise<void> {
       const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
-      // `filename` carries the family's epoch prefix (`galaxy-catalog/v9/…`,
+      // `filename` carries the family's epoch prefix (`galaxy-catalog/v10/…`,
       // see `tierFilenameForSource`), so the subfolder doesn't exist on a
       // fresh checkout — recursive mkdir is a no-op once it does.
       mkdirSync(dirname(outPath), { recursive: true });
