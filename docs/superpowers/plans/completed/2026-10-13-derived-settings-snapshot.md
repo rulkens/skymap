@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Redux Toolkit (`combineSlices`), Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-10-12-derived-settings-snapshot-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-12-derived-settings-snapshot-design.md`
 
 ## Global Constraints
 
@@ -83,7 +83,7 @@ review: yes (Redux state and sagas: the restore path)
 ### Task 3: Docs and backlog
 
 **Files:**
-- Create: `docs/superpowers/specs/2026-10-12-derived-settings-snapshot-design.md` (copy of the spec supplied with the brief)
+- Create: `docs/superpowers/specs/completed/2026-10-12-derived-settings-snapshot-design.md` (copy of the spec supplied with the brief)
 - Create: `docs/superpowers/plans/2026-10-13-derived-settings-snapshot.md` (this plan)
 - Modify: `docs/BACKLOG.md` (delete the "Derive `SettingsSnapshot` from the Layer registry" index line)
 - Delete: `docs/backlog/2026-09-21-derive-settings-snapshot.md`
@@ -91,7 +91,7 @@ review: yes (Redux state and sagas: the restore path)
 No test: docs only.
 
 - [x] Before deleting, read the backlog detail file and confirm nothing in it is left undone by this plan beyond what the spec rules out (it names `orientation` staying out and pricing `earth`/`blackHoleLensingTuning`; the audit in Task 1 is that pricing). Report anything else.
-- [ ] Tick this plan's checkboxes as tasks finish.
+- [x] Tick this plan's checkboxes as tasks finish.
 - [x] Commit `docs: derived settings snapshot spec + plan; drop its backlog item`. This commit goes FIRST on the branch (before Task 1), so the draft PR opens with the spec and plan.
 
 ## Definition of Done
