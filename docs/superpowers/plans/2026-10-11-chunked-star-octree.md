@@ -702,7 +702,7 @@ Built after the plan was written; each is its own commit on this branch.
 - A famous-star deep link: the star resolves to a sphere once its chunk lands; the InfoCard shows the field-star row for a picked survey star and clears when that chunk is evicted.
 - Switching the Gaia row to `format: 'skst'` renders as on main at the same poses.
 - `npm run sync-r2 -- --dry-run` lists the index (wrangler, gzip) and every chunk (bulk, gzip) ahead of the manifest.
-- The tier switch (small / medium / large) reloads the same index with a different pool size; the Network tab shows one index fetch per switch, not three files.
+- The tier switch (small / medium / large) reloads the same index with a different pool size; the Network tab shows one index fetch per switch, not three files. Declined: the switch also refetches every chunk (HTTP-cache hits in production); keeping the pool across a switch was judged not worth its code (user ruling 2026-10-13).
 
 **Out of scope (the deferral boundary)**
 
