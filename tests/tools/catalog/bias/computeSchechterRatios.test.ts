@@ -1,19 +1,10 @@
 /**
- * Unit tests for the pure `computeSchechterRatios` helper.
- *
- * Verifies the lazy Schechter-ratio bake produces the same dim-only-clamp
- * values the original inline `buildPointInterleavedBuffer` loop wrote into
- * slot 11.  Single source of truth: this helper now backs both the eager
- * path (when an upload happens while Schechter mode is active) and the lazy
- * path (when the user toggles into Schechter mode after upload), so a
- * regression here would silently break both call sites.
- *
- * Worker plumbing isn't exercised — Vitest runs in Node without a Worker
- * constructor; the worker is a thin wrapper that just delegates.
+ * Unit tests for the pure `computeSchechterRatios` bake: the clamp bounds and
+ * the median-pivot rebalance `--bias-weight schechter` writes into byte 55.
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeSchechterRatios } from '../../../../src/services/engine/bake/computeSchechterRatios';
+import { computeSchechterRatios } from '../../../../tools/catalog/bias/computeSchechterRatios';
 import { Source } from '../../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';

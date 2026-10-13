@@ -140,7 +140,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-reweight',
     text: 'The sky is cut into 12,288 cells of equal area, each about 1.8 degrees across, and a catalogue’s depth into 10 shells of distance. In each shell a galaxy’s brightness is multiplied by the median number of galaxies in a cell divided by the number in its own cell, and that factor is kept between 0.3 and 1.2.',
-    source: `${REPO_BLOB}/src/services/engine/bake/computeAngularWeights.ts`,
+    source: `${REPO_BLOB}/tools/catalog/bias/computeAngularWeights.ts`,
     sourceLabel: `the density correction, ${IN_REPO}`,
     checked: CHECKED,
   },

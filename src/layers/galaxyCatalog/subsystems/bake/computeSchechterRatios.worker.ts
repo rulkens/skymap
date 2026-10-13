@@ -23,8 +23,8 @@
  * @module
  */
 
-import { computeSchechterRatios } from '../../../../services/engine/bake/computeSchechterRatios';
-import type { ComputeSchechterRatiosInput } from '../../../../@types/engine/ComputeSchechterRatiosInput';
+import { computeSchechterRatios } from '../../../../../tools/catalog/bias/computeSchechterRatios';
+import type { ComputeSchechterRatiosInput } from '../../../../../tools/@types/catalog/ComputeSchechterRatiosInput';
 
 self.onmessage = (event: MessageEvent<ComputeSchechterRatiosInput>) => {
   const ratios = computeSchechterRatios(event.data);

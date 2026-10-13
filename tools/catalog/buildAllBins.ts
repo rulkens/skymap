@@ -7,7 +7,8 @@
  *     --sdss    path/to/sdss.csv \
  *     --twomrs  path/to/2mrs_table3.dat \
  *     --glade   path/to/glade2.3.dat \
- *     --out-dir public/data
+ *     --out-dir public/data \
+ *     --bias-weight angular   # angular (default) | schechter | vmax | none
  *
  * Output files: sdss-*.bin, 2mrs.bin, glade-*.bin (one per source/tier),
  * written under `public/data/galaxy-catalog/v10/` — the epoch-prefixed
@@ -91,6 +92,9 @@ import { TIER_LADDER } from '../../src/data/tierLadder';
 import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { estimateLog10StellarMass } from './estimateLog10StellarMass';
+import { bakeBiasWeights } from './bias/bakeBiasWeights';
+import type { BiasWeightKind } from '../@types/catalog/BiasWeightKind';
+import { encodeAngularWeight } from '../../src/utils/galaxy/encodeAngularWeight';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -134,10 +138,14 @@ export type LocalVolumeOverrides = {
  * 0.78 Mpc). When `overrides` is null the cz-only path runs for every
  * record — used by unit tests that exercise the SoA fill loop in
  * isolation.
+ *
+ * `biasWeights`: `bakeBiasWeights`' per-record weight, encoded into
+ * `angularWeight`; a record it lacks (or no map) is unweighted.
  */
 export function recordsToCloud(
   records: ParsedRecord[],
   overrides: LocalVolumeOverrides | null = null,
+  biasWeights: Map<ParsedRecord, number> | null = null,
 ): GalaxyCatalog {
   const count = records.length;
   const cloud: GalaxyCatalog = {
@@ -289,6 +297,7 @@ export function recordsToCloud(
       magZ: r.magZ,
       distMpc: adoptedDistMpc,
     });
+    cloud.angularWeight[i] = encodeAngularWeight(biasWeights?.get(r) ?? 1);
   }
   if (overrides !== null && overridesApplied > 0) {
     process.stderr.write(
@@ -619,6 +628,12 @@ async function runCli(): Promise<void> {
     );
   }
 
+  const biasWeight = (args['bias-weight'] || 'angular') as BiasWeightKind;
+  if (!['angular', 'schechter', 'vmax', 'none'].includes(biasWeight)) {
+    throw new Error(`--bias-weight must be angular|schechter|vmax|none, got "${biasWeight}"`);
+  }
+  process.stderr.write(`bias weight: ${biasWeight}\n`);
+
   // Load the optional orientation caches before any parsing kicks off.
   // Both files are produced by separate `tools/fetch*.ts` scripts and may
   // not yet exist on a fresh checkout — that's intentional. A missing cache
@@ -856,6 +871,12 @@ async function runCli(): Promise<void> {
   const written = new Set<string>();
 
   for (const [source, records] of bySource) {
+    const biasWeights = bakeBiasWeights(
+      records,
+      recordsToCloud(records, overrides),
+      source,
+      biasWeight,
+    );
     for (const tier of TIER_LADDER) {
       const filename = tierFilenameForSource(source, tier);
       if (written.has(filename)) continue;
@@ -883,7 +904,7 @@ async function runCli(): Promise<void> {
           ? records
           : selectTierRecords(records, target, fluxSupplementMagLimitFor(source));
 
-      const cloud = recordsToCloud(slice, overrides);
+      const cloud = recordsToCloud(slice, overrides, biasWeights);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
       // `filename` carries the family's epoch prefix (`galaxy-catalog/v10/…`,

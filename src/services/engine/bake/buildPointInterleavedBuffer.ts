@@ -48,7 +48,7 @@ import {
   galaxyCatalogSchechter,
 } from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { absoluteFromApparent, expectedNumberDensity, vMaxWeight } from '../../../utils/math';
-import { computeSchechterRatios } from './computeSchechterRatios';
+import { computeSchechterRatios } from '../../../../tools/catalog/bias/computeSchechterRatios';
 import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
 import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
 import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';

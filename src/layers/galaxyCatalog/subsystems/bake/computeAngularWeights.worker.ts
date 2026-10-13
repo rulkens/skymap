@@ -25,8 +25,8 @@
  * @module
  */
 
-import { computeAngularWeights } from '../../../../services/engine/bake/computeAngularWeights';
-import type { ComputeAngularWeightsInput } from '../../../../@types/engine/ComputeAngularWeightsInput';
+import { computeAngularWeights } from '../../../../../tools/catalog/bias/computeAngularWeights';
+import type { ComputeAngularWeightsInput } from '../../../../../tools/@types/catalog/ComputeAngularWeightsInput';
 
 self.onmessage = (event: MessageEvent<ComputeAngularWeightsInput>) => {
   const weights = computeAngularWeights(event.data);

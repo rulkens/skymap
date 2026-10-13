@@ -1,21 +1,12 @@
 /**
- * Unit tests for the pure `computeAngularWeights` helper.
- *
- * Verifies the HEALPix angular re-weighting bake produces sensible
- * down-weights for over-dense angular regions and up-weights for sparse
- * regions, with the result clamped to [0.3, 1.2] for numeric stability +
- * additive-blending tolerance (asymmetric — dimming is cheap, boosting
- * compounds; see `computeAngularWeights.ts` `WEIGHT_MIN`/`WEIGHT_MAX`
- * docstring for the full rationale).
- *
- * Worker plumbing isn't exercised — Vitest runs in Node without a Worker
- * constructor; the worker is a thin wrapper that just delegates.
+ * Unit tests for the pure `computeAngularWeights` bake: over-dense angular
+ * regions get down-weights, sparse ones up-weights, clamped to [0.3, 1.2].
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
+import { computeAngularWeights } from '../../../../tools/catalog/bias/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
-import { raDecZToCartesian } from '../../../../src/utils/math';
+import { raDecZToCartesian } from '../../../../src/utils/math/index';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 

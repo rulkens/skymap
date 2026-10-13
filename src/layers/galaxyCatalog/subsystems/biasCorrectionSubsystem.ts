@@ -11,8 +11,8 @@ import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCat
 import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
-import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
-import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
+import type { ComputeSchechterRatiosInput } from '../../../../tools/@types/catalog/ComputeSchechterRatiosInput';
+import type { ComputeAngularWeightsInput } from '../../../../tools/@types/catalog/ComputeAngularWeightsInput';
 import type { SchechterRunner } from '../../../@types/engine/subsystems/SchechterRunner';
 import type { AngularRunner } from '../../../@types/engine/subsystems/AngularRunner';
 import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';

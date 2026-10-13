@@ -27,7 +27,7 @@ Flux-limited surveys over-represent nearby galaxies, because faint ones are only
 - **Volume-limited**: only galaxies brighter than a threshold `M_lim` (default −19), a uniformly-detectable subsample.
 - **1/V_max**: dim each galaxy by its inverse maximum-detection volume ([Schmidt 1968](https://ui.adsabs.harvard.edu/abs/1968ApJ...151..393S/abstract)), as alpha instead of a discard.
 - **Schechter LF**: dim by the inverse expected number density from each survey's Schechter luminosity function.
-- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins ([computeAngularWeights.ts](../src/services/engine/bake/computeAngularWeights.ts)). Corrects footprint artifacts such as GLADE's pencil-beam jets.
+- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins ([computeAngularWeights.ts](../tools/catalog/bias/computeAngularWeights.ts)). Corrects footprint artifacts such as GLADE's pencil-beam jets.
 
 Per-survey flux limits and Schechter parameters live in the source modules under [src/data/sources/](../src/data/sources/), with their literature origins noted there ([Blanton et al. 2003](https://arxiv.org/abs/astro-ph/0210215), [Kochanek et al. 2001](https://arxiv.org/abs/astro-ph/0011456), [Norberg et al. 2002](https://arxiv.org/abs/astro-ph/0111011)).
 

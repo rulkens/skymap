@@ -92,7 +92,7 @@ import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatal
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
 import { mulberry32 } from '../../src/utils/random/mulberry32';
-import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights';
+import { computeAngularWeights } from '../catalog/bias/computeAngularWeights';
 import { gaussian } from '../utils/random/gaussian';
 
 /**
