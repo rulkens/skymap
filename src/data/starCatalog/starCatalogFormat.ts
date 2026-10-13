@@ -133,11 +133,9 @@ const STAR_COLORIDX_MAX = 4.4;
 export const STAR_COLORIDX_STEP = (STAR_COLORIDX_MAX - STAR_COLORIDX_MIN) / STAR_COLORIDX_LEVELS;
 
 /**
- * In-cell offset resolution — the 10-bit per-axis offset triple spans `[0, 1024)`
- * of the owning node's box edge (see the record layout above). This is the one
- * home for that span: both the reconstruction in `resolveStarRecord` and the
- * vertex shader's `OFFSET_SCALE` (`1 / 1024`) invert it, so they must read the
- * same 1024. Sibling of `STAR_ABSMAG_LEVELS` / `STAR_COLORIDX_LEVELS`.
+ * In-cell offset resolution of the v1 record — the 10-bit per-axis offset triple spans
+ * `[0, 1024)` of the owning node's box edge (see the record layout above). The v2 format
+ * uses `OFFSET_FRACTION_LEVELS` (16 bits).
  */
 export const STAR_OFFSET_LEVELS = 1024;
 
@@ -386,17 +384,4 @@ export async function decodeSkstCatalog(buf: ArrayBuffer): Promise<SkstCatalog> 
   const records = plain.slice(recordsStart, recordsStart + recordBytes);
 
   return { starCount, nodeCount, mortonBitsPerAxis, cellEdgePc, gridOrigin, nodes, records };
-}
-
-/** The empty catalog — zero stars, zero nodes. The renderer's initial state. */
-export function emptyStarCatalog(): SkstCatalog {
-  return {
-    starCount: 0,
-    nodeCount: 0,
-    mortonBitsPerAxis: 0,
-    cellEdgePc: 0,
-    gridOrigin: [0, 0, 0],
-    nodes: [],
-    records: new Uint8Array(0),
-  };
 }

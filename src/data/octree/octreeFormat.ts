@@ -36,8 +36,7 @@ export const NODE_CHUNK_REF_OFFSET = 20;
 export const NO_CHUNK_REF = 0xffffffff;
 
 /**
- * Bytes per record. `u10x3` packs x into bits 0–9, y 10–19, z 20–29 of one u32 (2 bits spare);
- * `u16x3` is x bits 0–15, y 16–31, z 32–47, little-endian over 6 bytes.
+ * Bytes per record. `u16x3` is x bits 0–15, y 16–31, z 32–47, little-endian over 6 bytes.
  */
 export const COLUMN_STORE_BYTES: Readonly<Record<ColumnStore, number>> = {
   f32: 4,
@@ -45,14 +44,9 @@ export const COLUMN_STORE_BYTES: Readonly<Record<ColumnStore, number>> = {
   u8: 1,
   u16: 2,
   u32: 4,
-  u64: 8,
   i8: 1,
-  u10x3: 4,
   u16x3: 6,
 };
-export const U10X3_COMPONENT_MASK = 0x3ff;
-export const U10X3_Y_SHIFT = 10;
-export const U10X3_Z_SHIFT = 20;
 export const U16X3_Y_BYTE_OFFSET = 2;
 export const U16X3_Z_BYTE_OFFSET = 4;
 /** Components per packed-vector record. */

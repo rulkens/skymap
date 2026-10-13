@@ -3,8 +3,7 @@
  * `<outDir>/<name>/<level>-<morton>.<hash8>.bin` and the index `<outDir>/<name>.bin` last. An
  * object's header names its child chunks' hashes, so children are written before parents (ids
  * run breadth-first, so descending id order does it): a reader that sees an object never meets
- * a child not on disk yet. The quantiser covers the star schema's stores; `u10x3` and `u64`
- * throw until a column uses them.
+ * a child not on disk yet. The quantiser covers the star schema's stores.
  */
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -74,7 +73,7 @@ export function writeOctreeCatalog(
     family: meta.family,
     grid: meta.grid,
     stratify: meta.stratify,
-    chunkCapacity: meta.capacity,
+    chunkCapacity: objects.index.chunkCapacity,
     chunkNodeCap: objects.index.chunkNodeCap,
     nodes: objects.index.nodes.count,
     records: recordCount(objects.index.nodes),
@@ -115,9 +114,6 @@ function quantiseColumn(values: Float32Array, c: ColumnSchema): OctreeRawColumn 
       return Uint16Array.from(values, (f) =>
         clamp(Math.round(f * OFFSET_FRACTION_LEVELS), 0, OFFSET_FRACTION_LEVELS - 1),
       );
-    case 'u10x3':
-    case 'u64':
-      throw new Error(`column ${c.id}: no quantiser for store ${c.store} yet`);
     default: {
       const { array, min, max } = INTEGER_STORES[c.store];
       const out = new array(values.length);

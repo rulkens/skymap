@@ -185,7 +185,12 @@ export function chunkOctree(
   const index = gatherRows(tree, indexRows, recordsOf, chunkRefOf);
   let recordBase = index.records;
   return {
-    index: { nodes: index.nodes, columns: index.columns, chunkNodeCap: nodeCapacity },
+    index: {
+      nodes: index.nodes,
+      columns: index.columns,
+      chunkCapacity: capacity,
+      chunkNodeCap: nodeCapacity,
+    },
     chunks: byId.map((b) => {
       const { host, roots } = built[b]!;
       const object = gatherRows(tree, rowsOf[b]!, recordsOf, chunkRefOf);

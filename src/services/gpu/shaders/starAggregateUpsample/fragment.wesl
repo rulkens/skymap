@@ -44,12 +44,12 @@
 import package::starAggregateUpsample::io::VSOut;
 import package::lib::starKnee::starKnee;
 
-@group(0) @binding(0) var halfTex: texture_2d<f32>;
-@group(0) @binding(1) var halfSamp: sampler;
+@group(0) @binding(0) var quarterTex: texture_2d<f32>;
+@group(0) @binding(1) var quarterSamp: sampler;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let s = textureSample(halfTex, halfSamp, in.uv);
+  let s = textureSample(quarterTex, quarterSamp, in.uv);
   let scalar = s.a; // summed RAW pre-knee scalar (offscreen alpha)
   // Knee the summed scalar, then rescale the summed tinted rgb onto it, hue
   // preserved. select() guards the scalar == 0 no-coverage texel from a 0/0.

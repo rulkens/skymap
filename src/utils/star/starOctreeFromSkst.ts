@@ -12,22 +12,12 @@ import {
   colorIdxToBpRp,
   lutIndexToAbsMag,
   RECORD_BYTES,
+  unpackStarRecord,
 } from '../../data/starCatalog/starCatalogFormat';
 import { starOctreeIndex } from './starOctreeIndex';
 
 /** 10-bit v1 offset → 16-bit fraction of the box. */
 const OFFSET_WIDEN_SHIFT = 6;
-// The v1 record is two 24-bit halves (`packStarRecord`); offsetZ straddles them.
-const HALF_BYTES = 3;
-const OFFSET_BITS = 10;
-const OFFSET_MASK = 0x3ff;
-const Z_LOW_BITS = 4;
-const Z_LOW_MASK = 0xf;
-const Z_HIGH_MASK = 0x3f;
-const ABSMAG_SHIFT = 6;
-const ABSMAG_MASK = 0x7f;
-const COLOR_SHIFT = 13;
-const COLOR_MASK = 0x3f;
 
 export function starOctreeFromSkst(cat: SkstCatalog): StarOctree {
   const grid = { bits: cat.mortonBitsPerAxis, origin: cat.gridOrigin, cellEdge: cat.cellEdgePc };
@@ -72,18 +62,13 @@ export function starOctreeFromSkst(cat: SkstCatalog): StarOctree {
   const offset = new Uint16Array(count * 3);
   const absMag = new Float32Array(count);
   const colourIndex = new Float32Array(count);
-  const bytes = cat.records;
   for (let r = 0; r < count; r++) {
-    const at = r * RECORD_BYTES;
-    const lo = bytes[at]! | (bytes[at + 1]! << 8) | (bytes[at + 2]! << 16);
-    const h = at + HALF_BYTES;
-    const hi = bytes[h]! | (bytes[h + 1]! << 8) | (bytes[h + 2]! << 16);
-    const z = ((lo >>> (2 * OFFSET_BITS)) & Z_LOW_MASK) | ((hi & Z_HIGH_MASK) << Z_LOW_BITS);
-    offset[3 * r] = (lo & OFFSET_MASK) << OFFSET_WIDEN_SHIFT;
-    offset[3 * r + 1] = ((lo >>> OFFSET_BITS) & OFFSET_MASK) << OFFSET_WIDEN_SHIFT;
-    offset[3 * r + 2] = z << OFFSET_WIDEN_SHIFT;
-    absMag[r] = lutIndexToAbsMag((hi >>> ABSMAG_SHIFT) & ABSMAG_MASK);
-    colourIndex[r] = colorIdxToBpRp((hi >>> COLOR_SHIFT) & COLOR_MASK);
+    const rec = unpackStarRecord(cat.records, r * RECORD_BYTES);
+    offset[3 * r] = rec.offset[0] << OFFSET_WIDEN_SHIFT;
+    offset[3 * r + 1] = rec.offset[1] << OFFSET_WIDEN_SHIFT;
+    offset[3 * r + 2] = rec.offset[2] << OFFSET_WIDEN_SHIFT;
+    absMag[r] = lutIndexToAbsMag(rec.absMagIdx);
+    colourIndex[r] = colorIdxToBpRp(rec.colorIdx);
   }
 
   return {

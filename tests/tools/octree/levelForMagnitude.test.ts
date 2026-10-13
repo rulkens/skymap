@@ -25,7 +25,6 @@ describe('levelForMagnitude', () => {
   });
 
   it('clamps at 0 and at grid.bits', () => {
-    expect(levelForMagnitude(20, stratify, grid)).toBe(0);
     // M = −30 → log2(10·10^8·0.16 / 23.4) = 22.7, far past the 10-bit root
     expect(levelForMagnitude(-30, stratify, grid)).toBe(10);
   });

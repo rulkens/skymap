@@ -6,7 +6,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { planStarChunks } from '../../../src/utils/star/planStarChunks';
-import { starOctreeIndex } from '../../../src/utils/star/starOctreeIndex';
 import { NO_CHUNK_REF } from '../../../src/data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { StarChunk } from '../../../src/@types/data/starCatalog/StarChunk';
@@ -88,7 +87,6 @@ const plan = (
 ) =>
   planStarChunks(
     OCTREE,
-    starOctreeIndex(OCTREE.nodes, OCTREE.grid),
     cut(planes),
     (ref) => (resident.includes(ref) ? EMPTY_CHUNK : null),
     (ref) => failed.includes(ref),
@@ -143,7 +141,6 @@ describe('planStarChunks', () => {
     } as StarOctree;
     const { requests } = planStarChunks(
       shared,
-      starOctreeIndex(shared.nodes, shared.grid),
       cut(new Float32Array(0)),
       () => null,
       () => false,
@@ -164,7 +161,6 @@ describe('planStarChunks', () => {
     );
     const { requests, touched } = planStarChunks(
       OCTREE,
-      starOctreeIndex(OCTREE.nodes, OCTREE.grid),
       cut(ONE_VIEW),
       (ref) => (ref === A ? chunkA : null),
       () => false,
@@ -180,7 +176,6 @@ describe('planStarChunks', () => {
     const leafChunk = chunkOf(table([[3, 0, 0xff, 5]]));
     const { requests, touched } = planStarChunks(
       OCTREE,
-      starOctreeIndex(OCTREE.nodes, OCTREE.grid),
       cut(ONE_VIEW),
       (ref) => (ref === A ? leafChunk : null),
       () => false,

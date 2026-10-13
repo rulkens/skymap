@@ -7,6 +7,8 @@ export type OctreeObjects = {
   readonly index: {
     readonly nodes: OctreeNodeTable;
     readonly columns: ReadonlyMap<ColumnId, Float32Array>;
+    /** The bake's record bound: no chunk holds more records. */
+    readonly chunkCapacity: number;
     /** The bake's row bound: no object holds more rows. */
     readonly chunkNodeCap: number;
   };

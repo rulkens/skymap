@@ -18,7 +18,6 @@ import { describe, it, expect } from 'vitest';
 import {
   encodeSkstCatalog,
   decodeSkstCatalog,
-  emptyStarCatalog,
   packStarRecord,
   VERSION,
 } from '../../../src/data/starCatalog/starCatalogFormat';
@@ -93,14 +92,6 @@ describe('encodeSkstCatalog / decodeSkstCatalog', () => {
     await expect(decodeSkstCatalog(recompressed.buffer as ArrayBuffer)).rejects.toThrow(
       /regenerate the \.bin via "npm run build-stars"/,
     );
-  });
-
-  it('encodes and decodes an empty catalog', async () => {
-    const decoded = await decodeSkstCatalog(await encodeSkstCatalog(emptyStarCatalog()));
-    expect(decoded.starCount).toBe(0);
-    expect(decoded.nodeCount).toBe(0);
-    expect(decoded.nodes).toEqual([]);
-    expect(decoded.records.length).toBe(0);
   });
 
   it('rejects a truncated record region', async () => {

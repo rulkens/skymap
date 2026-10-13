@@ -40,7 +40,7 @@ export type StarCatalogSettings = {
   aggregateIntensityCap: number;
   /**
    * Debug override of the octree chunk pool's size, in slots; null = the
-   * source's per-tier `budgets[tier].slots`. A change reloads the star slots.
+   * source's per-tier `budgets[tier].slots`.
    */
   chunkSlotsOverride: number | null;
   /**

@@ -49,11 +49,6 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
   const hostSlotOf = ({ parent }: StarChunk) =>
     parent === null ? null : residents.get(parent)!.slot;
   let epoch = 0;
-  // Bytes after the browser inflates them, not on the wire.
-  let decodedBytes = 0;
-  let fetchedChunks = 0;
-  // The A/B's bytes-and-chunks readout logs once per settle: in flight back to 0 after a landing.
-  let landedSinceSettle = false;
 
   const pool = new SlotPool(deps.slots);
   const stream = createTileStreamSubsystem<StarChunk, SlotPool>({
@@ -64,7 +59,6 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
       deps.upload(slot, chunk, hostSlotOf(chunk));
       residents.set(chunk.ref.id, { slot, chunk });
       epoch++;
-      landedSinceSettle = true;
     },
     // A decoded chunk is plain memory: nothing to free.
     release: () => {},
@@ -87,8 +81,6 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     const ref = refs[id]!;
     const buf = await fetchChunk(starChunkPath(binBaseName, ref));
     if (buf === null) return null;
-    decodedBytes += buf.byteLength;
-    fetchedChunks++;
     const { header, nodes, columns } = decodeOctreeChunk(buf, octree);
     learn(header.chunks, id);
     return {
@@ -133,13 +125,6 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
           else stream.upload(key, chunk);
         },
       });
-    }
-    if (import.meta.env.DEV && landedSinceSettle && stream.inFlightCount() === 0) {
-      landedSinceSettle = false;
-      console.log(
-        `[stars] ${binBaseName}: ${fetchedChunks}/${octree.chunkCount} chunks, ` +
-          `${(decodedBytes / 1e6).toFixed(1)} MB decoded, ${residents.size} resident`,
-      );
     }
   }
 

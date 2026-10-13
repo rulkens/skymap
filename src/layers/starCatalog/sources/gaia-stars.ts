@@ -32,7 +32,7 @@ export const GAIA_STARS_ENTRY = {
   // (near-)all leaves when the camera is close. Starting values (grill Q9), raised
   // alongside `REFINE_ANGULAR_THRESHOLD`'s tightening (0.3 → 0.05): a lower
   // threshold refines more nodes at a given distance, so it wants more
-  // headroom. `slots` are first guesses for the v1/v2 A/B to tune.
+  // headroom.
   budgets: {
     small: { drawBudget: 1_500_000, slots: 64 },
     medium: { drawBudget: 1_500_000, slots: 128 },

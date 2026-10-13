@@ -18,9 +18,6 @@ import {
   OCTREE_ALIGN,
   OCTREE_NODE_BYTES,
   PACKED_VECTOR_COMPONENTS,
-  U10X3_COMPONENT_MASK,
-  U10X3_Y_SHIFT,
-  U10X3_Z_SHIFT,
   U16X3_Y_BYTE_OFFSET,
   U16X3_Z_BYTE_OFFSET,
 } from './octreeFormat';
@@ -79,21 +76,6 @@ function readNodeTable(dv: DataView, at: number, count: number): OctreeNodeTable
 function readColumn(dv: DataView, at: number, n: number, c: ColumnSchema): OctreeColumn {
   const stride = COLUMN_STORE_BYTES[c.store];
   switch (c.store) {
-    case 'u64': {
-      const out = new BigUint64Array(n);
-      for (let i = 0; i < n; i++) out[i] = dv.getBigUint64(at + i * stride, true);
-      return out;
-    }
-    case 'u10x3': {
-      const out = new Uint16Array(n * PACKED_VECTOR_COMPONENTS);
-      for (let i = 0; i < n; i++) {
-        const w = dv.getUint32(at + i * stride, true);
-        out[3 * i] = w & U10X3_COMPONENT_MASK;
-        out[3 * i + 1] = (w >>> U10X3_Y_SHIFT) & U10X3_COMPONENT_MASK;
-        out[3 * i + 2] = (w >>> U10X3_Z_SHIFT) & U10X3_COMPONENT_MASK;
-      }
-      return out;
-    }
     case 'u16x3': {
       const out = new Uint16Array(n * PACKED_VECTOR_COMPONENTS);
       for (let i = 0; i < n; i++) {

@@ -32,7 +32,7 @@ A wrong magic or version throws the "regenerate" error, as v1 does (`starCatalog
 ### 2.2 Header JSON
 
 ```ts
-type ColumnStore = 'f32' | 'f16' | 'u8' | 'u16' | 'u32' | 'u64' | 'i8' | 'u10x3' | 'u16x3';
+type ColumnStore = 'f32' | 'f16' | 'u8' | 'u16' | 'u32' | 'i8' | 'u16x3';
 type ColumnSchema = {
   readonly id: ColumnId;
   readonly store: ColumnStore;
@@ -103,7 +103,6 @@ Rows sort by `(level, morton)` ascending, as v1 does, so a forward scan visits c
 
 | Store         | Bytes/record | Packing                       |
 | ------------- | ------------ | ----------------------------- |
-| `u10x3`       | 4            | x bits 0–9, y 10–19, z 20–29  |
 | `u16x3`       | 6            | x bits 0–15, y 16–31, z 32–47 |
 | scalar stores | natural size | `f16` is IEEE half            |
 
@@ -304,7 +303,7 @@ Each test fails on a real bug that no other test or compiler check catches.
 
 | Test                                    | Catches                                                                                                                                          |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Format round-trip, every store          | a mis-packed `u16x3` / `u10x3` bit, wrong column alignment, `q0/q1` applied to the wrong store                                                   |
+| Format round-trip, every store          | a mis-packed `u16x3` bit, wrong column alignment, `q0/q1` applied to the wrong store                                                   |
 | Missing required column throws          | a star index decoding with a silently absent `absMag`                                                                                            |
 | `L(M)` at known magnitudes              | the formula's sign, base or rounding; clamp at 0 and `maxLevel`; a one-octave `thr` shift moving the level by exactly one                        |
 | Flux conservation per node              | own + blob ≠ subtree flux at any node of a baked fixture; a blob counting its own node's records                                                 |

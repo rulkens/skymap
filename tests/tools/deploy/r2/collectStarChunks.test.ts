@@ -52,7 +52,6 @@ describe('collectStarChunks', () => {
         stratify: TEST_STRATIFY,
         schema: STAR_COLUMN_SCHEMA,
         stats: { starCount: N },
-        capacity: CAPACITY,
       },
       epochDir,
       'stars',

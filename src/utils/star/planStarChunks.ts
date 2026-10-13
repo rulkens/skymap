@@ -13,7 +13,6 @@
 import type { StarChunk } from '../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
-import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
 import type { StarChunkPlan } from '../../layers/starCatalog/@types/StarChunkPlan';
 import type { StarChunkRequest } from '../../layers/starCatalog/@types/StarChunkRequest';
 import { SCALE_UNITS } from '../../data/scaleUnits';
@@ -50,7 +49,6 @@ const stackObject = new Int32Array(STACK_DEPTH);
 
 export function planStarChunks(
   octree: StarOctree,
-  index: StarOctreeIndex,
   cut: StarCutSpec,
   resident: (id: number) => StarChunk | null,
   hasFailed: (id: number) => boolean,
@@ -78,7 +76,7 @@ export function planStarChunks(
   // The object being walked; depth-first, it switches about twice per chunk walked into.
   let object = INDEX;
   let nodes = octree.nodes;
-  let { boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } = index;
+  let { boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } = starOctreeIndex(nodes, octree.grid);
 
   const touched: number[] = [];
   const wanted: number[] = [];
@@ -90,8 +88,10 @@ export function planStarChunks(
     if (stackObject[top] !== object) {
       object = stackObject[top]!;
       nodes = object === INDEX ? octree.nodes : resident(object)!.nodes;
-      ({ boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } =
-        object === INDEX ? index : starOctreeIndex(nodes, octree.grid));
+      ({ boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } = starOctreeIndex(
+        nodes,
+        octree.grid,
+      ));
     }
     const ref = nodes.chunkRef[i]!;
     const isChunkRoot = ref !== NO_CHUNK_REF;

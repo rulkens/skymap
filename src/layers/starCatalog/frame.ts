@@ -23,7 +23,6 @@ import { starCutInputs } from './render/cut/starCutInputs';
 import { sameStarCut } from './render/cut/sameStarCut';
 import { resizeStarPools } from './load/resizeStarPools';
 import { planStarChunks } from '../../utils/star/planStarChunks';
-import { starOctreeIndex } from '../../utils/star/starOctreeIndex';
 
 export function starCatalogPlanner(
   runtime: StarCatalogRuntime,
@@ -89,10 +88,8 @@ export function starCatalogPlanner(
           plannedFrame = frameIndex;
           wantedChunks = false;
           for (const { stream, octree } of streams) {
-            const index = starOctreeIndex(octree.nodes, octree.grid);
             const { touched, requests } = planStarChunks(
               octree,
-              index,
               inputs.cut,
               stream.resident,
               stream.hasFailed,

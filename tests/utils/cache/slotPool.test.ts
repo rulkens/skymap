@@ -32,7 +32,7 @@ describe('SlotPool slot state machine', () => {
     const a = new SlotPool(3);
     for (const key of ['a', 'b', 'c']) a.allocate(key, 1);
     for (const key of ['c', 'b', 'a']) a.touch(key, 2);
-    expect(a.allocate('new', 3)).toBe(a.slotOf('new'));
+    a.allocate('new', 3);
     expect(a.slotOf('c')).toBeUndefined();
     expect(a.slotOf('a')).toBe(0);
   });

@@ -124,8 +124,8 @@ export function createStarCatalogRenderer(
     const poolSlots = Math.min(slots, octree.chunkCount);
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, poolSlots);
-    // Empty octree is the unload signal (a tier swap that drops the bin);
-    // `createBuffer({size:0})` is forbidden.
+    // `createBuffer({size:0})` is forbidden, and a degenerate bake (a `--limit` dev run)
+    // can leave no records.
     const packed = octree.records.count === 0 ? null : packStarGpuRecords(octree.records);
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();

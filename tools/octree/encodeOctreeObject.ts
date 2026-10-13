@@ -24,9 +24,6 @@ import {
   OCTREE_VERSION,
   OCTREE_VERSION_OFFSET,
   PACKED_VECTOR_COMPONENTS,
-  U10X3_COMPONENT_MASK,
-  U10X3_Y_SHIFT,
-  U10X3_Z_SHIFT,
   U16X3_Y_BYTE_OFFSET,
   U16X3_Z_BYTE_OFFSET,
 } from '../../src/data/octree/octreeFormat';
@@ -72,7 +69,7 @@ export function encodeOctreeObject(
 
   columns.forEach((c, k) => {
     const values = raw.get(c.id);
-    const width = c.store === 'u10x3' || c.store === 'u16x3' ? PACKED_VECTOR_COMPONENTS : 1;
+    const width = c.store === 'u16x3' ? PACKED_VECTOR_COMPONENTS : 1;
     if (values === undefined || values.length !== header.records * width) {
       throw new Error(`column ${c.id}: expected ${header.records * width} raw values`);
     }
@@ -86,27 +83,12 @@ function writeColumn(
   at: number,
   n: number,
   c: ColumnSchema,
-  values: OctreeRawColumn,
+  v: OctreeRawColumn,
 ): void {
   const stride = COLUMN_STORE_BYTES[c.store];
-  if (c.store === 'u64') {
-    const v = values as BigUint64Array;
-    for (let i = 0; i < n; i++) dv.setBigUint64(at + i * stride, v[i]!, true);
-    return;
-  }
-  const v = values as Exclude<OctreeRawColumn, BigUint64Array>;
   for (let i = 0; i < n; i++) {
     const b = at + i * stride;
     switch (c.store) {
-      case 'u10x3':
-        dv.setUint32(
-          b,
-          (v[3 * i]! & U10X3_COMPONENT_MASK) |
-            ((v[3 * i + 1]! & U10X3_COMPONENT_MASK) << U10X3_Y_SHIFT) |
-            ((v[3 * i + 2]! & U10X3_COMPONENT_MASK) << U10X3_Z_SHIFT),
-          true,
-        );
-        break;
       case 'u16x3':
         dv.setUint16(b, v[3 * i]!, true);
         dv.setUint16(b + U16X3_Y_BYTE_OFFSET, v[3 * i + 1]!, true);

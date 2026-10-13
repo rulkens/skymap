@@ -49,7 +49,7 @@ import {
 } from '../../src/data/starCatalog/starCatalogFormat';
 import { STAR_COLUMN_SCHEMA, STAR_OCTREE_DATA_PREFIX } from '../../src/data/octree/octreeFormat';
 import { initialState } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
-import { buildOctreeCatalog, CHUNK_CAPACITY } from '../octree/buildOctreeCatalog';
+import { buildOctreeCatalog } from '../octree/buildOctreeCatalog';
 import { writeOctreeCatalog } from '../octree/writeOctreeCatalog';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -339,7 +339,6 @@ export function buildStarCatalog(inputs: BuildStarInputs): BuildStarResult {
     stratify: GAIA_STRATIFY,
     schema: STAR_COLUMN_SCHEMA,
     stats: { starCount: stars.length },
-    capacity: CHUNK_CAPACITY,
   };
 
   return { objects, meta, drops, clamps };

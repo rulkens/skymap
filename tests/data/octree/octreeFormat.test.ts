@@ -60,9 +60,7 @@ const ALL_STORES: readonly ColumnSchema[] = [
   { id: id('f32'), store: 'f32', q0: 0, q1: 1 },
   { id: id('f16'), store: 'f16', q0: 0, q1: 1 },
   { id: id('u32'), store: 'u32', q0: 1, q1: 2 },
-  { id: id('u64'), store: 'u64', q0: 0, q1: 1 },
   { id: id('i8'), store: 'i8', q0: 0, q1: 0.5 },
-  { id: id('u10'), store: 'u10x3', q0: 0, q1: 1 },
 ];
 
 const ALL_RAW = new Map<ColumnId, OctreeRawColumn>([
@@ -73,9 +71,7 @@ const ALL_RAW = new Map<ColumnId, OctreeRawColumn>([
   // Half bits: 1, −2, 0.5, 0, 65504 (the largest finite half).
   [id('f16'), new Uint16Array([0x3c00, 0xc000, 0x3800, 0x0000, 0x7bff])],
   [id('u32'), new Uint32Array([0, 1, 2, 1_000_000, 7])],
-  [id('u64'), new BigUint64Array([0n, 1n, 2n ** 64n - 1n, 5853498713190525696n, 42n])],
   [id('i8'), new Int8Array([-128, -1, 0, 1, 127])],
-  [id('u10'), new Uint16Array([1023, 0, 1023, 1, 2, 3, 1023, 1023, 1023, 4, 5, 6, 0, 512, 7])],
 ]);
 
 describe('octree container format', () => {
@@ -88,7 +84,6 @@ describe('octree container format', () => {
     expect(decoded.nodes).toEqual(nodeTable());
     const col = (k: string) => list(decoded.columns.get(id(k))!);
     expect(col('offset')).toEqual(list(ALL_RAW.get('offset')!));
-    expect(col('u10')).toEqual(list(ALL_RAW.get(id('u10'))!));
     // −6 + raw·0.19
     [-6.0, -5.81, 18.13, 42.45, -4.1].forEach((v, i) => expect(col('absMag')[i]).toBeCloseTo(v, 5));
     // 0.5 + raw·0.01
@@ -99,7 +94,6 @@ describe('octree container format', () => {
     expect(col('f16')).toEqual([1, -2, 0.5, 0, 65504]);
     // 1 + raw·2
     expect(col('u32')).toEqual([1, 3, 5, 2_000_001, 15]);
-    expect(col('u64')).toEqual([0n, 1n, 2n ** 64n - 1n, 5853498713190525696n, 42n]);
     // raw·0.5
     expect(col('i8')).toEqual([-64, -0.5, 0, 0.5, 63.5]);
   });
