@@ -53,10 +53,9 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
 self.onmessage = (event: MessageEvent<BuildPointInterleavedBufferInput>) => {
   const result: BuildPointInterleavedBufferResult = buildPointInterleavedBuffer(event.data);
 
-  // Transfer the two large ArrayBuffers back to the caller — avoids a
-  // copy of the per-vertex bytes (~14 MB at 3.5 M points × 48 B) and the
-  // fallback-flag array (~3.5 MB).  The Schechter triple, mLim and nRef
-  // are scalars; they ride along by structured clone.
+  // Transfer both ArrayBuffers back to the caller — avoids a copy of the
+  // per-vertex bytes (~170 MB at 3.5 M points × 48 B) and the fallback-flag
+  // array (~3.5 MB).
   const transfer: Transferable[] = [result.interleaved.buffer, result.isFallbackArr.buffer];
   (self as unknown as Worker).postMessage(result, transfer);
 };

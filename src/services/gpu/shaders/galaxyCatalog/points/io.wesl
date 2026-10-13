@@ -164,20 +164,15 @@ struct Uniforms {
 
   // ── Malmquist-bias correction state ─────────────────────────────────
   //
-  // 'biasMode' chooses which correction the vertex/fragment stages apply:
+  // 'biasMode' chooses which correction the vertex stage applies:
   //   0 = none         — render every galaxy unchanged.
   //   1 = volume-limit — discard galaxies whose absolute magnitude is
   //                      fainter (numerically larger) than 'absMagLimit'.
-  //   2 = 1/V_max      — weight by inverse maximum-detection volume.
-  //   3 = Schechter    — reweight by the expected Schechter LF.
-  //   4 = AngularReweight — re-weight by HEALPix angular completeness.
+  //   2 = AngularReweight — multiply by the build-time 'angularWeight'.
   //
-  // Only 'biasMode' + 'absMagLimit' are live. The 'apparentMagLimit' /
-  // 'schechter*' fields are reserved-but-unread: the Schechter / 1-over-Vmax
-  // modes read their per-galaxy weights from the per-vertex 'schechterRatio'
-  // + angular slots (spliced in by biasCorrectionSubsystem on the CPU), not
-  // these uniforms. They stay declared only to keep 'pickPass's byte offset
-  // stable; nothing writes them, no shader reads them.
+  // Only 'biasMode' + 'absMagLimit' are live. 'apparentMagLimit' and the
+  // 'schechter*' fields are padding: nothing writes or reads them, and they
+  // stay declared only to keep 'pickPass's byte offset stable.
   biasMode: u32,
   absMagLimit: f32,
   apparentMagLimit: f32,
@@ -283,22 +278,10 @@ struct PerVertex {
   // 'NaN < 0.0' is false, so a NaN radius reads as non-fallback.
   @location(5) radiusMpc: f32,
 
-  // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
-  // upload time as 'clamp((dRef / dMax(M, m_lim))³, 0, 1)'. Read by the
-  // vertex shader's intensity computation, but ONLY when
-  // 'u.biasMode == 2u'.
-  @location(6) vMaxWeight: f32,
-
-  // Per-galaxy Schechter density-correction ratio. Baked at upload time
-  // as 'clamp(N_ref / n(d), 0, 10)' (originally a 200-step trapezoidal
-  // integral evaluated per-fragment; now a single multiply). Read in
-  // 'fs' only when 'u.biasMode == 3u'.
-  @location(7) schechterRatio: f32,
-
-  // Per-galaxy HEALPix angular re-weight. Baked at mode-toggle time as
-  // 'clamp(medianCount / localCount, 0.1, 10)' (default 1.0). Read in
-  // 'fs' only when 'u.biasMode == 4u'.
-  @location(8) angularDensityWeight: f32,
+  // Per-galaxy angular re-weight in [0.1, 10], baked by the tier build
+  // (bakeBiasWeights) into SKMP byte 55 and decoded at upload; 1.0 when
+  // the cloud carries none. Read only when 'u.biasMode == 2u'.
+  @location(6) angularWeight: f32,
 
   // Absolute magnitude, baked at upload from the offset-normalised
   // apparent magnitude (the same slot-3 value 'magnitude' above carries)
@@ -307,7 +290,7 @@ struct PerVertex {
   // galaxy-static, so the old per-vertex 'distanceModulus(magnitude,
   // length(position))' spent a log10 + sqrt per invocation recomputing
   // a constant.
-  @location(9) absMag: f32,
+  @location(7) absMag: f32,
 
   // Physical surface-brightness amplitude, baked at upload: relative
   // luminosity (vs the per-catalog mean absolute magnitude) over
@@ -315,7 +298,7 @@ struct PerVertex {
   // / compact galaxies emit above the bloom threshold and diffuse ones stay
   // dim. Surface brightness is distance-independent; the inverse-square
   // behaviour on approach comes from the flux-conservation term in vs.
-  @location(10) sbAmp: f32,
+  @location(8) sbAmp: f32,
 };
 
 // ─── vertex-to-fragment interface ───────────────────────────────────

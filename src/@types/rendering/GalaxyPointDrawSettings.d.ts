@@ -27,7 +27,7 @@ export type GalaxyPointDrawSettings = {
   pxPerRad: number;
   /** Per-axis provenance audit state: highlight overlay + tri-state cull. Applies to the visual AND pick passes (a culled galaxy is not pickable either). */
   provenance: GalaxyProvenanceSettings;
-  /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; `absMagLimit` ignored.  The Schechter / 1-over-Vmax modes read per-vertex weights (`schechterRatio`, angular-density) the bias-correction subsystem splices into the vertex buffer — not uniforms. */
+  /** Survey-bias correction selector (`data/galaxyCatalog/biasMode.ts`).  `AngularReweight` reads the per-vertex baked `angularWeight`, not a uniform. */
   biasMode: number;
   /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */
   absMagLimit: number;
