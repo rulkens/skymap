@@ -187,7 +187,7 @@ describe('exhibitBodySaga', () => {
     });
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(flownDistance).not.toBe(fitExhibit.pose.distance);
+    expect(flownDistance).not.toBe(fitExhibit.pose!.distance);
     // The whole shell must clear the frustum: distance is well beyond the
     // authored 0.14 Mpc fallback for a 14 300 Mpc fit radius.
     expect(flownDistance).toBeGreaterThan(1000);
@@ -208,7 +208,7 @@ describe('exhibitBodySaga', () => {
     });
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(flownDistance).toBe(fitExhibit.pose.distance);
+    expect(flownDistance).toBe(fitExhibit.pose!.distance);
   });
 
   it('exits during the fly-in without waiting for it to land', async () => {

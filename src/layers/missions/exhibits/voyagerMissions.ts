@@ -13,7 +13,6 @@ import { initialState as structuresInitialState } from '../../structure/state/st
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
 import { MISSION_EVENTS } from '../../../data/missions/missionEvents.generated';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { section } from '../../../utils/exhibits/section';
 import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
@@ -23,9 +22,6 @@ import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
 
 /** Held down so the trails read against the sky, as in the solar-system exhibit. */
 const STARFIELD_BRIGHTNESS = 0.3;
-
-/** The sphere that fits both whole trails (Voyager 1 is about 172 AU out). */
-const FRAMING_RADIUS_AU = 190;
 
 /**
  * Looking along the cross product of the two craft's outbound headings (2026), so both
@@ -94,12 +90,6 @@ export const voyagerMissions: Exhibit = {
         blackHole: true,
       },
     },
-  },
-  pose: {
-    target: [0, 0, 0],
-    yaw: YAW,
-    pitch: PITCH,
-    distance: FRAMING_RADIUS_AU * 3 * SCALE_UNITS.AU_TO_MPC,
   },
   lede: 'Two spacecraft launched sixteen days apart in 1977. Between them they passed all four giant planets, and both still send data from beyond the edge of the solar wind.',
   body: [

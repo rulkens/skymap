@@ -62,13 +62,16 @@ export function* exhibitBodySaga(
   // any other exhibit.
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const rt = cameraRuntime();
+  const authored = exhibit.pose;
+  if (authored === undefined)
+    throw new Error(`exhibit ${exhibit.id} has neither a hold kind nor a pose`);
   const pose =
     exhibit.fitRadiusMpc !== undefined && rt !== null
       ? {
-          ...exhibit.pose,
+          ...authored,
           distance: sphereFitDistance(exhibit.fitRadiusMpc, rt.fovYRad, rt.aspect),
         }
-      : exhibit.pose;
+      : authored;
 
   if (entry === 'cut') {
     yield* put(commitCameraPose(absoluteArm(pose)));

@@ -289,7 +289,6 @@ describe('pickWinner', () => {
     return {
       id,
       priority,
-      ridesWheelTarget: false,
       isActive: vi.fn<(s: RootState) => boolean>(() => active),
       pose: vi.fn<CameraDriver['pose']>(() => ({
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),

@@ -14,7 +14,7 @@ export type CameraDriver<Own = unknown> = {
   // This row re-asserts a moving target every frame, so a committed `base` is invisible
   // under it: a wheel notch resolves to the row's own distance target instead, and the
   // keep-ticking wake reads the row's ease.
-  readonly ridesWheelTarget: boolean;
+  readonly ridesWheelTarget?: true;
   // The epoch this row's `ctx.elapsedMs` measures on; unset for the rows that
   // read no clock (orbitDrag, resting). Both follow rows name `follow`, so the
   // approach's ease and the hold's saturation share one epoch.

@@ -795,7 +795,6 @@ describe('runFrame — sim clock (Task 8)', () => {
       // Not a real row id: `commitOnEdge` resolves `prevWinner` against this
       // list, so a colliding label would shadow the row it names.
       id: 'stub' as DriverId,
-      ridesWheelTarget: false,
       priority: 1000,
       isActive: () => true,
       pose: (_ctx, mem) => {
@@ -1170,7 +1169,6 @@ describe('runFrame — effective intent', () => {
     let seen: RootState | null = null;
     const probe: CameraDriver = {
       id: 'probe' as DriverId,
-      ridesWheelTarget: false,
       priority: 1000,
       isActive: () => true,
       pose: (ctx, mem) => {

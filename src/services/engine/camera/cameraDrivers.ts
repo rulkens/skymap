@@ -224,7 +224,6 @@ function framedClipArm(
 export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'clip',
-    ridesWheelTarget: false,
     priority: 95,
     epoch: 'clip',
     deliversFraming: true,
@@ -256,7 +255,6 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'orbitDrag',
-    ridesWheelTarget: false,
     priority: 80,
     // The pin overwrites the dragged target with the live body, so a drag
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
@@ -308,7 +306,6 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'tween',
-    ridesWheelTarget: false,
     priority: 60,
     epoch: 'tween',
     deliversFraming: true,
@@ -344,7 +341,6 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'autoRotate',
-    ridesWheelTarget: false,
     priority: 20,
     epoch: 'autoRotate',
     commitsOnEdge: 'register',
@@ -368,7 +364,6 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'resting',
-    ridesWheelTarget: false,
     priority: 0,
     // Pivots too, so 'every orbit driver pivots on the focused body' holds without exception.
     pivotsOnFocusedBody: true,
