@@ -17,7 +17,7 @@ const LOD = 'src/data/galaxyLodBands.ts';
 const TILES = 'src/data/bodies/surfaceTileParams.ts';
 const SHELL = 'src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts';
 const SLABS = 'src/services/engine/frame/slabs.ts';
-const STARS = 'src/data/starCatalog/starCatalogFormat.ts';
+const STARS = 'src/data/octree/octreeFormat.ts';
 // One megaparsec in metres, to the figures a rounded sentence needs.
 const MPC_M = 3.0857e22;
 
@@ -56,7 +56,7 @@ describe('rendering rows and the constants behind them', () => {
 
   it('a star: bits of a step inside its box', () => {
     expect(text('render-local-origins')).toContain(
-      `${Math.log2(one(STARS, 'STAR_OFFSET_LEVELS'))}-bit steps`,
+      `${Math.log2(one(STARS, 'OFFSET_FRACTION_LEVELS'))}-bit steps`,
     );
   });
 

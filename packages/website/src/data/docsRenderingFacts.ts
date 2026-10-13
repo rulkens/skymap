@@ -252,7 +252,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-local-origins',
     about: 'app',
-    text: 'Two kinds of thing carry their own origin. A ground tile is sent as its corner’s offset from the camera and four angles, from which the graphics processor builds the patch. A box of stars is sent as its corner’s offset from the camera, and its stars as 10-bit steps inside the box.',
+    text: 'Two kinds of thing carry their own origin. A ground tile is sent as its corner’s offset from the camera and four angles, from which the graphics processor builds the patch. A box of stars is sent as its corner’s offset from the camera, and its stars as 16-bit steps inside the box.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/bodies/surfaceTile/io.wesl`,
     sourceLabel: `what a ground patch is sent as, ${IN_REPO}`,
     checked: CHECKED,
