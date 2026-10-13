@@ -36,12 +36,13 @@ export function bakeBiasWeights(
   records: ParsedRecord[],
   cloud: GalaxyCatalog, // recordsToCloud(records, overrides) — same order as `records`
   source: SourceType,
-  kind: BiasWeightKind,
+  kind: Exclude<BiasWeightKind, 'none'>,
 ): Map<ParsedRecord, number> {
-  let weights: Float32Array;
-  if (kind === 'angular') weights = computeAngularWeights({ cloud });
-  else if (kind === 'schechter') weights = computeSchechterRatios({ cloud, source });
-  else if (kind === 'vmax') weights = vMaxWeights(cloud, source);
-  else weights = new Float32Array(records.length).fill(1);
+  const weights =
+    kind === 'angular'
+      ? computeAngularWeights({ cloud })
+      : kind === 'schechter'
+        ? computeSchechterRatios({ cloud, source })
+        : vMaxWeights(cloud, source);
   return new Map(records.map((record, i) => [record, weights[i]!]));
 }

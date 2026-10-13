@@ -41,13 +41,6 @@ function clusters(): { dense: ParsedRecord[]; mid: ParsedRecord[]; sparse: Parse
 }
 
 describe('bakeBiasWeights', () => {
-  it("'none' maps every record to 1", () => {
-    const { dense, mid, sparse } = clusters();
-    const records = [...dense, ...mid, ...sparse];
-    const weights = bakeBiasWeights(records, recordsToCloud(records), Source.Glade, 'none');
-    expect(records.map((r) => weights.get(r))).toEqual(records.map(() => 1));
-  });
-
   it("'angular' weights a record in the denser of two HEALPix cells below 1 and the sparser above 1", () => {
     const { dense, mid, sparse } = clusters();
     const records = [...dense, ...mid, ...sparse];
