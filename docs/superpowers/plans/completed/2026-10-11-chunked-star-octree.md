@@ -14,7 +14,7 @@
 
 **Tech stack:** TS, Vitest, WESL/WGSL, WebGPU, rclone + wrangler (deploy).
 
-**Spec:** [`docs/superpowers/specs/2026-10-10-chunked-star-octree-design.md`](../specs/2026-10-10-chunked-star-octree-design.md), §2 to §7. Background rulings: `docs/research/2026-10-08-galaxy-octree-streaming.md` §8 and §10. Preps P1 (#872), P2 (#871), P3 (#873) are on main; this plan builds on their shipped names (`SlotPool`, `SlotStore`, `budgets`, `DATA_FAMILIES`, `R2SyncGroup.gzipOnWire`).
+**Spec:** [`docs/superpowers/specs/completed/2026-10-10-chunked-star-octree-design.md`](../../specs/completed/2026-10-10-chunked-star-octree-design.md), §2 to §7. Background rulings: `docs/research/2026-10-08-galaxy-octree-streaming.md` §8 and §10. Preps P1 (#872), P2 (#871), P3 (#873) are on main; this plan builds on their shipped names (`SlotPool`, `SlotStore`, `budgets`, `DATA_FAMILIES`, `R2SyncGroup.gzipOnWire`).
 
 ## Dispatch groups
 
