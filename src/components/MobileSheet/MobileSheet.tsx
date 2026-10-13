@@ -34,7 +34,6 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
   const handleRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: number; startY: number; moved: boolean } | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const [shownKey, setShownKey] = useState(resetKey);
   if (shownKey !== resetKey) {
     setShownKey(resetKey);
@@ -52,26 +51,26 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
 
   const onPointerMove = (e: ReactPointerEvent<HTMLElement>): void => {
     const d = drag.current;
-    const sheet = sheetRef.current;
-    if (!d || d.id !== e.pointerId || !sheet) return;
+    if (!d || d.id !== e.pointerId) return;
+    const sheet = e.currentTarget;
     const dy = e.clientY - d.startY;
     if (!d.moved) {
       if (Math.abs(dy) < DRAG_SLOP_PX) return;
       // Capture only once it is a drag: capturing on down would retarget a tap's click to the sheet.
       d.moved = true;
-      sheet.setPointerCapture?.(e.pointerId);
-      setDragging(true);
+      sheet.setPointerCapture(e.pointerId);
+      sheet.style.transition = 'none';
     }
     sheet.style.setProperty('--drag', `${dy}px`);
   };
 
   const onPointerEnd = (e: ReactPointerEvent<HTMLElement>): void => {
     const d = drag.current;
-    const sheet = sheetRef.current;
     if (!d || d.id !== e.pointerId) return;
     drag.current = null;
-    if (!d.moved || !sheet) return;
-    setDragging(false);
+    if (!d.moved) return;
+    const sheet = e.currentTarget;
+    sheet.style.removeProperty('transition');
     sheet.style.removeProperty('--drag');
     const dy = e.type === 'pointercancel' ? 0 : e.clientY - d.startY;
     if (dy < -SNAP_PX) setExpanded(true);
@@ -85,11 +84,7 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
     <div className={styles.root}>
       <section
         ref={sheetRef}
-        className={cx(
-          styles.sheet,
-          panel ? styles.panel : !expanded && styles.peeking,
-          dragging && styles.dragging,
-        )}
+        className={cx(styles.sheet, panel ? styles.panel : !expanded && styles.peeking)}
         {...(!panel && {
           onPointerDown,
           onPointerMove,

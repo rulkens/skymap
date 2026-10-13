@@ -55,10 +55,6 @@
   touch-action: none;
 }
 
-.dragging {
-  transition: none;
-}
-
 .panel {
   display: flex;
   flex-direction: column;
