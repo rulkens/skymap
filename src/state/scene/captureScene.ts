@@ -1,6 +1,6 @@
 /**
- * captureScene — a SELECTOR that takes a detached snapshot of the ten
- * tour-owned settings clusters, `settings.orientation`, AND `selection.focus`
+ * captureScene — a SELECTOR that takes a detached snapshot of the
+ * Layer and core snapshot settings clusters, `settings.orientation`, AND `selection.focus`
  * off the live store state.
  *
  * The cinematic tour captures the scene before playing a beat (which may call

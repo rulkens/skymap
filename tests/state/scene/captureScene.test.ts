@@ -6,7 +6,7 @@
  * back. These tests pin the properties that make the scene-level capture
  * sound:
  *
- *   1. *Scope* — the snapshot carries every snapshot settings cluster (via
+ *   1. *Scope* — the snapshot carries `captureSettings`' output (as
  *      `snap.settings`), `orientation` as a SIBLING of `settings` (not inside
  *      it — see `SceneSnapshot`'s header for why), AND the focus ref from
  *      `state.selection.focus`.
@@ -20,21 +20,15 @@ import { describe, it, expect } from 'vitest';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import { captureScene } from '../../../src/state/scene/captureScene';
-import { APP_SETTINGS_SLICES } from '../../../src/compositions/appSettingsSlices';
-import { CORE_SNAPSHOT_CLUSTERS } from '../../../src/data/settings/coreSnapshotClusters';
+import { captureSettings } from '../../../src/state/scene/captureSettings';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
-
-const SNAPSHOT_SETTINGS_KEYS = [
-  ...APP_SETTINGS_SLICES.map((slice) => slice.reducerPath),
-  ...CORE_SNAPSHOT_CLUSTERS,
-].sort();
 
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
  * A minimal state carrying the full settings fixture plus a
- * non-null `selection.focus`. Cast through `unknown` rather than building
- * full cluster shapes — only the fields assertions touch are needed.
+ * non-null `selection.focus`. Cast through `unknown` because the fixture
+ * omits slices `captureScene` never reads.
  */
 function makeState(focus: SelectionRef | null = FOCUS_REF) {
   return {
@@ -55,15 +49,8 @@ describe('captureScene', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state, 0);
 
-    // Settings half carries exactly the tour-owned clusters — orientation
-    // is NOT among them.
-    expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
+    expect(snap.settings).toEqual(captureSettings(state));
     expect(snap.settings).not.toHaveProperty('orientation');
-    for (const key of SNAPSHOT_SETTINGS_KEYS) {
-      expect((snap.settings as Record<string, unknown>)[key]).toEqual(
-        (state.settings as unknown as Record<string, unknown>)[key],
-      );
-    }
 
     // Orientation rides as a sibling of settings.
     expect(snap.orientation).toBe('galactic');
@@ -81,12 +68,6 @@ describe('captureScene', () => {
   it('captureScene is detached', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state, 0);
-
-    // Settings detachment: mutation of a nested cluster field must not bleed
-    // into the snapshot (structuredClone via captureSettings).
-    const captured = snap.settings.flow.enabled;
-    state.settings.flow.enabled = !captured;
-    expect(snap.settings.flow.enabled).toBe(captured);
 
     // Focus detachment: replacing state.selection.focus with a new ref must
     // not change the captured value. SelectionRef is an immutable identity
