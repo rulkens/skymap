@@ -68,7 +68,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
             // `state` is live, so building the request HERE yields the request
             // for the tier in force when the fetch actually runs, not the one
             // current when it was queued.
-            await slot.load(row.req(state.tier, ctx.settings));
+            await slot.load(row.req(state.tier));
           },
           onResult: () => {},
         });
@@ -106,9 +106,9 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       else if (
         row.demand(ctx) &&
         lastRequest !== null &&
-        !sameRequest(lastRequest, row.req(state.tier, ctx.settings))
+        !sameRequest(lastRequest, row.req(state.tier))
       ) {
-        void slot.load(row.req(state.tier, ctx.settings));
+        void slot.load(row.req(state.tier));
       }
     } catch (err) {
       // Contain the failure to this row so later rows still evaluate: a bad

@@ -1,51 +1,78 @@
 /**
- * starCatalogSlot — the pool size handed to `renderer.upload` is the request's
- * override when set, else the tier's `slots`; a throwing upload leaves the
- * source's previous chunk stream in place.
+ * starCatalogSlot + resizeStarPools — the pool size handed to `renderer.upload` is
+ * the override when set, else the tier's `slots`; a resize reuses the loaded
+ * octree (no refetch); a refused size keeps the previous stream.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogSlot } from '../../../../src/layers/starCatalog/load/starCatalogSlot';
+import { resizeStarPools } from '../../../../src/layers/starCatalog/load/resizeStarPools';
 import { SOURCE_REGISTRY, Source } from '../../../../src/data/sources';
 import type { StarChunkStream } from '../../../../src/layers/starCatalog/@types/StarChunkStream';
+import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogRenderer } from '../../../../src/layers/starCatalog/@types/StarCatalogRenderer';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
+const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ starCount: 0, nodes: { count: 0 } })));
 vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({
-  starCatalogFetcher: async () => ({ starCount: 0, nodes: { count: 0 } }),
+  starCatalogFetcher: fetchSpy,
 }));
 
-function setup(upload: StarCatalogRenderer['upload']) {
-  const renderer = { upload } as unknown as StarCatalogRenderer;
+const POOL_CAP = 256;
+
+function setup(override: { value: number | null }) {
+  const upload = vi.fn<StarCatalogRenderer['upload']>((_s, _o, slots) => {
+    if (slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
+    return 0;
+  });
   const chunkStreams = new Map<SourceType, StarChunkStream>();
-  const slot = createStarCatalogSlot(Source.GaiaStars, renderer, chunkStreams, () => {});
-  return { slot, chunkStreams };
+  const host = {
+    renderer: { upload } as unknown as StarCatalogRenderer,
+    chunkStreams,
+    requestRender: () => {},
+  };
+  const slot = createStarCatalogSlot(Source.GaiaStars, host, () => override.value);
+  const runtime = { ...host, catalogs: new Map([[Source.GaiaStars, slot]]) };
+  return { slot, upload, chunkStreams, runtime: runtime as unknown as StarCatalogRuntime };
 }
 
-const tierSlots = (tier: 'small' | 'medium' | 'large') => {
+const REQ = { source: Source.GaiaStars, tier: 'medium' } as const;
+const tierSlots = () => {
   const entry = SOURCE_REGISTRY[Source.GaiaStars];
   if (entry.type !== 'starCatalog') throw new Error('not a star catalog');
-  return entry.budgets[tier].slots;
+  return entry.budgets.medium.slots;
 };
 
 describe('starCatalogSlot commit', () => {
-  it('uploads with the override when set, the tier slots when null', async () => {
-    const upload = vi.fn(() => 0);
-    const { slot } = setup(upload);
-    await slot.load({ source: Source.GaiaStars, tier: 'medium', slotsOverride: 384 });
-    await slot.load({ source: Source.GaiaStars, tier: 'medium', slotsOverride: null });
-    expect(upload.mock.calls.map((c: unknown[]) => c[2])).toEqual([384, tierSlots('medium')]);
+  it('honours an override set before the load, else uses the tier slots', async () => {
+    const override = { value: 384 as number | null };
+    const { slot, upload } = setup(override);
+    await slot.load(REQ);
+    override.value = null;
+    await slot.load(REQ);
+    expect(upload.mock.calls.map((c) => c[2])).toEqual([384, tierSlots()]);
+  });
+});
+
+describe('resizeStarPools', () => {
+  it('re-installs the loaded octree at the new size without fetching', async () => {
+    const { slot, upload, runtime } = setup({ value: null });
+    await slot.load(REQ);
+    fetchSpy.mockClear();
+    expect(resizeStarPools(runtime, 128)).toBeNull();
+    expect(upload.mock.calls.at(-1)![2]).toBe(128);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('keeps the previous chunk stream when the upload throws', async () => {
+  it('returns the error and keeps the old stream for an over-cap size, then clears on a valid one', async () => {
+    const { slot, chunkStreams, runtime } = setup({ value: null });
+    await slot.load(REQ);
     const destroy = vi.fn();
-    const upload = vi.fn<StarCatalogRenderer['upload']>().mockImplementation(() => {
-      throw new Error('pool past cap');
-    });
-    const { slot, chunkStreams } = setup(upload);
     chunkStreams.set(Source.GaiaStars, { destroy } as unknown as StarChunkStream);
-    await slot.load({ source: Source.GaiaStars, tier: 'medium', slotsOverride: 512 });
+    expect(resizeStarPools(runtime, 512)).toBe(`only ${POOL_CAP} slots fit`);
     expect(destroy).not.toHaveBeenCalled();
     expect(chunkStreams.has(Source.GaiaStars)).toBe(true);
+    expect(resizeStarPools(runtime, 128)).toBeNull();
+    expect(destroy).toHaveBeenCalledOnce();
   });
 });

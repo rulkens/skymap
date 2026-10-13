@@ -12,7 +12,6 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
-import { NO_SETTINGS } from '../../../support/noSettings';
 
 // The row reads neither the renderer nor the slot — only `factory` closes over
 // the runtime, and nothing here calls it.
@@ -37,9 +36,9 @@ describe('filamentsAssetRows', () => {
   it('the request drifts only across the small boundary', () => {
     // Polarity, not just drift: a flipped flag would fetch the wrong file at
     // every tier while keeping the drift assertions below green.
-    expect(ROW.req('small', NO_SETTINGS)).toEqual({ small: true });
-    expect(ROW.req('large', NO_SETTINGS)).toEqual({ small: false });
-    expect(sameRequest(ROW.req('medium', NO_SETTINGS), ROW.req('large', NO_SETTINGS))).toBe(true);
-    expect(sameRequest(ROW.req('small', NO_SETTINGS), ROW.req('medium', NO_SETTINGS))).toBe(false);
+    expect(ROW.req('small')).toEqual({ small: true });
+    expect(ROW.req('large')).toEqual({ small: false });
+    expect(sameRequest(ROW.req('medium'), ROW.req('large'))).toBe(true);
+    expect(sameRequest(ROW.req('small'), ROW.req('medium'))).toBe(false);
   });
 });

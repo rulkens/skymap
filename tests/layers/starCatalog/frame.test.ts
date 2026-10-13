@@ -83,6 +83,7 @@ const STATE = {
       refineThreshold: 0.05,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
+      chunkSlotsOverride: null,
       items: { gaiaStars: { enabled: true, labelEnabled: false } },
     },
   },
@@ -257,5 +258,44 @@ describe('starCatalogPlanner', () => {
       expect(v.slice(fadeFrames, 61)).not.toContain(true);
       expect(v.slice(61 + fadeFrames)).not.toContain(true);
     });
+  });
+
+  it('re-installs the pools when the chunk-slots override changes, publishing the outcome', () => {
+    const runtime = makeRuntime(true);
+    const octree = {} as StarOctree;
+    const upload = vi.fn((_s: number, _o: StarOctree, slots: number) => {
+      if (slots > 256) throw new Error('only 256 slots fit');
+      return 0;
+    });
+    const publish = vi.fn();
+    Object.assign(runtime, {
+      publish,
+      requestRender: () => {},
+      catalogs: new Map([
+        [
+          Source.GaiaStars,
+          {
+            current: () => octree,
+            lastRequest: () => ({ tier: 'medium' }),
+            committed: () => ({ req: { source: Source.GaiaStars, tier: 'medium' } }),
+          },
+        ],
+      ]),
+    });
+    Object.assign(runtime.renderer, { upload });
+    const planner = starCatalogPlanner(runtime);
+    const plan = (chunkSlotsOverride: number | null) =>
+      planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), 0)], {
+        settings: { starCatalogs: { ...STATE.settings.starCatalogs, chunkSlotsOverride } },
+      } as unknown as PassState);
+
+    plan(null);
+    expect(publish).not.toHaveBeenCalled();
+    plan(512);
+    expect(publish).toHaveBeenLastCalledWith({ chunkSlotsError: 'only 256 slots fit' });
+    plan(512);
+    expect(publish).toHaveBeenCalledTimes(1);
+    plan(128);
+    expect(publish).toHaveBeenLastCalledWith({ chunkSlotsError: null });
   });
 });

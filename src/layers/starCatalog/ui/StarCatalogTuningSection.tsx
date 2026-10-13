@@ -7,6 +7,7 @@
 import type { ReactElement } from 'react';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 import { STAR_CATALOG_TUNING_FIELDS } from './starCatalogTuningFields';
+import { loadStateColorClass } from '../../../components/DebugPanel/loadStateColorClass';
 import type { StarCatalogTuningKey } from '../@types/StarCatalogTuningKey';
 
 /** Pool sizes the picker offers; null is the tier's own. */
@@ -20,6 +21,8 @@ export type StarCatalogTuningSectionProps = {
   /** The slot count the tier gives when there is no override. */
   tierSlots: number;
   onChunkSlotsChange: (slots: number | null) => void;
+  /** Why the last resize failed (a pool past its cap), else null. */
+  slotError: string | null;
 };
 
 export function StarCatalogTuningSection({
@@ -28,6 +31,7 @@ export function StarCatalogTuningSection({
   chunkSlots,
   tierSlots,
   onChunkSlotsChange,
+  slotError,
 }: StarCatalogTuningSectionProps): ReactElement {
   return (
     <DebugTuningSection
@@ -36,7 +40,7 @@ export function StarCatalogTuningSection({
       values={values}
       onSliderChange={onChange}
     >
-      <label title="Octree chunk pool size. A size past the pool cap fails the Gaia slot (see Asset loading); the previous pool keeps drawing.">
+      <label title="Octree chunk pool size. A size past the pool cap is refused and the previous pool keeps drawing.">
         Chunk slots{' '}
         <select
           value={chunkSlots ?? ''}
@@ -52,6 +56,11 @@ export function StarCatalogTuningSection({
           ))}
         </select>
       </label>
+      {slotError !== null && (
+        <div role="alert" className={loadStateColorClass('error')}>
+          Chunk slots not applied: {slotError}. The previous pool is still drawing.
+        </div>
+      )}
     </DebugTuningSection>
   );
 }

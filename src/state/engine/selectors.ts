@@ -137,6 +137,10 @@ export const selectStructureMemberCount = (state: RootState): number | null =>
 export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
   selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
 
+/** Why the Debug panel's last star chunk-pool resize failed, or null. */
+export const selectStarChunkSlotsError = (state: RootState): string | null =>
+  selectEngineFacts(state).starCatalog?.chunkSlotsError ?? null;
+
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no
  * body is focused. A primitive read, so `useSelector`'s reference-equality check

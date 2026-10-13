@@ -1,8 +1,8 @@
 /**
  * StarCatalogTuningSectionContainer — store boundary for the DebugPanel's
  * star-catalog tuning board. Reads the whole `starCatalogs` cluster and maps each
- * slider key to its setter; the chunk-slots picker writes the override the Gaia
- * asset row folds into its request, which reloads that slot alone.
+ * slider key to its setter; the chunk-slots picker writes the override the
+ * planner applies without a refetch, and a refused size's message shows under it.
  */
 
 import { memo, useCallback } from 'react';
@@ -20,6 +20,7 @@ import {
 } from '../state/starCatalogs/slice';
 import { selectTier } from '../../../state/tier/selectors';
 import { SOURCE_REGISTRY, Source } from '../../../data/sources';
+import { selectStarChunkSlotsError } from '../../../state/engine/selectors';
 import type { StarCatalogTuningKey } from '../@types/StarCatalogTuningKey';
 
 const SETTERS = {
@@ -45,6 +46,7 @@ function StarCatalogTuningSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const slotError = useAppSelector(selectStarChunkSlotsError);
   const tier = useAppSelector(selectTier);
   const gaia = SOURCE_REGISTRY[Source.GaiaStars];
   const tierSlots = gaia.type === 'starCatalog' ? gaia.budgets[tier].slots : 0;
@@ -56,6 +58,7 @@ function StarCatalogTuningSectionContainer(): React.ReactElement {
       chunkSlots={starCatalogs.chunkSlotsOverride}
       tierSlots={tierSlots}
       onChunkSlotsChange={onChunkSlotsChange}
+      slotError={slotError}
     />
   );
 }

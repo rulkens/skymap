@@ -27,7 +27,6 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { NO_SETTINGS } from '../../../support/noSettings';
 
 // Core's half of the rows as the demand loop sees them; each Layer's own are
 // folded in beside these by `createLayers`, and tested beside their Layer.
@@ -86,10 +85,7 @@ describe('ASSET_WIRING membership', () => {
       const row = rowFor(bodyTextureSlotKey(entry.bodyId, entry.kind));
       expect(row.built).toBe('external');
       // req carries { bodyId, kind, tier } clamped to the (body, kind) ceiling.
-      expect(row.req('large', NO_SETTINGS)).toMatchObject({
-        bodyId: entry.bodyId,
-        kind: entry.kind,
-      });
+      expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
   });
 
@@ -97,7 +93,7 @@ describe('ASSET_WIRING membership', () => {
     // Every SCENE_MESH_BODIES entry ships `small` only today, so any app tier
     // above it must still fetch the `small` files.
     const row = rowFor(meshBodySlotKey('curiosity'));
-    expect(row.req('large', NO_SETTINGS)).toEqual({ meshKey: 'curiosity', tier: 'small' });
+    expect(row.req('large')).toEqual({ meshKey: 'curiosity', tier: 'small' });
   });
 });
 

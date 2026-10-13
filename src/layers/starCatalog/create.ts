@@ -81,7 +81,11 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
       ([source]) =>
         [
           source,
-          createStarCatalogSlot(source, renderer, chunkStreams, deps.requestRender),
+          createStarCatalogSlot(
+            source,
+            { renderer, chunkStreams, requestRender: deps.requestRender },
+            () => deps.store.getState().settings.starCatalogs.chunkSlotsOverride,
+          ),
         ] as const,
     ),
   );
@@ -97,6 +101,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     starRenderer,
     starPointRenderer,
     aggregateUpsample,
+    requestRender: deps.requestRender,
     publish: deps.publish,
   };
 }

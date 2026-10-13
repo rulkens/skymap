@@ -21,6 +21,7 @@ import { NODE_FADE_MS } from '../../data/starNodeFade';
 import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
 import { starCutInputs } from './render/cut/starCutInputs';
 import { sameStarCut } from './render/cut/sameStarCut';
+import { resizeStarPools } from './load/resizeStarPools';
 import { planStarChunks } from '../../utils/star/planStarChunks';
 import { starOctreeIndex } from '../../utils/star/starOctreeIndex';
 
@@ -38,6 +39,8 @@ export function starCatalogPlanner(
   let plannedFrame = 0;
   let wantedChunks = false;
   let recutLast = true;
+  // The debug chunk-pool size last applied; a change re-installs the pools from the loaded octrees.
+  let appliedSlots: number | null = null;
   const observeEpoch = (stream: StarChunkStream): boolean => {
     const epoch = stream.epoch();
     if (seenEpoch.get(stream) === epoch) return false;
@@ -48,6 +51,12 @@ export function starCatalogPlanner(
     name: 'star-catalog',
     scope: 'once',
     plan(_snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState) {
+      const slotsOverride = state.settings.starCatalogs.chunkSlotsOverride;
+      if (slotsOverride !== appliedSlots) {
+        appliedSlots = slotsOverride;
+        runtime.publish({ chunkSlotsError: resizeStarPools(runtime, slotsOverride) });
+        plannedCut = null; // the new streams know nothing of the last plan
+      }
       const inputs = starCutInputs(runtime, state.settings.starCatalogs, views);
       const nowMs = views[0]!.snapshot.nowMs;
       if (nowMs < changedAtMs) changedAtMs = nowMs;

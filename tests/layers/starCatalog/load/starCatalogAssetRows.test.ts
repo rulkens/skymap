@@ -28,8 +28,6 @@ function rowFor(key: AssetKey) {
   return r;
 }
 
-const SETTINGS = {} as Readonly<EngineSettingsState>;
-
 function makeCtx(over: {
   settings?: unknown;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
@@ -70,16 +68,14 @@ describe('starCatalogAssetRows req builders', () => {
   it("the famous-stars-meta row's request is undefined at every tier", () => {
     const row = rowFor('famousStarsMeta');
     for (const tier of ['small', 'medium', 'large'] as const) {
-      expect(row.req(tier, SETTINGS)).toBeUndefined();
+      expect(row.req(tier)).toBeUndefined();
     }
   });
 
-  it('gaiaStars carries its source, tier and the chunk-slots override', () => {
-    const req = (chunkSlotsOverride: number | null) =>
-      rowFor(Source.GaiaStars).req('medium', {
-        starCatalogs: { chunkSlotsOverride },
-      } as unknown as Readonly<EngineSettingsState>);
-    expect(req(null)).toEqual({ source: Source.GaiaStars, tier: 'medium', slotsOverride: null });
-    expect(req(384)).toEqual({ source: Source.GaiaStars, tier: 'medium', slotsOverride: 384 });
+  it('gaiaStars carries its source + tier', () => {
+    expect(rowFor(Source.GaiaStars).req('medium')).toEqual({
+      source: Source.GaiaStars,
+      tier: 'medium',
+    });
   });
 });

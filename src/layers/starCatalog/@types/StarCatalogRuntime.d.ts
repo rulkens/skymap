@@ -29,5 +29,6 @@ export type StarCatalogRuntime = {
   readonly starRenderer: StarRenderer; // spheres (starSpheresPass, fieldStarSpherePass)
   readonly starPointRenderer: StarPointRenderer; // starPointsPass
   readonly aggregateUpsample: StarAggregateUpsample;
+  readonly requestRender: () => void;
   readonly publish: (patch: Partial<StarCatalogFacts>) => void;
 };
