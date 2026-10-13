@@ -15,6 +15,8 @@ import {
   Source,
   SOURCE_REGISTRY,
 } from '../../../data/sources';
+import { tierTarget } from '../../../data/tierTargets';
+import type { Tier } from '../../../@types/data/Tier';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
 
 /** One demand+req row per galaxy-catalog entry, derived from the fields it already carries. */
@@ -24,11 +26,15 @@ function pointRow(
 ): AssetWiringRow {
   const source = entry.code;
   const id = entry.id;
+  // Target 0 means the tier ships no file for this source (SDSS at `small`);
+  // a source with no caps has no target and is never excluded.
+  const excluded = (tier: Tier) => tierTarget(source, tier) === 0;
   return {
     key: source,
     factory: () => runtime.points.get(source)!,
     req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
+    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
+    release: (ctx) => excluded(ctx.tier),
     priority: entry.priority,
   };
 }

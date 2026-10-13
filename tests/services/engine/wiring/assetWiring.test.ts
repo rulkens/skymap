@@ -63,6 +63,7 @@ function makeCtx(over: {
     // epoch so `bodyPosOf` below (also J2000) and the gate agree unless a test
     // moves the clock.
     simDays: over.simDays ?? CONST_J2000,
+    tier: 'medium',
   };
 }
 

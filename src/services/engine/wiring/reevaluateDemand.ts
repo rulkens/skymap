@@ -2,7 +2,7 @@
  * reevaluateDemand — the guarded demand-evaluation loop, run once per frame
  * (`runFrame.ts`). Walks every `AssetWiringRow` and applies four edges:
  * enqueue, drop, evict, drift. The drift edge RELOADS in place; `release()` is
- * distance eviction only, so the resident payload keeps drawing until the new
+ * eviction only (distance or tier), so the resident payload keeps drawing until the new
  * one commits.
  *
  * Rationale (four edges, queue, idle-guard):
@@ -59,12 +59,13 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
           // then be wrong for thumbnails.
           priority: -row.priority,
           fetcher: async () => {
-            // The SAME idle predicate the enqueue decision used, evaluated at
-            // the other moment that matters: the queue puts a gap between
-            // decision and action, and during that gap the drift edge's direct
-            // `.load()` may have claimed the slot. One predicate at two
-            // moments, not two copies of a policy.
-            if (slot.state().kind !== 'idle') return;
+            // The SAME idle + demand predicates the enqueue decision used,
+            // evaluated at the other moment that matters: the queue puts a gap
+            // between decision and action, and during that gap the drift edge's
+            // direct `.load()` may have claimed the slot, or a tier swap may
+            // have excluded a source whose file does not exist. One predicate
+            // pair at two moments, not two copies of a policy.
+            if (slot.state().kind !== 'idle' || !row.demand(buildDemandCtx(state))) return;
             // `state` is live, so building the request HERE yields the request
             // for the tier in force when the fetch actually runs, not the one
             // current when it was queued.
