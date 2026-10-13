@@ -1,5 +1,7 @@
 # Voyager flyby ride-along — implementation plan
 
+**SUPERSEDED 2026-10-13.** Its prep landed on PR #854; the ride camera and ride clock were folded into one mission camera and one mission clock by `docs/superpowers/specs/completed/2026-10-09-voyager-mission-camera-design.md`, built without a plan of its own (see the ledger beside this file). The boxes below stay unticked on purpose.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use superpowers:subagent-driven-development under the
 > lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax.
 
@@ -13,7 +15,7 @@
 
 **Tech stack:** TypeScript, Redux Toolkit + redux-saga, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-10-07-voyager-flyby-ride-along-design.md` (with the UX doc's Revisions 1–2).
+**Spec:** `docs/superpowers/specs/completed/2026-10-07-voyager-flyby-ride-along-design.md` (with the UX doc's Revisions 1–2).
 
 ## Global constraints
 

@@ -1,7 +1,9 @@
 # Voyager mission trails — implementation plan
 
+**Completed 2026-10-13** on PR #854 (ledger beside this file). The exhibit and camera grew past Task 11 here: see the mission camera spec, `2026-10-09-voyager-mission-camera-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use superpowers:subagent-driven-development under the
-> lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax.
+> lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** Voyager 1 and 2 sit at their JPL positions from launch to 2100, each drawing a trail
 that grows with the sim clock, and a Voyager exhibit's timeline jumps the clock to launch,
@@ -18,7 +20,7 @@ and a Voyager exhibit with a `timeline` section.
 **Tech stack:** TypeScript, WebGPU + WESL, Redux Toolkit + redux-saga, Vitest, tsx tools, the
 JPL Horizons API.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-voyager-mission-trails-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-05-voyager-mission-trails-design.md`
 
 ## Global constraints
 
@@ -78,11 +80,11 @@ JPL Horizons API.
 (today: `kind === 'orbit' && elements.e > 1`) — kept local to the file unless a second caller
 appears.
 
-- [ ] Add test `every position driver belongs to exactly one region` (iterate
+- [x] Add test `every position driver belongs to exactly one region` (iterate
       `POSITION_DRIVERS`, assert `regionOfBody(id) !== null`).
-- [ ] Add test `region membership is unchanged` — snapshot today's `{ regionId: memberIds[] }`
+- [x] Add test `region membership is unchanged` — snapshot today's `{ regionId: memberIds[] }`
       before the change and assert equality after.
-- [ ] Implement; `npm test -- bodyRegions regionOfBody` green; commit.
+- [x] Implement; `npm test -- bodyRegions regionOfBody` green; commit.
 
 ### Task 2: Trajectory registry in the snapshot memo key (P2)
 
@@ -110,9 +112,9 @@ export const trajectoryRegistry: {
 `deriveBodyStates` memoizes on `(simDays, trajectoryRegistry.version())`. Empty in prep — no
 behaviour change.
 
-- [ ] Add test `a registry version bump recomputes the snapshot at the same simDays` (call twice
+- [x] Add test `a registry version bump recomputes the snapshot at the same simDays` (call twice
       with the same `simDays`, `set` a dummy track between, assert a new Map identity).
-- [ ] Implement; tests green; commit.
+- [x] Implement; tests green; commit.
 
 ### Task 3: Extract `lib::trailOcclusion` (P3) — review: yes
 
@@ -128,11 +130,11 @@ move to the lib module as functions taking the uniform block and fragment inputs
 owns the block's byte layout and writes it from `sceneOccluderSpheres` + the depth binding
 inputs the pass already gathers (`orbitTrailsPass.ts:168-169`). Orbit-trail pixels unchanged.
 
-- [ ] Move the layout constants to the packer; the parity test asserts the WGSL struct and the
+- [x] Move the layout constants to the packer; the parity test asserts the WGSL struct and the
       packer agree byte-for-byte (offsets, stride, size).
-- [ ] `npm run typecheck` + `npm test -- orbitTrail`; visual: orbit trails still occlude behind
+- [x] `npm run typecheck` + `npm test -- orbitTrail`; visual: orbit trails still occlude behind
       planets (`http://localhost:5176/#focus=body-saturn&t=1980-11-12T23:46:00Z`, trails on).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4: Exhaustive exhibit section dispatch (P4)
 
@@ -144,7 +146,7 @@ default (`const unreachable: never = section`); the second branch at `ExhibitOve
 routes through the same switch or asks a per-kind predicate. Rendering unchanged. No new test
 (tsc is the check).
 
-- [ ] Implement; typecheck; commit.
+- [x] Implement; typecheck; commit.
 
 ### Task 5: Time joins the takeover scene capture (P5) — review: yes
 
@@ -172,11 +174,11 @@ export type SceneSnapshot = Readonly<{
   captured rate, direction and paused flag. Store `capturedNowMs` beside the time, or capture the
   derived `simDays` — implementer's choice, stated in the report.
 
-- [ ] Test `exit restores a manual paused clock to its captured instant`.
-- [ ] Test `exit restores a live clock to live at the real now` (advance a fake wall clock
+- [x] Test `exit restores a manual paused clock to its captured instant`.
+- [x] Test `exit restores a live clock to live at the real now` (advance a fake wall clock
       between capture and restore; assert `mode === 'live'` and the anchor tracks the new now).
-- [ ] Test `exit restores rate and direction changed inside the takeover`.
-- [ ] Implement; `npm test -- scene takeover time clip`; commit.
+- [x] Test `exit restores rate and direction changed inside the takeover`.
+- [x] Implement; `npm test -- scene takeover time clip`; commit.
 
 ### Task 6: Horizons fetch rows with span and state vectors (P6) — review: yes
 
@@ -201,12 +203,12 @@ not every fetch row. The CSV gains `vx_kms,vy_kms,vz_kms` columns only for `vect
 the parser returns velocities when present. Chunks are cut from each row's `span` (≤ 89k rows
 each, whole-minute steps, as today).
 
-- [ ] Test: chunking a row with span 1977-09-05 → 2100-01-01 yields no chunk before the start.
-- [ ] Test: the parser reads a 7-column state CSV fixture and a 4-column position fixture.
-- [ ] Run `npm run build-ephemeris-corrections` is NOT required (50 min); instead assert the
+- [x] Test: chunking a row with span 1977-09-05 → 2100-01-01 yields no chunk before the start.
+- [x] Test: the parser reads a 7-column state CSV fixture and a 4-column position fixture.
+- [x] Run `npm run build-ephemeris-corrections` is NOT required (50 min); instead assert the
       fit's id list equals today's `HORIZONS_BODIES` ids and that the existing raw CSV paths are
       unchanged. Commit.
-- [ ] Open the prep PR (base `main`), watch CI.
+- [x] Open the prep PR (base `main`), watch CI.
 
 ---
 
@@ -254,16 +256,16 @@ vectors (fetch the targets' `500@10` positions over each ±2 d window at 1 min i
 raw), writes the `.bin` and `missionEvents.generated.ts`, and prints samples, bytes and worst
 reconstruction error per track. Throw if any reconstruction error exceeds 1 km.
 
-- [ ] Test `decimateHermiteSamples keeps the reconstruction within tolerance` on a synthetic
+- [x] Test `decimateHermiteSamples keeps the reconstruction within tolerance` on a synthetic
       hyperbolic flyby (analytic, 1-min dense) — max error ≤ tol, and fewer samples kept than given.
-- [ ] Test `closestApproach finds the minimum of a synthetic flyby` to 1 minute.
-- [ ] Test `parseSpacecraftTracks round-trips writeSpacecraftTracks` (two tracks, odd n) and
+- [x] Test `closestApproach finds the minimum of a synthetic flyby` to 1 minute.
+- [x] Test `parseSpacecraftTracks round-trips writeSpacecraftTracks` (two tracks, odd n) and
       `throws on a wrong magic`.
-- [ ] Run `npm run fetch-horizons` for the two craft rows + flyby targets, then
+- [x] Run `npm run fetch-horizons` for the two craft rows + flyby targets, then
       `npm run build-spacecraft-tracks`; record the printed sizes in the report (expect ~2k
       samples, ~88 kB). Titan closest approach for V1 should land 1980-11-12 ~05:4x UTC at
       ~6,490 km (sanity check, not a test).
-- [ ] Commit (raw CSVs stay under `data/` per the registry, not committed if gitignored; the
+- [x] Commit (raw CSVs stay under `data/` per the registry, not committed if gitignored; the
       `.bin` follows the existing public/data convention — check `docs/DATA.md`).
 
 ### Task 8: The `sampled` position driver — review: yes
@@ -290,15 +292,15 @@ the hyperbola half of `isUnbound`. Keep every other per-id row (mesh seeds, rota
 earth`, search names, facts, featured tabs) — re-check `featuredTabs.ts:39-61,145-150,348-361`
 captures still resolve.
 
-- [ ] Test `hermiteTrackAt reproduces samples exactly and an analytic arc between them`.
-- [ ] Test `hermiteTrackAt clamps past the last sample`.
-- [ ] Test `a craft with no track sits at Earth's position`; `a craft before its first sample
+- [x] Test `hermiteTrackAt reproduces samples exactly and an analytic arc between them`.
+- [x] Test `hermiteTrackAt clamps past the last sample`.
+- [x] Test `a craft with no track sits at Earth's position`; `a craft before its first sample
       sits at Earth's position`.
-- [ ] Test `Voyager 1 at Titan closest approach is within 1,000 km of Horizons` — load the real
+- [x] Test `Voyager 1 at Titan closest approach is within 1,000 km of Horizons` — load the real
       `.bin` (or a fixture slice of it) into the registry; compare to a Horizons fixture point
       (add to `tests/fixtures/`).
-- [ ] Regenerate `bodyStatesJ2000.json` (Voyager now = Earth's position at J2000, pre-launch).
-- [ ] `npm run typecheck` (exhaustive `bodyHostId` flags any missed switch) + full suite; commit.
+- [x] Regenerate `bodyStatesJ2000.json` (Voyager now = Earth's position at J2000, pre-launch).
+- [x] `npm run typecheck` (exhaustive `bodyHostId` flags any missed switch) + full suite; commit.
 
 ### Task 9: Load the asset and gate presence — review: yes
 
@@ -318,11 +320,11 @@ frame — render-wake is dep-only, see the renderer landmine). On fetch/parse fa
 leave the registry empty. The pick table (`BODY_PICK_ROWS`, `SCENE_MESH_BODIES` indexing in
 `meshBodiesPass.ts:137`, `bodySelectionRow.ts:33`) stays unfiltered so pick ids do not shift.
 
-- [ ] Test `an absent craft is in neither glints nor meshes and has no label`; `a present craft is`.
-- [ ] Test `a failed track fetch leaves the craft absent and does not throw` (saga test).
-- [ ] Test `a track arriving while paused shows the craft` (saga sets the registry; next
+- [x] Test `an absent craft is in neither glints nor meshes and has no label`; `a present craft is`.
+- [x] Test `a failed track fetch leaves the craft absent and does not throw` (saga test).
+- [x] Test `a track arriving while paused shows the craft` (saga sets the registry; next
       snapshot at the same simDays has the Hermite position).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 10: Mission trails pass — review: yes
 
@@ -353,12 +355,12 @@ built when `trajectoryRegistry.version()` changes. Per frame per present track: 
 tessellated `tDays ≤ simDays` (binary search), draw segments `[0, k)` plus one to a head vertex
 written from the snapshot position. Drawn when the orbit-trails setting is on.
 
-- [ ] Test `tessellateTrack keeps chord sag within tolerance` on a synthetic arc.
-- [ ] Test `splitF64HiLo reconstructs within 1 km at 160 AU` (in Mpc).
-- [ ] Test `draw count k is the number of vertices at or before simDays` (pure helper if the pass
+- [x] Test `tessellateTrack keeps chord sag within tolerance` on a synthetic arc.
+- [x] Test `splitF64HiLo reconstructs within 1 km at 160 AU` (in Mpc).
+- [x] Test `draw count k is the number of vertices at or before simDays` (pure helper if the pass
       needs one; frame-file purity: put it in `src/utils/`).
-- [ ] Test layout parity: WGSL `io.wesl` vertex struct vs the renderer's attribute table.
-- [ ] Visual (deep links in DoD); commit.
+- [x] Test layout parity: WGSL `io.wesl` vertex struct vs the renderer's attribute table.
+- [x] Visual (deep links in DoD); commit.
 
 ### Task 11: Voyager exhibit and timeline section — review: yes
 
@@ -381,9 +383,9 @@ instant (rate and play state untouched; camera untouched). The exhibit turns orb
 (as `solarSystem.ts` does) and frames the outer solar system; notes cite Horizons and the
 heliopause sources. Exit restore comes from Task 5.
 
-- [ ] Test `a tick click sets the clock to the event instant without pausing`.
-- [ ] Test `the thumb position follows the sim day` (pure mapping helper in `src/utils/`).
-- [ ] Commit.
+- [x] Test `a tick click sets the clock to the event instant without pausing`.
+- [x] Test `the thumb position follows the sim day` (pure mapping helper in `src/utils/`).
+- [x] Commit.
 
 ### Task 12: Docs, backlog, close-out
 
@@ -392,30 +394,30 @@ items: `scaleFadeBands.ts:166` Voyager comment, `narrowMat4` per-frame allocatio
 shell depth-sampling duplication — plus `watchClipSaga` clock restore if Task 5 kept it),
 `src/services/engine/presentation/scaleFadeBands.ts` comment only if trivially wrong now.
 
-- [ ] Write the backlog lines + detail files; commit.
-- [ ] R2 sync of `spacecraftTracks.bin` is the user's step before merge — say so in the PR body.
+- [x] Write the backlog lines + detail files; commit.
+- [x] R2 sync of `spacecraftTracks.bin` is the user's step before merge — say so in the PR body.
 
 ## Definition of Done
 
 **Deliverables**
-- [ ] `public/data/spacecraftTracks.bin` + manifest entry + R2 allow-list row;
+- [x] `public/data/spacecraftTracks.bin` + manifest entry + R2 allow-list row;
       `npm run build-spacecraft-tracks`; `MISSION_EVENTS` generated.
-- [ ] `sampled` `PositionDriver` arm; `SAMPLED_BODIES`; `trajectoryRegistry`; `spacecraftPresent`.
-- [ ] `missionTrailsPass` + `missionTrail` shaders; `lib::trailOcclusion` shared with orbit trails.
-- [ ] Voyager exhibit with a `timeline` section; `SceneSnapshot.time`.
-- [ ] Voyager hyperbola rows, `probe.ts` (and dead hyperbola code) deleted.
+- [x] `sampled` `PositionDriver` arm; `SAMPLED_BODIES`; `trajectoryRegistry`; `spacecraftPresent`.
+- [x] `missionTrailsPass` + `missionTrail` shaders; `lib::trailOcclusion` shared with orbit trails.
+- [x] Voyager exhibit with a `timeline` section; `SceneSnapshot.time`.
+- [x] Voyager hyperbola rows, `probe.ts` (and dead hyperbola code) deleted.
 
 **Smoke** (server :5176, orbit trails on):
-- [ ] Titan flyby — V1 mesh skims Titan, trail bends through the encounter:
+- [x] Titan flyby — V1 mesh skims Titan, trail bends through the encounter:
       `http://localhost:5176/#focus=body-voyager1&t=1980-11-12T05:41:00Z`
-- [ ] Saturn closest approach, V1: `http://localhost:5176/#focus=body-voyager1&t=1980-11-12T23:46:00Z`
-- [ ] Neptune, V2 — trail drawn from 1977 through four planets:
+- [x] Saturn closest approach, V1: `http://localhost:5176/#focus=body-voyager1&t=1980-11-12T23:46:00Z`
+- [x] Neptune, V2 — trail drawn from 1977 through four planets:
       `http://localhost:5176/#focus=body-voyager2&t=1989-08-25T03:56:00Z`
-- [ ] Before launch — no craft, no label, no trail, no throw:
+- [x] Before launch — no craft, no label, no trail, no throw:
       `http://localhost:5176/#focus=body-voyager1&t=1977-01-01T00:00:00Z`
-- [ ] Exhibit — ticks jump the clock, camera stays; exit restores the clock:
+- [x] Exhibit — ticks jump the clock, camera stays; exit restores the clock:
       `http://localhost:5176/#exhibit=voyager`
-- [ ] Scrub backwards through a flyby: trail shrinks, head stays on the mesh.
+- [x] Scrub backwards through a flyby: trail shrinks, head stays on the mesh.
 
 **Out of scope:** other spacecraft, trail fade or time window, camera following the timeline,
 a heliopause surface, New Horizons.

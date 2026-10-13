@@ -1,6 +1,6 @@
 # Voyager flyby ride-along — design
 
-**Status:** design approved 2026-10-07 (UX doc Revision 2; refactor-ground checkpoint ask ss3a). Rides on PR #854 (`mission-trails`): prep commits first, then the feature.
+**Status:** SUPERSEDED by the mission camera spec (`2026-10-09-voyager-mission-camera-design.md`), shipped on #854. Was: design approved 2026-10-07 (UX doc Revision 2; refactor-ground checkpoint ask ss3a). Rides on PR #854 (`mission-trails`): prep commits first, then the feature.
 **Parent:** [`2026-10-05-voyager-mission-ux-design.md`](2026-10-05-voyager-mission-ux-design.md), Revisions 1–2.
 
 ## Goal
