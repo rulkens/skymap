@@ -34,6 +34,7 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
   const handleRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: number; startY: number; moved: boolean } | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [shownKey, setShownKey] = useState(resetKey);
   if (shownKey !== resetKey) {
     setShownKey(resetKey);
@@ -59,7 +60,7 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
       // Capture only once it is a drag: capturing on down would retarget a tap's click to the sheet.
       d.moved = true;
       sheet.setPointerCapture(e.pointerId);
-      sheet.style.transition = 'none';
+      setDragging(true);
     }
     sheet.style.setProperty('--drag', `${dy}px`);
   };
@@ -70,7 +71,7 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
     drag.current = null;
     if (!d.moved) return;
     const sheet = e.currentTarget;
-    sheet.style.removeProperty('transition');
+    setDragging(false);
     sheet.style.removeProperty('--drag');
     const dy = e.type === 'pointercancel' ? 0 : e.clientY - d.startY;
     if (dy < -SNAP_PX) setExpanded(true);
@@ -84,7 +85,11 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
     <div className={styles.root}>
       <section
         ref={sheetRef}
-        className={cx(styles.sheet, panel ? styles.panel : !expanded && styles.peeking)}
+        className={cx(
+          styles.sheet,
+          panel ? styles.panel : !expanded && styles.peeking,
+          dragging && styles.dragging,
+        )}
         {...(!panel && {
           onPointerDown,
           onPointerMove,
