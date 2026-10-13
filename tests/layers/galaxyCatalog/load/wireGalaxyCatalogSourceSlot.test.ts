@@ -35,8 +35,10 @@ function fakeCloud(count: number): GalaxyCatalog {
 
 function harness() {
   const upload = vi.fn().mockResolvedValue(undefined);
+  const unload = vi.fn();
   const pointRenderer = {
     upload,
+    unload,
     loadedSources: () => [],
     totalCount: () => 0,
   } as never;
@@ -46,7 +48,7 @@ function harness() {
   const deps = {
     publish: vi.fn(),
   } as unknown as LayerCoreDeps<GalaxyCatalogFacts>;
-  return { upload, pointRenderer, catalogs, provenanceCounts, bumpCatalogsVersion, deps };
+  return { upload, unload, pointRenderer, catalogs, provenanceCounts, bumpCatalogsVersion, deps };
 }
 
 describe('wireGalaxyCatalogSourceSlot', () => {
@@ -114,5 +116,28 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     void slot.load({ source: Source.SDSS, tier: 'medium' });
     await vi.waitFor(() => expect(h.upload).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => expect(requestRender).toHaveBeenCalled());
+  });
+
+  it('release unloads the renderer, drops the catalog and provenance, and republishes without the source', async () => {
+    const h = harness();
+    vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
+    const slot = wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[Source.SDSS], h.deps, h);
+    void slot.load({ source: Source.SDSS, tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    h.bumpCatalogsVersion.mockClear();
+    vi.mocked(h.deps.publish).mockClear();
+
+    slot.release();
+
+    expect(slot.state().kind).toBe('idle');
+    expect(slot.committed()).toBeNull();
+    expect(h.unload).toHaveBeenCalledExactlyOnceWith(SOURCE_REGISTRY[Source.SDSS].id);
+    expect(h.catalogs.has(Source.SDSS)).toBe(false);
+    expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
+    const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
+      provenanceCounts: Record<number, unknown>;
+    };
+    expect(patch.provenanceCounts[Source.SDSS]).toBeUndefined();
+    expect(galaxyCatalogFetcher).toHaveBeenCalledTimes(1);
   });
 });
