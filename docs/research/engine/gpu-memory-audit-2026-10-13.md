@@ -54,8 +54,9 @@ each consumer.
    its fade-gated `release` design is the general one.
 2. **Pick targets are canvas-sized to read one texel.** Up to four r32uint + depth
    pairs (`pickProgram.ts:162`, readback at `:428`), never released; debug pick
-   targets survive the overlay being turned off. A small target with an off-centre
-   projection saves 66 MB (1080p) / 265 MB (4K) and a full-viewport raster per hover.
+   targets survive the overlay being turned off. #899 shares one target set across
+   slabs (66 → 25 MB at 1080p, 265 → 100 MB at 4K) and scissors each pass to the
+   cursor; a cropped projection would shrink what remains to a few pixels.
 3. **Eager allocations for off or invisible features.** Flow particles (26.6 MB);
    bloom pyramid with bloom disabled; `cosmic-web-density`, `zoa`, `star-aggregates`,
    `mw-aggregate` targets with their layers hidden (no `allocateWhen`); hi-res famous
