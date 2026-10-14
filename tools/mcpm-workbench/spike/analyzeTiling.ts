@@ -9,8 +9,8 @@ import { dataPointHistogram } from '../validate/dataPointHistogram';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const [outDir, catPath] = process.argv.slice(2);
-const N = 160, T = 80, V = 0.78125, BINS = 256;
-const eOrigin: Vec3 = [-200 - 125 + 80 * V, -50 - 125 + 80 * V, 125 - 125 + 80 * V];
+const N = 128, T = 64, V = 0.78125, BINS = 256;
+const eOrigin: Vec3 = [-200 - 100 + 64 * V, -50 - 100 + 64 * V, 125 - 100 + 64 * V];
 const load = (n: string) => { const b = readFileSync(`${outDir}/${n}.f32`); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
 
 function stitch(prefix: string): Float32Array | null {

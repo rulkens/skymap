@@ -13,8 +13,8 @@ const [catPath, outDir, stepsArg, ...only] = process.argv.slice(2);
 const STEPS = Number(stepsArg);
 const V = 0.78125; // ~VAC voxel (556.288 Mpc / 712)
 const CENTER: Vec3 = [-200, -50, 125];
-const REF_DIMS = 320; // 250 Mpc
-const E_LO = 80, TILE = 80; // eval region = voxels [80, 240) of the reference, 2x2x2 tiles of 80
+const REF_DIMS = 256; // 200 Mpc
+const E_LO = 64, TILE = 64; // eval region = voxels [64, 192) of the reference, 2x2x2 tiles of 64 (50 Mpc)
 const AGENT_DENSITY = 10_000_000 / (712 * 1200 * 728); // VAC agents per voxel
 const VAC_MEAN_WEIGHT = 1e6 / 324_901; // VAC per-galaxy deposit scale
 const origin: Vec3 = [CENTER[0] - (REF_DIMS * V) / 2, CENTER[1] - (REF_DIMS * V) / 2, CENTER[2] - (REF_DIMS * V) / 2];
@@ -71,8 +71,8 @@ await page.exposeFunction('progress', (s: number, sec: number) => { if (s % 100 
 await page.goto(url + 'spike/tiling.html');
 await page.waitForFunction(() => (window as any).ready === true, null, { timeout: 120_000 });
 
-for (const r of runs) {
-  if (only.length && !only.some((o) => r.name.startsWith(o))) continue;
+const ordered = only.length ? only.flatMap((o) => runs.filter((r) => r.name.startsWith(o + (o.startsWith('ref') ? '' : '-t')))) : runs;
+for (const r of ordered) {
   const out = `${outDir}/${r.name}.f32`;
   if (existsSync(out)) continue;
   const { positions, weights } = cull(r.lo, r.dims, r.pinned);
