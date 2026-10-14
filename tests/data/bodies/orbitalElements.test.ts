@@ -34,15 +34,12 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
   });
 
   it('pairs every eccentricity with the sign of its semi-major axis', () => {
-    // The conic branch stated twice, so a transcription that "tidies" one half
-    // fails: an ellipse is e < 1 with a > 0, a hyperbola e > 1 with a < 0 —
-    // Horizons publishes the escaping rows' A negative and dropping that sign
-    // puts the probe on the wrong branch, visible nowhere else. e = 1
-    // (parabola) has no solver on either side.
+    // Bound rows only: `keplerianPositionMpc` has no hyperbola branch (the escaping
+    // craft are sampled tracks), so e >= 1 or a <= 0 would place a body at NaN.
     for (const el of ORBITAL_ELEMENTS) {
       expect(el.eccentricity, el.id).toBeGreaterThanOrEqual(0);
-      expect(el.eccentricity, el.id).not.toBe(1);
-      expect(Math.sign(el.semiMajorMpc), el.id).toBe(el.eccentricity < 1 ? 1 : -1);
+      expect(el.eccentricity, el.id).toBeLessThan(1);
+      expect(el.semiMajorMpc, el.id).toBeGreaterThan(0);
     }
   });
 });

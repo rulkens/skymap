@@ -151,7 +151,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         text: 'A second set of mouse controls that behaves as OpenSpace does, for people who run a planetarium with it. The groundwork is in the app.',
         state: 'in progress',
         spec: `${SPECS}/2026-09-29-openspace-camera-mode-design.md`,
-        built: 'src/services/engine/camera/controlSchemes.ts',
+        built: 'src/services/engine/camera/composeControlSchemes.ts',
       },
       {
         id: 'structure-shapes',

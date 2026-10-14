@@ -11,6 +11,7 @@ import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
+import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
@@ -53,6 +54,9 @@ export type Layer<
    * `anchorId`s are globally unique and the composed total must fit
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];
+  /** Exhibit rows, folded after core's into `APP_EXHIBITS` by import (`appExhibits`); the
+   * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
+  readonly exhibits?: readonly Exhibit[];
   /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
@@ -99,7 +103,7 @@ export type Layer<
   /** Per-source counts on the same terms. Core dispatches `engineSourceCountReported`
    * per yield and keeps its ready-total / contentVersion side effects. */
   sourceCounts?(runtime: Runtime): AsyncIterable<SourceCountReport>;
-  /** Appended after `CORE_PLANNERS` in `createLayers`; a row's own `FrameSection`
+  /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
 };

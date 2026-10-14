@@ -14,6 +14,7 @@
 
 import package::horizonShell::io::Uniforms;
 import package::horizonShell::io::VsOut;
+import package::lib::fresnel::fresnelRim;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
@@ -57,8 +58,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let normal = normalize(hit - center); // outward sphere normal
   let viewDir = -rayDir;                // points back toward the camera
 
-  let cosTheta = abs(dot(normal, viewDir));
-  let rim = pow(1.0 - cosTheta, RIM_POWER);
+  let rim = fresnelRim(normal, viewDir, RIM_POWER);
   // Distance fade (CPU-side smoothstep) scales the whole additive
   // contribution, so the shell ramps in as the camera pulls back.
   let value = rim * INTENSITY * u.fadeAlpha;

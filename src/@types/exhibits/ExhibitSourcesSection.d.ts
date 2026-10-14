@@ -3,7 +3,6 @@
 import type { ExhibitSource } from './ExhibitSource';
 
 export type ExhibitSourcesSection = {
-  kind: 'sources';
   heading: string;
   links: readonly ExhibitSource[];
 };

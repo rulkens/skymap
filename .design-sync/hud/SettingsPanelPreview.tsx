@@ -20,7 +20,7 @@ import GalaxiesSection from '../../src/components/SettingsPanel/GalaxiesSection'
 import StarsSection from '../../src/components/SettingsPanel/StarsSection';
 import CosmicWebSection from '../../src/components/SettingsPanel/CosmicWebSection';
 import FlowSection from '../../src/components/SettingsPanel/FlowSection';
-import StructuresSection from '../../src/components/SettingsPanel/StructuresSection';
+import StructuresSection from '../../src/layers/structure/ui/StructuresSection/StructuresSection';
 import LabelsSection from '../../src/components/SettingsPanel/LabelsSection';
 import DisplaySection from '../../src/components/SettingsPanel/DisplaySection';
 import EarthSection from '../../src/components/SettingsPanel/EarthSection';

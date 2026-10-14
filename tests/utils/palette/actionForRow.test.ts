@@ -4,7 +4,7 @@ import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
@@ -31,6 +31,7 @@ const COMA: StructureSearchEntry = {
   category: 'galaxy-cluster',
   abell: 'A1656',
   description: '',
+  featured: true,
 };
 
 describe('actionForRow', () => {
@@ -83,7 +84,7 @@ describe('actionForRow', () => {
   });
 
   it('an exhibit row → an exhibit action carrying the registry id, not a focus', () => {
-    const exhibit = exhibitRegistry.cosmicWeb;
+    const exhibit = APP_EXHIBITS.cosmicWeb;
     expect(actionForRow({ kind: 'exhibit', exhibit, score: 0 })).toEqual({
       kind: 'exhibit',
       exhibitId: exhibit.id,

@@ -3,7 +3,7 @@
  *
  * Produced by the closure factory `createGalaxyPointRenderer`.
  * `loadedSources` returns a fresh generator on each call.
- * Consumers: engine, frame body, bias-correction subsystem.
+ * Consumers: engine, frame body.
  * The pick renderer no longer shares the uniform buffer — it owns its
  * own GPU buffer and rebuilds the packed bytes at pick time from the
  * slab view (see `pickUniformBytesOf`).
@@ -29,19 +29,8 @@ export type GalaxyPointRenderer = {
    * the factory body for the off-thread bake / race-condition rationale.
    */
   upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
-  /**
-   * Install the upload-tail callback used by the bias-correction
-   * subsystem.  Pass `null` to detach.  Idempotent.
-   */
-  setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void;
-  /** Install the unload-tail callback for the bias-correction subsystem. */
-  setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void;
-  /** Splice per-row Schechter ratios into slot 9 of the source's interleaved mirror. */
-  spliceSchechterRatios(source: SourceType, ratios: Float32Array): void;
-  /** Splice per-row HEALPix angular weights into slot 10. */
-  spliceAngularWeights(source: SourceType, weights: Float32Array): void;
-  /** Zero slots 9 + 10 for one source or every loaded source. */
-  clearBiasOverlays(source?: SourceType): void;
+  /** Destroy the catalog's buffers and drop its entry. */
+  unload(id: GalaxyCatalogId): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;
   /** True when the catalog's buffer is committed — the survey fade row's guard reads this. */

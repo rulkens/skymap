@@ -30,11 +30,12 @@ export const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
 export const WHALE_GREY: Vec3 = [0.28, 0.32, 0.38];
 export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
 
-// Thermal-blanket gold, warm and cool so the two probes stay apart; unread
-// today — mesh bodies draw no trail.
-export const VOYAGER_1_GOLD: Vec3 = [0.5, 0.42, 0.2];
-export const VOYAGER_2_AMBER: Vec3 = [0.5, 0.36, 0.16];
+// Voyager trail tints (read by `SAMPLED_BODIES`): V1 lime, V2 green — a hue no planet
+// trail uses (the old gold was Saturn's own), with the two still apart where they run close.
+// Muted a quarter of the way toward grey; at full saturation they read as neon.
+export const VOYAGER_1_LIME: Vec3 = [0.342, 0.5, 0.163];
+export const VOYAGER_2_GREEN: Vec3 = [0.154, 0.5, 0.226];
 
-// Hubble's aluminium skin, cool enough to stay off the probes' gold; unread
+// Hubble's aluminium skin, cool enough to stay off the probes' lime and green; unread
 // today — mesh bodies draw no trail.
 export const HUBBLE_SILVER: Vec3 = [0.38, 0.42, 0.5];

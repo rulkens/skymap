@@ -38,6 +38,7 @@ function makeCtx(over: {
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
+    tier: 'medium',
   };
 }
 

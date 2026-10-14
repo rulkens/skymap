@@ -24,7 +24,7 @@ import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { isRegistryBodyId } from '../scene/isRegistryBodyId';
-import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
@@ -127,7 +127,7 @@ export function rankPaletteMatches(
   // duplicates the object it takes over to. `Tour.dev` tours are harnesses for
   // the tour machinery and stay out of search; they remain launchable from the
   // debug panel and by id.
-  const exhibitScored: ScoredRow[] = Object.values(exhibitRegistry)
+  const exhibitScored: ScoredRow[] = Object.values(APP_EXHIBITS)
     .map<ScoredRow>((exhibit) => {
       const raw = scoreFamousMatch(
         { id: exhibit.id, names: [exhibit.label], description: '' },

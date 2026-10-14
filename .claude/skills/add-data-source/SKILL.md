@@ -62,7 +62,7 @@ the `Source` code enum stays global, per the layer-composition spec). Adding a
 tenth survey is a new row file plus a line in that list, not a new Layer.
 
 A genuinely **new Layer** (a new family with its own renderers/settings/passes,
-like the planned `starCatalog` or `structure` Layers) is a much bigger edit —
+like `starCatalog` or `structure`) is a much bigger edit —
 see `docs/superpowers/specs/2026-09-09-layer-composition-design.md` §9 for the
 folder shape, and don't start one for what's really a tenth catalog.
 
@@ -116,7 +116,7 @@ binary format family. Treat it as a sibling precedent, not a Path A instance:
   from `galaxyCatalogFormat.ts`: cell-quantized + compressed, sized for tens
   of millions of stars rather than millions of galaxies. Don't reuse
   `galaxyCatalogFormat.ts` machinery for star data — the encodings diverge.
-- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run build-stars`, emits the per-tier `public/data/stars-{small,medium,large}.bin`.
+- **Build entry** — `tools/stars/buildStars.ts`, run via `npm run build-stars`, emits the v2 octree: the index `public/data/star-catalog/v2/stars.bin` plus `stars/<level>-<morton>.<hash>.bin` chunk objects (see DATA.md). A survey star source row picks its container with `format: 'octree'` (the shipped default) or `'skst'` (the v1 tier bins).
 - **R2 sync** — a new binary family needs its own entries in
   `tools/deploy/r2/allowDataFile.ts`, same step as adding a new galaxy-catalog
   tier.
@@ -173,16 +173,16 @@ walk you to anything missed.
 | #   | Site               | File                                                                                                                                                | What it decides                                                                                 |
 | --- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 1   | Source code        | `src/data/source.ts`                                                                                                                                | The append-only pick code (rules below)                                                         |
-| 2   | Registry row       | `src/data/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/data/sources.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
+| 2   | Registry row       | `src/layers/structure/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/layers/structure/sources/structureSourceRows.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
 | 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
 | 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
-| 5   | Style row          | `src/services/engine/presentation/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `visibleBand`, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
+| 5   | Style row          | `src/layers/structure/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `visibleBand`, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
 | 6   | Fade band (if new) | `src/services/engine/presentation/scaleFadeBands.ts`                                                                                                | Only when no existing band fits; otherwise point `visibleBand` at one                           |
-| 7   | Build switch       | `src/data/structure/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
+| 7   | Build switch       | `src/layers/structure/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
 | 8   | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
-| 9   | Card row (if any)  | `src/components/InfoCard/StructureDetailCard/StructureDetailCard.tsx`; copy beside it in `src/data/structure/` (`nebulaKindLabels.ts`)                       | A per-category fact such as a nebula's Type                                                     |
+| 9   | Card row (if any)  | `src/layers/structure/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
 | 10  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
-| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/data/structure/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm; a band test in `structureVisibleBands.test.ts` if the band is new |
+| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm; a band test in `structureVisibleBands.test.ts` if the band is new |
 
 ### Source code (step 1)
 
@@ -241,14 +241,17 @@ _nearer_ distance. Focus framing is uniform (`structureFocusDistance.ts`,
 ### Derived: no edit needed
 
 Everything below reads `STRUCTURE_IDS` or the registry and widens with your row:
-the Settings toggles and their counts, `emitCounts`, the pick decode, the
+the Settings toggles and their counts, the pick decode, the
 selection row's deep-link claim (`${category}-${seed.id}`, matched by category
 prefix; add a test only if your id could collide with another category's
 prefix), the search chip and palette rows, default marker and label visibility,
 `StructureId`, the marker renderers' buckets, and the marker and label passes
-(chosen by `scale`). `BULK_CATALOG_CATEGORIES` in `assetWiring.ts` is the one
-list not derived: add the category **only if** it has a bulk `.ccat`, which a
-seed-only category does not.
+(chosen by `scale`). Counts and the palette's search list are the structure
+Layer's facts (`counts`, `searchList`), published by
+`load/wireStructureProjection.ts` off the store, with no per-category row.
+`BULK_CATALOG_CATEGORIES` in `src/layers/structure/load/structureAssetRows.ts`
+is the one list not derived: add the category **only if** it has a bulk
+`.ccat`, which a seed-only category does not.
 
 ## Verify
 

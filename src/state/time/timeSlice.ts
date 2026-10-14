@@ -36,6 +36,7 @@
 import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
 import { timeRoute } from '../../store/constants';
+import type { ClockProfile } from '../../@types/time/ClockProfile';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { CONST_J2000 } from '../../data/time/constJ2000';
@@ -51,6 +52,7 @@ const initialState: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: false,
+  profile: null,
 };
 
 /**
@@ -131,10 +133,51 @@ const timeSlice = createSlice({
       time.direction = captured.direction;
       time.paused = captured.paused;
     },
+
+    // Play a mission profile from its first sample, un-paused. The profile arrives stamped
+    // (reducers read no clock); the anchor is set to its start so a visitor action that drops
+    // the profile re-anchors from a consistent instant.
+    startClockProfile: (time, action: PayloadAction<{ profile: ClockProfile }>) => {
+      const { profile } = action.payload;
+      time.mode = 'manual';
+      time.anchor = { simDays: profile.simDays[0]!, realMs: profile.startWallMs };
+      time.paused = false;
+      time.profile = profile;
+    },
+
+    // A visitor stepping to a timeline event lands the clock there, paused. The dispatch site
+    // resolves the event's instant; `eventId` rides along for the hold saga, which plays a flyby.
+    stepToEvent: (
+      time,
+      action: PayloadAction<{ eventId: string; simDays: number; nowMs: number }>,
+    ) => {
+      time.mode = 'manual';
+      time.anchor = { simDays: action.payload.simDays, realMs: action.payload.nowMs };
+      time.paused = true;
+    },
+  },
+  // Every clock intent but starting a profile drops it, so a new reducer cannot forget to: a
+  // stale profile would override the anchor. Matchers run after the case reducer.
+  extraReducers: (builder) => {
+    builder.addMatcher(
+      (action) => action.type.startsWith(`${timeRoute}/`) && !startClockProfile.match(action),
+      (time) => {
+        time.profile = null;
+      },
+    );
   },
 });
 
-export const { setRate, setDirection, pause, resume, setSimDays, goLive, restoreTime } =
-  timeSlice.actions;
+export const {
+  setRate,
+  setDirection,
+  pause,
+  resume,
+  setSimDays,
+  goLive,
+  restoreTime,
+  startClockProfile,
+  stepToEvent,
+} = timeSlice.actions;
 
 export default timeSlice.reducer;

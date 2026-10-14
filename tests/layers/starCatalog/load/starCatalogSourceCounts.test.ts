@@ -12,7 +12,7 @@ import { starCatalogSourceCounts } from '../../../../src/layers/starCatalog/load
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
 import { Source } from '../../../../src/data/sources';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { SkstCatalog } from '../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { SourceCountReport } from '../../../../src/@types/engine/layer/SourceCountReport';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 
@@ -50,7 +50,7 @@ const SEEDED_SOURCES = [...SEEDED_STAR_CATALOGS_BY_SOURCE].map(([source]) => sou
 
 describe('starCatalogSourceCounts', () => {
   it('reports no seeded count until one of the Layer’s slots reports its state', async () => {
-    const gaia = fakeSlot<StarCatalog>();
+    const gaia = fakeSlot<SkstCatalog>();
     const famous = fakeSlot<unknown>();
     const runtime = {
       catalogs: new Map([[Source.GaiaStars, gaia.slot]]),
@@ -73,7 +73,7 @@ describe('starCatalogSourceCounts', () => {
   });
 
   it('reports the seeded counts before the survey’s own count', async () => {
-    const gaia = fakeSlot<StarCatalog>();
+    const gaia = fakeSlot<SkstCatalog>();
     const famous = fakeSlot<unknown>();
     const runtime = {
       catalogs: new Map([[Source.GaiaStars, gaia.slot]]),
@@ -81,7 +81,7 @@ describe('starCatalogSourceCounts', () => {
     } as unknown as StarCatalogRuntime;
 
     const iterator = starCatalogSourceCounts(runtime)[Symbol.asyncIterator]();
-    gaia.emit({ kind: 'ready', value: { starCount: 1234 } } as unknown as LoadState<StarCatalog>);
+    gaia.emit({ kind: 'ready', value: { starCount: 1234 } } as unknown as LoadState<SkstCatalog>);
 
     const reports = await drain(iterator, SEEDED_SOURCES.length + 1);
 

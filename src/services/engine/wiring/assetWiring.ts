@@ -10,8 +10,6 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
-import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
@@ -24,6 +22,7 @@ import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotK
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
+import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
@@ -32,13 +31,6 @@ import type { TextureKind } from '../../../@types/data/TextureKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
-
-/**
- * The categories backed by the bulk `.ccat` — their visibility gates its fetch.
- * `famousGalaxy` (own `.bin`) and `galaxy-group` (seed-only, no `.ccat`) are excluded;
- * adding it here would fetch the catalog whenever group visibility toggles.
- */
-const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['galaxy-cluster', 'supercluster', 'void'];
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
@@ -120,7 +112,9 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
       meshKey: body.meshKey,
       tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
     }),
+    // An absent craft is parked on or in Earth, which must not demand its mesh.
     demand: (ctx) =>
+      spacecraftPresent(body.id, ctx.simDays) &&
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
     release: (ctx) =>
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) > 2 * meshBodyLoadRadiusMpc(body.id),
@@ -140,22 +134,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     req: () => undefined,
     demand: () => true,
     priority: 0,
-  },
-
-  // ── Cluster/supercluster bulk coverage ───────────────────────────
-  // The structures-enabled proxy: loads when ANY bulk category has its ring OR its
-  // label on, both axes read from the per-category item rows.
-  {
-    key: 'structureCatalog',
-    factory: (deps) => createStructureCatalogSlot(deps.state, deps.cb),
-    req: () => ({}),
-    demand: (ctx) =>
-      BULK_CATALOG_CATEGORIES.some(
-        (cat) =>
-          ctx.settings.structures.items[cat].enabled ||
-          ctx.settings.structures.items[cat].labelEnabled,
-      ),
-    priority: 30, // a small .ccat that draws across many rungs at once — high value per byte
   },
 
   // ── Body-surface textures (proximity-demanded + released) ────────

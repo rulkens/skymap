@@ -2,7 +2,7 @@
  * starPointsPass — unit tests for the point-partition star content row.
  *
  * The load-bearing threading assertion here is the f64 rebase seam: like the
- * captions in `foregroundLabelsPass`, the point anchors and the NEAR0 view
+ * captions in `labelsNearPass`, the point anchors and the NEAR0 view
  * translation are near-equal parsec-scale numbers during the final approach to
  * a local star, so an f32 subtraction cancels catastrophically and jitters the
  * sprite centre. The layer must therefore hand the renderer CAMERA-RELATIVE
@@ -274,9 +274,6 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         // `=== null` handle check rather than reading state.data.bodies.planets,
         // which this star-focused fixture does not carry.
         bodyGlintRenderer: null,
-        // The near marker pass rides this group too and is visible below the
-        // gate; no renderer keeps it out so the roster stays the star rows.
-        structureMarkerNearRenderer: null,
       },
       // The milky-way impostor also rides this group now (its slab moved to
       // NEAR0), but its visibility window is far WIDER than the foreground
@@ -294,6 +291,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
+        missions: { trails: false },
       },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;

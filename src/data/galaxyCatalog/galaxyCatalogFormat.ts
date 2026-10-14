@@ -1,10 +1,10 @@
 /**
- * Binary on-disk format for a `GalaxyCatalog` — version 9.
+ * Binary on-disk format for a `GalaxyCatalog` — version 10.
  *
  * 16-byte header (magic/version/count/reserved) + one `BYTES_PER_GALAXY`
  * (64-byte) record per galaxy. `GALAXY_CATALOG_FIELD_SPECS` below is the
  * single declaration of the per-field element type and on-disk offset —
- * see `GalaxyCatalogFieldSpec`. v8-and-earlier files are rejected via the
+ * see `GalaxyCatalogFieldSpec`. v9-and-earlier files are rejected via the
  * version header; the fix is "regenerate via `npm run build-tiers`".
  */
 
@@ -15,11 +15,11 @@ import { galaxyMedianAbsMag } from '../../utils/galaxy/galaxyMedianAbsMag';
 import { FormatVersionError } from '../formatVersionError';
 
 const MAGIC = 0x504d4b53;
-const VERSION = 9;
+const VERSION = 10;
 const HEADER_BYTES = 16;
 const BYTES_PER_GALAXY = 64;
 // Bit 2 of the flags byte ("mass is estimated") has no backing column: every
-// v9 mass is a photometric estimate, so the encoder derives it from
+// v10 mass is a photometric estimate, so the encoder derives it from
 // `Number.isFinite(log10StellarMass[i])` instead. When measured masses land
 // this becomes a real `flagBit` column and this constant goes away.
 const MASS_ESTIMATED_BIT = 1 << 2;
@@ -81,14 +81,15 @@ export const GALAXY_CATALOG_FIELD_SPECS = {
     components: 1,
     disk: { kind: 'flagBit', offset: 54, bit: 1 },
   },
-  // Byte 55 is reserved/zeroed padding — no column claims it.
+  /** Build-time angular bias weight, `encodeAngularWeight`'s log-u8 code; 0 = never baked (1.0). */
+  angularWeight: { column: 'u8', components: 1, disk: { kind: 'field', offset: 55 } },
   /** Catalogued spectroscopic z; may be negative (peculiar-velocity blueshift). */
   spectroscopicZ: { column: 'f32', components: 1, disk: { kind: 'field', offset: 56 } },
   /**
    * log₁₀(M★/M☉) photometric estimate; NaN = no estimate. Bit 2 of the flags
    * byte ("mass is estimated") is derived from this field's finiteness at
    * encode time rather than stored as its own column — see
-   * `MASS_ESTIMATED_BIT` — because every v9 mass is photometric. A future
+   * `MASS_ESTIMATED_BIT` — because every v10 mass is photometric. A future
    * measured-mass source turns bit 2 into a real `flagBit` column here.
    */
   log10StellarMass: { column: 'f32', components: 1, disk: { kind: 'field', offset: 60 } },
@@ -106,7 +107,7 @@ type FlagBitField = { column: GalaxyCatalogColumn; bit: number };
 // Partitioned once at module load (not per call, and never per record) from
 // the static table above. A record's byte base is always 4-aligned (both
 // HEADER_BYTES and BYTES_PER_GALAXY are multiples of 4), so every f32 field
-// is reachable through the shared Float32Array overlay — v9 has no field
+// is reachable through the shared Float32Array overlay — v10 has no field
 // left at a non-4-aligned offset, so UNALIGNED_FLOATS is always empty; kept
 // so a future unaligned field doesn't need this partitioning rebuilt.
 const ALIGNED_FLOAT_SLOTS: AlignedFloatSlot[] = [];
@@ -216,8 +217,6 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
       if (f.array[i]) flagsByte |= 1 << f.bit;
     }
     byteView[byteBase + FLAGS_BYTE_OFFSET] = flagsByte;
-    // Byte 55 (reserved) and the tail beyond BYTES_PER_GALAXY stay zero —
-    // ArrayBuffer zero-inits and no spec claims those bytes.
   }
   return buf;
 }

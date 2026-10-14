@@ -43,8 +43,7 @@ import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tour
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { Source } from '../../../src/data/sources';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -88,21 +87,19 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 };
 
 // Structure resolved by id immediately — no catalog needed.
-const STRUCTURE_DEPS: ResolveDeps = {
-  structures: {
-    byId: (id) =>
-      ({
-        type: 'structure',
-        id,
-        name: 'Test Structure',
-        category: 'galaxy-cluster',
-        worldPos: [1, 2, 3] as [number, number, number],
-        physicalRadiusMpc: 1,
-        apparentRadiusMpc: 2,
-        featured: true,
-      }) as const,
-    byCategory: () => [],
-  },
+const STRUCTURES: StructureRowFixture = {
+  byId: (id) =>
+    ({
+      type: 'structure',
+      id,
+      name: 'Test Structure',
+      category: 'galaxy-cluster',
+      worldPos: [1, 2, 3] as [number, number, number],
+      physicalRadiusMpc: 1,
+      apparentRadiusMpc: 2,
+      featured: true,
+    }) as const,
+  byCategory: () => [],
 };
 
 // ─── Beat fixtures ───────────────────────────────────────────────────────────
@@ -119,7 +116,7 @@ const milkyWayBeat: BeatData = {
 // (null-caption) short-dwell beat in the timeout test.
 const narrationClip: ClipData = { start: 'live', timeline: [] };
 
-// A clip with a structure focus id — resolves immediately (structures are always in deps).
+// A clip with a structure focus id — resolves immediately (the store stub always has it).
 const structureClip: ClipData = flyAndFocusOnClip(focusId('galaxy-cluster-virgo'));
 const structureBeat: BeatData = {
   enterClip: structureClip,
@@ -133,7 +130,7 @@ type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
 
 function buildStore(opts: {
   playClip?: PlayClipStub;
-  resolveDeps?: ResolveDeps;
+  structures?: StructureRowFixture;
   cameraRuntime?: LiveCameraRuntime | null;
 }) {
   const sagaMiddleware = createSagaMiddleware();
@@ -145,12 +142,11 @@ function buildStore(opts: {
   const playClipFn: PlayClipStub =
     opts.playClip ??
     (vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined) as PlayClipStub);
-  const deps = opts.resolveDeps ?? STRUCTURE_DEPS;
+  const structures = opts.structures ?? STRUCTURES;
   const cam = opts.cameraRuntime !== undefined ? opts.cameraRuntime : CAMERA_RUNTIME;
 
   sagaMiddleware.setContext({
-    resolveDeps: () => deps,
-    selection: selectionResolverOver(deps),
+    selection: selectionResolverOver(structures),
     cameraRuntime: () => cam,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
@@ -201,9 +197,7 @@ describe('visitBeatSaga', () => {
       axisRatio: new Float32Array([1]),
     });
 
-    const lazyDeps: ResolveDeps = {
-      structures: { byId: () => null, byCategory: () => [] },
-    };
+    const lazyStructures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
     // Read LIVE: the beat's readiness gate must clear only once the cloud lands.
     const lazyGalaxies = {
       get catalogs() {
@@ -219,13 +213,12 @@ describe('visitBeatSaga', () => {
     };
 
     const playClipMock = flyThenBlockingDrift(true);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: lazyDeps });
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, structures: lazyStructures });
 
     // Camera runtime is dynamic; override the context with a closure read.
     let currentRuntime: LiveCameraRuntime | null = null;
     sagaMiddleware.setContext({
-      resolveDeps: () => lazyDeps,
-      selection: selectionResolverOver(lazyDeps, lazyGalaxies),
+      selection: selectionResolverOver(lazyStructures, lazyGalaxies),
       cameraRuntime: () => currentRuntime,
       playClip: (clip: ClipData) => playClipMock(clip),
     });
@@ -251,7 +244,7 @@ describe('visitBeatSaga', () => {
 
   it('passes the resolved clip to playClip — no id-bearing cues remain', async () => {
     const playClipMock = flyThenBlockingDrift(true);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: STRUCTURE_DEPS });
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, structures: STRUCTURES });
 
     sagaMiddleware.run(visitBeatSaga, structureBeat, 0);
 
@@ -449,7 +442,7 @@ describe('visitBeatSaga', () => {
 
   it('a flyAndFocusOnClip beat resolves its focusId cue to a concrete focus ref', async () => {
     const playClipMock = flyThenBlockingDrift(true);
-    const { sagaMiddleware } = buildStore({ playClip: playClipMock, resolveDeps: STRUCTURE_DEPS });
+    const { sagaMiddleware } = buildStore({ playClip: playClipMock, structures: STRUCTURES });
 
     sagaMiddleware.run(visitBeatSaga, structureBeat, 0);
 

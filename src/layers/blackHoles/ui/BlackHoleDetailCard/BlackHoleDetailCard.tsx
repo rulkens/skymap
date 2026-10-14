@@ -13,16 +13,20 @@ import { BODY_FACTS } from '../../../../data/bodies/bodyFacts.generated';
 import { formatDistance } from '../../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../../utils/format/formatRadiusM';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import { focusShotUrl } from '../../../../utils/palette/focusShotUrl';
+import { encodeBlackHoleFocusId } from '../../present/encodeBlackHoleFocusId';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
+import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import local from './BlackHoleDetailCard.module.css';
 
 export type BlackHoleDetailCardProps = {
   target: BlackHoleInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -30,24 +34,34 @@ export type BlackHoleDetailCardProps = {
 function BlackHoleDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: BlackHoleDetailCardProps): ReactNode {
   const facts = BODY_FACTS[target.id];
   const [x, y, z] = target.positionMpc;
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const shotUrl = focusShotUrl(encodeBlackHoleFocusId(target.id));
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        layout={layout}
         eyebrow="Black hole"
+        title={target.label}
+        thumbnail={
+          shotUrl !== undefined ? (
+            <Thumbnail url={shotUrl} alt={`${target.label} thumbnail`} />
+          ) : undefined
+        }
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}
       />
-
-      <CardRow type="headline">{target.label}</CardRow>
 
       <div className={styles.cardSection}>
         <CardRow label="Designation" value={target.detailLabel} />

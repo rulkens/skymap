@@ -19,7 +19,7 @@
  * The main camera projection is pinned at near = 0.01 Mpc.  At solar-system
  * zoom the bodies sit ~1e-13 Mpc from the camera — far inside that near
  * plane — so the normal label path (which projects with `ctx.vp`) would
- * clip them away.  `foregroundLabelsPass` instead draws these through the
+ * clip them away.  `labelsNearPass` instead draws these through the
  * NEAR0 slab view (`view.vp`), whose near plane is proportional to
  * `cam.distance` and so always contains the bodies.
  *
@@ -36,6 +36,7 @@
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { ForegroundCaption } from './foregroundCaption';
+import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
@@ -81,9 +82,12 @@ function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
  * captions FOLLOW them as the sim clock advances. The caller re-invokes this only
  * when the snapshot actually changes — a paused clock returns the same map by
  * reference, so a fresh instant is the only thing that rebuilds the captions
- * (see `foregroundLabelsPass`'s memo).
+ * (see `labelsNearPass`'s memo).
  */
-export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
+export function sceneBodyLabels(
+  bodyStates: ReadonlyMap<string, BodyState>,
+  simDays: number,
+): ForegroundCaption[] {
   return [
     bodyCaption(
       SCENE_EARTH,
@@ -106,7 +110,9 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // planet's, so it is scaled to full brightness first; the caption keeps
     // the hue, just not the darkness. An anchored scan is ground, not an
     // object on it, so it goes uncaptioned (and unpicked, see meshBodiesPass).
-    ...SCENE_MESH_BODIES.filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id)).map((body) => ({
+    ...SCENE_MESH_BODIES.filter(
+      (body) => !ANCHORED_MESH_BODY_IDS.has(body.id) && spacecraftPresent(body.id, simDays),
+    ).map((body) => ({
       ...bodyCaption(
         body,
         bodyFootprintRadiusM(body),
@@ -114,6 +120,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
         scaleToUnitMax(body.albedo),
         'meshBody',
       ),
+      bodyId: body.id,
       revealBand: captionRevealBand(body.captionRevealM),
     })),
   ];

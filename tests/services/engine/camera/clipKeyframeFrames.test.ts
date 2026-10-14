@@ -209,7 +209,11 @@ describe('frame-tagged keyframes', () => {
     const state = store.getState() as unknown as RootState;
     const clipRow = CAMERA_DRIVERS.find((d) => d.id === 'clip')!;
 
-    const { pose } = clipRow.pose(makeDriverCtx({ state, elapsedMs: 2000, bodies: BODIES }), null);
+    const { pose } = clipRow.pose(
+      makeDriverCtx({ state, elapsedMs: 2000, bodies: BODIES }),
+      null,
+      null,
+    );
 
     expect(pose.frame).toEqual(EARTH);
     // The same LookAt decode the evaluator's channels imply — body-fixed metres,

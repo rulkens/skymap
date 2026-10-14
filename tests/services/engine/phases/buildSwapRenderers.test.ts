@@ -51,13 +51,13 @@ function makeState(): EngineState {
         canvas: { __mockCanvas: true },
       },
       fontAtlases: { __mockAtlases: true },
-      labelRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      markerLineRendererCosmo: null,
       debugLineRenderer: null,
       selectionRingRenderer: null,
       pickDebugOverlay: null,
-      foregroundLabelRenderer: null,
-      foregroundMarkerLineRenderer: null,
+      labelRendererNear: null,
+      markerLineRendererNear: null,
       horizonShellRenderer: makeStub(),
     },
     subsystems: {
@@ -77,13 +77,13 @@ describe('buildSwapRenderers', () => {
     buildSwapRenderers(state, 'bgra8unorm');
 
     const firstRound = {
-      labelRenderer: state.gpu.labelRenderer,
-      markerLineRenderer: state.gpu.markerLineRenderer,
+      labelRendererCosmo: state.gpu.labelRendererCosmo,
+      markerLineRendererCosmo: state.gpu.markerLineRendererCosmo,
       debugLineRenderer: state.gpu.debugLineRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
-      foregroundLabelRenderer: state.gpu.foregroundLabelRenderer,
-      foregroundMarkerLineRenderer: state.gpu.foregroundMarkerLineRenderer,
+      labelRendererNear: state.gpu.labelRendererNear,
+      markerLineRendererNear: state.gpu.markerLineRendererNear,
     } as const;
 
     buildSwapRenderers(state, 'rgba16float');
@@ -99,8 +99,8 @@ describe('buildSwapRenderers', () => {
   it('re-attaches the label director to the new renderers', () => {
     const state = makeState();
     buildSwapRenderers(state, 'bgra8unorm');
-    const firstLabelRenderer = state.gpu.labelRenderer;
-    const firstMarkerLineRenderer = state.gpu.markerLineRenderer;
+    const firstLabelRenderer = state.gpu.labelRendererCosmo;
+    const firstMarkerLineRenderer = state.gpu.markerLineRendererCosmo;
 
     buildSwapRenderers(state, 'rgba16float');
 
@@ -115,8 +115,8 @@ describe('buildSwapRenderers', () => {
     // that they match the final field values and that they are NOT the
     // first-round instances.
     const [lastLabelArg, lastMarkerArg] = attachRenderers.mock.calls.at(-1)!;
-    expect(lastLabelArg).toBe(state.gpu.labelRenderer);
-    expect(lastMarkerArg).toBe(state.gpu.markerLineRenderer);
+    expect(lastLabelArg).toBe(state.gpu.labelRendererCosmo);
+    expect(lastMarkerArg).toBe(state.gpu.markerLineRendererCosmo);
     expect(lastLabelArg).not.toBe(firstLabelRenderer);
     expect(lastMarkerArg).not.toBe(firstMarkerLineRenderer);
   });

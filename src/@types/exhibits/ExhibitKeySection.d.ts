@@ -7,7 +7,6 @@
 import type { ExhibitToggle } from './ExhibitToggle';
 
 export type ExhibitKeySection = {
-  kind: 'key';
   heading: string;
   ramp: readonly string[];
   ends: readonly string[];

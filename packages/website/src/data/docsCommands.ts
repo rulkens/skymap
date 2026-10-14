@@ -62,6 +62,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
+          'fetch-voyager-windows',
         ],
         family: 'fetch-<source>',
         does: 'One for each source, downloading its raw files into data/raw/: <sources>. The one for structures fetches both cluster catalogues; those for dhm and skraafoto need an API key.',
@@ -96,6 +97,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['build-ephemeris-corrections', 'build-planet-facts'],
         does: 'Fit the corrections to the planets’ and moons’ orbits against JPL Horizons, and compile the facts an info card shows. Both write source files that are committed.',
         manual: 'data/raw/horizons/README.md',
+      },
+      {
+        scripts: ['build-spacecraft-tracks'],
+        does: 'Write the file of Voyager trails from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded.',
+        manual: DATA,
       },
       {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
@@ -155,6 +161,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/capture/README.md',
       },
       {
+        scripts: ['capture-structures'],
+        does: 'Cuts the small pictures of star clusters, nebulae and the Galactic Centre out of a sky survey, one for each that has none.',
+        manual: 'tools/capture/README.md',
+      },
+      {
         scripts: ['record-tour', 'record-clip'],
         does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time, and the film stays smooth.',
         manual: RECORD,
@@ -189,6 +200,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['loadtime'],
         does: 'Builds the app and loads it in a headless browser at phone size on a slow connection, and reports the seconds until each step of the loading is done.',
         manual: 'tools/loadtime/README.md',
+      },
+      {
+        scripts: ['phone'],
+        does: 'Serves the app to an Android phone on the same WiFi and, over USB, opens links there, takes pictures, lists what it downloads and times its frames.',
+        manual: 'tools/phone/README.md',
       },
       {
         scripts: ['structure-audit'],

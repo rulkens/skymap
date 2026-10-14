@@ -10,12 +10,12 @@
 import { describe, it, expect } from 'vitest';
 
 describe('GALAXY_POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
-  it('has 11 attributes with the expected shader locations and formats', async () => {
+  it('has 9 attributes over a 12-slot, 48-byte record', async () => {
     const { GALAXY_POINT_VERTEX_ATTRIBUTES, POINT_STRIDE } =
       await import('../../../../src/layers/galaxyCatalog/render/galaxyPointVertexLayout');
 
-    expect(POINT_STRIDE).toBe(56);
-    expect(GALAXY_POINT_VERTEX_ATTRIBUTES).toHaveLength(11);
+    expect(POINT_STRIDE).toBe(48);
+    expect(GALAXY_POINT_VERTEX_ATTRIBUTES).toHaveLength(9);
 
     // Location 0 is the position vec3, location 4 is the baked (paCos,
     // paSin) vec2; everything else is a scalar f32.  Anyone editing
@@ -38,11 +38,9 @@ describe('GALAXY_POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
       { location: 2, offset: 16 }, // colorIndex
       { location: 3, offset: 20 }, // axisRatio
       { location: 5, offset: 32 }, // radiusMpc
-      { location: 6, offset: 36 }, // vMaxWeight
-      { location: 7, offset: 40 }, // schechterRatio
-      { location: 8, offset: 44 }, // angularDensityWeight
-      { location: 9, offset: 48 }, // absMag
-      { location: 10, offset: 52 }, // sbAmp
+      { location: 6, offset: 36 }, // angularWeight
+      { location: 7, offset: 40 }, // absMag
+      { location: 8, offset: 44 }, // sbAmp
     ];
     for (const { location, offset } of scalarExpectations) {
       expect(GALAXY_POINT_VERTEX_ATTRIBUTES[location]).toEqual({

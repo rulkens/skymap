@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
   unpackStarRecord,
   RECORD_BYTES,
 } from '../../../src/data/starCatalog/starCatalogFormat';
@@ -41,7 +41,7 @@ describe('buildStarOctree', () => {
 
     // Survives the format's encode/decode round-trip — ties the octree assembly
     // to the byte contract without restating offsets.
-    const decoded = await decodeStarCatalog(await encodeStarCatalog(cat));
+    const decoded = await decodeSkstCatalog(await encodeSkstCatalog(cat));
     expect(decoded.nodes).toEqual(cat.nodes);
     expect(decoded.records).toEqual(cat.records);
   });

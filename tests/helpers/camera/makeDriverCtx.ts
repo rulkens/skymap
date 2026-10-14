@@ -17,6 +17,9 @@ import type { DriverCtx } from '../../../src/@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { RootState } from '../../../src/store/types';
 
+/** The rows that ride the wheel target: core's two follow rows and the mission's exhibit row. */
+const RIDES_WHEEL: ReadonlySet<string> = new Set(['followApproach', 'followHold', 'mission']);
+
 const NEUTRAL_REGISTER: FramedCameraPose = absoluteArm({
   target: [0, 0, 0],
   yaw: 0,
@@ -29,6 +32,7 @@ export function makeDriverCtx(
 ): DriverCtx {
   const register = args.register ?? NEUTRAL_REGISTER;
   const simDays = args.simDays ?? CONST_J2000;
+  const winnerLastFrame = args.winnerLastFrame ?? 'resting';
   return {
     state: args.state,
     elapsedMs: args.elapsedMs ?? 0,
@@ -43,7 +47,8 @@ export function makeDriverCtx(
         upBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
         terrainHeightAt: datumOnlyTerrainHeight,
       }),
-    winnerLastFrame: args.winnerLastFrame ?? 'resting',
+    winnerLastFrame,
+    lastWinnerRidesWheel: args.lastWinnerRidesWheel ?? RIDES_WHEEL.has(winnerLastFrame),
     poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
     simDays,
     bodies: args.bodies ?? (deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>),

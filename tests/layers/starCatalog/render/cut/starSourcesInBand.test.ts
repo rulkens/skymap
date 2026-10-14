@@ -8,29 +8,23 @@ import { describe, it, expect, vi } from 'vitest';
 import { starSourcesInBand } from '../../../../../src/layers/starCatalog/render/cut/starSourcesInBand';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../../src/@types/data/starCatalog/StarOctree';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 
 type Runtime = Pick<StarCatalogRuntime, 'renderer'>;
 
 /** A single-leaf catalog — its content is irrelevant here, only its identity. */
-function makeCatalog(): StarCatalog {
-  return {
-    starCount: 1,
-    nodeCount: 1,
-    mortonBitsPerAxis: 9,
-    cellEdgePc: 78,
-    gridOrigin: [0, 0, 0],
-    nodes: [{ mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }],
-    records: new Uint8Array(6),
-  } as unknown as StarCatalog;
+function makeCatalog(): StarOctree {
+  return { starCount: 1 } as unknown as StarOctree;
 }
 
-function makeRuntime(catalog: StarCatalog): Runtime {
+function makeRuntime(catalog: StarOctree): Runtime {
   return {
     renderer: {
-      loadedCatalogs: vi.fn(() => [{ source: Source.GaiaStars, catalog }][Symbol.iterator]()),
+      loadedCatalogs: vi.fn(() =>
+        [{ source: Source.GaiaStars, octree: catalog }][Symbol.iterator](),
+      ),
     },
   } as unknown as Runtime;
 }

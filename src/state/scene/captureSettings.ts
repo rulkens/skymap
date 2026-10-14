@@ -1,6 +1,6 @@
 /**
- * captureSettings — take a detached snapshot of the tour-owned
- * settings clusters off the live store state.
+ * captureSettings — take a detached snapshot of the Layer and core
+ * snapshot clusters off the live store state.
  *
  * The cinematic tour captures the user's settings, plays an effect that
  * mutates them, then restores the capture. For that round-trip to be
@@ -36,44 +36,16 @@
 
 import type { RootState } from '../../store/types';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
+import { APP_SETTINGS_SLICES } from '../../compositions/appSettingsSlices';
+import { CORE_SNAPSHOT_CLUSTERS } from '../../data/settings/coreSnapshotClusters';
+
+const SNAPSHOT_KEYS = [
+  ...APP_SETTINGS_SLICES.map((slice) => slice.reducerPath),
+  ...CORE_SNAPSHOT_CLUSTERS,
+];
 
 export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSnapshot {
-  const {
-    galaxyCatalogs,
-    structures,
-    cosmicWebDensity,
-    cosmicWebFilaments,
-    milkyWay,
-    zoneOfAvoidance,
-    lightTime,
-    flow,
-    localBubble,
-    constellations,
-    orbitTrails,
-    starCatalogs,
-    bodies,
-    blackHoles,
-    labels,
-    picking,
-    camera,
-  } = state.settings;
-  return structuredClone({
-    galaxyCatalogs,
-    structures,
-    cosmicWebDensity,
-    cosmicWebFilaments,
-    milkyWay,
-    zoneOfAvoidance,
-    lightTime,
-    flow,
-    localBubble,
-    constellations,
-    orbitTrails,
-    starCatalogs,
-    bodies,
-    blackHoles,
-    labels,
-    picking,
-    camera,
-  });
+  const picked = Object.fromEntries(SNAPSHOT_KEYS.map((key) => [key, state.settings[key]]));
+  // Keys come from the same tuples the type does; Object.fromEntries only widens them.
+  return structuredClone(picked) as SettingsSnapshot;
 }

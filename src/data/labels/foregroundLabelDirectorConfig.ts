@@ -28,7 +28,6 @@ const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
  * layer's leader-line math has always used.
  */
 export const FOREGROUND_LABEL_DIRECTOR: Label2DDirectorConfig = {
-  id: 'foreground-labels',
   project: near0LabelProjection,
   declutter: { mode: 'screenSeparation', minSeparationPx: STAR_CAPTION_MIN_SEPARATION_PX },
   envelope: {

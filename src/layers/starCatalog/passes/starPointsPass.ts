@@ -37,7 +37,7 @@
  * the f32-narrowed `view.vp` — whose translation bits are already gone — cannot
  * fix this.
  *
- * The fix mirrors `foregroundLabelsPass`'s caption seam exactly. Each frame we
+ * The fix mirrors `labelsNearPass`'s caption seam exactly. Each frame we
  * rebase both operands into a camera-relative frame in f64 before narrowing:
  * `rebaseViewProj(view.slab.vp, camPos)` folds the eye offset into the vp
  * (zeroing the large view translation) and each anchor is re-expressed as

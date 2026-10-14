@@ -24,7 +24,8 @@ import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
-import { engineStatusChanged, engineStructureCountsChanged } from '../engine/engineSlice';
+import { engineStatusChanged, factsReported } from '../engine/engineSlice';
+import { selectStructureBulk } from '../engine/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -34,7 +35,6 @@ export function* watchFocusTweenSaga() {
   yield* takeLatest(
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
-      const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
@@ -46,29 +46,13 @@ export function* watchFocusTweenSaga() {
         yield* take(engineStatusChanged);
       }
 
-      // A structure deep link resolves its ref statically at bootstrap (a
-      // durable id), before its backing store is fed, so the row comes back
-      // null until that store's first commit. `NOT_YET_LOADED` states the one
-      // rule ("is this ref's store still empty?") once, keyed on `ref.type` —
-      // each entry pairs the store-empty predicate with the action that
-      // pulses the instant the store is fed. A garbage id/index (row null
-      // with the store already fed) falls through to the no-op below rather
-      // than waiting for a pulse that never recurs. `takeLatest` discards this
-      // waiter if a newer focus supersedes it.
-      type Deferral = {
-        empty(): boolean;
-        pulse: typeof engineStructureCountsChanged;
-      };
-      const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
-        {
-          structure: {
-            empty: () => resolveDeps().structures.loaded?.() === false,
-            pulse: engineStructureCountsChanged,
-          },
-        };
-      // `ref.type` never changes across retries, so the deferral (if any) is
-      // looked up once; only `empty()` is re-polled per pulse.
-      const deferral = action.payload ? NOT_YET_LOADED[action.payload.type] : undefined;
+      // A structure deep link resolves statically at bootstrap, so its row is
+      // null until the store is fed. It waits only while the bulk slot is
+      // loading: an idle (undemanded), ready or failed slot will not fill the
+      // row, so a garbage id falls through to the no-op below. `bulk` is re-read
+      // after every `factsReported`, which pulses for every Layer's facts.
+      // `takeLatest` discards this waiter if a newer focus supersedes it.
+      const waitsOnBulk = action.payload?.type === 'structure';
 
       // Off-frame resolve — same `deriveSimDays(time, nowMs)` derivation
       // `watchGoHomeSaga` uses, so a body row's position matches where the
@@ -80,8 +64,8 @@ export function* watchFocusTweenSaga() {
         action.payload,
         deriveSimDays(yield* select(selectTimeState), performance.now()),
       );
-      while (row === null && deferral?.empty()) {
-        yield* take(deferral.pulse);
+      while (row === null && waitsOnBulk && (yield* select(selectStructureBulk)) === 'loading') {
+        yield* take(factsReported);
         row = selection.extractRow(
           action.payload,
           deriveSimDays(yield* select(selectTimeState), performance.now()),

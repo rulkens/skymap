@@ -81,6 +81,8 @@ function serializeFadeId(h: FadeId): string {
       return 'constellations';
     case 'orbitTrails':
       return 'orbitTrails';
+    case 'missionTrails':
+      return 'missionTrails';
     case 'zoneOfAvoidance':
       return 'zoneOfAvoidance';
     case 'lightTime':

@@ -138,7 +138,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
 // `distance` argument alone drives the foreground-gate assertions.
 function makeCtx(distance: number): FrameView {
   return {
-    snapshot: { nowMs: 0 },
+    snapshot: { nowMs: 0, meshBodies: [] },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -158,6 +158,7 @@ function makeCtx(distance: number): FrameView {
 function makeDrawCtx(): FrameView {
   return {
     snapshot: {
+      meshBodies: [],
       simDays: CONST_J2000,
       focusBlend: 0,
       nowMs: 0,
@@ -224,6 +225,7 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
 function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
   return {
     snapshot: {
+      meshBodies: [],
       simDays,
       focusBlend: 0,
       nowMs: 0,
@@ -346,7 +348,7 @@ describe('orbitTrailsPass.enabled', () => {
     // pass plan instead of packing zero records.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000 },
+      snapshot: { simDays: CONST_J2000, meshBodies: [] },
       cam: { distance: 1e-6 },
       drawCamPos: [1e-6, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -360,7 +362,7 @@ describe('orbitTrailsPass.enabled', () => {
     // region cull can drop the layer; the AU-to-lunar trails are ~1e-5 px there.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000 },
+      snapshot: { simDays: CONST_J2000, meshBodies: [] },
       cam: { distance: 8.178e-3 },
       drawCamPos: [8.178e-3, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -554,6 +556,7 @@ describe('orbitTrailsPass.draw', () => {
     // the one conic whose centre rides ~1 AU out on Earth.
     const ctx = {
       snapshot: {
+        meshBodies: [],
         simDays,
         focusBlend: 0,
         nowMs: 0,
@@ -766,6 +769,7 @@ describe('orbitTrailsPass.draw', () => {
     const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
     const ctx = {
       snapshot: {
+        meshBodies: [],
         simDays,
         focusBlend: 0,
         nowMs: 0,
@@ -823,7 +827,7 @@ describe('orbitTrailsPass.draw', () => {
     // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
     // apparent-size cull threshold, so nothing is packed and no draw is issued.
     const farCtx = {
-      snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0 },
+      snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0, meshBodies: [] },
       drawCamPos: [1, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1 },

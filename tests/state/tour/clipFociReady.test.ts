@@ -12,9 +12,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { clipFociReady } from '../../../src/state/tour/clipFociReady';
-import { selectionResolverOver } from '../../support/selectionResolverOver';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import {
   moveTargetId,
@@ -40,10 +42,8 @@ const id = (s: string): FocusId => s as FocusId;
 
 // Deps where no catalog is loaded and famousMeta is empty — any
 // famous or galaxy id resolves to null.
-const emptyDeps: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
-const emptyResolver = selectionResolverOver(emptyDeps);
+const emptyStructures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
+const emptyResolver = selectionResolverOver(emptyStructures);
 
 // FamousGalaxyMetaEntry stub for 'm87'. The famous branch of resolveFocusId
 // scans famousMeta for .id === 'm87'; if found AND the FamousGalaxy
@@ -59,10 +59,8 @@ const m87Meta: FamousGalaxyMetaEntry = {
 
 // Deps with m87 in famousMeta but NO FamousGalaxy cloud loaded.
 // resolveFocusId returns null for 'm87' — the catalog is absent.
-const depsM87NotLoaded: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
-const m87NotLoadedResolver = selectionResolverOver(depsM87NotLoaded);
+const structuresM87NotLoaded: StructureRowFixture = { byId: () => null, byCategory: () => [] };
+const m87NotLoadedResolver = selectionResolverOver(structuresM87NotLoaded);
 
 // ─── flyToClip-shaped clip for 'm87' ─────────────────────────────────────────
 //

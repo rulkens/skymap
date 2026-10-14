@@ -6,6 +6,7 @@ const SWITCH = 'On or off';
 const PANEL = 'src/components/SettingsPanel';
 const GALAXIES = 'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx';
 const STARS = 'src/layers/starCatalog/ui/StarsSection.tsx';
+const STRUCTURES = 'src/layers/structure/ui/StructuresSection/StructuresSection.tsx';
 const LABELS = `${PANEL}/LabelsAndGuidesSection.tsx`;
 const DISPLAY = `${PANEL}/DisplaySection.tsx`;
 
@@ -195,12 +196,11 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Density correction',
         control: 'list',
-        does: 'Chooses how the galaxies are thinned or dimmed to make up for what the surveys missed. None draws every galaxy as catalogued. Volume-limited hides every galaxy less luminous than M_lim, the limit the slider under it sets. 1/V_max and Schechter LF dim each galaxy by a weight computed from its luminosity: the first from the volume in which the survey could have seen it, the second from a standard curve of how many galaxies there are at each luminosity. Angular re-weight dims the directions a catalogue sampled more densely than its median; HEALPix is the grid of equal patches of sky it counts in.',
-        values:
-          'None — raw catalogue, Volume-limited, 1/V_max, Schechter LF, Angular re-weight (HEALPix)',
+        does: 'Chooses how the galaxies are thinned or dimmed to make up for what the surveys missed. None draws every galaxy as catalogued. Volume-limited hides every galaxy less luminous than M_lim, the limit the slider under it sets. Angular re-weight dims the directions a catalogue sampled more densely than its median; HEALPix is the grid of equal patches of sky it counts in. The weight is computed when the catalogue files are built, not in the app.',
+        values: 'None — raw catalogue, Volume-limited, Angular re-weight (HEALPix)',
         first: 'Angular re-weight (HEALPix)',
         state: 'bias.mode',
-        firstValue: 4,
+        firstValue: 2,
       },
       {
         name: 'M_lim',
@@ -296,60 +296,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: '1.0×',
         state: 'starCatalogs.brightness',
         firstValue: 1,
-      },
-      {
-        name: 'Detail',
-        control: 'slider',
-        does: 'Sets how far away stars are still drawn one by one. Further off, the stars of a region are drawn together as one glow. A lower value draws more of them singly and costs more work each frame.',
-        values: '0.01 to 0.30, in steps of 0.01',
-        first: '0.16',
-        state: 'starCatalogs.refineThreshold',
-        firstValue: 0.16,
-      },
-      {
-        name: 'Glow overlap',
-        control: 'slider',
-        does: 'Spreads each of those glows wider, without adding light, so that the blocks they stand for do not show as a grid.',
-        values: '1.0× to 6.0×, in steps of 0.1',
-        first: '3.0×',
-        state: 'starCatalogs.glowOverlap',
-        firstValue: 3,
-      },
-      {
-        name: 'Exposure (near)',
-        control: 'slider',
-        does: 'The exposure applied to stars when the camera is about 1 parsec from its target.',
-        values: '1× to 60×, in steps of 0.5',
-        first: '6.0×',
-        state: 'starCatalogs.exposureNearX',
-        firstValue: 6,
-      },
-      {
-        name: 'Exposure (mid)',
-        control: 'slider',
-        does: 'The exposure applied to stars when the camera is about 3 kiloparsecs from its target.',
-        values: '5× to 150×, in steps of 1',
-        first: '23×',
-        state: 'starCatalogs.exposureMidX',
-        firstValue: 23,
-      },
-      {
-        name: 'Exposure (far)',
-        control: 'slider',
-        does: 'The exposure applied to stars when the camera is 10 kiloparsecs or more from its target.',
-        values: '5× to 300×, in steps of 1',
-        first: '28×',
-        state: 'starCatalogs.exposureFarX',
-        firstValue: 28,
-      },
-      {
-        name: 'Fog cap',
-        control: 'slider',
-        does: 'Caps how bright one of those glows may be, which keeps a haze from forming round the Sun. Light above the cap is thrown away.',
-        values: '0.01 to 0.50, in steps of 0.01',
-        first: '0.06',
-        state: 'starCatalogs.aggregateIntensityCap',
-        firstValue: 0.06,
       },
     ],
   },
@@ -449,7 +395,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'structures',
     title: 'Structures',
-    file: `${PANEL}/StructuresSection.tsx`,
+    file: STRUCTURES,
     rows: [
       {
         name: 'Structures',
@@ -584,6 +530,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: ON,
         state: 'orbitTrails.enabled',
         firstValue: true,
+      },
+      {
+        name: 'Mission trails',
+        control: 'switch',
+        does: 'Shows the trails of the Voyager spacecraft. The Voyager exhibit turns it on.',
+        values: SWITCH,
+        first: OFF,
+        state: 'missions.trails',
+        firstValue: false,
       },
       {
         name: 'Zone of Avoidance',

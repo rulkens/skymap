@@ -5,8 +5,7 @@
  * mutates them, then restores the capture. These tests pin the properties
  * that make that round-trip sound:
  *
- *   1. *Scope* — exactly the seventeen tour-owned clusters are captured, and
- *      excluded fields (e.g. `tonemap`, `orientation`) never leak into the
+ *   1. *Scope* — excluded fields (e.g. `tonemap`, `orientation`) never leak into the
  *      snapshot. `orientation` is captured separately by `captureScene` onto
  *      `SceneSnapshot` — see that type's header for why it must not ride here.
  *   2. *Detachment* — the snapshot is a deep, independent copy; a later
@@ -23,90 +22,33 @@ import type { RootState } from '../../../src/store/types';
 import { captureSettings } from '../../../src/state/scene/captureSettings';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
 
-const SNAPSHOT_KEYS = [
-  'bodies',
-  'blackHoles',
-  'cosmicWebFilaments',
-  'flow',
-  'localBubble',
-  'constellations',
-  'galaxyCatalogs',
-  'labels',
-  'milkyWay',
-  'orbitTrails',
-  'picking',
-  'camera',
-  'starCatalogs',
-  'structures',
-  'cosmicWebDensity',
-  'zoneOfAvoidance',
-  'lightTime',
-].sort();
-
-/**
- * A minimal `state` carrying the tour-owned clusters plus one
- * deliberately-excluded cluster (`tonemap`) to prove it's dropped. Only
- * the fields the assertions touch are populated; the rest of each cluster
- * is irrelevant to capture's whole-cluster clone, so we cast through
- * `unknown` rather than build a full `EngineSettingsState`.
- */
+/** The full fixture plus `orientation` and `tonemap`, which must never be captured. */
 function makeState() {
   return {
-    settings: {
-      galaxyCatalogs: { enabled: true, sizePx: 4, brightness: 1 },
-      structures: { enabled: true, items: {} },
-      cosmicWebDensity: { enabled: false, items: {} },
-      cosmicWebFilaments: { enabled: true, intensity: 0.5 },
-      milkyWay: { enabled: true, labelEnabled: false },
-      flow: { enabled: true, nested: { speed: 2 } },
-      orbitTrails: { enabled: true },
-      lightTime: { enabled: true },
-      starCatalogs: { enabled: true, items: {} },
-      bodies: { items: {} },
-      blackHoles: { items: {} },
-      labels: { focusedOnly: false },
-      orientation: 'galactic',
-      // Excluded — must NOT appear in the snapshot.
-      tonemap: { exposure: 1.2, curve: 'aces' },
-    },
+    settings: { ...makeSettingsFixture(), orientation: 'galactic' },
   } as unknown as Pick<RootState, 'settings'>;
 }
 
 describe('captureSettings', () => {
-  it('clones exactly the seventeen tour-owned clusters', () => {
-    const state = makeState();
-    const snap = captureSettings(state);
+  it('captures a Layer cluster it was never told about', () => {
+    // `earth` was absent from the old hand-kept list.
+    const snap = captureSettings(makeState());
 
-    expect(Object.keys(snap).sort()).toEqual(SNAPSHOT_KEYS);
-    // Excluded cluster dropped.
-    expect(snap).not.toHaveProperty('tonemap');
-    // `orientation` must never reach this snapshot — it rides `SceneSnapshot`
-    // instead, precisely so a beat-boundary `mergeSnapshot` dispatch built from
-    // this type cannot revert the tour's live-authored pole (see
-    // `SceneSnapshot`'s header).
-    expect(snap).not.toHaveProperty('orientation');
-    // The seventeen captured clusters deep-equal their source.
-    for (const key of SNAPSHOT_KEYS) {
-      expect((snap as Record<string, unknown>)[key]).toEqual(
-        (state.settings as unknown as Record<string, unknown>)[key],
-      );
-    }
+    expect(snap.earth).toEqual(makeSettingsFixture().earth);
   });
 
-  it('is detached — mutating live settings does not change the snapshot', () => {
+  it.each(['orientation', 'tonemap', 'bloom', 'hdr', 'debug'])('never captures %s', (key) => {
+    expect(captureSettings(makeState())).not.toHaveProperty(key);
+  });
+
+  it('is detached — a nested write to live settings does not change the snapshot', () => {
     const state = makeState();
     const snap = captureSettings(state);
+    const captured = snap.bodies.items.earth.labelEnabled;
 
-    // Top-level field flip on a captured cluster.
-    state.settings.flow.enabled = !state.settings.flow.enabled;
-    expect(snap.flow.enabled).toBe(true);
+    state.settings.bodies.items.earth.labelEnabled = !captured;
 
-    // Nested-field mutation in another cluster proves deep detachment.
-    (state.settings.flow as unknown as { nested: { speed: number } }).nested.speed = 999;
-    expect((snap.flow as unknown as { nested: { speed: number } }).nested.speed).toBe(2);
-
-    state.settings.galaxyCatalogs.brightness = 42;
-    expect(snap.galaxyCatalogs.brightness).toBe(1);
+    expect(snap.bodies.items.earth.labelEnabled).toBe(captured);
   });
 
   it('captures the per-body and per-star-catalog label gates', () => {

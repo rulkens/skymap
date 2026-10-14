@@ -35,7 +35,7 @@ function makeStub(name: string): Stub {
     // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` never calls `setLabels` itself — `foregroundLabelsPass`
+    // `initGpu` never calls `setLabels` itself — `labelsNearPass`
     // uploads the live caption set on its own first draw. Kept on the stub
     // shape because other stubbed renderers built from the same factory
     // expose the method.
@@ -162,10 +162,6 @@ vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () 
 
 vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub('selectionRingRenderer')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer', () => ({
-  createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
@@ -299,7 +295,7 @@ import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
  * writes. Every nullable `gpu.*` handle starts at `null`; the
  * `subsystems` bag carries just the facades `initGpu` calls into
- * (`biasCorrection.attachRenderer`, `cosmoLabelDirector.attachRenderers`).
+ * (`cosmoLabelDirector.attachRenderers`).
  */
 function makeState(): EngineState {
   return {
@@ -309,12 +305,11 @@ function makeState(): EngineState {
       pickProgram: null,
       renderTargets: null,
       compositor: null,
-      labelRenderer: null,
-      foregroundLabelRenderer: null,
-      foregroundMarkerLineRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      labelRendererNear: null,
+      markerLineRendererNear: null,
+      markerLineRendererCosmo: null,
       selectionRingRenderer: null,
-      structureMarkerCosmoRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       horizonShellRenderer: null,
@@ -336,10 +331,6 @@ function makeState(): EngineState {
     // `composeRenderTargetRows`; no Layer targets in this fixture.
     layerTargets: [],
     subsystems: {
-      biasCorrection: {
-        attachRenderer: vi.fn(),
-        setMode: vi.fn().mockResolvedValue(undefined),
-      },
       cosmoLabelDirector: {
         attachRenderers: vi.fn(),
         registerProducer: vi.fn(),

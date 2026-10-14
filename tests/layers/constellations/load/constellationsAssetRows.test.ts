@@ -22,6 +22,7 @@ function makeCtx(settings: unknown): DemandCtx {
     slotState: () => 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
+    tier: 'medium',
   };
 }
 

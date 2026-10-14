@@ -46,6 +46,7 @@ const MANUAL_PAUSED: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: true,
+  profile: null,
 };
 
 function makeSnapshot(
@@ -66,12 +67,17 @@ function makeSnapshot(
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
+      missions: { ...f.missions, trails: !f.missions.trails },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
       blackHoles: { items: { 'sgr-a-star': { labelEnabled: false } } },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
       picking: { ...f.picking },
       camera: { ...f.camera, fovDeg: f.camera.fovDeg + 13 },
+      earth: { ...f.earth },
+      bias: { ...f.bias },
+      thumbnails: { ...f.thumbnails },
+      blackHoleLensingTuning: { ...f.blackHoleLensingTuning },
     },
     orientation: f.orientation,
     focus,
@@ -221,6 +227,7 @@ describe('restoreSceneSaga', () => {
         rateIndex: 0,
         direction: 1,
         paused: false,
+        profile: null,
       };
       store.dispatch(setSimDays({ simDays: 2470000, nowMs: 5 }));
       const wallMs = Date.UTC(2031, 5, 1);
@@ -242,6 +249,7 @@ describe('restoreSceneSaga', () => {
         rateIndex: 0,
         direction: 1,
         paused: true,
+        profile: null,
       };
       store.dispatch(setSimDays({ simDays: 2470000, nowMs: 5 }));
 
@@ -260,6 +268,7 @@ describe('restoreSceneSaga', () => {
         rateIndex: 2,
         direction: -1,
         paused: false,
+        profile: null,
       };
       store.dispatch(setRate({ rateIndex: 5, nowMs: 5 }));
       store.dispatch(setDirection({ direction: 1, nowMs: 5 }));

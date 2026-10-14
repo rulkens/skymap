@@ -13,32 +13,45 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { ZoneOfAvoidanceInfo } from '../../../../@types/engine/ZoneOfAvoidanceInfo';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
-import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
+import type { CardLayout } from '../../../../@types/components/infoCard/CardLayout';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import zoa from './ZoneOfAvoidanceDetailCard.module.css';
 
 export type ZoneOfAvoidanceDetailCardProps = {
   target: ZoneOfAvoidanceInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onClose?: () => void;
 };
 
 function ZoneOfAvoidanceDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onClose,
 }: ZoneOfAvoidanceDetailCardProps): ReactNode {
-  const outerClass = cx(zoa.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    zoa.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
-      <CardHeader eyebrow="Guide Layer" onClose={isPinned ? onClose : undefined} />
-
-      <CardRow type="headline">{target.displayName}</CardRow>
+      <CardHeader
+        layout={layout}
+        eyebrow="Guide Layer"
+        title={target.displayName}
+        // The band has no focus id; its picture is the exhibit card's shot.
+        thumbnail={
+          <Thumbnail url={cardShotUrl('zoneOfAvoidance')} alt="Zone of Avoidance thumbnail" />
+        }
+        onClose={isPinned ? onClose : undefined}
+      />
 
       <div className={styles.cardSection}>
         <WikipediaRow title={target.wikiTitle} />

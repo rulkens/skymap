@@ -10,16 +10,12 @@
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
-import type { StructureCatalogPayload } from '../../loading/structureCatalogPayload/StructureCatalogPayload';
-import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
 import type { BodyTextureReq } from '../../loading/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 import type { MeshAsset } from '../../data/mesh/MeshAsset';
 import type { MeshReq } from '../../loading/MeshReq';
 
 export type EngineAssetSlots = {
-  /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
-  structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /**
    * One slot per `(bodyId, kind)` map, keyed by the composite `BodyTextureSlotKey`
    * (`'earth:surface'`, the ring strip `'saturn-ring:surface'`, …). Proximity-gated

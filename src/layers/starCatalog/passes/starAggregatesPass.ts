@@ -1,8 +1,8 @@
 /**
  * starAggregatesPass — the survey star AGGREGATE stream, drawn LINEAR into the
- * half-res `star-aggregates` offscreen. Interior flux-mip glows fill their box
+ * low-res `star-aggregates` offscreen. Interior flux-mip glows fill their box
  * footprint, so at kpc zoom they deposit many screens of additive overdraw; the
- * half-res target quarters that. `star-upsample` composites it back with the
+ * quarter-res target cuts that sixteenfold. `star-upsample` composites it back with the
  * knee on the SUMMED field; the leaf stream stays full-res (`starCatalogPass`).
  * `enabled` shares `starCatalogVisible` with that upsample: the offscreen is
  * cleared on first touch, so a skipped draw beside a running upsample would

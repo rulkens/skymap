@@ -3,9 +3,8 @@
  *
  * The store owns one vertex buffer (plus fade + source uniforms and their
  * bind groups) per loaded `GalaxyCatalogId`. These tests cover the storage
- * life-cycle — upload / replace / unload, the draw-order iterators, the
- * counts, and the bias-splice byte semantics — none of which touch a
- * pipeline. That is precisely why the store is separable from
+ * life-cycle — upload / replace / unload, the draw-order iterators and the
+ * counts — none of which touch a pipeline. That is precisely why the store is separable from
  * `galaxyPointRenderer`: the questions asked below ("does a parallel rebake stomp
  * the fresh buffer?") can be answered without standing up a stub pipeline.
  *
@@ -82,9 +81,6 @@ function makeStubDevice(): GPUDevice {
     createBuffer: () => stubBuffer(),
     createBindGroup: () => ({}) as unknown as GPUBindGroup,
     queue: {
-      // `writeBuffer` is invoked from `upload()` and the splice methods.
-      // The stub is a no-op; tests that need the bytes use
-      // `makeCapturingDevice` below.
       writeBuffer: () => {},
     },
   } as unknown as GPUDevice;
@@ -117,17 +113,42 @@ describe('catalogStore.totalCount', () => {
   });
 });
 
-describe('catalogStore.hasCatalog', () => {
-  it('treats a zero-count upload (the unload signal) as not loaded', async () => {
+describe('catalogStore.unload', () => {
+  it('destroys the catalog buffers and forgets the entry', async () => {
+    const destroyed: number[] = [];
+    let minted = 0;
+    const device = makeStubDevice();
+    (device as unknown as { createBuffer: () => GPUBuffer }).createBuffer = () => {
+      const n = minted++;
+      return { destroy: () => destroyed.push(n), size: 0 } as unknown as GPUBuffer;
+    };
+    const store = createCatalogStore({
+      device,
+      fadeBgl: makeStubFadeBgl(),
+      sourceBgl: makeStubSourceBgl(),
+      buildRunner: testRunner,
+    });
+    await store.upload(idOf(Source.SDSS), makeCloud(10));
+    expect(destroyed).toEqual([]);
+
+    store.unload(idOf(Source.SDSS));
+
+    expect(destroyed.length).toBe(minted);
+    expect(store.hasCatalog(idOf(Source.SDSS))).toBe(false);
+  });
+
+  it('leaves the store able to take a fresh upload afterwards (tier down, then up)', async () => {
     const store = createCatalogStore({
       device: makeStubDevice(),
       fadeBgl: makeStubFadeBgl(),
       sourceBgl: makeStubSourceBgl(),
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(10));
-    await store.upload(idOf(Source.SDSS), makeCloud(0));
-    expect(store.hasCatalog(idOf(Source.SDSS))).toBe(false);
+    await store.upload(idOf(Source.SDSS), makeCloud(1000));
+    store.unload(idOf(Source.SDSS));
+    await store.upload(idOf(Source.SDSS), makeCloud(750));
+
+    expect(Array.from(store.loadedSources()).map((e) => e.count)).toEqual([750]);
   });
 });
 
@@ -199,83 +220,6 @@ describe('catalogStore.upload — regression: replace, not append', () => {
   });
 });
 
-// ─── Regression: empty-cloud upload (small-tier exclusion path) ──────────────
-//
-// `engine.setTier('small')` excludes SDSS (TIER_TARGETS.small[SDSS] === 0)
-// and `cloudLoader.reloadSource` fires an empty-cloud (count: 0) callback so
-// the store can clear the source's GPU buffer.  The naive path would call
-// `device.createBuffer({ size: 0, ... })` which the WebGPU spec forbids
-// (OperationError on `size === 0`); the prior buffer would already be
-// destroyed by then, leaving the entry in the galaxyCatalogs Map with a destroyed
-// buffer reference and the next frame's draw call would fault.
-//
-// Contract: a count=0 upload destroys the prior buffer, REMOVES the entry
-// from `loadedSources()` entirely, and never calls `createBuffer`.  The
-// draw loop's existing `if (!entry) continue;` then naturally skips the
-// excluded source.
-describe('catalogStore.upload — regression: empty-cloud unload', () => {
-  it('destroys the prior buffer and removes the entry on a count=0 upload', async () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(1000));
-
-    const firstEntry = Array.from(store.loadedSources()).find((e) => e.source === Source.SDSS);
-    expect(firstEntry).toBeDefined();
-    const destroySpy = vi.spyOn(firstEntry!.vertexBuffer, 'destroy');
-
-    // Empty cloud — same shape `cloudLoader.reloadSource` builds when
-    // `TIER_TARGETS[tier][source] === 0`.
-    await store.upload(idOf(Source.SDSS), makeCloud(0));
-
-    // Prior buffer destroyed (VRAM freed).
-    expect(destroySpy).toHaveBeenCalledTimes(1);
-
-    // Entry is GONE from the bookkeeping — not lingering with a broken
-    // buffer reference, not lingering with count=0.  Either of those would
-    // produce a different failure mode on the next frame.
-    const lookup = Array.from(store.loadedSources()).find((e) => e.source === Source.SDSS);
-    expect(lookup).toBeUndefined();
-    expect(store.totalCount()).toBe(0);
-  });
-
-  it('survives upload(0) when no prior cloud exists', async () => {
-    // Pathological-but-legal: the engine could in principle call setTier
-    // before any cloud has loaded.  Should be a no-op, not a crash.
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await expect(store.upload(idOf(Source.SDSS), makeCloud(0))).resolves.toBeUndefined();
-    expect(store.totalCount()).toBe(0);
-  });
-
-  it('allows re-uploading a real cloud after an empty-cloud unload', async () => {
-    // small → medium swap: SDSS goes from count=0 (excluded) back to count>0
-    // (the medium tier file).  The empty-cloud path must leave the store
-    // in a state where a subsequent real upload works normally.
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(1000));
-    await store.upload(idOf(Source.SDSS), makeCloud(0));
-    await store.upload(idOf(Source.SDSS), makeCloud(750));
-
-    const entries = Array.from(store.loadedSources());
-    expect(entries.length).toBe(1);
-    expect(entries[0]!.source).toBe(Source.SDSS);
-    expect(entries[0]!.count).toBe(750);
-  });
-});
-
 // ─── Regression: parallel-upload rebake race ─────────────────────────────────
 //
 // Tier swap fires two `upload()` calls in parallel — typically SDSS and GLADE
@@ -340,167 +284,5 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
     // the old large cloud.  The fix keeps GLADE on the new medium cloud the
     // user actually requested.
     expect(glade?.count).toBe(400);
-  });
-});
-
-// ─── Bias-mode bake coverage lives elsewhere ─────────────────────────────────
-//
-// The bias-bake state machine lives in `biasCorrectionSubsystem.ts`, not the
-// store. Its scenarios — fast toggle, cache hit on re-toggle, no-bake for
-// identity modes, mid-bake source upload — are covered in
-// `tests/layers/galaxyCatalog/subsystems/biasCorrectionSubsystem.test.ts`.
-
-// ─── Splice surface ──────────────────────────────────────────────────────────
-//
-// Three public methods carry the layout-aware splice contract that
-// biasCorrectionSubsystem calls into. The tests below assert their
-// byte-write semantics.
-
-/**
- * Build a stub device whose `queue.writeBuffer` calls are captured into the
- * supplied array.  Otherwise identical to `makeStubDevice()` — same
- * createBuffer / createBindGroup surface.
- */
-function makeCapturingDevice(
-  writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[],
-): GPUDevice {
-  const device = makeStubDevice();
-  (
-    device.queue as unknown as {
-      writeBuffer: (b: GPUBuffer, o: number, d: ArrayBufferView) => void;
-    }
-  ).writeBuffer = (buffer, offset, data) => {
-    writeCalls.push({ buffer, offset, data });
-  };
-  return device;
-}
-
-describe('catalogStore.spliceSchechterRatios', () => {
-  it('writes ratios[i] into slot 10 of row i of the interleaved mirror', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const store = createCatalogStore({
-      device,
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(3));
-
-    const ratios = new Float32Array([0.25, 0.5, 0.75]);
-    store.spliceSchechterRatios(Source.SDSS, ratios);
-
-    // The most-recent writeBuffer call carries the spliced mirror.
-    const last = writeCalls[writeCalls.length - 1]!;
-    const view = last.data as Float32Array;
-    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // SLOTS_PER_GALAXY_POINT = 14; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4.
-    expect(f32[0 * 14 + 10]).toBeCloseTo(0.25);
-    expect(f32[1 * 14 + 10]).toBeCloseTo(0.5);
-    expect(f32[2 * 14 + 10]).toBeCloseTo(0.75);
-  });
-
-  it('throws when ratios.length !== source count', async () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(5));
-    expect(() => store.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(/length/i);
-  });
-
-  it('is a no-op when the source is not loaded', () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    // Should not throw — subsystem may call this for a stale source mid-bake.
-    expect(() => store.spliceSchechterRatios(Source.Glade, new Float32Array(0))).not.toThrow();
-  });
-});
-
-describe('catalogStore.spliceAngularWeights', () => {
-  it('writes weights[i] into slot 11 of row i', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const store = createCatalogStore({
-      device,
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(2));
-
-    const weights = new Float32Array([0.1, 0.9]);
-    store.spliceAngularWeights(Source.SDSS, weights);
-
-    const last = writeCalls[writeCalls.length - 1]!;
-    const view = last.data as Float32Array;
-    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    // slot 11 = ANGULAR_WEIGHT_BYTE_OFFSET / 4.
-    expect(f32[0 * 14 + 11]).toBeCloseTo(0.1);
-    expect(f32[1 * 14 + 11]).toBeCloseTo(0.9);
-  });
-
-  it('throws when weights.length !== source count', async () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(5));
-    expect(() => store.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(/length/i);
-  });
-});
-
-describe('catalogStore.clearBiasOverlays', () => {
-  it('zeroes slots 10 and 11 for the named source', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const store = createCatalogStore({
-      device,
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(2));
-
-    // Populate slots 10/11 first so we can assert clear actually clears.
-    store.spliceSchechterRatios(Source.SDSS, new Float32Array([0.5, 0.6]));
-    store.spliceAngularWeights(Source.SDSS, new Float32Array([0.7, 0.8]));
-
-    writeCalls.length = 0; // reset capture
-    store.clearBiasOverlays(Source.SDSS);
-
-    const last = writeCalls[writeCalls.length - 1]!;
-    const view = last.data as Float32Array;
-    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
-    expect(f32[0 * 14 + 10]).toBe(0);
-    expect(f32[0 * 14 + 11]).toBe(0);
-    expect(f32[1 * 14 + 10]).toBe(0);
-    expect(f32[1 * 14 + 11]).toBe(0);
-  });
-
-  it('zeroes for every loaded source when called with no argument', async () => {
-    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
-    const device = makeCapturingDevice(writeCalls);
-    const store = createCatalogStore({
-      device,
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(1));
-    await store.upload(idOf(Source.Glade), makeCloud(1));
-
-    const before = writeCalls.length;
-    store.clearBiasOverlays();
-    // One writeBuffer per loaded source.
-    expect(writeCalls.length - before).toBe(2);
   });
 });

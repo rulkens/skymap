@@ -28,6 +28,15 @@ describe('SlotPool slot state machine', () => {
     expect(a.lastSeenFrame('obj-new')).toBe(9999);
   });
 
+  it('breaks a lastSeenFrame tie by touch order: the least recently touched goes first', () => {
+    const a = new SlotPool(3);
+    for (const key of ['a', 'b', 'c']) a.allocate(key, 1);
+    for (const key of ['c', 'b', 'a']) a.touch(key, 2);
+    a.allocate('new', 3);
+    expect(a.slotOf('c')).toBeUndefined();
+    expect(a.slotOf('a')).toBe(0);
+  });
+
   // The bug this reproduces: a bitmap fetched for a key that was evicted and
   // then re-requested landed in the slot the FIRST allocation returned, painting
   // it over whichever key had taken that slot meanwhile. `slotOf` is what an

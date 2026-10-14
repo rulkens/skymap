@@ -9,7 +9,7 @@ Structure-focus mode (PR #242) renders membership as a sphere of radius `apparen
 
 ## Current state (verified 2026-06-29)
 
-Still spherical. `src/utils/structure/structureMembership.ts` is a pure cone-search (`d2 < r*r` against a single radius — no ellipsoid, no MSCC `memCl` fit, no density-field membership). `structureFocusSubsystem.ts:88-95` now ramps the fade across a `[physicalRadiusMpc, apparentRadiusMpc]` band — a refinement, but the membership geometry is still a sphere.
+Still spherical. `src/layers/galaxyCatalog/present/structureMembership.ts` is a pure cone-search (`d2 < r*r` against a single radius — no ellipsoid, no MSCC `memCl` fit, no density-field membership). `structureFocusSubsystem.ts:88-95` now ramps the fade across a `[physicalRadiusMpc, apparentRadiusMpc]` band — a refinement, but the membership geometry is still a sphere.
 
 ## Options
 

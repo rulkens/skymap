@@ -1,9 +1,11 @@
 /**
  * starCatalogSelectionRow — one selection kind for all four star catalogs. A
- * seeded pick names its table row (durable id, live position); a survey pick is
- * positional (the bin-stable record index), and a stale index after a tier swap
- * warns+nulls in `resolveStarRecord` rather than mis-resolving. THREE seed
- * tables (famousStar, sun, sStar), never merged — `ref.index` indexes ONE.
+ * seeded pick names its table row (durable id, live position); a survey pick
+ * names the catalog record ordinal, stable per bake. The pick draw stamps a
+ * pool-absolute index instead, so the renderer maps it both ways and a chunk
+ * that is not resident (evicted under a pick, or never loaded) resolves to
+ * null. THREE seed tables (famousStar, sun, sStar), never merged — `ref.index`
+ * indexes ONE.
  */
 
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
@@ -14,6 +16,7 @@ import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import { encodeStarFocusId } from '../../../services/url/encodeStarFocusId';
 import { decodeStarFocusId } from '../../../services/url/decodeStarFocusId';
 import { resolveStarRecord } from '../../../services/engine/helpers/resolveStarRecord';
+import { starResidency } from '../load/starResidency';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { STAR_CATALOG_SOURCE_ROWS } from '../sources/starCatalogSourceRows';
 import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
@@ -22,6 +25,7 @@ import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 type StarCatalogRef = Extract<SelectionRef, { type: 'starCatalog' }>;
 
@@ -43,24 +47,33 @@ function starDriver(poseId: string | null, radiusM: number): DriverGeometry {
   };
 }
 
-/** The first (only, in v1) committed Gaia catalog, or null before it lands. */
-function currentCatalog(runtime: Pick<StarCatalogRuntime, 'renderer'>) {
-  for (const { catalog } of runtime.renderer.loadedCatalogs()) return catalog;
+/** The committed survey catalog of `source`, or null before it lands. */
+function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: SourceType) {
+  for (const loaded of runtime.renderer.loadedCatalogs()) {
+    if (loaded.source === source) return loaded.octree;
+  }
   return null;
 }
 
 export function starCatalogSelectionRow(
-  runtime: Pick<StarCatalogRuntime, 'renderer'>,
+  runtime: Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>,
 ): SelectionKindRow<StarCatalogRef> {
   return {
     type: 'starCatalog',
     pickSources: STAR_CATALOG_SOURCE_ROWS.map(([code]) => code),
-    resolvePick: (_entry, pick) => ({
-      type: 'starCatalog',
-      source: pick.sourceCode as StarCatalogSourceType,
-      index: pick.localIdx,
-    }),
-    encodePick: (ref) => packSelection(ref.source, ref.index + PICK_SENTINEL_OFFSET),
+    resolvePick: (_entry, pick) => {
+      const source = pick.sourceCode as StarCatalogSourceType;
+      const index = SEEDED_STAR_CATALOGS_BY_SOURCE.has(source)
+        ? pick.localIdx
+        : runtime.renderer.recordOrdinal(source, pick.localIdx);
+      return index === null ? null : { type: 'starCatalog', source, index };
+    },
+    encodePick: (ref) => {
+      const index = SEEDED_STAR_CATALOGS_BY_SOURCE.has(ref.source)
+        ? ref.index
+        : runtime.renderer.poolRecordIndex(ref.source, ref.index);
+      return index === null ? null : packSelection(ref.source, index + PICK_SENTINEL_OFFSET);
+    },
     extractRow: (ref, simDays) => {
       const seededRow = SEEDED_STAR_CATALOGS_BY_SOURCE.get(ref.source);
       if (seededRow) {
@@ -80,9 +93,9 @@ export function starCatalogSelectionRow(
           driver: starDriver(star.id, star.surface.datumRadiusM),
         };
       }
-      const catalog = currentCatalog(runtime);
+      const catalog = catalogOf(runtime, ref.source);
       if (!catalog) return null;
-      const record = resolveStarRecord(catalog, ref.index);
+      const record = resolveStarRecord(catalog, starResidency(runtime, ref.source), ref.index);
       if (!record) return null;
       const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
       return {
@@ -100,7 +113,7 @@ export function starCatalogSelectionRow(
     },
     focusId: {
       claims: (id) => id.startsWith(STAR_FOCUS_PREFIX),
-      decode: (id) => decodeStarFocusId(id, currentCatalog(runtime) !== null),
+      decode: (id) => decodeStarFocusId(id, [...runtime.renderer.loadedCatalogs()].length > 0),
       encode: (ref) => encodeStarFocusId(ref),
     },
   };

@@ -357,7 +357,6 @@ describe('renderFrame visual baseline', () => {
       upsample: densityUpsample,
     } as unknown as CosmicWebDensityRuntime;
     const labelRenderer = {
-      glyphCount: vi.fn(() => 12),
       ...makeLoggingRenderer(records, 'labels'),
     };
     const markerLineRenderer = {
@@ -462,15 +461,14 @@ describe('renderFrame visual baseline', () => {
         // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
         viewRig: 'mono',
         gpu: {
-          labelRenderer,
-          markerLineRenderer,
+          labelRendererCosmo: labelRenderer,
+          markerLineRendererCosmo: markerLineRenderer,
           // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
           selectionRingRenderer: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
-          structureMarkerCosmoRenderer: null,
           // Near-field handles null → the program's (hdr, NEAR0) render,
           // foreground:0 render, and NEAR0 caption render all select
           // nothing, and the foreground:0→swap composite is
@@ -485,7 +483,7 @@ describe('renderFrame visual baseline', () => {
           // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
-          foregroundLabelRenderer: null,
+          labelRendererNear: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `renderFrame` input field duplication;
@@ -548,6 +546,7 @@ describe('renderFrame visual baseline', () => {
             label: 'fadeRegistry',
           },
           clipPlayer: { clipOpacityOf: () => 1 },
+          cosmoLabelDirector: { labels: () => Array.from({ length: 12 }) },
         },
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.
@@ -638,7 +637,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "marker-lines",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,object",
           "renderer": "labels",
         },
       ]

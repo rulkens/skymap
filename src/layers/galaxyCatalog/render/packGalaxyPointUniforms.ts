@@ -115,12 +115,8 @@ export function packGalaxyPointUniforms(
   // alias the same ArrayBuffer.
   u32[32] = biasMode >>> 0; // byte 128
   f32[33] = absMagLimit; // byte 132
-  // f32[34..38] (apparentMagLimit / schechterMStar / schechterAlpha /
-  // schechterMLim / schechterNRef) stay zero.  The Schechter / 1-over-Vmax
-  // modes read their per-galaxy weights from the per-vertex `schechterRatio`
-  // + angular slots (spliced in by `biasCorrectionSubsystem`), so these
-  // uniform slots carry nothing — left reserved rather than removed to keep
-  // the struct's byte offsets (incl. `pickPass`) stable.
+  // f32[34..38] (apparentMagLimit / schechter*) are padding and stay zero —
+  // kept, not removed, so the struct's byte offsets (incl. `pickPass`) hold.
   // Slot 39 closes the Malmquist vec4 group; it hosts `depthFadeEnabled`
   // (unrelated to bias correction) so the provenance block above keeps a
   // contiguous 112..127 run.

@@ -280,6 +280,38 @@ describe('evaluateRows', () => {
     // rank order — SDSS, first in the array and worst-ranked, waits its turn.
     expect(started).toEqual([Source.TwoMRS, Source.Glade]);
   });
+
+  it('does not start a queued fetch whose demand turned false while it waited', async () => {
+    // A tier swap between enqueue and start can exclude a source whose file no
+    // longer exists; the queue's gap must not turn a stale decision into a fetch.
+    const first = stubSlot();
+    let finishFirst: () => void = () => {};
+    first.load.mockImplementation(() => new Promise<void>((r) => (finishFirst = r)));
+    const second = stubSlot();
+    second.load.mockReturnValue(new Promise<void>(() => {}));
+    const waiting = stubSlot();
+    let demanded = true;
+    const state = makeState(
+      new Map([
+        [Source.TwoMRS, first],
+        [Source.Glade, second],
+        [Source.SDSS, waiting],
+      ]),
+    );
+
+    evaluateRows(state, [
+      ranked(Source.TwoMRS, 0),
+      ranked(Source.Glade, 1),
+      { ...ranked(Source.SDSS, 2), demand: () => demanded },
+    ]);
+    expect(waiting.load).not.toHaveBeenCalled();
+
+    demanded = false;
+    finishFirst();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(waiting.load).not.toHaveBeenCalled();
+  });
 });
 
 describe('evaluateRows — drift edge', () => {

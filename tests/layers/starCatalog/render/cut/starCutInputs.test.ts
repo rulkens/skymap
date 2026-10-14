@@ -14,7 +14,7 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../../src/@types/data/starCatalog/StarOctree';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 
 // Distinct per tier so a test can tell which tier's budget the cut read.
@@ -43,7 +43,7 @@ function runtime(committedTier: Tier, requestedTier: Tier = committedTier): Star
   return {
     renderer: {
       loadedCatalogs: vi.fn(() =>
-        [{ source: Source.GaiaStars, catalog: {} as StarCatalog }][Symbol.iterator](),
+        [{ source: Source.GaiaStars, octree: {} as StarOctree }][Symbol.iterator](),
       ),
     },
     catalogs: new Map([[Source.GaiaStars, slot]]),

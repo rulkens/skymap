@@ -1,5 +1,5 @@
 /**
- * starAggregateUpsamplePass — HDR composite of the half-res
+ * starAggregateUpsamplePass — HDR composite of the low-res
  * `star-aggregates` offscreen, re-applying the star pass's hue-preserving
  * knee to the summed field (the LOD-symmetry fix; see the composite shader).
  *

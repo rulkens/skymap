@@ -1,7 +1,7 @@
 /**
  * galaxyCatalogPlanner — the galaxy catalog Layer's once-per-frame CPU
- * planning row: reconciles the alias index, the structure member counts and
- * the bias mode against the live settings, runs the hi-res famous-galaxy
+ * planning row: reconciles the alias index and the structure member counts
+ * against the live settings, runs the hi-res famous-galaxy
  * planner, then does the ONE catalog walk that feeds both disk planners
  * (procedural and textured). Once, not per view: the walk touches the whole
  * visible catalog, so it plans over the rig's views (anchor camera `views[0]`,
@@ -22,7 +22,7 @@ import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
-import { structureMemberCount } from '../../utils/structure/structureMemberCount';
+import { structureMemberCount } from './present/structureMemberCount';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -77,14 +77,6 @@ export function galaxyCatalogPlanner(
                 )
               : null,
         });
-      }
-
-      // Set FIRST, then bake: the bake is async and may reject into a warning, so
-      // a compare that waited for it would re-fire every frame for its duration.
-      const biasMode = state.settings.bias.mode;
-      if (biasMode !== runtime.biasLastApplied) {
-        runtime.biasLastApplied = biasMode;
-        void runtime.biasCorrection.setMode(biasMode);
       }
 
       // The once row's rig-wide anchor (mirrors `starCutInputs.ts`'s

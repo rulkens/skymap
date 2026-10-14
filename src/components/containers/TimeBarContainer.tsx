@@ -1,29 +1,13 @@
 /**
  * TimeBarContainer — store boundary for the sim clock's transport bar.
  *
- * Owns every store reach the presentational `TimeBar` refuses to do itself: it
- * subscribes the time *intent* slice (mode / paused / rateIndex → ladder label /
- * anchor) and maps each control to the matching re-anchoring intent action,
- * mirroring the `[`/`]`/`\` entries in `KEYBOARD_SHORTCUTS`. `memo` localizes
- * an intent change's re-render to this leaf instead of cascading from App.
- *
- * ### The readout ticks locally, not off an engine pub
- *
- * The engine's throttled `engineBodyDistanceReported` pub only carries the
- * focused-body distance, not the sim clock, and only refreshes every few
- * seconds while the clock is live-idle — subscribing it would leave the
- * readout visibly frozen between ticks. So `useTimeReadout` runs its own 1 Hz
- * interval that re-derives the instant from the slice anchor with
- * `deriveSimDays(time, performance.now())`.
- *
- * The time base MUST be `performance.now()`: `anchor.realMs` is itself a
- * `performance.now()` stamp (the intent reducers pin it that way), so a
- * `Date.now()` base here would subtract two unrelated epochs and derive garbage
- * simDays. The derived Julian day crosses back to a `Date` via `julianDaysToUnixMs`
- * only for display through `formatSimClock`.
+ * Owns the store reach `TimeBar` refuses: it subscribes the time *intent* slice
+ * and maps each control to its re-anchoring action, mirroring the `[`/`]`/`\`
+ * entries in `KEYBOARD_SHORTCUTS`. The readout ticks locally (`useSimInstant`):
+ * the engine's throttled pubs carry no sim clock and would freeze it.
  */
 
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import TimeBar from '../TimeBar/TimeBar';
 import DateEntryPopover from '../TimeBar/DateEntryPopover/DateEntryPopover';
@@ -34,25 +18,15 @@ import { pause, resume, setRate } from '../../state/time/timeSlice';
 import { enterManualPausedAt } from '../../state/time/enterManualPausedAt';
 import { goLiveNowAction } from '../../state/time/goLiveNowAction';
 import { RATE_LADDER } from '../../data/time/rateLadder';
-import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { formatSimClock } from '../../utils/time/formatSimClock';
-import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
-import type { TimeState } from '../../@types/time/TimeState';
+import { useSimInstant } from '../../hooks/useSimInstant';
 
 export type TimeBarContainerProps = {
   // App-layout gate, mirroring the sibling HUD pills (paletteOpen || splashVisible).
   readonly hidden: boolean;
+  // Phone: render the full-width row (see TimeBar).
+  readonly row?: boolean;
 };
-
-// The current sim instant as a UTC Date — the readout string and the
-// date-entry popover's seed both derive from this same moment.
-function readoutInstant(time: TimeState): Date {
-  return new Date(julianDaysToUnixMs(deriveSimDays(time, performance.now())));
-}
-
-function formatReadout(time: TimeState): string {
-  return formatSimClock(readoutInstant(time));
-}
 
 // The date popover is a fixed pane pinned to the bottom-right corner, lifted just
 // above the TimeBar toolbar (it may overlap the ScaleBar above it while open;
@@ -63,33 +37,24 @@ const POPOVER_PLACEMENT: CSSProperties = {
   position: 'fixed',
   right: 'var(--corner-offset)',
   bottom: 'calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3))',
-  zIndex: 11,
+  zIndex: 'var(--z-bottom-stack-popover)',
 };
 
-/**
- * Derived readout string that keeps ticking without a per-frame Redux write.
- * Recomputes immediately whenever the intent changes (the `time` reference is
- * new only on an intent dispatch) and once per second in between, so the clock
- * stays visibly alive while the store sits still.
- */
-function useTimeReadout(time: TimeState): string {
-  const [readout, setReadout] = useState(() => formatReadout(time));
+// On the phone row the popover spans the screen width, just above the stack.
+const ROW_POPOVER_PLACEMENT: CSSProperties = {
+  position: 'fixed',
+  left: 'var(--corner-offset)',
+  right: 'var(--corner-offset)',
+  bottom: 'calc(var(--bottom-stack-height) + var(--space-3))',
+  zIndex: 'var(--z-bottom-stack-popover)',
+};
 
-  useEffect(() => {
-    const update = () => setReadout(formatReadout(time));
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, [time]);
-
-  return readout;
-}
-
-function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
+function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
   const rateStep = useAppSelector(selectRateStep);
-  const readout = useTimeReadout(time);
+  const instant = useSimInstant(time);
+  const readout = formatSimClock(instant);
 
   const { mode, paused, rateIndex } = time;
 
@@ -151,8 +116,8 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
   // lands the manual clock at the chosen instant, paused (a date jump lands
   // paused, not playing). The shared-`nowMs` invariant lives in that helper.
   const onPopoverCommit = useCallback(
-    (instant: Date) => {
-      enterManualPausedAt(dispatch, instant);
+    (picked: Date) => {
+      enterManualPausedAt(dispatch, picked);
       setOpenPopover('none');
     },
     [dispatch],
@@ -178,11 +143,12 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
         // collapsing controls strip; hold it expanded for the duration so the
         // rate popover's CSS anchor doesn't move out from under an open click.
         holdControlsOpen={openPopover !== 'none'}
+        row={row}
       />
       {openPopover === 'date' && !hidden && (
-        <div style={POPOVER_PLACEMENT}>
+        <div style={row ? ROW_POPOVER_PLACEMENT : POPOVER_PLACEMENT}>
           <DateEntryPopover
-            initial={readoutInstant(time)}
+            initial={instant}
             onCommit={onPopoverCommit}
             onCancel={onPopoverClose}
           />
@@ -190,7 +156,7 @@ function TimeBarContainer({ hidden }: TimeBarContainerProps): ReactNode {
       )}
       {/* The rate popover self-places via CSS Anchor Positioning (its .root anchors
           to TimeBar's rate label), so it needs no placement wrapper — rendered
-          bare. The date popover above keeps the fixed right-rail wrapper. */}
+          bare. The date popover above takes a fixed placement wrapper. */}
       {openPopover === 'rate' && !hidden && (
         <RateSelectorPopover
           currentIndex={rateIndex}

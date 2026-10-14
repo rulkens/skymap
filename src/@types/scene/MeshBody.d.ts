@@ -23,4 +23,7 @@ export type MeshBody = {
    *  full alpha; it fades in from zero at twice that distance. Optional — a
    *  mesh body that omits it keeps the `meshBody` fade row's default reach. */
   readonly captionRevealM?: number;
+  /** UTC instant the body enters the scene (launch, deployment, landing); absent
+   *  before it. Omitted for a body that is always there. */
+  readonly presentFromIso?: string;
 };

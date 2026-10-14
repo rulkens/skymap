@@ -43,9 +43,12 @@
   transition: opacity var(--duration-fast) ease-out;
 }
 
-.root:hover .tip,
-.root:focus-within .tip {
-  opacity: 1;
+/* Hover-capable pointers only: a tap sets :hover and focus, and the tip would stay up. */
+@media (hover: hover) {
+  .root:hover .tip,
+  .root:focus-within .tip {
+    opacity: 1;
+  }
 }
 
 .tipBottom {

@@ -3,7 +3,7 @@
  * tags that copy may use: `<i>…</i>` and `<a href="…">…</a>`. Everything else
  * stays literal text, so a stray `<b>` reads as the characters it is rather
  * than silently vanishing. The caller renders real elements per run, never
- * `dangerouslySetInnerHTML` — the copy is authored in `exhibitRegistry.ts`,
+ * `dangerouslySetInnerHTML` — the copy is authored in the exhibit files,
  * but routing it through an HTML sink would make the next author's typo an
  * injection site.
  */

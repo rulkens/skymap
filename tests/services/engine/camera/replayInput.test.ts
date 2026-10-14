@@ -42,6 +42,8 @@ import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { ridesWheelTarget } from '../../../../src/services/engine/camera/ridesWheelTarget';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
@@ -80,6 +82,7 @@ function ctxOf(
     rootState: store.getState(),
     nowMs: overrides.nowMs ?? 0,
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
+    lastWinnerRidesWheel: ridesWheelTarget(CAMERA_DRIVERS, overrides.winnerLastFrame ?? 'resting'),
     autoRotateEpoch: { ref: null, startMs: null },
   };
 }
