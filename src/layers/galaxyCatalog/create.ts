@@ -23,7 +23,6 @@ import { createGalaxyPointRenderer } from './render/galaxyPointRenderer';
 import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
-import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { wireImpostorSubsystems } from './load/wireImpostorSubsystems';
 import { wireGalaxyCatalogSourceSlot } from './load/wireGalaxyCatalogSourceSlot';
 import { createFamousGalaxiesMetaSlot } from './load/famousGalaxiesMetaSlot';
@@ -47,13 +46,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     fadeBgl: deps.fadeBgl,
     sourceBgl: deps.sourceBgl,
     focusBgl: deps.focusBgl,
-  });
-
-  const biasCorrection = createBiasCorrectionSubsystem({
-    renderer: pointRenderer,
-    getMode: () => deps.store.getState().settings.bias.mode,
-    getLoadedClouds: () => catalogs,
-    requestRender: deps.requestRender,
   });
 
   const texturedDiskRenderer = createTexturedDiskRenderer(
@@ -132,10 +124,5 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     texturedDisks,
     proceduralDisks,
     diskPlannerWalk,
-    biasCorrection,
-    // Seeded from the live setting, not a default: the bake fires only on a
-    // CHANGE, and nothing bakes at boot today either (the per-source upload
-    // callback covers the boot path).
-    biasLastApplied: deps.store.getState().settings.bias.mode,
   };
 }

@@ -59,8 +59,6 @@ function makeState(select: SelectionRow | null): PassState {
 function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
-    biasLastApplied: 0,
-    biasCorrection: { setMode: vi.fn() },
     hiResFamous: { committed: () => null },
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
@@ -128,8 +126,6 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     let catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
     const publish = vi.fn();
     const runtime = {
-      biasLastApplied: 0,
-      biasCorrection: { setMode: vi.fn() },
       hiResFamous: { committed: () => null },
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },

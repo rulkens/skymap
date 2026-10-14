@@ -261,8 +261,14 @@ export type GalaxyCatalog = {
   diameterIsFallback: Uint8Array;
 
   /**
+   * Build-time angular bias weight, log-u8 coded — length === count. Decode
+   * with `decodeAngularWeight`; 0 means the cloud never baked one (1.0).
+   */
+  angularWeight: Uint8Array;
+
+  /**
    * log₁₀(M★/M☉), photometric stellar-mass estimate — length === count.
-   * NaN means no estimate. Every v9 mass is photometric (build-time,
+   * NaN means no estimate. Every v10 mass is photometric (build-time,
    * `estimateLog10StellarMass`); the on-disk "mass-is-estimated" flag bit is
    * derived from `Number.isFinite` rather than a stored column, so this
    * field alone carries presence.

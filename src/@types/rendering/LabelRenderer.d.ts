@@ -1,6 +1,6 @@
 /**
  * Public handle returned by `createLabelRenderer`.  Mirrors the shape of
- * other engine handles (`ThumbnailSubsystem`, `BiasCorrectionSubsystem`):
+ * other engine handles (`ThumbnailSubsystem`, `ProceduralDiskSubsystem`):
  * explicit method type, no internals leaked.
  */
 
