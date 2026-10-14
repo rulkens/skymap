@@ -174,7 +174,7 @@ for sid, t in enumerate(picked, start=1):
     if not np.isfinite(w_deg) or w_deg <= 0: w_deg = 0.3
     dmean = np.median(a[:, 2])
     w_kpc = max(0.03, np.radians(w_deg)*dmean)
-    nump = int(np.clip(L*60, 300, 20000))
+    nump = int(np.clip(L*60*max(1.0, w_kpc/0.3), 300, 30000))
     s = np.concatenate([[0], np.cumsum(seg)])
     u = np.sort(rng.uniform(0, L, nump))
     idx = np.clip(np.searchsorted(s, u) - 1, 0, len(seg)-1)
@@ -189,7 +189,7 @@ for sid, t in enumerate(picked, start=1):
     clump = 0.55 + 0.45*np.sin(2*np.pi*(phase*rng.uniform(4, 9) + rng.uniform())) ** 2
     endfade = np.clip(np.minimum(phase, 1-phase)*8, 0, 1)
     lum = clump*endfade*rng.uniform(0.5, 1.0, nump) * 0.8
-    emit(pos, tan, np.full(nump, max(0.05, w_kpc*0.8)), lum, rng.uniform(0.0, 0.6, nump), sid)
+    emit(pos, tan, np.full(nump, float(np.clip(w_kpc*0.8, 0.05, 0.3))), lum, rng.uniform(0.0, 0.6, nump), sid)
 
 R = np.concatenate(recs)
 R.tofile(OUT)
