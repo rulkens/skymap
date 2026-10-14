@@ -1,5 +1,6 @@
-// Spike driver: whole-box reference vs 2x2x2 tiles with margins, all on SwiftShader.
+// Spike driver: whole-box reference vs 2x2x2 tiles with margins (real GPU or SwiftShader).
 //   npx tsx tools/mcpm-workbench/spike/runTiling.ts <catalog.bin> <outDir> <steps> [runName...]
+//   real GPU by default; SWIFTSHADER=1 in a GPU-less container; TOOL=1 drives createMcpmHarness instead
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -59,8 +60,11 @@ for (const [m, pinned] of [[8, true], [16, true], [32, true], [16, false]] as co
 const server = await createServer({ configFile: resolve(import.meta.dirname, '../vite.config.ts'), server: { port: 5599, strictPort: false }, logLevel: 'error' });
 await server.listen();
 const url = server.resolvedUrls!.local[0]!;
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true,
-  args: ['--enable-unsafe-webgpu', '--enable-unsafe-swiftshader', '--use-webgpu-adapter=swiftshader', '--use-angle=swiftshader'] });
+// Real GPU by default (probeGpuErrors.ts's launch); SWIFTSHADER=1 for a GPU-less container.
+const browser = process.env.SWIFTSHADER
+  ? await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true,
+      args: ['--enable-unsafe-webgpu', '--enable-unsafe-swiftshader', '--use-webgpu-adapter=swiftshader', '--use-angle=swiftshader'] })
+  : await chromium.launch({ channel: 'chromium', headless: true });
 const page = await browser.newPage();
 page.on('console', (m) => console.log('[page]', m.text()));
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));
@@ -72,6 +76,7 @@ const TOOL = !!process.env.TOOL;
 const REF_AGENTS = 3_200_000; // tool mode: 100k-quantum counts, density-exact at the 25 Mpc margin
 await page.goto(url + (TOOL ? 'spike/tool.html' : 'spike/tiling.html'));
 await page.waitForFunction(() => (window as any).ready === true, null, { timeout: 120_000 });
+console.log('adapter', await page.evaluate(async () => { const i = (await navigator.gpu.requestAdapter())?.info; return i ? `${i.vendor} ${i.architecture} ${i.description}` : 'none'; }));
 if (TOOL) await page.evaluate(([p, m]) => (window as any).setCatalog(p, m), [Array.from(cat.positions), Array.from(cat.log10StellarMass)] as const);
 
 const ordered = only.length ? only.flatMap((o) => runs.filter((r) => r.name.startsWith(o + (o.startsWith('ref') ? '' : '-t')))) : runs;
