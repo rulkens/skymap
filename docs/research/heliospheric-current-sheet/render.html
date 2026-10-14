@@ -1,0 +1,307 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="gl" width="1920" height="1080"></canvas>
+<script src="hcs.js"></script>
+<script>
+'use strict';
+const W=1920,H=1080;
+const M=HCS, NL=72, NJ=30, CRLEN=27.2753, SID=25.38, T0=M[0].t;
+const DAY_PER_AU=1.496e8/400/86400, K=2*Math.PI/SID*DAY_PER_AU; // rad per AU of spiral winding (~1.07)
+const RMAX=10, NR=150, R0=0.12, NPHI=144;
+const SL=[...Array(NJ)].map((_,j)=>(14.5-j)/15), CL=SL.map(s=>Math.sqrt(1-s*s));
+// ---------------- data sampling
+function mapIdx(t){let lo=0,hi=M.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(M[m].t<=t)lo=m;else hi=m-1;}return lo;}
+function sampler(te){
+  const k=mapIdx(te), k2=Math.min(M.length-1,k+1), f=Math.min(1,Math.max(0,(te-M[k].t)/CRLEN));
+  const A=M[k].g, B=M[k2].g;
+  return (Ldeg,j)=>{const x=((Ldeg%360)+360)%360/5, i0=Math.floor(x)%NL, i1=(i0+1)%NL, u=x-Math.floor(x);
+    const a=A[i0][j]*(1-u)+A[i1][j]*u, b=B[i0][j]*(1-u)+B[i1][j]*u; return a*(1-f)+b*f;};
+}
+const rotDeg=te=>360/SID*(te-T0);
+// ---------------- polar field & flips (north = mean of top 3 rows)
+const POLN=M.map(m=>{let s=0;for(let i=0;i<NL;i++)for(let j=0;j<3;j++)s+=m.g[i][j];return s/(NL*3);});
+const POLS=M.map(m=>{let s=0;for(let i=0;i<NL;i++)for(let j=NJ-3;j<NJ;j++)s+=m.g[i][j];return s/(NL*3);});
+const smooth=(a,w)=>a.map((_,i)=>{let s=0,n=0;for(let d=-w;d<=w;d++){const v=a[i+d];if(v!==undefined){s+=v;n++;}}return s/n;});
+const PN=smooth(POLN,6);
+const FLIPS=[]; {let sgn=Math.sign(PN[0]);for(let i=1;i<PN.length;i++){const s=Math.sign(PN[i]); if(s!==sgn&&s!==0){let ok=true;for(let d=1;d<8&&i+d<PN.length;d++)if(Math.sign(PN[i+d])!==s)ok=false; if(ok){FLIPS.push({k:i,to:s});sgn=s;}}}}
+function tiltOf(g){let mx=0;for(let i=0;i<NL;i++)for(let j=0;j<NJ-1;j++){const a=g[i][j],b=g[i][j+1];if((a>=0)!==(b>=0)){const u=a/(a-b);mx=Math.max(mx,Math.abs(Math.asin((14.5-j-u)/15)));}}return mx*180/Math.PI;}
+const TILT=M.map(m=>tiltOf(m.g));
+// ---------------- GL setup
+const cv=document.getElementById('gl');
+const gl=cv.getContext('webgl2',{antialias:true,preserveDrawingBuffer:true,premultipliedAlpha:false});
+gl.getExtension('EXT_color_buffer_float');
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s)+src);return s;}
+function prog(vs,fs){const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,'#version 300 es\nprecision highp float;\n'+vs));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,'#version 300 es\nprecision highp float;\n'+fs));gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  const u={};const n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const a=gl.getActiveUniform(p,i);u[a.name]=gl.getUniformLocation(p,a.name);}return {p,u};}
+const SHEET=prog(`
+in vec3 aPos; in vec3 aNrm; uniform mat4 uVP; uniform float uShift; out vec3 vPos; out vec3 vN;
+void main(){vPos=aPos;vN=aNrm;vec4 c=uVP*vec4(aPos,1.);c.x+=uShift*c.w;gl_Position=c;}`,`
+in vec3 vPos; in vec3 vN; uniform vec3 uEye; uniform float uK,uRmax,uFlow; out vec4 o;
+void main(){
+  vec3 N=normalize(vN), V=normalize(uEye-vPos); float ndv=dot(N,V), a=abs(ndv);
+  float fres=pow(1.-a,3.0);
+  vec3 pos=vec3(1.0,0.46,0.16), neg=vec3(0.18,0.50,1.0);
+  vec3 base= ndv>0. ? pos : neg;
+  float r=length(vPos), phi=atan(vPos.z,vPos.x), psi=phi+uK*r;
+  float stripes=pow(0.5+0.5*cos(psi*12.0),18.0);            // field-line striations
+  float pulse=pow(0.5+0.5*cos((r-uFlow)*6.2832/1.6),10.0);   // wind ripples moving out
+  float fade=smoothstep(uRmax,uRmax*0.5,r)*smoothstep(0.12,0.6,r);
+  vec3 sheen=mix(base,vec3(1.0,0.86,0.98),0.25);
+  vec3 col=base*(0.010+0.045*stripes+0.022*pulse)+sheen*fres*0.16;
+  col*=1.0+1.0*exp(-r*1.3);
+  o=vec4(col*fade,1.0);}`);
+const LINE=prog(`
+in vec3 aPos; in vec3 aNext; in float aSide; in vec4 aCol; uniform mat4 uVP; uniform vec2 uRes; uniform float uShift,uWidth;
+out vec4 vCol; out float vEdge;
+void main(){vec4 c=uVP*vec4(aPos,1.),n=uVP*vec4(aNext,1.);c.x+=uShift*c.w;n.x+=uShift*n.w;
+ vec2 d=(n.xy/n.w-c.xy/c.w)*uRes; d=length(d)>1e-6?normalize(d):vec2(1,0); vec2 p=vec2(-d.y,d.x);
+ c.xy+=p*aSide*uWidth*2.0/uRes*c.w; vCol=aCol; vEdge=aSide; gl_Position=c;}`,`
+in vec4 vCol; in float vEdge; out vec4 o; void main(){float a=exp(-3.0*vEdge*vEdge); o=vec4(vCol.rgb*vCol.a*a,1.0);}`);
+const STAR=prog(`
+in vec3 aPos; in vec3 aCol; uniform mat4 uVP; uniform float uShift; out vec3 vCol;
+void main(){vec4 c=uVP*vec4(aPos,1.);c.x+=uShift*c.w;gl_Position=c;gl_PointSize=1.0+2.2*aCol.r*aCol.g; vCol=aCol;}`,`
+in vec3 vCol; out vec4 o; void main(){vec2 q=gl_PointCoord*2.-1.; float a=exp(-4.0*dot(q,q)); o=vec4(vCol*a,1.);}`);
+const GLOW=prog(`
+in vec2 aC; uniform mat4 uVP; uniform float uShift,uSize; uniform vec3 uCenter,uRight,uUp; out vec2 vUV;
+void main(){vUV=aC; vec3 p=uCenter+(uRight*aC.x+uUp*aC.y)*uSize; vec4 c=uVP*vec4(p,1.); c.x+=uShift*c.w; gl_Position=c;}`,`
+in vec2 vUV; uniform vec3 uColor; uniform float uCore,uRays; out vec4 o;
+void main(){float d=length(vUV); float ang=atan(vUV.y,vUV.x);
+ float glow=exp(-d*7.0)*0.9+exp(-d*22.0)*2.5;
+ float rays=uRays*exp(-d*3.5)*pow(abs(cos(ang*3.0+0.4)),24.0)*0.35 + uRays*exp(-d*4.5)*pow(abs(cos(ang*5.0+1.3)),40.0)*0.25;
+ float core=smoothstep(uCore,uCore*0.7,d);
+ vec3 c=uColor*(glow+rays)+vec3(1.0,0.96,0.9)*core*8.0; o=vec4(c*smoothstep(1.0,0.6,d),1.0);}`);
+const FS_VS=`out vec2 vUV; void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); vUV=p; gl_Position=vec4(p*2.-1.,0,1);}`;
+const DOWN=prog(FS_VS,`in vec2 vUV; uniform sampler2D uT; uniform vec2 uTx; out vec4 o;
+void main(){vec3 c=texture(uT,vUV+uTx*vec2(-1,-1)).rgb+texture(uT,vUV+uTx*vec2(1,-1)).rgb+texture(uT,vUV+uTx*vec2(-1,1)).rgb+texture(uT,vUV+uTx*vec2(1,1)).rgb; o=vec4(c*0.25,1);}`);
+const BLUR=prog(FS_VS,`in vec2 vUV; uniform sampler2D uT; uniform vec2 uDir; out vec4 o;
+void main(){float w[5]=float[](0.2270270270,0.1945945946,0.1216216216,0.0540540541,0.0162162162);
+ vec3 c=texture(uT,vUV).rgb*w[0]; for(int i=1;i<5;i++){c+=texture(uT,vUV+uDir*float(i)).rgb*w[i];c+=texture(uT,vUV-uDir*float(i)).rgb*w[i];} o=vec4(c,1);}`);
+const COMP=prog(FS_VS,`in vec2 vUV; uniform sampler2D uScene,uB1,uB2,uB3,uB4,uB5; uniform float uSeed; out vec4 o;
+vec3 aces(vec3 x){return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.,1.);}
+float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233))+uSeed)*43758.5453);}
+void main(){vec3 s=texture(uScene,vUV).rgb;
+ vec3 b=texture(uB1,vUV).rgb*0.55+texture(uB2,vUV).rgb*0.55+texture(uB3,vUV).rgb*0.6+texture(uB4,vUV).rgb*0.7+texture(uB5,vUV).rgb*0.8;
+ vec3 c=s+b*0.42; c=aces(c*1.0);
+ vec2 q=vUV-vec2(0.62,0.5); c*=1.0-0.55*dot(q,q)*1.4;
+ c=pow(c,vec3(1.0/2.2)); c+=(hash(gl_FragCoord.xy)-0.5)*0.018; o=vec4(c,1);}`);
+// ---------------- render targets
+function rt(w,h){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,w,h,0,gl.RGBA,gl.HALF_FLOAT,null);
+  for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);
+  const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);return {t,f,w,h};}
+// MSAA scene buffer resolved into a float texture
+const SAMPLES=4;
+const msFB=gl.createFramebuffer(), msRB=gl.createRenderbuffer();
+gl.bindRenderbuffer(gl.RENDERBUFFER,msRB);gl.renderbufferStorageMultisample(gl.RENDERBUFFER,SAMPLES,gl.RGBA16F,W,H);
+gl.bindFramebuffer(gl.FRAMEBUFFER,msFB);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.RENDERBUFFER,msRB);
+const scene=rt(W,H);
+const LV=[];{let w=W,h=H;for(let i=0;i<5;i++){w=Math.max(1,w>>1);h=Math.max(1,h>>1);LV.push({a:rt(w,h),b:rt(w,h)});}}
+const vao=gl.createVertexArray();
+// ---------------- math
+const mul=(a,b)=>{const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}return o;};
+const persp=(fov,asp,n,f)=>{const t=1/Math.tan(fov/2);return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0]);};
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], norm=a=>{const l=Math.hypot(...a)||1;return [a[0]/l,a[1]/l,a[2]/l];};
+function lookAt(e,c,up){const z=norm(sub(e,c)),x=norm(cross(up,z)),y=cross(z,x);return {m:new Float32Array([x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -(x[0]*e[0]+x[1]*e[1]+x[2]*e[2]),-(y[0]*e[0]+y[1]*e[1]+y[2]*e[2]),-(z[0]*e[0]+z[1]*e[1]+z[2]*e[2]),1]),x,y};}
+// ---------------- buffers
+function buf(target,data,usage){const b=gl.createBuffer();gl.bindBuffer(target,b);gl.bufferData(target,data,usage||gl.STATIC_DRAW);return b;}
+function attr(p,name,b,size){const l=gl.getAttribLocation(p.p,name);if(l<0)return;gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,size,gl.FLOAT,false,0,0);}
+function resetAttrs(){for(let i=0;i<8;i++)gl.disableVertexAttribArray(i);}
+// stars
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const NS=5000, sp=new Float32Array(NS*3), sc=new Float32Array(NS*3);
+for(let i=0;i<NS;i++){const u=rnd()*2-1,th=rnd()*Math.PI*2,s=Math.sqrt(1-u*u);sp.set([160*s*Math.cos(th),160*u,160*s*Math.sin(th)],i*3);
+  const m=Math.pow(rnd(),5)*0.9+0.08, tint=rnd(); sc.set([m*(0.8+0.2*tint),m*(0.85+0.1*tint),m*(1.0-0.25*tint)],i*3);}
+const starPB=buf(gl.ARRAY_BUFFER,sp), starCB=buf(gl.ARRAY_BUFFER,sc);
+const quadB=buf(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]));
+// ---------------- sheet mesh: marching tetrahedra on B(r,phi,lat)=0
+const TETS=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const CORN=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+function buildSheet(t){
+  const NV=NR*NPHI*NJ, val=new Float32Array(NV), P=new Float32Array(NV*3);
+  for(let k=0;k<NR;k++){const r=R0+(RMAX-R0)*k/(NR-1), te=t-r*DAY_PER_AU, S=sampler(te), rot=rotDeg(te);
+    for(let i=0;i<NPHI;i++){const phd=360*i/NPHI, ph=phd*Math.PI/180, L=phd-rot, cp=Math.cos(ph), spn=Math.sin(ph);
+      for(let j=0;j<NJ;j++){const g=(k*NPHI+i)*NJ+j; let v=S(L,j); if(v===0)v=1e-4; val[g]=v; P[g*3]=r*CL[j]*cp; P[g*3+1]=r*SL[j]; P[g*3+2]=r*CL[j]*spn;}}}
+  const vmap=new Map(); const pos=[], nrm=[], idx=[];
+  const vert=(a,b)=>{const key=a<b?a*1e6+b:b*1e6+a; let id=vmap.get(key); if(id!==undefined)return id;
+    const u=val[a]/(val[a]-val[b]); id=pos.length/3; pos.push(P[a*3]+(P[b*3]-P[a*3])*u,P[a*3+1]+(P[b*3+1]-P[a*3+1])*u,P[a*3+2]+(P[b*3+2]-P[a*3+2])*u); nrm.push(0,0,0); vmap.set(key,id); return id;};
+  const cg=new Int32Array(8);
+  const tri=(a,b,c,gpos,gneg)=>{ // orient normal toward positive polarity
+    const pa=[pos[a*3],pos[a*3+1],pos[a*3+2]], pb=[pos[b*3],pos[b*3+1],pos[b*3+2]], pc=[pos[c*3],pos[c*3+1],pos[c*3+2]];
+    let n=cross(sub(pb,pa),sub(pc,pa)); const dir=[P[gpos*3]-P[gneg*3],P[gpos*3+1]-P[gneg*3+1],P[gpos*3+2]-P[gneg*3+2]];
+    if(n[0]*dir[0]+n[1]*dir[1]+n[2]*dir[2]<0)n=[-n[0],-n[1],-n[2]];
+    for(const v of [a,b,c]){nrm[v*3]+=n[0];nrm[v*3+1]+=n[1];nrm[v*3+2]+=n[2];} idx.push(a,b,c);};
+  for(let k=0;k<NR-1;k++)for(let i=0;i<NPHI;i++)for(let j=0;j<NJ-1;j++){
+    let any=0,all=0;
+    for(let c=0;c<8;c++){const [dk,di,dj]=CORN[c]; const g=((k+dk)*NPHI+(i+di)%NPHI)*NJ+j+dj; cg[c]=g; if(val[g]>=0)any++;}
+    if(any===0||any===8)continue;
+    for(const T of TETS){const g=T.map(c=>cg[c]); const ps=g.filter(x=>val[x]>=0), ng=g.filter(x=>val[x]<0);
+      if(ps.length===0||ng.length===0)continue;
+      if(ps.length===1){tri(vert(ps[0],ng[0]),vert(ps[0],ng[1]),vert(ps[0],ng[2]),ps[0],ng[0]);}
+      else if(ng.length===1){tri(vert(ng[0],ps[0]),vert(ng[0],ps[1]),vert(ng[0],ps[2]),ps[0],ng[0]);}
+      else{const a=vert(ps[0],ng[0]),b=vert(ps[0],ng[1]),c=vert(ps[1],ng[1]),d=vert(ps[1],ng[0]);tri(a,b,c,ps[0],ng[0]);tri(a,c,d,ps[0],ng[0]);}
+    }}
+  return {pos:new Float32Array(pos),nrm:new Float32Array(nrm),idx:new Uint32Array(idx)};
+}
+// ---------------- field lines (Parker spirals from source-surface footpoints)
+const POSC=[1.0,0.46,0.16], NEGC=[0.18,0.50,1.0];
+function ribbons(lines){ // lines: [{pts:[[x,y,z]...], col:[[r,g,b,a]...]}]
+  let nv=0,ni=0; for(const l of lines){nv+=l.pts.length*2; ni+=(l.pts.length-1)*6;}
+  const P=new Float32Array(nv*3),N=new Float32Array(nv*3),S=new Float32Array(nv),C=new Float32Array(nv*4),I=new Uint32Array(ni);
+  let v=0,ii=0;
+  for(const l of lines){const p=l.pts,m=p.length,base=v;
+    for(let q=0;q<m;q++){const a=p[Math.max(0,q-1)],b=p[Math.min(m-1,q+1)]; const nx=[p[q][0]+(b[0]-a[0]),p[q][1]+(b[1]-a[1]),p[q][2]+(b[2]-a[2])];
+      for(const s of [-1,1]){P.set(p[q],v*3);N.set(nx,v*3);S[v]=s;C.set(l.col[q],v*4);v++;}}
+    for(let q=0;q<m-1;q++){const o=base+q*2;I.set([o,o+1,o+2,o+1,o+3,o+2],ii);ii+=6;}}
+  return {P,N,S,C,I};
+}
+function fieldLines(t,flow){
+  const lines=[]; const rotNow=rotDeg(t);
+  const lats=[-50,-30,-11,11,30,50];
+  for(let L0=0;L0<360;L0+=24)for(const lat of lats){
+    const sl=Math.sin(lat*Math.PI/180), cl=Math.cos(lat*Math.PI/180), jf=14.5-15*sl, j0=Math.max(0,Math.min(NJ-2,Math.floor(jf))), u=jf-j0;
+    const pts=[],col=[];
+    for(let r=0.05;r<=RMAX;r+=0.06){const te=t-r*DAY_PER_AU, S=sampler(te); const b=S(L0,j0)*(1-u)+S(L0,j0+1)*u;
+      const ph=(L0+rotNow)*Math.PI/180 - K*r;
+      pts.push([r*cl*Math.cos(ph),r*sl,r*cl*Math.sin(ph)]);
+      const c=b>=0?POSC:NEGC; const fade=Math.pow(Math.max(0,1-r/RMAX),1.3)*Math.min(1,r/0.4);
+      const pulse=0.25+1.6*Math.pow(0.5+0.5*Math.cos((r-flow*1.3+L0*0.013)*2*Math.PI/2.2),12);
+      col.push([c[0],c[1],c[2],0.30*fade*pulse]);}
+    lines.push({pts,col});}
+  return lines;
+}
+function orbitLines(){const out=[];for(const [r,a] of [[1,0.5],[5.2,0.35],[9.54,0.3]]){const pts=[],col=[];for(let d=0;d<=360;d+=1.5){const p=d*Math.PI/180;pts.push([r*Math.cos(p),0,r*Math.sin(p)]);col.push([0.45,0.55,0.8,a*0.35]);}out.push({pts,col});}return out;}
+const ORB=ribbons(orbitLines());
+// planets: mean longitudes at J2000 (deg) and periods (d); frame phi=0 is Earth's direction at T0
+const J2000=Date.UTC(2000,0,1,12)/86400000;
+const PLAN=[{L:100.46,P:365.256,a:1,c:[0.45,0.7,1.0]},{L:34.40,P:4332.59,a:5.2,c:[1.0,0.8,0.55]},{L:49.94,P:10759.22,a:9.54,c:[1.0,0.88,0.6]}];
+const lonAt=(p,t)=>p.L+360*(t-J2000)/p.P;
+const earthAtT0=lonAt(PLAN[0],T0);
+// ---------------- draw
+function drawRibbons(R,VP,shift,width){
+  gl.useProgram(LINE.p);resetAttrs();
+  const bp=buf(gl.ARRAY_BUFFER,R.P),bn=buf(gl.ARRAY_BUFFER,R.N),bs=buf(gl.ARRAY_BUFFER,R.S),bc=buf(gl.ARRAY_BUFFER,R.C),bi=buf(gl.ELEMENT_ARRAY_BUFFER,R.I);
+  attr(LINE,'aPos',bp,3);attr(LINE,'aNext',bn,3);attr(LINE,'aSide',bs,1);attr(LINE,'aCol',bc,4);
+  gl.uniformMatrix4fv(LINE.u.uVP,false,VP);gl.uniform2f(LINE.u.uRes,W,H);gl.uniform1f(LINE.u.uShift,shift);gl.uniform1f(LINE.u.uWidth,width);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bi);gl.drawElements(gl.TRIANGLES,R.I.length,gl.UNSIGNED_INT,0);
+  for(const b of [bp,bn,bs,bc,bi])gl.deleteBuffer(b);
+}
+function glow(VP,shift,cam,center,size,color,core,rays){
+  gl.useProgram(GLOW.p);resetAttrs();attr(GLOW,'aC',quadB,2);
+  gl.uniformMatrix4fv(GLOW.u.uVP,false,VP);gl.uniform1f(GLOW.u.uShift,shift);gl.uniform1f(GLOW.u.uSize,size);
+  gl.uniform3fv(GLOW.u.uCenter,center);gl.uniform3fv(GLOW.u.uRight,cam.x);gl.uniform3fv(GLOW.u.uUp,cam.y);
+  gl.uniform3fv(GLOW.u.uColor,color);gl.uniform1f(GLOW.u.uCore,core);gl.uniform1f(GLOW.u.uRays,rays);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+}
+function fsPass(P,target,setup){gl.bindFramebuffer(gl.FRAMEBUFFER,target?target.f:null);gl.viewport(0,0,target?target.w:W,target?target.h:H);gl.useProgram(P.p);resetAttrs();setup();gl.drawArrays(gl.TRIANGLES,0,3);}
+function tex(unit,t,loc){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t);gl.uniform1i(loc,unit);}
+function renderGL(t,n){
+  const az=0.9+n*0.0042, el=0.36+0.10*Math.sin(n*0.009), dist=27.5;
+  const eye=[dist*Math.cos(el)*Math.cos(az),dist*Math.sin(el),dist*Math.cos(el)*Math.sin(az)];
+  const cam=lookAt(eye,[0,-0.3,0],[0,1,0]); const VP=mul(persp(33*Math.PI/180,W/H,0.1,500),cam.m); const shift=0.24;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,msFB);gl.viewport(0,0,W,H);gl.clearColor(0.004,0.006,0.012,1);gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.disable(gl.DEPTH_TEST);
+  // stars
+  gl.useProgram(STAR.p);resetAttrs();attr(STAR,'aPos',starPB,3);attr(STAR,'aCol',starCB,3);
+  gl.uniformMatrix4fv(STAR.u.uVP,false,VP);gl.uniform1f(STAR.u.uShift,shift);gl.drawArrays(gl.POINTS,0,NS);
+  // orbits + planets
+  drawRibbons(ORB,VP,shift,1.4);
+  for(const p of PLAN){const lam=(lonAt(p,t)-earthAtT0)*Math.PI/180; glow(VP,shift,cam,[p.a*Math.cos(lam),0,p.a*Math.sin(lam)],0.55,p.c.map(x=>x*0.5),0.05,0);}
+  // sheet
+  const S=buildSheet(t);
+  gl.useProgram(SHEET.p);resetAttrs();
+  const bp=buf(gl.ARRAY_BUFFER,S.pos),bn=buf(gl.ARRAY_BUFFER,S.nrm),bi=buf(gl.ELEMENT_ARRAY_BUFFER,S.idx);
+  attr(SHEET,'aPos',bp,3);attr(SHEET,'aNrm',bn,3);
+  gl.uniformMatrix4fv(SHEET.u.uVP,false,VP);gl.uniform1f(SHEET.u.uShift,shift);gl.uniform3fv(SHEET.u.uEye,eye);
+  gl.uniform1f(SHEET.u.uK,K);gl.uniform1f(SHEET.u.uRmax,RMAX);gl.uniform1f(SHEET.u.uFlow,n*0.11);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bi);gl.drawElements(gl.TRIANGLES,S.idx.length,gl.UNSIGNED_INT,0);
+  for(const b of [bp,bn,bi])gl.deleteBuffer(b);
+  // field lines
+  drawRibbons(ribbons(fieldLines(t,n*0.11)),VP,shift,2.2);
+  // sun
+  glow(VP,shift,cam,[0,0,0],2.6,[1.0,0.62,0.30],0.03,0.8);
+  // resolve MSAA
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER,msFB);gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,scene.f);gl.blitFramebuffer(0,0,W,H,0,0,W,H,gl.COLOR_BUFFER_BIT,gl.NEAREST);
+  gl.disable(gl.BLEND);
+  // bloom chain
+  let src=scene;
+  for(const L of LV){
+    fsPass(DOWN,L.a,()=>{tex(0,src.t,DOWN.u.uT);gl.uniform2f(DOWN.u.uTx,0.5/src.w,0.5/src.h);});
+    fsPass(BLUR,L.b,()=>{tex(0,L.a.t,BLUR.u.uT);gl.uniform2f(BLUR.u.uDir,1.3/L.a.w,0);});
+    fsPass(BLUR,L.a,()=>{tex(0,L.b.t,BLUR.u.uT);gl.uniform2f(BLUR.u.uDir,0,1.3/L.a.h);});
+    src=L.a;}
+  fsPass(COMP,null,()=>{tex(0,scene.t,COMP.u.uScene);LV.forEach((L,i)=>tex(i+1,L.a.t,COMP.u['uB'+(i+1)]));gl.uniform1f(COMP.u.uSeed,n*0.37);});
+  return S.idx.length/3;
+}
+// ---------------- 2D overlay
+const out=document.createElement('canvas');out.width=W;out.height=H;const ctx=out.getContext('2d');
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const FONT='Helvetica, Arial, sans-serif';
+const CYCLES=[[1976.2,21],[1986.7,22],[1996.4,23],[2008.9,24],[2019.9,25]];
+const yearOf=t=>{const d=new Date(t*86400000);return d.getUTCFullYear()+d.getUTCMonth()/12;};
+const rgb=(c,a)=>`rgba(${c.map(x=>Math.round(x*255)).join(',')},${a})`;
+function panel(t,n){
+  const g=ctx.createLinearGradient(0,0,860,0);g.addColorStop(0,'rgba(2,3,8,0.88)');g.addColorStop(0.62,'rgba(2,3,8,0.55)');g.addColorStop(1,'rgba(2,3,8,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,860,H);const gb=ctx.createLinearGradient(0,H-120,0,H);gb.addColorStop(0,'rgba(2,3,8,0)');gb.addColorStop(1,'rgba(2,3,8,0.85)');ctx.fillStyle=gb;ctx.fillRect(0,H-120,W,120);
+  const x0=72; let y=96;
+  ctx.fillStyle='rgba(255,213,150,0.85)';ctx.font=`600 15px ${FONT}`;ctx.fillText('THE SUN’S MAGNETIC FIELD  ·  1976 – 2025',x0,y);
+  y+=50;ctx.fillStyle='#f4f1ea';ctx.font=`300 46px ${FONT}`;ctx.fillText('The ballerina skirt',x0,y);
+  y+=36;ctx.fillStyle='#8d97ad';ctx.font=`19px ${FONT}`;ctx.fillText('The heliospheric current sheet, out to Saturn’s orbit',x0,y);
+  const d=new Date(t*86400000);
+  y+=96;ctx.fillStyle='#ffd99a';ctx.font=`200 82px ${FONT}`;ctx.fillText(String(d.getUTCFullYear()),x0,y);
+  const yw=ctx.measureText(String(d.getUTCFullYear())).width;
+  ctx.font=`300 30px ${FONT}`;ctx.fillStyle='#d9c9a8';ctx.fillText(MON[d.getUTCMonth()],x0+yw+20,y);
+  const k=mapIdx(t);const yr=yearOf(t);let cyc=21;for(const [s,c] of CYCLES)if(yr>=s)cyc=c;
+  y+=34;ctx.font=`16px ${FONT}`;ctx.fillStyle='#7f8aa3';ctx.fillText(`Solar cycle ${cyc}   ·   Carrington rotation ${M[k].cr}`,x0,y);
+  // poles
+  y+=46;const pn=PN[k], cN=pn>=0?POSC:NEGC, cS=pn>=0?NEGC:POSC;
+  const pole=(label,c,x,out)=>{ctx.fillStyle=rgb(c,1);ctx.beginPath();ctx.arc(x+7,y-6,7,0,7);ctx.fill();ctx.fillStyle='#c8cfdd';ctx.font=`17px ${FONT}`;ctx.fillText(`${label}  ${out?'outward':'inward'}`,x+24,y);};
+  pole('North pole field',cN,x0,pn>=0);pole('South pole field',cS,x0+300,pn<0);
+  // synoptic map
+  y+=40;const mx=x0,my=y,mw=560,mh=200;
+  ctx.fillStyle='#c8cfdd';ctx.font=`600 15px ${FONT}`;ctx.fillText('Measured field at the Sun’s source surface (2.5 solar radii)',mx,my);
+  const gm=M[k].g, img=ctx.createImageData(mw,mh);
+  for(let yy=0;yy<mh;yy++){const s=1-2*(yy+0.5)/mh, jf=Math.max(0,Math.min(NJ-1.001,14.5-s*15)), j0=Math.floor(jf),u=jf-j0, j1=Math.min(NJ-1,j0+1);
+    for(let xx=0;xx<mw;xx++){const Lx=(1-(xx+0.5)/mw)*NL, i0=Math.floor(Lx)%NL,i1=(i0+1)%NL,w=Lx-Math.floor(Lx);
+      const b=(gm[i0][j0]*(1-w)+gm[i1][j0]*w)*(1-u)+(gm[i0][j1]*(1-w)+gm[i1][j1]*w)*u;
+      const a=Math.tanh(Math.abs(b)/7), c=b>=0?POSC:NEGC, o=4*(yy*mw+xx), e=0.08+0.92*a;
+      img.data[o]=255*c[0]*e;img.data[o+1]=255*c[1]*e;img.data[o+2]=255*c[2]*e;img.data[o+3]=255;}}
+  ctx.putImageData(img,mx,my+14);
+  ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.lineWidth=2;ctx.beginPath();
+  const MP=(i,jj)=>[mx+mw-(i/NL)*mw, my+14+mh*(1-((14.5-jj)/15+1)/2)];
+  for(let i=0;i<NL;i++)for(let j=0;j<NJ-1;j++){const i2=(i+1)%NL;const a=gm[i][j],b=gm[i2][j],c=gm[i2][j+1],dd=gm[i][j+1];const p=[];
+    if((a>=0)!==(b>=0))p.push(MP(i+a/(a-b),j));if((b>=0)!==(c>=0))p.push(MP(i+1,j+b/(b-c)));if((c>=0)!==(dd>=0))p.push(MP(i+dd/(dd-c),j+1));if((dd>=0)!==(a>=0))p.push(MP(i,j+a/(a-dd)));
+    if(i===NL-1)continue;
+    if(p.length>=2){ctx.moveTo(p[0][0],p[0][1]);ctx.lineTo(p[1][0],p[1][1]);}if(p.length===4){ctx.moveTo(p[2][0],p[2][1]);ctx.lineTo(p[3][0],p[3][1]);}}
+  ctx.stroke();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1;ctx.strokeRect(mx+0.5,my+14.5,mw,mh);
+  ctx.font=`13px ${FONT}`;ctx.fillStyle='#6f7a93';ctx.fillText('N',mx-16,my+30);ctx.fillText('S',mx-16,my+14+mh);
+  y=my+14+mh+28;
+  ctx.fillStyle=rgb(POSC,1);ctx.fillRect(x0,y-11,12,12);ctx.fillStyle='#c8cfdd';ctx.font=`15px ${FONT}`;ctx.fillText('field pointing out',x0+20,y);
+  ctx.fillStyle=rgb(NEGC,1);ctx.fillRect(x0+170,y-11,12,12);ctx.fillStyle='#c8cfdd';ctx.fillText('pointing in',x0+190,y);
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0+310,y-5);ctx.lineTo(x0+334,y-5);ctx.stroke();ctx.fillText('neutral line: the skirt’s waist',x0+342,y);
+  // tilt history coloured by north polarity, with flips
+  y+=66;const gx=x0,gy=y,gw=560,gh=150;
+  ctx.fillStyle='#c8cfdd';ctx.font=`600 15px ${FONT}`;ctx.fillText('How far the skirt swings, and when the poles flip',gx,gy-14);
+  const tA=M[0].t,tB=M[M.length-1].t+CRLEN,X=tt=>gx+(tt-tA)/(tB-tA)*gw,Y=dd=>gy+gh-(Math.min(dd,75)/75)*gh;
+  ctx.lineWidth=1;ctx.font=`12px ${FONT}`;
+  for(const dd of [0,35,70]){ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.beginPath();ctx.moveTo(gx,Y(dd));ctx.lineTo(gx+gw,Y(dd));ctx.stroke();ctx.fillStyle='#5d6782';ctx.fillText(dd+'°',gx+gw+8,Y(dd)+4);}
+  for(let yy=1980;yy<=2020;yy+=10){ctx.fillStyle='#5d6782';ctx.fillText(String(yy),X(Date.UTC(yy,0,1)/86400000)-14,gy+gh+18);}
+  for(const f of FLIPS){const xx=X(M[f.k].t);ctx.strokeStyle=f.k<=k?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.15)';ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(xx,gy);ctx.lineTo(xx,gy+gh);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=f.k<=k?'#e9e2d0':'#4d566d';ctx.fillText('flip',xx-10,gy-2);}
+  ctx.lineWidth=1.2;for(let i=1;i<M.length;i++){ctx.strokeStyle=rgb(PN[i]>=0?POSC:NEGC,0.22);ctx.beginPath();ctx.moveTo(X(M[i-1].t),Y(TILT[i-1]));ctx.lineTo(X(M[i].t),Y(TILT[i]));ctx.stroke();}
+  ctx.lineWidth=2.2;for(let i=1;i<=k;i++){ctx.strokeStyle=rgb(PN[i]>=0?POSC:NEGC,1);ctx.beginPath();ctx.moveTo(X(M[i-1].t),Y(TILT[i-1]));ctx.lineTo(X(M[i].t),Y(TILT[i]));ctx.stroke();}
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(X(M[k].t),Y(TILT[k]),4.5,0,7);ctx.fill();
+  y=gy+gh+46;ctx.fillStyle='#7f8aa3';ctx.font=`15px ${FONT}`;
+  ctx.fillText('Line colour = north pole’s polarity. Near solar maximum the skirt',x0,y);
+  ctx.fillText('swings to the poles, the poles swap, and it turns inside out.',x0,y+21);
+  // flip banner
+  let ban=0,fl=null;for(const f of FLIPS){const dk=k-f.k;if(dk>=-2&&dk<=26){const a=dk<0?(dk+3)/3:dk<20?1:(26-dk)/6;if(a>ban){ban=a;fl=f;}}}
+  if(ban>0){ctx.save();ctx.globalAlpha=ban;ctx.textAlign='center';const cx=W*0.62;
+    ctx.font=`300 34px ${FONT}`;ctx.fillStyle='#fff3dc';ctx.fillText('The Sun’s magnetic poles flip',cx,H-118);
+    ctx.font=`18px ${FONT}`;ctx.fillStyle='#b9c0d0';ctx.fillText(`North pole now points ${fl.to>0?'outward':'inward'}: the skirt’s ${fl.to>0?'upper side turns orange':'upper side turns blue'}`,cx,H-84);ctx.restore();}
+  // credits
+  ctx.font=`13px ${FONT}`;ctx.fillStyle='#4f5870';
+  ctx.fillText('Data: Wilcox Solar Observatory (Stanford), source-surface field maps, one per solar rotation. Sheet and field lines carried outward by an idealised 400 km/s wind (Parker spiral).',x0,H-40);
+  ctx.fillText('Orbits of Earth, Jupiter and Saturn for scale. Each frame is one 25.4-day rotation of the Sun.',x0,H-21);
+}
+window.NFRAMES=Math.floor((M[M.length-1].t+CRLEN-(M[0].t+RMAX*DAY_PER_AU))/SID);
+window.render=(n)=>{const t=M[0].t+RMAX*DAY_PER_AU+n*SID;const tris=renderGL(t,n);gl.finish();ctx.drawImage(cv,0,0);panel(t,n);window.lastTris=tris;return out.toDataURL('image/png');};
+window.ready=true;
+</script></body></html>
