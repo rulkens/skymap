@@ -56,7 +56,8 @@ each consumer.
    pairs (`pickProgram.ts:162`, readback at `:428`), never released; debug pick
    targets survive the overlay being turned off. #899 shares one target set across
    slabs (66 → 25 MB at 1080p, 265 → 100 MB at 4K) and scissors each pass to the
-   cursor; a cropped projection would shrink what remains to a few pixels.
+   cursor; [the pick-window spec](../../superpowers/specs/2026-10-14-pick-window-design.md)
+   shrinks what remains to one pixel.
 3. **Eager allocations for off or invisible features.** Flow particles (26.6 MB);
    bloom pyramid with bloom disabled; `cosmic-web-density`, `zoa`, `star-aggregates`,
    `mw-aggregate` targets with their layers hidden (no `allocateWhen`); hi-res famous
