@@ -7,7 +7,7 @@
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { meshFetcher } from '../../loading/fetchers/meshFetcher';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
-import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
+import { closeMeshAssetBitmaps } from '../../../utils/meshBodies/closeMeshAssetBitmaps';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
@@ -24,9 +24,9 @@ export function wireMeshBodySlots(state: EngineState): void {
       // `setMesh` copies every bitmap into its own texture; close the decoded copies.
       commit: async (asset) => {
         state.gpu.meshBodyRenderer?.setMesh(body.id, asset);
-        for (const { field } of MESH_TEXTURE_SLOTS) asset[field].close();
-        asset.contactShadow?.close();
+        closeMeshAssetBitmaps(asset);
       },
+      dispose: closeMeshAssetBitmaps,
       onRelease: () => state.gpu.meshBodyRenderer?.clearMesh(body.id),
     });
     state.assetSlots.meshBodies.set(body.id, slot);

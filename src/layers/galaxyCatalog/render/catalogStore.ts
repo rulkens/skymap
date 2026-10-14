@@ -211,10 +211,10 @@ export function createCatalogStore(init: {
    * the numeric source, keeping the subsystem's source-keyed caches and
    * pick-identity packing untouched.
    *
-   * Last-writer-wins on parallel uploads of the same catalog: both
-   * workers spawn, both `galaxyCatalogs.set` calls run in resolution
-   * order, the loser's GPU buffer leaks until the next upload destroys it.
-   * Theoretical — in practice each catalog uploads once per session.
+   * Parallel uploads of one catalog are last-writer-wins and leak nothing:
+   * each reads `prev` only after its own bake resolves, so the later one
+   * destroys the earlier one's buffers. The asset slot serializes commits
+   * anyway, so the case needs a caller outside it.
    */
   async function upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void> {
     // The store only handles galaxy catalog sources; the registry

@@ -15,6 +15,7 @@ import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
 import { isTexturedBodyKey } from '../../../utils/bodyTextures/isTexturedBodyKey';
+import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
@@ -77,6 +78,7 @@ export function wireBodyTextureSlots(state: EngineState): void {
         commitBodyTexture(state, entry, bitmap);
         bitmap.close();
       },
+      dispose: closeBitmap,
       onRelease: () => releaseBodyTexture(state, entry),
     });
     state.assetSlots.bodyTextures.set(key, slot);

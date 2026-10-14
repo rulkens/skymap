@@ -149,6 +149,29 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.cloudShellRenderer.setTexture.mock.invocationCallOrder[0]!).toBeLessThan(closedAt);
   });
 
+  it('closes a bitmap superseded before it reached any sink', async () => {
+    const stale = { close: vi.fn() } as unknown as ImageBitmap;
+    vi.mocked(globalThis.createImageBitmap)
+      .mockResolvedValueOnce(stale)
+      .mockResolvedValueOnce(bitmap);
+    // One Response per call: a body can be read once.
+    fetch.mock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
+      ),
+    );
+    const gpu = makeGpu();
+    const state = makeState(gpu);
+    wireBodyTextureSlots(state);
+
+    const slot = state.assetSlots.bodyTextures.get('mars:surface')!;
+    void slot.load({ bodyId: 'mars', kind: 'surface', tier: 'small' });
+    await slot.load({ bodyId: 'mars', kind: 'surface', tier: 'medium' });
+
+    expect(stale.close).toHaveBeenCalledOnce();
+    expect(gpu.texturedBodyRenderer.setMap).not.toHaveBeenCalledWith('mars', 'surface', stale);
+  });
+
   it("the ring slot's commit dispatches to texturedBodyRenderer.setRingTexture(hostBody, …)", async () => {
     const gpu = makeGpu();
     const state = makeState(gpu);
