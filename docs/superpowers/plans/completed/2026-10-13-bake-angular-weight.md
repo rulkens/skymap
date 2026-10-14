@@ -78,9 +78,9 @@ export function bakeBiasWeights(
 **Files:** `src/utils/galaxy/encodeAngularWeight.ts` (new), `src/utils/galaxy/decodeAngularWeight.ts`
 (new), `tests/utils/galaxy/encodeAngularWeight.test.ts` (new).
 
-- [ ] Tests: `1.0 encodes to exactly 128 and decodes back to exactly 1`; `0.1 → 1, 10 → 255, and
+- [x] Tests: `1.0 encodes to exactly 128 and decodes back to exactly 1`; `0.1 → 1, 10 → 255, and
       values outside clamp to those`; `raw 0 decodes to 1`; `encode is monotone over [0.1, 10]`.
-- [ ] Implement per the contract. Commit.
+- [x] Implement per the contract. Commit.
 
 ### Task 2: SKMP v10 `review: yes`
 
@@ -90,14 +90,14 @@ export function bakeBiasWeights(
 `tools/famous/buildFamous.ts`, `tests/data/galaxyCatalog/galaxyCatalogFormat.test.ts` (or the
 format's existing test file), `docs/DATA.md`.
 
-- [ ] Add `angularWeight: Uint8Array` to `GalaxyCatalog` and the spec entry
+- [x] Add `angularWeight: Uint8Array` to `GalaxyCatalog` and the spec entry
       `{ column: 'u8', components: 1, disk: { kind: 'field', offset: 55 } }` after `diameterIsFallback`;
       drop the "byte 55 is reserved" comment. Bump `VERSION` and the prefix.
-- [ ] Every place that builds a `GalaxyCatalog` by hand (`emptyGalaxyCatalog`, `buildFamous`'s cloud,
+- [x] Every place that builds a `GalaxyCatalog` by hand (`emptyGalaxyCatalog`, `buildFamous`'s cloud,
       test fixtures the typecheck flags) allocates the column; zeros are the correct famous value.
-- [ ] Test: extend the format round-trip to assert `angularWeight` survives encode → decode; extend
+- [x] Test: extend the format round-trip to assert `angularWeight` survives encode → decode; extend
       the version test so a v9 header is rejected with the regenerate message.
-- [ ] `docs/DATA.md`: the binary-format paragraph names v10 and byte 55; the tier-build section
+- [x] `docs/DATA.md`: the binary-format paragraph names v10 and byte 55; the tier-build section
       documents `--bias-weight`. Commit.
 
 ### Task 3: bake computes the weight `review: yes`
@@ -109,22 +109,22 @@ format's existing test file), `docs/DATA.md`.
 `tools/catalog/bias/bakeBiasWeights.ts` (new), `tools/catalog/buildAllBins.ts`,
 `tests/tools/catalog/bias/bakeBiasWeights.test.ts` (new), the moved tests.
 
-- [ ] Move the four files with
+- [x] Move the four files with
       `npm run move-files -- --manifest <moves.json>` (`--dry` first), then grep for the old paths.
       Their tests travel with them into `tests/tools/catalog/bias/`.
       `tests/services/engine/bake/computeAngularWeights.rebake.test.ts`: delete if it exercises the
       runtime re-bake, keep (moved) only if it tests the pure function.
-- [ ] `bakeBiasWeights` per the contract: `angular` → `computeAngularWeights`, `schechter` →
+- [x] `bakeBiasWeights` per the contract: `angular` → `computeAngularWeights`, `schechter` →
       `computeSchechterRatios`, `vmax` → `vMaxWeight` per record as
       `buildPointInterleavedBuffer.ts:300-315` does today (read it before deleting it in Task 5),
       `none` → every record 1.
-- [ ] `buildAllBins.ts`: parse `--bias-weight` beside the other flags (`readArgs`,
+- [x] `buildAllBins.ts`: parse `--bias-weight` beside the other flags (`readArgs`,
       `buildAllBins.ts:346`); in the tier loop (`buildAllBins.ts:856`) bake the weights from each tier's
       `recordsToCloud(slice, overrides)` and write `encodeAngularWeight(w[i])` into `angularWeight`.
-- [ ] Test `bakeBiasWeights`: `'none' maps every record to 1`; `'angular' weights a record in the
+- [x] Test `bakeBiasWeights`: `'none' maps every record to 1`; `'angular' weights a record in the
       denser of two HEALPix cells below 1 and the sparser above 1` (two clusters of synthetic
       records at one distance).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4: delete the runtime bias machinery
 
@@ -144,10 +144,10 @@ the fixtures in `tests/layers/galaxyCatalog/frame.{aliasIndexReconcile,memberCou
 `tests/services/engine/phases/initGpu.hdrCapabilityWiring.test.ts:334`,
 `tests/services/engine/wiring/makeReconcileEffects.test.ts:63-71`.
 
-- [ ] Delete the files, remove the store's bias surface and the renderer passthroughs, the runtime's
+- [x] Delete the files, remove the store's bias surface and the renderer passthroughs, the runtime's
       two members and `frame`'s reconcile; drop the fixture fields. `cloneGalaxyCatalogForTransfer`
       stays: the interleave worker still uses it (`catalogStore.ts:93`).
-- [ ] No new test: a deletion. Commit.
+- [x] No new test: a deletion. Commit.
 
 ### Task 5: 12-slot record, interleave reads the baked weight `review: yes`
 
@@ -160,17 +160,17 @@ the fixtures in `tests/layers/galaxyCatalog/frame.{aliasIndexReconcile,memberCou
 `tests/layers/galaxyCatalog/render/galaxyPointVertexLayout.test.ts`,
 `tests/services/engine/bake/buildPointInterleavedBuffer.test.ts`, `docs/RENDERER.md:20`.
 
-- [ ] Layout per the contract table; the pick pipeline shares `GALAXY_POINT_VERTEX_ATTRIBUTES`, so
+- [x] Layout per the contract table; the pick pipeline shares `GALAXY_POINT_VERTEX_ATTRIBUTES`, so
       it follows. Shader `PerVertex` locations 6–8 renumber; delete the two `select`s and the
       `vMaxWeight`/`schechterRatio` inputs; `biasMode == 2u` for the angular multiply. The uniform
       struct and `packGalaxyPointUniforms` keep their bytes; rewrite the comment so the
       `apparentMagLimit`/`schechter*` words read as padding kept for offset stability.
-- [ ] `buildPointInterleavedBuffer` writes `decodeAngularWeight(cloud.angularWeight[i])` to slot 9;
+- [x] `buildPointInterleavedBuffer` writes `decodeAngularWeight(cloud.angularWeight[i])` to slot 9;
       the `mode` switch, the Schechter bake call, `nRef` and the `vMaxWeight` call go.
       `galaxyCatalogFluxLimit`/`galaxyCatalogSchechter` remain for the tools.
-- [ ] Tests: layout test asserts 12 slots / 48-byte stride and the location table; interleave test
+- [x] Tests: layout test asserts 12 slots / 48-byte stride and the location table; interleave test
       asserts slot 9 equals the decoded weight of the input column (raw 128 → 1, raw 255 → 10).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: dropdown, docs, website
 
@@ -178,13 +178,13 @@ the fixtures in `tests/layers/galaxyCatalog/frame.{aliasIndexReconcile,memberCou
 `packages/website/src/data/docsSettings.ts:199-203`, `packages/website/src/data/docsGuideFacts.ts:1010`,
 `packages/website/src/data/docsScienceFacts.ts:214`, `docs/science.md:22-32`.
 
-- [ ] Three options in the dropdown (None, Volume-limited, Angular re-weight); the comment about
+- [x] Three options in the dropdown (None, Volume-limited, Angular re-weight); the comment about
       future disabled options goes. `docsSettings.options` lists the same three
       (`tests/packages/website/docsReference.test.ts:169` parses them from the component).
-- [ ] Guide fact 1010 and science fact 214 describe the weight as baked at build time with the
+- [x] Guide fact 1010 and science fact 214 describe the weight as baked at build time with the
       Schechter and 1/V_max alternatives as build flags; `docs/science.md` "Survey bias" likewise,
       linking `tools/catalog/bias/computeAngularWeights.ts`.
-- [ ] No new test: the docs reference test already pins the options. Commit.
+- [x] No new test: the docs reference test already pins the options. Commit.
 
 ## Definition of Done
 
