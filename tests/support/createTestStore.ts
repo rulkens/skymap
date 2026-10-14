@@ -99,7 +99,6 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
   },
   // A home-less composition: a bare arrival frames the neutral pose and seeds nothing.
   home: { focus: null, seedSelection: false },
-  pushGesture: () => {},
 };
 
 export function createTestStore(preloadedState?: PreloadedState) {

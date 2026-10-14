@@ -62,7 +62,6 @@ import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
 import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
-import type { GestureSink } from '../@types/engine/interaction/GestureSink';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -186,10 +185,5 @@ export type SagaContext = {
   clipPathInspect: ClipPathInspectSeam;
   /** The composition's home — what a bare link arrives on (`navigateSaga`). */
   home: EngineHomeConfig;
-  /**
-   * The engine's one gesture sink, the same function the DOM recognizer emits
-   * into: a saga pushing here gets the DOM path's store edges and render wake.
-   */
-  pushGesture: GestureSink;
 };
 export type SetSagaContext = (ctx: SagaContext) => void;

@@ -464,7 +464,6 @@ function makeDeps(): BootstrapDeps {
       resolveFocusId: () => null,
       focusIdOf: () => null,
     },
-    pushGesture: () => {},
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,

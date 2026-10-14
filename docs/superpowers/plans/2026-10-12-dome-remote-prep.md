@@ -59,16 +59,16 @@ to the comment budget.
 (`engine.ts:384`). The aggregator exists from construction, so a push before bootstrap simply waits for the first
 frame's drain.
 
-- [x] Move the two sink assertions out of `wireInput.test.ts` into `createGestureSink.test.ts`:
+- [ ] Move the two sink assertions out of `wireInput.test.ts` into `createGestureSink.test.ts`:
       `queues an event and wakes the loop` and
       `cancels an in-flight tween on the gesture-start emission, at DOM time` (the B1 test at `wireInput.test.ts:303`;
       keep its comment, it is the landmine record).
-- [x] In `wireInput.test.ts`, replace them with `hands the bootstrap gesture sink to the orbit controls`, asserting the
+- [ ] In `wireInput.test.ts`, replace them with `hands the bootstrap gesture sink to the orbit controls`, asserting the
       spy's second argument is `deps.pushGesture` by identity.
-- [x] Implement, wire, update the stubs.
-- [x] `npm run typecheck:fast` and `npx vitest run tests/services/engine tests/state/tour tests/state/exhibits
+- [ ] Implement, wire, update the stubs.
+- [ ] `npm run typecheck:fast` and `npx vitest run tests/services/engine tests/state/tour tests/state/exhibits
 tests/state/takeover tests/state/camera tests/support` pass.
-- [x] Commit.
+- [ ] Commit.
 
 ---
 

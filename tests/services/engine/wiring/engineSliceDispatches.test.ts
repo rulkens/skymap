@@ -212,7 +212,6 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
         resolveFocusId: () => null,
         focusIdOf: () => null,
       },
-      pushGesture: () => {},
     };
 
     installLoadProgress(state, deps);

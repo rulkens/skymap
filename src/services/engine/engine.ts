@@ -33,7 +33,6 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
-import { createGestureSink } from './interaction/createGestureSink';
 import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
@@ -382,13 +381,6 @@ export function createEngine(
     () => state.selectionKindRows,
     () => state.settings.picking.kinds,
   );
-  // One sink for the DOM recognizer and the sagas alike. The aggregator exists
-  // from construction, so a push before bootstrap waits for the first drain.
-  const pushGesture = createGestureSink({
-    dispatch: store.dispatch,
-    aggregator: state.subsystems.inputAggregator,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-  });
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
@@ -398,7 +390,6 @@ export function createEngine(
     handleRef,
     allSlots,
     selection,
-    pushGesture,
   };
 
   // The single clip-run seam the saga context exposes.
@@ -439,7 +430,6 @@ export function createEngine(
     playClip,
     clipPathInspect,
     home: composition.home,
-    pushGesture,
   });
 
   // `void`: nothing awaits engine construction, and the catch routes failures to
