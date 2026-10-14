@@ -21,6 +21,7 @@ import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
+import { pastTextureReleaseRadius } from '../frame/pastTextureReleaseRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
@@ -83,8 +84,11 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
       distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
       loadRadiusMpc(entry.bodyId),
     release: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) >
-      2 * loadRadiusMpc(entry.bodyId),
+      pastTextureReleaseRadius(
+        entry.bodyId,
+        ctx.cameraPosMpc,
+        bodyPosOf(entry.bodyId, ctx.simDays),
+      ),
     priority: 10, // one rank for the family; they are rarely co-demanded with each other
   };
 }

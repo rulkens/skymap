@@ -51,6 +51,7 @@ import { selectTimeState, selectIsLiveTicking } from '../../../state/time/select
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
@@ -306,6 +307,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         }
       }
       surfaceTiles.setLastCut(cut);
+    }
+  }
+  // A pull-back keeps the tile atlases (~324 MB) for a quick re-engage; past twice
+  // the body's texture load radius its globe map unloads too, and so do they.
+  const engagedTileBody = surfaceTiles?.engagedBodyId() ?? null;
+  if (engagedTileBody !== null) {
+    const body = sceneBodyStates(state, canvas).get(engagedTileBody);
+    if (
+      body !== undefined &&
+      pastTextureReleaseRadius(engagedTileBody, canvas.drawCamPos, body.positionMpc)
+    ) {
+      surfaceTiles!.release();
     }
   }
 
