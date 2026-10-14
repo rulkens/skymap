@@ -3,72 +3,18 @@
 **Spec:** [`docs/superpowers/specs/2026-10-11-dome-remote-design.md`](../specs/2026-10-11-dome-remote-design.md),
 section "Ground preparation".
 
-**Goal:** create the three joints the dome remote needs, with no behaviour change: a named gesture sink reachable
-from sagas, palette search and its go-to runner outside `src/components/`, and Labels & Guides toggle rows built
-without React.
+**Goal:** create the joints the dome remote needs, with no behaviour change: palette search and its go-to runner
+outside `src/components/`, and Labels & Guides toggle rows built without React.
 
 **Packaging:** its own PR, merged before the feature PR. Pure refactor: the app behaves exactly as before.
 
 ---
 
-### Task 1: The gesture sink gets a name and a seat in the saga context
+### Task 1: dropped
 
-**review: yes** (Redux edges, input path, a landmine-ordered contract)
-
-**Files:**
-
-- `src/services/engine/interaction/createGestureSink.ts` (create)
-- `src/@types/engine/interaction/GestureSink.d.ts` (create)
-- `src/services/engine/engine.ts` (modify: build the sink once, pass it to `setSagaContext` and to bootstrap deps)
-- `src/@types/engine/BootstrapDeps.d.ts` (modify: add `pushGesture`)
-- `src/services/engine/phases/wireInput.ts` (modify: hand `deps.pushGesture` to `attachOrbitControls`, delete the
-  inline closure at `:189-198`)
-- `src/store/types.ts` (modify: `SagaContext` gains `pushGesture`, at `:148`)
-- `tests/services/engine/interaction/createGestureSink.test.ts` (create)
-- `tests/services/engine/phases/wireInput.test.ts` (modify)
-- Saga-context stubs: `tests/support/createTestStore.ts`, `tests/state/tour/visitBeatSaga.test.ts`,
-  `tests/state/tour/webShowcaseDive.integration.test.ts`, `tests/state/tour/tourBodySaga.test.ts`,
-  `tests/state/exhibits/exhibitBodySaga.test.ts`, `tests/state/takeover/watchTakeoverSaga.test.ts`,
-  `tests/state/camera/clipBodySaga.test.ts` (modify: add a no-op `pushGesture`, only where the literal is typed as a
-  full `SagaContext`)
-
-**Contract:**
-
-```ts
-// src/@types/engine/interaction/GestureSink.d.ts
-export type GestureSink = (event: InputGestureEvent) => void;
-
-// src/services/engine/interaction/createGestureSink.ts
-export function createGestureSink(deps: {
-  dispatch: AppDispatch;
-  aggregator: Pick<InputAggregator, 'push'>;
-  requestRender: () => void;
-}): GestureSink;
-
-// SagaContext and BootstrapDeps
-pushGesture: GestureSink;
-```
-
-**Behaviour** (moved unchanged from `wireInput.ts:189-198`): on `gestureStart`, dispatch `beginDrag()` then
-`cancelCameraTween()` synchronously, before the push; every event is pushed to the aggregator and wakes the loop.
-Carry the existing comment at `wireInput.ts:182-188` (why the start edges fire at DOM time) into the new file, trimmed
-to the comment budget.
-
-**Construction:** in `engine.ts`, build the sink once after `state.subsystems` exists (the aggregator is created at
-`engine.ts:236`) and before `cb.setSagaContext` (`engine.ts:413`); the same function goes into `bootstrapDeps`
-(`engine.ts:384`). The aggregator exists from construction, so a push before bootstrap simply waits for the first
-frame's drain.
-
-- [ ] Move the two sink assertions out of `wireInput.test.ts` into `createGestureSink.test.ts`:
-      `queues an event and wakes the loop` and
-      `cancels an in-flight tween on the gesture-start emission, at DOM time` (the B1 test at `wireInput.test.ts:303`;
-      keep its comment, it is the landmine record).
-- [ ] In `wireInput.test.ts`, replace them with `hands the bootstrap gesture sink to the orbit controls`, asserting the
-      spy's second argument is `deps.pushGesture` by identity.
-- [ ] Implement, wire, update the stubs.
-- [ ] `npm run typecheck:fast` and `npx vitest run tests/services/engine tests/state/tour tests/state/exhibits
-tests/state/takeover tests/state/camera tests/support` pass.
-- [ ] Commit.
+The gesture-sink task (a `SagaContext.pushGesture` member) was implemented, rejected in review as a bolt-on, and
+reverted. Remote input now arrives through the input architecture ruled in
+`docs/grill-sessions/input-architecture-2026-10-14.md`, which ships as its own spec and PR.
 
 ---
 
@@ -189,7 +135,6 @@ tests/components/containers` pass.
 
 **Deliverables:**
 
-- `createGestureSink` and `GestureSink`; `SagaContext.pushGesture` and `BootstrapDeps.pushGesture`.
 - `src/utils/palette/` holding `rankPaletteMatches`, `scoreFamousMatch`, `scoreAliasMatch`, `actionForRow` and
   `actionsForPaletteAction`; `ScoredRow` in `src/@types/palette/`; `MILKY_WAY_NAMES` in `src/data/palette/`;
   `paletteRowModel.ts` and `RUN_ACTION` gone.
@@ -197,7 +142,6 @@ tests/components/containers` pass.
 
 **Smoke (unchanged behaviour), against this worktree's dev server:**
 
-- Drag, pinch and wheel move the camera; double-click on a galaxy flies to it (the B1 path).
 - Command palette: search "andromeda", pick it, and the camera flies; pick a tour, an exhibit and an Earth place.
 - Settings → Labels & Guides: each checkbox, the master toggle and a Layer row toggle their labels.
 

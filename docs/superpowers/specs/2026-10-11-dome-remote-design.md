@@ -33,9 +33,9 @@ A second device (phone, tablet or laptop) drives skymap while it runs on a dome 
 Ground check run 2026-10-11: 3 of 10 touchpoints were special cases. Three prep commits, shipped as their own PR
 before the feature. The spec below is written against the code as it stands after them.
 
-1. **The gesture sink gets a name and a seat in the saga context.** Today the only door into the camera is an inline
-   closure at `src/services/engine/phases/wireInput.ts:191` (store edges on gesture start, queue, wake). It becomes
-   one function, registered as `SagaContext.pushGesture`. Seven test stubs gain a no-op.
+1. **Dropped:** the gesture sink in the saga context was built, rejected as a bolt-on and reverted. Remote input
+   enters through the input architecture (`docs/grill-sessions/input-architecture-2026-10-14.md`); this spec's
+   "Gestures" section is superseded by it and is rewritten before the remote is built.
 2. **Palette search and its go-to runner leave the component folder.** `rankPaletteMatches`, `actionForRow`,
    `paletteRowModel` and the `RUN_ACTION` table move out of `src/components/` to `src/utils/palette/` (types to
    `src/@types/palette/`, the name list to `src/data/palette/`) (via `npm run move-files`), and the
@@ -46,9 +46,6 @@ before the feature. The spec below is written against the code as it stands afte
    returning `ToggleRow[]`. The container maps those to `SectionRow`.
 
 ```ts
-// SagaContext, after prep 1
-pushGesture: (event: InputGestureEvent) => void;
-
 // after prep 2
 export function actionsForPaletteAction(action: PaletteAction): UnknownAction[];
 
@@ -172,6 +169,9 @@ export const REMOTE_COMMANDS: { [K in keyof RemoteCommandPayloads]: RemoteComman
   reported state, so a lost message corrects itself on the next status.
 
 ### Gestures
+
+> Superseded by the input architecture (`docs/grill-sessions/input-architecture-2026-10-14.md`); rewritten before
+> the remote is built.
 
 The remote runs the existing recognizer (`attachOrbitControls`) on its trackpad element and forwards what it emits,
 with pixels replaced by fractions. The dome scales them to its own canvas and calls `pushGesture`.
