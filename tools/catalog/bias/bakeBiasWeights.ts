@@ -1,8 +1,8 @@
 /**
  * bakeBiasWeights — the per-galaxy weight `--bias-weight` stores in byte 55.
- * Run once per source over the full cross-matched set (after local-volume
- * overrides), never per tier: keyed by record identity, a weight follows its
- * record through `selectTierRecords`, so every tier carries the same weight.
+ * Run per tier file, over that file's own rows: the angular weight flattens
+ * the sample the tier draws, and the tier selection (brightest by absolute
+ * magnitude) changes which directions are over-sampled.
  */
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
@@ -10,7 +10,6 @@ import { galaxyCatalogFluxLimit } from '../../../src/data/galaxyCatalog/galaxyCa
 import { absoluteFromApparent } from '../../../src/utils/math/absoluteFromApparent';
 import { vMaxWeight } from '../../../src/utils/math/vMaxWeight';
 import type { BiasWeightKind } from '../../@types/catalog/BiasWeightKind';
-import type { ParsedRecord } from '../../parsers/common';
 import { computeAngularWeights } from './computeAngularWeights';
 import { computeSchechterRatios } from './computeSchechterRatios';
 
@@ -33,16 +32,11 @@ function vMaxWeights(cloud: GalaxyCatalog, source: SourceType): Float32Array {
 }
 
 export function bakeBiasWeights(
-  records: ParsedRecord[],
-  cloud: GalaxyCatalog, // recordsToCloud(records, overrides) — same order as `records`
+  cloud: GalaxyCatalog,
   source: SourceType,
   kind: Exclude<BiasWeightKind, 'none'>,
-): Map<ParsedRecord, number> {
-  const weights =
-    kind === 'angular'
-      ? computeAngularWeights({ cloud })
-      : kind === 'schechter'
-        ? computeSchechterRatios({ cloud, source })
-        : vMaxWeights(cloud, source);
-  return new Map(records.map((record, i) => [record, weights[i]!]));
+): Float32Array {
+  if (kind === 'angular') return computeAngularWeights({ cloud });
+  if (kind === 'schechter') return computeSchechterRatios({ cloud, source });
+  return vMaxWeights(cloud, source);
 }

@@ -56,9 +56,9 @@ unchanged. The default stays `AngularReweight`.
 ### Build flag
 
 `npm run build-tiers -- --bias-weight angular|schechter|vmax|none` (default `angular`). Weights are
-computed **once per source over the full cross-matched record set, after local-volume overrides**,
-and follow each record through `selectTierRecords` by identity, so every tier of a source carries
-the same per-galaxy weight.
+computed **per tier file, over that file's own rows** (after local-volume overrides), as the
+runtime bake did on the loaded tier. Ruled 2026-10-14 after the v9/v10 A/B: full-set weights
+over-corrected the brightness-selected small and medium tiers (medium ~18% darker).
 
 ```ts
 // tools/catalog/bias/bakeBiasWeights.ts
@@ -119,13 +119,11 @@ format's existing test file), `docs/DATA.md`.
       `buildPointInterleavedBuffer.ts:300-315` does today (read it before deleting it in Task 5),
       `none` → every record 1.
 - [ ] `buildAllBins.ts`: parse `--bias-weight` beside the other flags (`readArgs`,
-      `buildAllBins.ts:346`); in the per-source loop (`buildAllBins.ts:856`) bake the weights from
-      `recordsToCloud(records, overrides)` once per source before the tier loop; `recordsToCloud`
-      takes the map and writes `encodeAngularWeight(weights.get(rec) ?? 1)` into `angularWeight`.
+      `buildAllBins.ts:346`); in the tier loop (`buildAllBins.ts:856`) bake the weights from each tier's
+      `recordsToCloud(slice, overrides)` and write `encodeAngularWeight(w[i])` into `angularWeight`.
 - [ ] Test `bakeBiasWeights`: `'none' maps every record to 1`; `'angular' weights a record in the
       denser of two HEALPix cells below 1 and the sparser above 1` (two clusters of synthetic
-      records at one distance); `a weight follows its record through selectTierRecords` (bake on
-      the full set, select a tier, every selected record's weight equals the full-set bake).
+      records at one distance).
 - [ ] Commit.
 
 ### Task 4: delete the runtime bias machinery

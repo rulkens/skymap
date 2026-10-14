@@ -139,14 +139,10 @@ export type LocalVolumeOverrides = {
  * 0.78 Mpc). When `overrides` is null the cz-only path runs for every
  * record — used by unit tests that exercise the SoA fill loop in
  * isolation.
- *
- * `biasWeights`: `bakeBiasWeights`' per-record weight, encoded into
- * `angularWeight`; a record it lacks (or no map) is unweighted.
  */
 export function recordsToCloud(
   records: ParsedRecord[],
   overrides: LocalVolumeOverrides | null = null,
-  biasWeights: Map<ParsedRecord, number> | null = null,
 ): GalaxyCatalog {
   const count = records.length;
   const cloud: GalaxyCatalog = {
@@ -298,7 +294,7 @@ export function recordsToCloud(
       magZ: r.magZ,
       distMpc: adoptedDistMpc,
     });
-    cloud.angularWeight[i] = encodeAngularWeight(biasWeights?.get(r) ?? 1);
+    cloud.angularWeight[i] = encodeAngularWeight(1);
   }
   if (overrides !== null && overridesApplied > 0) {
     process.stderr.write(
@@ -872,10 +868,6 @@ async function runCli(): Promise<void> {
   const written = new Set<string>();
 
   for (const [source, records] of bySource) {
-    const biasWeights =
-      biasWeight === 'none'
-        ? null
-        : bakeBiasWeights(records, recordsToCloud(records, overrides), source, biasWeight);
     for (const tier of TIER_LADDER) {
       const filename = tierFilenameForSource(source, tier);
       if (written.has(filename)) continue;
@@ -903,7 +895,13 @@ async function runCli(): Promise<void> {
           ? records
           : selectTierRecords(records, target, fluxSupplementMagLimitFor(source));
 
-      const cloud = recordsToCloud(slice, overrides, biasWeights);
+      const cloud = recordsToCloud(slice, overrides);
+      // Baked over this tier's own rows: the weight flattens what the tier draws.
+      if (biasWeight !== 'none') {
+        const weights = bakeBiasWeights(cloud, source, biasWeight);
+        for (let i = 0; i < cloud.count; i++)
+          cloud.angularWeight[i] = encodeAngularWeight(weights[i]!);
+      }
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
       // `filename` carries the family's epoch prefix (`galaxy-catalog/v10/…`,

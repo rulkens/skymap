@@ -225,7 +225,7 @@ Wire, per record: `offset` u16x3, `absMag` u8, `colourIndex` u8, `axisRatio` u8 
 
 ### Ruled 2026-10-13: bias correction moves to the bake
 
-Only `AngularReweight` ships (the default; the mode is not persisted, not in the URL, not used by tours), so the runtime bakes go. The bake computes the HEALPix angular weight over the full cross-matched catalog per source, before tier selection, and stores it as a u8 in the SKMP record's reserved byte 55 (v10) and as a column on the octree. The Schechter and 1/V_max computations stay available in the bake behind a build flag, in case the shipped weight is ever switched; the runtime loses `biasCorrectionSubsystem`, both workers, the transfer clone, the splice path and the dropdown's two modes. Its own prep PR ahead of the GLADE slice.
+Only `AngularReweight` ships (the default; the mode is not persisted, not in the URL, not used by tours), so the runtime bakes go. The bake computes the HEALPix angular weight per tier file over that file's own rows (ruled 2026-10-14: full-set weights over-correct a brightness-selected tier; the octree, which has no tiers, revisits this), and stores it as a u8 in the SKMP record's reserved byte 55 (v10) and as a column on the octree. The Schechter and 1/V_max computations stay available in the bake behind a build flag, in case the shipped weight is ever switched; the runtime loses `biasCorrectionSubsystem`, both workers, the transfer clone, the splice path and the dropdown's two modes. Its own prep PR ahead of the GLADE slice.
 
 ### Open for the user
 

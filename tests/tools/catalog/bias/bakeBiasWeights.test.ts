@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { Source } from '../../../../src/data/sources';
-import { encodeAngularWeight } from '../../../../src/utils/galaxy/encodeAngularWeight';
 import { bakeBiasWeights } from '../../../../tools/catalog/bias/bakeBiasWeights';
 import { recordsToCloud } from '../../../../tools/catalog/buildAllBins';
-import { selectTierRecords } from '../../../../tools/catalog/selectTierRecords';
 import type { ParsedRecord } from '../../../../tools/parsers/common';
 
 function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
@@ -44,24 +42,8 @@ describe('bakeBiasWeights', () => {
   it("'angular' weights a record in the denser of two HEALPix cells below 1 and the sparser above 1", () => {
     const { dense, mid, sparse } = clusters();
     const records = [...dense, ...mid, ...sparse];
-    const weights = bakeBiasWeights(records, recordsToCloud(records), Source.Glade, 'angular');
-    expect(weights.get(dense[0]!)!).toBeLessThan(1);
-    expect(weights.get(sparse[0]!)!).toBeGreaterThan(1);
-  });
-
-  it('a weight follows its record through selectTierRecords', () => {
-    const { dense, mid, sparse } = clusters();
-    const records = [...dense, ...mid, ...sparse];
-    const full = bakeBiasWeights(records, recordsToCloud(records), Source.Glade, 'angular');
-    const tier = selectTierRecords(records, 12);
-    expect(tier.length).toBe(12);
-
-    const cloud = recordsToCloud(tier, null, full);
-    const reBaked = bakeBiasWeights(tier, recordsToCloud(tier), Source.Glade, 'angular');
-    // Every tier row carries its full-set weight, not a re-bake over the tier.
-    tier.forEach((r, i) => {
-      expect(cloud.angularWeight[i]).toBe(encodeAngularWeight(full.get(r)!));
-    });
-    expect(tier.some((r) => reBaked.get(r) !== full.get(r))).toBe(true);
+    const weights = bakeBiasWeights(recordsToCloud(records), Source.Glade, 'angular');
+    expect(weights[0]!).toBeLessThan(1);
+    expect(weights[records.length - 1]!).toBeGreaterThan(1);
   });
 });

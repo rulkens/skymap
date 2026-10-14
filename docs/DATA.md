@@ -80,7 +80,7 @@ Build everything with:
 npm run build-all
 ```
 
-With no flags it auto-detects the newest `Skyserver_*.csv` under `data/raw/sdss/` by mtime, plus the stable 2MRS/GLADE/Milliquas filenames, and silently skips whichever inputs aren't present, so downloading just one survey is a fine workflow. Override any input with `--sdss`, `--twomrs`, `--glade`, `--milliquas`, or `--out-dir`; `--glade-spec-only` drops GLADE's photo-z rows, `--glade-isotropic` drops SDSS-DR12-only GLADE rows (both optional); `--bias-weight angular|schechter|vmax|none` (default `angular`) picks the per-galaxy bias weight baked into byte 55, computed once per source over the full cross-matched set so every tier carries the same weight (see [`buildAllBins.ts`](../tools/catalog/buildAllBins.ts) for the full flag set).
+With no flags it auto-detects the newest `Skyserver_*.csv` under `data/raw/sdss/` by mtime, plus the stable 2MRS/GLADE/Milliquas filenames, and silently skips whichever inputs aren't present, so downloading just one survey is a fine workflow. Override any input with `--sdss`, `--twomrs`, `--glade`, `--milliquas`, or `--out-dir`; `--glade-spec-only` drops GLADE's photo-z rows, `--glade-isotropic` drops SDSS-DR12-only GLADE rows (both optional); `--bias-weight angular|schechter|vmax|none` (default `angular`) picks the per-galaxy bias weight baked into byte 55, computed per tier file over that file's own rows, the sample the tier draws (see [`buildAllBins.ts`](../tools/catalog/buildAllBins.ts) for the full flag set).
 
 ### The SQL 500,000-row trap
 
