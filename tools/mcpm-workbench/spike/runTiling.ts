@@ -68,8 +68,11 @@ let chunks: Buffer[] = [];
 let label = '';
 await page.exposeFunction('sendChunk', (b64: string) => { chunks.push(Buffer.from(b64, 'base64')); });
 await page.exposeFunction('progress', (s: number, sec: number) => { if (s % 100 === 0) console.log(`  ${label} step ${s} ${sec.toFixed(0)}s`); });
-await page.goto(url + 'spike/tiling.html');
+const TOOL = !!process.env.TOOL;
+const REF_AGENTS = 3_200_000; // tool mode: 100k-quantum counts, density-exact at the 25 Mpc margin
+await page.goto(url + (TOOL ? 'spike/tool.html' : 'spike/tiling.html'));
 await page.waitForFunction(() => (window as any).ready === true, null, { timeout: 120_000 });
+if (TOOL) await page.evaluate(([p, m]) => (window as any).setCatalog(p, m), [Array.from(cat.positions), Array.from(cat.log10StellarMass)] as const);
 
 const ordered = only.length ? only.flatMap((o) => runs.filter((r) => r.name.startsWith(o + (o.startsWith('ref') ? '' : '-t')))) : runs;
 for (const r of ordered) {
@@ -77,11 +80,12 @@ for (const r of ordered) {
   if (existsSync(out)) continue;
   const { positions, weights } = cull(r.lo, r.dims, r.pinned);
   const voxels = r.dims[0] * r.dims[1] * r.dims[2];
-  const agentCount = Math.round(AGENT_DENSITY * voxels);
+  const agentCount = TOOL ? Math.max(100_000, Math.round((REF_AGENTS * voxels) / REF_DIMS ** 3 / 100_000) * 100_000) : Math.round(AGENT_DENSITY * voxels);
   label = r.name; chunks = [];
   const t0 = Date.now();
   console.log(`${r.name}: dims ${r.dims.join('x')} galaxies ${weights.length} agents ${agentCount}`);
-  await page.evaluate((cfg) => (window as any).runMcpm(cfg), {
+  if (TOOL) await page.evaluate((cfg) => (window as any).runTool(cfg), { box: boxFor(r.lo, r.dims), agentCount, seed: r.seed, steps: STEPS, crop: r.crop });
+  else await page.evaluate((cfg) => (window as any).runMcpm(cfg), {
     box: boxFor(r.lo, r.dims), positions, weights, agentCount, seed: r.seed, steps: STEPS,
     pinAgentsM: r.pinned ? 10 : null, crop: r.crop,
     seedSpreadAxis: process.env.SPREAD_FROM_BOX ? Math.min(...r.dims) : REF_DIMS,
