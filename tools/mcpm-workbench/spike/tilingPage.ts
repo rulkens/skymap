@@ -14,6 +14,7 @@ type RunCfg = {
   steps: number;
   pinAgentsM: number | null; // null = shader's own nAgents-derived threshold
   crop: { lo: Vec3; hi: Vec3 }; // voxel range to return
+  seedSpreadAxis: number; // aroundData's spread is 2.5% of this many voxels, not of the box's own shortest axis
 };
 
 const P = { senseSpreadDeg: 20, senseDistanceMpc: 4.6, turnAngleDeg: 10, moveDistanceMpc: 0.1, depositValue: 0, persistence: 0.8, sharpness: 2.5, normalizationFactor: 1 };
@@ -47,7 +48,7 @@ function getDevice(): Promise<GPUDevice> {
   const s = seedAgents({
     points: { positions: new Float32Array(cfg.positions), log10StellarMass: new Float32Array(nData), count: nData, sources: [] },
     weights: { weights: new Float32Array(cfg.weights), nanCount: 0, medianLog10Mass: 0 },
-    box, agentCount: quantum, mode: 'aroundData', seed: cfg.seed,
+    box: { ...box, dims: [cfg.seedSpreadAxis, cfg.seedSpreadAxis, cfg.seedSpreadAxis] }, agentCount: quantum, mode: 'aroundData', seed: cfg.seed,
   });
   const total = nData + cfg.agentCount;
   const lanes = [s.x, s.y, s.z, s.phi, s.theta, s.weight].map((arr) => {

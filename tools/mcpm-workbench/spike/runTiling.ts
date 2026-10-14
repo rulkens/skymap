@@ -84,6 +84,7 @@ for (const r of ordered) {
   await page.evaluate((cfg) => (window as any).runMcpm(cfg), {
     box: boxFor(r.lo, r.dims), positions, weights, agentCount, seed: r.seed, steps: STEPS,
     pinAgentsM: r.pinned ? 10 : null, crop: r.crop,
+    seedSpreadAxis: process.env.SPREAD_FROM_BOX ? Math.min(...r.dims) : REF_DIMS,
   });
   writeFileSync(out, Buffer.concat(chunks));
   appendFileSync(`${outDir}/log.txt`, `${r.name} ${((Date.now() - t0) / 1000).toFixed(0)}s galaxies=${weights.length} agents=${agentCount}\n`);

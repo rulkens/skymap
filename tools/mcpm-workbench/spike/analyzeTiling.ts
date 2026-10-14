@@ -38,7 +38,7 @@ function stats(a: Float32Array) {
   const dpA = dataPointHistogram({ values: a, dims, originMpc: eOrigin, voxelSizeMpc: [V, V, V], pointsMpc: cat.positions, pointCount: cat.count, binCount: BINS, maxLogTrace: maxLog });
   const dpR = dataPointHistogram({ values: ref, dims, originMpc: eOrigin, voxelSizeMpc: [V, V, V], pointsMpc: cat.positions, pointCount: cat.count, binCount: BINS, maxLogTrace: maxLog });
   const ma = axisMarginals(a, dims), mr = axisMarginals(ref, dims);
-  const marg = (['x', 'y', 'z'] as const).map((k) => { let m = 0; for (let i = 0; i < N; i++) m = Math.max(m, Math.abs(ma[k][i]! / mr[k][i]! - 1)); return m; });
+  const marg = ([0, 1, 2] as const).map((k) => { let m = 0; for (let i = 0; i < N; i++) m = Math.max(m, Math.abs(ma[k][i]! / mr[k][i]! - 1)); return m; });
   let sa = 0, sr = 0, saa = 0, srr = 0, sar = 0;
   const prof = new Float64Array(T / 2 * 2), cnt = new Float64Array(T / 2);
   let massA = 0, massR = 0;
