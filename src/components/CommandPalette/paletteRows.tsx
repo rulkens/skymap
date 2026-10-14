@@ -4,11 +4,12 @@
  * `ROW_VIEW` turns a `ScoredRow` into its rendered parts (leading visual +
  * primary/secondary text) for the shared <li>, keyed on the row's `kind`.
  *
- * Split from `paletteRowModel` (the non-JSX type/const seam) so the pure
- * ranking pipeline can import the row vocabulary without pulling in React +
- * the CSS module.  A new row kind is one entry here, not a new render branch.
+ * `ScoredRow` (`@types/palette`) and `MILKY_WAY_NAMES` (`data/palette`) live
+ * outside this JSX module so the pure ranking pipeline can import them without
+ * React.  A new row kind is one entry here, not a new render branch.
  * Selection routing is NOT here — every row maps to a `PaletteAction` via
- * `utils/actionForRow`, and the container dispatches on `action.kind`.
+ * `utils/palette/actionForRow`, and the container dispatches
+ * `actionsForPaletteAction(action)` in order.
  *
  * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
  * composes ResultsList's module rather than carrying its own — the row styles
@@ -22,9 +23,9 @@ import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import { cardShotUrl } from '../../utils/palette/cardShotUrl';
 import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
-import { actionForRow } from './utils/actionForRow';
-import { MILKY_WAY_NAMES } from './paletteRowModel';
-import type { ScoredRow } from './paletteRowModel';
+import { actionForRow } from '../../utils/palette/actionForRow';
+import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import styles from './ResultsList.module.css';
 
 /** A row's leading visual: its captured shot when it has one, else a letter glyph. */
