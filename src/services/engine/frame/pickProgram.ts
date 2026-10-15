@@ -32,18 +32,18 @@
  * composite, and no whole-texture round-trip. The GPU work stays "draw the pick
  * ids"; the cross-slab occlusion rule lives in one pure CPU fold.
  *
- * ### One shared target for every slab, scissored to the cursor
+ * ### One 1×1 target for every slab, through the cursor's window
  *
- * `pick()` rasterises each slab into ONE shared r32uint colour texture plus one
- * depth texture per format (COSMO's depth24plus, everyone else's depth32float),
- * and copies the cursor texel to that slab's staging buffer before the next
- * pass clears it — one encoder executes in recorded order, so the reuse is
- * safe. Every pass is scissored to that one texel, so a hover pick shades a
- * pixel per slab, not the viewport. The textures stay canvas-sized because each
- * slab's projection is the visual one; a smaller target would need a cropped
- * projection in every pick shader. `renderForDebug()` needs every slab's FULL
- * raster alive at once, so it keeps its own target per slab in `debugTargets`,
- * reused across calls and evicted once a slab stops appearing.
+ * `pick()` hands each slab's draws `windowedSlabView`, the slab's projection
+ * cropped to the cursor's pixel, so every slab rasterises into ONE shared 1×1
+ * r32uint colour texture plus one 1×1 depth texture per format (COSMO's
+ * depth24plus, everyone else's depth32float). Each pass's texel is copied to
+ * that slab's staging buffer before the next pass clears it — one encoder
+ * executes in recorded order, so the reuse is safe. The pick gates run on the
+ * whole-canvas view first: the window changes what is rasterised, never what
+ * is pickable. `renderForDebug()` needs every slab's FULL raster alive at once,
+ * so it keeps its own canvas-sized target per slab in `debugTargets`, reused
+ * across calls and evicted once a slab stops appearing.
  *
  * @module
  */
@@ -53,10 +53,13 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
+import type { PickWindow } from '../../../@types/engine/frame/PickWindow';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
 import { slabViewOf, foregroundChainOrder, isBodySlabIndex, COSMO, NEAR0 } from './slabs';
 import { passSlabOf } from './passSlabOf';
+import { windowedSlabView } from './windowedSlabView';
 import { OVERLAY_PICK_SLAB } from './overlayPickSlab';
 import { FRAME_ORDER } from './frameOrder';
 import { frontmostPick } from '../../../utils/picking/frontmostPick';
@@ -178,8 +181,8 @@ export function createPickProgram(deps: {
     return device.createTexture(descriptor);
   }
 
-  /** `pick()`'s shared attachments for a slab, (re)allocated on first use or resize. */
-  function ensureSharedTarget(slabIndex: number, w: number, h: number): PickSlabTarget {
+  /** `pick()`'s shared attachments for a slab, at the window's size. */
+  function ensureSharedTarget(slabIndex: number, [w, h]: Readonly<Vec2>): PickSlabTarget {
     sharedColour = sized(sharedColour, {
       label: 'pick-target',
       size: { width: w, height: h },
@@ -255,7 +258,6 @@ export function createPickProgram(deps: {
     ctx: FrameView,
     slabPickables: readonly ContentPass[],
     timing: GPURenderPassTimestampWrites | undefined,
-    cursor?: { readonly x: number; readonly y: number },
   ): void {
     const pass = encoder.beginRenderPass({
       label: `${pickTargetId(slabIndex)}-pass`,
@@ -282,8 +284,6 @@ export function createPickProgram(deps: {
       ...(timing ? { timestampWrites: timing } : {}),
     });
 
-    // No `drawPick` sets its own scissor or viewport, so this holds for every draw.
-    if (cursor) pass.setScissorRect(cursor.x, cursor.y, 1, 1);
     for (const contentPass of slabPickables) {
       contentPass.drawPick!(pass, view, ctx, state);
     }
@@ -375,12 +375,16 @@ export function createPickProgram(deps: {
     const groups = pickablesBySlab(ctx);
     if (groups.length === 0) return null; // no pickable layer → no GPU work
 
-    const w = canvas.width;
-    const h = canvas.height;
-    // Clamp so `copyTextureToBuffer` stays inside the texture (DPR-scaled CSS
-    // coords can land out of range during a resize).
-    const px = Math.max(0, Math.min(w - 1, Math.floor(pickXPx)));
-    const py = Math.max(0, Math.min(h - 1, Math.floor(pickYPx)));
+    const canvasPx: Vec2 = [canvas.width, canvas.height];
+    // Clamp so the window stays inside the canvas (DPR-scaled CSS coords can
+    // land out of range during a resize).
+    const cursorWindow: PickWindow = {
+      originPx: [
+        Math.max(0, Math.min(canvasPx[0] - 1, Math.floor(pickXPx))),
+        Math.max(0, Math.min(canvasPx[1] - 1, Math.floor(pickYPx))),
+      ],
+      sizePx: [1, 1],
+    };
 
     const encoder = device.createCommandEncoder({ label: 'pick-program-encoder' });
     // One submit can now span MULTIPLE passes (one per body-m slab row plus
@@ -389,21 +393,20 @@ export function createPickProgram(deps: {
     // writeBuffer-vs-submit note).
     state.gpu.bodyPickRenderer?.beginSubmit();
 
-    // Record every slab's pass + cursor-texel copy on ONE encoder; the staging
+    // Record every slab's pass + texel copy on ONE encoder; the staging
     // buffers are collected in slab order (near→far) so the readback fold is a
-    // simple "first non-zero".
+    // simple "first non-zero". Windowing comes after `pickablesBySlab` has
+    // gated on the whole-canvas view.
     const stagingInOrder: GPUBuffer[] = [];
     for (const { slabIndex, view, passes: slabPickables } of groups) {
-      const target = ensureSharedTarget(slabIndex, w, h);
+      const target = ensureSharedTarget(slabIndex, cursorWindow.sizePx);
       const staging = ensureSlabStaging(slabIndex);
       const timing =
         slabIndex === COSMO ? state.gpu.timingService.descriptorFor('pick') : undefined;
-      recordSlabPass(encoder, slabIndex, target, view, ctx, slabPickables, timing, {
-        x: px,
-        y: py,
-      });
+      const windowed = windowedSlabView(view, cursorWindow, canvasPx);
+      recordSlabPass(encoder, slabIndex, target, windowed, ctx, slabPickables, timing);
       encoder.copyTextureToBuffer(
-        { texture: target.pickTexture, origin: { x: px, y: py, z: 0 } },
+        { texture: target.pickTexture, origin: { x: 0, y: 0, z: 0 } },
         { buffer: staging, bytesPerRow: 256 },
         { width: 1, height: 1, depthOrArrayLayers: 1 },
       );
