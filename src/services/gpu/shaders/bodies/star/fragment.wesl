@@ -22,10 +22,11 @@
 // ## Bindings / blend target
 //
 // Same 'TintedSphereUniforms' binding as 'star/vertex.wesl' (the vertex
-// stage reads 'mvp', this stage reads 'tint'); the shared struct import
-// keeps the two modules' layouts locked. Output is straight alpha=1 —
-// the star draws in the OPAQUE foreground pass (depth-tested, no
-// blend), and the foreground composite handles layer blending.
+// stage reads 'mvp', this stage reads 'tint' and 'opacity'); the shared
+// struct import keeps the two modules' layouts locked. Output is straight,
+// not premultiplied: the pipeline blends OVER (src-alpha, one-minus-src-alpha)
+// with depth write kept, so at 'opacity' 1 it is the opaque replace and the
+// alpha written for caption occlusion stays 1.
 
 import package::lib::sphere::TintedSphereUniforms;
 
@@ -39,5 +40,5 @@ const EMISSIVE: f32 = 12.0;
 
 @fragment
 fn fs() -> @location(0) vec4<f32> {
-  return vec4<f32>(u.tint * EMISSIVE, 1.0);
+  return vec4<f32>(u.tint * EMISSIVE, u.opacity);
 }

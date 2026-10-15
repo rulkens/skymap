@@ -18,6 +18,7 @@ import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../src/services/engine/frame/createFramePlannerResultStore';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
+import { makeGalaxyCatalogItems } from '../fixtures/makeGalaxyCatalogItems';
 import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
@@ -436,7 +437,6 @@ describe('renderFrame visual baseline', () => {
       pointSizePx: 2.5,
       brightness: 1.0,
       selected: null as { source: SourceType; localIdx: number } | null,
-      visibleSourceMask: 0xffffffff,
       biasMode: BiasMode.None,
       absMagLimit: -19,
       depthFadeEnabled: true,
@@ -508,6 +508,7 @@ describe('renderFrame visual baseline', () => {
             brightness: settings.brightness,
             provenance: DEFAULT_GALAXY_PROVENANCE,
             depthFade: settings.depthFadeEnabled,
+            items: makeGalaxyCatalogItems(),
           },
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
           // Bloom off: the split baseline captures the non-bloom program.

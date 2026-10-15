@@ -10,7 +10,6 @@ export const GLOBULAR_CLUSTER_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'milkyWay',
-  labelLayer: 'structure',
   detailLabel: 'Globular Cluster',
   shortLabel: 'Globular cluster',
   plural: 'Globular clusters',

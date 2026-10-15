@@ -4,7 +4,7 @@ import type { FadeRegistry } from '../animation/FadeRegistry';
 import type { FocusUniformsValue } from './FocusUniformsValue';
 
 /** One frame's per-caption compose inputs — `composeForegroundCaption`'s
- *  shared half of `produceSceneBodyCaptions` and `produceStarCaptions`. */
+ *  shared half, built by `captionComposeContextOf` for every NEAR0 caption producer. */
 export type CaptionComposeContext = {
   readonly settings: EngineSettingsState;
   readonly camPos: Readonly<Vec3>;

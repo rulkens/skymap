@@ -5,7 +5,6 @@ import { deriveFrameContext } from '../../../../src/services/engine/frame/frameC
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { cubemapCaptureFrame } from '../../../../src/services/engine/frame/cubemapCaptureFrame';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
@@ -22,9 +21,11 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { Source } from '../../../../src/data/sources';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -35,7 +36,6 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-import type { FadeId } from '../../../../src/@types/animation/FadeId';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
@@ -84,7 +84,6 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
-    visibleSourceMask: 0,
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -358,22 +357,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const texturedDisks =
       overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
 
-    const items = Object.fromEntries(
-      GALAXY_CATALOG_SOURCES.map((s) => [
-        galaxyCatalogIdOf(s),
-        { enabled: true, labelEnabled: true },
-      ]),
-    );
-
     return {
       booted: overrides.booted ?? true,
       gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
-      subsystems: {
-        texturedDisks,
-        fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
-      },
+      subsystems: { texturedDisks },
       settings: {
-        galaxyCatalogs: { items },
         orientation: 'equatorial',
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: {} },
@@ -461,14 +449,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         nowMs: 0,
       }).isReady,
     ).toBe(false);
-  });
-
-  it('carries the draw mask, not the pick mask, as visibleSourceMask', () => {
-    const state = makeCaptureState();
-    const capture = captureFrame(state);
-    expect(capture).not.toBeNull();
-    if (capture === null) return;
-    expect(capture.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
   });
 
   it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {
@@ -706,5 +686,61 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       for (let i = 0; i < 16; i++) pin(view.vp[i]!, VP[face]![i]!);
       for (let i = 0; i < 9; i++) pin(view.cam.poseBasis![i]!, POSE_BASIS[face]![i]!);
     }
+  });
+});
+
+describe('deriveView — NEAR0 range from the star spheres', () => {
+  const SUN_MPC = deriveBodyStates(CONST_J2000).get('sun')!.positionMpc;
+  const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
+
+  it('spans a resolved Sun, sized at each view’s own camera', () => {
+    // 1e6 km out the Sun spans ~1000 px; a view whose eye sits 1e4 AU off sees it sub-pixel.
+    const pose: CameraPose = {
+      target: [...SUN_MPC],
+      yaw: 0,
+      pitch: 0,
+      distance: 1e6 * SCALE_UNITS.KM_TO_MPC,
+    };
+    const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
+    const state = {
+      ...makeState(),
+      settings: {
+        bodies: { items: {} },
+        starCatalogs: {
+          enabled: true,
+          items: {
+            famousStar: { enabled: false },
+            sun: { enabled: true },
+            sStar: { enabled: false },
+          },
+        },
+      },
+    } as unknown as EngineState;
+    const snapshot = deriveFrameContext(state, {
+      cam,
+      arm: absoluteArm(pose),
+      altitudeMpc: pose.distance,
+      nowMs: 0,
+      simDays: CONST_J2000,
+    });
+    if (!snapshot.isReady) throw new Error('fixture not ready');
+
+    const near = deriveView(snapshot, cam, spec());
+    const dM =
+      Math.hypot(
+        SUN_MPC[0] - near.drawCamPos[0],
+        SUN_MPC[1] - near.drawCamPos[1],
+        SUN_MPC[2] - near.drawCamPos[2],
+      ) * SCALE_UNITS.MPC_TO_M;
+    const range = near.slabs[NEAR0]!.distanceRangeM!;
+    expect(range[0]).toBeCloseTo(dM - SUN_OUTER_M, -3);
+    expect(range[1]).toBeCloseTo(dM + SUN_OUTER_M, -3);
+
+    const far = deriveView(
+      snapshot,
+      cam,
+      spec({ eyeOffsetMpc: [1e4 * SCALE_UNITS.AU_TO_MPC, 0, 0] }),
+    );
+    expect(far.slabs[NEAR0]!.distanceRangeM).toBeNull();
   });
 });

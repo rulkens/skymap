@@ -14,8 +14,8 @@ export function missionTrailsFadeRows(): readonly FadeLayer<unknown>[] {
       key: 'missionTrails',
       expand: () => [undefined],
       handle: () => ({ kind: 'missionTrails' }),
-      seed: (s) => (s.missions.trails ? 1 : 0),
-      intent: (s) => s.missions.trails,
+      seed: (s) => (s.missionTrails.enabled ? 1 : 0),
+      intent: (s) => s.missionTrails.enabled,
     }),
   ];
 }

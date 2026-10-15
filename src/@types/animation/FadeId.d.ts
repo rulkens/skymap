@@ -43,7 +43,7 @@
  *   - lightTime    — the light-time spheres guide. Seeded from
  *                    `settings.lightTime.enabled`. No discriminator.
  *   - missionTrails — the sampled-craft (Voyager) trails. Seeded from
- *                    `settings.missions.trails`. No discriminator.
+ *                    `settings.missionTrails.enabled`. No discriminator.
  *   - orbitTrails  — the near-field Keplerian orbit trails (Earth / Jupiter /
  *                    Moon …). Seeded from `settings.orbitTrails.enabled` and
  *                    multiplied into the layer's per-orbit apparent-size alpha so

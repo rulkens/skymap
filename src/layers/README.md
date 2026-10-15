@@ -89,4 +89,5 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
 `milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
-settings-only stub left from prep step (c).
+settings-only Layer: its `layer.ts` declares the body clusters, while its render
+and load code stay in core.

@@ -86,8 +86,8 @@ describe('galaxyCatalogFadeRows', () => {
   });
 
   it('survey row has no post — masks are a pure per-frame derivation', () => {
-    // `deriveSourceMasks` projects the draw/pick bitmasks on read (per frame in
-    // `runFrame`, fresh at click time), so a toggle just fades the catalog
+    // `sourceMaskOf` projects the draw/pick bitmasks on read (where the Layer
+    // draws and picks), so a toggle just fades the catalog
     // handle and the next frame's derivation picks up the new enabled set.
     expect(rowFor('survey').post).toBeUndefined();
   });
