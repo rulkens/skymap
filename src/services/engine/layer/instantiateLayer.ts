@@ -27,6 +27,7 @@ export function instantiateLayer<
     passes: layer.passes(runtime),
     computes: layer.computes?.(runtime) ?? [],
     planners: layer.planners?.(runtime) ?? [],
+    nearSpheres: layer.nearSpheres?.(runtime) ?? null,
     assets: layer.assets?.(runtime) ?? [],
     fades: layer.fades?.(runtime) ?? [],
     screenLabels: guides?.screenLabels ?? [],

@@ -32,6 +32,7 @@ import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { NearSphereSource } from '../frame/NearSphereSource';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
@@ -120,6 +121,9 @@ export type EngineState = {
   /** Core's conics then every Layer's `guides.orbitTrails`, composed once by
    * `createLayers`; `orbitTrailsPass` walks this. */
   orbitTrailRows: readonly OrbitalElements[];
+  /** Every Layer's `nearSpheres`, composed once by `createLayers`;
+   * `deriveFrameContext` binds them into `ReadyFrameContext.nearSpheres`. */
+  nearSphereSources: readonly NearSphereSource[];
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

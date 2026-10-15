@@ -2,30 +2,27 @@
  * positionedVisibleStars — the seeded stars this frame's star layers draw, each
  * paired with the position the body snapshot resolves for it.
  *
- * `visibleStars` answers WHICH stars (the per-source gates) and
- * `sceneBodyStates` answers WHERE (one map, one instant, shared by every pass).
- * Joining them once here is what lets `partitionStarsByResolution` and the
- * renderer keep reading `star.positionMpc` — the alternative was threading the
- * snapshot through those signatures and their six call sites.
+ * `visibleStars` answers WHICH stars (the per-source gates) and the frame's one
+ * body sample answers WHERE (one map, one instant, shared by every pass and by
+ * `starNearSpheres`). Joining them once here is what lets
+ * `partitionStarsByResolution` and the renderer keep reading `star.positionMpc`.
  *
  * The lookup is total by construction: every seeded star is a `SCENE_ANCHORS`
  * root, pinned by the anchor-totality test. A `?? origin` fallback would turn a
  * missing anchor into a star silently drawn at the Sun.
  */
 
-import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { StarCatalogSettings } from '../../../@types/settings/StarCatalogSettings';
 import type { PositionedStar } from '../@types/PositionedStar';
-import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { visibleStars } from './visibleStars';
 
 export function positionedVisibleStars(
-  state: PassState,
-  ctx: FrameView,
+  bodyStates: ReadonlyMap<string, BodyState>,
+  settings: StarCatalogSettings,
 ): readonly PositionedStar[] {
-  const states = sceneBodyStates(state, ctx);
-  return visibleStars(state.settings.starCatalogs).map((star) => ({
+  return visibleStars(settings).map((star) => ({
     ...star,
-    positionMpc: states.get(star.id)!.positionMpc,
+    positionMpc: bodyStates.get(star.id)!.positionMpc,
   }));
 }

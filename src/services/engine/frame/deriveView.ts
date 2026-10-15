@@ -28,14 +28,13 @@ import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { viewBodyPose } from '../camera/viewBodyPose';
 import { deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
-import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../../../layers/starCatalog/present/partitionStarsByResolution';
 
 export function deriveView(
   snapshot: ReadyFrameContext,
   cam: OrbitCamera,
   spec: ViewSpec,
 ): FrameView {
-  const { bodyStates, slabBodyCandidates, meshBodies, positionedStars } = snapshot;
+  const { bodyStates, slabBodyCandidates, meshBodies } = snapshot;
   const { id, rotation, eyeOffsetMpc, frustum, sizePx } = spec;
 
   const viewFromCamEye = viewFromCameraEye(rotation, eyeOffsetMpc);
@@ -113,21 +112,15 @@ export function deriveView(
     );
   }
 
-  // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn in
+  // NEAR0's distanceRangeM (spec §7.1): the opaque spheres actually drawn in
   // THIS view, not `foregroundFrustum`'s bracket.
-  const { spheres } = partitionStarsByResolution({
-    stars: positionedStars,
-    camPosMpc: drawCamPos,
-    thresholdPx: STAR_RESOLVE_PX,
-    pxPerRad,
-  });
   const starRangeM = starSphereRangeM({
     // Outer: distanceRangeM is the painter-sort interval and must SPAN the row's
     // drawn content (Slab.d.ts). Body rows bracket theirs off the same outer
     // footprint (`bodySlabRow`'s `marginM`), so the star row has to match that currency.
-    spheres: spheres.map((star) => ({
-      positionMpc: star.positionMpc,
-      radiusM: outerBoundRadiusM(star.surface),
+    spheres: snapshot.nearSpheres(drawCamPos, pxPerRad).map((sphere) => ({
+      positionMpc: sphere.positionMpc,
+      radiusM: outerBoundRadiusM(sphere.surface),
     })),
     camPosMpc: drawCamPos,
   });

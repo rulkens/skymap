@@ -306,6 +306,7 @@ export function createEngine(
     fadeRows: [],
     label3DProducers: [],
     orbitTrailRows: [],
+    nearSphereSources: [],
     layerSlots: new Map(),
   };
 

@@ -25,6 +25,10 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
+import { starNearSpheres } from '../../../../src/layers/starCatalog/present/starNearSpheres';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -66,9 +70,9 @@ function makeState(): EngineState {
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
+    nearSphereSources: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
-      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: {} },
     },
     picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
@@ -375,11 +379,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       settings: {
         galaxyCatalogs: { items },
         orientation: 'equatorial',
-        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: {} },
       },
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
+      nearSphereSources: [],
       data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
@@ -706,5 +710,63 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       for (let i = 0; i < 16; i++) pin(view.vp[i]!, VP[face]![i]!);
       for (let i = 0; i < 9; i++) pin(view.cam.poseBasis![i]!, POSE_BASIS[face]![i]!);
     }
+  });
+});
+
+describe('deriveView — NEAR0 range from the Layers’ near spheres', () => {
+  const SUN_MPC = deriveBodyStates(CONST_J2000).get('sun')!.positionMpc;
+  const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
+
+  it('spans a resolved Sun at its outer bound, asked at each view’s own camera', () => {
+    // 1e6 km out the Sun spans ~1000 px; a view whose eye sits 1e4 AU off sees it sub-pixel.
+    const pose: CameraPose = {
+      target: [...SUN_MPC],
+      yaw: 0,
+      pitch: 0,
+      distance: 1e6 * SCALE_UNITS.KM_TO_MPC,
+    };
+    const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
+    const state = {
+      ...makeState(),
+      nearSphereSources: [starNearSpheres],
+      settings: {
+        bodies: { items: {} },
+        starCatalogs: {
+          enabled: true,
+          items: {
+            famousStar: { enabled: false },
+            sun: { enabled: true },
+            sStar: { enabled: false },
+          },
+        },
+      },
+    } as unknown as EngineState;
+    const snapshot = deriveFrameContext(state, {
+      cam,
+      arm: absoluteArm(pose),
+      altitudeMpc: pose.distance,
+      nowMs: 0,
+      simDays: CONST_J2000,
+      visibleSourceMask: 0,
+    });
+    if (!snapshot.isReady) throw new Error('fixture not ready');
+
+    const near = deriveView(snapshot, cam, spec());
+    const dM =
+      Math.hypot(
+        SUN_MPC[0] - near.drawCamPos[0],
+        SUN_MPC[1] - near.drawCamPos[1],
+        SUN_MPC[2] - near.drawCamPos[2],
+      ) * SCALE_UNITS.MPC_TO_M;
+    const range = near.slabs[NEAR0]!.distanceRangeM!;
+    expect(range[0]).toBeCloseTo(dM - SUN_OUTER_M, -3);
+    expect(range[1]).toBeCloseTo(dM + SUN_OUTER_M, -3);
+
+    const far = deriveView(
+      snapshot,
+      cam,
+      spec({ eyeOffsetMpc: [1e4 * SCALE_UNITS.AU_TO_MPC, 0, 0] }),
+    );
+    expect(far.slabs[NEAR0]!.distanceRangeM).toBeNull();
   });
 });

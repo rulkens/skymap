@@ -31,6 +31,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `fades?`        | `present/`                                     |                                                                                                                       |
 | `guides?`       | `present/`                                     |                                                                                                                       |
 | `selection?`    | `present/`                                     |                                                                                                                       |
+| `nearSpheres?`  | `present/`                                     | The opaque spheres the Layer draws on NEAR0; core sizes NEAR0's range and the occluder set from them                  |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
 | `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import              |
@@ -55,7 +56,7 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 **`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
 
-**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
+**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`, `nearSpheres`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
 
 ## Rules
 

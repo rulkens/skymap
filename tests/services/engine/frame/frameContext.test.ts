@@ -94,9 +94,9 @@ function makeState(
     // every fixture below stays a 2-row (NEAR0+COSMO) slab table, matching
     // what every assertion in this file was written against.
     slabRows: [],
+    nearSphereSources: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
-      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: {} },
     },
     picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },

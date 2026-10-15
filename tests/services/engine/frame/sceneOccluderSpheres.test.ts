@@ -18,6 +18,8 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
+import { starNearSpheresAt } from '../../../helpers/engine/starNearSpheresAt';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -31,18 +33,15 @@ function makeState(meshBodies: readonly MeshBody[]): EngineState {
     data: {
       bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies },
     },
-    settings: {
-      starCatalogs: {
-        enabled: true,
-        items: {
-          famousStar: { enabled: true },
-          sun: { enabled: true },
-          sStar: { enabled: true },
-        },
-      },
-    },
   } as unknown as EngineState;
 }
+
+const ALL_STARS_ON = {
+  starCatalogs: {
+    enabled: true,
+    items: { famousStar: { enabled: true }, sun: { enabled: true }, sStar: { enabled: true } },
+  },
+} as unknown as EngineSettingsState;
 
 const STATE = makeState([]);
 
@@ -54,7 +53,11 @@ function makeCtx(bodyId: string, offsetKm: number): FrameView {
   const p = STATES.get(bodyId)!.positionMpc;
   const drawCamPos: Vec3 = [p[0] + offsetKm * KM_TO_MPC, p[1], p[2]];
   return {
-    snapshot: { simDays: CONST_J2000, meshBodies: SCENE_MESH_BODIES },
+    snapshot: {
+      simDays: CONST_J2000,
+      meshBodies: SCENE_MESH_BODIES,
+      nearSpheres: starNearSpheresAt(ALL_STARS_ON, CONST_J2000),
+    },
     drawCamPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
@@ -101,11 +104,19 @@ describe('sceneOccluderSpheres', () => {
     expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES)))).toBe(false);
   });
 
+  const sunRadiusKm =
+    innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
+
+  it('holds a resolved Sun at its inner bound, asked at the draw camera', () => {
+    // 1e6 km out the Sun spans ~1200 px. The inner bound, not the outer one
+    // NEAR0's range takes: an occluder must under-occlude.
+    const radii = occluderRadiiKm(makeCtx('sun', 1e6));
+    expect(radii.filter((r) => Math.abs(r - sunRadiusKm) < 1)).toHaveLength(1);
+  });
+
   it('drops the Sun once it demotes to a point at Jupiter-range', () => {
     // The Sun subtends ~1.6 px from Jupiter: drawn as an additive point by
     // starPointsPass, so it is no longer an opaque sphere.
-    const sunRadiusKm =
-      innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
     const radii = occluderRadiiKm(makeCtx('jupiter', 1e7));
     expect(radii.some((r) => Math.abs(r - sunRadiusKm) < 1)).toBe(false);
     expect(has(radii, 'jupiter')).toBe(true);

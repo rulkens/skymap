@@ -241,12 +241,12 @@ starNearSpheres: NearSphereSource
 - `frameContext`'s `bodyStates` and `sceneBodyStates(state, ctx)` are the same memoised `deriveBodyStates(simDays)` map, so the sources see the positions the passes see.
 - Fixture tests that stubbed `starCatalogs` only so `visibleStars` found nothing drop the stub: an empty `nearSphereSources` admits no star. Tests that need a star sphere register `starNearSpheres`.
 
-- [ ] Run the moves; commit the pure move.
-- [ ] `sceneOccluderSpheres.test.ts` and `deriveView.test.ts` keep their star-sphere cases (Sun resolved → an occluder at its inner bound; NEAR0's range spans it at its outer bound) through a registered `starNearSpheres`, unchanged in value. They fail if the provider is unbound, cached across views, or reads the wrong radius.
-- [ ] No new test: the source is today's code behind a new call shape, and the cases above pin its values. PR 2 adds the liveness test when core binds `live`.
-- [ ] **Gate:** `npx tsc --noEmit` passes (`NearSphereSource` reaches the settings root from `Layer.d.ts`).
-- [ ] The first Review Focus #2 grep prints nothing.
-- [ ] Commit.
+- [x] Run the moves; commit the pure move.
+- [x] `sceneOccluderSpheres.test.ts` and `deriveView.test.ts` keep their star-sphere cases (Sun resolved → an occluder at its inner bound; NEAR0's range spans it at its outer bound) through a registered `starNearSpheres`, unchanged in value. They fail if the provider is unbound, cached across views, or reads the wrong radius.
+- [x] No new test: the source is today's code behind a new call shape, and the cases above pin its values. PR 2 adds the liveness test when core binds `live`.
+- [x] **Gate:** `npx tsc --noEmit` passes (`NearSphereSource` reaches the settings root from `Layer.d.ts`).
+- [x] The first Review Focus #2 grep prints nothing.
+- [x] Commit.
 
 ### Task 7: The galaxy source mask moves into its Layer (V3)
 
