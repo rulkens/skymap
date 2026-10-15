@@ -15,8 +15,8 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { PositionedStar } from '../@types/PositionedStar';
-import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
+import type { PositionedStar } from '../../../@types/scene/PositionedStar';
+import { sceneBodyStates } from './sceneBodyStates';
 import { visibleStars } from './visibleStars';
 
 export function positionedVisibleStars(

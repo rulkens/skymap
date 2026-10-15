@@ -16,7 +16,7 @@ import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTar
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { visibleStars } from './present/visibleStars';
+import { visibleStars } from '../../services/engine/frame/visibleStars';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
 
 import { createStarCatalogRenderer } from './render/starCatalogRenderer';

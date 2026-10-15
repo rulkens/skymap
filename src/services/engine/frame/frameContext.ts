@@ -31,7 +31,7 @@ import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
-import { visibleStars } from '../../../layers/starCatalog/present/visibleStars';
+import { visibleStars } from './visibleStars';
 
 export function deriveFrameContext(
   state: EngineState,

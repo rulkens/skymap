@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../src/layers/starCatalog/render/starPointRenderer';
-import type { PositionedStar } from '../../../../src/layers/starCatalog/@types/PositionedStar';
+import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
 import { Source } from '../../../../src/data/sources';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {

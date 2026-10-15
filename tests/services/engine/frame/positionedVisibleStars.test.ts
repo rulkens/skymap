@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { positionedVisibleStars } from '../../../../src/layers/starCatalog/present/positionedVisibleStars';
+import { positionedVisibleStars } from '../../../../src/services/engine/frame/positionedVisibleStars';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
