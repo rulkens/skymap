@@ -85,6 +85,11 @@ export class TextureAtlas implements SlotStore {
     return this.texture.createView({ label: `${this.label}-view` });
   }
 
+  /** WebGPU frees a texture only on `destroy()`, never on GC. */
+  destroy(): void {
+    this.texture.destroy();
+  }
+
   /** UV rectangle [u0, v0, u1, v1] in [0,1] texture coords; slots are row-major. */
   slotUv(slotIdx: number): Vec4 {
     const col = slotIdx % this.slotsPerRow;
