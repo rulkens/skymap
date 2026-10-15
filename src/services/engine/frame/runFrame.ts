@@ -39,7 +39,7 @@ import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
-import { deriveSourceMasks } from './deriveSourceMasks';
+import { sourceMaskOf } from '../../../layers/galaxyCatalog/present/sourceMaskOf';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -86,7 +86,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // hand-maintained mirror; demand itself reads settings directly. Sampled at
   // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
   // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
-  const masks = deriveSourceMasks(state, nowMs);
+  const masks = sourceMaskOf(state, nowMs);
   reevaluateDemand(state);
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale

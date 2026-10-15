@@ -5,7 +5,7 @@ import { deriveFrameContext } from '../../../../src/services/engine/frame/frameC
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { cubemapCaptureFrame } from '../../../../src/services/engine/frame/cubemapCaptureFrame';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
@@ -472,7 +472,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const capture = captureFrame(state);
     expect(capture).not.toBeNull();
     if (capture === null) return;
-    expect(capture.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
+    expect(capture.snapshot.visibleSourceMask).toBe(sourceMaskOf(state, 0).draw);
   });
 
   it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {

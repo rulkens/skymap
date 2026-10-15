@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
@@ -61,7 +61,7 @@ describe('deriveSourceMasks', () => {
     // Enabled with zero opacity still gets both bits — `enabled` alone drives
     // the pick bit, and `enabled || opacity>0` drives the draw bit.
     const state = makeState({ enabledOverrides: { sdss: true } });
-    const { draw, pick } = deriveSourceMasks(state, 0);
+    const { draw, pick } = sourceMaskOf(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(true);
     expect(maskHas(pick, Source.SDSS)).toBe(true);
   });
@@ -71,7 +71,7 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0.5 },
     });
-    const { draw, pick } = deriveSourceMasks(state, 0);
+    const { draw, pick } = sourceMaskOf(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(true);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
@@ -81,7 +81,7 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0 },
     });
-    const { draw, pick } = deriveSourceMasks(state, 0);
+    const { draw, pick } = sourceMaskOf(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(false);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
@@ -111,7 +111,7 @@ describe('deriveSourceMasks', () => {
 
     // Query well past the fade's 100 ms end, at a nowMs the registry was
     // never ticked to.
-    const { draw } = deriveSourceMasks(state, 500);
+    const { draw } = sourceMaskOf(state, 500);
     expect(maskHas(draw, Source.SDSS)).toBe(false);
   });
 });

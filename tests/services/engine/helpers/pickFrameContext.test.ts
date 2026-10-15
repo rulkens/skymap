@@ -20,7 +20,7 @@ import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFr
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/pivotSurfaceRangeMpc';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -160,7 +160,7 @@ describe('pickFrameContext', () => {
         // simDays does not affect the view-projection this test compares; any
         // valid epoch reproduces the same vp.
         simDays: 0,
-        visibleSourceMask: deriveSourceMasks(state, 0).pick,
+        visibleSourceMask: sourceMaskOf(state, 0).pick,
       },
       { width: canvas.width, height: canvas.height },
     );
@@ -194,7 +194,7 @@ describe('pickFrameContext', () => {
     const ctx = pickFrameContext(state, makeCanvas());
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
+    expect(ctx.snapshot.visibleSourceMask).toBe(sourceMaskOf(state, 0).pick);
   });
 
   it('carries the drawn frame’s focus, so a pick excludes what that frame dimmed', () => {

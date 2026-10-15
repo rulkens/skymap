@@ -34,12 +34,12 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { SourceMasks } from '../../../@types/engine/frame/SourceMasks';
+import type { SourceMasks } from '../@types/SourceMasks';
 import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { maskWith } from '../../../utils/maskWith';
 
-export function deriveSourceMasks(
+export function sourceMaskOf(
   state: Pick<EngineState, 'settings' | 'subsystems'>,
   nowMs: number,
 ): SourceMasks {

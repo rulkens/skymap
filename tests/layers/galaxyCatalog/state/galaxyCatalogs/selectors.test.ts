@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { selectVisibleSourceMask } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../../../src/store/constants';
-import { deriveSourceMasks } from '../../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import type { RootState } from '../../../../../src/store/types';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -32,7 +32,7 @@ function deriveMasks(
       fades: { opacityOf: (h: { id: GalaxyCatalogId }) => opacityFor(h.id) },
     },
   };
-  return deriveSourceMasks(state as never, 0);
+  return sourceMaskOf(state as never, 0);
 }
 
 describe('selectVisibleSourceMask', () => {

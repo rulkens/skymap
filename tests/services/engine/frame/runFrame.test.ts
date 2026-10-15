@@ -88,7 +88,7 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import {
@@ -742,7 +742,7 @@ describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
     });
 
     // Replace the deriveSourceMasks mock's implementation for this test.
-    vi.mocked(deriveSourceMasks).mockImplementationOnce(() => {
+    vi.mocked(sourceMaskOf).mockImplementationOnce(() => {
       callOrder.push('deriveSourceMasks');
       return { draw: 0, pick: 0 };
     });

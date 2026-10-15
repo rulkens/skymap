@@ -9,7 +9,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { deriveFrameContext } from '../frame/frameContext';
 import { deriveView } from '../frame/deriveView';
-import { deriveSourceMasks } from '../frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../layers/galaxyCatalog/present/sourceMaskOf';
 import { frameContextInputOf } from '../frame/frameContextInputOf';
 import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
@@ -31,7 +31,7 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
     // tail. `enabled` alone drives the pick bit, so the nowMs sample only
     // matters for `.draw` — passed anyway so this call site never relies on
     // the registry's stale last-ticked clock.
-    visibleSourceMask: deriveSourceMasks(state, nowMs).pick,
+    visibleSourceMask: sourceMaskOf(state, nowMs).pick,
     poseBasis,
     upBasis: poseBasis,
     // The instant the last frame derived its bodies at, so pickable body sprites
