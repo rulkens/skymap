@@ -4,7 +4,7 @@
  * then composes each instance's contributions onto core's `state.passes` /
  * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
- * `.label3DProducers`, `.orbitTrailRows` and `.nearSphereSources` are unkeyed concatenations instead.
+ * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
 
 import { put } from 'typed-redux-saga';
@@ -183,9 +183,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.slabRows = slabRows;
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
   state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
-  state.nearSphereSources = instances.flatMap((instance) =>
-    instance.nearSpheres === null ? [] : [instance.nearSpheres],
-  );
   state.orbitTrailRows = [
     ...CORE_TRAIL_ELEMENTS,
     ...instances.flatMap((instance) => instance.orbitTrails),

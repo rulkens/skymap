@@ -960,10 +960,10 @@ describe('runFrame — the label-director wake fold', () => {
         flow: { enabled: false },
         // Read unconditionally by `visibleStars` past the ready gate — see
         // frameContext.test.ts's makeState for the same addition and why.
+        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
       slabRows: [],
-      nearSphereSources: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
@@ -1031,10 +1031,10 @@ describe('runFrame — the planner keep-ticking fold', () => {
       settings: {
         ...base.settings,
         flow: { enabled: false },
+        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
       slabRows: [],
-      nearSphereSources: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers: [],

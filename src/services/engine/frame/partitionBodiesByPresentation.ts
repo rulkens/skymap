@@ -70,7 +70,7 @@ export const BODY_GLINT_MAX_PX = 3;
  * inside the body, maximally resolved), which clears the `BODY_GLINT_MAX_PX`
  * threshold so the body is a mesh, never a glint. That degenerate case lives in
  * the shared projection helper, so every LOD gate reading it (this partition,
- * the star Layer's sphere/point split, the planet layers) gets the right answer with a
+ * `partitionStarsByResolution`, the planet layers) gets the right answer with a
  * plain `>= threshold` comparison and no per-site branch.
  */
 export function partitionBodiesByPresentation(input: {

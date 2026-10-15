@@ -69,6 +69,10 @@ function makeState(
     },
     settings: {
       orientation: 'equatorial',
+      // Read unconditionally by `visibleStars` past the ready gate — see
+      // frameContext.test.ts's makeState for the same addition and why.
+      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+      bodies: { items: {} },
     },
     // No focused pivot in this fixture — see frameContext.test.ts's makeState
     // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
@@ -76,7 +80,6 @@ function makeState(
     // No seeded bodies/stars — see frameContext.test.ts's makeState for why
     // `deriveFrameContext` needs this now.
     slabRows: [],
-    nearSphereSources: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },

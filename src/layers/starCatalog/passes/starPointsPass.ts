@@ -81,7 +81,10 @@ import type { BodyRegionId } from '../../../@types/data/BodyRegionId';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyPointPick } from '../../../@types/rendering/bodyPickRenderer/BodyPointPick';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
-import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../present/partitionStarsByResolution';
+import {
+  partitionStarsByResolution,
+  STAR_RESOLVE_PX,
+} from '../present/partitionStarsByResolution';
 import { positionedVisibleStars } from '../present/positionedVisibleStars';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
@@ -135,7 +138,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       if (fadeBand(SCALE_FADE_BANDS.starBackdrop, regionDistMpc) <= 0) return false;
       return (
         partitionStarsByResolution({
-          stars: positionedVisibleStars(sceneBodyStates(state, ctx), state.settings.starCatalogs),
+          stars: positionedVisibleStars(state, ctx),
           camPosMpc: ctx.drawCamPos,
           thresholdPx: STAR_RESOLVE_PX,
           pxPerRad: ctx.drawPxPerRad,
@@ -145,7 +148,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
 
     draw(pass, view, ctx, state) {
       const { points } = partitionStarsByResolution({
-        stars: positionedVisibleStars(sceneBodyStates(state, ctx), state.settings.starCatalogs),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: view.camPos,
         thresholdPx: STAR_RESOLVE_PX,
         pxPerRad: ctx.drawPxPerRad,
@@ -258,7 +261,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       if (pickRenderer === null) return;
 
       const { points } = partitionStarsByResolution({
-        stars: positionedVisibleStars(sceneBodyStates(state, ctx), state.settings.starCatalogs),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: view.camPos,
         thresholdPx: STAR_RESOLVE_PX,
         pxPerRad: ctx.drawPxPerRad,

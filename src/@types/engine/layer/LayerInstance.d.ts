@@ -1,5 +1,4 @@
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
-import type { NearSphereSource } from '../frame/NearSphereSource';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { SourceCountReport } from './SourceCountReport';
@@ -18,7 +17,6 @@ export type LayerInstance = {
   readonly passes: readonly ContentPass[];
   readonly computes: readonly ContentCompute[];
   readonly planners: readonly FrameContentPlanner<unknown>[];
-  readonly nearSpheres: NearSphereSource | null;
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];

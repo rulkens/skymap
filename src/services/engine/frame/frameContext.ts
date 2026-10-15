@@ -11,7 +11,6 @@ import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { FrameContextInput } from '../../../@types/engine/frame/FrameContextInput';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
-import type { NearSphereProvider } from '../../../@types/engine/frame/NearSphereProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
@@ -32,6 +31,7 @@ import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
+import { visibleStars } from '../../../layers/starCatalog/present/visibleStars';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -110,14 +110,13 @@ export function deriveFrameContext(
     return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
   };
 
-  // Bound once, asked per call: which sphere resolves is a per-view question
-  // (`deriveView` asks at its own camera, `sceneOccluderBodies` at the draw
-  // camera), and the pick path calls this speculatively, so nothing is cached.
-  const settings = state.settings;
-  const nearSpheres: NearSphereProvider = (camPosMpc, pxPerRad) =>
-    state.nearSphereSources.flatMap((source) =>
-      source.spheres({ bodyStates, settings, camPosMpc, pxPerRad }),
-    );
+  // NEAR0's distanceRangeM (spec §7.1) is sized from the star spheres actually
+  // drawn; which star is a sphere is a per-view question, so this resolves the
+  // positions once and `deriveView` partitions them.
+  const positionedStars = visibleStars(state.settings.starCatalogs).map((star) => ({
+    ...star,
+    positionMpc: bodyStates.get(star.id)!.positionMpc,
+  }));
 
   // `focusBlend` and `focus` are at-rest placeholders that `runFrame` overwrites
   // the moment the ready gate passes, before any consumer reads them: deriving
@@ -130,7 +129,7 @@ export function deriveFrameContext(
     bodyPose,
     slabBodyCandidates,
     meshBodies,
-    nearSpheres,
+    positionedStars,
     nowMs,
     simDays,
     altitudeMpc,

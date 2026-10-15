@@ -25,7 +25,6 @@ import { fieldStarSpherePass } from './passes/fieldStarSpherePass';
 import { starCatalogFadeRows } from './present/starCatalogFadeRows';
 import { starCatalogSelectionRow } from './present/starCatalogSelectionRow';
 import { produceStarCaptions } from './present/produceStarCaptions';
-import { starNearSpheres } from './present/starNearSpheres';
 import { STAR_AGGREGATES_TARGET } from './render/starAggregatesTarget';
 import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
 import StarsSectionContainer from './ui/StarsSectionContainer';
@@ -58,7 +57,6 @@ export const starCatalogLayer = defineLayer({
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
   planners: (runtime) => [starCatalogPlanner(runtime)],
-  nearSpheres: () => starNearSpheres,
   ui: [
     { slot: 'main', content: StarsSectionContainer },
     { slot: 'debug', content: StarCatalogTuningSectionContainer },

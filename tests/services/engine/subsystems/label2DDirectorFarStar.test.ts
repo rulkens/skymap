@@ -155,7 +155,6 @@ const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDow
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
     snapshot: {
-      nearSpheres: () => [],
       nowMs: 0,
       simDays: CONST_J2000,
       meshBodies: SCENE_MESH_BODIES,

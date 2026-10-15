@@ -65,9 +65,11 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../present/partitionStarsByResolution';
+import {
+  partitionStarsByResolution,
+  STAR_RESOLVE_PX,
+} from '../present/partitionStarsByResolution';
 import { positionedVisibleStars } from '../present/positionedVisibleStars';
-import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -81,7 +83,7 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       return (
         partitionStarsByResolution({
-          stars: positionedVisibleStars(sceneBodyStates(state, ctx), state.settings.starCatalogs),
+          stars: positionedVisibleStars(state, ctx),
           camPosMpc: ctx.drawCamPos,
           thresholdPx: STAR_RESOLVE_PX,
           pxPerRad: ctx.drawPxPerRad,
@@ -91,7 +93,7 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
 
     draw(pass, view, ctx, state) {
       const { spheres } = partitionStarsByResolution({
-        stars: positionedVisibleStars(sceneBodyStates(state, ctx), state.settings.starCatalogs),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: view.camPos,
         thresholdPx: STAR_RESOLVE_PX,
         pxPerRad: ctx.drawPxPerRad,
@@ -140,7 +142,7 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
       if (pickRenderer === null) return;
 
       const { spheres } = partitionStarsByResolution({
-        stars: positionedVisibleStars(sceneBodyStates(state, ctx), state.settings.starCatalogs),
+        stars: positionedVisibleStars(state, ctx),
         camPosMpc: view.camPos,
         thresholdPx: STAR_RESOLVE_PX,
         pxPerRad: ctx.drawPxPerRad,

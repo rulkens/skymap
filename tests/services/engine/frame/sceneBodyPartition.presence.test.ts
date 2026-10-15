@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
-import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
-import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -28,18 +26,13 @@ const STATE = {
     compositor: {},
     texturedBodyRenderer: null,
   },
-  subsystems: {
-    texturedDisks: {},
-    fades: { opacityOf: () => 1 },
-    clipPlayer: { clipOpacityOf: () => 1 },
-  },
+  subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
-  nearSphereSources: [],
   data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
   settings: {
-    bodies: { items: makeBodyItems() },
-    missions: { craft: null },
+    starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+    bodies: { items: {} },
   },
   picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
 } as unknown as EngineState;
@@ -69,12 +62,8 @@ const drawnIds = (simDays: number): string[] => {
   const { glints, meshes } = sceneBodyPartition(STATE as never, view);
   return [...glints, ...meshes].map((body) => body.id);
 };
-// Core captions every body but the sampled craft, which the missions Layer captions.
 const labelIds = (simDays: number): string[] =>
-  [
-    ...sceneBodyLabels(deriveBodyStates(simDays), simDays),
-    ...produceMissionCaptions(STATE, viewAt(simDays)).labels,
-  ].map((label) => label.id);
+  sceneBodyLabels(deriveBodyStates(simDays), simDays).map((label) => label.id);
 
 describe('spacecraft presence', () => {
   it('a body with a presence date is absent before it, present after', () => {

@@ -17,7 +17,6 @@ import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
-import type { NearSphereSource } from '../frame/NearSphereSource';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerGuides } from './LayerGuides';
@@ -107,7 +106,4 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
-  /** The opaque spheres this Layer draws on the NEAR0 row, composed into
-   * `state.nearSphereSources`: they size NEAR0's range and join the occluder set. */
-  nearSpheres?(runtime: Runtime): NearSphereSource;
 };

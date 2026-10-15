@@ -32,13 +32,11 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
-import { starNearSpheresAt } from '../../../helpers/engine/starNearSpheresAt';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -59,21 +57,12 @@ function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
 }
 
-const ALL_STARS_ON = {
-  starCatalogs: {
-    enabled: true,
-    items: { famousStar: { enabled: true }, sun: { enabled: true }, sStar: { enabled: true } },
-  },
-} as unknown as EngineSettingsState;
-
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
     snapshot: {
-      // Every star catalog on, so the Sun occludes from its genuine J2000 place.
-      nearSpheres: starNearSpheresAt(ALL_STARS_ON, CONST_J2000),
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
@@ -92,6 +81,10 @@ function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
  * only cares whether body captions are on at all passes a bare boolean; the
  * per-row cases pass the bits separately, which is the axis those rows buy.
  * Moved verbatim from `labelsNearPass.test.ts`'s `makeState`.
+ *
+ * `starCatalogs` is a fixed, uninteresting fixture: `sceneOccluderBodies`
+ * reads it (for the star-sphere occluder set), but no case here inspects a
+ * star caption any more, so its values never drive an assertion.
  *
  * `registryOverrides`/`clipOverrides` key by a fade handle's `item` (e.g.
  * `'earth'`) / clip key (`'bodyLabel'`). Left at the defaults,
@@ -123,6 +116,14 @@ function makeState(
     settings: {
       bodies: { items: bodyItems },
       blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled: true } } },
+      starCatalogs: {
+        enabled: true,
+        items: {
+          famousStar: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
+          sStar: { enabled: true, labelEnabled: false },
+        },
+      },
     },
     subsystems: {
       fades: {
@@ -322,7 +323,7 @@ describe('produceSceneBodyCaptions', () => {
       },
     } as unknown as EngineState;
     const ctx = {
-      snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS, nearSpheres: () => [] },
+      snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS },
       cam: { distance: 5e-4 },
       drawCamPos: camPos,
     } as unknown as FrameView;

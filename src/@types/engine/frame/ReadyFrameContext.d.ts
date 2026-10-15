@@ -12,10 +12,10 @@ import type { Mat3 } from '../../math/Mat3';
 import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
+import type { PositionedStar } from '../../../layers/starCatalog/@types/PositionedStar';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
-import type { NearSphereProvider } from './NearSphereProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
 import type { SlabRow } from './SlabRow';
 
@@ -58,10 +58,9 @@ export type ReadyFrameContext = {
   /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
    *  the hosts of mesh bodies riding someone else's slab row. */
   meshBodies: readonly MeshBody[];
-  /** Every Layer's NEAR0 opaque spheres, bound to this frame's body sample and
-   *  settings, asked at the caller's camera: a view sizes NEAR0's range from
-   *  them, `sceneOccluderBodies` adds them to the occluder set. */
-  nearSpheres: NearSphereProvider;
+  /** The visible seeded stars with this frame's positions resolved — a view
+   *  partitions them by apparent size (`partitionStarsByResolution`). */
+  positionedStars: readonly PositionedStar[];
   /**
    * The frame's stamped clock — `performance.now()`-shaped, taken from
    * `runFrame`'s single wall-clock sample.  Every per-frame-evaluated

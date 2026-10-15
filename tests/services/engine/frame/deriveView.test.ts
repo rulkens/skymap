@@ -26,7 +26,6 @@ import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
-import { starNearSpheres } from '../../../../src/layers/starCatalog/present/starNearSpheres';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -67,9 +66,9 @@ function makeState(): EngineState {
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
-    nearSphereSources: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
+      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: {} },
     },
     picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
@@ -364,11 +363,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       subsystems: { texturedDisks },
       settings: {
         orientation: 'equatorial',
+        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: {} },
       },
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
-      nearSphereSources: [],
       data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
@@ -690,11 +689,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   });
 });
 
-describe('deriveView — NEAR0 range from the Layers’ near spheres', () => {
+describe('deriveView — NEAR0 range from the star spheres', () => {
   const SUN_MPC = deriveBodyStates(CONST_J2000).get('sun')!.positionMpc;
   const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
 
-  it('spans a resolved Sun through the bound provider, asked at each view’s own camera', () => {
+  it('spans a resolved Sun, sized at each view’s own camera', () => {
     // 1e6 km out the Sun spans ~1000 px; a view whose eye sits 1e4 AU off sees it sub-pixel.
     const pose: CameraPose = {
       target: [...SUN_MPC],
@@ -705,7 +704,6 @@ describe('deriveView — NEAR0 range from the Layers’ near spheres', () => {
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
     const state = {
       ...makeState(),
-      nearSphereSources: [starNearSpheres],
       settings: {
         bodies: { items: {} },
         starCatalogs: {

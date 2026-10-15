@@ -24,7 +24,6 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 function makeCtx(camPos: Vec3, distance: number): FrameView {
   return {
     snapshot: {
-      nearSpheres: () => [],
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
@@ -47,6 +46,7 @@ function makeState(): EngineState {
     settings: {
       missions: { craft: null },
       bodies: { items: makeBodyItems() },
+      starCatalogs: { enabled: false, items: {} },
     },
     subsystems: {
       fades: { opacityOf: () => 1 },

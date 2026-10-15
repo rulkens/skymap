@@ -16,22 +16,29 @@ import { positionedVisibleStars } from '../../../../src/layers/starCatalog/prese
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 const MOVING_STAR = SCENE_S_STARS[0]!;
 
-const SETTINGS = {
-  enabled: true,
-  items: {
-    famousStar: { enabled: false },
-    sun: { enabled: false },
-    sStar: { enabled: true },
+const STATE = {
+  settings: {
+    starCatalogs: {
+      enabled: true,
+      items: {
+        famousStar: { enabled: false },
+        sun: { enabled: false },
+        sStar: { enabled: true },
+      },
+    },
   },
-} as unknown as StarCatalogSettings;
+} as unknown as EngineState;
+
+const ctxAt = (simDays: number) => ({ snapshot: { simDays } }) as unknown as FrameView;
 
 describe('positionedVisibleStars', () => {
   it('pairs each visible star with the snapshot’s position, not a baked one', () => {
-    const atEpoch = positionedVisibleStars(deriveBodyStates(CONST_J2000), SETTINGS);
+    const atEpoch = positionedVisibleStars(STATE, ctxAt(CONST_J2000));
     expect(atEpoch).toHaveLength(SCENE_S_STARS.length);
     // The record's own fields ride through untouched; the position is the
     // snapshot's, by identity — no copy, no re-derivation.
@@ -43,7 +50,7 @@ describe('positionedVisibleStars', () => {
     // A different instant moves it: the pairing is per frame, so nothing about
     // the star record can be the source of the position.
     const later = CONST_J2000 + 120;
-    const atLater = positionedVisibleStars(deriveBodyStates(later), SETTINGS);
+    const atLater = positionedVisibleStars(STATE, ctxAt(later));
     expect(atLater[0]!.positionMpc).toBe(deriveBodyStates(later).get(MOVING_STAR.id)!.positionMpc);
     expect(atLater[0]!.positionMpc).not.toEqual(atEpoch[0]!.positionMpc);
   });
