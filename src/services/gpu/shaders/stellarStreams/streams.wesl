@@ -51,8 +51,9 @@ fn vs(
   // Drift along the orbit: a looping slide with a per-particle phase, faded in
   // and out at the loop ends so the wrap-around never pops; the /0.8 restores
   // the plateau window's mean brightness.
-  let phase = fract(u.timeSec * 0.05 + hash11(f32(ii)));
-  let rel = pos + tangent * size * u.flow * (phase - 0.5) * 6.0 - u.eye;
+  // 'flow' is kpc travelled per 8 s loop, so drift speed is physical, not sprite-sized.
+  let phase = fract(u.timeSec * 0.125 + hash11(f32(ii)));
+  let rel = pos + tangent * (u.flow * 0.001) * (phase - 0.5) - u.eye;
   let c0 = worldToClip(u.cam, rel);
   if (c0.w <= 0.0) {
     out.clipPos = vec4<f32>(2.0, 2.0, 2.0, 1.0);
@@ -78,7 +79,7 @@ fn vs(
   out.shape = vec2<f32>(lPx, rPx);
   let area = (rTrue * rTrue) / (rPx * rPx);
   let envelope = smoothstep(0.0, 0.2, phase) * smoothstep(1.0, 0.8, phase) / 0.8;
-  let lum = attr.y * area / (1.0 + lPx / (1.25 * rPx)) * mix(1.0, envelope, min(u.flow, 1.0));
+  let lum = attr.y * area / (1.0 + lPx / (1.25 * rPx)) * select(1.0, envelope, u.flow > 0.0);
   out.colour = mix(BHB, GIANT, attr.z) * lum * u.intensity;
   return out;
 }
