@@ -161,10 +161,31 @@ emit(sx, sv, rng.uniform(0.25, 0.6, n), 1.0*(0.6+0.8*(1-sage)), rng.uniform(0.55
 core = sprog + rng.normal(0, 0.6, (4000, 3))*np.array([1, 0.4, 0.4])
 emit(core, np.tile(sv.mean(0), (4000, 1)), rng.uniform(0.2, 0.5, 4000), np.full(4000, 1.6), rng.uniform(0.6, 1.0, 4000), 0)
 
+def motion_sign(a):
+    """+1 if the track's point order follows its proper motions (rv taken as 0 where missing), -1 if
+    against, 0 when the track carries no motions."""
+    pm = np.isfinite(a[:, 3:5]).all(1)
+    if pm.sum() < 2: return 0
+    ra, dec = np.radians(a[:, 0]), np.radians(a[:, 1])
+    e_ra = np.stack([-np.sin(ra), np.cos(ra), 0*ra], -1)
+    e_de = np.stack([-np.sin(dec)*np.cos(ra), -np.sin(dec)*np.sin(ra), np.cos(dec)], -1)
+    p = radec_xyz(a[:, 0], a[:, 1], a[:, 2])
+    rv = np.where(np.isfinite(a[:, 5]), a[:, 5], 0.0)
+    v = rv[:, None]*p/np.linalg.norm(p, axis=1, keepdims=True) + K*a[:, 2:3]*(a[:, 3:4]*e_ra + a[:, 4:5]*e_de)
+    vgc = v @ A_G.T + VSUN
+    tan = np.diff(icrs_to_gc(p), axis=0)
+    dots = (tan*vgc[:-1]).sum(1)[pm[:-1]]
+    return 1 if dots.sum() >= 0 else -1
+
+oriented = {1: 0, -1: 0, 0: 0}
 for sid, t in enumerate(picked, start=1):
     if t['name'] == 'Sagittarius' or t['kind'] not in ('st',): continue
     a = load(G_DIR + '/tracks/' + t['file'])
     a = a[np.isfinite(a[:, :3]).all(1)]
+    # Track files run in survey order, not orbital order: flip to the stars' motion.
+    sign = motion_sign(a)
+    oriented[sign] += 1
+    if sign < 0: a = a[::-1]
     P = icrs_to_gc(radec_xyz(a[:, 0], a[:, 1], a[:, 2]))
     seg = np.linalg.norm(np.diff(P, axis=0), axis=1)
     L = seg.sum()
@@ -195,3 +216,4 @@ R = np.concatenate(recs)
 R.tofile(OUT)
 json.dump(names, open(OUT + '.names.json', 'w'))
 print('records', len(R), 'streams', len(names), 'bytes', R.nbytes)
+print('track order vs motion: kept', oriented[1], 'flipped', oriented[-1], 'no motions', oriented[0])

@@ -108,6 +108,7 @@ describe('expandFrameOrder', () => {
       'milky-way-upsample',
       'milky-way',
       'local-bubble',
+      'stellar-streams',
       'light-time-spheres',
       'star-points',
       'star-catalog',

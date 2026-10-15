@@ -25,7 +25,8 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass 
         view.viewportPx,
         ctx.drawPxPerRad,
         view.camPos,
-        ctx.snapshot.nowMs / 1000,
+        // Wrapped on a multiple of the shader's 20 s loop, so f32 never loses the phase.
+        (ctx.snapshot.nowMs / 1000) % 200,
         (globalThis as { __streamLooks?: typeof STELLAR_STREAMS_LOOKS }).__streamLooks ??
           STELLAR_STREAMS_LOOKS,
       );

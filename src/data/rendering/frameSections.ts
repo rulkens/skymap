@@ -20,6 +20,7 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
+    { kind: 'plan', name: 'stellar-streams' },
     // The compute prelude. `flow` integrates the peculiar-velocity particles;
     // `sky-view` bakes its LUT, which folds in this frame's camera altitude + sun
     // direction and so re-bakes every frame (unlike the once-baked transmittance

@@ -48,8 +48,9 @@ fn vs(
   var out: VSOut;
   let c = vec2<f32>(f32(vi & 1u) * 2.0 - 1.0, f32(vi >> 1u) * 2.0 - 1.0);
   let size = attr.x * u.sizeScale;
-  // Drift along the orbit: a looping slide with a per-particle phase, so the
-  // stream visibly flows without any particle leaving its track for long.
+  // Drift along the orbit: a looping slide with a per-particle phase, faded in
+  // and out at the loop ends so the wrap-around never pops; the /0.8 restores
+  // the plateau window's mean brightness.
   let phase = fract(u.timeSec * 0.05 + hash11(f32(ii)));
   let rel = pos + tangent * size * u.flow * (phase - 0.5) * 6.0 - u.eye;
   let c0 = worldToClip(u.cam, rel);
@@ -76,7 +77,8 @@ fn vs(
   out.uvPx = vec2<f32>(c.x * halfAlong, c.y * halfAcross);
   out.shape = vec2<f32>(lPx, rPx);
   let area = (rTrue * rTrue) / (rPx * rPx);
-  let lum = attr.y * area / (1.0 + lPx / (1.25 * rPx));
+  let envelope = smoothstep(0.0, 0.2, phase) * smoothstep(1.0, 0.8, phase) / 0.8;
+  let lum = attr.y * area / (1.0 + lPx / (1.25 * rPx)) * mix(1.0, envelope, min(u.flow, 1.0));
   out.colour = mix(BHB, GIANT, attr.z) * lum * u.intensity;
   return out;
 }
