@@ -537,7 +537,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         does: 'Shows the trails of the Voyager spacecraft. The Voyager exhibit turns it on.',
         values: SWITCH,
         first: OFF,
-        state: 'missions.trails',
+        state: 'missionTrails.enabled',
         firstValue: false,
       },
       {

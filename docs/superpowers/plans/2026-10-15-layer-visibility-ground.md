@@ -126,9 +126,9 @@ export type MissionTrailsSettings = { enabled: boolean };
 
 The `settings/` action-type prefix is what makes `watchFadesSaga` react (`watchFadesSaga.ts:17-18`); keep it. The URL does not carry either cluster. No shipped cue addresses `missionTrails`.
 
-- [ ] Split the cluster and re-point every reader and writer above. Grep `src tests tools packages` for `missions.trails`, `trails:` inside a `missions` literal, and `missions/selectors`/`missions/slice` imports of the two moved symbols; the result must be empty.
-- [ ] No new test: the compiler catches every stale `missions.trails` read and the exhibit's excess `trails` property; `restoreSceneSaga.test.ts` round-trips the new cluster; `docsReference.test.ts`'s `starts every setting where the app does` catches the website row.
-- [ ] Commit.
+- [x] Split the cluster and re-point every reader and writer above. Grep `src tests tools packages` for `missions.trails`, `trails:` inside a `missions` literal, and `missions/selectors`/`missions/slice` imports of the two moved symbols; the result must be empty.
+- [x] No new test: the compiler catches every stale `missions.trails` read and the exhibit's excess `trails` property; `restoreSceneSaga.test.ts` round-trips the new cluster; `docsReference.test.ts`'s `starts every setting where the app does` catches the website row.
+- [x] Commit.
 
 ---
 

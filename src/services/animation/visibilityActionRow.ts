@@ -23,7 +23,7 @@ import {
 } from '../../layers/milkyWay/state/milkyWay/slice';
 import { setCosmicWebFilamentsEnabled } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
-import { setMissionTrailsEnabled } from '../../layers/missions/state/missions/slice';
+import { setMissionTrailsEnabled } from '../../layers/missions/state/missionTrails/slice';
 import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
 import {
   setCosmicWebDensityEnabled,
