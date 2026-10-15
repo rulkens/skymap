@@ -295,7 +295,7 @@ import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
  * Build a minimal `EngineState` covering the slices `initGpu` reads and
  * writes. Every nullable `gpu.*` handle starts at `null`; the
  * `subsystems` bag carries just the facades `initGpu` calls into
- * (`biasCorrection.attachRenderer`, `cosmoLabelDirector.attachRenderers`).
+ * (`cosmoLabelDirector.attachRenderers`).
  */
 function makeState(): EngineState {
   return {
@@ -331,10 +331,6 @@ function makeState(): EngineState {
     // `composeRenderTargetRows`; no Layer targets in this fixture.
     layerTargets: [],
     subsystems: {
-      biasCorrection: {
-        attachRenderer: vi.fn(),
-        setMode: vi.fn().mockResolvedValue(undefined),
-      },
       cosmoLabelDirector: {
         attachRenderers: vi.fn(),
         registerProducer: vi.fn(),

@@ -5,8 +5,8 @@
  * circumscribes the unit UV circle, via WebGPU's instanced draw
  * (`draw(3, N)`).  The vertex stage reads `@builtin(vertex_index)`
  * (0..2, the corner) and per-instance attributes (position, magnitude,
- * colour index, axis ratio, baked PA cos/sin, padded radius, three bias
- * weights, baked absMag — see `GALAXY_POINT_VERTEX_ATTRIBUTES`).  A triangle
+ * colour index, axis ratio, baked PA cos/sin, padded radius, angular
+ * weight, baked absMag, sbAmp — see `GALAXY_POINT_VERTEX_ATTRIBUTES`).  A triangle
  * rather than the usual 6-vertex quad because this pass is vertex/
  * primitive-bound at ~2.5M instances: `draw(3, N)` halves the
  * vertex-shader invocations and the primitive setup, while the fragment
@@ -19,9 +19,8 @@
  * mask).  The per-catalog GPU resources — one vertex buffer, fade and
  * source uniforms, and their bind groups per loaded catalog — live in
  * `catalogStore`, which the factory composes.  The renderer's public
- * surface still exposes the store's methods (the engine, picker and
- * bias-correction subsystem all talk to the renderer), but they are
- * delegations, not implementations.
+ * surface still exposes the store's methods (the engine and picker talk
+ * to the renderer), but they are delegations, not implementations.
  *
  * An engine-supplied bitmask decides which catalogs draw each frame.
  * Each catalog's `@group(2)` SourceUniforms carries a 6-bit `sourceCode`
@@ -59,12 +58,6 @@ import {
 } from './galaxyPointVertexLayout';
 import { createCatalogStore } from './catalogStore';
 import type { BuildRunner } from '../@types/BuildRunner';
-
-// The `schechter*` uniform slots at byte offsets 140..155 are
-// dead-but-reserved: the Schechter integral bakes into the per-vertex
-// `schechterRatio` attribute, so no shader reads these slots.  They
-// stay in the `Uniforms` struct for layout stability — removing them
-// would shift every subsequent member's offset.
 
 /**
  * Build the render pipeline, allocate the uniform buffer, create the
@@ -293,11 +286,6 @@ export function createGalaxyPointRenderer(init: {
     label: 'galaxyPointRenderer',
     upload: store.upload,
     unload: store.unload,
-    setBiasUploadCallback: store.setBiasUploadCallback,
-    setBiasUnloadCallback: store.setBiasUnloadCallback,
-    spliceSchechterRatios: store.spliceSchechterRatios,
-    spliceAngularWeights: store.spliceAngularWeights,
-    clearBiasOverlays: store.clearBiasOverlays,
     totalCount: store.totalCount,
     hasCatalog: store.hasCatalog,
     loadedSources: store.loadedSources,

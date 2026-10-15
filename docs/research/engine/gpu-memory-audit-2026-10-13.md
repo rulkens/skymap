@@ -54,7 +54,7 @@ each consumer.
    its fade-gated `release` design is the general one.
 2. **Pick targets are canvas-sized to read one texel.** Up to four r32uint + depth
    pairs (`pickProgram.ts:162`, readback at `:428`), never released; debug pick
-   targets survive the overlay being turned off. #899 shares one target set across
+   targets survive the overlay being turned off. #906 shares one target set across
    slabs (66 → 25 MB at 1080p, 265 → 100 MB at 4K) and scissors each pass to the
    cursor; [the pick-window spec](../../superpowers/specs/2026-10-14-pick-window-design.md)
    shrinks what remains to one pixel.

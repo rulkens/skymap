@@ -8,7 +8,7 @@ projection cropped to the cursor's pixel. The canvas-sized pick textures go.
 A hover or click pick costs one pixel of colour and depth per slab, not a
 canvas-sized texture set, and gives the same answer it gives today.
 
-After #899 every slab already shares one r32uint colour texture and one depth
+After #906 every slab already shares one r32uint colour texture and one depth
 per format, scissored to the cursor. That is 12 B/px, still 25 MB at 1080p and
 100 MB at 4K, held for the session to read one texel per slab. This picks up
 `docs/backlog/2026-10-13-pick-targets-canvas-sized.md` (its index line and
@@ -102,7 +102,7 @@ export function windowedSlabView(view: SlabView, window: PickWindow, canvasPx: R
 
 | Site | Change |
 |---|---|
-| `pickProgram.pick()` | Builds the cursor's 1×1 window. Each group's view goes through `windowedSlabView`. Targets become 1×1, so the copy origin is (0, 0). The scissor from #899 goes away, since a 1×1 target needs none. |
+| `pickProgram.pick()` | Builds the cursor's 1×1 window. Each group's view goes through `windowedSlabView`. Targets become 1×1, so the copy origin is (0, 0). The scissor from #906 goes away, since a 1×1 target needs none. |
 | `pickProgram.renderForDebug()` | Unchanged: whole-canvas window, its own full-size targets. |
 | The 15 view-only pick draws | No change. |
 | Label pick passes ×2 | Quads stay in canvas px (the declutter layout is canvas-based). `labelPickRenderer.draw` takes `view.window`, translates each rect by `−originPx`, and maps px → NDC with `sizePx`. |
@@ -118,7 +118,7 @@ from `slab.vp`.
 
 ## Memory and cost
 
-| | today (#899) | after |
+| | today (#906) | after |
 |---|---|---|
 | Pick textures, 1080p | 25 MB | 12 B total |
 | Pick textures, 4K | 100 MB | 12 B total |

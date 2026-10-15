@@ -37,8 +37,6 @@ function makeRuntime(opts: {
     [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
   ]);
   const runtime = {
-    biasLastApplied: 0,
-    biasCorrection: { setMode: vi.fn() },
     hiResFamous: { committed: () => null },
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
@@ -115,8 +113,6 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     };
     const publish = vi.fn();
     const runtime = {
-      biasLastApplied: 0,
-      biasCorrection: { setMode: vi.fn() },
       hiResFamous: { committed: () => null },
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
