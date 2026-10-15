@@ -24,7 +24,7 @@ Seven formats, each a magic + version header followed by fixed- or variable-size
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| SKMP   | `0x504D4B53` | 9       | Galaxy point cloud: position, photometry, shape, stellar mass. 16-byte header + 64 bytes/galaxy.                                                                  | [`galaxyCatalogFormat.ts`](../src/data/galaxyCatalog/galaxyCatalogFormat.ts)   |
+| SKMP   | `0x504D4B53` | 10      | Galaxy point cloud: position, photometry, shape, stellar mass, baked angular bias weight (u8 at byte 55). 16-byte header + 64 bytes/galaxy.                       | [`galaxyCatalogFormat.ts`](../src/data/galaxyCatalog/galaxyCatalogFormat.ts)   |
 | SKST   | `0x54534B53` | 1       | Stars in a spatial octree, cell-quantized to 6-byte records; interior nodes carry flux-weighted aggregates as a built-in LOD mip. 64-byte header + 16 bytes/node. | [`starCatalogFormat.ts`](../src/data/starCatalog/starCatalogFormat.ts)         |
 | SKOI / SKOC | ASCII   | 1       | Chunked octree container: 10-byte framing + JSON header + 24 B node rows + columnar records; one index per catalog, one object per chunk; chunks nest, and each object lists only the chunks rooted in its rows. | [`octreeFormat.ts`](../src/data/octree/octreeFormat.ts) |
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
@@ -36,7 +36,7 @@ Seven formats, each a magic + version header followed by fixed- or variable-size
 
 Each format has its own `<family>/v<N>/` folder, where `N` is that format's current version. A version bump moves the family to a new folder so a CDN can never serve a stale `.bin` alongside code that expects the new layout (`max-age=86400` on these responses would otherwise pair mismatched bytes and code for up to a day):
 
-- `galaxy-catalog/v9/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
+- `galaxy-catalog/v10/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
 - `star-catalog/v1/`: `stars-{small,medium,large}.bin` (SKST, the `format: 'skst'` side of the A/B)
 - `star-catalog/v2/`: `stars.bin` (the index) + `stars/<level>-<morton>.<hash>.bin` (one per chunk, named by its first root; a chunk packs several chunk roots' subtrees). Chunk names carry the bake's own content hash, so `build-data-manifest` neither hashes nor lists them. Chunks nest: the index names the chunks rooted in its own rows, each chunk names the next depth's, and the runtime resolves a chunk path straight through once its parent has decoded.
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
@@ -46,7 +46,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
-[`allowDataFile`](../tools/deploy/r2/allowDataFile.ts) is the allow-list of exactly which files under `public/data/` are tracked, hashed, manifested, and synced to R2 (matched by basename so it survives the family/epoch nesting). A few files live in these folders without being tracked: in `galaxy-catalog/v9/`, `sdss.bin` and `glade.bin` are pre-tier inputs to DisPerSE, not runtime tiers; in `filament/v1/`, `filaments-sdss.bin` is the matching diagnostic input. A `.scfd` can also exist on disk with no `SOURCE_REGISTRY` row yet, when a data pipeline ships ahead of its renderer wiring — the Edenhofer dust volume did this, but it still got an `allowDataFile` entry from day one (`/^edenhofer-dust-(small|medium|large)\.scfd$/`), so it was tracked, hashed and synced despite having no UI toggle. Only truly untracked-by-design files (the DisPerSE/diagnostic inputs above) skip `allowDataFile` entirely.
+[`allowDataFile`](../tools/deploy/r2/allowDataFile.ts) is the allow-list of exactly which files under `public/data/` are tracked, hashed, manifested, and synced to R2 (matched by basename so it survives the family/epoch nesting). A few files live in these folders without being tracked: in `galaxy-catalog/v10/`, `sdss.bin` and `glade.bin` are pre-tier inputs to DisPerSE, not runtime tiers; in `filament/v1/`, `filaments-sdss.bin` is the matching diagnostic input. A `.scfd` can also exist on disk with no `SOURCE_REGISTRY` row yet, when a data pipeline ships ahead of its renderer wiring — the Edenhofer dust volume did this, but it still got an `allowDataFile` entry from day one (`/^edenhofer-dust-(small|medium|large)\.scfd$/`), so it was tracked, hashed and synced despite having no UI toggle. Only truly untracked-by-design files (the DisPerSE/diagnostic inputs above) skip `allowDataFile` entirely.
 
 ### Content hash + manifest
 
@@ -80,7 +80,7 @@ Build everything with:
 npm run build-all
 ```
 
-With no flags it auto-detects the newest `Skyserver_*.csv` under `data/raw/sdss/` by mtime, plus the stable 2MRS/GLADE/Milliquas filenames, and silently skips whichever inputs aren't present, so downloading just one survey is a fine workflow. Override any input with `--sdss`, `--twomrs`, `--glade`, `--milliquas`, or `--out-dir`; `--glade-spec-only` drops GLADE's photo-z rows, `--glade-isotropic` drops SDSS-DR12-only GLADE rows (both optional, see [`buildAllBins.ts`](../tools/catalog/buildAllBins.ts) for the full flag set).
+With no flags it auto-detects the newest `Skyserver_*.csv` under `data/raw/sdss/` by mtime, plus the stable 2MRS/GLADE/Milliquas filenames, and silently skips whichever inputs aren't present, so downloading just one survey is a fine workflow. Override any input with `--sdss`, `--twomrs`, `--glade`, `--milliquas`, or `--out-dir`; `--glade-spec-only` drops GLADE's photo-z rows, `--glade-isotropic` drops SDSS-DR12-only GLADE rows (both optional); `--bias-weight angular|schechter|vmax|none` (default `angular`) picks the per-galaxy bias weight baked into byte 55, computed per tier file over that file's own rows, the sample the tier draws (see [`buildAllBins.ts`](../tools/catalog/buildAllBins.ts) for the full flag set).
 
 ### The SQL 500,000-row trap
 
@@ -135,7 +135,7 @@ A small hand-curated catalog of well-known galaxies (Messier + NGC greatest-hits
 ```bash
 npm run build-tiers            # the survey .bin files (build-famous's own docblock requires this order)
 npm run fetch-famous-images    # downloads + processes thumbnails; idempotent, --force to re-fetch
-npm run build-famous           # public/data/galaxy-catalog/v9/famous.bin + famous_galaxies_meta.json
+npm run build-famous           # public/data/galaxy-catalog/v10/famous.bin + famous_galaxies_meta.json
 ```
 
 To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.

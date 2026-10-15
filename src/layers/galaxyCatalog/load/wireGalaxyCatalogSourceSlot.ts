@@ -58,7 +58,7 @@ export function wireGalaxyCatalogSourceSlot(
         `[engine] upload done  ${id} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
     },
-    // Search, picking and bias correction read `catalogs`, so a released
+    // Search and picking read `catalogs`, so a released
     // catalog must leave it with the GPU buffers or they would find galaxies
     // that are no longer drawn.
     onRelease: () => {

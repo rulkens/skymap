@@ -1,21 +1,11 @@
 /**
- * Unit tests for the pure `computeAngularWeights` helper.
- *
- * Verifies the HEALPix angular re-weighting bake produces sensible
- * down-weights for over-dense angular regions and up-weights for sparse
- * regions, with the result clamped to [0.3, 1.2] for numeric stability +
- * additive-blending tolerance (asymmetric — dimming is cheap, boosting
- * compounds; see `computeAngularWeights.ts` `WEIGHT_MIN`/`WEIGHT_MAX`
- * docstring for the full rationale).
- *
- * Worker plumbing isn't exercised — Vitest runs in Node without a Worker
- * constructor; the worker is a thin wrapper that just delegates.
+ * Unit tests for the pure `computeAngularWeights` bake: over-dense angular
+ * regions get down-weights, sparse ones up-weights, clamped to [0.3, 1.2].
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
-import { Source } from '../../../../src/data/sources';
-import { raDecZToCartesian } from '../../../../src/utils/math';
+import { computeAngularWeights } from '../../../../tools/catalog/bias/computeAngularWeights';
+import { raDecZToCartesian } from '../../../../src/utils/math/index';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -56,7 +46,7 @@ describe('computeAngularWeights', () => {
       const z = 0.01 + rand() * 0.1;
       setPos(cloud, i, ra, dec, z);
     }
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
     for (let i = 0; i < 50; i++) {
       expect(Number.isFinite(w[i]!)).toBe(true);
       // f32 rounding slack — `Math.min(1.2, …)` stored as Float32 can
@@ -71,7 +61,7 @@ describe('computeAngularWeights', () => {
     // fast path should kick in and produce identity weights.
     const cloud = emptyCloud(5);
     for (let i = 0; i < 5; i++) setPos(cloud, i, i * 70, 0, 0.05);
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
     for (let i = 0; i < 5; i++) {
       expect(w[i]!).toBeCloseTo(1, 5);
     }
@@ -104,7 +94,7 @@ describe('computeAngularWeights', () => {
       setPos(cloud, N_CONE + i, ra, dec, 0.085 + (i % 7) * 0.001);
     }
 
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
 
     // The first N_CONE rows are the dense cluster — their weights should
     // average BELOW 1 (down-weighted for over-density).
@@ -124,7 +114,7 @@ describe('computeAngularWeights', () => {
 
   it('returns identity weights for an empty cloud', () => {
     const cloud = emptyCloud(0);
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
+    const w = computeAngularWeights({ cloud });
     expect(w.length).toBe(0);
   });
 });

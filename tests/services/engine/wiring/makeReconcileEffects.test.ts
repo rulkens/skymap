@@ -8,7 +8,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { BiasMode } from '../../../../src/@types/data/galaxyCatalog/BiasMode';
 import { makeReconcileEffects } from '../../../../src/services/engine/wiring/makeReconcileEffects';
 
 // Mock the syncVisibilityFades module so the syncFades tests don't need a real
@@ -60,22 +59,19 @@ const CANVAS = {} as HTMLCanvasElement;
 function makeState(): {
   state: EngineState;
   requestRender: ReturnType<typeof vi.fn<() => void>>;
-  setMode: ReturnType<typeof vi.fn<(mode: BiasMode) => Promise<void>>>;
 } {
   const requestRender = vi.fn<() => void>();
-  const setMode = vi.fn<(mode: BiasMode) => Promise<void>>(() => Promise.resolve());
 
   const state = {
     subsystems: {
       scheduler: { requestRender },
-      biasCorrection: { setMode },
     },
     booted: false,
     selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
   } as unknown as EngineState;
 
-  return { state, requestRender, setMode };
+  return { state, requestRender };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
