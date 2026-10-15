@@ -327,10 +327,10 @@ StarRenderer.draw(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3, op
   - the overlays read `foreground:0` alpha for caption occlusion (RENDERER.md, "Caption/label occlusion reads alpha"): at opacity 1 the written alpha is 1, as today.
 - `STAR_EMISSIVE` and its parity test are untouched.
 
-- [ ] Test `draw writes the opacity at byte 76` (`starRenderer.test.ts`; a uniform byte-layout keep-rule, `testing.md`): `draw(pass, mvp, [0.2, 0.4, 0.6], 0.5)` → the written `Float32Array` has length 20, `[16..18]` = the tint and `[19]` = 0.5. Mutation-check by writing index 18.
-- [ ] Rewrite `bakes the opaque foreground profile` as `blends straight-alpha OVER with depth write kept`: the colour target's `blend` equals the factors above and `depthStencil` still matches `{ depthWriteEnabled: true, depthCompare: 'less' }`. Update the `draw.length` arity assertion to 4.
+- [x] Test `draw writes the opacity at byte 76` (`starRenderer.test.ts`; a uniform byte-layout keep-rule, `testing.md`): `draw(pass, mvp, [0.2, 0.4, 0.6], 0.5)` → the written `Float32Array` has length 20, `[16..18]` = the tint and `[19]` = 0.5. Mutation-check by writing index 18.
+- [x] Rewrite `bakes the opaque foreground profile` as `blends straight-alpha OVER with depth write kept`: the colour target's `blend` equals the factors above and `depthStencil` still matches `{ depthWriteEnabled: true, depthCompare: 'less' }`. Update the `draw.length` arity assertion to 4.
 - [ ] Load the dev server at `#focus=body-sun` and check the console for shader compile errors before committing.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 

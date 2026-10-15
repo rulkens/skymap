@@ -250,7 +250,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
         IDENTITY_MAT3,
       );
       // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-      runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp));
+      runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp), 1);
     },
 
     // Pick aspect — stamps the present star's identity into the NEAR0 r32uint pick

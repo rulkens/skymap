@@ -20,7 +20,7 @@
  *
  * ### Renderer uniform caveat (known gap)
  *
- * `starRenderer.draw` writes MVP+colour into a single non-dynamic uniform
+ * `starRenderer.draw` writes MVP, colour and opacity into a single non-dynamic uniform
  * buffer, so a camera pose that resolves TWO stars at once yields two
  * sphere draws whose `queue.writeBuffer` calls both land before the frame's
  * submit — both draws read the LAST uniform. Since the size gate now
@@ -113,7 +113,7 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
           star.oblateness,
         );
         // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-        runtime.starRenderer.draw(pass, narrowMat4(mvp), star.color);
+        runtime.starRenderer.draw(pass, narrowMat4(mvp), star.color, 1);
       }
     },
 
