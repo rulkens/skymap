@@ -1,5 +1,5 @@
 /**
- * deriveSourceMasks — project the galaxy catalog draw/pick bitmasks from settings.
+ * sourceMaskOf — project the galaxy catalog draw/pick bitmasks from settings.
  *
  * ### A pure projection, applied by the caller
  *
@@ -8,9 +8,9 @@
  * `settings.galaxyCatalogs.items[id].enabled` flag, and that galaxy catalog's live
  * fade opacity. The single source of truth is the settings record; the bitmask is
  * a compiled, GPU-cheap projection of it. This function computes that projection
- * and RETURNS it as a `SourceMasks` value — it writes nothing. Each caller decides
- * where to apply the result: `runFrame` derives it once per frame and threads it
- * into the render + pick passes; the click path derives it fresh at click time.
+ * and RETURNS it as a `SourceMasks` value — it writes nothing. The Layer reads it
+ * where it uses it: the planner and the point pass's `draw` take `.draw`, its
+ * `drawPick` takes `.pick`, each at the frame's (or the click's) `nowMs`.
  * Computing on read (rather than caching a field a setter must remember to
  * refresh) is what keeps the masks from ever drifting out of sync with settings.
  *
@@ -52,7 +52,7 @@ export function sourceMaskOf(
     const id = galaxyCatalogIdOf(src);
     const enabled = state.settings.galaxyCatalogs.items[id].enabled;
     // Sampled at THIS frame's nowMs, not the registry's last-ticked clock
-    // (`tick(nowMs)` runs at the frame TAIL, runFrame.ts) — otherwise the mask
+    // (`tick(nowMs)` runs at the frame TAIL, `runFrame`) — otherwise the mask
     // lags the fade by one frame and keeps a just-settled source drawing.
     const opacity = state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, nowMs);
     // Draw through the fade-out tail so a hidden galaxy catalog ramps down smoothly.

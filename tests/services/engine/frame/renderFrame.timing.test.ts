@@ -31,6 +31,7 @@ import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/Fr
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
@@ -376,6 +377,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
       settings: {
         galaxyCatalogs: {
+          items: makeGalaxyCatalogItems(),
           sizePx: settings.pointSizePx,
           brightness: settings.brightness,
           provenance: DEFAULT_GALAXY_PROVENANCE,

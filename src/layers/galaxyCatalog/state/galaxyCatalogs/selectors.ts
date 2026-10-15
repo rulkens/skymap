@@ -58,7 +58,7 @@ export const selectGalaxyCatalogItems = createSelector(
 /**
  * selectVisibleSourceMask — projects the per-galaxy-catalog `enabled` bits into
  * the 32-bit galaxy-catalog-visibility bitmask the SettingsPanel checkboxes
- * read. NOT authoritative state — it reproduces `deriveSourceMasks`' `pick`
+ * read. NOT authoritative state — it reproduces `sourceMaskOf`'s `pick`
  * mask (intent only, no fade-out tail) by iterating `GALAXY_CATALOG_SOURCES`
  * in the same order with the same `maskWith`.
  */

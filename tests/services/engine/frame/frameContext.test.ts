@@ -110,7 +110,6 @@ function frameInput(
     arm?: FramedCameraPose;
     projection?: CameraProjection;
     simDays?: number;
-    visibleSourceMask?: number;
   } = {},
 ): FrameContextInput {
   const projection = over.projection ?? PROJECTION;
@@ -120,7 +119,6 @@ function frameInput(
     altitudeMpc: pose.distance,
     nowMs: 0,
     simDays: over.simDays ?? CONST_J2000,
-    visibleSourceMask: over.visibleSourceMask ?? 0xffffffff,
   };
 }
 
@@ -207,15 +205,10 @@ describe('deriveFrameContext — ready branch', () => {
     expect(Array.from(canvas.slabs[1]!.vp)).toEqual(Array.from(expected[1]!.vp));
   });
 
-  it('exposes visibleSourceMask and a seeded focus on the ready context', () => {
-    const mask = 0b1011;
-    const ctx = deriveFrameContext(
-      makeState(),
-      frameInput(RESTING_POSE, { visibleSourceMask: mask }),
-    );
+  it('exposes a seeded focus on the ready context', () => {
+    const ctx = deriveFrameContext(makeState(), frameInput(RESTING_POSE));
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    expect(ctx.visibleSourceMask).toBe(mask);
     expect(ctx.focus.blend).toBe(0);
   });
 

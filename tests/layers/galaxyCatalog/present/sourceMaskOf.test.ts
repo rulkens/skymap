@@ -1,5 +1,5 @@
 /**
- * deriveSourceMasks — the galaxy catalog draw/pick bitmask derivation.
+ * sourceMaskOf — the galaxy catalog draw/pick bitmask derivation.
  *
  * These tests pin the three core invariants the helper exists to enforce:
  * an enabled galaxy catalog gets both bits; a galaxy catalog toggled off but still fading
@@ -8,7 +8,7 @@
  * The all-enabled case pins that enabling every catalog lights every
  * galaxy-catalog bit, DesiDeep included.
  *
- * `deriveSourceMasks` is a PURE projection: it RETURNS `{ draw, pick }` and
+ * `sourceMaskOf` is a PURE projection: it RETURNS `{ draw, pick }` and
  * writes nothing. The fixture is therefore just its two inputs — a settings stub
  * whose `galaxyCatalogs.items` covers every `GALAXY_CATALOG_SOURCES` id (so the
  * loop never indexes undefined), and a `fades.opacityOf` stub keyed off the
@@ -31,7 +31,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
  *
  * `enabledOverrides` flips specific galaxy catalog ids; `opacityById` supplies
  * each catalog's fade opacity (default 0 — fully faded). Returns the same
- * `Pick<EngineState, ...>` shape `deriveSourceMasks` accepts.
+ * `Pick<EngineState, ...>` shape `sourceMaskOf` accepts.
  */
 function makeState(opts: {
   enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
@@ -56,7 +56,7 @@ function makeState(opts: {
   };
 }
 
-describe('deriveSourceMasks', () => {
+describe('sourceMaskOf', () => {
   it('sets draw+pick bits for an enabled galaxy catalog', () => {
     // Enabled with zero opacity still gets both bits — `enabled` alone drives
     // the pick bit, and `enabled || opacity>0` drives the draw bit.

@@ -45,7 +45,7 @@ export function deriveFrameContext(
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
-  const { cam, arm, altitudeMpc, nowMs, simDays, visibleSourceMask } = input;
+  const { cam, arm, altitudeMpc, nowMs, simDays } = input;
 
   // This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes one
   // deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call this
@@ -133,7 +133,6 @@ export function deriveFrameContext(
     nowMs,
     simDays,
     altitudeMpc,
-    visibleSourceMask,
     renderTargets: state.gpu.renderTargets,
     focus: ZERO_FOCUS,
     focusBlend: 0,

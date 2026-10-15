@@ -32,6 +32,7 @@ import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
+import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -252,7 +253,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       subsystems: { fades, clipPlayer },
       settings: {
         milkyWay: { enabled: true },
-        galaxyCatalogs: {},
+        galaxyCatalogs: { items: makeGalaxyCatalogItems() },
         bias: {},
       },
       selection: { select: null, hover: null, focus: null },

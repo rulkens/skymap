@@ -282,11 +282,11 @@ PR 2 narrows `sourceMaskOf` to `(fade) => number` over the handed `survey` recor
 - `DiskWalkInput.visibleSourceMask`, `HiResFamousFrameInput.visibleSourceMask`, `GalaxyPointDrawSettings.visibleSourceMask` and `structureMemberCount`'s parameter keep their names and types. The renderer's mask skip stays.
 - Core: `visibleSourceMask` leaves `FrameContextInput`, `ReadyFrameContext`, `frameContextInputOf`'s args and `deriveFrameContext`; the three calls and their comments go (`runFrame.ts:85-89` and the hand-off at `:164-171`; the first-statement note at `:80-82` stays, naming demand and the pose without the masks).
 
-- [ ] Run the moves and the rename; commit the pure move.
-- [ ] Test `drawPick drops a catalog switched off while its fade-out runs` (`galaxyPointSpritesPass.test.ts`; Review Focus #1): SDSS `enabled: false` with its fade at 0.5 → `drawPick` hands the pick renderer no SDSS source, while `draw` still passes a mask with the SDSS bit set. Mutation-check by reading `.draw` in `drawPick`.
-- [ ] Tests: the 19 `vi.mock` blocks go, with `runFrame.test.ts`'s fixture comments that justify them (`:36-43,164-167,196-200`). `runFrame.test.ts`'s ordering case (`:722-760`) re-points at `reevaluateDemand` (already a `vi.fn` mock at `:32-34`) as `ticks clipPlayer before reevaluateDemand`. Delete `deriveView.test.ts`'s `carries the draw mask, not the pick mask` (`:466-472`), `pickFrameContext.test.ts`'s `carries the pick mask as visibleSourceMask` (`:189-197`), and the mask half of `frameContext.test.ts`'s `exposes visibleSourceMask and a seeded focus` (`:210-218`; the focus half stays): the new pass test owns the split. `renderFrame.test.ts:755`'s mask assertion goes. The four `frame.*.test.ts` fixtures drop the snapshot field and seed `galaxyCatalogs` settings and fades instead.
-- [ ] The second Review Focus #2 grep prints nothing.
-- [ ] Commit.
+- [x] Run the moves and the rename; commit the pure move.
+- [x] Test `drawPick drops a catalog switched off while its fade-out runs` (`galaxyPointSpritesPass.test.ts`; Review Focus #1): SDSS `enabled: false` with its fade at 0.5 → `drawPick` hands the pick renderer no SDSS source, while `draw` still passes a mask with the SDSS bit set. Mutation-check by reading `.draw` in `drawPick`.
+- [x] Tests: the 19 `vi.mock` blocks go, with `runFrame.test.ts`'s fixture comments that justify them (`:36-43,164-167,196-200`). `runFrame.test.ts`'s ordering case (`:722-760`) re-points at `reevaluateDemand` (already a `vi.fn` mock at `:32-34`) as `ticks clipPlayer before reevaluateDemand`. Delete `deriveView.test.ts`'s `carries the draw mask, not the pick mask` (`:466-472`), `pickFrameContext.test.ts`'s `carries the pick mask as visibleSourceMask` (`:189-197`), and the mask half of `frameContext.test.ts`'s `exposes visibleSourceMask and a seeded focus` (`:210-218`; the focus half stays): the new pass test owns the split. `renderFrame.test.ts:755`'s mask assertion goes. The four `frame.*.test.ts` fixtures drop the snapshot field and seed `galaxyCatalogs` settings and fades instead.
+- [x] The second Review Focus #2 grep prints nothing.
+- [x] Commit.
 
 ### Task 8: The star sphere pipeline gains an opacity, held at 1 (V1)
 

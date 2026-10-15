@@ -39,7 +39,6 @@ import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
-import { sourceMaskOf } from '../../../layers/galaxyCatalog/present/sourceMaskOf';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -78,15 +77,10 @@ const LIVE_IDLE_TICK_MS = 500;
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // First statement, by contract: scene cues fired here (fade / show / hide /
-  // focus) are in the store before this frame derives masks, demand or the pose,
+  // focus) are in the store before this frame derives demand or the pose,
   // and a frameTween a cue dispatches is seen by this frame's basis.
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
-  // The masks are a per-frame projection of settings + fade opacity, never a
-  // hand-maintained mirror; demand itself reads settings directly. Sampled at
-  // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
-  // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
-  const masks = sourceMaskOf(state, nowMs);
   reevaluateDemand(state);
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
@@ -161,14 +155,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // The camera assembly + altitude line, shared with `pickFrameContext`:
-  // `nowMs`/`visibleSourceMask`/`poseBasis`/`upBasis`/`simDays` are the only
+  // `nowMs`/`poseBasis`/`upBasis`/`simDays` are the only
   // fields the two callers vary on purpose; everything else reads off `state`
   // identically — safe to call here because `state.cameraRuntime = next` above
   // already made `state`'s view of the runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
     worldPose,
     nowMs,
-    visibleSourceMask: masks.draw,
     poseBasis,
     upBasis,
     simDays,

@@ -1,10 +1,10 @@
 /**
  * galaxyPointSpritesPass — every loaded galaxy from every visible source as an
  * instanced additive billboard in the HDR target; the headline content layer.
- * Always on: per-source visibility is the shader-side `visibleSourceMask`, so
- * hiding SDSS is a 4-byte write. The renderer's own loop skips a source at
- * exactly 0 opacity, which is what keeps a completed deep-zoom fade from
- * rasterizing millions of alpha-0 instances.
+ * Always on: per-source visibility is the shader-side `visibleSourceMask` (the
+ * draw half of `sourceMaskOf`), so hiding SDSS is a 4-byte write. The
+ * renderer's own loop skips a source at exactly 0 opacity, which is what keeps
+ * a completed deep-zoom fade from rasterizing millions of alpha-0 instances.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -13,6 +13,7 @@ import { Source } from '../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
+import { sourceMaskOf } from '../present/sourceMaskOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -52,7 +53,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         pointSizePx: state.settings.galaxyCatalogs.sizePx,
         brightness: state.settings.galaxyCatalogs.brightness,
         selectedPacked,
-        visibleSourceMask: ctx.snapshot.visibleSourceMask,
+        visibleSourceMask: sourceMaskOf(state, ctx.snapshot.nowMs).draw,
         camPosWorld: view.camPos,
         pxPerRad: drawPxPerRad,
         provenance: state.settings.galaxyCatalogs.provenance,
@@ -81,16 +82,18 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
       });
     },
 
-    // `ctx.snapshot.visibleSourceMask` is the PICK mask here (`deriveSourceMasks(state).pick`),
-    // and the opacity filter extends the mask on the INTENT fade only — picking
-    // follows intent, not pixels (`deriveSourceMasks.ts:25-27`, #18 D8), so a clip
-    // `fade()` dims these points without revoking their click target.
+    // The PICK mask, not the draw one: picking follows intent, not pixels
+    // (`sourceMaskOf`, #18 D8), so a catalog switched off stops taking clicks
+    // while its fade-out still draws. The opacity filter extends the mask on the
+    // INTENT fade only, so a clip `fade()` dims these points without revoking
+    // their click target.
     drawPick(pass, view, ctx, state) {
       const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
       const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
       const fades = state.subsystems.fades;
+      const pickMask = sourceMaskOf(state, ctx.snapshot.nowMs).pick;
       const sources = Array.from(runtime.pointRenderer.loadedSources()).filter((s) => {
-        if (((ctx.snapshot.visibleSourceMask >> s.source) & 1) === 0) return false;
+        if (((pickMask >> s.source) & 1) === 0) return false;
         const opacity =
           fades.opacityOf(
             { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) },

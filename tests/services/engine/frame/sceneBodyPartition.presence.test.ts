@@ -60,7 +60,6 @@ const viewAt = (simDays: number) =>
       altitudeMpc: POSE.distance,
       nowMs: 0,
       simDays,
-      visibleSourceMask: 0,
     },
     { width: 1920, height: 1080 },
   )!;

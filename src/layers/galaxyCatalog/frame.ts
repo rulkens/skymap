@@ -23,6 +23,7 @@ import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { structureMemberCount } from './present/structureMemberCount';
+import { sourceMaskOf } from './present/sourceMaskOf';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -54,14 +55,18 @@ export function galaxyCatalogPlanner(
         });
       }
 
+      // The draw mask, so the counts, the hi-res famous gate and the disk walk
+      // keep a hidden catalog through its fade-out, as the point sprites do.
+      const visibleSourceMask = sourceMaskOf(state, snapshot.nowMs).draw;
+
       const selectRow = state.selectionRows.select;
       if (
         selectRow !== memberCountRow ||
-        snapshot.visibleSourceMask !== memberCountMask ||
+        visibleSourceMask !== memberCountMask ||
         runtime.catalogsVersion !== memberCountVersion
       ) {
         memberCountRow = selectRow;
-        memberCountMask = snapshot.visibleSourceMask;
+        memberCountMask = visibleSourceMask;
         memberCountVersion = runtime.catalogsVersion;
         runtime.publish({
           // Narrowed on the row's own tag, never a structural sniff — only a
@@ -73,7 +78,7 @@ export function galaxyCatalogPlanner(
               ? structureMemberCount(
                   selectRow,
                   (source) => runtime.catalogs.get(source),
-                  snapshot.visibleSourceMask,
+                  visibleSourceMask,
                 )
               : null,
         });
@@ -95,7 +100,7 @@ export function galaxyCatalogPlanner(
         pair.subsystem.runFrame({
           cam,
           catalogs: runtime.catalogs,
-          visibleSourceMask: snapshot.visibleSourceMask,
+          visibleSourceMask,
           pxPerRad,
           famousGalaxiesMeta: runtime.famousMeta,
         });
@@ -106,11 +111,11 @@ export function galaxyCatalogPlanner(
       const sharedInput = {
         cam,
         catalogs: runtime.catalogs,
-        visibleSourceMask: snapshot.visibleSourceMask,
+        visibleSourceMask,
         pxPerRad,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
-        // popping once `deriveSourceMasks` drops the source from the mask.
+        // popping once the fade ends and the draw mask drops the source.
         sourceOpacity: (source: SourceType) =>
           state.subsystems.fades.opacityOf(
             { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },

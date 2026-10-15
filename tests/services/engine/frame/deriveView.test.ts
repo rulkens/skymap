@@ -5,7 +5,6 @@ import { deriveFrameContext } from '../../../../src/services/engine/frame/frameC
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { cubemapCaptureFrame } from '../../../../src/services/engine/frame/cubemapCaptureFrame';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
@@ -22,8 +21,7 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { Source } from '../../../../src/data/sources';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
@@ -39,7 +37,6 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-import type { FadeId } from '../../../../src/@types/animation/FadeId';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
@@ -88,7 +85,6 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
-    visibleSourceMask: 0,
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -362,22 +358,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const texturedDisks =
       overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
 
-    const items = Object.fromEntries(
-      GALAXY_CATALOG_SOURCES.map((s) => [
-        galaxyCatalogIdOf(s),
-        { enabled: true, labelEnabled: true },
-      ]),
-    );
-
     return {
       booted: overrides.booted ?? true,
       gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
-      subsystems: {
-        texturedDisks,
-        fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
-      },
+      subsystems: { texturedDisks },
       settings: {
-        galaxyCatalogs: { items },
         orientation: 'equatorial',
         bodies: { items: {} },
       },
@@ -465,14 +450,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         nowMs: 0,
       }).isReady,
     ).toBe(false);
-  });
-
-  it('carries the draw mask, not the pick mask, as visibleSourceMask', () => {
-    const state = makeCaptureState();
-    const capture = captureFrame(state);
-    expect(capture).not.toBeNull();
-    if (capture === null) return;
-    expect(capture.snapshot.visibleSourceMask).toBe(sourceMaskOf(state, 0).draw);
   });
 
   it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {
@@ -747,7 +724,6 @@ describe('deriveView — NEAR0 range from the Layers’ near spheres', () => {
       altitudeMpc: pose.distance,
       nowMs: 0,
       simDays: CONST_J2000,
-      visibleSourceMask: 0,
     });
     if (!snapshot.isReady) throw new Error('fixture not ready');
 

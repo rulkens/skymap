@@ -1,7 +1,7 @@
 /**
- * SourceMasks — the two per-source bitmasks `deriveSourceMasks` projects from
+ * SourceMasks — the two per-source bitmasks `sourceMaskOf` projects from
  * settings + live fade opacity. A transient return value, not stored state:
- * the frame loop derives it fresh each frame, the pick path fresh at click time.
+ * the Layer derives it where it reads it, each frame and at click time.
  */
 export type SourceMasks = {
   /** draw — bit set when `enabled || fade opacity > 0` (a just-hidden catalog keeps drawing through its fade-out tail). */

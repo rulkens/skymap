@@ -8,13 +8,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // The harness's `state.settings`/`state.gpu` slices are minimal (camera-only);
-// these three run inside `runFrame` regardless and reach past what the
+// these two run inside `runFrame` regardless and reach past what the
 // fixture stubs, same as every other camera-only frame-level fixture.
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
-}));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
 }));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,

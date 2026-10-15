@@ -218,7 +218,7 @@ export function createTexturedDiskSubsystem(
         const loadFade = loadFadeAlpha(bitmapReadyTime.get(key), nowMs, LOAD_FADE_MS);
         // Survey-fade term: without it, toggling a catalog off left its
         // textured disks at full alpha through the point sprites' fade and
-        // popped them out only once `deriveSourceMasks` dropped the source.
+        // popped them out only once the draw mask (`sourceMaskOf`) dropped the source.
         const fadeAlpha = distFade * loadFade * sourceOpacity;
 
         // Disks-only.  The `Number.isFinite` checks are a defensive
