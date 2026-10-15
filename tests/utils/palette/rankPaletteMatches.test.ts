@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { blackHoleSearch } from '../../../../src/layers/blackHoles/present/blackHoleSearch';
-import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
-import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { Source } from '../../../../src/data/sources';
-import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
-import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
-import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
-import type { LayerSearchEntry } from '../../../../src/@types/engine/layer/LayerSearchEntry';
+import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
+import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
+import { actionForRow } from '../../../src/utils/palette/actionForRow';
+import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
+import { Source } from '../../../src/data/sources';
+import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
+import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',

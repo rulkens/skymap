@@ -6,7 +6,7 @@
  *   - `data/seeds/famous_galaxies.seed.json`           (curated entries)
  *
  * Writes:
- *   - `public/data/galaxy-catalog/v9/famous.bin` (GalaxyCatalog, normal renderer input)
+ *   - `public/data/galaxy-catalog/v10/famous.bin` (GalaxyCatalog, normal renderer input)
  *   - `public/data/famous_galaxies_meta.json`   (per-localIdx → id + names + description;
  *     stays at the data root — loose JSON sidecars are unversioned, see docs/DATA.md)
  *
@@ -162,6 +162,8 @@ async function main(): Promise<void> {
     // Famous entries always carry a curated real diameter (e.diameterKpc), so
     // no row is a flat-default fallback; every flag stays 0.
     diameterIsFallback: new Uint8Array(count),
+    // Never bias-weighted: 0 decodes as 1.0.
+    angularWeight: new Uint8Array(count),
     log10StellarMass: new Float32Array(count),
   };
 
@@ -236,7 +238,7 @@ async function main(): Promise<void> {
   );
 
   // ── Write the artefacts ──────────────────────────────────────────────
-  // famous.bin rides the GalaxyCatalog epoch folder (galaxy-catalog/v9/);
+  // famous.bin rides the GalaxyCatalog epoch folder (galaxy-catalog/v10/);
   // the meta sidecar stays flat at the data root — see module docblock.
   const binBuf = encodeGalaxyCatalog(cloud);
   const binPath = resolve(outDir, GALAXY_CATALOG_DATA_PREFIX, 'famous.bin');

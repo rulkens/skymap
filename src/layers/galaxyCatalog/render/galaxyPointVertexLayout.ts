@@ -25,7 +25,7 @@
  *   [x, y, z, magnitude, colorIndex,
  *    axisRatio (sign bit = isFallback flag),
  *    paCos, paSin, radiusMpc (sign bit = diameterIsFallback),
- *    vMaxWeight, schechterRatio, angularDensityWeight, absMag, sbAmp]
+ *    angularWeight, absMag, sbAmp]
  *
  * Every slot is f32; the fallback-orientation bit rides on the sign of
  * axisRatio.  Identity comes from `(sourceCode << 26) | instance_index`
@@ -35,14 +35,14 @@
  * vertex stage skips a cos+sin and a log10+sqrt per invocation — see the
  * layout docblock in `buildPointInterleavedBuffer.ts` for the trade.
  */
-export const SLOTS_PER_GALAXY_POINT = 14;
+export const SLOTS_PER_GALAXY_POINT = 12;
 
 /**
- * Byte stride between per-instance records — 14 × 4 = 56.  Both
+ * Byte stride between per-instance records — 12 × 4 = 48.  Both
  * pipelines (point + pick) declare this stride; mismatched values
  * either validate-error or silently read garbage.
  */
-export const POINT_STRIDE = SLOTS_PER_GALAXY_POINT * 4; // 56 bytes
+export const POINT_STRIDE = SLOTS_PER_GALAXY_POINT * 4; // 48 bytes
 
 /** Slot 5: galaxy b/a ratio.  `abs(axisRatio)` for the ellipse mask; sign bit flags a fallback orientation. */
 const AXIS_RATIO_BYTE_OFFSET = 20;
@@ -62,35 +62,22 @@ const PA_COS_SIN_BYTE_OFFSET = 24;
  */
 const RADIUS_MPC_BYTE_OFFSET = 32;
 
-/** Slot 9: per-galaxy 1/V_max multiplier (Malmquist mode 2).  Baked from m, distance, and the galaxy catalog flux limit. */
-const VMAX_WEIGHT_BYTE_OFFSET = 36;
-
-/** Slot 10: Schechter density-correction ratio (Malmquist mode 3).  Default 1.0; real values spliced in lazily when the user picks mode 3. */
-const SCHECHTER_RATIO_BYTE_OFFSET = 40;
-
 /**
- * Slot 11: HEALPix angular re-weight (Malmquist mode 4).  Default
- * 1.0; real per-galaxy values spliced in lazily by
- * `biasCorrectionSubsystem` when the user first picks mode 4 (same
- * pattern as Schechter).
- *
- * Per-vertex (not uniform) because the weight depends on each galaxy's
- * HEALPix cell + log-distance shell, which in turn depend on the
- * whole cloud's distribution.  The bake is three linear passes plus
- * one sort — ~150 ms for full GLADE, fine for a user-initiated toggle
- * but too slow for the .bin-arrival path.
+ * Slot 9: the build-time angular weight (SKMP byte 55, decoded to f32).
+ * Per-vertex, not uniform: it depends on the galaxy's HEALPix cell and
+ * distance shell over the whole source, so the tier build bakes it.
  */
-const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
+const ANGULAR_WEIGHT_BYTE_OFFSET = 36;
 
 /**
- * Slot 12: absolute magnitude from the offset-normalised apparent
+ * Slot 10: absolute magnitude from the offset-normalised apparent
  * magnitude (slot 3) — the Malmquist mode-1 gate compares this against
  * `u.absMagLimit` directly instead of re-deriving it per vertex.
  */
-const ABS_MAG_BYTE_OFFSET = 48;
+const ABS_MAG_BYTE_OFFSET = 40;
 
-/** Slot 13: physical surface-brightness amplitude (see buildPointInterleavedBuffer slot 13). */
-const SB_AMP_BYTE_OFFSET = 52;
+/** Slot 11: physical surface-brightness amplitude (see buildPointInterleavedBuffer slot 11). */
+const SB_AMP_BYTE_OFFSET = 44;
 
 /**
  * Vertex buffer attribute table — single source of truth, imported
@@ -102,11 +89,9 @@ const SB_AMP_BYTE_OFFSET = 52;
  *   3  axisRatio (sign bit = isFallback)
  *   4  paCosSin (vec2<f32>)
  *   5  radiusMpc (sign bit = diameterIsFallback)
- *   6  vMaxWeight
- *   7  schechterRatio
- *   8  angularDensityWeight
- *   9  absMag
- *   10 sbAmp
+ *   6  angularWeight
+ *   7  absMag
+ *   8  sbAmp
  *
  * Named offset constants only exist for slots that other code reads by
  * name (bake / shader); position/magnitude/colorIndex use literal
@@ -119,11 +104,9 @@ export const GALAXY_POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 3, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 4, offset: PA_COS_SIN_BYTE_OFFSET, format: 'float32x2' },
   { shaderLocation: 5, offset: RADIUS_MPC_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 6, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 7, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 8, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 9, offset: ABS_MAG_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 10, offset: SB_AMP_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 6, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 7, offset: ABS_MAG_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 8, offset: SB_AMP_BYTE_OFFSET, format: 'float32' },
 ];
 
 // ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
@@ -167,11 +150,11 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 124..127: sizeFilter        u32          (0 all/1 measured/2 estimated) }
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
- *   bytes 136..139: apparentMagLimit  f32          (reserved, unwritten) } 32 bytes
- *   bytes 140..143: schechterMStar    f32          (reserved, unwritten) }  (two vec4 slots)
- *   bytes 144..147: schechterAlpha    f32          (reserved, unwritten) }
- *   bytes 148..151: schechterMLim     f32          (reserved, unwritten) }
- *   bytes 152..155: schechterNRef     f32          (reserved, unwritten) }
+ *   bytes 136..139: apparentMagLimit  f32          (padding, unwritten)  } 32 bytes
+ *   bytes 140..143: schechterMStar    f32          (padding, unwritten)  }  (two vec4 slots)
+ *   bytes 144..147: schechterAlpha    f32          (padding, unwritten)  }
+ *   bytes 148..151: schechterMLim     f32          (padding, unwritten)  }
+ *   bytes 152..155: schechterNRef     f32          (padding, unwritten)  }
  *   bytes 156..159: depthFadeEnabled  u32          (UI toggle)           }
  *   bytes 160..163: pxFadeStart       f32          (procedural-disk band low)  }
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
@@ -181,9 +164,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 180..183: galaxyFalloffStrength f32      (resolved-fraction exponent)    }
  *   bytes 184..191: _padU0 / _padU1       f32×2    (written as 0)                  }
  *
- * Byte 172 was the former `_padFade1` pad word, repurposed to `galaxySbScale`
- * when the three galaxy surface-brightness calibration knobs became live
- * uniforms; the two trailing pad words round the struct out to 192.
+ * The two trailing pad words round the struct out to 192.
  *
  * Total: 192 bytes — a multiple of 16 ✓
  *
@@ -200,12 +181,9 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *
  * The trailing u32 padding words round the struct out to a 16-byte
  * boundary so a future vec3/vec4 append doesn't fall into mis-alignment.
- * The `apparentMagLimit` / `schechterMStar` / `schechterAlpha` slots are
- * reserved-but-unwritten: the shader's Schechter / 1-over-Vmax modes read
- * their per-galaxy weights from the per-vertex `schechterRatio` + angular
- * slots (spliced in by `biasCorrectionSubsystem`), never from these
- * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
- * stable; the WGSL struct still declares them but no shader reads them.
+ * The `apparentMagLimit` / `schechter*` words are padding: nothing writes
+ * or reads them, and they stay only to keep `pickPass`'s byte offset
+ * stable.
  *
  * The value (192) is defined in `src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts` and
  * re-exported from here so callers that already import the layout don't
