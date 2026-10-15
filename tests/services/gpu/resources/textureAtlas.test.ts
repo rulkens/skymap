@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TextureAtlas } from '../../../../src/services/gpu/resources/textureAtlas';
 
 const ATLAS_SIDE = 2048;
@@ -17,5 +17,18 @@ describe('TextureAtlas', () => {
     // Slot 16 = row 1, col 0 (since 16 slots per row).
     const uvRow1 = a.slotUv(16);
     expect(uvRow1[1]).toBeCloseTo(SLOT_SIDE / ATLAS_SIDE);
+  });
+
+  it('destroy frees its texture', () => {
+    const texture = { destroy: vi.fn() };
+    const device = { createTexture: () => texture } as unknown as GPUDevice;
+    const a = new TextureAtlas(device, {
+      atlasSide: ATLAS_SIDE,
+      slotSide: SLOT_SIDE,
+      format: 'rgba8unorm-srgb',
+      label: 'test-atlas',
+    });
+    a.destroy();
+    expect(texture.destroy).toHaveBeenCalledOnce();
   });
 });
