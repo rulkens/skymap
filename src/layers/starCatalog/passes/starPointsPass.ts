@@ -84,8 +84,8 @@ import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import {
   partitionStarsByResolution,
   STAR_RESOLVE_PX,
-} from '../../../services/engine/frame/partitionStarsByResolution';
-import { positionedVisibleStars } from '../../../services/engine/frame/positionedVisibleStars';
+} from '../present/partitionStarsByResolution';
+import { positionedVisibleStars } from '../present/positionedVisibleStars';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';

@@ -37,7 +37,7 @@ import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCata
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
-import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
+import { visibleStars } from '../../../../src/layers/starCatalog/present/visibleStars';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
@@ -56,7 +56,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { SeededStarCatalogId } from '../../../../src/@types/data/starCatalog/SeededStarCatalogId';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
-import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
+import type { PositionedStar } from '../../../../src/layers/starCatalog/@types/PositionedStar';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

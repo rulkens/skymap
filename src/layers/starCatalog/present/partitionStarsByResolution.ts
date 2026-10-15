@@ -22,7 +22,7 @@
  * unit-tests headlessly, with no GPU device or engine state to stand up.
  */
 
-import type { PositionedStar } from '../../../@types/scene/PositionedStar';
+import type { PositionedStar } from '../@types/PositionedStar';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { resolvesToSphere } from '../../../utils/star/resolvesToSphere';

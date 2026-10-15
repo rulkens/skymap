@@ -28,7 +28,7 @@ import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { viewBodyPose } from '../camera/viewBodyPose';
 import { deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
-import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
+import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../../../layers/starCatalog/present/partitionStarsByResolution';
 
 export function deriveView(
   snapshot: ReadyFrameContext,

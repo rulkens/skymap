@@ -121,7 +121,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { STAR_RESOLVE_PX } from '../../../services/engine/frame/partitionStarsByResolution';
+import { STAR_RESOLVE_PX } from '../present/partitionStarsByResolution';
 import { starTintFromBpRp } from '../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';

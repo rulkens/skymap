@@ -21,7 +21,7 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { PositionedStar } from '../../../@types/scene/PositionedStar';
+import type { PositionedStar } from './PositionedStar';
 
 export type StarPointRenderer = Renderer & {
   /**

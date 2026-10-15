@@ -28,7 +28,7 @@ import { seedIndexOfBody } from '../../../../src/utils/picking/seedIndexOfBody';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
-import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
+import { visibleStars } from '../../../../src/layers/starCatalog/present/visibleStars';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -44,7 +44,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
-import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
+import type { PositionedStar } from '../../../../src/layers/starCatalog/@types/PositionedStar';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by

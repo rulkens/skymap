@@ -21,13 +21,13 @@ import { describe, it, expect } from 'vitest';
 import {
   partitionStarsByResolution,
   STAR_RESOLVE_PX,
-} from '../../../../src/services/engine/frame/partitionStarsByResolution';
+} from '../../../../src/layers/starCatalog/present/partitionStarsByResolution';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { Source } from '../../../../src/data/sources';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
+import type { PositionedStar } from '../../../../src/layers/starCatalog/@types/PositionedStar';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));

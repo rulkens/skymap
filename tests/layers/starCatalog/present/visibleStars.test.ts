@@ -6,7 +6,7 @@
  * catalog still drawing.
  */
 import { describe, it, expect } from 'vitest';
-import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
+import { visibleStars } from '../../../../src/layers/starCatalog/present/visibleStars';
 import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import type { SeededStarCatalogId } from '../../../../src/@types/data/starCatalog/SeededStarCatalogId';

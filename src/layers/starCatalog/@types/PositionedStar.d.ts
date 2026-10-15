@@ -14,9 +14,9 @@
  * instead of searching the seed tables for its id.
  */
 
-import type { StarBody } from './StarBody';
-import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
-import type { Vec3 } from '../math/Vec3';
+import type { StarBody } from '../../../@types/scene/StarBody';
+import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type PositionedStar = StarBody & {
   readonly positionMpc: Vec3; // this frame's resolved position, from BodyState

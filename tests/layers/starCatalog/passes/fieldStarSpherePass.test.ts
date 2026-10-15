@@ -32,7 +32,7 @@ import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOct
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { STAR_RESOLVE_PX } from '../../../../src/services/engine/frame/partitionStarsByResolution';
+import { STAR_RESOLVE_PX } from '../../../../src/layers/starCatalog/present/partitionStarsByResolution';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { Source } from '../../../../src/data/sources';

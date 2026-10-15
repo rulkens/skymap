@@ -68,8 +68,8 @@ import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import {
   partitionStarsByResolution,
   STAR_RESOLVE_PX,
-} from '../../../services/engine/frame/partitionStarsByResolution';
-import { positionedVisibleStars } from '../../../services/engine/frame/positionedVisibleStars';
+} from '../present/partitionStarsByResolution';
+import { positionedVisibleStars } from '../present/positionedVisibleStars';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';

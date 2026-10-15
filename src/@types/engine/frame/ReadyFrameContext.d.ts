@@ -12,7 +12,7 @@ import type { Mat3 } from '../../math/Mat3';
 import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
-import type { PositionedStar } from '../../scene/PositionedStar';
+import type { PositionedStar } from '../../../layers/starCatalog/@types/PositionedStar';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
