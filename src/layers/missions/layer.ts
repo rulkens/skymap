@@ -1,5 +1,5 @@
 /**
- * The missions Layer: the sampled craft's (Voyager's) trails, their `missions` settings cluster,
+ * The missions Layer: the sampled craft's (Voyager's) trails, their `missions` and `missionTrails` settings clusters,
  * the track load, and the Voyager exhibit with its mission timeline kind.
  */
 
