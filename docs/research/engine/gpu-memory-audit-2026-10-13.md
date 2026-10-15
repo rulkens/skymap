@@ -69,8 +69,8 @@ each consumer.
 5. **`AssetSlot` keeps every committed value; superseded values are never disposed.**
    CPU copies nothing reads after upload: volume voxels (155 MB at large), flow cube,
    filaments, `ShellMesh` (views into the whole ~11 MB fetched buffer). Superseded
-   fetches drop their value without disposal: a hi-res famous texture allocated in
-   `fetch` leaks to GC (`wireHiResFamousSlot.ts:27`), superseded bitmaps go unclosed.
+   fetches dropped their value without disposal (a hi-res famous texture allocated in
+   `fetch`, unclosed bitmaps); the `dispose` hook now covers that half.
 6. **Galaxy point record is 56 B of f32.** Position needs f32; the rest packs to
    snorm16/f16 for 32 B (−43%, 60–84 MB at large). The full CPU `interleaved` mirror
    kept for bias splices costs the same again in JS heap.

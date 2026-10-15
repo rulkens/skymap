@@ -13,6 +13,7 @@ import { createAssetSlot } from '../AssetSlot';
 import { bodyAtlasFetcher } from '../fetchers/bodyAtlasFetcher';
 import { BODY_ATLAS_GRID, BODY_ATLAS_LAYOUT } from '../../../data/bodies/bodyAtlas.generated';
 import { atlasTileRect } from '../../../utils/gpu/atlasTileRect';
+import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
@@ -46,6 +47,7 @@ export const createBodyTextureAtlasSlot: SlotFactory<ImageBitmap, void> = (state
       // Every tile is cropped into its own texture above; the 2048×1792 source is spent.
       atlas.close();
     },
+    dispose: closeBitmap,
   });
   slot.subscribe((s) => {
     if (s.kind === 'error') {
