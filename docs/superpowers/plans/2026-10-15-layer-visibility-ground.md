@@ -89,7 +89,7 @@ export const bodyLayer = defineLayer({
 
 `create`/`destroy`/`passes` are required members (`Layer.d.ts:68-76`). The header says the Layer owns the body settings clusters and that body render and load code stay in core. It joins `APP_COMPOSITION` last, so in PR 2 its panel row is the last Layer row. Nothing reads `Layer.settings` at runtime (it types the composition; the reducer reads `APP_SETTINGS_SLICES`, which already folds `bodyLayerSettings` in), so appending it changes no behaviour.
 
-- [ ] Run the moves (pure-move commit, no content edits):
+- [x] Run the moves (pure-move commit, no content edits):
   ```bash
   npm run move-files -- src/state/settings/core/orbitTrails/slice.ts src/layers/body/state/orbitTrails/slice.ts --dry
   npm run move-files -- src/state/settings/core/orbitTrails/slice.ts src/layers/body/state/orbitTrails/slice.ts
@@ -97,11 +97,11 @@ export const bodyLayer = defineLayer({
   npm run move-files -- src/state/settings/core/orbitTrails/initialState.ts src/layers/body/state/orbitTrails/initialState.ts
   ```
   Then grep for `settings/core/orbitTrails`; the result must be empty. Commit the move.
-- [ ] Edit commit: add `orbitTrailsSlice` to `bodyLayerSettings`, remove it from `CORE_SETTINGS_SLICES`, remove `'orbitTrails'` and its doc line from `CORE_SNAPSHOT_CLUSTERS` (`coreSnapshotClusters.ts:7,10`): the cluster is now captured as a Layer cluster, so the snapshot keys are unchanged. Reword the slice header ("core's" → the body Layer's; the switch also governs the star catalog's S-star trails, which the same core `orbitTrailsPass` draws). Write `body/layer.ts` and append it to `APP_COMPOSITION`.
-- [ ] The hand-authored Orbit trails row in `selectToggleRows.ts:69-75` stays, in its place (PR 2 replaces it).
-- [ ] No new test. `tests/compositions/appSettingsSlices.test.ts` (claimed once, never by core) and `restoreSceneSaga.test.ts`'s whole-cluster round trip already cover the move.
-- [ ] **Gate:** `npx tsc --noEmit` passes.
-- [ ] Commit.
+- [x] Edit commit: add `orbitTrailsSlice` to `bodyLayerSettings`, remove it from `CORE_SETTINGS_SLICES`, remove `'orbitTrails'` and its doc line from `CORE_SNAPSHOT_CLUSTERS` (`coreSnapshotClusters.ts:7,10`): the cluster is now captured as a Layer cluster, so the snapshot keys are unchanged. Reword the slice header ("core's" → the body Layer's; the switch also governs the star catalog's S-star trails, which the same core `orbitTrailsPass` draws). Write `body/layer.ts` and append it to `APP_COMPOSITION`.
+- [x] The hand-authored Orbit trails row in `selectToggleRows.ts:69-75` stays, in its place (PR 2 replaces it).
+- [x] No new test. `tests/compositions/appSettingsSlices.test.ts` (claimed once, never by core) and `restoreSceneSaga.test.ts`'s whole-cluster round trip already cover the move.
+- [x] **Gate:** `npx tsc --noEmit` passes.
+- [x] Commit.
 
 ### Task 4: Mission trails get their own `missionTrails` cluster (M1)
 
