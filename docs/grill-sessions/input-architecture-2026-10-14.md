@@ -297,3 +297,76 @@ unmatched `extraReducers` case is dropped silently.
 
 Folding stage 5 into stage 2 was rejected (one larger refactor touching tours, clips and tween sagas, with the remote
 waiting behind it).
+
+---
+
+## Ground check (refactor-ground, 2026-10-14 → 15)
+
+A greenfield cross-check derived the shapes without seeing the code. Adopted without a ruling: one motion shape
+(`dx`, `dy`, `ratio`, `at`) for drag, pinch and wheel; binding as an ordered list of `Partial<Press>` patterns, first
+match wins; resize flowing through the device stream so the pure recognizer has the surface size; the wheel's
+`deltaY` turned into a zoom ratio in the adapter; pick requests carrying a sequence number so a result clears only its
+own request, stored in `input.pick`, with hover stored only while no gesture is owned; and **one end path** — a source
+saga's `finally` dispatches `gestureEnded` before `sourceDetached` (amending Q9's "detach ends it in the reducer").
+One prep was found: "focus the selected object" is inline twice (`keyboardShortcuts.ts:61`, `wireInput.ts:216`) and
+double-tap would be a third copy. `InputStep` and its 11 consumers stay: the conversion produces today's steps.
+
+## GC1: Is a wheel tick a gesture?
+
+**The question:** The cross-check made a wheel tick start a gesture (ownership, tween cancel). Today the at-rest wheel
+is deliberately different: each notch commits to `base`, rides the follow's distance target, and leaves fly-tos
+running (`replayInput.ts:118,171,213`).
+
+**Considerations:**
+
+- **Option A (keep today's at-rest wheel):** zoom accepted without ownership; no behaviour change.
+- **Option B (wheel is a gesture):** one ownership rule, but scrolling would stop fly-tos dead, cut the follow
+  approach and lose the follow-distance ride, pause auto-rotate, commit once at the end instead of per notch, let a
+  dome-mouse scroll steal the presenter's drag — and, with no timer to end it, hold the camera after scrolling stops
+  (`dragging` stays true: 60 fps, `orbitDrag` owning) until the next pointer event.
+
+**Decision:** the owner wanted the wheel to *be* a gesture with today's behaviour. Resolved as **held vs atomic
+gestures**: held gestures (press → release: drag, pinch) alone take ownership, set `dragging` and cancel tweens; atomic
+gestures (wheel notch, tap, double-tap) begin and end in one event and never hold the camera. A notch keeps today's
+at-rest lane; a wheel during the same source's held gesture folds into it. This matches `replayInput.ts`'s own wording,
+"an at-rest notch is its own atomic gesture", and needs no timer.
+
+## GC2: How does `inputConsumed` clear?
+
+**Considerations:**
+
+- **Option A (clear all):** exact because `runFrame` is synchronous (`runFrame.ts:79`): the read and the dispatch
+  share one task, and pointer events and source flushes run in their own.
+- **Option B (subtract what was read):** a count-and-residue protocol guarding a race that cannot happen today.
+
+**Decision:** A. The reducer's comment states the synchronous-frame assumption, and a test pins that a flush
+dispatched after `inputConsumed` survives into the next frame.
+
+## GC3: A second finger mid-drag
+
+**Considerations:**
+
+- **Option A (same held gesture, as today):** `orbitControls.ts` — "a second finger promoting to pinch does NOT start
+  a new gesture".
+- **Option B (end and restart as a pinch gesture):** allows a two-finger binding but commits on every finger change
+  and adds a latch exception.
+
+**Decision:** A. Asked how a pinch works today: the finger distance becomes a zoom factor, old ÷ new
+(`inputAggregator.ts:83-87`), during the gesture and with no cursor, so it zooms toward the view centre; moving both
+fingers together does nothing; lifting one ends the pinch but not the gesture, and the survivor stays inert. The
+cross-check's "centroid delta plus span ratio" pinch (pan with two fingers, zoom toward them) was briefly read as
+wanted and then **rejected: keep today's centre zoom**. A pinch motion carries only a ratio.
+
+## GC4: Shape sign-off
+
+**Decision:** signed off — one prep commit (`focusSelected`); new `input` slice, actions, pure recognizer (held and
+atomic), per-scheme binding tables and canvas source saga; replaced aggregator, `attachOrbitControls`, the pointer
+half of `inputBindings`, the hover driver and `detachControlsRef`; `InputStep` and the camera code unchanged below the
+one conversion.
+
+## GC5: Prep packaging
+
+**Considerations:** its own PR first (an extra CI cycle and merge word for a few lines) or the first commit of the
+input-architecture PR.
+
+**Decision:** its own PR first.
