@@ -1,36 +1,12 @@
 /**
- * sourceMaskOf — project the galaxy catalog draw/pick bitmasks from settings.
+ * sourceMaskOf — the galaxy catalog draw/pick bitmasks, projected from settings.
  *
- * ### A pure projection, applied by the caller
- *
- * The two masks are not authoritative state — they are a *derivation* of two
- * inputs the user actually controls: each galaxy catalog's
- * `settings.galaxyCatalogs.items[id].enabled` flag, and that galaxy catalog's live
- * fade opacity. The single source of truth is the settings record; the bitmask is
- * a compiled, GPU-cheap projection of it. This function computes that projection
- * and RETURNS it as a `SourceMasks` value — it writes nothing. The Layer reads it
- * where it uses it: the planner and the point pass's `draw` take `.draw`, its
- * `drawPick` takes `.pick`, each at the frame's (or the click's) `nowMs`.
- * Computing on read (rather than caching a field a setter must remember to
- * refresh) is what keeps the masks from ever drifting out of sync with settings.
- *
- * ### Why draw and pick diverge
- *
- * The two masks answer different questions, so they read different inputs:
- *
- *   - **draw** uses `enabled || opacity > 0`. A just-hidden galaxy catalog keeps its
- *     draw bit while its fade-out tail is still above zero, so the layer ramps
- *     down smoothly instead of popping out the instant it's toggled off. The
- *     bit clears only once the fade has fully resolved to 0.
- *   - **pick** uses `enabled` alone. Picking follows *intent*, not pixels: a
- *     galaxy catalog toggled off is non-clickable immediately, even while it is still
- *     visibly fading. You should never click a layer you've just dismissed.
- *
- * ### Domain
- *
- * The loop packs bits only for `GALAXY_CATALOG_SOURCES` — the galaxy catalog source codes that
- * own bit positions in the 32-bit mask. Structure / filament / volume codes
- * never had bits, so packing from these codes covers the whole mask domain.
+ * Pure and computed on read, never cached: a stored mask would need a setter to
+ * remember to refresh it. The two masks diverge on purpose:
+ *   - draw: `enabled || opacity > 0`, so a just-hidden catalog fades out
+ *     instead of popping.
+ *   - pick: `enabled` alone; picking follows intent, so a dismissed catalog is
+ *     unclickable at once even while it is still visibly fading.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

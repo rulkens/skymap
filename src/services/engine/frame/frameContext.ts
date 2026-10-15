@@ -113,9 +113,10 @@ export function deriveFrameContext(
   // Bound once, asked per call: which sphere resolves is a per-view question
   // (`deriveView` asks at its own camera, `sceneOccluderBodies` at the draw
   // camera), and the pick path calls this speculatively, so nothing is cached.
+  const settings = state.settings;
   const nearSpheres: NearSphereProvider = (camPosMpc, pxPerRad) =>
     state.nearSphereSources.flatMap((source) =>
-      source.spheres({ bodyStates, settings: state.settings, camPosMpc, pxPerRad }),
+      source.spheres({ bodyStates, settings, camPosMpc, pxPerRad }),
     );
 
   // `focusBlend` and `focus` are at-rest placeholders that `runFrame` overwrites

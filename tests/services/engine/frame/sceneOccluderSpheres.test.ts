@@ -107,9 +107,8 @@ describe('sceneOccluderSpheres', () => {
   const sunRadiusKm =
     innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
 
-  it('holds a resolved Sun at its inner bound, asked at the draw camera', () => {
-    // 1e6 km out the Sun spans ~1200 px. The inner bound, not the outer one
-    // NEAR0's range takes: an occluder must under-occlude.
+  it('holds a resolved Sun through the bound provider, asked at the draw camera', () => {
+    // 1e6 km out the Sun spans ~1200 px; the provider is asked at the draw camera.
     const radii = occluderRadiiKm(makeCtx('sun', 1e6));
     expect(radii.filter((r) => Math.abs(r - sunRadiusKm) < 1)).toHaveLength(1);
   });

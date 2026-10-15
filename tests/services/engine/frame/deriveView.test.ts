@@ -694,7 +694,7 @@ describe('deriveView — NEAR0 range from the Layers’ near spheres', () => {
   const SUN_MPC = deriveBodyStates(CONST_J2000).get('sun')!.positionMpc;
   const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
 
-  it('spans a resolved Sun at its outer bound, asked at each view’s own camera', () => {
+  it('spans a resolved Sun through the bound provider, asked at each view’s own camera', () => {
     // 1e6 km out the Sun spans ~1000 px; a view whose eye sits 1e4 AU off sees it sub-pixel.
     const pose: CameraPose = {
       target: [...SUN_MPC],

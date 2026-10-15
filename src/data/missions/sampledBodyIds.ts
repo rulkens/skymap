@@ -1,8 +1,4 @@
-/**
- * SAMPLED_BODY_IDS — the ids of `SAMPLED_BODIES`, in order: the craft the
- * missions Layer captions. An array, not a Set, because a Layer's label entry
- * declares its claimed bodies as a list; readers `.includes` its two ids.
- */
+/** SAMPLED_BODY_IDS — an array, not a Set: a Layer's label entry claims bodies as a list. */
 
 import { SAMPLED_BODIES } from './spacecraftBodies';
 
