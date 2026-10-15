@@ -92,7 +92,7 @@ describe('zoneOfAvoidanceRenderer window rect', () => {
     const window = { originPx: [0, 0], sizePx: [1, 1] } as const;
     renderer.draw(PASS, CAM, [100, 50], TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
     expect(windowRect()).toEqual([0, 0, 1, 1]);
-    // Review Focus 5: the buffer is shared, so a pick's rect must not leak.
+    // The buffer is shared, so a pick's rect must not leak.
     renderer.drawPick(PASS, CAM, [100, 50], window, TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
     renderer.draw(PASS, CAM, [100, 50], TUNING, ZONE_OF_AVOIDANCE_SHELL, 1);
     expect(windowRect()).toEqual([0, 0, 1, 1]);

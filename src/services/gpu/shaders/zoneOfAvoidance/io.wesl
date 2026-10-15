@@ -35,7 +35,7 @@
 // distance-decay term actually needs. 'packedId' is the band's constant
 // pick identity (written once at construction, unread by the visual
 // fragment) — see fragmentPick.wesl. 'windowNdcCentre'/'windowNdcHalf' are
-// the canvas-NDC rectangle the target covers: the whole canvas (0, 1) for
+// the canvas-NDC rectangle the target covers: centre (0, 0), half-extent (1, 1) for
 // the visual draw, the pick window for the pick draw, so a cropped pick
 // target still builds the rays of the canvas pixels it stands for.
 

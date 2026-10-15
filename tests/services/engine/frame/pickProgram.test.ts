@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { mat4d } from 'wgpu-matrix';
 
 // Mock the pick-time camera derivation: the program calls `pickFrameContext`
 // internally, but reproducing a ready context through the real derivation
@@ -27,7 +28,8 @@ vi.mock('../../../../src/services/engine/helpers/pickFrameContext', () => ({
 
 import { createPickProgram } from '../../../../src/services/engine/frame/pickProgram';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
-import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { NEAR0, COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
+import { windowedSlabView } from '../../../../src/services/engine/frame/windowedSlabView';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   PICK_SENTINEL_OFFSET,
@@ -127,13 +129,11 @@ function makeDevice(
     size: { width: number; height: number };
   }> = [];
   const passDescriptors: Array<Record<string, unknown>> = [];
-  const scissorRects: number[][] = [];
   const copyOrigins: Array<{ x: number; y: number; z: number }> = [];
   let commandEncoderCount = 0;
   let copyCount = 0;
 
   const makePass = () => ({
-    setScissorRect: vi.fn((...rect: number[]) => scissorRects.push(rect)),
     setPipeline: vi.fn(),
     setBindGroup: vi.fn(),
     setVertexBuffer: vi.fn(),
@@ -195,7 +195,6 @@ function makeDevice(
     device: device as unknown as GPUDevice,
     createTextureCalls,
     passDescriptors,
-    scissorRects,
     copyOrigins,
     getCommandEncoderCount: () => commandEncoderCount,
     getCopyCount: () => copyCount,
@@ -551,8 +550,8 @@ describe('createPickProgram', () => {
     expect(formats).toEqual(['depth24plus', 'depth32float', 'r32uint']);
   });
 
-  it('pick() allocates only 1×1 pick textures and sets no scissor', async () => {
-    const { device, createTextureCalls, scissorRects } = makeDevice();
+  it('pick() allocates only 1×1 pick textures', async () => {
+    const { device, createTextureCalls } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth']));
     const passes = [
       makeContentPass({ slab: COSMO, enabled: true, drawPick: vi.fn() }),
@@ -570,7 +569,6 @@ describe('createPickProgram', () => {
 
     expect(createTextureCalls.length).toBeGreaterThan(0);
     for (const call of createTextureCalls) expect(call.size).toEqual({ width: 1, height: 1 });
-    expect(scissorRects).toEqual([]);
   });
 
   it('pick() copies texel (0, 0) of every pass', async () => {
@@ -597,13 +595,31 @@ describe('createPickProgram', () => {
 
   it('pick() hands every drawPick a view windowed to the cursor pixel', async () => {
     const { device } = makeDevice();
-    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
-    const views: SlabView[] = [];
-    const record: ContentPass['drawPick'] = (_pass, view) => views.push(view);
+    // Distinct, non-zero projections per slab, so an uncropped vp cannot pass.
+    const base = makeCtx();
+    const ctx = {
+      ...base,
+      slabs: [
+        { ...base.slabs[NEAR0]!, vp: mat4d.translation([1, 2, 3]) as Float64Array },
+        { ...base.slabs[COSMO]!, vp: mat4d.scaling([2, 3, 4]) as Float64Array },
+      ],
+    } as FrameView;
+    vi.mocked(pickFrameContext).mockReturnValue(ctx);
+    const received: Array<{ slabIndex: number; view: SlabView }> = [];
+    const recordAs =
+      (slabIndex: number): ContentPass['drawPick'] =>
+      (_pass, view) =>
+        received.push({ slabIndex, view });
     const passes = [
-      makeContentPass({ slab: COSMO, enabled: true, drawPick: record }),
-      makeContentPass({ slab: NEAR0, enabled: true, drawPick: record }),
-      makeContentPass({ slab: NEAR0, enabled: true, pickTarget: 'overlay', drawPick: record }),
+      makeContentPass({ slab: COSMO, enabled: true, drawPick: recordAs(COSMO) }),
+      makeContentPass({ slab: NEAR0, enabled: true, drawPick: recordAs(NEAR0) }),
+      // The overlay group borrows NEAR0's view.
+      makeContentPass({
+        slab: NEAR0,
+        enabled: true,
+        pickTarget: 'overlay',
+        drawPick: recordAs(NEAR0),
+      }),
     ];
     const program = createPickProgram({
       device,
@@ -614,10 +630,16 @@ describe('createPickProgram', () => {
 
     await program.pick(10.7, 20.2);
 
-    expect(views).toHaveLength(3);
-    for (const view of views) {
-      expect(view.window).toEqual({ originPx: [10, 20], sizePx: [1, 1] });
+    const cursorWindow = { originPx: [10, 20], sizePx: [1, 1] } as SlabView['window'];
+    expect(received).toHaveLength(3);
+    for (const { slabIndex, view } of received) {
+      expect(view.window).toEqual(cursorWindow);
       expect(view.viewportPx).toEqual([1, 1]);
+      const expected = windowedSlabView(slabViewOf(ctx, slabIndex), cursorWindow, [
+        CANVAS.width,
+        CANVAS.height,
+      ]);
+      expect(view.vp).toEqual(expected.vp);
     }
   });
 
@@ -694,7 +716,7 @@ describe('createPickProgram', () => {
   });
 
   it("renderForDebug rasterises into its own targets, never pick()'s shared one", async () => {
-    const { device, scissorRects } = makeDevice();
+    const { device } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
     const passes = [
       makeContentPass({ slab: COSMO, enabled: true, drawPick: vi.fn() }),
@@ -709,13 +731,11 @@ describe('createPickProgram', () => {
 
     await program.pick(10, 10);
     const shared = (device.createTexture as ReturnType<typeof vi.fn>).mock.results[0]!.value;
-    const scissorsAfterPick = scissorRects.length;
     const debug = program.renderForDebug();
 
     expect(debug).toHaveLength(2);
     expect(new Set(debug).size).toBe(2);
     expect(debug).not.toContain(shared);
-    expect(scissorRects).toHaveLength(scissorsAfterPick); // the overlay needs the full raster
   });
 
   it('never allocates pick:near0 at N=1 (no slab-0 pickable layer → one target)', async () => {

@@ -99,7 +99,8 @@ export function pickDepthFormat(slabIndex: number): GPUTextureFormat {
 }
 
 // One pass's attachments: the r32uint colour texture and its depth. `width` /
-// `height` track the viewport so a resize reallocates the textures.
+// `height` let a debug target be reused while the canvas size holds and
+// reallocated on resize; `pick()`'s shared pair is always 1×1.
 type PickSlabTarget = {
   pickTexture: GPUTexture;
   depthTexture: GPUTexture;
@@ -170,34 +171,26 @@ export function createPickProgram(deps: {
     };
   }
 
-  /** Reuse `existing` at this size, else destroy it and create a fresh one. */
-  function sized(
-    existing: GPUTexture | null | undefined,
-    descriptor: GPUTextureDescriptor & { size: { width: number; height: number } },
-  ): GPUTexture {
-    const { width, height } = descriptor.size;
-    if (existing && existing.width === width && existing.height === height) return existing;
-    existing?.destroy();
-    return device.createTexture(descriptor);
-  }
-
-  /** `pick()`'s shared attachments for a slab, at the window's size. */
-  function ensureSharedTarget(slabIndex: number, [w, h]: Readonly<Vec2>): PickSlabTarget {
-    sharedColour = sized(sharedColour, {
+  /** `pick()`'s shared attachments for a slab: 1×1, the cursor window's size. */
+  function ensureSharedTarget(slabIndex: number): PickSlabTarget {
+    sharedColour ??= device.createTexture({
       label: 'pick-target',
-      size: { width: w, height: h },
+      size: { width: 1, height: 1 },
       format: 'r32uint',
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
     const depthFormat = pickDepthFormat(slabIndex);
-    const depth = sized(sharedDepth.get(depthFormat), {
-      label: `pick-depth-${depthFormat}`,
-      size: { width: w, height: h },
-      format: depthFormat,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    sharedDepth.set(depthFormat, depth);
-    return { pickTexture: sharedColour, depthTexture: depth, width: w, height: h };
+    let depth = sharedDepth.get(depthFormat);
+    if (!depth) {
+      depth = device.createTexture({
+        label: `pick-depth-${depthFormat}`,
+        size: { width: 1, height: 1 },
+        format: depthFormat,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+      sharedDepth.set(depthFormat, depth);
+    }
+    return { pickTexture: sharedColour, depthTexture: depth, width: 1, height: 1 };
   }
 
   /** `slabIndex`'s debug target, reused when the viewport size still matches. */
@@ -399,7 +392,7 @@ export function createPickProgram(deps: {
     // gated on the whole-canvas view.
     const stagingInOrder: GPUBuffer[] = [];
     for (const { slabIndex, view, passes: slabPickables } of groups) {
-      const target = ensureSharedTarget(slabIndex, cursorWindow.sizePx);
+      const target = ensureSharedTarget(slabIndex);
       const staging = ensureSlabStaging(slabIndex);
       const timing =
         slabIndex === COSMO ? state.gpu.timingService.descriptorFor('pick') : undefined;
