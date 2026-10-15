@@ -77,7 +77,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     id: 'search-scope',
     about: 'app',
     text: 'The search finds planets, moons, spacecraft, named stars, galaxies by name or catalogue number, clusters and voids, places on Earth, and the exhibits and tours.',
-    source: `${REPO_BLOB}/src/components/CommandPalette/utils/rankPaletteMatches.ts`,
+    source: `${REPO_BLOB}/src/utils/palette/rankPaletteMatches.ts`,
     sourceLabel: `what the search matches, ${IN_REPO}`,
     checked: CHECKED,
   },

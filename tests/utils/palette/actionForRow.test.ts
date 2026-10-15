@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
-import { Source } from '../../../../src/data/sources';
-import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
-import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
-import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
-import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
-import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
-import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
-import type { EarthPlace } from '../../../../src/@types/palette/EarthPlace';
+import { actionForRow } from '../../../src/utils/palette/actionForRow';
+import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { Source } from '../../../src/data/sources';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
+import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
+import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
+import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
+import type { EarthPlace } from '../../../src/@types/palette/EarthPlace';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',

@@ -197,9 +197,7 @@ fn vs(
   //               × source.sbBoost              // per-source lift (e.g. faint Milliquas quasars)
   //               × fluxFalloff                 // readability falloff, pow(resolvedFrac, k)
   //               × u.brightness                // global slider
-  //               × vMaxWeight     (mode 2: 1/V_max)
-  //               × schechterRatio (mode 3: Schechter LF)
-  //               × angularReweight (mode 4: HEALPix)
+  //               × angularWeight  (mode 2: build-time HEALPix re-weight)
   //               × crossfadeOut   (procedural-disk handoff band)
   //               × focusMult      (structure-focus dim)
   //
@@ -209,9 +207,7 @@ fn vs(
   // constants, so the fragment reads out.instanceTint.rgb directly — no
   // per-pixel multiply for the brightness modulator (the ramp colour it
   // multiplies against IS evaluated per-fragment; see colorFragment.wesl).
-  let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
-  let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
-  let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
+  let angularMult = select(1.0, p.angularWeight, u.biasMode == 2u);
 
   // Crossfade-out against the procedural-disk pass. ThumbnailRenderer
   // fades IN across [pxFadeStart, pxFadeEnd] (apparent-pixel diameter);
@@ -251,8 +247,6 @@ fn vs(
     * source.sbBoost
     * fluxFalloff
     * u.brightness
-    * vMaxAlpha
-    * schechterMult
     * angularMult
     * crossfadeOut
     * focusMult;

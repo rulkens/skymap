@@ -40,12 +40,12 @@
  * the table is indexed by the row's own tag — but TS needs each arm to narrow.
  */
 
-import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
-import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
-import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
-import { encodeStarFocusId } from '../../../services/url/encodeStarFocusId';
-import type { ScoredRow } from '../paletteRowModel';
-import type { PaletteAction } from '../../../@types/palette/PaletteAction';
+import { encodeGalaxyId } from '../../services/url/encodeGalaxyId';
+import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
+import { BODY_FOCUS_PREFIX } from '../../services/url/bodyFocusId';
+import { encodeStarFocusId } from '../../services/url/encodeStarFocusId';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
 // The non-focus kinds have no harmless stand-in for their unreachable arm:
 // `exhibit`/`tour` carry a closed-union id, and a `flyTo` fallback of 0,0,0 is
