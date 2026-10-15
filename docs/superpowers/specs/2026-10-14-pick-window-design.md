@@ -92,6 +92,9 @@ export type SlabView = {
 // src/utils/gpu/pickWindowCrop.ts: C as a column-major 4×4, f64
 export function pickWindowCrop(window: PickWindow, canvasPx: Readonly<Vec2>): Float64Array;
 
+// src/utils/gpu/pickWindowNdc.ts: the window as a canvas-NDC centre + half-extent (y up); C and the ZoA rect share it
+export function pickWindowNdc(window: PickWindow, canvasPx: Readonly<Vec2>): PickWindowNdc;
+
 // src/services/engine/frame/windowedSlabView.ts: the one place a window is applied
 export function windowedSlabView(view: SlabView, window: PickWindow, canvasPx: Readonly<Vec2>): SlabView;
 ```
@@ -106,7 +109,7 @@ export function windowedSlabView(view: SlabView, window: PickWindow, canvasPx: R
 | `pickProgram.renderForDebug()` | Unchanged: whole-canvas window, its own full-size targets. |
 | The 15 view-only pick draws | No change. |
 | Label pick passes ×2 | Quads stay in canvas px (the declutter layout is canvas-based). `labelPickRenderer.draw` takes `view.window`, translates each rect by `−originPx`, and maps px → NDC with `sizePx`. |
-| Zone of avoidance pick | The vertex stage applies C to `out.pos` and keeps the `ndc` varying in canvas NDC. The jitter keeps hashing `@builtin(position)`, now the window's fragcoord, so a pick inside the density mask's noise edge can land differently than the full-canvas pick did (ruled acceptable). C travels in the ZoA pick uniforms; the visual draw passes the identity matrix. |
+| Zone of avoidance pick | The quad keeps covering its target (`clipPos` = corner); the `ndc` varying becomes the canvas-NDC point that corner stands for, `windowNdcCentre + corner · windowNdcHalf` (C inverted, so nothing is clipped). The jitter keeps hashing `@builtin(position)`, now the window's fragcoord, so a pick inside the density mask's noise edge can land differently than the full-canvas pick did (ruled acceptable). The rect travels in the ZoA uniforms; the visual draw writes the whole-canvas rect. |
 
 ## Precision
 
