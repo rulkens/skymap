@@ -113,8 +113,6 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
       ),
   },
 
-  // `cosmicWebDensity.items` is a Partial record — a field is absent until
-  // its slot commits — so only present ids are emitted.
   cosmicWebDensityField: {
     actions: (on, settings) =>
       Object.keys(settings.cosmicWebDensity.items).map((id) =>

@@ -56,8 +56,8 @@ Its own commit (ruled). Nothing reads the field: no `.labelLayer` access exists 
 
 **Files:** `src/@types/data/SourceEntryBase.d.ts` (the field at `:43-46` and the sentence naming it at `:32`), delete `src/@types/animation/CategoryLabelLayer.d.ts` (its only user is that field); the 16 rows: `src/data/sources/{earth,mesh-body,planet}.ts`, `src/layers/blackHoles/sources/sgrAStar.ts`, `src/layers/galaxyCatalog/sources/famous-galaxy.ts`, `src/layers/milkyWay/sources/milky-way.ts`, `src/layers/starCatalog/sources/{famous-star,sun}.ts`, `src/layers/structure/sources/{galaxyCluster,galaxyGroup,gcCluster,globularCluster,nebula,openCluster,supercluster,void}.ts`; `src/services/animation/visibilityActionRow.ts` (the stale "Partial record" comment at `:116-117`: `cosmicWebDensity.items` carries every field from boot); `tests/helpers/conventions/inlineTypeFiles.ts` if it lists the deleted type.
 
-- [ ] Delete the field, the type and the comment. No test: a deletion the compiler checks.
-- [ ] Commit.
+- [x] Delete the field, the type and the comment. No test: a deletion the compiler checks.
+- [x] Commit.
 
 ### Task 2: Complete `blackHoles.items`
 

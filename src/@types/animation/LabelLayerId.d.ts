@@ -7,9 +7,8 @@
  * added by extending this union; nothing in the registry itself needs to learn
  * the new value.
  *
- * The names track the SOURCE TYPE that produces the layer's labels, so a
- * registry row's `labelLayer` reads as "which of my siblings do I share a fade
- * with". `scaleBar` is the one member with no producing source type — it is a
+ * The names track the SOURCE TYPE that produces the layer's labels.
+ * `scaleBar` is the one member with no producing source type — it is a
  * React-side HUD element, reserved for tour integration.
  *
  * Current layers:

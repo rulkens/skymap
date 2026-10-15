@@ -10,7 +10,6 @@ export const FAMOUS_GALAXY_ENTRY = {
   allSky: true, // hand-picked entries from across the sky
   bearsLabel: true,
   bearsMarker: false,
-  labelLayer: 'galaxy',
   detailLabel: 'Famous Galaxy',
   shortLabel: 'Galaxy',
   plural: 'Famous Galaxies',

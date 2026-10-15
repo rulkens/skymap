@@ -18,8 +18,8 @@ export const S_STAR_ENTRY = {
   // allSky:true matches the other non-catalog rows.
   allSky: true,
   // No captions: 39 names inside a few arcseconds would pile into an unreadable
-  // smear, and Sgr A* already names the place. So no `labelLayer`/`detailLabel`/
-  // `shortLabel`/`plural` either — those are present iff `bearsLabel`.
+  // smear, and Sgr A* already names the place. So no `detailLabel`/`shortLabel`/
+  // `plural` either — those are present iff `bearsLabel`.
   bearsLabel: false,
   bearsMarker: false,
   // Seeded in code from `SCENE_S_STARS`, so no asset ships for it.

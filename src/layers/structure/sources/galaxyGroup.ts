@@ -10,7 +10,6 @@ export const GALAXY_GROUP_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'cosmic',
-  labelLayer: 'structure',
   detailLabel: 'Galaxy Group',
   shortLabel: 'Galaxy group',
   plural: 'Galaxy groups',
