@@ -69,9 +69,9 @@ Its own commit (ruled). Nothing reads the field: no `.labelLayer` access exists 
 
 **Contract:** `initialState.items` = every id of `BLACK_HOLE_SOURCE_ROWS` → `{ labelEnabled: true }`. `setBlackHoleLabelEnabled` writes `items[id].labelEnabled` and leaves the item's other fields alone.
 
-- [ ] Test `the initial blackHoles.items has a row for every black-hole id`, iterating `BLACK_HOLE_SOURCE_ROWS` (a structural invariant: it fails if the derivation drops a row).
-- [ ] Test `setBlackHoleLabelEnabled writes the field, not the item`: seed an item with a second field (cast in the test), dispatch, and assert the second field survives. It fails on today's replace. This is the pattern PR 2's `setVisibility` relies on (its Review Focus #5).
-- [ ] Commit.
+- [x] Test `the initial blackHoles.items has a row for every black-hole id`, iterating `BLACK_HOLE_SOURCE_ROWS` (a structural invariant: it fails if the derivation drops a row).
+- [x] Test `setBlackHoleLabelEnabled writes the field, not the item`: seed an item with a second field (cast in the test), dispatch, and assert the second field survives. It fails on today's replace. This is the pattern PR 2's `setVisibility` relies on (its Review Focus #5).
+- [x] Commit.
 
 ### Task 3: The body Layer's `layer.ts`, and the `orbitTrails` cluster moves into it
 
