@@ -167,10 +167,10 @@ produceMissionCaptions(state: EngineState, ctx: FrameView): Label2DProducerOutpu
 - `SAMPLED_BODY_IDS` in `sceneBodyLabels.ts` is this PR's interim: the one place core still knows which bodies the missions Layer captions. PR 2 replaces the filter with a generic rule (M4): core's body captions skip every body id another Layer's label entry claims in its `items`, and the missions label entry declares `items: SAMPLED_BODY_IDS`. This PR keeps the filter, because label entries do not exist yet. `produceSceneBodyCaptions.ts` names neither the set nor `missions`.
 - Behaviour-neutrality: same ids, so the director's per-id envelopes and the upload key (`label2DDirector.ts:376-385`) carry over; same `prominencePx`, so declutter ranks identically (Review Focus #1, M2 caption order). If anything else turns out to read the merged producer order, STOP and report.
 
-- [ ] Test `each present sampled craft is captioned by exactly one producer` (`produceMissionCaptions.test.ts`): with both tracks loaded, `sceneBodyLabels` emits no id of `SAMPLED_BODY_IDS`, and `produceMissionCaptions` emits `sceneBody-voyager1` and `sceneBody-voyager2` once each. Mutation-check by dropping the core exclusion (duplicate) or the Layer's presence filter.
-- [ ] Move `dims only the non-emphasised sampled craft, on a state the memo already saw` into the same file against `produceMissionCaptions`, unchanged in value (`full × MISSION_EMPHASIS_DIM`).
-- [ ] No test for `captionComposeContextOf` or `meshBodyCaption`: the occlusion, reveal-band and kind cases in `produceSceneBodyCaptions.test.ts`, `sceneBodyLabels.test.ts`, `produceStarCaptions.test.ts` and `produceBlackHoleCaptions.test.ts` exercise both through their callers and must pass unchanged.
-- [ ] Commit.
+- [x] Test `each present sampled craft is captioned by exactly one producer` (`produceMissionCaptions.test.ts`): with both tracks loaded, `sceneBodyLabels` emits no id of `SAMPLED_BODY_IDS`, and `produceMissionCaptions` emits `sceneBody-voyager1` and `sceneBody-voyager2` once each. Mutation-check by dropping the core exclusion (duplicate) or the Layer's presence filter.
+- [x] Move `dims only the non-emphasised sampled craft, on a state the memo already saw` into the same file against `produceMissionCaptions`, unchanged in value (`full × MISSION_EMPHASIS_DIM`).
+- [x] No test for `captionComposeContextOf` or `meshBodyCaption`: the occlusion, reveal-band and kind cases in `produceSceneBodyCaptions.test.ts`, `sceneBodyLabels.test.ts`, `produceStarCaptions.test.ts` and `produceBlackHoleCaptions.test.ts` exercise both through their callers and must pass unchanged.
+- [x] Commit.
 
 ### Task 6: Core's star helpers move into the star Layer behind a `nearSpheres` source (V2)
 

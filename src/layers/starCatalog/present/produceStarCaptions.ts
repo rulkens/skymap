@@ -11,12 +11,11 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import type { CaptionComposeContext } from '../../../@types/rendering/CaptionComposeContext';
 import type { CaptionSourceRow } from '../@types/CaptionSourceRow';
 import type { ForegroundCaption } from '../../../services/engine/presentation/foregroundCaption';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
+import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
@@ -77,17 +76,7 @@ export function produceStarCaptions(): Label2DProducer['produceLabels'] {
       now,
     );
 
-    const composeCtx: CaptionComposeContext = {
-      settings: state.settings,
-      camPos: ctx.drawCamPos,
-      camOrbitDistanceMpc: ctx.cam.distance,
-      viewportShortSidePx: Math.min(ctx.canvasSize.width, ctx.canvasSize.height),
-      drawPxPerRad: ctx.drawPxPerRad,
-      fades: state.subsystems.fades,
-      nowMs: now,
-      focus: ctx.snapshot.focus,
-      occluders: sceneOccluderBodies(state, ctx),
-    };
+    const composeCtx = captionComposeContextOf(state, ctx);
 
     const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) => {
       return composeForegroundCaption(
