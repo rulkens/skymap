@@ -172,6 +172,97 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
   });
 });
 
+// A dropped value can own memory the GC cannot reclaim (a GPU texture, an
+// ImageBitmap's decoded pixels), so the slot hands every value its commit never
+// saw to `dispose`; a value whose commit ran belongs to the consumer.
+describe('AssetSlot — dispose', () => {
+  it('disposes a fetch result superseded before commit (race window 1)', async () => {
+    const fetchA = deferred<string>();
+    const fetchB = deferred<string>();
+    const fetch: Fetcher<string, number> = vi.fn((req) =>
+      req === 1 ? fetchA.promise : fetchB.promise,
+    );
+    const dispose = vi.fn();
+    const slot = createAssetSlot<string, number>({ name: 'test', fetch, dispose, retry: noRetry });
+
+    slot.load(1);
+    slot.load(2);
+    fetchA.resolve('A');
+    fetchB.resolve('B');
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(dispose).toHaveBeenCalledWith('A');
+  });
+
+  it('disposes a fetch result that lands after release', async () => {
+    const fetchGate = deferred<string>();
+    const dispose = vi.fn();
+    const slot = createAssetSlot<string, void>({
+      name: 'test',
+      fetch: () => fetchGate.promise,
+      dispose,
+      retry: noRetry,
+    });
+
+    slot.load();
+    slot.release();
+    fetchGate.resolve('late');
+    await waitFor(() => expect(dispose).toHaveBeenCalledWith('late'));
+  });
+
+  it('disposes a result superseded while it waited on the prior commit (race window 3)', async () => {
+    const commitA = deferred<void>();
+    const fetchC = deferred<string>();
+    const fetch: Fetcher<string, string> = vi.fn((req) =>
+      req === 'C' ? fetchC.promise : Promise.resolve(req),
+    );
+    const commit = vi.fn((value: string) => (value === 'A' ? commitA.promise : Promise.resolve()));
+    const dispose = vi.fn();
+    const slot = createAssetSlot<string, string>({
+      name: 'test',
+      fetch,
+      commit,
+      dispose,
+      retry: noRetry,
+    });
+
+    slot.load('A');
+    await waitFor(() => expect(slot.state().kind).toBe('committing'));
+    slot.load('B'); // fetched at once, then queues behind commit A
+    await Promise.resolve();
+    slot.load('C'); // supersedes B while it waits
+    commitA.resolve();
+    fetchC.resolve('C');
+    await waitFor(() => expect(slot.current()).toBe('C'));
+
+    expect(commit).not.toHaveBeenCalledWith('B', expect.anything());
+    expect(dispose).toHaveBeenCalledWith('B');
+  });
+
+  it('never disposes a value whose commit ran, even one superseded mid-commit', async () => {
+    const commitA = deferred<void>();
+    const fetch: Fetcher<string, string> = vi.fn((req) => Promise.resolve(req));
+    const commit = vi.fn((value: string) => (value === 'A' ? commitA.promise : Promise.resolve()));
+    const dispose = vi.fn();
+    const slot = createAssetSlot<string, string>({
+      name: 'test',
+      fetch,
+      commit,
+      dispose,
+      retry: noRetry,
+    });
+
+    slot.load('A');
+    await waitFor(() => expect(slot.state().kind).toBe('committing'));
+    slot.load('B');
+    commitA.resolve();
+    await waitFor(() => expect(slot.current()).toBe('B'));
+
+    expect(dispose).not.toHaveBeenCalled();
+  });
+});
+
 describe('AssetSlot — retry', () => {
   it('retries per policy after transient failure', async () => {
     let calls = 0;
@@ -284,6 +375,28 @@ describe('AssetSlot — release (the evict edge)', () => {
     expect(slot.state().kind).toBe('idle');
     expect(commit).not.toHaveBeenCalled();
     expect(onRelease).not.toHaveBeenCalled();
+  });
+
+  // The commit already ran its side effects (a texture uploaded, a mesh bound);
+  // the release that raced it must still undo them, or they outlive the slot.
+  it('runs onRelease for a commit that was mid-flight when release() landed', async () => {
+    const commitGate = deferred<void>();
+    const onRelease = vi.fn();
+    const slot = createAssetSlot<string, void>({
+      name: 'test',
+      fetch: () => Promise.resolve('X'),
+      commit: () => commitGate.promise,
+      onRelease,
+      retry: noRetry,
+    });
+
+    slot.load();
+    await waitFor(() => expect(slot.state().kind).toBe('committing'));
+    slot.release();
+    commitGate.resolve();
+    await waitFor(() => expect(onRelease).toHaveBeenCalledWith('X'));
+    expect(onRelease).toHaveBeenCalledTimes(1);
+    expect(slot.state().kind).toBe('idle');
   });
 
   it('re-loads after release when demand returns (full evict → re-enter cycle)', async () => {
