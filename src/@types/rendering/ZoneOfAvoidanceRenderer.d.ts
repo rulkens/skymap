@@ -16,6 +16,7 @@
 
 import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { Vec2 } from '../math/Vec2';
+import type { PickWindow } from '../engine/frame/PickWindow';
 import type { ZoneOfAvoidanceTuning } from '../settings/ZoneOfAvoidanceTuning';
 import type { ZoneOfAvoidanceShell } from './ZoneOfAvoidanceShell';
 import type { Renderer } from './Renderer';
@@ -41,15 +42,15 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
   ): void;
 
   /**
-   * Pick twin of `draw` — same args, same uniforms, issued against the
-   * r32uint pick pipeline instead. Does not bind `@group(0)`: the COSMO
-   * pick pass's shared camera prefix is already bound by the time this
-   * runs (see `ContentPass.drawPick`'s postcondition).
+   * Pick twin of `draw`, issued against the r32uint pick pipeline. The rays
+   * are the canvas's (`canvasPx` sets the aspect); the target covers only
+   * `window`, a canvas-px rectangle.
    */
   drawPick(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
-    viewport: Vec2,
+    canvasPx: Vec2,
+    window: PickWindow,
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,

@@ -125,22 +125,24 @@ describe('zoneOfAvoidancePass.draw', () => {
 });
 
 describe('zoneOfAvoidancePass.drawPick', () => {
-  it('draws with ctx.cam, the FULL canvas viewport, and the composed opacity', () => {
+  it('draws with ctx.cam, the FULL canvas size, the view window, and the composed opacity', () => {
     const drawPickSpy = vi.fn();
     const runtime = makeRuntime({ drawPick: drawPickSpy });
     const pass = zoneOfAvoidancePass(runtime);
     const state = liveState();
     const ctx = makeCtx();
-    pass.drawPick!(PASS_STUB, {} as never, ctx, state);
+    const window = { originPx: [10, 20], sizePx: [1, 1] };
+    pass.drawPick!(PASS_STUB, { window } as never, ctx, state);
     expect(drawPickSpy).toHaveBeenCalledTimes(1);
     const args = drawPickSpy.mock.calls[0]!;
-    // drawPick(pass, cam, viewport, tuning, shell, opacity)
+    // drawPick(pass, cam, canvasPx, window, tuning, shell, opacity)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
-    // Full-res viewport — NOT the 'zoa' target's downsampled one `draw` uses,
-    // because the pick pass rasterises at full canvas resolution.
+    // Full canvas — NOT the 'zoa' target's downsampled one `draw` uses: the
+    // pick rays are the canvas's, whatever window the target covers.
     expect(args[2]).toEqual([1280, 720]);
-    expect(args[3]).toBe(state.settings.zoneOfAvoidance);
-    expect(args[5]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
+    expect(args[3]).toBe(window);
+    expect(args[4]).toBe(state.settings.zoneOfAvoidance);
+    expect(args[6]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
   });
 });

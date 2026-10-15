@@ -9,7 +9,7 @@
 // worldToGalactic's rotation basis lives in 'lib/util.wesl' as a compile-time
 // constant, not a uniform field here.
 
-// ── Uniforms layout (112 bytes) ─────────────────────────────────────
+// ── Uniforms layout (128 bytes) ─────────────────────────────────────
 //
 //   offset  0 : camForward    (vec3<f32>) + tanHalfFovY    (f32)
 //   offset 16 : camRight      (vec3<f32>) + aspect         (f32)
@@ -18,6 +18,7 @@
 //   offset 64 : color         (vec3<f32>) + bulgeDeg       (f32)
 //   offset 80 : anticenterDeg (f32), intensity (f32), radialFalloffMpc (f32), edgeSharpness (f32)
 //   offset 96 : fadeAlpha (f32), packedId (u32), _pad0 (f32), _pad1 (f32)
+//   offset 112: windowNdcCentre (vec2<f32>), windowNdcHalf (vec2<f32>)
 //
 // Each 'vec3 + f32' pair above packs into one 16-byte slot the same way
 // horizonShell's does — WGSL's uniform-address-space layout gives vec3<f32>
@@ -33,7 +34,10 @@
 // field, so the shader only ever sees the one currency its exponential
 // distance-decay term actually needs. 'packedId' is the band's constant
 // pick identity (written once at construction, unread by the visual
-// fragment) — see fragmentPick.wesl.
+// fragment) — see fragmentPick.wesl. 'windowNdcCentre'/'windowNdcHalf' are
+// the canvas-NDC rectangle the target covers: the whole canvas (0, 1) for
+// the visual draw, the pick window for the pick draw, so a cropped pick
+// target still builds the rays of the canvas pixels it stands for.
 
 struct Uniforms {
   camForward: vec3<f32>,
@@ -54,13 +58,16 @@ struct Uniforms {
   packedId: u32,
   _pad0: f32,
   _pad1: f32,
+  windowNdcCentre: vec2<f32>,
+  windowNdcHalf: vec2<f32>,
 };
 
 // ── Vertex-to-fragment interface ────────────────────────────────────
 
 struct VsOut {
   @builtin(position) clipPos: vec4<f32>,
-  // NDC of this fragment in [-1, 1]², interpolated linearly across the
-  // fullscreen quad. The fragment builds the view ray from it.
+  // Canvas NDC of this fragment, interpolated linearly across the quad;
+  // the target's own NDC only when the window is the whole canvas. The
+  // fragment builds the view ray from it.
   @location(0) ndc: vec2<f32>,
 };
