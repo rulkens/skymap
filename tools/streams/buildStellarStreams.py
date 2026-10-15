@@ -54,7 +54,8 @@ def leapfrog(x, v, dt, n, cb=None):
 
 # ---- Sagittarius particle spray (Fardal+2015 style) ---------------------------
 def sgr_spray():
-    ra, dec, d, pmra, pmdec, rv = 283.764, -30.480, 26.0, -2.692, -1.359, 142.0
+    # Sky position and distance of M54, the dwarf's nucleus, so the remnant lands on its marker.
+    ra, dec, d, pmra, pmdec, rv = 283.7636, -30.4799, 26.28, -2.692, -1.359, 142.0
     p = radec_xyz(ra, dec, d)
     rhat = p/np.linalg.norm(p)
     ra_r, dec_r = np.radians(ra), np.radians(dec)
@@ -109,9 +110,9 @@ def sgr_spray():
         aa = acc(xa); va += 0.5*dt*aa; xa += dt*va; aa = acc(xa); va += 0.5*dt*aa
     print('sgr particles', active, 'progenitor now', xs[n])
     age = (n - B[:active])/n
-    return x[:active], v[:active], age, xs[n]
+    return x[:active], v[:active], age, xs[n], vs[n]
 
-sx, sv, sage, sprog = sgr_spray()
+sx, sv, sage, sprog, svprog = sgr_spray()
 
 # ---- galstreams tracks --------------------------------------------------------
 def load(f):
@@ -157,9 +158,23 @@ def emit(Xgc, T, size_kpc, lum, ctint, sid):
 # Sagittarius: luminosity higher for young debris; tint redder (metal-richer)
 n = len(sx)
 emit(sx, sv, rng.uniform(0.25, 0.6, n), 1.0*(0.6+0.8*(1-sage)), rng.uniform(0.55, 1.0, n), 0)
-# Sgr core (bound remnant) — dense knot
-core = sprog + rng.normal(0, 0.6, (4000, 3))*np.array([1, 0.4, 0.4])
-emit(core, np.tile(sv.mean(0), (4000, 1)), rng.uniform(0.2, 0.5, 4000), np.full(4000, 1.6), rng.uniform(0.6, 1.0, 4000), 0)
+# Sgr bound remnant: a cuspy body stretched along the orbit, bent into the S the
+# arm roots trace (leading arm inside, trailing outside), so both arms grow out of
+# it rather than starting ~2 tidal radii either side of M54. The bend is fitted to
+# the young debris itself, not assumed.
+along = svprog/np.linalg.norm(svprog)
+radial = sprog/np.linalg.norm(sprog); radial -= (radial @ along)*along; radial /= np.linalg.norm(radial)
+normal = np.cross(along, radial)
+rel = sx - sprog
+near = (np.linalg.norm(rel, axis=1) < 6) & (sage < 0.1)
+sa, sr = rel[near] @ along, rel[near] @ radial
+bend = (sa*sr).sum()/(sa*sa).sum()
+NC = 6000
+s_al = np.clip(rng.laplace(0, 0.9, NC), -4, 4)
+core = (sprog + s_al[:, None]*along + (bend*s_al + rng.normal(0, 0.35, NC))[:, None]*radial
+        + rng.normal(0, 0.35, NC)[:, None]*normal)
+emit(core, np.tile(svprog, (NC, 1)), rng.uniform(0.2, 0.45, NC), 0.45 + 0.4*np.exp(-np.abs(s_al)/0.6), rng.uniform(0.6, 1.0, NC), 0)
+print('remnant bend (radial kpc per along kpc): %.2f from %d young debris' % (bend, near.sum()))
 
 def motion_sign(a):
     """+1 if the track's point order follows its proper motions (rv taken as 0 where missing), -1 if
