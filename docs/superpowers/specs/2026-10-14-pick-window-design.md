@@ -106,7 +106,7 @@ export function windowedSlabView(view: SlabView, window: PickWindow, canvasPx: R
 | `pickProgram.renderForDebug()` | Unchanged: whole-canvas window, its own full-size targets. |
 | The 15 view-only pick draws | No change. |
 | Label pick passes ×2 | Quads stay in canvas px (the declutter layout is canvas-based). `labelPickRenderer.draw` takes `view.window`, translates each rect by `−originPx`, and maps px → NDC with `sizePx`. |
-| Zone of avoidance pick | The vertex stage applies C to `out.pos` and keeps the `ndc` varying in canvas NDC. The fragment adds `window.originPx` to `@builtin(position)` before hashing, so the jitter matches the full-canvas pick. C and the origin travel in the ZoA pick uniforms; the visual draw passes the identity window. |
+| Zone of avoidance pick | The vertex stage applies C to `out.pos` and keeps the `ndc` varying in canvas NDC. The jitter keeps hashing `@builtin(position)`, now the window's fragcoord, so a pick inside the density mask's noise edge can land differently than the full-canvas pick did (ruled acceptable). C travels in the ZoA pick uniforms; the visual draw passes the identity matrix. |
 
 ## Precision
 
@@ -139,8 +139,8 @@ That is the prep step:
 - At this step `view.window` is always the whole canvas, so behaviour is
   identical.
 
-It is its own first commit. Separate PR or riding this one is your call, per the
-refactor-ground ruling.
+It is the feature PR's first commit (ruled: same PR, since it is small and only
+means something together with the window).
 
 ## Tests
 
@@ -159,11 +159,11 @@ refactor-ground ruling.
   - `renderForDebug()` still gets whole-canvas views
 - Label pick: a rect containing the cursor covers target texel (0, 0) after
   translation; a rect one px off does not.
-- ZoA pick: the jitter hash input equals the canvas fragcoord.
-- **Parity, on a WebGPU device.** A dev-only script samples cursor positions at a few
+- **Parity, on a WebGPU device, run once by hand** (ruled: not a committed tool). A
+  throwaway script samples cursor positions at a few
   poses: cosmic, Sun neighbourhood, Saturn system, Earth surface. At each it compares
   `pick()` against the same texel of `renderForDebug()`'s full rasters. Expected:
-  identical, except ties on exact pixel-edge coverage.
+  identical, except ties on exact pixel-edge coverage and the ZoA noise edge.
 
 ## Out of scope
 
@@ -171,14 +171,9 @@ refactor-ground ruling.
 - Changing any pick pad or floor value.
 - Picking several pixels at once, such as a nearest-hit-within-radius pick.
 
-## Open questions
+## Rulings (2026-10-15)
 
-1. **Packaging the prep.** Should the `view.window` prep step go as its own PR, or
-   as the first commit of the feature PR? Recommended: same PR. It's small, and it
-   only means something together with the window.
-2. **ZoA jitter parity.** Add the window origin so the hash sees canvas fragcoords
-   (recommended: exact parity, one uniform), or accept that picks within the
-   density mask's noise edge can differ?
-3. **Parity script.** Keep it as a committed dev tool (`npm run pick-parity`), or
-   run it once by hand for this change? Recommended: once by hand. A standing tool
-   is code to maintain for a check that only matters when pick plumbing changes.
+1. **Prep packaging:** the `view.window` prep is the feature PR's first commit.
+2. **ZoA jitter:** no window-origin uniform; picks at the density mask's noise
+   edge may differ from the full-canvas pick.
+3. **Parity check:** run once by hand for this change; no committed script.
