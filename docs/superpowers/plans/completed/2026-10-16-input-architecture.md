@@ -15,7 +15,7 @@ requests. The aggregator, `attachOrbitControls`, the hover driver, the click res
 
 **Tech Stack:** TypeScript, Redux Toolkit, redux-saga (`typed-redux-saga`, `eventChannel`), Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-10-15-input-architecture-design.md` (decisions:
+**Spec:** `docs/superpowers/specs/completed/2026-10-15-input-architecture-design.md` (decisions:
 `docs/grill-sessions/input-architecture-2026-10-14.md`).
 
 ## Global Constraints
@@ -130,9 +130,9 @@ last tap (`t`, `at`, `press`).
 Tests: `recognize.test.ts` drives `recognize` with literal `DeviceEvent` arrays through a small local `run(events)`
 fold. Use a 200 × 100 surface (aspect 2) so aspect bugs show.
 
-- [ ] Move the prep plan to `completed/`; move `WHEEL_ZOOM_K` and fix its two importers.
-- [ ] Add the types and constants.
-- [ ] Write these tests, each with its assertion on the emitted `Gesture[]`:
+- [x] Move the prep plan to `completed/`; move `WHEEL_ZOOM_K` and fix its two importers.
+- [x] Add the types and constants.
+- [x] Write these tests, each with its assertion on the emitted `Gesture[]`:
   - `a press then a release within the slop is heldStart, heldEnd, tap`
   - `a release beyond the slop is heldStart, heldEnd with no tap`
   - `two taps inside the window and the distance add a doubleTap after the second tap`
@@ -152,10 +152,10 @@ fold. Use a 200 × 100 surface (aspect 2) so aspect bugs show.
   - `leave emits hover with at null`
   - `cancel ends the gesture with no tap`
   - `a mouse down heals a pointer whose up was never seen: heldStart, not a pinch`
-- [ ] Run `npx vitest run tests/utils/input/recognize.test.ts` → all fail (no implementation).
-- [ ] Implement `initialRecognizerState` and `recognize`. Pure: no clocks, no DOM, no mutation of the input state.
-- [ ] Tests pass; `npm run typecheck:fast`.
-- [ ] Commit.
+- [x] Run `npx vitest run tests/utils/input/recognize.test.ts` → all fail (no implementation).
+- [x] Implement `initialRecognizerState` and `recognize`. Pure: no clocks, no DOM, no mutation of the input state.
+- [x] Tests pass; `npm run typecheck:fast`.
+- [x] Commit.
 
 ---
 
@@ -184,13 +184,13 @@ export function bindPress(table: BindingTable, press: Press): HeldIntent;
 There is one scheme today, so the saga reads `CONTROL_BINDINGS.skymap` directly (Task 6). #837 adds the scheme
 setting and its selector; the spec's "a scheme switch applies from the next press" test lands with it.
 
-- [ ] Tests on `bindPress(CONTROL_BINDINGS.skymap, …)`:
+- [x] Tests on `bindPress(CONTROL_BINDINGS.skymap, …)`:
   - `right and middle mouse bind to pan`
   - `left mouse, touch and pen bind to orbit`
   - `a modifier does not change the skymap binding` (shift + left mouse → orbit)
   - `a table with no matching row throws`
-- [ ] Implement; tests pass.
-- [ ] Commit.
+- [x] Implement; tests pass.
+- [x] Commit.
 
 ---
 
@@ -278,7 +278,7 @@ hover card through the same request the picker already answers.
 alive forever. Pattern: `src/state/selection/watchSelectionWakeSaga.ts`. Do NOT add `inputRoute` to
 `WAKE_ROUTES` in `watchWakeSaga.ts`.
 
-- [ ] Tests, real `rootReducer` (`configureStore`), one assertion focus each:
+- [x] Tests, real `rootReducer` (`configureStore`), one assertion focus each:
   - `consecutive same-source same-intent motion merges: dx and dy add, ratio multiplies, at is the newest`
   - `a change of intent or held starts a new pending step`
   - `motion is stamped with the source aspect at fold time, and a resize applies to later motion only`
@@ -294,8 +294,8 @@ alive forever. Pattern: `src/state/selection/watchSelectionWakeSaga.ts`. Do NOT 
     silently, so this pins the wiring)
   - wake: `wakes on gesture start, motion and end; never on hover, tap, consumed or pick resolved` (stub the
     `reconcile` context, as `tests/state/selection/` does for `watchSelectionWakeSaga`)
-- [ ] Run → fail. Implement. Pass; `npm run typecheck:fast`.
-- [ ] Commit.
+- [x] Run → fail. Implement. Pass; `npm run typecheck:fast`.
+- [x] Commit.
 
 ---
 
@@ -365,7 +365,7 @@ the conversion or the harness translation is wrong; never re-record.
 rest; drop the `wires the recognizer's emit sink to the aggregator` case in `tests/services/engine/phases/
 wireInput.test.ts`. The live canvas does not move the camera between this task and Task 6; the branch ships whole.
 
-- [ ] Tests for `pendingToInputSteps`:
+- [x] Tests for `pendingToInputSteps`:
   - `the canvas's own aspect reproduces today's pixel drag` (100 × 50 view, aspect 2: a drag from px (10, 10) to
     (30, 20) round-trips to `startPx ≈ [10, 10]`, `endPx ≈ [30, 20]`)
   - `a 9:16 source moves isotropically on a 16:9 view` (equal unit-of-height motion on both axes gives equal pixel
@@ -373,11 +373,11 @@ wireInput.test.ts`. The live canvas does not move the camera between this task a
   - `a pinch gives a zoom step with cursorPx null`
   - `a held: false wheel gives duringGesture false and its cursor in view pixels`
   - `start and end map to gestureStart and gestureEnd in order`
-- [ ] Run → fail. Implement the two utils; tests pass.
-- [ ] Switch the drain in `runFrame.ts`; delete the aggregator and its type, field, construction and test.
-- [ ] Rewrite the harness and every `push` call site (a sweep: one pass, no assertion edits).
-- [ ] `npx vitest run tests/services/engine tests/helpers tests/utils/input` → green, golden trace untouched.
-- [ ] Commit.
+- [x] Run → fail. Implement the two utils; tests pass.
+- [x] Switch the drain in `runFrame.ts`; delete the aggregator and its type, field, construction and test.
+- [x] Rewrite the harness and every `push` call site (a sweep: one pass, no assertion edits).
+- [x] `npx vitest run tests/services/engine tests/helpers tests/utils/input` → green, golden trace untouched.
+- [x] Commit.
 
 ---
 
@@ -432,7 +432,7 @@ export function createPickDriver(deps: PickDriverDeps): Destroyable; // destroy(
   `state.picking.cursorTexPx` and `requestRender()`. Nothing else in the driver wakes the loop.
 - No `pointerDown` gate: the reducer already refuses hover while a gesture is owned.
 
-- [ ] Tests, with a fake `pickProgram` whose `pick` returns a controllable promise and a real store:
+- [x] Tests, with a fake `pickProgram` whose `pick` returns a controllable promise and a real store:
   - `a hover request picks at the view pixel and dispatches the hover ref, then resolves the request`
   - `a hover request with at null clears hover without a GPU pick`
   - `a select request dispatches updateSelectionSelect`
@@ -441,10 +441,10 @@ export function createPickDriver(deps: PickDriverDeps): Destroyable; // destroy(
   - `a failed pick keeps the prior selection and resolves the request`
   - `the terrain marker cursor is written only with the overlay on and a pickable rig`
   - `destroy unsubscribes`
-- [ ] Run → fail. Implement; swap it into `wireInput.ts`; delete the hover driver, the click resolver and
+- [x] Run → fail. Implement; swap it into `wireInput.ts`; delete the hover driver, the click resolver and
   `pointerDown`.
-- [ ] Tests pass; `npm run typecheck:fast`.
-- [ ] Commit.
+- [x] Tests pass; `npm run typecheck:fast`.
+- [x] Commit.
 
 ---
 
@@ -511,7 +511,7 @@ comment (`orbitControls.ts:139-145`) travels verbatim; never `setPointerCapture`
 cancel the task in the effect's cleanup. Widen `RunSaga` (`src/store/types.ts:78`) to pass arguments only if the
 current signature cannot.
 
-- [ ] Saga tests (`runSaga` with a hand-driven channel and a stubbed `nextAnimationFrame`):
+- [x] Saga tests (`runSaga` with a hand-driven channel and a stubbed `nextAnimationFrame`):
   - `the source attaches on the first resize with width over height as aspect`
   - `an edge flushes buffered motion before it is put`
   - `a resize flushes before inputSourceResized`
@@ -520,16 +520,16 @@ current signature cannot.
   - `a pan-bound tap is not reported`
   - `a doubleTap puts inputTapped then focusSelected`
   - `cancelling the saga ends an open gesture before detaching`
-- [ ] Integration test (real `rootReducer`, real `rootSaga`'s focus sagas, the source saga over a hand-driven
+- [x] Integration test (real `rootReducer`, real `rootSaga`'s focus sagas, the source saga over a hand-driven
   channel): `press, release, press, release on a selected galaxy: the focus tween started by focusSelected survives`
   (B1). Follow the store setup of `tests/state/selection/watchFocusSelectedSaga.test.ts`.
-- [ ] Run → fail. Implement the channel, the saga, the `useEngine` fork.
-- [ ] Delete `orbitControls.ts`, `OrbitControlsOptions`, `InputGestureEvent`, the pointer and Escape halves of
+- [x] Run → fail. Implement the channel, the saga, the `useEngine` fork.
+- [x] Delete `orbitControls.ts`, `OrbitControlsOptions`, `InputGestureEvent`, the pointer and Escape halves of
   `inputBindings`, `detachControlsRef`, and the `wireInput` handlers; trim their tests. `Grep` for every deleted
   symbol afterwards (including comments in `src/` and `docs/RENDERER.md`).
-- [ ] Update the backlog detail file and index line.
-- [ ] `npm test`, `npm run typecheck:fast` green.
-- [ ] Commit.
+- [x] Update the backlog detail file and index line.
+- [x] `npm test`, `npm run typecheck:fast` green.
+- [x] Commit.
 
 ---
 

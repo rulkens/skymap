@@ -4,7 +4,7 @@ Every input source (the canvas today, the dome remote next, a gamepad or WebXR c
 and the picker through one layered path: **source → recognition → binding → intents in the store → engine**. Nothing
 calls into the engine; the store's actions are the only interface.
 
-Decisions and their alternatives: [`input-architecture-2026-10-14.md`](../../grill-sessions/input-architecture-2026-10-14.md)
+Decisions and their alternatives: [`input-architecture-2026-10-14.md`](../../../grill-sessions/input-architecture-2026-10-14.md)
 (Q1–Q14 and the ground check GC1–GC5). This spec cites them as `Q<n>` / `GC<n>`.
 
 ## Intent
