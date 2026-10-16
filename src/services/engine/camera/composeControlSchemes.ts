@@ -42,5 +42,7 @@ export function composeControlSchemes(
     }
   }
   const lifted = [...byDriver].map(([driver, dataById]) => liftExhibitDriver(driver, dataById));
-  return { skymap: { drivers: [...CAMERA_DRIVERS, ...lifted] } };
+  const drivers = [...CAMERA_DRIVERS, ...lifted];
+  // `openspace` reuses the skymap drivers until its rows land (plan Task 2).
+  return { skymap: { drivers }, openspace: { drivers } };
 }

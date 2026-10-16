@@ -8,4 +8,10 @@ export const CONTROL_BINDINGS: Readonly<Record<ControlSchemeId, BindingTable>> =
     [{ pointerType: 'mouse', button: 2 }, 'pan'],
     [{}, 'orbit'],
   ],
+  // Placeholder until the openspace row lands (plan Task 3).
+  openspace: [
+    [{ pointerType: 'mouse', button: 1 }, 'pan'],
+    [{ pointerType: 'mouse', button: 2 }, 'pan'],
+    [{}, 'orbit'],
+  ],
 };

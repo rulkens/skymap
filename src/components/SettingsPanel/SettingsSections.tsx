@@ -11,6 +11,7 @@ import { layerUiContents } from '../../utils/layer/layerUiContents';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
 import EarthSectionContainer from '../containers/EarthSectionContainer';
+import CameraControlsSectionContainer from '../containers/CameraControlsSectionContainer';
 
 export const SettingsSections = memo(function SettingsSections(): ReactNode {
   const mainSections = useMemo(() => layerUiContents(APP_COMPOSITION.layers, 'main'), []);
@@ -27,6 +28,7 @@ export const SettingsSections = memo(function SettingsSections(): ReactNode {
       <DisplaySectionContainer>
         <EarthSectionContainer />
       </DisplaySectionContainer>
+      <CameraControlsSectionContainer />
     </>
   );
 });

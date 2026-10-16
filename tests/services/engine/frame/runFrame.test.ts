@@ -770,7 +770,7 @@ describe('runFrame — sim clock (Task 8)', () => {
     };
     const deps: RunFrameDeps = {
       ...makeCamDeps(state, store),
-      controlSchemes: { skymap: { drivers: [stub] } },
+      controlSchemes: { skymap: { drivers: [stub] }, openspace: { drivers: [stub] } },
     };
 
     runFrame(state, deps, NOW);
@@ -1139,7 +1139,8 @@ describe('runFrame — effective intent', () => {
         return { pose: ctx.register, memory: mem };
       },
     };
-    const deps = { ...h.deps, controlSchemes: { skymap: { drivers: [probe, ...CAMERA_DRIVERS] } } };
+    const drivers = [probe, ...CAMERA_DRIVERS];
+    const deps = { ...h.deps, controlSchemes: { skymap: { drivers }, openspace: { drivers } } };
 
     const before = h.store.getState();
     runFrame(h.state, deps, 16);

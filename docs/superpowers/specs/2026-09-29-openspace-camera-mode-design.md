@@ -47,19 +47,21 @@ Packaging: **two PRs**. PR 1 is the ground preparation (§3): five behaviour-neu
 ```ts
 type ControlSchemeId = 'skymap' | 'openspace';
 type NavAxis = 'orbit' | 'look' | 'zoom' | 'roll';
-type FrictionGroup = 'rotational' | 'zoom' | 'roll';          // orbit+look share 'rotational'
+type FrictionGroup = 'rotational' | 'zoom' | 'roll';          // orbit → rotational; look and roll → roll (OpenSpace)
 type CameraControlsSettings = {                               // own cluster, not in SettingsSnapshot
   scheme: ControlSchemeId; friction: number; frictionOn: Record<FrictionGroup, boolean>;
 };
 type InputStep = … | { kind: 'navDrag'; axis: NavAxis; deltaPx: Vec2 };   // new kind, not a DragMode variant
 type ArmDelta = { orbit?: Vec2; look?: Vec2; zoom?: number; roll?: number };  // rad, rad, ln-factor, rad
 type NavigatorState = { velocity: NavVelocity; held: NavAxis | null; lastNowMs: number | null };
-                                                              // CameraRuntime.navigator
+                                                              // CameraRuntime.navigator (+ CameraRuntime.scheme, last frame's)
+type AxisPress = { button; ctrl; alt; shift; pointerType };   // what a scheme binds an axis from
+CameraDriver.family?: DriverFamily                            // rows sharing a family are one author: no edge commit between them
 type CameraPose = { …; roll?: number; lookOffset?: Vec2 };    // yaw, pitch of view about the orbit sightline
 
 RungRow.nudge(tilt, framed, delta: ArmDelta, ctx): { pose, tilt }  // new column, one cell per rung
-CONTROL_SCHEMES: Record<ControlSchemeId, ControlScheme>        // { drivers }; PR 2 adds bindAxis(button, mods)
-CAMERA_DRIVERS += openSpaceHeld (80), openSpaceCoast (50)      // both commitsOnEdge
+CONTROL_SCHEMES: Record<ControlSchemeId, ControlScheme>        // { drivers }; PR 2 adds bindAxis(press: AxisPress)
+OPENSPACE_DRIVERS = CAMERA_DRIVERS with orbitDrag → openSpaceHeld (80), openSpaceCoast (50)  // family 'openSpace'
 KEYBOARD_SHORTCUTS += 'shift+c'
 ```
 
@@ -97,7 +99,7 @@ It placed velocity in module state; this spec keeps it in `CameraRuntime`, becau
 
   Each arm's orbit **proximity scaling** (the world arm's altitude damping at `applyInputToCamera.ts:73`, and its body and site equivalents) moves inside the arm, so pixel `step` and `nudge` share it and `ArmDelta` stays arm-agnostic. Tests: each cell against the pixel path at the equivalent angle.
 - **P2: driver activity bag.** Replace `isActive(s, approachDone?)` with `isActive(s, activity: DriverActivity)`, where `DriverActivity = { approachDone: boolean }` and `stepCameraRuntime` builds it once per frame. PR 2 adds `navHeld` and `navMoving`.
-- **P3: scheme-selected driver table.** Add `CONTROL_SCHEMES: Record<ControlSchemeId, ControlScheme>`, where `ControlScheme = { drivers: readonly CameraDriver[] }`. `skymap` is today's `CAMERA_DRIVERS`. PR 2 adds `bindAxis: (button, mods) => NavAxis | null` alongside its first reader. The loop picks the table from the scheme each frame (`startLoop.ts:47` injection becomes a registry lookup; a fixture override still works). Only `skymap` exists in PR 1, and the id type is the one-member union `'skymap'`.
+- **P3: scheme-selected driver table.** Add `CONTROL_SCHEMES: Record<ControlSchemeId, ControlScheme>`, where `ControlScheme = { drivers: readonly CameraDriver[] }`. `skymap` is today's `CAMERA_DRIVERS`. PR 2 adds `bindAxis: (press: AxisPress) => NavAxis | null` alongside its first reader. The loop picks the table from the scheme each frame (`startLoop.ts:47` injection becomes a registry lookup; a fixture override still works). Only `skymap` exists in PR 1, and the id type is the one-member union `'skymap'`.
 - **P4: persisted-value table.** A `PersistedValue<T>` row is `{ key, select, parse, serialize }`; `PERSISTED_VALUES` (`src/state/persistedValues.ts`) lists them, `persistValues(store, rows)` is one subscribe-diff writer with try/catch around storage, and `readPersisted(row)` is the boot read each consumer calls. The splash version migrates onto it as the `SPLASH_SEEN_VERSION` row, and `persistSplashVersion.ts` is deleted; `splashStorage.ts` stays for `CURRENT_SPLASH_VERSION` and `readUrlAtMount`.
 - **P5: `CameraPose.lookOffset?: Vec2`.** Thread it through every reader of `roll`, about 20 files:
   - `assembleOrbitCamera`/`computeViewProj` turn the view basis by it;
@@ -127,46 +129,51 @@ It placed velocity in module state; this spec keeps it in `CameraRuntime`, becau
 
 ## 5. Input capture
 
-- `ControlScheme` gains `bindAxis: (button, mods) => NavAxis | null` (PR 1 shipped it without), and `OrbitControlsOptions` gains the same field, which `wireInput.ts:241` reads from `CONTROL_SCHEMES[scheme]` at press.
-- At pointer-down, a non-null axis latches for the gesture. The recognizer then emits `navDrag` events carrying that axis and each move's pixel delta, and never re-reads the modifiers mid-drag.
+- `ControlScheme` gains `bindAxis: (press: AxisPress) => NavAxis | null` (PR 1 shipped it without), and `OrbitControlsOptions` gains the same field, which `wireInput.ts:241` reads from `CONTROL_SCHEMES[scheme]` at press. In the `openspace` scheme a touch or pen press binds `orbit`, so every pointer gesture goes through the navigator; a second finger still pinches through the rung's zoom step.
+- At pointer-down, a non-null axis latches for the gesture. The recognizer emits a zero-delta `navMove` on the press itself (so the axis is held before any motion), then one `navMove` per move with its pixel delta, and never re-reads the modifiers mid-drag.
 - A null axis (the `skymap` scheme) takes today's path untouched.
-- A `navDrag` release never click-picks. The click test stays tied to the skymap `orbit` mode.
+- An `orbit`-axis release under the click threshold click-picks, as skymap's orbit does; a zoom, look or roll release never does (alt+left zoom shares the `orbit` drag mode, so the axis is what excludes it).
 - `beginDrag`/`endDrag` and `cancelCameraTween` fire as for any gesture, so `camera.dragging` still means "a button is held".
-- The aggregator folds consecutive `navDrag` moves of the same axis by summing `deltaPx`.
-- `replayInput` hands a `navDrag` step to the navigator, not the rung.
+- The aggregator turns `navMove` events into `navDrag` steps, folding consecutive moves of the same axis by summing `deltaPx`.
+- `replayInput` hands a `navDrag` step to the navigator, not the rung. While the navigator holds an axis it skips the `gestureEnd` base commit: the motion is one running fold, so a single-frame flick commits once, through the rows below.
 
 ## 6. The navigator
 
 `CameraRuntime.navigator: NavigatorState`, advanced inside `stepCameraRuntime`, whose single writer is `runFrame`:
 
 1. `dt = clamp(nowMs − lastNowMs, 0, 100 ms)`. On the first frame (`lastNowMs === null`) `dt` is 0.
-2. **Held axis:** the velocity approaches `deltaPx · gain[axis] / dt` with the same damping law as release, so a held but motionless mouse comes to rest (OpenSpace's `DampenedVelocity::set`; the plan verifies the exact form against the source before coding).
+2. **Held axis:** `v += (deltaPx · gain[axis] / dt − v) · k`, with `k = min(dt / friction, 1)` (OpenSpace's `DampenedVelocity::set`, verified against the source). It is never gated by the friction toggles, so a held but motionless mouse comes to rest. The target divides by the real, uncapped frame gap, since a stall's pixels were gathered over all of it; `k` and `ArmDelta` use the capped `dt`.
 3. **Released axes:** `v *= 1 − min(dt / friction, 1)` when `frictionOn[group(axis)]` is on; unchanged otherwise. Anything below `NAV_REST_EPS` snaps to 0.
 4. `ArmDelta = v · dt`, per axis. The zoom axis uses only the vertical delta, and its sign matches OpenSpace (verified in the plan).
 
-`gain` starts from OpenSpace's `MouseSensitivity` default (15 × 1e-4) and is tuned by feel side by side with OpenSpace. Velocities are arm-agnostic (§3.3 P1), so a coast that crosses an arm boundary (the regime fold runs during coast, `projectFramePose.ts:109`) carries on without a wipe or remap.
+`gain` does not copy OpenSpace's `MouseSensitivity` (15 × 1e-4): that is multiplied by an altitude scale skymap's arms already own. Orbit, look and roll seed at 1× the skymap drag's own rate (`fovY / cssHeight` radians per pixel) at steady hold, zoom at 0.005 ln-units per pixel, all tuned by feel side by side with OpenSpace.
+
+Friction groups follow the source: OpenSpace's `rotational` toggle gates only orbit, its `roll` toggle gates look and roll (`NAV_FRICTION_GROUP`), so the settings panel labels that toggle "Look & roll". Velocities are arm-agnostic (§3.3 P1), so a coast that crosses an arm boundary (the regime fold runs during coast, `projectFramePose.ts:109`) carries on without a wipe or remap.
 
 ## 7. Driver rows and commits
 
 | Row | Priority | Active when | Flags |
 |---|---|---|---|
-| `openSpaceHeld` | 80 | `activity.navHeld` | `pivotsOnFocusedBody`, `commitsOnEdge` |
-| `openSpaceCoast` | 50 | `!activity.navHeld && activity.navMoving` | `pivotsOnFocusedBody`, `commitsOnEdge` |
+| `openSpaceHeld` | 80 | `activity.navHeld` | `family: 'openSpace'`, `pivotsOnFocusedBody`, `commitsOnEdge` |
+| `openSpaceCoast` | 50 | `!activity.navHeld && activity.navMoving` | `family: 'openSpace'`, `pivotsOnFocusedBody`, `commitsOnEdge` |
 
 - Both rows sit only in `CONTROL_SCHEMES.openspace.drivers`, which is `skymap`'s table with `orbitDrag` replaced. Their `pose` is the register after `nudge(ArmDelta)` has been applied, and the navigator writes it before `pickWinner`.
 - Priority 50 puts a coast **below** `followApproach` (55) and tween (60) and above `autoRotate` (20), so any focus, home or fly-to preempts it (R10).
-- **Commit edges.** All three come free from `commitsOnEdge`:
+- **One family.** `commitOnEdge` treats rows sharing a `CameraDriver.family` as one author (the field replaced the hand-listed follow pair), so held → coast is no edge and held → coast → rest commits once.
+- **Commit edges**, all from `commitsOnEdge`:
   - **at rest:** `navMoving` goes false;
   - **handoff:** a higher row wins;
-  - **scheme toggle:** the table swaps and the row vanishes.
-- On a handoff, and on a scheme toggle, `stepCameraRuntime` zeroes the navigator (sibling of the `followIn` reset at `:180`).
+  - **scheme toggle:** the table swaps and the row vanishes. This one is not free: the departing row must be looked up in the table it was picked from, so `stepCameraRuntime` resolves the scheme itself (`StepInputs.schemes`) and records last frame's in `CameraRuntime.scheme`.
+- **One reset rule.** The navigator returns to rest on any frame whose winner is outside the `openSpace` family. That covers handoff, scheme toggle and a clip or tween preempting a held drag.
+- `stepCameraRuntime` drops navigator input when the active table has no `openSpace`-family row, which a scheme toggle mid-press reaches.
+- **Accepted:** a scheme toggle during a held press can double-commit, or freeze the view until release.
 - **R11:** there is no other commit.
 
 ## 8. `lookOffset` (world arm)
 
 - `lookOffset = [yaw, pitch]` turns the **view basis** about the eye after the orbit terms place it. `target`, `yaw`, `pitch` and `distance` keep their meaning, so the focus pin's re-centring (`applyFocusedBodyPivot`) and R12b-3's eye derivation are untouched.
 - The R12b-3 comment is reworded to "every committed absolute pose's **orbit terms** are centre-looking; `lookOffset` turns only the view".
-- The look axis on the world arm adds to `lookOffset`, with pitch clamped to ±(π/2 − 0.01).
+- The look axis on the world arm adds to `lookOffset`. Its pitch is clamped so the RENDERED view's elevation, measured against `frameUp(upBasis)`, stays within ±`PITCH_LIMIT`; not `pose.pitch + offset`, which has the wrong sign and ignores a pose basis that differs from the up basis. The clamp re-runs after an orbit, which can push an offset pose past the pole.
 - A tween or focus change eases `lookOffset` to 0 over its own duration (OpenSpace's retarget aim); a clip snaps it to 0 at its start.
 - In the `skymap` scheme nothing writes it. After switching back, an existing offset stays until the next tween clears it.
 - Body-arm look is native to `basisLocal` and needs no offset. Arm conversions carry or zero it (P5), and PR 2 keeps today's disengage retarget, which zeroes it.
