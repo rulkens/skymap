@@ -66,11 +66,15 @@
 
 .toggle {
   composes: ring ring-small from '../../styles/ring.module.css';
-  list-style: none;
 }
 
-.toggle::-webkit-details-marker {
-  display: none;
+/* A button, so it sheds the browser's button face; `button.` outranks the composed ring. */
+button.toggle {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* Same breakpoint as site.css. */
@@ -106,7 +110,7 @@
     font-size: min(1.75rem, 9vw);
   }
 
-  .root .menu > summary.toggle,
+  .root .menu > button.toggle,
   .root .open {
     --mark: 0.6875em;
     --gap: 0.625em;
@@ -118,23 +122,30 @@
     padding-inline: 0.75em 1em;
   }
 
-  .root .menu > summary.toggle svg,
+  .root .menu > button.toggle svg,
   .root .open svg {
     width: 1.25em;
     height: 1.25em;
   }
 
+  /* A popover sits in the top layer, placed on the window: right under the bar, which is stuck to the top. */
   .menu .list {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
+    position: fixed;
+    inset: var(--nav-height) 0 auto;
+    width: auto;
+    margin: 0;
     flex-direction: column;
     gap: 0;
     padding: 0.5rem var(--gutter) 1.5rem;
+    color: inherit;
     background: var(--color-bg);
+    border: 0;
     border-bottom: 1px solid var(--border-divider);
     text-shadow: none;
+  }
+
+  .menu .list:not(:popover-open) {
+    display: none;
   }
 
   /* The same face as the bar's links on a wide screen, a size up for the thumb. */
@@ -146,7 +157,7 @@
   }
 
   /* The open list needs the bar's ground even over a hero. */
-  .root:has(.menu[open]) {
+  .root:has(.list:popover-open) {
     background: var(--color-bg);
     text-shadow: none;
   }
