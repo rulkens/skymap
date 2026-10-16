@@ -241,7 +241,7 @@ A Vite plugin under `tools/utils/vite/`, active on the dev and preview servers.
 
 - **`/__remote/<code>`** upgrades to a WebSocket and rebroadcasts each message to the room's other sockets.
 - **`GET /__remote/origins`** returns the server's network addresses.
-- **Limits:** messages over 2 KB are dropped, a room holds at most four sockets, and an empty room is forgotten.
+- **Limits:** messages over 16 KB are dropped (a full status and a ten-match search answer from the dome must fit), a room holds at most four sockets, and an empty room is forgotten.
 - **Startup line:** it prints the remote's address beside Vite's own, for a device that cannot scan.
 - **Dependency:** `ws` and `@types/ws`, as explicit dev dependencies.
 - **Build:** `vite.config.ts` gains `build.rollupOptions.input` for `index.html` and `remote.html`;

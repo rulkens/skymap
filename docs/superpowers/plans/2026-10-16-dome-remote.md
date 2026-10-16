@@ -25,7 +25,7 @@ Nothing reaches into the engine.
 - The remote page's import graph contains nothing under `src/services/gpu/` or `src/services/engine/`, and it never
   touches `navigator.gpu`, so it loads over plain `http://` on a LAN address.
 - Each side parses only its inbound union; anything unknown, malformed or oversized drops silently.
-- Relay limits: messages over 2 KB dropped, at most four sockets per room, an empty room forgotten.
+- Relay limits: messages over 16 KB dropped (dome-side status and search answers must fit), at most four sockets per room, an empty room forgotten.
 - Room codes: local relay 8 characters of Crockford base32 (40 bits) from `crypto.getRandomValues`, fresh per dome
   page load. The QR encodes `<origin>/remote.html#<room>`.
 - Heartbeat: the remote sends `hello` every 1000 ms; the dome closes a remote's source after 3000 ms without any
@@ -348,7 +348,7 @@ export function createLocalTransport(): RemoteTransport;
 **Behaviour:**
 - Relay: `/__remote/<code>` upgrades to a WebSocket (`ws`, `noServer: true`, on the HTTP server's `upgrade` event,
   leaving Vite's own HMR upgrade alone) and rebroadcasts each text message to the room's OTHER sockets; messages over
-  2048 bytes dropped; a fifth socket in a room refused (closed with a policy code); an empty room deleted.
+  16384 bytes dropped; a fifth socket in a room refused (closed with a policy code); an empty room deleted.
   `GET /__remote/origins` returns JSON `string[]` of `http://<lan-ip>:<port>` for each non-internal IPv4 interface,
   then `http://localhost:<port>`. On server start it prints `➜  Remote:  <first origin>/remote.html` under Vite's
   own lines.
