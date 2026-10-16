@@ -21,7 +21,7 @@ export type MeshBody = {
   readonly standoffRadii: number;
   /** Distance from the camera, in metres, at which this body's caption reaches
    *  full alpha; it fades in from zero at twice that distance. Optional — a
-   *  mesh body that omits it keeps the `meshBody` fade row's default reach. */
+   *  mesh body that omits it keeps the `meshBody` caption rule's default reach. */
   readonly captionRevealM?: number;
   /** UTC instant the body enters the scene (launch, deployment, landing); absent
    *  before it. Omitted for a body that is always there. */

@@ -390,21 +390,25 @@ framing (`{ target, distance, radius }`) comes from
 
 ## Opacity: three factors, multiplied
 
-A layer's rendered alpha is the **product of three independent factors**:
+A layer's rendered alpha is the **product of three independent factors**, computed
+once in core (`resolveVisibilityOpacity`) and handed to the pass or label producer:
 
 ```
-final alpha = intentOpacity(bridge)  ×  focusRecession(structureFocus)  ×  clipOpacity(clipPlayer)
+handed value = fade(FadeRegistry)  ×  recession(entry, focus blend)  ×  clip(clipPlayer)
 ```
 
-- **`intentOpacity`** — the visibility fade in the shared `FadeRegistry`, heading for
-  each entry's target (switch, gating slot, `of`). `show`/`hide` move this (and the
+- **`fade`** — the visibility fade in the shared `FadeRegistry`, heading for each
+  entry's target (switch, gating slot, `of`). `show`/`hide` move this (and the
   underlying enabled-intent).
-- **`focusRecession`** — the structure-focus **layer** recession: under focus the
-  surrounding layers (filaments, volumes, structure rings, labels) dim toward their
-  recession targets. Galaxy points do **not** recede here. `focus(id)` moves this.
-- **`clipOpacity`** — the clip-owned transient channel (`ClipOpacityChannel`, one
-  private `FadeController` per layer, lazily created). `fade()` moves _only_ this. It
-  defaults to 1 for every untouched layer and **resets to 1 when the clip ends**.
+- **`recession`** — the focus recession an entry declares (`recession: 'strong' |
+  'mild'`): under focus the receding entries (filaments, volumes, structure rings,
+  labels) dim toward their strength. Galaxy points do **not** recede here. `focus(id)`
+  moves this.
+- **`clip`** — the clip-owned transient channel (`ClipOpacityChannel`, one private
+  `FadeController` per address, lazily created). `fade()` moves _only_ this. It
+  defaults to 1 for every untouched address and **resets to 1 when the clip ends**. A
+  label entry with `of` also takes its thing's clip, so `fade(['constellations'], 0, 2)`
+  dims the names with the lines.
 
 > **Galaxy points carry one extra factor, off this product.** Under structure focus
 > the points shader multiplies each galaxy's alpha by a per-vertex **isolation**
@@ -412,12 +416,12 @@ final alpha = intentOpacity(bridge)  ×  focusRecession(structureFocus)  ×  cli
 > geometric (distance from the structure centre vs its radius), driven by the same
 > `focus(id)` / `selection.focus`, and is **galaxy-only** — not part of the layer
 > product above. This is what makes `focus(id)` "dim everything that isn't in this
-> cluster"; `focusRecession` handles the chrome, the isolation factor handles the
+> cluster"; `recession` handles the chrome, the isolation factor handles the
 > galaxy field.
 
 This is why **`fade()` can dim an intent-bearing layer without desyncing it from
-intent**: `fade(['survey'], 0, 3)` drives `clipOpacity(survey) → 0` while
-`intentOpacity(survey)` stays 1 (galaxies stay loaded). And it's why the "load but
+intent**: `fade(['survey'], 0, 3)` drives `clip(survey) → 0` while the `survey`
+fade stays 1 (galaxies stay loaded). And it's why the "load but
 don't show" trick works: `fade(['flow'], 0, 0)` masks the layer to 0, then
 `scene(setFlowEnabled(true))` raises intent behind the mask, then
 `fade(['flow'], 1, 3)` reveals it — no flash.

@@ -344,7 +344,7 @@ export function createVolumeFieldRenderer<Id extends string>(
         if (s.intensity <= 0) continue;
         // Opacity is the SOLE visibility truth: a field is active iff its
         // resolved opacity is non-zero. The enabled toggle doesn't override
-        // a zero — it only SEEDS fade intent through the visibility bridge,
+        // a zero — it only SEEDS the fade target through the visibility sync,
         // so an enabled field spatially faded to 0 (deep zoom) must not
         // burn a full raymarch. This one test also covers the fade-out
         // tail (toggle off, opacity still ramping down) for free: the tail
@@ -400,8 +400,8 @@ export function createVolumeFieldRenderer<Id extends string>(
           e.residentPaletteId = s.paletteId;
         }
         // Skip iff the field resolves invisible: opacity is the sole
-        // visibility truth (the enabled toggle only seeds fade intent via
-        // the visibility bridge — it never overrides a zero, so an enabled
+        // visibility truth (the enabled toggle only seeds the fade target via
+        // the visibility sync — it never overrides a zero, so an enabled
         // field spatially faded to 0 at deep zoom skips its raymarch).
         // While opacity > 0 we keep drawing so the ~100 ms fade-out tail is
         // visible. A just-enabled field is skipped only for its first tick

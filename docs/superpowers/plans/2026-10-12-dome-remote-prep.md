@@ -105,7 +105,7 @@ export type ToggleRow = {
 // src/compositions/selectToggleRows.ts
 export function selectToggleRows(
   state: RootState,
-  layerRows: readonly LayerSettingsRow[],
+  layerRows: readonly LayerToggleRow[],
 ): readonly ToggleRow[];
 ```
 

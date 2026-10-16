@@ -50,7 +50,7 @@ import type { RootState } from '../../../../../src/store/types';
  * leaves — the tree-order equivalent of `compileClip`'s flat, atSec-sorted
  * `cues` list, narrowed to the one cue kind that can move `settings.orientation`.
  * `show`/`hide`/`focus` also route through `applySceneEffect`, but firing them
- * for real needs a live `state.subsystems.fades` (the visibility bridge) —
+ * for real needs a live `state.subsystems.fades` (the visibility sync) —
  * standing that up would drag in the whole fade/subsystem wiring for cues this
  * test has no interest in. `frameTo` alone determines the orientation ladder,
  * so only it needs firing.

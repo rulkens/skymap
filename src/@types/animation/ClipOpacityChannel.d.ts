@@ -8,14 +8,14 @@
  * factor of 1 — they are fully visible by default, so the clip only needs
  * to declare exceptions.
  *
- * This is the *third* opacity factor in the compositing chain:
+ * It is the last factor of the value core hands a consumer
+ * (`resolveVisibilityOpacity`):
  *
- *   final opacity = registry factor × intent-bridge factor × clip factor
+ *   handed value = registry fade × focus recession × clip factor
  *
- * Keeping it separate from the shared FadeRegistry (which the intent bridge
- * owns) and from the intent-bridge fade (which reads settings) means the
- * clip's transient fades vanish cleanly on `reset()` without disturbing the
- * persistent visibility state. This mirrors the pattern used by
+ * Keeping it separate from the shared FadeRegistry (which the settings-driven
+ * visibility sync owns) means the clip's transient fades vanish cleanly on
+ * `reset()` without disturbing the persistent visibility state. This mirrors the pattern used by
  * `structureFocusSubsystem` — a private `createFadeController` outside the
  * registry — extended to one-per-key.
  *

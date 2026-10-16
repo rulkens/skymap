@@ -16,9 +16,9 @@
  *
  * ### Relation to the other opacity channels
  *
- * The clip factor is the third factor in the compositing chain:
+ * The clip factor is the last factor of the value core hands a consumer:
  *
- *   final = registry factor × intent-bridge factor × clip factor
+ *   handed value = registry fade × focus recession × clip factor
  *
  * `reset()` clears the controller map entirely, which is equivalent to
  * resetting every layer's clip factor to 1 — because untouched keys always

@@ -25,10 +25,10 @@ describe('watchFadesSaga', () => {
     reconcile = built.reconcile;
   });
 
-  // The per-key cases collapse into one shape: any settings write re-syncs
-  // every row (Task 4's targetOf skip is what keeps this cheap — see Task 5).
+  // The per-key cases collapse into one shape: any settings write re-syncs every
+  // visibility target (a target already held is never re-issued, which keeps it cheap).
 
-  it('any settings write calls syncFades with no rows', () => {
+  it('any settings write calls syncFades with no arguments', () => {
     store.dispatch(setMilkyWayEnabled(true));
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
