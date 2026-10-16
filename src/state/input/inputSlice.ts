@@ -67,7 +67,8 @@ const inputSlice = createSlice({
           tail?.kind === 'motion' &&
           tail.source === source &&
           tail.intent === m.intent &&
-          tail.held === m.held
+          tail.held === m.held &&
+          tail.aspect === record.aspect
         ) {
           input.pending[input.pending.length - 1] = {
             ...tail,

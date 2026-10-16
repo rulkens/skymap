@@ -1,12 +1,8 @@
 /**
- * watchInputWakeSaga — render-on-demand for held input: a gesture start, its
- * motion and its end each have a camera consequence the next frame must draw.
- *
- * Hover, tap and the pick answers stay wake-free (hover lands at pointer rate;
- * the selection they lead to wakes through its own saga), and `inputConsumed`
- * must never wake: the frame dispatches it, so waking on it would keep the loop
- * alive forever. getContext is read per action because the engine registers the
- * reconcile bag after the root saga is forked.
+ * watchInputWakeSaga — wakes the loop for gesture start, motion and end only.
+ * `inputConsumed` must never wake: the frame dispatches it, so the loop would
+ * never stop. getContext is read per action: the reconcile bag registers after
+ * the root saga forks.
  */
 import { takeEvery, getContext } from 'typed-redux-saga';
 

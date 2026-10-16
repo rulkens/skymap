@@ -86,7 +86,7 @@ describe('inputSlice', () => {
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     store.dispatch(inputMoved({ source: 'canvas', motion: [orbit()] }));
     store.dispatch(inputSourceResized({ source: 'canvas', aspect: 0.5 }));
-    store.dispatch(inputMoved({ source: 'canvas', motion: [orbit({ intent: 'pan' })] }));
+    store.dispatch(inputMoved({ source: 'canvas', motion: [orbit()] }));
     const aspects = selectPendingInput(store.getState()).flatMap((s) =>
       s.kind === 'motion' ? [s.aspect] : [],
     );
