@@ -13,6 +13,7 @@ export function installVisibilityGates(state: EngineState): void {
   for (const row of state.assetRows) {
     if (row.gates === undefined) continue;
     const id = gateIdentityOf(row.gates);
-    slotFor(state, row.key)?.subscribe(() => syncVisibilityTarget(state, id));
+    // `collectVisibilityGates` already threw on a gating row with no slot.
+    slotFor(state, row.key)!.subscribe(() => syncVisibilityTarget(state, id));
   }
 }

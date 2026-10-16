@@ -84,3 +84,5 @@ const surveyPass: ContentPass<'survey'> = {
   draw: () => {},
 };
 const _passes: readonly ContentPass[] = [flowPass, surveyPass];
+// @ts-expect-error a narrowed pass must declare its fade, or core never hands the value
+const _undeclared: ContentPass<'flow'> = { name: 'typeOnly', enabled: () => true, draw: () => {} };

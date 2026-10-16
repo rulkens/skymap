@@ -23,7 +23,7 @@ Line citations below are at `7ab7ec0fd`; in files PR 1 touched they may have mov
 ## Global Constraints
 
 - **No special cases, ever silently.** If a Layer seems to need a special case, or a declaration unlike its siblings (a different entry shape, an extra skip, its own recession, clip or switch AND, a core branch on its id), STOP and report it in your reply. Never add it silently. The same applies to anything a task's text did not foresee.
-- **No Layer contract change beyond this plan's** (ruled 2026-10-15). The plan adds exactly: `Layer.visibility` (Task 1), `ContentPass.fade` and `FrameContentPlanner.fade` with their trailing value parameter (Tasks 1, 4), `LayerScreenLabel.label`, `LayerWorldLabel` (typing `LayerGuides.worldLabels`) and `produceLabels`' third argument (Task 1), `AssetWiringRow.gates` (Task 3), `LayerUiSlots.labelsAndGuides: LayerToggleRow` (Task 6), the optional show-entry field `ShowEntry.bodies` (Task 7, T7-1), `ReadyFrameContext.sceneBodies` in place of `ReadyFrameContext.positionedStars` (Task 7, T7-3: a consented core frame change, a data field, not a function), and removes `Layer.fades` (Task 12). A task that seems to need any other new or widened member of `Layer`, `LayerInstance`, `ContentPass`, `FrameContentPlanner`, a label row, `LayerUiSlots` or `ReadyFrameContext` STOPs and reports: it needs the user's consent.
+- **No Layer contract change beyond this plan's** (ruled 2026-10-15). The plan adds exactly: `Layer.visibility` (Task 1), `ContentPass.fade` and `FrameContentPlanner.fade` with their trailing value parameter (Tasks 1, 4), `LayerScreenLabel.label`, `LayerWorldLabel` (typing `LayerGuides.worldLabels`) and `produceLabels`' third argument (Task 1), `LayerInstance.worldLabels: LayerWorldLabel[]` (the instance copy of `LayerGuides.worldLabels`; consented 2026-10-16, ask WCWE), `AssetWiringRow.gates` (Task 3), `LayerUiSlots.labelsAndGuides: LayerToggleRow` (Task 6), the optional show-entry field `ShowEntry.bodies` (Task 7, T7-1), `ReadyFrameContext.sceneBodies` in place of `ReadyFrameContext.positionedStars` (Task 7, T7-3: a consented core frame change, a data field, not a function), and removes `Layer.fades` (Task 12). A task that seems to need any other new or widened member of `Layer`, `LayerInstance`, `ContentPass`, `FrameContentPlanner`, a label row, `LayerUiSlots` or `ReadyFrameContext` STOPs and reports: it needs the user's consent.
 - Never add `Co-Authored-By` (or any attribution trailer) to a commit. One commit per task, message in the plan's voice. Never rebase, force-push or merge.
 - Stage by path, never `git add -A`. `npx prettier --write <files you touched>`, never `npm run format`.
 - Move or rename TS files only with `npm run move-files -- <from> <to>` (run `--dry` first), never `git mv` plus hand-edited imports. Afterwards grep for the old path, because string literals and `vi.mock` paths are not rewritten.
@@ -137,16 +137,17 @@ VisibilityArg      = VisibilityAddress | 'labels'
 FadeIdentity       = { readonly address: VisibilityAddress; readonly item?: string }
 FadeValueOf<A>     = entry of A has items ? Readonly<Record<item, number>> : number
 
-// ContentPass and FrameContentPlanner gain (types only in this task):
-readonly fade?: ShowKey;
-// ContentPass: enabled / draw / pickEnabled / drawPick gain a trailing `fade` parameter typed FadeValueOf<that key>.
+// ContentPass<K extends ShowKey = ShowKey> and FrameContentPlanner<T, K> gain (types only in this task):
+readonly fade?: K;   // optional on the erased type; REQUIRED once K is narrowed (ContentPass<'flow'>)
+// ContentPass: enabled / draw / pickEnabled / drawPick gain a trailing `...fade: FadeParam<K, ShowKey>`
+// (FadeParam.d.ts: a rest tuple of FadeValueOf<K>, required once narrowed, optional when erased).
 // FrameContentPlanner: `plan` gains the same trailing parameter (both scopes).
-// Pick an encoding (e.g. ContentPass<K extends ShowKey = never>) such that a pass declaring
-// fade: 'localBubble' receives `number` with no cast, and `readonly ContentPass[]` still accepts it.
+// A pass declaring fade: 'localBubble' receives `number` with no cast, `readonly ContentPass[]` still
+// accepts it, and a ContentPass<'localBubble'> without `fade` fails `tsc`.
 
-// LayerScreenLabel = Label2DProducer & { slab; label?: LabelName }; produceLabels gains a third
-// parameter typed by the referenced entry. LayerWorldLabel is the same over Label3DProducer.
-// There is no `fade:` form on a label row.
+// LayerScreenLabel<L extends LabelName = LabelName> = Omit<Label2DProducer, 'produceLabels'> & { slab;
+// label?: L (required once L is narrowed) }; produceLabels gains a third parameter typed by the
+// referenced entry. LayerWorldLabel is the same over Label3DProducer. No `fade:` form on a label row.
 ```
 
 **Entries.** Verified against `focusRecession.ts:27-62` and today's fade rows (at `7ab7ec0fd`); every recession value matches. Build item lists the way the fade rows do today. A single-parameter `.filter((e) => e.bearsLabel)` narrows by the inferred predicate (`starCatalogFadeRows.ts:12-19`, `fadeLayers.ts:18-22`).
@@ -225,7 +226,7 @@ The `settings/` action type prefix is what makes `watchFadesSaga` (`watchFadesSa
 **review: yes**: sagas and state, plus `slot.committed()` semantics.
 
 **Files:**
-- create `src/utils/visibility/fadeIdentityKey.ts`, `fadeIdentitiesOf.ts`, `visibilityTargetOf.ts`
+- create `src/utils/visibility/fadeIdentityKey.ts`, `fadeIdentitiesOf.ts`, `visibilityTargetOf.ts`, `visibilityEntryOf.ts`, `ofLabelsOf.ts`
 - create `src/@types/engine/state/VisibilityGates.d.ts`; `src/services/engine/wiring/collectVisibilityGates.ts`, `seedVisibilityFades.ts`, `syncVisibilityTargets.ts`, `syncVisibilityTarget.ts`, `installVisibilityGates.ts`
 - modify `src/@types/loading/AssetWiringRow.d.ts` (`gates?`), `src/@types/animation/FadeRegistry.d.ts` and `src/services/animation/fadeRegistry.ts` (also accept `FadeIdentity`), `src/@types/engine/state/EngineState.d.ts` (`visibilityEntries`, `visibilityGates`), `src/services/engine/engine.ts` (initial values), `src/services/engine/phases/createLayers.ts` (compose `visibilityEntries`), `src/services/engine/phases/wireSlots.ts` (seed + install), `src/services/engine/wiring/makeReconcileEffects.ts` (`syncFades` also runs the new sync)
 - modify the gating asset rows: `src/layers/localBubble/load/localBubbleAssetRows.ts`, `src/layers/constellations/load/constellationsAssetRows.ts`, `src/layers/flow/load/flowAssetRows.ts`, `src/layers/cosmicWebFilaments/load/filamentsAssetRows.ts`, `src/layers/galaxyCatalog/load/galaxyCatalogAssetRows.ts`, `src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows.ts`, `src/layers/starCatalog/load/starCatalogAssetRows.ts`
@@ -238,19 +239,23 @@ The `settings/` action type prefix is what makes `watchFadesSaga` (`watchFadesSa
 readonly gates?: VisibilityAddress | { readonly address: VisibilityAddress; readonly item: string };
 fadeIdentityKey(id: FadeIdentity): string          // item === undefined ? address : `${address}:${item}`
 fadeIdentitiesOf(entry: VisibilityEntry): readonly FadeIdentity[]  // one per item, or one item-less
+visibilityEntryOf(entries, address: VisibilityAddress): VisibilityEntry  // src/utils/visibility/; throws on no entry
+ofLabelsOf(entries, address: VisibilityAddress): readonly LabelEntry[]   // the labels whose `of` names address:
+  // the one `of` fan-out, shared by both syncs (and Task 11's cue path)
 type VisibilityGates = ReadonlyMap<string, Pick<AssetSlot<unknown, unknown>, 'committed'>>
 visibilityTargetOf(settings, entries: readonly VisibilityEntry[], entry, item: string | undefined,
                    gates: VisibilityGates): 0 | 1
   // switch && (no gate for this identity || gate.committed() !== null)
   //        && (entry.of === undefined || visibilityTargetOf(<the show entry named by of>, item) === 1)
-  // `of` resolves for the SAME item: undefined for an item-less label, the label's own item otherwise.
+  // `of` resolves for the SAME item (through visibilityEntryOf): undefined for an item-less label, the
+  // label's own item otherwise.
 collectVisibilityGates(state): VisibilityGates   // state.assetRows' `gates` → slotFor(state, row.key)
 seedVisibilityFades(state): void                 // register every identity at its boot target
 syncVisibilityTargets(state, opts: { animate: boolean; only?: readonly VisibilityAddress[]; durationMs?: number }): void
-  // `only` covers the named addresses AND every label entry whose `of` names one of them
+  // `only` covers the named addresses AND every label entry whose `of` names one of them (ofLabelsOf)
 syncVisibilityTarget(state, id: FadeIdentity): void
   // one identity, animated, default durations; also { address: <label>, item: id.item } for each
-  // label entry whose `of` names id.address and whose items include id.item (item-less: id.item undefined)
+  // ofLabelsOf(id.address) entry whose items include id.item (item-less: id.item undefined)
 installVisibilityGates(state): void              // each gating slot's subscribe → syncVisibilityTarget(its identity)
 ```
 
@@ -270,33 +275,34 @@ Gating rows: localBubble `'localBubble'`, constellations `'constellations'`, fil
 
 **review: yes**: a frame-path contract, and the producer-skip rule is Review Focus #3.
 
-**Files:** create `src/services/engine/presentation/resolveVisibilityOpacity.ts`, `src/services/engine/presentation/resolveFadeValue.ts`, `src/services/engine/presentation/visibilityLiveOf.ts`, `src/services/engine/layer/gatePassByFade.ts`, `src/services/engine/layer/gatePlannerByFade.ts`, `src/services/engine/layer/gateLabelProducer.ts`; modify `src/services/engine/presentation/focusRecession.ts` (add `recessionFactor`), `src/@types/engine/subsystems/ClipPlayer.d.ts` + `src/services/engine/subsystems/clipPlayer.ts` + `src/@types/animation/ClipOpacityChannel.d.ts` + `src/services/animation/clipOpacityChannel.ts` (key type widened to `VisibilityLayerKey | VisibilityAddress` until Task 11), `src/services/engine/phases/createLayers.ts` (wrap `state.passes` (core and Layer), `state.planners`, every Layer screen and world label row); tests create `tests/services/engine/layer/gateLabelProducer.test.ts`, `tests/services/engine/layer/gatePassByFade.test.ts`, `tests/services/engine/presentation/resolveVisibilityOpacity.test.ts`; modify `tests/services/engine/phases/createLayers*.test.ts` as the wrap requires.
+**Files:** create `src/services/engine/presentation/resolveVisibilityOpacity.ts`, `src/services/engine/presentation/resolveFadeValue.ts`, `src/services/engine/presentation/labelLiveOf.ts`, `src/services/engine/layer/gatePassByFade.ts`, `src/services/engine/layer/gatePlannerByFade.ts`, `src/services/engine/layer/gateLabelProducer.ts`, `src/services/engine/layer/gateWorldLabelProducer.ts`; modify `src/services/engine/presentation/focusRecession.ts` (add `recessionFactor`), `src/@types/engine/subsystems/ClipPlayer.d.ts` + `src/services/engine/subsystems/clipPlayer.ts` + `src/@types/animation/ClipOpacityChannel.d.ts` + `src/services/animation/clipOpacityChannel.ts` (key type widened to `VisibilityLayerKey | VisibilityAddress` until Task 11), `src/services/engine/phases/createLayers.ts` (wrap `state.passes` (core and Layer), `state.planners`, every Layer screen and world label row); tests create `tests/services/engine/layer/gateLabelProducer.test.ts`, `tests/services/engine/layer/gatePassByFade.test.ts`, `tests/services/engine/presentation/resolveVisibilityOpacity.test.ts`; modify `tests/services/engine/phases/createLayers*.test.ts` as the wrap requires.
 
 **Contract:**
 
 ```ts
 recessionFactor(strength: 'strong' | 'mild' | undefined, blend: number): number  // lerp(1, STRONG|MILD, blend); undefined → 1
 resolveVisibilityOpacity(state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
-                         snapshot: { nowMs: number; focusBlend: number },
+                         snapshot: Pick<ReadyFrameContext, 'nowMs' | 'focusBlend'>,
                          address: VisibilityAddress, item?: string): number
   // fades.opacityOf({address, item}, nowMs) × recessionFactor(entry.recession, focusBlend)
   //   × clipOpacityOf(address, nowMs) × (entry.of ? clipOpacityOf(entry.of, nowMs) : 1)   (U7)
   // The handed value. Task 7's scene-body admission tests it > 0 (T7-4).
 resolveFadeValue(state, snapshot, address): number | Readonly<Record<string, number>>   // per entry shape
-visibilityLiveOf(state: Pick<EngineState, 'subsystems'>, id: FadeIdentity, nowMs: number): boolean
-  // the registry's held target is 1 OR the RAW fade (no recession, no clip) is above 0. The one
-  // liveness predicate, used by the producer skip. Core always passes an identity read from data
-  // (an entry, a row's `label`), never a literal.
-gatePassByFade(pass: ContentPass): ContentPass
+labelLiveOf(state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>, label: LabelName, nowMs: number): boolean
+  // some identity of the label entry has a held target of 1 OR a RAW fade (no recession, no clip) above 0.
+  // The one liveness predicate, used by the producer skip of both label gates. Core always passes a
+  // label read from data (a row's `label`), never a literal.
+// The gates take the engine's own state, bound in createLayers: PassState does not carry the entries.
+gatePassByFade(pass: ContentPass, state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>): ContentPass
   // no `fade` → returns pass unchanged; else enabled/pickEnabled → false without calling the inner when the
   // value is 0 (every item 0), and enabled/draw/pickEnabled/drawPick all get the SAME value as their last
   // argument: one value gates draw and pick (SQ2, behaviour change #6)
-gatePlannerByFade(planner: FrameContentPlanner<T>): FrameContentPlanner<T>
+gatePlannerByFade(planner: FrameContentPlanner<T>, state): FrameContentPlanner<T>
   // no `fade` → unchanged; else `plan` gets the value as its last argument. Never skips: a planner's output
   // feeds passes that run their own gate (U6).
-gateLabelProducer(row): Label2DProducer (and the Label3DProducer twin, same rule)
+gateLabelProducer(row): Label2DProducer (and gateWorldLabelProducer(row): Label3DProducer, same rule)
   // skip (return { labels: [], awake: false } without calling) iff no identity of the row's label entry is
-  // live (visibilityLiveOf); else call with the resolved value as the third argument. The held target
+  // live (labelLiveOf); else call with the resolved value as the third argument. The held target
   // already folds switch, present and `of`. Rows without `label` pass through unchanged.
 ```
 
@@ -669,7 +675,7 @@ watchFadesSaga: a `setVisibility` action passes its payload's overMs to syncFade
 - [ ] `visibility.ts` in each of the 14 Layers (missions included); the body Layer (PR 1's `layer.ts`) declares `visibility` and the Orbit trails `ui` row; `APP_VISIBILITY` in `src/compositions/appVisibility.ts`; `ShowKey`, `LabelAddress`, `VisibilityAddress`, `ScopedVisibilityAddress`, `VisibilityArg`, `FadeIdentity` derived from it.
 - [ ] One density entry (`cosmicWebDensity` with items); one star show entry (`starCatalog` with items); the missions show entry on the `missionTrails` cluster and its per-craft `label:missions` entry (`items: SAMPLED_BODY_IDS`, switch `missions.items.<craft>.labelEnabled`); label entries with `of` for constellations, lightTime and zoneOfAvoidance (with a new `labelEnabled` switch), structure (`of: 'structureRing'`) and starCatalog (`of: 'starCatalog'`).
 - [ ] `setVisibility` handled in `settingsReducer.ts`; the section rule written once in `visibilitySwitchOf`.
-- [ ] `AssetWiringRow.gates` on the seven gating Layers (star survey rows included); `fade` on passes and planners; `label` on every label producer row (no other form), `produceMissionCaptions` included; `visibilityLiveOf` as the one liveness predicate, used by the producer skip; `labelsAndGuides` toggle rows in the `{ slot, content }` shape, Mission trails and Orbit trails included, built in `selectToggleRows`.
+- [ ] `AssetWiringRow.gates` on the seven gating Layers (star survey rows included); `fade` on passes and planners; `label` on every label producer row (no other form), `produceMissionCaptions` included; `labelLiveOf` as the one liveness predicate, used by the producer skip; `labelsAndGuides` toggle rows in the `{ slot, content }` shape, Mission trails and Orbit trails included, built in `selectToggleRows`.
 - [ ] One sort over every scene body: each seed record carries its own `resolvePx`; the star show entry declares `bodies: SEEDED_STAR_CATALOGS`; `ReadyFrameContext.sceneBodies` (every admitted body, positioned once per frame, admitted on a handed value above 0) in place of `positionedStars`; `partitionBodiesByPresentation` splits it into `unresolved` and `resolved`, and each pass takes its own bodies by its own data; `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution` and `resolvesToSphere` gone; `STAR_RESOLVE_PX` and `BODY_GLINT_MAX_PX` in `src/data/bodies/`; no contract member beyond `ShowEntry.bodies` and `ReadyFrameContext.sceneBodies` (both consented); the NEAR0 range rule as ruled for Task 7's open question.
 - [ ] `sourceMaskOf(fade)` in `src/layers/galaxyCatalog/present/`, called only by the galaxy planner on its handed `survey` record; `SourceMasks` gone.
 - [ ] Both sphere passes draw with their catalog's handed value (PR 1's opacity slot and blend).

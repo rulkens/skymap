@@ -4,11 +4,13 @@
  * item-less label). One rule for every entry; the data decides where each term binds.
  */
 
+import type { VisibilityAddress } from '../../@types/animation/VisibilityAddress';
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 import type { VisibilityGates } from '../../@types/engine/state/VisibilityGates';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import { fadeIdentityKey } from './fadeIdentityKey';
 import { visibilityAddressOf } from './visibilityAddressOf';
+import { visibilityEntryOf } from './visibilityEntryOf';
 import { visibilitySwitchOf } from './visibilitySwitchOf';
 
 export function visibilityTargetOf(
@@ -22,7 +24,6 @@ export function visibilityTargetOf(
   const gate = gates.get(fadeIdentityKey({ address: visibilityAddressOf(entry), item }));
   if (gate !== undefined && gate.committed() === null) return 0;
   if ('key' in entry || entry.of === undefined) return 1;
-  const thing = entries.find((e) => 'key' in e && e.key === entry.of);
-  if (thing === undefined) throw new Error(`label:${entry.label}: of '${entry.of}' is no entry`);
+  const thing = visibilityEntryOf(entries, entry.of as VisibilityAddress);
   return visibilityTargetOf(settings, entries, thing, item, gates);
 }

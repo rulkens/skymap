@@ -5,13 +5,14 @@
  */
 
 import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { recessionFactor } from './focusRecession';
-import { visibilityEntryOf } from './visibilityEntryOf';
 
 export function resolveVisibilityOpacity(
   state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
-  snapshot: { readonly nowMs: number; readonly focusBlend: number },
+  snapshot: Pick<ReadyFrameContext, 'nowMs' | 'focusBlend'>,
   address: VisibilityAddress,
   item?: string,
 ): number {

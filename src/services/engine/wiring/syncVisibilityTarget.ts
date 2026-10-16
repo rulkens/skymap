@@ -6,23 +6,22 @@
 
 import type { FadeIdentity } from '../../../@types/animation/FadeIdentity';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import { ofLabelsOf } from '../../../utils/visibility/ofLabelsOf';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { applyVisibilityTarget } from './applyVisibilityTarget';
 
 export function syncVisibilityTarget(
   state: Pick<EngineState, 'settings' | 'subsystems' | 'visibilityEntries' | 'visibilityGates'>,
   id: FadeIdentity,
 ): void {
-  for (const entry of state.visibilityEntries) {
-    const address = visibilityAddressOf(entry);
-    if (address === id.address) {
-      applyVisibilityTarget(state, entry, id, { animate: true });
-    } else if (
-      'label' in entry &&
-      entry.of === id.address &&
-      (id.item === undefined ? entry.items === undefined : entry.items?.includes(id.item) === true)
-    ) {
-      applyVisibilityTarget(state, entry, { address, item: id.item }, { animate: true });
-    }
+  const entries = state.visibilityEntries;
+  applyVisibilityTarget(state, visibilityEntryOf(entries, id.address), id, { animate: true });
+  for (const label of ofLabelsOf(entries, id.address)) {
+    const follows =
+      id.item === undefined ? label.items === undefined : label.items?.includes(id.item) === true;
+    if (!follows) continue;
+    const labelId = { address: visibilityAddressOf(label), item: id.item };
+    applyVisibilityTarget(state, label, labelId, { animate: true });
   }
 }

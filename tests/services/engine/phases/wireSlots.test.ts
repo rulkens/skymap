@@ -684,8 +684,8 @@ describe('wireSlots', () => {
     expect(structureCatalogFetcher).not.toHaveBeenCalled();
   });
 
-  // Seeded before any slot can commit, and subscribed before the first load starts: a
-  // gated identity waits at 0 and its slot's commit is what raises it.
+  // Seeded before any slot can commit (gates collected after seeding would seed it at 1):
+  // a gated identity waits at 0 and its slot's commit is what raises it.
   it('a gated visibility identity seeds at 0 and its slot commit raises it', async () => {
     const sdssSlot = makeFakeSlot('sdss-points');
     const state = makeState({ points: new Map([[Source.SDSS, sdssSlot]]) });

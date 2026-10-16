@@ -14,10 +14,9 @@ export type LayerScreenLabel<L extends LabelName = LabelName> = Omit<
   'produceLabels'
 > & {
   readonly slab: number;
-  readonly label?: L;
   produceLabels(
     state: EngineState,
     ctx: FrameView,
     ...fade: FadeParam<`label:${L}`, LabelAddress>
   ): Label2DProducerOutput;
-};
+} & ([LabelName] extends [L] ? { readonly label?: L } : { readonly label: L });

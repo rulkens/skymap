@@ -11,7 +11,8 @@
 import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { fadeIdentitiesOf } from '../../../utils/visibility/fadeIdentitiesOf';
-import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
+import { ofLabelsOf } from '../../../utils/visibility/ofLabelsOf';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { applyVisibilityTarget } from './applyVisibilityTarget';
 
 export function syncVisibilityTargets(
@@ -22,13 +23,13 @@ export function syncVisibilityTargets(
     readonly durationMs?: number;
   },
 ): void {
-  const only = opts.only === undefined ? undefined : new Set<string>(opts.only);
-  for (const entry of state.visibilityEntries) {
-    const covered =
-      only === undefined ||
-      only.has(visibilityAddressOf(entry)) ||
-      ('label' in entry && entry.of !== undefined && only.has(entry.of));
-    if (!covered) continue;
+  const all = state.visibilityEntries;
+  // A Set: an `only` naming both a thing and its label would otherwise visit the label twice.
+  const entries =
+    opts.only === undefined
+      ? all
+      : new Set(opts.only.flatMap((a) => [visibilityEntryOf(all, a), ...ofLabelsOf(all, a)]));
+  for (const entry of entries) {
     for (const id of fadeIdentitiesOf(entry)) applyVisibilityTarget(state, entry, id, opts);
   }
   if (!opts.animate) state.subsystems.scheduler.requestRender();

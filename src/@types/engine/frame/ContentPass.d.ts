@@ -22,17 +22,11 @@ import type { PassState } from './PassState';
 import type { FadeParam } from '../../animation/FadeParam';
 import type { ShowKey } from '../../animation/ShowKey';
 
-// `K` types the handed value: a pass written as `ContentPass<'flow'>` gets a `number` and
-// still sits in a plain `readonly ContentPass[]` (see `FadeParam`).
+// `K` types the handed value: a pass written as `ContentPass<'flow'>` must declare
+// `fade: 'flow'`, gets a `number`, and still sits in a plain `readonly ContentPass[]`.
 export type ContentPass<K extends ShowKey = ShowKey> = {
   /** Stable identifier: what `FRAME_ORDER` names, and the timing-slot list derives. */
   readonly name: string;
-  /**
-   * The show entry this pass draws. Core resolves its value (fade × recession × clip), skips
-   * the pass while it is 0 (every item 0), and hands the same value to all four methods, so
-   * one value gates draw and pick.
-   */
-  readonly fade?: K;
   /**
    * Whether this pass should record draw commands this frame, given the
    * step's already-resolved `SlabView` — a pass on a body roster reads
@@ -122,4 +116,13 @@ export type ContentPass<K extends ShowKey = ShowKey> = {
     state: PassState,
     ...fade: FadeParam<K, ShowKey>
   ): void;
-};
+} & ([ShowKey] extends [K]
+  ? {
+      /**
+       * The show entry this pass draws. Core resolves its value (fade × recession × clip),
+       * skips the pass while it is 0 (every item 0), and hands the same value to all four
+       * methods, so one value gates draw and pick.
+       */
+      readonly fade?: K;
+    }
+  : { readonly fade: K });

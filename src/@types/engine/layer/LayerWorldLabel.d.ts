@@ -12,10 +12,9 @@ export type LayerWorldLabel<L extends LabelName = LabelName> = Omit<
   Label3DProducer,
   'produceLabels3D'
 > & {
-  readonly label?: L;
   produceLabels3D(
     state: EngineState,
     ctx: FrameView,
     ...fade: FadeParam<`label:${L}`, LabelAddress>
   ): Label3DProducerOutput;
-};
+} & ([LabelName] extends [L] ? { readonly label?: L } : { readonly label: L });

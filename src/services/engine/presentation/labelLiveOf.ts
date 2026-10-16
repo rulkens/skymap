@@ -1,16 +1,19 @@
 import type { LabelName } from '../../../@types/animation/LabelName';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { fadeIdentitiesOf } from '../../../utils/visibility/fadeIdentitiesOf';
-import { visibilityEntryOf } from './visibilityEntryOf';
-import { visibilityLiveOf } from './visibilityLiveOf';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 
-/** Whether any identity of a label entry is live: the producer skip's one test, shared by
- * the screen and world label gates. */
+/** The one liveness predicate, the producer skip's test for the screen and world label gates:
+ * some identity of the label entry heads for 1, or its RAW fade is still above 0. Raw, not the
+ * handed value: a clip or recession at 0 must not cut a switched-off label's fade-out tail. */
 export function labelLiveOf(
   state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
   label: LabelName,
   nowMs: number,
 ): boolean {
+  const { fades } = state.subsystems;
   const entry = visibilityEntryOf(state.visibilityEntries, `label:${label}`);
-  return fadeIdentitiesOf(entry).some((id) => visibilityLiveOf(state, id, nowMs));
+  return fadeIdentitiesOf(entry).some(
+    (id) => fades.targetOf(id) === 1 || fades.opacityOf(id, nowMs) > 0,
+  );
 }
