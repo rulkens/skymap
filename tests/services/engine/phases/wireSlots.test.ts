@@ -266,10 +266,9 @@ function makeState(
     famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
     pgcAlias: layerSlots.get('pgcAlias'),
     hiResFamous: layerSlots.get('hiResFamous'),
-    pointRenderer: { hasCatalog: () => true },
   } as unknown as GalaxyCatalogRuntime;
   // The density Layer's real slots over a stub renderer.
-  const densityRenderer = { upload: vi.fn(), listIds: () => [] } as never;
+  const densityRenderer = { upload: vi.fn() } as never;
   const densityRuntime = {
     renderer: densityRenderer,
     slots: Object.fromEntries(

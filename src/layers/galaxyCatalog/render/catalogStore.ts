@@ -277,12 +277,6 @@ export function createCatalogStore(init: {
     return total;
   }
 
-  // Whether a catalog's buffer is committed — the survey fade row guards on
-  // this: a fade toward "visible" is suppressed until there is something to fade in.
-  function hasCatalog(id: GalaxyCatalogId): boolean {
-    return galaxyCatalogs.has(id);
-  }
-
   /**
    * Iterate loaded sources in GALAXY_CATALOG_SOURCES order.  Fresh iterator
    * per call so the caller may `unload()` between iterations without
@@ -360,7 +354,6 @@ export function createCatalogStore(init: {
     upload,
     unload,
     totalCount,
-    hasCatalog,
     loadedSources,
     entries,
     destroy,

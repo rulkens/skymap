@@ -33,7 +33,7 @@ import { Provider } from 'react-redux';
 import LabelsAndGuidesSectionContainer from '../../../src/components/containers/LabelsAndGuidesSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectStructureItems } from '../../../src/layers/structure/state/structures/selectors';
-import { selectOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/selectors';
+import { selectOrbitTrails } from '../../../src/layers/body/state/orbitTrails/selectors';
 import { selectLocalBubble } from '../../../src/layers/localBubble/state/localBubble/selectors';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
@@ -94,7 +94,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
 
   it('toggling the Orbit trails row dispatches setVisibility on its own cluster', () => {
     const { store } = createAppStore();
-    expect(selectOrbitTrailsEnabled(store.getState())).toBe(true);
+    expect(selectOrbitTrails(store.getState()).enabled).toBe(true);
     const dispatch = vi.spyOn(store, 'dispatch');
 
     const { container } = render(
@@ -111,7 +111,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(dispatch).toHaveBeenCalledWith(
       setVisibility({ cluster: 'orbitTrails', field: 'enabled', on: false }),
     );
-    expect(selectOrbitTrailsEnabled(store.getState())).toBe(false);
+    expect(selectOrbitTrails(store.getState()).enabled).toBe(false);
   });
 
   // ── layerRows ──────────────────────────────────────────────────────────────────

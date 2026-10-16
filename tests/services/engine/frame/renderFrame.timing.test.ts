@@ -277,7 +277,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   // No active field ⇒ the density passes stay gated off unless a test revives
   // this renderer in place (the raymarch row captured it at construction).
   const densityRuntime = {
-    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    renderer: { draw: vi.fn(), hasActiveFields: () => false },
     upsample: { draw: vi.fn(), destroy: vi.fn() },
   } as unknown as CosmicWebDensityRuntime;
 

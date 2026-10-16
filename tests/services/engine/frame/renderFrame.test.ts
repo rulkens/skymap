@@ -382,7 +382,7 @@ function makeInput(
   // these fixtures off the density raymarch; the ordering test swaps in a live
   // renderer and the gate test an upsample spy.
   const densityRuntime = {
-    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    renderer: { draw: vi.fn(), hasActiveFields: () => false },
     upsample: { draw: vi.fn(), destroy: vi.fn() },
   } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);

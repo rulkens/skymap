@@ -353,9 +353,6 @@ export function createVolumeFieldRenderer<Id extends string>(
       }
       return false;
     },
-    listIds() {
-      return Array.from(fields.keys());
-    },
     draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf) {
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);

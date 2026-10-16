@@ -282,7 +282,6 @@ export function createGalaxyPointRenderer(init: {
     upload: store.upload,
     unload: store.unload,
     totalCount: store.totalCount,
-    hasCatalog: store.hasCatalog,
     loadedSources: store.loadedSources,
     draw,
     destroy,
