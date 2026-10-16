@@ -253,3 +253,6 @@ Rulings:
 3. Shape approved: seven prep commits (rename to `Octree<C>`; family table for prefix, schema and grid unit; injected chunk stream and extracted ordinal mapping; one octree-catalog list for deploy; aggregate rule table; galaxy record contract over the flat path; galaxy vertex body as a library function).
 4. **Prep lands as one separate PR** before the feature PR.
 
+Ruled 2026-10-16 (later): **GLADE first, REGALADE next.** Both GLADE versions stay loadable, so they can be compared in
+the app and the mcpm workbench keeps working: GLADE's row keeps its tier files and gains an octree member, and a GLADE
+format setting picks which one loads. A licence ask to the REGALADE authors is drafted (outreach emails, gitignored).

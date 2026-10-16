@@ -159,9 +159,11 @@ type GalaxyRecordSource = {
 
 ### 5.2 Load and streaming
 
-The source row's tier targets move into a union, `storage: { kind: 'flat'; tierTargets } | { kind: 'octree'; budgets:
-OctreeBudgets }` (prep 6 introduces it with the flat variant only; GLADE switches to the octree variant in the feature).
-It is read at one site: the slot wiring, which builds the record source the variant names. Index + index info fetch
+**Both GLADE versions stay loadable** (ruled 2026-10-16), so they can be compared in the app and the mcpm workbench keeps
+its input. GLADE's row keeps its `tierTargets` and gains `octree: { budgets: OctreeBudgets }`; a **GLADE format** setting
+(Octree / Flat files, persisted in the URL so a shot can pin it) picks which record source the GLADE slot builds.
+Switching releases one and loads the other, as a tier switch does today. The slot wiring is the one site that reads
+`octree`; the other four rows never set it. Index + index info fetch
 through the data manifest; chunks stream through the shared chunk stream (prep 3) with the galaxy path builder and
 decoder, planned by the shared CPU planner over the index each frame. Info objects are not streamed: `loadRow` fetches
 them on demand through a small LRU keyed by chunk id, separate from the render pool.
@@ -209,8 +211,8 @@ the column is treated as permanent (the user is unsure it is needed on the octre
   `buildOctreeCatalog`) instead of writing tier files, and writes the info objects and the pgc shards beside it. Chunk
   info objects are named `octreeChunkFileName(ref)` with an `.info` suffix; the index info object is a data-manifest
   entry like the index.
-- GLADE's SKMP tier files are no longer written (its row has no tier targets). The filaments build already reads the
-  untiered `glade.bin`; the mcpm workbench loses GLADE as an input until it reads the octree (backlog item).
+- GLADE's SKMP tier files keep being written and synced: the flat GLADE format reads them, and so does the mcpm
+  workbench. Retiring them (and the format setting) is a later ruling, after the A/B.
 - Deploy: the galaxy octree is a row in the octree catalog list (prep 4): chunk and info objects in one bulk group,
   immutable, gzip on the wire; the index pair and the shard objects on the hashed-manifest path. The galaxy octree joins
   the star family's Cloudflare cache rule (research §11 open item 4).
@@ -221,7 +223,7 @@ the column is treated as permanent (the user is unsure it is needed on the octre
   24-byte GPU packer against the flat interleave's slots for the same galaxy (one derivation, two layouts), `ordinalOfPick`/`pickOfOrdinal` inverse, shard lookup.
 - Prep 6 is behaviour-neutral: the flat source's `stats` equal today's per-tier values (a test pins them), and the
   existing galaxy suite stays green unchanged.
-- A/B against main (v10 SKMP), before/after shots at the full-survey and 3.5 Gpc poses and one close pose inside the
+- A/B in one build through the GLADE format setting (Flat files vs Octree, same data, same code), before/after shots at the full-survey and 3.5 Gpc poses and one close pose inside the
   Local Volume, per bias mode (None, Volume-limited, Angular): brightness and structure must match within the eye-check;
   the zoomed-out pose must look right with no chunk loaded (blobs only); `npm run perf` before and after at the perf
   poses; a phone check of first paint on throttled 4G (`npm run loadtime`).
@@ -241,12 +243,12 @@ a re-bake.
 | 3 | Chunk stream and pool take the path builder, decoder and record stride; the `type === 'starCatalog'` guards go; `recordOrdinal`/`poolRecordIndex` extracted from the star renderer | `starChunkStream.ts:20`, `installStarPool.ts:23`, `starCatalogRenderer.ts:205` |
 | 4 | One list of octree catalogs drives the sync group, chunk collector, `DATA_FAMILIES` rows and `fetchPrebuiltData` | four star-only spots in `tools/deploy` and `tools/catalog` |
 | 5 | Aggregate kinds as a rule table; the star bake's output byte-identical                              | if/else on the kind at `stratifyOctree.ts:110,146,164`                 |
-| 6 | `GalaxyRecordSource` with the flat implementation; the 12 consumers move onto it; names resolve through `resolveDurableId`; `tierTargets` moves into `storage` (flat variant only) | flat row index as identity, whole-array scans, the `[Glade, TwoMRS]` lists (§5.1, §5.4) |
+| 6 | `GalaxyRecordSource` with the flat implementation; the 12 consumers move onto it; names resolve through `resolveDurableId` | flat row index as identity, whole-array scans, the `[Glade, TwoMRS]` lists (§5.1, §5.4) |
 | 7 | The galaxy vertex-stage body becomes a library function the flat prologue calls; the per-galaxy derivations in `buildPointInterleavedBuffer` become one function over a galaxy's fields, so the octree upload calls it too | attributes reachable only from a vertex buffer (`points/vertex.wesl:86`); derivations inlined in the interleave loop |
 
 Growth in the feature (no prep): the galaxy rows of §3.1, the info objects and `SKOF`, the `u64` store, the GLADE
 emitter call, the galaxy stratify setting, the octree record source, the pooled pipeline, the pgc shards, the `octree`
-variant of `storage`.
+member on GLADE's row and the GLADE format setting.
 
 Rejected at the checkpoint: a `format: 'skmp' | 'octree'` branch at each of the 12 consumer sites (two cases at 12 sites
 for as long as both kinds exist); decoding the flat files into the pooled record now (one path, but a re-verification of
@@ -262,4 +264,5 @@ and settings slice).
   already resident and the nearest chunks' info can be prefetched with the render object.
 - `thr`, `mLim` and the budgets need a bake sweep (§3.4); the A/B decides whether blobs need a disc look.
 - Whether the angular weight stays (§6).
-- The mcpm workbench loses GLADE until it reads the octree (§7).
+- The format setting and GLADE's flat files are a deliberate second path for the A/B; the spec does not decide when they
+  go.
