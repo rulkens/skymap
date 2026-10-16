@@ -4,8 +4,9 @@
  * structure store.
  *
  * Emits one marker descriptor per marker-bearing structure — applying
- * apparent-size fades, significance weighting, the selection brighten and the
- * per-category value core hands (toggle fade, focus recession and clip). Famous
+ * apparent-size fades, significance weighting, the selection brighten, the
+ * per-category value core hands (toggle fade and clip) and each ring's focus
+ * emphasis, keyed on its own pick word so the focused ring never recedes. Famous
  * galaxies are not on this path; they never emit markers.
  *
  * The per-category value bakes into the DESCRIPTOR alpha rather than riding a
@@ -45,9 +46,15 @@ import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
+import { structurePickId } from '../../../utils/picking/structurePickId';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
+import { structureVisibility } from '../visibility';
+
+const RING_ENTRY = visibilityEntryOf(structureVisibility, 'structureRing');
 
 export function produceStructureMarkers(
-  store: Pick<StructureStore, 'all'>,
+  store: Pick<StructureStore, 'all' | 'categoryIndexOf'>,
   state: PassState,
   ctx: FrameView,
   fade: Readonly<Record<StructureId, number>>,
@@ -64,7 +71,7 @@ export function produceStructureMarkers(
   const hoveredStructureId = structureIdOf(state.selection.hover);
 
   for (const p of store.all()) {
-    // The category's handed value: toggle fade × recession × clip. Skip only at
+    // The category's handed value: toggle fade × clip. Skip only at
     // exactly 0 (the all-or-nothing case, safe for within-category alignment); a
     // mid-fade value scales the descriptor alpha below.
     const catFade = fade[p.category];
@@ -92,7 +99,9 @@ export function produceStructureMarkers(
     // SIG_MIN_ALPHA (significance 0) to 1 (significance 1). Featured anchors
     // omit significance, so `?? 1` leaves their at-rest alpha unchanged.
     const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
-    const weightedFade = fadeAlpha * sigWeight * catFade;
+    const pickId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
+    const weightedFade =
+      fadeAlpha * sigWeight * catFade * emphasisOf(RING_ENTRY, ctx.snapshot, pickId);
 
     // Halo: style at-rest alpha × per-frame fade baked into alpha.
     const haloColor: Vec4 = [

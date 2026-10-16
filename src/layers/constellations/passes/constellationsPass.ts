@@ -13,8 +13,12 @@ import { constellationsBand } from '../present/constellationsBand';
 import { constellationsFade } from '../present/constellationsFade';
 import { CONSTELLATION_LINE_HALFWIDTH_PX } from '../../../data/constellation/constellationLineHalfwidthPx';
 import { CONSTELLATION_LINE_COLOR } from '../../../data/constellation/constellationLineColor';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
+import { constellationsVisibility } from '../visibility';
 
 export function constellationsPass(runtime: ConstellationsRuntime): ContentPass<'constellations'> {
+  const entry = visibilityEntryOf(constellationsVisibility, 'constellations');
   return {
     name: 'constellations',
     fade: 'constellations',
@@ -31,7 +35,7 @@ export function constellationsPass(runtime: ConstellationsRuntime): ContentPass<
       // renderer writes endpoints camera-relative to THIS pose (the
       // starPointsPass seam); `constellationsFade` reads ctx separately.
       const camPos = view.camPos;
-      const layerOpacity = constellationsFade(ctx, fade);
+      const layerOpacity = constellationsFade(ctx, fade * emphasisOf(entry, ctx.snapshot));
 
       // Multiplying absolute parsec-scale endpoints by an f32 vp cancels catastrophically
       // on approach and makes the lines hop, so fold the eye offset in at f64 — from the

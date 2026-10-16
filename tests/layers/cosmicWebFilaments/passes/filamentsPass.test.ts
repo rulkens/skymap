@@ -7,6 +7,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { filamentsPass } from '../../../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -21,6 +22,7 @@ function makeCtx(focusBlend: number): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend,
+      focusPickId: null,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
         apparentRadiusMpc: 1,
@@ -69,6 +71,19 @@ describe('filamentsPass draw', () => {
     );
     // Args: (pass, vp, viewport, pxPerRad, halfwidth, intensity, opacity).
     expect(drawSpy.mock.calls[0]![6]).toBe(0.4);
+  });
+
+  it('draws at the handed value times its recession', () => {
+    const drawSpy = vi.fn();
+    const ctx = makeCtx(1);
+    filamentsPass(makeRuntime(drawSpy)).draw(
+      PASS_STUB,
+      slabViewOf(ctx, COSMO),
+      ctx,
+      makeState(),
+      1,
+    );
+    expect(drawSpy.mock.calls[0]![6]).toBeCloseTo(STRONG_RECESSION);
   });
 
   it('threads the SlabView vp/viewport rather than ctx.vp/ctx.canvasSize', () => {

@@ -47,6 +47,8 @@ const STATE = {
   },
   visibilityEntries: APP_VISIBILITY,
   selectionRows: { hover: null, select: null, focus: null },
+  selection: { hover: null, select: null, focus: null },
+  selectionKindRows: [],
   slabRows: [],
   data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
   settings: {

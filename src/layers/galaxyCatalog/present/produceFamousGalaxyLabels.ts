@@ -25,7 +25,7 @@
  * ### Handed value × distance fade bakes into fadeAlpha
  *
  * Each label's final `fadeAlpha` is the apparent-size distance fade multiplied
- * by the value core hands for `famousGalaxy` (toggle fade × recession × clip).
+ * by the value core hands for `famousGalaxy` (toggle fade × clip).
  * The value is the same for every famous label, so it's read once before the loop
  * and folded into both the label's and its anchor line's `fadeAlpha`, so the
  * connector fades in lockstep with its label.
@@ -221,6 +221,11 @@ export function produceFamousGalaxyLabels(
       // fades in lockstep with its label.
       const labelAlpha = fadeAlpha * layerAlpha;
 
+      // Byte-identical to what the famous point batch's pick fragment writes:
+      // the meta ⋈ catalog join is index-aligned, so this loop index IS the
+      // catalog row the GPU stamps as `@builtin(instance_index)`.
+      const subjectId = packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET);
+
       // Build the label BEFORE its geometry so `measure` reads the same font /
       // text / alignment fields the final label carries — the measured ink
       // bottom that positions the line top can never drift from what is drawn.
@@ -228,12 +233,8 @@ export function produceFamousGalaxyLabels(
       // with the lifted anchor.
       const label: Label2D = {
         id: p.id,
-        // Byte-identical to what the famous point batch's pick fragment writes:
-        // the meta ⋈ catalog join is index-aligned, so this loop index IS the
-        // catalog row the GPU stamps as `@builtin(instance_index)`.
-        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)
-          ? packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET)
-          : undefined,
+        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus) ? subjectId : undefined,
+        subjectId,
         worldPos: p.worldPos,
         text: p.name,
         font: 'cormorant',

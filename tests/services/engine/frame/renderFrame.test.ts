@@ -486,6 +486,7 @@ function makeInput(
     simDays: 0,
     altitudeMpc: 0,
     focusBlend: 0,
+    focusPickId: null,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
       apparentRadiusMpc: 1,

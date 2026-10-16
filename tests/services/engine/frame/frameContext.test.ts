@@ -93,6 +93,8 @@ function makeState(
     // the raw cam.distance, the near-field bracket every arithmetic assertion
     // was written against.
     selectionRows: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: null },
+    selectionKindRows: [],
     // No seeded bodies and no covered stars — `visibleSlabBodies` and the
     // scene-body roster (both read unconditionally past the ready gate) get an
     // empty registry, so every fixture below stays a 2-row (NEAR0+COSMO) slab
@@ -151,6 +153,9 @@ describe('deriveFrameContext — not-ready branch', () => {
     ).toBe(false);
   });
 });
+
+const STRUCTURE_WORD = 0x0300_0007;
+const MILKY_WAY_WORD = 0x0900_0001;
 
 describe('deriveFrameContext — ready branch', () => {
   it("derives a ready context whose canvas view carries the caller's projection and orbit distance", () => {
@@ -214,6 +219,28 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.focus.blend).toBe(0);
+  });
+
+  it("the frame context carries the focus's pick id", () => {
+    const rows = [
+      { type: 'structure', encodePick: () => STRUCTURE_WORD },
+      { type: 'milkyWay', encodePick: () => MILKY_WAY_WORD },
+    ];
+    const pickIdWith = (selection: object): number | null => {
+      const state = {
+        ...makeState(),
+        selection,
+        selectionKindRows: rows,
+      } as unknown as EngineState;
+      const ctx = deriveFrameContext(state, frameInput(RESTING_POSE));
+      if (!ctx.isReady) throw new Error('fixture not ready');
+      return ctx.focusPickId;
+    };
+    const virgo = { type: 'structure', id: 'virgo' };
+    const milkyWay = { type: 'milkyWay' };
+    expect(pickIdWith({ hover: null, select: null, focus: virgo })).toBe(STRUCTURE_WORD);
+    expect(pickIdWith({ hover: null, select: milkyWay, focus: virgo })).toBe(STRUCTURE_WORD);
+    expect(pickIdWith({ hover: null, select: milkyWay, focus: null })).toBeNull();
   });
 
   it('stamps simDays onto the ready context (the frame epoch every body reader shares)', () => {

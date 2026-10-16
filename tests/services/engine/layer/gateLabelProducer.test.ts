@@ -9,6 +9,7 @@ import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { gateLabelProducer } from '../../../../src/services/engine/layer/gateLabelProducer';
+import { gateWorldLabelProducer } from '../../../../src/services/engine/layer/gateWorldLabelProducer';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -94,5 +95,15 @@ describe('gateLabelProducer', () => {
       expect.anything(),
       expect.objectContaining({ void: 1, supercluster: 0 }),
     );
+  });
+
+  // The directors recede a producer's labels by this entry; a gate that dropped it would leave
+  // every label at full emphasis with no other test failing.
+  it("the gated producer keeps its row's label", () => {
+    expect(gateLabelProducer(milkyWayRow().row).label).toBe('milkyWay');
+    const produceLabels3D = () => ({ labels: [], awake: false });
+    expect(
+      gateWorldLabelProducer({ id: 'c', label: 'constellations', produceLabels3D }).label,
+    ).toBe('constellations');
   });
 });

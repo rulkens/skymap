@@ -1,12 +1,12 @@
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../src/layers/structure/present/produceStructureLabels';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
 import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { MARKER_RADIUS_RETUNE } from '../../../../src/data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../src/layers/structure/data/structureLabelAboveGapPx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
+import { structurePickId } from '../../../../src/utils/picking/structurePickId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -161,20 +161,16 @@ describe('produceStructureLabels', () => {
     expect(dimmedAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
   });
 
-  it('recedes exactly once: a handed MILD_RECESSION scales the alpha by that and no more', () => {
-    // Core folds the recession into the value; a producer applying its own on
-    // top would recede to MILD_RECESSION squared.
+  it('scales by the handed value exactly once', () => {
+    // At full blend: the director recedes labels, so a producer that receded or
+    // clipped on its own would land below 0.25.
     const state = makeState();
     state.store.setGroup('anchors', [rec('a')]);
     const atRestAlpha = labelsOf(state, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
-    const recededAlpha = labelsOf(
-      state,
-      makeCtx({ focusBlend: 1 }),
-      'cosmic',
-      handed(MILD_RECESSION),
-    ).labels[0]!.fadeAlpha!;
+    const handedAlpha = labelsOf(state, makeCtx({ focusBlend: 1 }), 'cosmic', handed(0.25))
+      .labels[0]!.fadeAlpha!;
 
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
+    expect(handedAlpha).toBeCloseTo(atRestAlpha * 0.25, 6);
   });
 
   it('focusedOnly mode: emits only the focused structure label', () => {
@@ -298,5 +294,21 @@ describe('produceStructureLabels', () => {
     expect(byId(under, 'in').pickId).toBeDefined();
     expect(byId(under, 'out').pickId).toBeUndefined();
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
+  });
+
+  it('a label not clickable under focus still names its subject', () => {
+    const state = makeState();
+    state.store.setGroup('anchors', [rec('out', { worldPos: [0, 10, CAM_Z] })]);
+    const focus = {
+      center: [10, 0, CAM_Z],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    } as const;
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const label = labelsOf(state, focused, 'cosmic').labels[0]!;
+    expect(label.pickId).toBeUndefined();
+    expect(label.subjectId).toBe(structurePickId('galaxy-cluster', 0));
   });
 });

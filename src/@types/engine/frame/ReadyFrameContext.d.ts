@@ -95,6 +95,12 @@ export type ReadyFrameContext = {
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
+   * The focus encoded as the packed pick word its own geometry and label stamp
+   * (`encodeSelectionPick` over `selection.focus`); null with no focus, or while its row
+   * cannot encode it. `emphasisOf` compares records against it.
+   */
+  readonly focusPickId: number | null;
+  /**
    * This frame's `plan` rows' answers, one store shared by every `FrameView`
    * (`createFramePlannerResultStore()`, minted once by `deriveFrameContext`). `runPlanSteps`
    * writes it before any GPU step of its target reads it; a miss throws.

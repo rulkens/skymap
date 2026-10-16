@@ -12,8 +12,7 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
-import { Source } from '../../../data/sources';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { MILKY_WAY_PICK_ID } from './milkyWayPickId';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
@@ -62,13 +61,10 @@ export const produceMilkyWayLabel: LayerScreenLabel<'milkyWay'>['produceLabels']
   // the final label carries; `worldPos` is provisional until the lift below.
   const label: Label2D = {
     id: 'milkyWay',
-    // The impostor is a singleton — no per-instance identity — so its pick is
-    // the source code over localIdx 0, exactly what `milkyWayPickRenderer`
-    // stamps. Note the impostor picks on NEAR0 while this label picks on
-    // COSMO; both decode to the same `{ type: 'milkyWay' }` selection.
-    pickId: isPickableUnderFocus([0, 0, 0], ctx.snapshot.focus)
-      ? packSelection(Source.MilkyWay, 0 + PICK_SENTINEL_OFFSET)
-      : undefined,
+    // Exactly what `milkyWayPickRenderer` stamps. The impostor picks on NEAR0
+    // while this label picks on COSMO; both decode to `{ type: 'milkyWay' }`.
+    pickId: isPickableUnderFocus([0, 0, 0], ctx.snapshot.focus) ? MILKY_WAY_PICK_ID : undefined,
+    subjectId: MILKY_WAY_PICK_ID,
     worldPos: [0, 0, 0],
     text: LABEL_TEXT,
     font: 'cormorant',

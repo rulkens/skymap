@@ -22,7 +22,6 @@ import {
   unpackPick,
   PICK_SENTINEL_OFFSET,
 } from '../../../../src/data/selectionEncoding';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { Source } from '../../../../src/data/source';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { StarRowFixture } from '../../../support/selectionResolverOver';
@@ -103,9 +102,9 @@ function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined
 }
 
 describe('produceStarCaptions', () => {
-  it('recedes exactly once: a handed MILD_RECESSION scales a star caption by that and no more', () => {
-    // Core folds the recession into the value; a producer applying its own on top
-    // would recede to MILD_RECESSION squared.
+  it('scales by the handed value exactly once', () => {
+    // At full blend: the director recedes captions, so a producer that receded or
+    // clipped on its own would land below 0.25.
     const alphaOf = (value: number, blend: number) =>
       fadeAlphaOf(
         produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend), handed(value)).labels,
@@ -113,7 +112,7 @@ describe('produceStarCaptions', () => {
       );
     const full = alphaOf(1, 0)!;
     expect(full).toBeGreaterThan(0);
-    expect(alphaOf(MILD_RECESSION, 1)).toBeCloseTo(full * MILD_RECESSION, 10);
+    expect(alphaOf(0.25, 1)).toBeCloseTo(full * 0.25, 10);
   });
 
   it('captions every drawn famous star and the Sun with their kinds, and no S-star', () => {

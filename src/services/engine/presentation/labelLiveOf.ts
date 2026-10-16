@@ -5,7 +5,7 @@ import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 
 /** The one liveness predicate, the producer skip's test for the screen and world label gates:
  * some identity of the label entry heads for 1, or its RAW fade is still above 0. Raw, not the
- * handed value: a clip or recession at 0 must not cut a switched-off label's fade-out tail. */
+ * handed value: a clip at 0 must not cut a switched-off label's fade-out tail. */
 export function labelLiveOf(
   state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
   label: LabelName,

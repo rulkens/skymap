@@ -4,7 +4,7 @@
  * gates, anchored at the ring centre or just above its drawn top. It rides the
  * `surveyDeepZoom` band, which famous-galaxy labels (their own producer) do not.
  * `fadeAlpha` = distance fade × the category's handed value (label toggle fade
- * × recession × clip, and its ring's clip); a category is skipped only at a
+ * × clip, and its ring's clip); a category is skipped only at a
  * value of exactly 0, so its fade-out tail still draws. The label's `of` entry
  * keeps it off while its own ring is off, per category. Every candidate is emitted with
  * `prominencePx` = ring apparent radius: the `label2DDirector` declutters
@@ -132,14 +132,12 @@ export function produceStructureLabels(
       // Byte-identical to what `ringPick.wesl` writes for this structure's own
       // marker ring — the category's source code over the per-category index,
       // both read from the store's single-sourced `categoryIndexOf`.
-      let pickId: number | undefined;
-      if (isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)) {
-        pickId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
-      }
+      const subjectId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
 
       labels.push({
         id: p.id,
-        pickId,
+        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus) ? subjectId : undefined,
+        subjectId,
         worldPos: anchor,
         // Long names ("Perseus-Pisces Supercluster") break onto two balanced
         // lines here, at the presentation seam — the store keeps the unwrapped

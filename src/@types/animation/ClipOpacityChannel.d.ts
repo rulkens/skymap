@@ -11,7 +11,7 @@
  * It is the last factor of the value core hands a consumer
  * (`resolveVisibilityOpacity`):
  *
- *   handed value = registry fade × focus recession × clip factor
+ *   handed value = registry fade × clip factor
  *
  * Keeping it separate from the shared FadeRegistry (which the settings-driven
  * visibility sync owns) means the clip's transient fades vanish cleanly on

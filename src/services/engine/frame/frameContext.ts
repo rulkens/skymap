@@ -36,6 +36,7 @@ import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -117,15 +118,14 @@ export function deriveFrameContext(
   // Every admitted scene body, positioned once; which is resolved is a per-view
   // question, so each view sorts these. A body some show entry covers is admitted
   // while every covering item hands a value above 0 — the value its passes read, so a
-  // star faded or clipped to 0 neither occludes nor sizes NEAR0. Recession never
-  // reaches 0, so the at-rest blend gives the same sign `runFrame`'s blend would.
+  // star faded or clipped to 0 neither occludes nor sizes NEAR0.
   const coverage = sceneBodyCoverageOf(state.visibilityEntries);
   const handedAboveZero = new Map<string, boolean>();
   const isAboveZero = (id: FadeIdentity): boolean => {
     const key = fadeIdentityKey(id);
     let above = handedAboveZero.get(key);
     if (above === undefined) {
-      above = resolveVisibilityOpacity(state, { nowMs, focusBlend: 0 }, id.address, id.item) > 0;
+      above = resolveVisibilityOpacity(state, { nowMs }, id.address, id.item) > 0;
       handedAboveZero.set(key, above);
     }
     return above;
@@ -145,7 +145,8 @@ export function deriveFrameContext(
   // `focusBlend` and `focus` are at-rest placeholders that `runFrame` overwrites
   // the moment the ready gate passes, before any consumer reads them: deriving
   // them here would tick the structureFocus fade controller, a once-per-frame
-  // side effect this (speculatively callable) function must not have.
+  // side effect this (speculatively callable) function must not have. Encoding the
+  // focus ticks nothing, so its pick word is set here for every caller at once.
   return {
     isReady: true,
     camBasisWorld,
@@ -160,6 +161,7 @@ export function deriveFrameContext(
     renderTargets: state.gpu.renderTargets,
     focus: ZERO_FOCUS,
     focusBlend: 0,
+    focusPickId: encodeSelectionPick(state.selectionKindRows, state.selection.focus),
     // Fresh and empty: `runPlanSteps` fills it in as each section's plan rows
     // run, ahead of every GPU step and every other planner reader this frame.
     plans: createFramePlannerResultStore(),

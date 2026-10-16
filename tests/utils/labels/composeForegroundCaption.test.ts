@@ -41,6 +41,12 @@ describe('composeForegroundCaption pick under focus', () => {
     expect(composeForegroundCaption(ctxWith(sphereAt([1e-3, 0, 0])), caption, 1).pickId).toBe(7);
   });
 
+  it('a label not clickable under focus still names its subject', () => {
+    const out = composeForegroundCaption(ctxWith(sphereAt([0.5, 0, 0])), caption, 1);
+    expect(out.pickId).toBeUndefined();
+    expect(out.subjectId).toBe(7);
+  });
+
   it('draws the caption but strips its pick outside the focused sphere', () => {
     const out = composeForegroundCaption(ctxWith(sphereAt([0.5, 0, 0])), caption, 1);
     expect(out.pickId).toBeUndefined();
@@ -58,7 +64,7 @@ describe('composeForegroundCaption handed value', () => {
     blend: 1,
   });
 
-  it('recedes once: a handed 0.25 (full fade x MILD at blend 1) scales fadeAlpha by exactly 0.25', () => {
+  it('scales by the handed value exactly once', () => {
     // Against the unfocused value-1 case: a recession the compose applied itself would
     // scale both focused calls alike, so a focused reference could not see it.
     const atRest = composeForegroundCaption(ctxWith(ZERO_FOCUS), earthCaption, 1).fadeAlpha!;

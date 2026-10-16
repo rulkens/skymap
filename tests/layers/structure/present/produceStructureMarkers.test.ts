@@ -17,6 +17,7 @@ import {
   RING_PICK_MIN_ALPHA,
 } from '../../../../src/layers/structure/present/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
+import { structurePickId } from '../../../../src/utils/picking/structurePickId';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // Builds a real structure store (so `state.store` is the production store) and
@@ -54,9 +55,13 @@ function makeState(
 // the structures sit ~10 Mpc away to within 0.01%.
 const FULL_BAND_CAM_Z = SCALE_FADE_BANDS.surveyDeepZoom.fullAt * 1.01;
 
-function makeCtx(focusBlend = 0, camDistMpc = FULL_BAND_CAM_Z): FrameView {
+function makeCtx(
+  focusBlend = 0,
+  camDistMpc = FULL_BAND_CAM_Z,
+  focusPickId: number | null = null,
+): FrameView {
   return {
-    snapshot: { focusBlend, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: { focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -151,20 +156,52 @@ describe('produceStructureMarkers', () => {
     expect(a.ringColor[2]).toBeCloseTo(b.ringColor[2] * SELECTED_RING_BRIGHTEN, 6);
   });
 
-  it('recedes exactly once: a handed MILD_RECESSION scales ring AND halo alpha by that and no more', () => {
-    // Core folds the recession into the value; a producer applying its own on top
-    // would recede to MILD_RECESSION squared.
+  it('a ring recedes once unless it is the focus', () => {
     const state = makeState();
-    state.store.setGroup('anchors', [rec('a', 'galaxy-cluster')]);
-    const rest = produceStructureMarkers(state.store, state, makeCtx(), ONE)[0]!;
-    const receded = produceStructureMarkers(
-      state.store,
-      state,
-      makeCtx(1),
-      handed(MILD_RECESSION),
-    )[0]!;
-    expect(receded.ringColor[3]).toBeCloseTo(rest.ringColor[3] * MILD_RECESSION, 6);
-    expect(receded.haloColor[3]).toBeCloseTo(rest.haloColor[3] * MILD_RECESSION, 6);
+    state.store.setGroup('anchors', [
+      rec('a'),
+      rec('b', 'galaxy-cluster', { worldPos: [0, 10, 0] }),
+    ]);
+    const focusWord = structurePickId(
+      'galaxy-cluster',
+      state.store.categoryIndexOf('galaxy-cluster', 'a'),
+    );
+    const byId = (ctx: FrameView) =>
+      new Map(produceStructureMarkers(state.store, state, ctx, ONE).map((m) => [m.id, m]));
+    const rest = byId(makeCtx());
+    const focused = byId(makeCtx(1, FULL_BAND_CAM_Z, focusWord));
+    expect(focused.get('a')!.ringColor[3]).toBeCloseTo(rest.get('a')!.ringColor[3], 6);
+    expect(focused.get('a')!.haloColor[3]).toBeCloseTo(rest.get('a')!.haloColor[3], 6);
+    expect(focused.get('b')!.ringColor[3]).toBeCloseTo(
+      rest.get('b')!.ringColor[3] * MILD_RECESSION,
+      6,
+    );
+    expect(focused.get('b')!.haloColor[3]).toBeCloseTo(
+      rest.get('b')!.haloColor[3] * MILD_RECESSION,
+      6,
+    );
+  });
+
+  // Behaviour change #5: selection brightens, it no longer exempts from recession.
+  it('a selected ring that is not the focus recedes', () => {
+    const state = makeState('b', 'a');
+    state.store.setGroup('anchors', [
+      rec('a', 'galaxy-cluster', { significance: 0 }),
+      rec('b', 'galaxy-cluster', { significance: 0, worldPos: [0, 10, 0] }),
+    ]);
+    const focusWord = structurePickId(
+      'galaxy-cluster',
+      state.store.categoryIndexOf('galaxy-cluster', 'a'),
+    );
+    const b = (ctx: FrameView) =>
+      produceStructureMarkers(state.store, state, ctx, ONE).find((m) => m.id === 'b')!;
+    const rest = b(makeCtx());
+    const focused = b(makeCtx(1, FULL_BAND_CAM_Z, focusWord));
+    expect(focused.ringColor[3]).toBeCloseTo(rest.ringColor[3] * MILD_RECESSION, 6);
+    expect(focused.ringColor[0]).toBeCloseTo(rest.ringColor[0], 6);
+    expect(rest.ringColor[0]).toBeGreaterThan(
+      STRUCTURE_MARKER_STYLES['galaxy-cluster'].ringColor[0],
+    );
   });
 
   it('marker alpha at a camera distance equals the band value times the unbanded alpha', () => {

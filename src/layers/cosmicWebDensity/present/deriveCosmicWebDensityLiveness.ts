@@ -2,8 +2,10 @@
  * deriveCosmicWebDensityLiveness — the state reads behind "is there live
  * density work this frame?", shared by the raymarch and its upsample so the
  * producer and consumer of the offscreen cannot disagree. Each field's handed value
- * already folds the section switch, its own switch, recession and clip. The clamp, band
- * fold and `hasActiveFields` check are `deriveVolumeLiveness`'s pure core.
+ * already folds the section switch, its own switch and clip; its focus emphasis is
+ * composed here, for both passes. No field can be the focus, so every field recedes
+ * alike. The clamp, band fold and `hasActiveFields` check are `deriveVolumeLiveness`'s
+ * pure core.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
@@ -12,6 +14,11 @@ import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/Cosmic
 import type { VolumeFieldLiveness } from '../../../@types/rendering/VolumeFieldLiveness';
 import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
 import { deriveVolumeLiveness } from '../../../utils/volume/deriveVolumeLiveness';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
+import { cosmicWebDensityVisibility } from '../visibility';
+
+const DENSITY_ENTRY = visibilityEntryOf(cosmicWebDensityVisibility, 'cosmicWebDensity');
 
 export function deriveCosmicWebDensityLiveness(
   runtime: CosmicWebDensityRuntime,
@@ -21,11 +28,12 @@ export function deriveCosmicWebDensityLiveness(
 ): VolumeFieldLiveness<CosmicWebDensityFieldId> | null {
   // Mpc from the heliocentric render origin — what every field's `bands` measure.
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+  const emphasis = emphasisOf(DENSITY_ENTRY, ctx.snapshot);
 
   return deriveVolumeLiveness(
     runtime.renderer,
     (id) => state.settings.cosmicWebDensity.items[id],
-    (id) => fade[id],
+    (id) => fade[id] * emphasis,
     camDistMpc,
   );
 }

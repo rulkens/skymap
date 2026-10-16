@@ -2,7 +2,7 @@
  * composeForegroundCaption — the per-caption compose every NEAR0 caption producer
  * shares: fade rule → overflow → prominence → occlusion → `occludeNearKm` → lift.
  * `fade` is the caller's: the per-item value core hands its label entry (switch,
- * fade, recession and clip already folded in), so nothing here reads the registry.
+ * fade and clip already folded in), so nothing here reads the registry.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -58,6 +58,7 @@ export function composeForegroundCaption(
   return {
     ...label,
     pickId: pickable ? label.pickId : undefined,
+    subjectId: label.pickId,
     worldPos: anchor,
     fadeAlpha,
     occludeWeight: subjectOccludedByBodies({

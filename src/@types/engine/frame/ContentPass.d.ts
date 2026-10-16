@@ -119,7 +119,7 @@ export type ContentPass<K extends ShowKey = ShowKey> = {
 } & ([ShowKey] extends [K]
   ? {
       /**
-       * The show entry this pass draws. Core resolves its value (fade × recession × clip),
+       * The show entry this pass draws. Core resolves its value (fade × clip),
        * skips the pass while it is 0 (every item 0), and hands the same value to all four
        * methods, so one value gates draw and pick.
        */

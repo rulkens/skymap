@@ -19,6 +19,8 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -166,6 +168,33 @@ describe('label2DDirector', () => {
     expect(dir.labels()).toEqual([a, b]);
     // Neither label carries a leader, so no lines synthesize.
     expect(lineStub.setLines).toHaveBeenLastCalledWith([]);
+  });
+
+  // Review Focus #15–#17: recession once, in the director, keyed on identity not clickability.
+  it('a receding label recedes once, and the focused one not at all', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const FOCUS = 11;
+    const focused: Label2D = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0], subjectId: FOCUS };
+    const sibling: Label2D = { ...SAMPLE_LABEL, id: 'b', worldPos: [0.5, 0, 0], subjectId: 12 };
+    dir.registerProducer({
+      id: 'structures',
+      label: 'structure',
+      produceLabels: () => ({ labels: [focused, sibling], awake: false }),
+    });
+    const state = { ...makeState(), visibilityEntries: APP_VISIBILITY } as unknown as EngineState;
+    const ctxAt = (nowMs: number) =>
+      ({
+        ...makeCtx(nowMs),
+        snapshot: { nowMs, focusBlend: 1, focusPickId: FOCUS },
+      }) as unknown as FrameView;
+
+    dir.runFrame(state, ctxAt(0));
+    dir.runFrame(state, ctxAt(300));
+    const alphaOf = (id: string) => dir.labels().find((l) => l.id === id)?.fadeAlpha ?? 1;
+    expect(alphaOf('a')).toBe(1);
+    expect(alphaOf('b')).toBeCloseTo(MILD_RECESSION);
   });
 
   it('skips re-uploading the same merged set across frames once settled', () => {

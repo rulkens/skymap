@@ -243,6 +243,8 @@ function makeState(): EngineState {
     // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
     // ready gate.
     selectionRows: { focus: null },
+    selection: { hover: null, select: null, focus: null },
+    selectionKindRows: [],
   } as unknown as EngineState;
 }
 

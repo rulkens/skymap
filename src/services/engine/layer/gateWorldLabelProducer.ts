@@ -13,6 +13,7 @@ export function gateWorldLabelProducer(row: LayerWorldLabel): Label3DProducer {
   if (label === undefined) return row;
   return {
     id,
+    label,
     produceLabels3D: (state, ctx) =>
       labelLiveOf(state, label, ctx.snapshot.nowMs)
         ? row.produceLabels3D(state, ctx, resolveFadeValue(state, ctx.snapshot, `label:${label}`))

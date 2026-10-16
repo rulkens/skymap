@@ -18,7 +18,7 @@
  *
  * The clip factor is the last factor of the value core hands a consumer:
  *
- *   handed value = registry fade × focus recession × clip factor
+ *   handed value = registry fade × clip factor
  *
  * `reset()` clears the controller map entirely, which is equivalent to
  * resetting every layer's clip factor to 1 — because untouched keys always

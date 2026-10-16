@@ -16,6 +16,7 @@ export function gateLabelProducer(row: Omit<LayerScreenLabel, 'slab'>): Label2DP
   if (label === undefined) return row;
   return {
     id,
+    label,
     produceLabels: (state, ctx) =>
       labelLiveOf(state, label, ctx.snapshot.nowMs)
         ? row.produceLabels(state, ctx, resolveFadeValue(state, ctx.snapshot, `label:${label}`))

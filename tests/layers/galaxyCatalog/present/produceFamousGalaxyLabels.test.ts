@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import { mat4 } from 'wgpu-matrix';
 import { produceFamousGalaxyLabels } from '../../../../src/layers/galaxyCatalog/present/produceFamousGalaxyLabels';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
@@ -12,7 +11,11 @@ import {
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { Source } from '../../../../src/data/sources';
-import { unpackPick } from '../../../../src/data/selectionEncoding';
+import {
+  packSelection,
+  PICK_SENTINEL_OFFSET,
+  unpackPick,
+} from '../../../../src/data/selectionEncoding';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
@@ -282,9 +285,9 @@ describe('produceFamousGalaxyLabels', () => {
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
   });
 
-  it('recedes exactly once: a handed MILD_RECESSION scales the alpha by that and no more', () => {
-    // Core folds the recession into the value; a producer applying its own on top
-    // would recede to MILD_RECESSION squared.
+  it('scales by the handed value exactly once', () => {
+    // At full blend: the director recedes labels, so a producer that receded or
+    // clipped on its own would land below 0.25.
     const atRest = makeState();
     const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const atRestAlpha = produceFamousGalaxyLabels(atRestRuntime)(atRest, makeCtx(), ONE).labels[0]!
@@ -292,13 +295,13 @@ describe('produceFamousGalaxyLabels', () => {
 
     const focused = makeState();
     const focusedRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const recededAlpha = produceFamousGalaxyLabels(focusedRuntime)(
+    const handedAlpha = produceFamousGalaxyLabels(focusedRuntime)(
       focused,
       makeCtx({ focusBlend: 1 }),
-      handed(MILD_RECESSION),
+      handed(0.25),
     ).labels[0]!.fadeAlpha!;
 
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
+    expect(handedAlpha).toBeCloseTo(atRestAlpha * 0.25, 6);
   });
 
   it('focusedOnly mode: emits only the focused famous galaxy', () => {
@@ -394,5 +397,20 @@ describe('produceFamousGalaxyLabels', () => {
     expect(pickOf(under, 'famous-in')).toBeDefined();
     expect(pickOf(under, 'famous-out')).toBeUndefined();
     expect(under.find((l) => l.id === 'famous-out')!.fadeAlpha).toBeGreaterThan(0);
+  });
+
+  it('a label not clickable under focus still names its subject', () => {
+    const runtime = seed([{ id: 'out', names: ['Out'] }], [5, 3, 0], [120]);
+    const focus: FocusUniformsValue = {
+      center: [5, 0, 0],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    };
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const label = produceFamousGalaxyLabels(runtime)(makeState(), focused, ONE).labels[0]!;
+    expect(label.pickId).toBeUndefined();
+    expect(label.subjectId).toBe(packSelection(Source.FamousGalaxy, 0 + PICK_SENTINEL_OFFSET));
   });
 });

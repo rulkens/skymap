@@ -74,6 +74,8 @@ function makeState(
     // No focused pivot in this fixture — see frameContext.test.ts's makeState
     // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
     selectionRows: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: null },
+    selectionKindRows: [],
     // No seeded bodies/stars — see frameContext.test.ts's makeState for why
     // `deriveFrameContext` needs this now.
     slabRows: [],

@@ -9,7 +9,7 @@ import { resolveVisibilityOpacity } from './resolveVisibilityOpacity';
  * sound because `FadeValueOf` derives its shape from the same entry's `items`. */
 export function resolveFadeValue<A extends VisibilityAddress>(
   state: Pick<EngineState, 'subsystems' | 'visibilityEntries'>,
-  snapshot: Pick<ReadyFrameContext, 'nowMs' | 'focusBlend'>,
+  snapshot: Pick<ReadyFrameContext, 'nowMs'>,
   address: A,
 ): FadeValueOf<A> {
   const { items } = visibilityEntryOf(state.visibilityEntries, address);
