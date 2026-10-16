@@ -1,7 +1,8 @@
 /**
  * The body Layer: owns the body settings clusters (`bodies`, `earth`,
- * `orbitTrails`) and their visibility entries. Body render and load code stay in core, so the Layer mints
- * no runtime and contributes no pass.
+ * `orbitTrails`), their visibility entries and the Orbit trails toggle row. Body
+ * render and load code stay in core, so the Layer mints no runtime and
+ * contributes no pass.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -15,4 +16,5 @@ export const bodyLayer = defineLayer({
   create: () => undefined,
   destroy: () => {},
   passes: () => [],
+  ui: [{ slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } }],
 });

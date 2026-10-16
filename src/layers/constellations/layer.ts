@@ -14,7 +14,6 @@ import { destroy } from './destroy';
 import { constellationsAssetRows } from './load/constellationsAssetRows';
 import { constellationsPass } from './passes/constellationsPass';
 import { produceConstellationCaptions } from './present/produceConstellationCaptions';
-import { constellationsSettingsRow } from './ui/constellationsSettingsRow';
 
 export const constellationsLayer = defineLayer({
   name: 'constellations',
@@ -38,5 +37,5 @@ export const constellationsLayer = defineLayer({
       },
     ],
   }),
-  ui: [{ slot: 'labelsAndGuides', content: constellationsSettingsRow }],
+  ui: [{ slot: 'labelsAndGuides', content: { toggle: 'constellations', label: 'Constellations' } }],
 });

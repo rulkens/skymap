@@ -10,7 +10,6 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { lightTimeSpheresPass } from './passes/lightTimeSpheresPass';
 import { produceLightTimeCaptions } from './present/produceLightTimeCaptions';
-import { lightTimeSettingsRow } from './ui/lightTimeSettingsRow';
 
 export const lightTimeLayer = defineLayer({
   name: 'lightTime',
@@ -29,5 +28,5 @@ export const lightTimeLayer = defineLayer({
       },
     ],
   }),
-  ui: [{ slot: 'labelsAndGuides', content: lightTimeSettingsRow }],
+  ui: [{ slot: 'labelsAndGuides', content: { toggle: 'lightTime', label: 'Light-time spheres' } }],
 });

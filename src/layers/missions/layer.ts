@@ -12,7 +12,6 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { missionTrailsPass } from './passes/missionTrailsPass';
 import { produceMissionCaptions } from './present/produceMissionCaptions';
-import { missionTrailsSettingsRow } from './ui/missionTrailsSettingsRow';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 
 export const missionsLayer = defineLayer({
@@ -27,5 +26,5 @@ export const missionsLayer = defineLayer({
   guides: () => ({
     screenLabels: [{ slab: NEAR0, id: 'missionCaptions', produceLabels: produceMissionCaptions }],
   }),
-  ui: [{ slot: 'labelsAndGuides', content: missionTrailsSettingsRow }],
+  ui: [{ slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } }],
 });

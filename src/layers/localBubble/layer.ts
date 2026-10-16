@@ -12,7 +12,6 @@ import { destroy } from './destroy';
 import { localBubbleAssetRows } from './load/localBubbleAssetRows';
 import { localBubblePass } from './passes/localBubblePass';
 import LocalBubbleTuningSectionContainer from './ui/LocalBubbleTuningSectionContainer';
-import { localBubbleSettingsRow } from './ui/localBubbleSettingsRow';
 
 export const localBubbleLayer = defineLayer({
   name: 'localBubble',
@@ -23,7 +22,7 @@ export const localBubbleLayer = defineLayer({
   passes: (runtime) => [localBubblePass(runtime)],
   assets: localBubbleAssetRows,
   ui: [
-    { slot: 'labelsAndGuides', content: localBubbleSettingsRow },
+    { slot: 'labelsAndGuides', content: { toggle: 'localBubble', label: 'Local Bubble' } },
     { slot: 'debug', content: LocalBubbleTuningSectionContainer },
   ],
 });

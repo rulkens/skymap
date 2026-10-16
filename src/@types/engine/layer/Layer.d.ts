@@ -62,9 +62,9 @@ export type Layer<
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
-  /** Contributions to the three `LayerUiSlots`: whole sections (`main` in
-   * SettingsPanel, `debug` in DebugPanel) or a `labelsAndGuides` data row,
-   * appended after the core rows in `LabelsAndGuidesSectionContainer`. */
+  /** Contributions to the `LayerUiSlots`: whole sections (`main` in SettingsPanel,
+   * `debug` in DebugPanel), a detail card, or a `labelsAndGuides` toggle row, which
+   * `selectToggleRows` appends after the label-category rows in composition order. */
   readonly ui?: readonly LayerUiEntry[];
   /** What this Layer can show and label. The address types derive from `APP_VISIBILITY`,
    * which imports the same tuple from the Layer's `visibility.ts`, never from here. */

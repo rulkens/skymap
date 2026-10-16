@@ -147,7 +147,6 @@ describe('Settings page', () => {
     const guides = DOCS_SETTINGS.find((group) => group.id === 'labels-and-guides')!.rows.slice(1);
     expect(guides.map((row) => row.name)).toEqual([
       ...LABEL_CATEGORIES.map((category) => CATEGORY_DISPLAY_INFO[category].plural),
-      'Orbit trails',
       ...layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides').map((row) => row.label),
     ]);
   });
