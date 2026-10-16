@@ -32,6 +32,7 @@ import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSele
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
+import { gateComputeByFade } from '../layer/gateComputeByFade';
 import { gateLabelProducer } from '../layer/gateLabelProducer';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
@@ -145,7 +146,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // answers to it, and `checkFrameOrder` counts order lines rather than passes —
   // so a core pass left behind under a name a Layer now contributes would keep
   // drawing, silently, with the Layer's own version never reached.
-  // Every pass, planner and label row is gated here, once, so the executors never see
+  // Every pass, compute, planner and label row is gated here, once, so the executors never see
   // a `fade` or `label` declaration: they call what they always called.
   state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
     CONTENT_PASSES,
@@ -154,7 +155,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
     CORE_COMPUTES,
     ...instances.map((instance) => instance.computes),
-  ]);
+  ]).map((compute) => gateComputeByFade(compute, state));
   state.planners = concatUniqueRows(
     'createLayers: planner rows',
     (planner) => planner.name,

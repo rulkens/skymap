@@ -1,6 +1,7 @@
 /**
  * createLayers — compute-row composition: a shared name across composed rows
- * is caught at boot, exactly as it is for passes (`createLayers.composition.test.ts`).
+ * is caught at boot, exactly as it is for passes (`createLayers.composition.test.ts`),
+ * and a row declaring `fade` is wrapped so `encode` receives its handed value.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -9,6 +10,8 @@ import { createAppStore } from '../../../../src/store/createAppStore';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 
 function makeState(): EngineState {
   return {
@@ -20,7 +23,8 @@ function makeState(): EngineState {
       uiCtx: { device: {}, context: {}, canvas: {}, hdrCapable: true },
     },
     subsystems: {
-      fades: {},
+      fades: { opacityOf: () => 0.5 },
+      clipPlayer: { clipOpacityOf: () => 1 },
       scheduler: { requestRender: vi.fn() },
       cosmoLabelDirector: { registerProducer: vi.fn() },
       foregroundLabelDirector: { registerProducer: vi.fn() },
@@ -62,5 +66,26 @@ describe('createLayers computes composition', () => {
     const layers = [computeLayer('a', 'dup-compute'), computeLayer('b', 'dup-compute')];
 
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/dup-compute/);
+  });
+
+  it('hands a compute that declares fade its handed value as the last argument', async () => {
+    const { store } = createAppStore();
+    const state = makeState();
+    const encode = vi.fn();
+    const layer = {
+      name: 'a',
+      visibility: [{ key: 'flow' }],
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      computes: () => [{ name: 'faded', scope: 'once', fade: 'flow', encode }],
+    } as unknown as Layer<string, unknown>;
+    await createLayers(state, makeDeps([layer], store));
+
+    const ctx = { snapshot: { nowMs: 0, focusBlend: 0 } } as unknown as FrameView;
+    state.computes
+      .find((c) => c.name === 'faded')!
+      .encode({} as GPUCommandEncoder, ctx, {} as PassState, () => ({}));
+    expect(encode.mock.calls[0]!.at(-1)).toBe(0.5);
   });
 });
