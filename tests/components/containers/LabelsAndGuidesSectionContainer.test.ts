@@ -6,23 +6,9 @@
  * Pattern: `createAppStore()` + `<Provider>` + `createElement` (no JSX —
  * matches `vitest.config.ts` `include` glob `tests/**\/*.test.ts`).
  *
- * The container:
- *  - reads `selectStructureItems`, `selectGalaxyCatalogItems`,
- *    `selectStarCatalogItems`, `selectBodyItems`, and
- *    `selectMilkyWayLabelEnabled` from the store — one selector per
- *    label-bearing source-type cluster, plus the milkyWay scalar
- *  - projects them → `labelCategoryVisibility` via
- *    `projectLabelCategoryVisibility`
- *  - dispatches every label category's write through ONE table lookup,
- *    `LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[category]]
- *    .write(category, enabled)` — the category's registry-declared source
- *    type picks the home; there is no hand-written per-home branch
- *
- * The CRITICAL tests: three store-backed assertions proving the table lookup
- * lands on the correct home for three different source types — toggling a
- * structure-label category flips that structure item's `labelEnabled` flag;
- * toggling `milkyWay` flips `selectMilkyWayLabelEnabled`; toggling
- * `famousGalaxy` flips the galaxy catalog item's `labelEnabled` flag.
+ * The container binds each row `selectToggleRows` builds to `dispatch`; every row
+ * reads and writes through its visibility entry (`selectToggleRows.test.ts` round-trips
+ * every one). These tests pin the binding: a click lands in the store.
  *
  * The master tri-state folds every `layerRows` entry on top of the label
  * categories the registry derives. The label rows default on; the
@@ -47,8 +33,6 @@ import { Provider } from 'react-redux';
 import LabelsAndGuidesSectionContainer from '../../../src/components/containers/LabelsAndGuidesSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectStructureItems } from '../../../src/layers/structure/state/structures/selectors';
-import { selectGalaxyCatalogItems } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
-import { selectMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/state/milkyWay/selectors';
 import { selectOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/selectors';
 import { selectLocalBubble } from '../../../src/layers/localBubble/state/localBubble/selectors';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
@@ -82,9 +66,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(headerCheckbox.indeterminate).toBe(true);
   });
 
-  // ── CRITICAL: label-home dispatch tests ───────────────────────────────────────
-
-  it('[label-home dispatch] toggling a structure label category flips the structure item labelEnabled in the store', () => {
+  it('toggling a structure label category flips the structure item labelEnabled in the store', () => {
     const { store } = createAppStore();
     // Confirm initial state: cluster.labelEnabled is true.
     expect(selectStructureItems(store.getState())['galaxy-cluster'].labelEnabled).toBe(true);
@@ -107,58 +89,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(clusterCheckbox).not.toBeNull();
     fireEvent.click(clusterCheckbox);
 
-    // Assert the structure item's labelEnabled flipped — confirming setStructureLabelEnabled.
     expect(selectStructureItems(store.getState())['galaxy-cluster'].labelEnabled).toBe(false);
-  });
-
-  it('[label-home dispatch] toggling milkyWay label flips selectMilkyWayLabelEnabled in the store', () => {
-    const { store } = createAppStore();
-    // Confirm initial state: milkyWay label is enabled.
-    expect(selectMilkyWayLabelEnabled(store.getState())).toBe(true);
-
-    const { container } = render(
-      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
-      {
-        wrapper: makeWrapper(store),
-      },
-    );
-
-    // Expand to reach per-category body controls.
-    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
-    fireEvent.click(expandButton);
-
-    // milkyWay label starts enabled (checked); click dispatches enabled=false.
-    const milkyWayCheckbox = container.querySelector<HTMLInputElement>('#toggle-label-milkyWay')!;
-    expect(milkyWayCheckbox).not.toBeNull();
-    fireEvent.click(milkyWayCheckbox);
-
-    // Assert the milkyWay scalar labelEnabled flipped — confirming setMilkyWayLabelEnabled.
-    expect(selectMilkyWayLabelEnabled(store.getState())).toBe(false);
-  });
-
-  it('[label-home dispatch] toggling famousGalaxy label flips the galaxy catalog item labelEnabled in the store', () => {
-    const { store } = createAppStore();
-    // Confirm initial state: famousGalaxy.labelEnabled is true.
-    expect(selectGalaxyCatalogItems(store.getState())['famousGalaxy'].labelEnabled).toBe(true);
-
-    const { container } = render(
-      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
-      {
-        wrapper: makeWrapper(store),
-      },
-    );
-
-    // Expand to reach per-category body controls.
-    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
-    fireEvent.click(expandButton);
-
-    // famousGalaxy label starts enabled (checked); click dispatches enabled=false.
-    const famousCheckbox = container.querySelector<HTMLInputElement>('#toggle-label-famousGalaxy')!;
-    expect(famousCheckbox).not.toBeNull();
-    fireEvent.click(famousCheckbox);
-
-    // Assert the galaxy catalog item's labelEnabled flipped — confirming setGalaxyCatalogLabelEnabled.
-    expect(selectGalaxyCatalogItems(store.getState())['famousGalaxy'].labelEnabled).toBe(false);
   });
 
   it('toggling the Orbit trails row dispatches setVisibility on its own cluster', () => {

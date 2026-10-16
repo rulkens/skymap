@@ -11,11 +11,7 @@
 
 import type { FadeId } from '../../../@types/animation/FadeId';
 import type { LabelLayerId } from '../../../@types/animation/LabelLayerId';
-import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { lerp } from '../../../utils/math/lerp';
-import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 
 // The opacity a tagged layer settles to at full focus (blend = 1). Two strengths,
 // named for the strength and not for a layer, since unrelated layers share each.
@@ -75,27 +71,4 @@ export function recessionFactor(strength: 'strong' | 'mild' | undefined, blend: 
 // `blend` is 0 = no focus, 1 = full focus; an untagged id stays at 1.0 throughout.
 export function focusRecession(h: FadeId, blend: number): number {
   return lerp(1, recessionTargetFor(h) ?? 1, blend);
-}
-
-// Unmapped ids (e.g. `overlay`) get a neutral 1 — no clip cue addresses them.
-function clipFactorFor(clip: ClipPlayer, h: FadeId, now: number): number {
-  const key = fadeIdToVisibilityKey(h);
-  return key === undefined ? 1 : clip.clipOpacityOf(key, now);
-}
-
-/**
- * The canonical whole-layer opacity: toggle × recession × clip-owned transient.
- * Per-instance consumers (markers / labels with a focused-instance exemption) take
- * the three parts separately and combine them themselves.
- */
-export function resolveLayerOpacity(
-  state: Pick<EngineState, 'subsystems'>,
-  ctx: FrameView,
-  h: FadeId,
-): number {
-  const { fades, clipPlayer } = state.subsystems;
-  const { nowMs, focusBlend } = ctx.snapshot;
-  return (
-    fades.opacityOf(h, nowMs) * focusRecession(h, focusBlend) * clipFactorFor(clipPlayer, h, nowMs)
-  );
 }

@@ -24,9 +24,10 @@ describe('selectToggleRows', () => {
     expect(after).toBe(before);
   });
 
+  // Read-after-write through the real reducer, for every label category and Layer row: a
+  // row that reads one switch and writes another is a checkbox that refuses to flip.
   it("a row's set builds the action that flips its own value", () => {
-    const labelRowId = selectToggleRows(INIT, LAYER_ROWS)[0]!.id;
-    for (const id of [labelRowId, 'toggle-orbitTrails', 'toggle-missionTrails']) {
+    for (const { id } of selectToggleRows(INIT, LAYER_ROWS)) {
       const row = rowById(INIT, id);
       const next = rootReducer(INIT, row.set(!row.enabled));
       expect(rowById(next, id).enabled).toBe(!row.enabled);

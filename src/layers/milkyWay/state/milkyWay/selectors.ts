@@ -11,8 +11,3 @@ export const selectRoute = createSelector(
 
 /** The whole cluster, under the slice's own name. */
 export const selectMilkyWay = selectRoute;
-
-export const selectMilkyWayLabelEnabled = createSelector(
-  [selectRoute],
-  (route: MilkyWaySettings): boolean => route.labelEnabled,
-);

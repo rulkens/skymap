@@ -654,13 +654,13 @@ watchFadesSaga: a `setVisibility` action passes its payload's overMs to syncFade
 
 **Shipped `'labels'` cues (behaviour change #4):** the one cue is `hide(['labels'], 0)` in `clips/makers/makeEarthLoop.ts:77`, used with `hideLabels: true` only by `clips/earthCosmicWebLoop.ts:14`. The zone of avoidance boots on, so that clip now also hides the ZoA lettering. Constellations and light-time spheres boot off. The tools' screenshot declutter (`tools/utils/capture/sceneDeclutterActions.ts`, `labelDeclutterActions`) is its own hand list and is out of scope.
 
-- [ ] **First, the deciding test (Review Focus #10, U5):** `a cue's over reaches the fade through the live saga`, in `tests/state/tour/tour.integration.test.ts` or a sibling. It uses a real store with the root saga and a `reconcile` context whose `syncFades` runs the real sync over a real fade registry. `applySceneEffect(show(['flow'], 9))` must leave the flow identity mid-ramp at 4.5 s, not settled at 1. Add a second case: `hide(['flow'], 0)` leaves the identity at 0 at once. Run both on today's code first and record the result in your reply, then take the matching path above. On the fix path, mutation-check by dropping `overMs` in `watchFadesSaga`: both cases must fail.
-- [ ] Rewrite `visibilityCuesWriteCapturedClusters.test.ts` as `every entry's cluster is captured by the tour snapshot`.
-- [ ] Test `'labels' expands to every label address`: compare as a set against `APP_VISIBILITY`'s label entries (grill Q4: order is not a contract).
-- [ ] Test `a bare per-item show address writes the section switch where the cluster has one`: `cosmicWebDensity` and `starCatalog` → one action on the section switch; `survey` and `structureRing` → one per item. Mutation-check by always fanning out.
-- [ ] Test `every label category resolves to exactly one label entry` (iterate `LABEL_CATEGORIES`). Keep the round-trip `read-after-write for every label-bearing category` through the real reducer.
-- [ ] Type-level lines in `effectHelpers.test.ts`: `// @ts-expect-error` on `hide(['flwo'])`, `show(['label:structure:bogus'])`, `fade(['survey:bogus'], 0, 1)`.
-- [ ] Commit.
+- [x] **First, the deciding test (Review Focus #10, U5):** `a cue's over reaches the fade through the live saga`, in `tests/state/tour/tour.integration.test.ts` or a sibling. It uses a real store with the root saga and a `reconcile` context whose `syncFades` runs the real sync over a real fade registry. `applySceneEffect(show(['flow'], 9))` must leave the flow identity mid-ramp at 4.5 s, not settled at 1. Add a second case: `hide(['flow'], 0)` leaves the identity at 0 at once. Run both on today's code first and record the result in your reply, then take the matching path above. On the fix path, mutation-check by dropping `overMs` in `watchFadesSaga`: both cases must fail.
+- [x] Rewrite `visibilityCuesWriteCapturedClusters.test.ts` as `every entry's cluster is captured by the tour snapshot`.
+- [x] Test `'labels' expands to every label address`: compare as a set against `APP_VISIBILITY`'s label entries (grill Q4: order is not a contract).
+- [x] Test `a bare per-item show address writes the section switch where the cluster has one`: `cosmicWebDensity` and `starCatalog` → one action on the section switch; `survey` and `structureRing` → one per item. Mutation-check by always fanning out.
+- [x] Test `every label category resolves to exactly one label entry` (iterate `LABEL_CATEGORIES`). Keep the round-trip `read-after-write for every label-bearing category` through the real reducer.
+- [x] Type-level lines in `effectHelpers.test.ts`: `// @ts-expect-error` on `hide(['flwo'])`, `show(['label:structure:bogus'])`, `fade(['survey:bogus'], 0, 1)`.
+- [x] Commit.
 
 ### Task 12: Delete the old tables, bridges and vocabulary
 

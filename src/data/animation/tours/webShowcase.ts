@@ -55,7 +55,7 @@ const establishTheWeb: ClipData = (() => {
   const fly = flyToClip(focusId('milkyWay'));
   return {
     ...fly,
-    timeline: [hide(['cosmicWebDensity', 'cosmicWebFilaments', 'surveyLabel'], 0), ...fly.timeline],
+    timeline: [hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0), ...fly.timeline],
   };
 })();
 

@@ -16,7 +16,6 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -28,13 +27,11 @@ import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFad
 import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
-import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../../src/@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
-import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
@@ -44,73 +41,19 @@ function makeClipStub(factor: number): ClipPlayer {
     tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
     stop: vi.fn<() => void>(),
     registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
-    clipOpacityOf: vi.fn<(layer: VisibilityLayerKey, nowMs: number) => number>(() => factor),
+    clipOpacityOf: vi.fn<(address: VisibilityAddress, nowMs: number) => number>(() => factor),
     destroy: vi.fn<() => void>(),
   };
-}
-
-// Only the two fields `resolveLayerOpacity` reads. Cast through `unknown` because
-// the picked type still demands the full `EngineSubsystemHandles`.
-function makeResolveOpacityState(
-  fades: ReturnType<typeof createFadeRegistry>,
-  clipPlayer: ClipPlayer,
-): Pick<EngineState, 'subsystems'> {
-  return { subsystems: { fades, clipPlayer } } as unknown as Pick<EngineState, 'subsystems'>;
 }
 
 function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// Carries only what applySceneEffect's show/hide/scene arms reach for: live
-// settings, the two fade/scheduler stubs the snap path calls, and stub gpu /
-// assetSlots bags for the demand-loaded rows' guard closures.
+// applySceneEffect's show/hide/scene arms only dispatch: the live settings are all they read.
 function makeEngineState(settings: EngineSettingsState): EngineState {
-  return {
-    settings,
-    subsystems: {
-      fades: {
-        fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-        setImmediate: vi.fn<() => void>(),
-        // null never matches a real 0/1 target, so applyIntent's skip never
-        // spuriously fires here — every call in this suite drives a fresh fade.
-        targetOf: vi.fn<() => number | null>(() => null),
-      },
-      scheduler: { requestRender: vi.fn<() => void>() },
-    },
-    assetSlots: {},
-    fadeRows: FADE_LAYERS,
-  } as unknown as EngineState;
+  return { settings } as unknown as EngineState;
 }
-
-describe('three-way opacity product: intent × focus × clip', () => {
-  it('a clip factor of 0 collapses composed alpha regardless of intent', () => {
-    const fades = createFadeRegistry({ requestRender: () => {} });
-    const handle: FadeId = { kind: 'flow' };
-    fades.register(handle, 1); // flow fully visible (intent=1)
-
-    const clipAtZero = makeClipStub(0);
-    const stateAtZero = makeResolveOpacityState(fades, clipAtZero);
-    // 1 (intent) × 1 (no focus recession for flow) × 0 (clip) = 0
-    expect(
-      resolveLayerOpacity(stateAtZero, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
-    ).toBe(0);
-  });
-
-  it('a clip factor of 1 is neutral — composed alpha is the bare intent × recession product', () => {
-    const fades = createFadeRegistry({ requestRender: () => {} });
-    const handle: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    fades.register(handle, 0);
-    fades.fadeTo(handle, 0.8, 0, 0); // intent = 0.8
-
-    const clipAtOne = makeClipStub(1);
-    const state = makeResolveOpacityState(fades, clipAtOne);
-    // Hand-computed: intent 0.8 × recession 1 (galaxyCatalog never recedes) × clip 1 = 0.8.
-    expect(
-      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
-    ).toBe(0.8);
-  });
-});
 
 describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // The cosmicFlows start pose is concrete, not 'live', so `clipStarted` takes it
@@ -205,21 +148,6 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     expect(surveyAfterStop).toBe(1);
     expect(flowAfterStop).toBe(1);
 
-    const fades = createFadeRegistry({ requestRender: () => {} });
-    const flowHandle: FadeId = { kind: 'flow' };
-    fades.register(flowHandle, 0);
-    fades.fadeTo(flowHandle, 1, 0, 0); // intent = 1
-
-    const clipAtOne = makeClipStub(1); // factor 1 = clip is gone
-    const state = makeResolveOpacityState(fades, clipAtOne);
-    const composed = resolveLayerOpacity(
-      state,
-      { snapshot: { focusBlend: 0, nowMs: 0 } } as never,
-      flowHandle,
-    );
-    // 1 (intent) × 1 (no recession for flow) × 1 (clip gone) = 1
-    expect(composed).toBe(1);
-
     clipPlayer.destroy();
   });
 
@@ -263,9 +191,6 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       },
       selection: { select: null, hover: null, focus: null },
       gpu: { focusUniform: { bindGroup: {} } },
-      // The fade bridge walks the COMPOSED rows; this stub draws nothing from a
-      // Layer, so core's own manifest is the whole set.
-      fadeRows: FADE_LAYERS,
     } as unknown as EngineState;
   }
 

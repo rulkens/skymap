@@ -5,7 +5,6 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/source
 import { maskWith } from '../../../../utils/maskWith';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
 import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
@@ -48,11 +47,6 @@ export const selectGalaxySbMax = createSelector(
 export const selectGalaxyFalloffStrength = createSelector(
   [selectRoute],
   (route: GalaxyCatalogSettings): number => route.falloffStrength,
-);
-
-export const selectGalaxyCatalogItems = createSelector(
-  [selectRoute],
-  (route: GalaxyCatalogSettings): Record<GalaxyCatalogId, GalaxyCatalogItemSettings> => route.items,
 );
 
 /**

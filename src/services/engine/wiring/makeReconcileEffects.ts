@@ -19,9 +19,13 @@ export function makeReconcileEffects(
 ): ReconcileEffects {
   return {
     requestRender: () => state.subsystems.scheduler.requestRender(),
-    syncFades: () => {
+    syncFades: (opts) => {
       syncVisibilityFades(state, { animate: true });
-      syncVisibilityTargets(state, { animate: true });
+      const overMs = opts?.overMs;
+      syncVisibilityTargets(
+        state,
+        overMs === undefined ? { animate: true } : { animate: overMs !== 0, durationMs: overMs },
+      );
     },
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;

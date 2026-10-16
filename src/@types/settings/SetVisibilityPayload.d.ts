@@ -4,4 +4,7 @@ export type SetVisibilityPayload = {
   readonly item?: string;
   readonly field: 'enabled' | 'labelEnabled';
   readonly on: boolean;
+  /** A cue's duration (ms) for the fade this write starts: `0` snaps, absent means the default
+   * durations. Read by the reactive fade sync, never stored. */
+  readonly overMs?: number;
 };

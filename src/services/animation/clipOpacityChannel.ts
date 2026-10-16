@@ -1,7 +1,7 @@
 /**
  * clipOpacityChannel — the clip-owned transient opacity channel.
  *
- * Wraps one private FadeController per VisibilityLayerKey, created lazily on
+ * Wraps one private FadeController per VisibilityAddress, created lazily on
  * the first `fadeTo` call for a given key. This mirrors the pattern used by
  * `structureFocusSubsystem` (one private `createFadeController`, NOT the
  * shared FadeRegistry), extended to a keyed map: one controller per layer.
@@ -46,7 +46,6 @@
 
 import { createFadeController } from './fadeController';
 import type { ClipOpacityChannel } from '../../@types/animation/ClipOpacityChannel';
-import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { VisibilityAddress } from '../../@types/animation/VisibilityAddress';
 import type { FadeController } from '../../@types/animation/FadeController';
 
@@ -58,14 +57,14 @@ export function createClipOpacityChannel(
   _initialNowMs: number = 0,
 ): ClipOpacityChannel {
   // One private FadeController per key, created lazily on first fadeTo.
-  const controllers = new Map<VisibilityLayerKey | VisibilityAddress, FadeController>();
+  const controllers = new Map<VisibilityAddress, FadeController>();
 
   // The channel's default clock: the frame time of the most recent tick.
   // See the module-header rationale ("The default clock is the last ticked
   // frame time").
   let lastTickNowMs = 0;
 
-  function getOrCreate(key: VisibilityLayerKey | VisibilityAddress, nowMs: number): FadeController {
+  function getOrCreate(key: VisibilityAddress, nowMs: number): FadeController {
     let controller = controllers.get(key);
     if (controller === undefined) {
       // Default opacity 1 — untouched layers are fully visible.
@@ -76,7 +75,7 @@ export function createClipOpacityChannel(
   }
 
   function fadeTo(
-    key: VisibilityLayerKey | VisibilityAddress,
+    key: VisibilityAddress,
     target: number,
     durationMs: number,
     nowMs?: number,
@@ -91,7 +90,7 @@ export function createClipOpacityChannel(
     void controller.fadeTo(target, durationMs, now);
   }
 
-  function factorOf(key: VisibilityLayerKey | VisibilityAddress, nowMs?: number): number {
+  function factorOf(key: VisibilityAddress, nowMs?: number): number {
     const controller = controllers.get(key);
     // No controller for this key means it was never touched — default 1.
     if (controller === undefined) return 1;
