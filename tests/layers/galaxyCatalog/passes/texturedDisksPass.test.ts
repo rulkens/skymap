@@ -60,6 +60,7 @@ function makeView(ctx: FrameView): SlabView {
     vp: ctx.vp as unknown as Float32Array,
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+    window: { originPx: [0, 0], sizePx: [ctx.canvasSize.width, ctx.canvasSize.height] },
   };
 }
 

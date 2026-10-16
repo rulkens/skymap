@@ -93,7 +93,13 @@ function makePassState(settings: StarCatalogSettings): PassState {
 
 // Distinct f64 slab vp and f32 vp, so identity reveals which one is rebased.
 function makeNear0View(camPos: Vec3): SlabView {
-  return { slab: makeSlab(), vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
+  return {
+    slab: makeSlab(),
+    vp: new Float32Array(16),
+    camPos,
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
 }
 
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;

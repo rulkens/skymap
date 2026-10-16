@@ -228,6 +228,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
     vp: f32Vp,
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
   };
 }
 
@@ -310,6 +311,7 @@ describe('earthPass.enabled', () => {
         vp: new Float32Array(16),
         camPos: [0, 0, 0],
         viewportPx: [1, 1],
+        window: { originPx: [0, 0], sizePx: [1, 1] },
       }),
     ).toBe(false);
     expect(earthPass.enabled(state, NEAR_CTX, makeEarthBodyView('mars'))).toBe(false);

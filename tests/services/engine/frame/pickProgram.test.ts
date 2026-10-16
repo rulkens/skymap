@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { mat4d } from 'wgpu-matrix';
 
 // Mock the pick-time camera derivation: the program calls `pickFrameContext`
 // internally, but reproducing a ready context through the real derivation
@@ -27,7 +28,8 @@ vi.mock('../../../../src/services/engine/helpers/pickFrameContext', () => ({
 
 import { createPickProgram } from '../../../../src/services/engine/frame/pickProgram';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
-import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { NEAR0, COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
+import { windowedSlabView } from '../../../../src/services/engine/frame/windowedSlabView';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   PICK_SENTINEL_OFFSET,
@@ -36,6 +38,7 @@ import {
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
@@ -120,14 +123,17 @@ function makeDevice(
     mapAsyncImpl?: () => Promise<void>;
   } = {},
 ) {
-  const createTextureCalls: Array<{ format: GPUTextureFormat; label?: string }> = [];
+  const createTextureCalls: Array<{
+    format: GPUTextureFormat;
+    label?: string;
+    size: { width: number; height: number };
+  }> = [];
   const passDescriptors: Array<Record<string, unknown>> = [];
-  const scissorRects: number[][] = [];
+  const copyOrigins: Array<{ x: number; y: number; z: number }> = [];
   let commandEncoderCount = 0;
   let copyCount = 0;
 
   const makePass = () => ({
-    setScissorRect: vi.fn((...rect: number[]) => scissorRects.push(rect)),
     setPipeline: vi.fn(),
     setBindGroup: vi.fn(),
     setVertexBuffer: vi.fn(),
@@ -142,7 +148,7 @@ function makeDevice(
         label?: string;
         size: { width: number; height: number };
       }) => {
-        createTextureCalls.push({ format: desc.format, label: desc.label });
+        createTextureCalls.push({ format: desc.format, label: desc.label, size: desc.size });
         // `__label` lets a test correlate a returned GPUTexture back to its slab
         // (pick:cosmo-target / pick:near0-target) — used to assert far→near order.
         return {
@@ -175,8 +181,9 @@ function makeDevice(
           passDescriptors.push(desc);
           return makePass();
         }),
-        copyTextureToBuffer: vi.fn(() => {
+        copyTextureToBuffer: vi.fn((source: { origin: { x: number; y: number; z: number } }) => {
           copyCount++;
+          copyOrigins.push(source.origin);
         }),
         finish: vi.fn(() => ({})),
       };
@@ -188,7 +195,7 @@ function makeDevice(
     device: device as unknown as GPUDevice,
     createTextureCalls,
     passDescriptors,
-    scissorRects,
+    copyOrigins,
     getCommandEncoderCount: () => commandEncoderCount,
     getCopyCount: () => copyCount,
   };
@@ -369,7 +376,7 @@ describe('createPickProgram', () => {
     // the same expansion `executeFrame` applies to the visual program. Two
     // body-m rows (indices 2, 3) → two pick passes, one drawPick call each —
     // but ONE shared r32uint target (B1 fix: `pick()` reads a single texel per
-    // row, so every body row reuses the same viewport-sized texture instead of
+    // row, so every body row reuses the same texture instead of
     // retaining one pair per row; see the B1 growth test below).
     const { device, createTextureCalls } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
@@ -395,7 +402,7 @@ describe('createPickProgram', () => {
   });
 
   describe('B1 — bounded pick-texture memory across many body rows', () => {
-    it('pick() shares ONE viewport-sized target across every body row and never grows across repeated calls', async () => {
+    it('pick() shares ONE target across every body row and never grows across repeated calls', async () => {
       const { device, createTextureCalls } = makeDevice();
       const bodyIds = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus'];
       vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(bodyIds));
@@ -424,7 +431,7 @@ describe('createPickProgram', () => {
       expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
       expect(createTextureCalls.filter((c) => c.format === 'depth32float')).toHaveLength(1);
 
-      // A second pick at the same viewport size reuses the cached pair —
+      // A second pick at another cursor reuses the cached pair —
       // zero NEW textures, regardless of body-row count.
       await program.pick(20, 20);
       expect(createTextureCalls.filter((c) => c.format === 'r32uint')).toHaveLength(1);
@@ -519,9 +526,8 @@ describe('createPickProgram', () => {
     });
   });
 
-  // Each pass copies its cursor texel out before the next pass clears, so every
-  // slab can share one colour texture: up to four canvas-sized pairs (32 B/px)
-  // shrink to one colour + one depth per format (12 B/px).
+  // Each pass copies its texel out before the next pass clears, so every slab
+  // can share one colour texture and one depth per format.
   it('pick() shares one colour texture and one depth texture per format across every slab', async () => {
     const { device, createTextureCalls } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth', 'mars']));
@@ -544,8 +550,29 @@ describe('createPickProgram', () => {
     expect(formats).toEqual(['depth24plus', 'depth32float', 'r32uint']);
   });
 
-  it('pick() scissors every pass to the cursor texel', async () => {
-    const { device, passDescriptors, scissorRects } = makeDevice();
+  it('pick() allocates only 1×1 pick textures', async () => {
+    const { device, createTextureCalls } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeBodyCtx(['earth']));
+    const passes = [
+      makeContentPass({ slab: COSMO, enabled: true, drawPick: vi.fn() }),
+      makeContentPass({ slab: NEAR0, enabled: true, drawPick: vi.fn() }),
+      makeContentPass({ slab: 'body', enabled: true, drawPick: vi.fn() }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      passes,
+    });
+
+    await program.pick(10.7, 20.2);
+
+    expect(createTextureCalls.length).toBeGreaterThan(0);
+    for (const call of createTextureCalls) expect(call.size).toEqual({ width: 1, height: 1 });
+  });
+
+  it('pick() copies texel (0, 0) of every pass', async () => {
+    const { device, copyOrigins } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
     const passes = [
       makeContentPass({ slab: COSMO, enabled: true, drawPick: vi.fn() }),
@@ -558,17 +585,138 @@ describe('createPickProgram', () => {
       passes,
     });
 
-    await program.pick(10.7, 20.2);
+    await program.pick(42, 33);
 
-    expect(passDescriptors).toHaveLength(2);
-    expect(scissorRects).toEqual([
-      [10, 20, 1, 1],
-      [10, 20, 1, 1],
+    expect(copyOrigins).toEqual([
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 },
     ]);
   });
 
+  it('pick() hands every drawPick a view windowed to the cursor pixel', async () => {
+    const { device } = makeDevice();
+    // Distinct, non-zero projections per slab, so an uncropped vp cannot pass.
+    const base = makeCtx();
+    const ctx = {
+      ...base,
+      slabs: [
+        { ...base.slabs[NEAR0]!, vp: mat4d.translation([1, 2, 3]) as Float64Array },
+        { ...base.slabs[COSMO]!, vp: mat4d.scaling([2, 3, 4]) as Float64Array },
+      ],
+    } as FrameView;
+    vi.mocked(pickFrameContext).mockReturnValue(ctx);
+    const received: Array<{ slabIndex: number; view: SlabView }> = [];
+    const recordAs =
+      (slabIndex: number): ContentPass['drawPick'] =>
+      (_pass, view) =>
+        received.push({ slabIndex, view });
+    const passes = [
+      makeContentPass({ slab: COSMO, enabled: true, drawPick: recordAs(COSMO) }),
+      makeContentPass({ slab: NEAR0, enabled: true, drawPick: recordAs(NEAR0) }),
+      // The overlay group borrows NEAR0's view.
+      makeContentPass({
+        slab: NEAR0,
+        enabled: true,
+        pickTarget: 'overlay',
+        drawPick: recordAs(NEAR0),
+      }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      passes,
+    });
+
+    await program.pick(10.7, 20.2);
+
+    const cursorWindow = { originPx: [10, 20], sizePx: [1, 1] } as SlabView['window'];
+    expect(received).toHaveLength(3);
+    for (const { slabIndex, view } of received) {
+      expect(view.window).toEqual(cursorWindow);
+      expect(view.viewportPx).toEqual([1, 1]);
+      const expected = windowedSlabView(slabViewOf(ctx, slabIndex), cursorWindow, [
+        CANVAS.width,
+        CANVAS.height,
+      ]);
+      expect(view.vp).toEqual(expected.vp);
+    }
+  });
+
+  it('pick() gates passes on the whole-canvas view', async () => {
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+    const gatedViews: SlabView[] = [];
+    const pass = {
+      ...makeContentPass({ slab: COSMO, enabled: false, drawPick: vi.fn() }),
+      pickEnabled: (_state: EngineState, _ctx: FrameView, view: SlabView) => {
+        gatedViews.push(view);
+        return true;
+      },
+    } as ContentPass;
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      passes: [pass],
+    });
+
+    await program.pick(10, 20);
+
+    expect(gatedViews).toHaveLength(1);
+    expect(gatedViews[0]!.window.sizePx).toEqual([CANVAS.width, CANVAS.height]);
+    expect(gatedViews[0]!.viewportPx).toEqual([CANVAS.width, CANVAS.height]);
+  });
+
+  it('pick() clamps the cursor window inside the canvas', async () => {
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+    const windows: SlabView['window'][] = [];
+    const passes = [
+      makeContentPass({
+        slab: COSMO,
+        enabled: true,
+        drawPick: (_pass, view) => windows.push(view.window),
+      }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      passes,
+    });
+
+    await program.pick(CANVAS.width + 5, -3);
+
+    expect(windows).toEqual([{ originPx: [CANVAS.width - 1, 0], sizePx: [1, 1] }]);
+  });
+
+  it('renderForDebug hands whole-canvas views', () => {
+    const { device } = makeDevice();
+    vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
+    const views: SlabView[] = [];
+    const record: ContentPass['drawPick'] = (_pass, view) => views.push(view);
+    const passes = [
+      makeContentPass({ slab: COSMO, enabled: true, drawPick: record }),
+      makeContentPass({ slab: NEAR0, enabled: true, drawPick: record }),
+    ];
+    const program = createPickProgram({
+      device,
+      canvas: CANVAS,
+      state: makeState(() => undefined),
+      passes,
+    });
+
+    program.renderForDebug();
+
+    expect(views).toHaveLength(2);
+    for (const view of views) {
+      expect(view.window.sizePx).toEqual([CANVAS.width, CANVAS.height]);
+    }
+  });
+
   it("renderForDebug rasterises into its own targets, never pick()'s shared one", async () => {
-    const { device, scissorRects } = makeDevice();
+    const { device } = makeDevice();
     vi.mocked(pickFrameContext).mockReturnValue(makeCtx());
     const passes = [
       makeContentPass({ slab: COSMO, enabled: true, drawPick: vi.fn() }),
@@ -583,13 +731,11 @@ describe('createPickProgram', () => {
 
     await program.pick(10, 10);
     const shared = (device.createTexture as ReturnType<typeof vi.fn>).mock.results[0]!.value;
-    const scissorsAfterPick = scissorRects.length;
     const debug = program.renderForDebug();
 
     expect(debug).toHaveLength(2);
     expect(new Set(debug).size).toBe(2);
     expect(debug).not.toContain(shared);
-    expect(scissorRects).toHaveLength(scissorsAfterPick); // the overlay needs the full raster
   });
 
   it('never allocates pick:near0 at N=1 (no slab-0 pickable layer → one target)', async () => {
