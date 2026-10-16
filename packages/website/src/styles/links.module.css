@@ -20,7 +20,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0 2.5rem;
-  margin-top: 1.5rem;
+  margin-top: var(--row-top, 1.5rem);
 }
 
 .link-row.onward {

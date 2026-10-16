@@ -120,6 +120,12 @@
     margin: -0.75rem 0 0.75rem;
   }
 
+  /* A view link in a table cell keeps its 44px and gives the row the height of its text. */
+  & :is(td, th) > a:has(> svg) {
+    margin-block: -0.75rem;
+    vertical-align: middle;
+  }
+
   @media (max-width: 900px) {
     --doc-measure: 35rem;
   }

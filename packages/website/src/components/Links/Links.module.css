@@ -1,6 +1,7 @@
 .root {
   composes: link-row from '../../styles/links.module.css';
   /* Up under the paragraph it follows: a link's 44px are more than a line of text, and the margin takes the difference back. */
+  --row-top: -0.75rem;
   width: fit-content;
-  margin: -0.75rem 0 0.75rem;
+  margin-bottom: 0.75rem;
 }
