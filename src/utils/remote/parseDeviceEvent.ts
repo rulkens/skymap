@@ -12,9 +12,15 @@ import type { UnitPoint } from '../../@types/input/UnitPoint';
 
 const MAX_SIZE_PX = 16384;
 const POINTER_IDS = 2 ** 31;
+// Wider than 0..1 on purpose: the device channel follows a drag onto the whole
+// window, so moves and the final `up` of a drag that leaves the trackpad land
+// outside it. Dropping them would freeze the drag and strand the pointer.
+const AT_MIN = -10;
+const AT_MAX = 11;
 
 function unitPoint(raw: unknown): UnitPoint | null {
-  if (!isRecord(raw) || !isFiniteIn(raw.x, 0, 1) || !isFiniteIn(raw.y, 0, 1)) return null;
+  if (!isRecord(raw) || !isFiniteIn(raw.x, AT_MIN, AT_MAX) || !isFiniteIn(raw.y, AT_MIN, AT_MAX))
+    return null;
   return { x: raw.x, y: raw.y };
 }
 

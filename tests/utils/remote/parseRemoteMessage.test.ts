@@ -24,6 +24,7 @@ describe('parseRemoteMessage', () => {
   it('drops a message with no from', () => {
     expect(parse({ kind: 'hello' })).toBeNull();
     expect(parse({ from: '', kind: 'hello' })).toBeNull();
+    expect(parse({ from: 'x'.repeat(65), kind: 'hello' })).toBeNull();
   });
 
   it('drops an unknown kind', () => {

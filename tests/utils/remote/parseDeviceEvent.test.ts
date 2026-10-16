@@ -40,9 +40,24 @@ describe('parseDeviceEvent', () => {
     expect(parseDeviceEvent({ kind: 'resize', t: 1, widthPx: NaN, heightPx: 100 })).toBeNull();
   });
 
-  it('drops an at outside 0..1', () => {
-    expect(parseDeviceEvent({ ...down, at: { x: 1.01, y: 0.5 } })).toBeNull();
-    expect(parseDeviceEvent({ ...down, at: { x: 0.5, y: -0.01 } })).toBeNull();
+  it('keeps the up of a drag that ended off the trackpad', () => {
+    const up: DeviceEvent = { ...down, kind: 'up', at: { x: 1.4, y: -0.2 } };
+    expect(parseDeviceEvent(up)).toEqual(up);
+  });
+
+  it('drops an at far outside the surface', () => {
+    expect(parseDeviceEvent({ ...down, at: { x: 12, y: 0.5 } })).toBeNull();
+    expect(parseDeviceEvent({ ...down, at: { x: 0.5, y: -11 } })).toBeNull();
+  });
+
+  it('drops a pointer id that is negative, fractional or too large', () => {
+    for (const pointer of [-1, 1.5, 2 ** 31])
+      expect(parseDeviceEvent({ ...down, pointer })).toBeNull();
+  });
+
+  it('drops a wheel ratio that is zero or negative', () => {
+    for (const ratio of [0, -1.2])
+      expect(parseDeviceEvent({ kind: 'wheel', t: 1, ratio, at: down.at, mods })).toBeNull();
   });
 
   it('drops a zero or huge size', () => {

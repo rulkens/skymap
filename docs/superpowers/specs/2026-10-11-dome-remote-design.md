@@ -169,7 +169,7 @@ export type RemoteCommand = {
 export type RemoteCommandEnv = { nowMs: number; toggleRows: readonly ToggleRow[] };
 
 export type RemoteCommandSpec<P> = {
-  parse: (raw: unknown) => P | null; // null drops the message
+  parse: (raw: unknown) => P | undefined; // undefined drops it (null is a real payload)
   toActions: (payload: P, env: RemoteCommandEnv) => UnknownAction[];
 };
 
@@ -198,7 +198,7 @@ The trackpad is an input source like the canvas: no new gesture code on either s
   dome's recognizer, the dome's active control scheme, the dome's tap and double-tap timing. A remote's surface
   aspect reaches the camera through its source record, so a portrait phone moves the sky isotropically.
 - **Validation:** `parseDeviceEvent(raw: unknown): DeviceEvent | null` (`src/utils/remote/`) accepts the
-  `DeviceEvent` kinds only, every number finite, `at` inside 0..1, sizes positive and bounded, pointer ids small
+  `DeviceEvent` kinds only, every number finite, `at` within −10..11 (a drag followed off the trackpad lands outside 0..1), sizes positive and bounded, pointer ids small
   integers. Anything else drops the message.
 - **Lifetime of a remote's source:** forked on that remote's first device event; its channel closes when the remote
   is silent for three seconds or the link closes, and `inputSourceSaga`'s `finally` ends any open gesture and
@@ -274,7 +274,7 @@ A Vite plugin under `tools/utils/vite/`, active on the dev and preview servers.
 - **Command registry:** every row rejects a malformed payload and an unknown id; an unknown command name is dropped;
   no row takes a time stamp from the wire.
 - **`parseDeviceEvent`:** every `DeviceEvent` kind round-trips through JSON; an unknown kind, a non-finite number, an
-  `at` outside 0..1 and a zero or huge size are each dropped.
+  `at` far outside the surface and a zero or huge size are each dropped.
 - **Receiver saga (real store):** a command message dispatches exactly its row's actions; a remote's device events
   reach the `input` slice under `remote:<id>`; three seconds of silence, and separately a closed link, end an open
   gesture and detach the source; a remote that returns attaches again with its last size; two remotes are two

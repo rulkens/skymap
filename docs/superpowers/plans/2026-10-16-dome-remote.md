@@ -136,7 +136,7 @@ export function parseDomeMessage(text: string): DomeMessage | null;
 **Rules:**
 - `parseDeviceEvent`: the five `DeviceEvent` arms only (`down|move|up|cancel`, `wheel`, `leave`, `resize`); `t`
   finite; `pointer` an integer in 0..2³¹; `pointerType` one of three; `button` 0, 1 or 2; `at.x`, `at.y` finite in
-  0..1; `mods` four booleans; `ratio` finite and positive; `widthPx`, `heightPx` finite in 1..16384. Returns a fresh
+  −10..11 (a drag followed off the trackpad lands outside 0..1); `mods` four booleans; `ratio` finite and positive; `widthPx`, `heightPx` finite in 1..16384. Returns a fresh
   object with only the known fields.
 - `parseRemoteMessage`: `JSON.parse` in a try; an object with a string `from` of 1..64 chars and a known `kind`;
   `device` runs `parseDeviceEvent`; `search` needs a string `requestId` of 1..64 chars and a string `query`, cut to 64
@@ -147,7 +147,7 @@ export function parseDomeMessage(text: string): DomeMessage | null;
 - [ ] Run the move, rename and widen; `npm run typecheck:fast`. No new test for the rename.
 - [ ] Tests `parseDeviceEvent`: `every DeviceEvent arm round-trips through JSON` (one fixture per arm, asserting
       `parseDeviceEvent(JSON.parse(JSON.stringify(e)))` equals `e`); `drops an unknown kind`; `drops a non-finite
-      number` (NaN serialises to null, so feed objects directly); `drops an at outside 0..1`; `drops a zero or huge
+      number` (NaN serialises to null, so feed objects directly); `drops an at far outside the surface`, `keeps the up of a drag that ended off the trackpad`; `drops a zero or huge
       size`; `drops extra fields from the result`.
 - [ ] Tests `parseRemoteMessage`: `drops non-JSON text`; `drops JSON that is not an object`; `drops a message with no
       from`; `drops an unknown kind`; `cuts a search query to 64 characters`; `a command the parseCommand stub
@@ -177,7 +177,7 @@ export function parseDomeMessage(text: string): DomeMessage | null;
 ```ts
 export type RemoteCommandEnv = { nowMs: number; toggleRows: readonly ToggleRow[] };
 export type RemoteCommandSpec<P> = {
-  parse: (raw: unknown) => P | null; // null drops the message
+  parse: (raw: unknown) => P | undefined; // undefined drops it (null is a real payload)
   toActions: (payload: P, env: RemoteCommandEnv) => UnknownAction[];
 };
 export const REMOTE_COMMANDS: { [K in keyof RemoteCommandPayloads]: RemoteCommandSpec<RemoteCommandPayloads[K]> };
