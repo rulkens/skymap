@@ -135,8 +135,8 @@ export type RemoteSearchMatch = { name: string; kind: string; action: PaletteAct
   reads, and maps each `ScoredRow` to `actionForRow` plus `paletteRowLabel(row): { name; kind }`, a new pure
   function that `ROW_VIEW` also reads for its primary text, so the two lists never name a row differently.
 - **Focus carries no name** (ruled 2026-10-16). Names live in each kind's info card today, and a name table would
-  widen the Layer contract. The remote names a focus from what it already holds (its latest search results, the
-  tour, exhibit and clip lists) and shows "Focused" otherwise.
+  widen the Layer contract. The remote names a focus from its latest search results (the only list it holds that
+  carries focus ids) and shows "Focused" otherwise.
 - **No version field.** Remote and dome ship from one build, and unknown kinds already drop.
 
 ### Commands
