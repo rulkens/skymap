@@ -31,7 +31,6 @@ function DocsMap({ search }: DocsMapProps) {
       <div className={styles.map}>
         {DOCS_TREE.map((group) => {
           const id = group.name.toLowerCase();
-          const more = group.pages.filter((page) => page.family).length;
           return (
             <section
               key={group.name}
@@ -41,11 +40,7 @@ function DocsMap({ search }: DocsMapProps) {
             >
               <div className={styles.about}>
                 <h2 id={`${id}-name`}>{group.name}</h2>
-                <p className={styles.purpose}>
-                  {group.purpose}
-                  {more > 0 &&
-                    ` The first of these pages lists ${more} more, one for each source or kind of source.`}
-                </p>
+                {group.purpose && <p className={styles.purpose}>{group.purpose}</p>}
               </div>
               <ul className={styles.pages}>
                 {group.pages
