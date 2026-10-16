@@ -11,8 +11,6 @@ import DocsSearch from './DocsSearch.astro';
 import { DOCS_TREE } from '../data/docsTree';
 import { sitePath } from '../utils/sitePath';
 
-const pages = DOCS_TREE.flatMap((group) => group.pages);
-const written = pages.filter((page) => page.status === 'live').length;
 ---
 
 <header class="wrap open" data-opening>
@@ -22,9 +20,6 @@ const written = pages.filter((page) => page.status === 'live').length;
     pages document what it does, the data it is built from and how it draws that data.
   </p>
   <DocsSearch big />
-  <p class="count small">
-    {written} of {pages.length} pages {written === 1 ? 'is' : 'are'} written. The dimmer names are planned.
-  </p>
 </header>
 
 <div class="wrap map">
@@ -72,12 +67,6 @@ const written = pages.filter((page) => page.status === 'live').length;
 
   .say {
     max-width: var(--measure-lead);
-  }
-
-  .count {
-    max-width: 34rem;
-    margin: 1.5rem 0 0;
-    color: var(--site-text-dim);
   }
 
   .map {
