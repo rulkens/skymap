@@ -158,9 +158,13 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Files:** Claims, Columns, Beside, Group, SectionHead, SectionNav, SourceTable, AskList, AddressStrip, ContactForm (island; its 104-line inline script becomes the island's logic, the Turnstile widget and `POST /api/contact` unchanged), Disc, DiscBand, Offer, Figure, Step, Steps, PressPictures, LessonLinks, Feature.
 
+- [x] Done. Deviations: ContactForm is an island only where the page places it (`domes.astro` chooses between `ContactForm` and the static `ContactClosed` from `CONTACT_ENDPOINT`, which an island cannot read, and passes endpoint, site key and hrefs as props). Named slots are optional `ReactNode` props (`picture`, `today`, `work`, `link`, `lede`, `note`) because `astro check` does not see `slot=` as props. `Group` takes `first` for the part that follows a `SectionHead` (the old rule reached into `.head`). `Steps` hands `Step` its large numeral through `--numeral-*` properties instead of `ol.fixed`. New small components for what the page `<style>` blocks held: `Quotable`, `InlineAddress`, `FramePair`, `StatementsFigure`; `Columns` gained `footLast`, `Figure` gained `seam`.
+
 ### Task 4.2: Page styles out of pages
 
 **Files:** `pages/about.astro:169`, `pages/privacy.astro:143`, `pages/science.astro:272`, new component(s) holding those rules, `tests/packages/website/pageStyles.test.ts` (delete).
+
+- [x] Done: no page has a `<style>` block; `pageStyles.test.ts` deleted. The pages take their `wrap`/`section`/`link-row`/`small` classes from the vocabulary modules.
 
 - [ ] No `.astro` file under `src/` except pages and `layouts/Base.astro` remains; a grep in the gate checks it.
 - [ ] `site.css` holds no class selectors: each shared class left it in the wave where its last `.astro` user was rewritten (until then the vocabulary module and the global copy coexist; the vocabulary module is the one to edit).

@@ -17,11 +17,11 @@ const VIEW_LINK_TAGS = ['ViewLink', 'Feature'];
 /** View addresses that are not a control of their own: file, how many, and why. */
 const OTHER_USES: Record<string, number> = {
   // The address shown as text and copied, beside a picture.
-  'components/AddressStrip.astro': 2,
+  'components/AddressStrip/AddressStrip.tsx': 1,
   // The whole card is the link, its picture included; the launch drawing follows the name.
-  'components/Places.astro': 1,
+  'components/Places/PlaceLink.tsx': 1,
   // The card's picture repeats the card's ViewLink, hidden from the keyboard and from assistive technology.
-  'components/LessonLinks.astro': 1,
+  'components/LessonLinks/LessonLinks.tsx': 1,
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })

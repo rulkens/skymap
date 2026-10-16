@@ -2,11 +2,12 @@
 import Base from '../layouts/Base.astro';
 import ObjLink from '../components/ObjLink/ObjLink.tsx';
 import ViewLink from '../components/ViewLink/ViewLink.tsx';
-import PictureBand from '../components/PictureBand.astro';
+import PictureBand from '../components/PictureBand/PictureBand.tsx';
 import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
 import Sources from '../components/Sources/Sources.tsx';
 import { appLink } from '../data/appLink';
 import { siteShot } from '../data/siteShot';
+import layout from '../styles/layout.module.css';
 import { sitePath } from '../utils/sitePath';
 ---
 
@@ -23,7 +24,7 @@ import { sitePath } from '../utils/sitePath';
     <ViewLink hang href={appLink(siteShot('void-bootes').link)}>The Boötes Void</ViewLink>
     <ShotCaption id="void-bootes" open={false} />
   </PictureBand>
-  <div class="wrap section last">
+  <div class={`${layout.wrap} ${layout.section}`}>
     <Sources ids={['bootes-void']} />
   </div>
 </Base>

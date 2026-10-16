@@ -1,28 +1,34 @@
 ---
 import Base from '../layouts/Base.astro';
-import AskList from '../components/AskList.astro';
-import Citation from '../components/Citation.astro';
-import Claims from '../components/Claims.astro';
-import Columns from '../components/Columns.astro';
-import Credits from '../components/Credits.astro';
-import Figure from '../components/Figure.astro';
-import FullFigure from '../components/FullFigure.astro';
-import Group from '../components/Group.astro';
-import Note from '../components/Note.astro';
+import AskList from '../components/AskList/AskList.tsx';
+import Citation from '../components/Citation/Citation.tsx';
+import Claims from '../components/Claims/Claims.tsx';
+import Columns from '../components/Columns/Columns.tsx';
+import Credits from '../components/Credits/Credits.tsx';
+import FramePair from '../components/FramePair/FramePair.tsx';
+import FullFigure from '../components/FullFigure/FullFigure.tsx';
+import Group from '../components/Group/Group.tsx';
+import Note from '../components/Note/Note.tsx';
 import ObjLink from '../components/ObjLink/ObjLink.tsx';
 import OpenApp from '../components/OpenApp/OpenApp.tsx';
-import PictureBand from '../components/PictureBand.astro';
+import PictureBand from '../components/PictureBand/PictureBand.tsx';
 import Remark from '../components/Remark/Remark.tsx';
-import SectionHead from '../components/SectionHead.astro';
-import SectionNav from '../components/SectionNav.astro';
+import SectionHead from '../components/SectionHead/SectionHead.tsx';
+import SectionNav from '../components/SectionNav/SectionNav.tsx';
 import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
+import StatementsFigure from '../components/StatementsFigure/StatementsFigure.tsx';
 import Sources from '../components/Sources/Sources.tsx';
-import SourceTable from '../components/SourceTable.astro';
+import SourceTable from '../components/SourceTable/SourceTable.tsx';
 import { fact } from '../data/fact';
 import { REPO_URL } from '../data/siteIdentity';
+import layout from '../styles/layout.module.css';
+import links from '../styles/links.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
+
+const section = `${layout.wrap} ${layout.section}`;
+const linkRow = `${links['link-row']} ${links.onward}`;
 
 const title = 'The science behind Skymap: data, methods, limits';
 const description =
@@ -149,7 +155,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     ]}
   />
 
-  <section class="wrap section" id="sources">
+  <section class={section} id="sources">
     <SectionHead title="The sources">
       <p>
         This is every dataset Skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and
@@ -176,7 +182,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     </SourceTable>
   </section>
 
-  <section class="wrap section" id="bins">
+  <section class={section} id="bins">
     <SectionHead title="Measured, derived, drawn">
       <p>
         Each word has one meaning on this site. A point in the scene is usually all three at once: a measured
@@ -184,17 +190,14 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       </p>
     </SectionHead>
 
-    <Group title="Measured" big>
+    <Group title="Measured" big first>
       <p slot="lede">An instrument recorded it, and we use the published value.</p>
       <Claims items={MEASURED} />
     </Group>
 
     <Group title="Derived" big>
       <p slot="lede">Computed from measurements by a method we can name.</p>
-      <div class="pair">
-        <Figure id="science-web-points" sizes="(max-width: 900px) 100vw, 36rem" />
-        <Figure id="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
-      </div>
+      <FramePair start="science-web-points" end="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
       <Claims items={DERIVED} />
     </Group>
 
@@ -203,9 +206,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
         A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside the
         <a href={sitePath('/docs/science/#the-milky-way')}>Milky Way</a>, so its portrait from outside has to be drawn.
       </p>
-      <div class="one grid">
-        <div class="statements"><Figure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" /></div>
-      </div>
+      <StatementsFigure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" />
       <Claims items={DRAWN} />
     </Group>
     <Remark client:visible text={fact('astronomical-unit').short!} />
@@ -213,7 +214,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 
   <FullFigure id="science-zoa" />
 
-  <section class="wrap section" id="simplifications">
+  <section class={section} id="simplifications">
     <SectionHead title="Known simplifications">
       <p>
         {count} places where the scene <a href={sitePath('/docs/simplifications/')}>departs from the sky</a>, or from what a careful analysis would do, as of{' '}
@@ -221,8 +222,8 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       </p>
     </SectionHead>
     {
-      SIMPLIFIED.map((group) => (
-        <Group title={group.title} big>
+      SIMPLIFIED.map((group, i) => (
+        <Group title={group.title} big first={i === 0}>
           <Claims items={group.items} />
         </Group>
       ))
@@ -232,7 +233,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     </Note>
   </section>
 
-  <section class="wrap section" id="cite">
+  <section class={section} id="cite">
     <SectionHead title="How to cite">
       <p><a href={sitePath('/docs/cite/')}>Cite Skymap</a> for the pictures, and the catalogues for the data in them.</p>
     </SectionHead>
@@ -248,9 +249,9 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     </Columns>
   </section>
 
-  <section class="wrap section" id="onward">
+  <section class={section} id="onward">
     <h2>Further reading</h2>
-    <div class="link-row">
+    <div class={links['link-row']}>
       <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
       <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
       <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
@@ -258,45 +259,13 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       <ObjLink hang href={sitePath('/classroom/')}>Use Skymap in the classroom</ObjLink>
       <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
     </div>
-    <div class="link-row onward">
+    <div class={linkRow}>
       <OpenApp />
     </div>
   </section>
 
-  <div class="wrap section last">
+  <div class={section}>
     <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>
-
-<style>
-  /* One camera, two layers: the frames sit edge to edge so the eye carries a place across. */
-  .pair {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem 0.25rem;
-  }
-
-  .pair,
-  .one {
-    margin-bottom: 2.5rem;
-  }
-
-  /* The frames meet in the middle of a gap of the page grid; their labels keep to its columns either side. */
-  @media (min-width: 901px) {
-    .pair :global(figcaption) {
-      padding-right: calc(var(--col-gap) / 2 - 0.125rem);
-      --cols: 6;
-    }
-
-    .pair > :global(:nth-child(2) figcaption) {
-      padding-inline: calc(var(--col-gap) / 2 - 0.125rem) 0;
-    }
-  }
-
-  @media (max-width: 900px) {
-    .pair {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>

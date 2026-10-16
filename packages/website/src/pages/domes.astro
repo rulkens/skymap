@@ -1,24 +1,30 @@
 ---
 import Base from '../layouts/Base.astro';
-import Beside from '../components/Beside.astro';
-import Columns from '../components/Columns.astro';
-import ContactForm from '../components/ContactForm.astro';
-import Credits from '../components/Credits.astro';
-import DiscBand from '../components/DiscBand.astro';
-import Figure from '../components/Figure.astro';
+import Beside from '../components/Beside/Beside.tsx';
+import Columns from '../components/Columns/Columns.tsx';
+import ContactClosed from '../components/ContactForm/ContactClosed.tsx';
+import ContactForm from '../components/ContactForm/ContactForm.tsx';
+import Credits from '../components/Credits/Credits.tsx';
+import DiscBand from '../components/DiscBand/DiscBand.tsx';
+import Figure from '../components/Figure/Figure.tsx';
 import ObjLink from '../components/ObjLink/ObjLink.tsx';
-import Offer from '../components/Offer.astro';
+import Offer from '../components/Offer/Offer.tsx';
 import Remark from '../components/Remark/Remark.tsx';
-import SectionHead from '../components/SectionHead.astro';
-import Step from '../components/Step.astro';
-import Steps from '../components/Steps.astro';
+import SectionHead from '../components/SectionHead/SectionHead.tsx';
+import Step from '../components/Step/Step.tsx';
+import Steps from '../components/Steps/Steps.tsx';
 import ViewLink from '../components/ViewLink/ViewLink.tsx';
 import { appLink } from '../data/appLink';
+import { CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../data/contact';
 import { fact } from '../data/fact';
 import { REPO_URL } from '../data/siteIdentity';
 import { siteShot } from '../data/siteShot';
+import layout from '../styles/layout.module.css';
+import text from '../styles/type.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
+
+const section = `${layout.wrap} ${layout.section}`;
 
 const title = 'Domes and museums | Skymap';
 const description =
@@ -57,13 +63,13 @@ const STEPS = [
       <a href={sitePath('/docs/guide/screens-and-domes/#dome-mode')}>live fisheye picture</a> from the app, a <a href={sitePath('/docs/guide/screens-and-domes/#live-or-as-a-film')}>rendered film</a>, or a screen built around <a href={sitePath('/docs/guide/tours/#what-an-exhibit-is')}>one exhibit</a>.
     </p>
     <ObjLink hang href="#contact">How to reach us</ObjLink>
-    <p slot="note" class="small">
+    <p slot="note" class={text.small}>
       This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
       are 4,096.
     </p>
   </DiscBand>
 
-  <section class="wrap section" id="deliver">
+  <section class={section} id="deliver">
     <SectionHead title="What we can deliver">
       <p>For each: what the code does today, and what would be work for you.</p>
     </SectionHead>
@@ -111,12 +117,12 @@ const STEPS = [
     </Offer>
   </section>
 
-  <section class="wrap section" id="honest">
+  <section class={section} id="honest">
     <SectionHead title="What your audience is looking at" />
     <Columns count={3}>
       <div>
         <h3>Data and drawing, labelled</h3>
-        <p class="small">
+        <p class={text.small}>
           Star and galaxy positions come from published <a href={sitePath('/docs/data/')}>catalogues</a>. Some of the scene is a model: nobody has
           photographed <a href={sitePath('/docs/science/#the-milky-way')}>the Milky Way</a> from outside, so on your dome it is drawn.
         </p>
@@ -124,7 +130,7 @@ const STEPS = [
       </div>
       <div>
         <h3>Credits and licences</h3>
-        <p class="small">
+        <p class={text.small}>
           Some data and imagery in Skymap carry non-commercial licences. The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data.{' '}
           {fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source
           by source, ask the rights holders where the terms require it, and replace what may not be shown.
@@ -133,7 +139,7 @@ const STEPS = [
       </div>
       <div>
         <h3>Open source</h3>
-        <p class="small">
+        <p class={text.small}>
           <a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye is made</a> before anyone
           signs anything.
         </p>
@@ -143,20 +149,20 @@ const STEPS = [
     <Remark client:visible text={fact('earth-rotation').short!} live="dome-turn" />
   </section>
 
-  <section class="wrap section" id="commission">
+  <section class={section} id="commission">
     <SectionHead title="How a commission runs" />
     <Steps count={4}>
       {
         STEPS.map((step) => (
           <Step title={step.title}>
-            <p class="small">{step.text}</p>
+            <p class={text.small}>{step.text}</p>
           </Step>
         ))
       }
     </Steps>
   </section>
 
-  <section class="wrap section" id="contact">
+  <section class={section} id="contact">
     <Beside>
       <div>
         <h2>Write to us</h2>
@@ -165,11 +171,25 @@ const STEPS = [
           without asking anyone.
         </p>
       </div>
-      <ContactForm />
+      <div>
+        {
+          CONTACT_ENDPOINT && TURNSTILE_SITE_KEY ? (
+            <ContactForm
+              client:visible
+              endpoint={CONTACT_ENDPOINT}
+              siteKey={TURNSTILE_SITE_KEY}
+              privacyHref={sitePath('/privacy/')}
+              issuesHref={ISSUES_URL}
+            />
+          ) : (
+            <ContactClosed privacyHref={sitePath('/privacy/')} issuesHref={ISSUES_URL} />
+          )
+        }
+      </div>
     </Beside>
   </section>
 
-  <div class="wrap section last">
+  <div class={section}>
     <Credits />
   </div>
 </Base>

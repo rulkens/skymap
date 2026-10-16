@@ -1,0 +1,91 @@
+.root {
+  composes: grid halves from '../../styles/layout.module.css';
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  /* Seven shared rows: picture, name, four lines of the table, links. */
+  & li {
+    display: grid;
+    grid-row: span 7;
+    grid-template-rows: subgrid;
+  }
+
+  & picture img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  & h3 {
+    margin: 1rem 0 0.75rem;
+  }
+}
+
+/* The table's rows are the card's rows, so they line up across the pair. */
+.terms {
+  composes: small from '../../styles/type.module.css';
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  margin: 0;
+
+  & > div {
+    display: grid;
+    grid-template-rows: subgrid;
+    /* The names take two of the card's six columns, so the statements start on a line of the page grid. */
+    grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  & dt {
+    grid-column: span 2;
+    color: var(--site-text-dim);
+  }
+
+  & dd {
+    grid-column: 3 / -1;
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+}
+
+.name {
+  display: block;
+  color: var(--color-fg);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.5rem;
+  max-width: none;
+  margin: 0 0 4rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-divider);
+}
+
+@media (max-width: 900px) {
+  .terms dt {
+    grid-column: span 4;
+  }
+
+  .terms dd {
+    grid-column: 5 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Name above statement: two rows of its own, or the pair would share the card's one row and overlap. */
+  .terms > div {
+    grid-template-rows: none;
+    row-gap: 0.25rem;
+  }
+
+  .terms dt,
+  .terms dd {
+    grid-column: 1 / -1;
+  }
+}
