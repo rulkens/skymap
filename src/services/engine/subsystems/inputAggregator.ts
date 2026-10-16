@@ -12,16 +12,7 @@ import type { InputAggregator } from '../../../@types/engine/subsystems/InputAgg
 import type { InputGestureEvent } from '../../../@types/camera/InputGestureEvent';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { Vec2 } from '../../../@types/math/Vec2';
-
-/**
- * Exponent scale applied to `WheelEvent.deltaY`: factor = e^(deltaY · k).
- *
- * deltaY is ~±100 per notch on a mouse (pixel delta mode), ~±3–4 on a
- * high-resolution trackpad, so one notch is e^0.1 ≈ 1.105 — about 10 % per
- * step. Exponential rather than additive so the proportional step is the same
- * whether the camera sits 0.1 Mpc or 1000 Mpc out.
- */
-export const WHEEL_ZOOM_K = 0.001;
+import { WHEEL_ZOOM_K } from '../../../data/input/wheelZoomK';
 
 export function createInputAggregator(): InputAggregator {
   const steps: InputStep[] = [];
