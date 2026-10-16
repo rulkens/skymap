@@ -4,13 +4,13 @@
  * the article or main region reads as plain text and each reviewed heading carries an icon that opens that section's
  * panel: its marks, the feedback notes inside it, the owner's notes. Select text and press
  * c, w or g to add a mark; m shows the marks in the text (click one to cycle its state); h
- * flips between the original and the result.
+ * flips between the original and the result. The keys are listed in a box the bar's Keys button
+ * (or ?) opens; it starts open the first time the overlay is on in a browser.
  */
 import type { DocsReview } from '../../../../../tools/site/@types/DocsReview';
 import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReviewMark';
 import { devOverlay } from '../overlay/devOverlay';
 import { make } from '../overlay/make';
-import { overlayKeys } from '../overlay/overlayKeys';
 import { pageNotes } from '../overlay/pageNotes';
 import type { ReviewPanel } from './@types/ReviewPanel';
 import type { ReviewPanelActions } from './@types/ReviewPanelActions';
@@ -19,6 +19,7 @@ import { clearMarks } from './clearMarks';
 import { describeApply } from './describeApply';
 import { flashMark } from './flashMark';
 import { locateNotes } from './locateNotes';
+import { makeKeysHelp } from './makeKeysHelp';
 import { openSectionPanel } from './openSectionPanel';
 import { paintMark } from './paintMark';
 import { placeAfter } from './placeAfter';
@@ -33,6 +34,7 @@ import './review.css';
 const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const ROUTE = `${BASE}__review`;
 const HIDE_KEY = 'skymap-review-hide-cut';
+const HELP_SEEN_KEY = 'skymap-review-keys-seen';
 const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'good', good: 'cut' } as const;
 
 const APPLY_POLL_MS = 3000;
@@ -56,9 +58,8 @@ async function initReview(): Promise<void> {
   const job = make('input', 'review-job', bar);
   const words = make('span', 'review-words', bar);
   const counts = make('span', 'review-counts', bar);
-  const keys = make('span', 'review-keys', bar);
-  keys.textContent = overlayKeys(true);
-  // The confirm line takes the keys' place until the owner answers it.
+  const keysButton = make('button', 'review-bar-button review-keys-button', bar);
+  const help = makeKeysHelp(bar);
   const confirm = make('span', 'review-confirm-bar', bar);
   const confirmText = make('span', 'review-confirm-text', confirm);
   const yes = make('button', 'review-bar-button', confirm);
@@ -79,12 +80,15 @@ async function initReview(): Promise<void> {
     [no, 'Cancel'],
     [applyButton, 'Apply page'],
     [cancelApply, 'Cancel apply'],
+    [keysButton, 'Keys (?)'],
     [toggle, ''],
     [applyState, ''],
   ] as const) {
     button.type = 'button';
     if (label) button.textContent = label;
   }
+  keysButton.setAttribute('aria-controls', help.id);
+  keysButton.setAttribute('aria-expanded', 'false');
   toggle.title = 'Show the result: cut passages gone, rewrites in place (H)';
   // The bar wraps on a narrow screen: the page is pushed down by what it measures, not by a guess.
   new ResizeObserver(() =>
@@ -126,6 +130,26 @@ async function initReview(): Promise<void> {
   function closePanel(): void {
     panel?.close();
     panel = null;
+  }
+
+  // The box and a section panel share the corner, so only one is open at a time.
+  function setHelp(open: boolean, focus = false): void {
+    if (open) closePanel();
+    const hadFocus = help.contains(document.activeElement);
+    help.hidden = !open;
+    keysButton.setAttribute('aria-expanded', String(open));
+    if (open && focus) help.focus();
+    else if (!open && hadFocus) keysButton.focus();
+  }
+  // Open the first time the overlay is turned on in this browser, closed after that until asked for.
+  function introduceKeys(): void {
+    try {
+      if (localStorage.getItem(HELP_SEEN_KEY)) return;
+      localStorage.setItem(HELP_SEEN_KEY, '1');
+    } catch {
+      return;
+    }
+    setHelp(true);
   }
 
   // What earlier applies carried out is history: out of the text, the counts and the section panels.
@@ -170,6 +194,7 @@ async function initReview(): Promise<void> {
     bar.hidden = !active;
     if (!active) {
       sections = [];
+      setHelp(false);
       return closePanel();
     }
     const live = liveMarks();
@@ -216,6 +241,7 @@ async function initReview(): Promise<void> {
     [...sections].reverse().find((s) => s.items.some((i) => i.kind === 'mark' && i.mark === mark));
 
   function openPanel(section: ReviewSection, key?: string, focus = false): void {
+    setHelp(false);
     if (panel?.heading !== section.heading) {
       closePanel();
       panel = openSectionPanel(section, actions);
@@ -298,7 +324,6 @@ async function initReview(): Promise<void> {
   }
   const closeConfirm = (): void => {
     confirm.hidden = true;
-    keys.hidden = false;
     applyButton.focus();
   };
   applyButton.addEventListener('click', () => {
@@ -306,7 +331,6 @@ async function initReview(): Promise<void> {
     confirmText.textContent = text;
     yes.hidden = nothing;
     confirm.hidden = false;
-    keys.hidden = true;
     (nothing ? no : yes).focus();
   });
   yes.addEventListener('click', () => {
@@ -322,6 +346,7 @@ async function initReview(): Promise<void> {
   });
   applyState.addEventListener('click', () => {
     if (panel?.heading === applyState) return closePanel();
+    setHelp(false);
     closePanel();
     panel = openSectionPanel(historySection(), actions, true);
     refreshPanel();
@@ -357,6 +382,7 @@ async function initReview(): Promise<void> {
   devOverlay.subscribe((on) => {
     active = on;
     render();
+    if (on) introduceKeys();
   });
   pageNotes.subscribe(() => active && render());
   void pageNotes.refresh().catch(() => {
@@ -367,6 +393,10 @@ async function initReview(): Promise<void> {
     if ((e.target as Element | null)?.closest('.review-panel textarea')) return true;
     if (!confirm.hidden) {
       closeConfirm();
+      return true;
+    }
+    if (!help.hidden) {
+      setHelp(false);
       return true;
     }
     if (!panel) return false;
@@ -403,7 +433,9 @@ async function initReview(): Promise<void> {
         swallowClick = false;
         return;
       }
-      if (!(e.target as Element).closest('.review-panel, .review-section-icon')) closePanel();
+      const target = e.target as Element;
+      if (!target.closest('.review-panel, .review-section-icon')) closePanel();
+      if (!target.closest('.review-help, .review-keys-button')) setHelp(false);
     },
     true,
   );
@@ -437,13 +469,15 @@ async function initReview(): Promise<void> {
     if (e.key === 'Enter') job.blur();
   });
   toggle.addEventListener('click', () => setHiding(!hiding));
+  keysButton.addEventListener('click', () => setHelp(!!help.hidden, true));
   document.addEventListener('keydown', (e) => {
     const typing = !!(e.target as HTMLElement | null)?.closest(
       'input, textarea, select, [contenteditable]',
     );
     if (!active || typing || e.metaKey || e.ctrlKey || e.altKey) return;
     const key = e.key.toLowerCase();
-    if (key === 'h') setHiding(!hiding);
+    if (key === '?') setHelp(!!help.hidden, true);
+    else if (key === 'h') setHiding(!hiding);
     else if (key === 'm') {
       marksShown = !marksShown;
       render();
@@ -453,6 +487,7 @@ async function initReview(): Promise<void> {
   });
 
   render();
+  if (active) introduceKeys();
 }
 
 void initReview();

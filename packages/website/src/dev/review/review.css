@@ -45,7 +45,8 @@ html.review-on main {
 
 .review-bar[hidden],
 .review-confirm-bar[hidden],
-.review-bar button[hidden] {
+.review-bar button[hidden],
+.review-help[hidden] {
   display: none;
 }
 
@@ -77,21 +78,9 @@ html.review-on main {
 }
 
 /* Gives way first when the bar is full, so the job field keeps its width. */
-.review-keys,
 .review-confirm-bar {
   flex: 3 1 10rem;
   min-width: 0;
-  color: var(--site-text-dim);
-  font-size: 0.75rem;
-}
-
-.review-keys {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.review-confirm-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -183,11 +172,6 @@ html.review-on main {
 
   html.review-on .fb-dock {
     bottom: calc(var(--review-bar) + var(--space-8));
-  }
-
-  .review-keys {
-    flex: 1 0 100%;
-    white-space: normal;
   }
 
   .review-job {
@@ -339,8 +323,57 @@ html.review-on #page :is(h1, h2, h3) {
   font: 400 0.8125rem / 1.4 var(--font-body);
 }
 
-.review-panel:focus {
+.review-panel:focus,
+.review-help:focus {
   outline: none;
+}
+
+/* The key reference hangs from the bar, in the panel's corner; the two are never open together. */
+.review-help {
+  position: absolute;
+  top: calc(100% + var(--space-8));
+  right: var(--space-8);
+  box-sizing: border-box;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar) - 9rem);
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--review-line);
+  color: var(--site-text);
+  line-height: 1.4;
+}
+
+.review-help h3 {
+  margin: var(--space-6) 0 var(--space-2);
+  color: var(--site-text-dim);
+  font: 600 0.6875rem / 1.2 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-help h3:first-child {
+  margin-top: 0;
+}
+
+.review-help dl {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-2) var(--space-8);
+  margin: 0;
+}
+
+.review-help dt,
+.review-help dd {
+  margin: 0;
+}
+
+.review-help kbd {
+  padding: 0 var(--space-3);
+  border: 1px solid var(--review-line-dim);
+  border-radius: var(--space-2);
+  color: var(--color-fg);
+  font: 400 0.75rem / 1.4 var(--font-family-mono);
 }
 
 /* On a phone the panel is a sheet over the foot of the page, above the feedback button. */
@@ -349,6 +382,16 @@ html.review-on #page :is(h1, h2, h3) {
     top: auto;
     right: var(--space-8);
     bottom: calc(var(--review-bar) + 4rem);
+    left: var(--space-8);
+    width: auto;
+    max-height: 55svh;
+  }
+
+  /* Above the bar, clear of the feedback button like the panel. */
+  .review-help {
+    top: auto;
+    right: var(--space-8);
+    bottom: calc(100% + 4rem);
     left: var(--space-8);
     width: auto;
     max-height: 55svh;
@@ -461,11 +504,6 @@ html.review-on #page :is(h1, h2, h3) {
 
 .review-confirm-text {
   flex: 1 0 100%;
-}
-
-/* The keys line of the feedback dock gives way to the review bar's when the page has a review. */
-html.review-on .fb-keys {
-  display: none;
 }
 
 /* Shift lets the pointer through the feedback capture layer, so text can be selected for a mark. */
