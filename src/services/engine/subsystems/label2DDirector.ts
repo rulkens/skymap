@@ -777,10 +777,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // array via signature.
     const mergedLabels: Label2D[] = [];
     let anyAwake = false;
+    // At blend 0 every emphasis is exactly 1, so the resting frame skips the lookups.
+    const atRest = ctx.snapshot.focusBlend === 0;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
-      if (p.label === undefined) {
+      if (p.label === undefined || atRest) {
         for (const l of out.labels) mergedLabels.push(l);
         continue;
       }

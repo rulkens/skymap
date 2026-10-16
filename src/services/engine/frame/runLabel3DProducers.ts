@@ -17,8 +17,9 @@ export function runLabel3DProducers(state: EngineState, ctx: FrameView): boolean
   let awake = false;
   for (const producer of state.label3DProducers) {
     const output = producer.produceLabels3D(state, ctx);
+    // At blend 0 every emphasis is exactly 1, so the resting frame skips the lookup.
     const emphasis =
-      producer.label === undefined
+      producer.label === undefined || ctx.snapshot.focusBlend === 0
         ? 1
         : emphasisOf(
             visibilityEntryOf(state.visibilityEntries, `label:${producer.label}`),
