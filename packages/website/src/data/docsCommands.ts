@@ -296,6 +296,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:compare'],
+        does: 'Shoots every page of two built copies of the site at a desktop and a phone width, and fails on a page that differs in more than a thousandth of its pixels or is in one copy only.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:fold'],
         does: 'Opens every page of a running site in several window sizes and fails where a page’s title and lead do not fit the first screen.',
         manual: SITE_TOOLS,

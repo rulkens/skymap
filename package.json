@@ -124,6 +124,7 @@
     "site:links": "tsx --import ./tools/site/stubCssImports.mjs tools/site/checkSiteLinks.ts",
     "site:external": "tsx tools/site/checkExternalLinks.ts",
     "site:repeats": "vitest run tests/packages/website/factRepeats.test.ts",
+    "site:compare": "tsx tools/site/compareSite.ts",
     "site:fold": "tsx tools/site/checkFold.ts",
     "site:shots": "tsx tools/site/shootSiteShots.ts",
     "site:loops": "tsx tools/site/shootSiteLoops.ts",

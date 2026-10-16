@@ -69,9 +69,9 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Contract:** `npm run site:compare -- --baseline <dir> --current <dir> [--only <path-prefix>]` serves both built `dist/home/` trees, shoots every page listed in each sitemap (plus `/404.html`) at 1440 × 900 and 400 × 860, full-page, with animations and videos frozen (reduced motion, `video` paused at 0, the Home flight at progress 0), diffs each pair with `pixelmatch` (already in node_modules) and writes `<scratchpad>/compare/<page>-<width>-{base,cur,diff}.png` plus a table: page, width, changed pixels, ratio. Exit 1 when any page's ratio is over 0.001 or a page exists on one side only.
 
-- [ ] Build the baseline once from main `c2c38a1e7` into a scratch copy (`git worktree add` is the controller's step, not the task's: the task takes a directory).
-- [ ] Test `compareSite flags a page present on one side only` with two tiny fixture trees (no browser needed for that path).
-- [ ] Run it baseline-vs-baseline: zero diffs (proves the freezing is deterministic). Report the run time.
+- [x] Build the baseline once from main `c2c38a1e7` into a scratch copy (`git worktree add` is the controller's step, not the task's: the task takes a directory).
+- [x] Test `compareSite flags a page present on one side only` with two tiny fixture trees (no browser needed for that path).
+- [x] Run it baseline-vs-baseline: zero diffs (proves the freezing is deterministic). About 4 minutes for 110 pages at both widths. The freezing is reduced motion, paused videos, `performance.now` fixed at 1000, a pass down the page so every picture is drawn, and every scrolled box (the docs list scrolls itself to the current page from a parse-time position that varies by 42 px) back to its top: the gate does not cover that scroll, check it by eye when DocsNav is rewritten. Pages are read from the built files, since the preview build writes no sitemap.
 
 ---
 
