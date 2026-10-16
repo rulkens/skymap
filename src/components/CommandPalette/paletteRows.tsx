@@ -24,6 +24,7 @@ import { cardShotUrl } from '../../utils/palette/cardShotUrl';
 import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
 import { actionForRow } from '../../utils/palette/actionForRow';
+import { paletteRowLabel } from '../../utils/palette/paletteRowLabel';
 import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import styles from './ResultsList.module.css';
@@ -68,13 +69,8 @@ const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, seconda
  * else (aliases, constellation/scale chip, captured-shot leading visual) is
  * identical, so one row shape serves both kinds.
  */
-function namedRowView(
-  m: ScoredRow,
-  keyPrefix: string,
-  testidPrefix: string,
-  id: string,
-  label: string,
-): RowView {
+function namedRowView(m: ScoredRow, keyPrefix: string, testidPrefix: string, id: string): RowView {
+  const label = paletteRowLabel(m).name;
   const aliases = (BODY_SEARCH_NAMES.get(id) ?? []).slice(1);
   const chip = bodyRowChip(id);
   return {
@@ -99,12 +95,13 @@ const EARTH_CHIP = <span className={styles.source}>Earth</span>;
  * thumbnail to look up, so the two differ only in that chip.
  */
 function glyphRowView(
+  m: ScoredRow,
   kind: string,
   id: string,
   names: readonly string[],
   chip?: ReactNode,
 ): RowView {
-  const primary = names[0] ?? '(unnamed)';
+  const primary = paletteRowLabel(m).name;
   const aliases = names.slice(1);
   return {
     key: `${kind}:${id}`,
@@ -145,7 +142,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
               loading="lazy"
             />
           ),
-          primary: m.entry.names[0],
+          primary: paletteRowLabel(m).name,
           secondary:
             m.entry.names.length > 1 ? (
               <span className={styles.secondary}>{m.entry.names.slice(1).join(' · ')}</span>
@@ -158,14 +155,14 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     key: 'milkyWay',
     testid: 'milky-way-row',
     leading: shotOrGlyph(m, MILKY_WAY_NAMES[0]),
-    primary: MILKY_WAY_NAMES[0],
+    primary: paletteRowLabel(m).name,
     secondary: <span className={styles.secondary}>{MILKY_WAY_NAMES.slice(1).join(' · ')}</span>,
   }),
   // Alias row — no thumbnail (we don't pre-render NGC galaxies); letter-glyph
   // placeholder + source-label chip so GLADE vs 2MRS reads at a glance.
   alias: (m) => {
     if (m.kind !== 'alias') return EMPTY_ROW_VIEW;
-    const primary = m.entry.names[0] ?? '(unnamed)';
+    const primary = paletteRowLabel(m).name;
     const remaining = m.entry.names.slice(1);
     return {
       key: `alias:${m.entry.source}:${m.entry.localIdx}`,
@@ -194,13 +191,11 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   // Centre"). A seeded star's row renders identically — same lookups, same
   // chip — off its own star identity.
   body: (m) =>
-    m.kind !== 'body'
-      ? EMPTY_ROW_VIEW
-      : namedRowView(m, 'body', 'body-row', m.body.id, m.body.label),
+    m.kind !== 'body' ? EMPTY_ROW_VIEW : namedRowView(m, 'body', 'body-row', m.body.id),
   starCatalog: (m) =>
     m.kind !== 'starCatalog'
       ? EMPTY_ROW_VIEW
-      : namedRowView(m, 'starCatalog', 'star-row', m.star.id, m.star.label),
+      : namedRowView(m, 'starCatalog', 'star-row', m.star.id),
   // Structure row — the captured shot of a featured anchor (bulk rows have none),
   // else a glyph placeholder, + a category chip (Cluster / Supercluster /
   // Void / Group) from the per-category display copy, plus the Abell
@@ -212,7 +207,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       key: `structure:${id}`,
       testid: `structure-row-${id}`,
       leading: thumbOrGlyph(m.entry.featured ? structureShotUrl(id) : undefined, name),
-      primary: name,
+      primary: paletteRowLabel(m).name,
       secondary: (
         <>
           {abell !== null && abell !== name && <span className={styles.secondary}>{abell}</span>}
@@ -233,7 +228,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
           {m.exhibit.label[0] ?? '·'}
         </span>
       ),
-      primary: m.exhibit.label,
+      primary: paletteRowLabel(m).name,
       secondary: <span className={styles.source}>Exhibit</span>,
     };
   },
@@ -249,18 +244,18 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
           {m.tour.label[0] ?? '·'}
         </span>
       ),
-      primary: m.tour.label,
+      primary: paletteRowLabel(m).name,
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
   // Layer-published row — no thumbnail vocabulary to look up, and no chip: the
   // publishing Layer is not a source label the user would recognise.
   layer: (m) =>
-    m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView('layer', m.entry.id, m.entry.names),
+    m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView(m, 'layer', m.entry.id, m.entry.names),
   // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
   // here is on the one body.
   place: (m) =>
     m.kind !== 'place'
       ? EMPTY_ROW_VIEW
-      : glyphRowView('place', m.entry.id, m.entry.names, EARTH_CHIP),
+      : glyphRowView(m, 'place', m.entry.id, m.entry.names, EARTH_CHIP),
 };
