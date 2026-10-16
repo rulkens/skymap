@@ -55,7 +55,7 @@ each consumer.
 2. **Pick targets read one texel.** #906 shared one target set across slabs
    (66 → 25 MB at 1080p, 265 → 100 MB at 4K), and #908 renders every pick pass
    through a 1×1 window at the cursor
-   ([the pick-window spec](../../superpowers/specs/2026-10-14-pick-window-design.md)),
+   ([the pick-window spec](../../superpowers/specs/completed/2026-10-14-pick-window-design.md)),
    so `pick()`'s targets are a few bytes. Still open: the debug overlay's
    canvas-sized pick targets survive the overlay being turned off.
 3. **Eager allocations for off or invisible features.** Flow particles (26.6 MB);

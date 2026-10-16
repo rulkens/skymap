@@ -4,7 +4,7 @@
 
 **Architecture:** a `PickWindow` (canvas-px rectangle) rides on every `SlabView`. Prep (Group A) makes the view the one place a pick draw learns where it rasterises: labels and the zone of avoidance stop reading the canvas size for that, while every window is still the whole canvas, so nothing changes. The feature (Group B) adds the f64 crop and hands `pick()`'s draws a view windowed to the cursor pixel.
 
-**Spec:** `docs/superpowers/specs/2026-10-14-pick-window-design.md` (rulings 2026-10-15: prep rides this PR as its first commits; ZoA jitter edge differences accepted; parity checked once by hand, no committed script).
+**Spec:** `docs/superpowers/specs/completed/2026-10-14-pick-window-design.md` (rulings 2026-10-15: prep rides this PR as its first commits; ZoA jitter edge differences accepted; parity checked once by hand, no committed script).
 
 ## Global Constraints
 
@@ -71,10 +71,10 @@ export function pickWindowNdc(window: PickWindow, canvasPx: Readonly<Vec2>): Pic
 
 `centre = ((ox + sx/2) / W · 2 − 1, 1 − (oy + sy/2) / H · 2)`, `halfExtent = (sx / W, sy / H)`. `slabViewOf` sets `window` to `{ originPx: [0, 0], sizePx: [canvas w, canvas h] }`, the same values as its `viewportPx`. Test literals get the same whole-canvas window from their own `viewportPx`.
 
-- [ ] Test `pickWindowNdc of the whole canvas is centre 0, half-extent 1`.
-- [ ] Test `pickWindowNdc flips y: a 1×1 window at the top-left pixel` — 100×50 canvas, window `(0,0)` size `(1,1)` → centre `(−0.99, 0.98)`, halfExtent `(0.01, 0.02)`.
-- [ ] Implement the types, the field, `slabViewOf`, the util; sweep the literals. No other new test: the field is plumbing until Task 5, whose `renderForDebug` test pins the whole-canvas value.
-- [ ] `npm run typecheck:fast`, `npm test` → green. Commit.
+- [x] Test `pickWindowNdc of the whole canvas is centre 0, half-extent 1`.
+- [x] Test `pickWindowNdc flips y: a 1×1 window at the top-left pixel` — 100×50 canvas, window `(0,0)` size `(1,1)` → centre `(−0.99, 0.98)`, halfExtent `(0.01, 0.02)`.
+- [x] Implement the types, the field, `slabViewOf`, the util; sweep the literals. No other new test: the field is plumbing until Task 5, whose `renderForDebug` test pins the whole-canvas value.
+- [x] `npm run typecheck:fast`, `npm test` → green. Commit.
 
 ### Task 2: Label pick quads rasterise through `view.window`
 
@@ -84,9 +84,9 @@ export function pickWindowNdc(window: PickWindow, canvasPx: Readonly<Vec2>): Pic
 
 **Contract:** `draw(pass: GPURenderPassEncoder, quads: readonly LabelPickQuad[], window: PickWindow): void` replaces the `viewportPx` parameter. Each rect is written to the instance buffer translated by `−window.originPx`; the `viewportPx` uniform (`LabelPickUniforms`, unchanged layout) gets `window.sizePx`. Both passes pass `view.window` (rename `_view` → `view`) instead of `projection.viewportPx`. Quads keep being built from the label projections: the declutter layout is canvas-based. `labels/pick.wesl` does not change.
 
-- [ ] Test `draw translates every rect by the window origin` — window origin `(10, 20)`, rect `(5, 15, 15, 25)` → instance floats `(−5, −5, 5, 5)`.
-- [ ] Test `draw writes the window size as the viewport uniform` — size `(1, 1)` → uniform floats `[1, 1]`.
-- [ ] Implement. `npm run typecheck:fast`, `npm test -- labelPick labelsCosmoPass labelsNearPass` → green. Commit.
+- [x] Test `draw translates every rect by the window origin` — window origin `(10, 20)`, rect `(5, 15, 15, 25)` → instance floats `(−5, −5, 5, 5)`.
+- [x] Test `draw writes the window size as the viewport uniform` — size `(1, 1)` → uniform floats `[1, 1]`.
+- [x] Implement. `npm run typecheck:fast`, `npm test -- labelPick labelsCosmoPass labelsNearPass` → green. Commit.
 
 ### Task 3: The zone-of-avoidance pick rasterises through `view.window`
 
@@ -115,10 +115,10 @@ drawPick(pass, cam: OrbitCamera, canvasPx: Vec2, window: PickWindow, tuning, she
 
 `aspect` and `tanHalfFovY` keep coming from the canvas (`canvasPx`), never the window. `drawPick` writes `pickWindowNdc(window, canvasPx)` at 112–127. The pass calls `drawPick(pass, ctx.cam, [ctx.canvasSize.width, ctx.canvasSize.height], view.window, …)` (rename `_view` → `view`).
 
-- [ ] Test `drawPick writes the window's canvas-NDC rect at bytes 112–127` — canvas 100×50, window `(0,0)` size `(1,1)` → `(−0.99, 0.98, 0.01, 0.02)`.
-- [ ] Test `draw writes the whole-canvas NDC rect` — `(0, 0, 1, 1)`, also after a preceding `drawPick` with a 1×1 window (Review Focus 5).
-- [ ] Implement shader + writer together. `npm run typecheck:fast`, targeted tests → green.
-- [ ] Shot pair, main vs branch, at `#focus=body-sun` zoomed out until the band shows: identical. Commit.
+- [x] Test `drawPick writes the window's canvas-NDC rect at bytes 112–127` — canvas 100×50, window `(0,0)` size `(1,1)` → `(−0.99, 0.98, 0.01, 0.02)`.
+- [x] Test `draw writes the whole-canvas NDC rect` — `(0, 0, 1, 1)`, also after a preceding `drawPick` with a 1×1 window (Review Focus 5).
+- [x] Implement shader + writer together. `npm run typecheck:fast`, targeted tests → green.
+- [x] Shot pair, main vs branch, at `#focus=body-sun` zoomed out until the band shows: identical. Commit.
 
 ## Group B: the window
 
@@ -141,14 +141,14 @@ export function windowedSlabView(view: SlabView, window: PickWindow, canvasPx: R
 
 `c` and `s = 1 / halfExtent` come from `pickWindowNdc`. `windowedSlabView` returns `slab: { ...view.slab, vp: C · view.slab.vp }` (f64, `mat4d.multiply`), `vp: narrowMat4(slab.vp)`, `viewportPx: [...window.sizePx]`, `window`, and keeps `camPos` and `sampledDepth`. It never touches the f32 `view.vp`: at 4K, `s` reaches 3840, and the `x − c.x·w` cancellation must happen in f64.
 
-- [ ] Test `pickWindowCrop maps the window centre to clip (0, 0)`.
-- [ ] Test `pickWindowCrop maps the window corners to (±w, ±w)` with `w ≠ 1`.
-- [ ] Test `a point k canvas px from the window centre lands k target px from it` (the billboard invariant: target px = target NDC · sizePx / 2).
-- [ ] Test `pickWindowCrop of the whole canvas is the identity`.
-- [ ] Test `windowedSlabView sets viewportPx and window to the window`.
-- [ ] Test `windowedSlabView narrows vp from the f64 product` — a `slab.vp` with a large translation (e.g. `1e7` in column 3) where cropping the f32 `view.vp` gives a different f32 result; assert `vp` equals `narrowMat4(C · slab.vp)` exactly.
-- [ ] Test `windowedSlabView keeps camPos and every other slab field`.
-- [ ] Implement. Targeted tests → green. Commit.
+- [x] Test `pickWindowCrop maps the window centre to clip (0, 0)`.
+- [x] Test `pickWindowCrop maps the window corners to (±w, ±w)` with `w ≠ 1`.
+- [x] Test `a point k canvas px from the window centre lands k target px from it` (the billboard invariant: target px = target NDC · sizePx / 2).
+- [x] Test `pickWindowCrop of the whole canvas is the identity`.
+- [x] Test `windowedSlabView sets viewportPx and window to the window`.
+- [x] Test `windowedSlabView narrows vp from the f64 product` — a `slab.vp` with a large translation (e.g. `1e7` in column 3) where cropping the f32 `view.vp` gives a different f32 result; assert `vp` equals `narrowMat4(C · slab.vp)` exactly.
+- [x] Test `windowedSlabView keeps camPos and every other slab field`.
+- [x] Implement. Targeted tests → green. Commit.
 
 ### Task 5: `pick()` renders through the cursor's 1×1 window
 
@@ -159,7 +159,7 @@ review: yes
 
 **Change:** `pick()` builds `cursorWindow = { originPx: [px, py], sizePx: [1, 1] }` from today's clamped cursor (`:380-383`) and `canvasPx = [canvas.width, canvas.height]`. Each group's view becomes `windowedSlabView(group.view, cursorWindow, canvasPx)` **after** `pickablesBySlab` has gated on the whole-canvas view. Shared targets are allocated at the window size (1×1); the copy reads origin `(0, 0)`. The scissor and `recordSlabPass`'s `cursor` parameter go. `renderForDebug` is unchanged: whole-canvas views, its own full-size targets.
 
-- [ ] **Audit first** (Review Focus 1 and 2). From the worktree root, every hit outside the label passes, `zoneOfAvoidancePass.ts`, and comments is a STOP: report it, don't work around it.
+- [x] **Audit first** (Review Focus 1 and 2). From the worktree root, every hit outside the label passes, `zoneOfAvoidancePass.ts`, and comments is a STOP: report it, don't work around it.
   ```bash
   # drawPick bodies projecting from ctx instead of the view
   grep -rnE "ctx\.(canvasSize|slabs\[|vp\b)|mainViewSpec|LabelProjection\(" $(grep -rlE "drawPick" src --include='*.ts' | grep -v '@types')
@@ -167,20 +167,20 @@ review: yes
   grep -rnE "abs\([^)]*\)\s*>\s*1\.|> *1\.0 *\+|< *-1\.0 *-" src/services/gpu/shaders src/layers --include='*.wesl'
   ```
   For each shader hit, check whether a pick pipeline uses it; for each CPU frustum test on `view.vp` in a pick path, check it tests the primitive's extent, not its centre.
-- [ ] Replace `pick() scissors every pass to the cursor texel` with `pick() allocates only 1×1 pick textures and sets no scissor`.
-- [ ] Test `pick() copies texel (0, 0) of every pass`.
-- [ ] Test `pick() hands every drawPick a view windowed to the cursor pixel` — cursor `(10.7, 20.2)` → `window { originPx: [10, 20], sizePx: [1, 1] }`, `viewportPx [1, 1]`, overlay group included.
-- [ ] Test `pick() gates passes on the whole-canvas view` — a `pickEnabled` mock records the view it gets: `window.sizePx` is the canvas size.
-- [ ] Test `pick() clamps the cursor window inside the canvas` — cursor `(w + 5, −3)` → origin `(w − 1, 0)`.
-- [ ] Test `renderForDebug hands whole-canvas views` — `window.sizePx` equals the canvas size.
-- [ ] Implement. `npm run typecheck:fast`, `npm test` → green. Commit.
+- [x] Replace `pick() scissors every pass to the cursor texel` with `pick() allocates only 1×1 pick textures and sets no scissor`.
+- [x] Test `pick() copies texel (0, 0) of every pass`.
+- [x] Test `pick() hands every drawPick a view windowed to the cursor pixel` — cursor `(10.7, 20.2)` → `window { originPx: [10, 20], sizePx: [1, 1] }`, `viewportPx [1, 1]`, overlay group included.
+- [x] Test `pick() gates passes on the whole-canvas view` — a `pickEnabled` mock records the view it gets: `window.sizePx` is the canvas size.
+- [x] Test `pick() clamps the cursor window inside the canvas` — cursor `(w + 5, −3)` → origin `(w − 1, 0)`.
+- [x] Test `renderForDebug hands whole-canvas views` — `window.sizePx` equals the canvas size.
+- [x] Implement. `npm run typecheck:fast`, `npm test` → green. Commit.
 
 ### Task 6: Docs
 
 **Files:**
 - Modify: `docs/research/engine/gpu-memory-audit-2026-10-13.md` (finding 2: pick targets now 1×1), `docs/RENDERER.md` (only if it describes canvas-sized pick targets or the cursor scissor: `grep -n "scissor\|pick target\|pick-target" docs/RENDERER.md`)
 
-- [ ] Update both to the shipped state, timeless voice. No test. Commit.
+- [x] Update both to the shipped state, timeless voice. No test. Commit.
 
 ## Definition of Done
 
