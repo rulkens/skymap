@@ -47,7 +47,6 @@ const STATE = {
   slabRows: [],
   data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
   settings: {
-    starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
     bodies: { items: makeBodyItems() },
     missions: { craft: null },
   },
@@ -150,14 +149,14 @@ const meshAt = (id: string, radiusM: number, distanceM: number): PositionedScene
   positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
 });
 
-/** Core's rosters hold exactly the planets and meshes given; `sceneBodies` may hold more. */
+/** The frame's mesh bodies are the meshes given; `sceneBodies` may hold more. Planet ids are
+ *  `SCENE_PLANETS` ids, so core counts them as its own. */
 function partition(
   own: readonly PositionedSceneBody[],
   resident: (id: string) => boolean,
   extra: readonly PositionedSceneBody[] = [],
 ) {
   const state = {
-    data: { bodies: { planets: own.filter((p) => !('meshKey' in p.body)).map((p) => p.body) } },
     gpu: { texturedBodyRenderer: { hasMap: (id: string) => resident(id) } },
   } as unknown as PassState;
   const ctx = {

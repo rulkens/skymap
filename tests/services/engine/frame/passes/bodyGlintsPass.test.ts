@@ -106,12 +106,13 @@ function bodyAt(id: string, posKm: number, albedo: Vec3): SeededPlanet {
   };
 }
 
+// Real `SCENE_PLANETS` ids: core takes its own bodies by id (`coreSceneBodyIds`).
 // LIT: 1.1e6 km out (farther than the camera) → camera between Sun and body →
 // full phase. Mid-fade size, bright albedo.
-const LIT = bodyAt('lit-body', 1_100_000, [0.8, 0.8, 0.8]);
+const LIT = bodyAt('saturn', 1_100_000, [0.8, 0.8, 0.8]);
 // UNLIT: 0.9e6 km out (closer than the camera) → camera beyond it along the sun
 // ray → new phase, illuminated fraction 0 → zero brightness → skipped.
-const UNLIT = bodyAt('unlit-body', 900_000, [0.8, 0.8, 0.8]);
+const UNLIT = bodyAt('neptune', 900_000, [0.8, 0.8, 0.8]);
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -383,8 +384,8 @@ describe('bodyGlintsPass.draw', () => {
 // visibility). The lit sibling stays in so the skip can't over-drop.
 const JUPITER = bodyAt('jupiter', 1_100_000, [0.8, 0.8, 0.8]); // SCENE_PLANETS index 3
 const MARS = bodyAt('mars', 900_000, [0.6, 0.32, 0.23]); // SCENE_PLANETS index 2, unlit phase
-// An id absent from SCENE_PLANETS: seedIndexOfBody returns −1, so it is DROPPED
-// (a packed id from −1 would alias body 0).
+// An id absent from SCENE_PLANETS, as every mesh body's is: seedIndexOfBody returns −1,
+// so it is DROPPED (a packed id from −1 would alias body 0).
 const UNKNOWN = bodyAt('not-a-planet', 1_050_000, [0.5, 0.5, 0.5]);
 
 function makePickRenderer() {
@@ -444,9 +445,10 @@ describe('bodyGlintsPass.drawPick', () => {
     // and pick follows the LABEL, not the glint's own brightness. MARS is unlit
     // here (brightness → 0) — `draw` still skips it, but its label invites the
     // click, so the pick keeps it. JUPITER is lit and picked. UNKNOWN is not in the
-    // seed table → dropped regardless.
+    // seed table (it rides the frame's mesh bodies) → dropped regardless.
     const pickRenderer = makePickRenderer();
-    const state = makePickState(pickRenderer, [JUPITER, MARS, UNKNOWN]);
+    const state = makePickState(pickRenderer, [JUPITER, MARS]);
+    Object.assign(state.data.bodies, { meshBodies: [UNKNOWN] });
     const view = makeNear0View(CAM_POS);
 
     bodyGlintsPass.drawPick!(PASS_STUB, view, makeCtx(CAM_POS, state), state);

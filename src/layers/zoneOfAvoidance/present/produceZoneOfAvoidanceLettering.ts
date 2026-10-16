@@ -6,9 +6,7 @@
  * and `LABEL_EM_MPC` — visual-pass placeholders — live here.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { Label3DProducerOutput } from '../../../@types/engine/subsystems/Label3DProducerOutput';
+import type { LayerWorldLabel } from '../../../@types/engine/layer/LayerWorldLabel';
 import type { Label3D } from '../../../@types/rendering/Label3D';
 import { deriveZoneOfAvoidanceLiveness } from './deriveZoneOfAvoidanceLiveness';
 import { GAL_X_EQ, GAL_Z_EQ } from '../../../data/orientation/orientationFrames';
@@ -31,30 +29,27 @@ const LABEL_RADIUS_MPC = 40;
  */
 const LABEL_EM_MPC = 2;
 
-export function produceZoneOfAvoidanceLettering(
-  state: EngineState,
-  ctx: FrameView,
-  fade: number,
-): Label3DProducerOutput {
-  const fadeAlpha = deriveZoneOfAvoidanceLiveness(ctx, fade);
-  if (fadeAlpha === null) return { labels: [], awake: false };
+export const produceZoneOfAvoidanceLettering: LayerWorldLabel<'zoneOfAvoidance'>['produceLabels3D'] =
+  (state, ctx, fade) => {
+    const fadeAlpha = deriveZoneOfAvoidanceLiveness(ctx, fade);
+    if (fadeAlpha === null) return { labels: [], awake: false };
 
-  const tuning = state.settings.zoneOfAvoidance;
-  const label: Label3D = {
-    id: 'zoneOfAvoidance',
-    text: ZONE_OF_AVOIDANCE_LABEL_TEXT,
-    font: FONT_IDS[0]!,
-    placement: {
-      center: [0, 0, 0],
-      planeNormal: GAL_Z_EQ,
-      referenceDir: GAL_X_EQ,
-      radiusMpc: LABEL_RADIUS_MPC,
-      startAngleRad: 0,
-    },
-    emMpc: LABEL_EM_MPC,
-    repeatCount: ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
-    color: [tuning.labelColor[0], tuning.labelColor[1], tuning.labelColor[2], 1],
-    fadeAlpha,
+    const tuning = state.settings.zoneOfAvoidance;
+    const label: Label3D = {
+      id: 'zoneOfAvoidance',
+      text: ZONE_OF_AVOIDANCE_LABEL_TEXT,
+      font: FONT_IDS[0]!,
+      placement: {
+        center: [0, 0, 0],
+        planeNormal: GAL_Z_EQ,
+        referenceDir: GAL_X_EQ,
+        radiusMpc: LABEL_RADIUS_MPC,
+        startAngleRad: 0,
+      },
+      emMpc: LABEL_EM_MPC,
+      repeatCount: ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
+      color: [tuning.labelColor[0], tuning.labelColor[1], tuning.labelColor[2], 1],
+      fadeAlpha,
+    };
+    return { labels: [label], awake: false };
   };
-  return { labels: [label], awake: false };
-}

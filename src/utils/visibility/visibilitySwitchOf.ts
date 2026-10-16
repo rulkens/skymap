@@ -9,6 +9,7 @@ import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry'
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import { hasSectionSwitch } from './hasSectionSwitch';
 import { settingsClusterOf } from './settingsClusterOf';
+import { visibilityClusterOf } from './visibilityClusterOf';
 
 export function visibilitySwitchOf(
   settings: EngineSettingsState,
@@ -16,7 +17,7 @@ export function visibilitySwitchOf(
   item?: string,
 ): boolean {
   const isShow = 'key' in entry;
-  const name = isShow ? (entry.cluster ?? entry.key) : entry.cluster;
+  const name = visibilityClusterOf(entry);
   const field = isShow ? 'enabled' : 'labelEnabled';
   const where = item === undefined ? `${name}.${field}` : `${name}.items.${item}.${field}`;
   if ((entry.items === undefined) !== (item === undefined)) {

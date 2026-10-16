@@ -8,9 +8,7 @@
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
@@ -25,11 +23,11 @@ import { deriveLightTimeLiveness } from './deriveLightTimeLiveness';
 /** Both clamps, so every sphere's caption is the same size on screen. */
 const CAPTION_PX = 32;
 
-export function produceLightTimeCaptions(
-  _state: EngineState,
-  ctx: FrameView,
-  fade: number,
-): Label2DProducerOutput {
+export const produceLightTimeCaptions: LayerScreenLabel<'lightTime'>['produceLabels'] = (
+  _state,
+  ctx,
+  fade,
+) => {
   const liveness = deriveLightTimeLiveness(ctx, fade);
   if (liveness === null) return { labels: [], awake: false };
 
@@ -67,4 +65,4 @@ export function produceLightTimeCaptions(
     });
   });
   return { labels, awake: false };
-}
+};

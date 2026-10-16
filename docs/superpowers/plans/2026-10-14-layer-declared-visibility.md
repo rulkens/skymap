@@ -370,7 +370,7 @@ Reading `state.settings` here is safe for the memo: the per-row values are boole
 
 **review: yes**: it changes `ReadyFrameContext` (consented, T7-3), re-routes NEAR0's painter range and the scene occluders, and makes the frame context resolve handed values.
 
-**NEAR0's bodies: a named leftover (T7-5, ruled 2026-10-16).** NEAR0's depth range (`deriveView`) spans the resolved bodies the NEAR0 row draws: today the star spheres, since planets and craft draw in their own `'body'` slab rows (spanning a resolved planet would move NEAR0 in the painter order, `slabs.ts:365-372`). No data says this yet. The bodies-into-Layers PR gives each body row a slab field that says which slab draws it; until then, NEAR0 spans the resolved bodies outside core's own rosters (`state.data.bodies.planets`, `ctx.snapshot.meshBodies`), the complement of the rule `sceneBodyPartition` uses. That filter is the leftover: one function, `near0SphereBodies`, in `src/services/engine/frame/`, whose header names it as the stand-in for the slab field and the PR that deletes it. It branches on core's rosters, never on a Layer key, a star table or a body kind.
+**NEAR0's bodies: a named leftover (T7-5, ruled 2026-10-16).** NEAR0's depth range (`deriveView`) spans the resolved bodies the NEAR0 row draws: today the star spheres, since planets and craft draw in their own `'body'` slab rows (spanning a resolved planet would move NEAR0 in the painter order, `slabs.ts:365-372`). No data says this yet. The bodies-into-Layers PR gives each body row a slab field that says which slab draws it; until then, NEAR0 spans the resolved bodies outside core's own scene bodies, the ones `sceneBodyPartition` keeps. Both read one definition, `coreSceneBodyIds(meshBodies)` in `src/services/engine/frame/`: by id, over the static `SCENE_PLANETS` plus the frame's `meshBodies`, so the two stay complementary by construction and need no `state`. The filter is the leftover: one function, `near0SphereBodies`, in `src/services/engine/frame/`, whose header names it as the stand-in for the slab field and the PR that deletes it. It branches on core's rosters, never on a Layer key, a star table or a body kind.
 
 Ruled 2026-10-15 and 2026-10-16 (REVERT, T7-1 to T7-4). Today core runs two sorts. `partitionBodiesByPresentation` splits planets and mesh bodies at `BODY_GLINT_MAX_PX = 3` (glint below; flat, textured or mesh at or above). `partitionStarsByResolution` splits `visibleStars(settings.starCatalogs)` at `STAR_RESOLVE_PX = 4` (point below, sphere at or above), and core picks the star set by reading the star switches by name (`visibleStars.ts`, `frameContext.ts:113-119`, `sceneOccluderBodies.ts:34-39`, `deriveView.ts:116-133`). After this task there is one sort over one roster, and every rule in it reads data:
 
@@ -381,7 +381,7 @@ Ruled 2026-10-15 and 2026-10-16 (REVERT, T7-1 to T7-4). Today core runs two sort
 - **Who draws what.** The sort splits every body by presentation into two branches. Each drawing pass takes the bodies it owns from each branch, identified by its own data: core's body passes by core's rosters, the star passes by the star Layer's seed refs. No pass and no core file branches on a Layer key or a body kind to find its bodies.
 
 **Files:**
-- create `src/@types/engine/frame/PositionedSceneBody.d.ts`, `src/@types/engine/frame/SceneBodyPresentation.d.ts`, `src/@types/engine/frame/CoveredSceneBody.d.ts`, `src/utils/visibility/sceneBodyCoverageOf.ts`, `src/services/engine/frame/sceneBodyPresentation.ts`, `src/services/engine/frame/near0SphereBodies.ts` (the T7-5 leftover), `src/data/bodies/starResolvePx.ts`, `src/data/bodies/bodyGlintMaxPx.ts`, `src/layers/starCatalog/@types/SeededStarRef.d.ts`, `src/layers/starCatalog/present/seededStarRefs.ts`
+- create `src/@types/engine/frame/PositionedSceneBody.d.ts`, `src/@types/engine/frame/SceneBodyPresentation.d.ts`, `src/@types/engine/frame/CoveredSceneBody.d.ts`, `src/utils/visibility/sceneBodyCoverageOf.ts`, `src/services/engine/frame/sceneBodyPresentation.ts`, `src/services/engine/frame/near0SphereBodies.ts` (the T7-5 leftover), `src/services/engine/frame/coreSceneBodyIds.ts` (core's own bodies, read by it and by `sceneBodyPartition`), `src/data/bodies/starResolvePx.ts`, `src/data/bodies/bodyGlintMaxPx.ts`, `src/layers/starCatalog/@types/SeededStarRef.d.ts`, `src/layers/starCatalog/present/seededStarRefs.ts`
 - modify `src/@types/engine/layer/ShowEntry.d.ts` (`bodies?`), `src/layers/starCatalog/visibility.ts` (the star show entry's `bodies`)
 - modify `src/@types/scene/{StarBody,PlanetBody,MeshBody,EarthBody}.d.ts` (`resolvePx`), the record builders `src/data/bodies/makers/{star,heliocentricPlanet,satelliteBody,meshBody}.ts`, `src/data/bodies/sceneSStars.ts` (builds its `StarBody` records inline), `src/data/bodies/sceneEarth.ts`
 - modify `src/services/engine/frame/partitionBodiesByPresentation.ts` (two branches; `BODY_GLINT_MAX_PX` moves out), `src/services/engine/frame/sceneBodyPartition.ts` (reads the presentation; signature kept), `src/services/engine/frame/frameContext.ts` (builds `sceneBodies`; the `visibleStars` read goes), `src/@types/engine/frame/ReadyFrameContext.d.ts`, `src/services/engine/frame/deriveView.ts`, `src/services/engine/frame/sceneOccluderBodies.ts`; the `BODY_GLINT_MAX_PX` importers `src/services/engine/presentation/scaleFadeBands.ts` and `src/utils/scene/bodyGlintBrightness.ts`
@@ -447,16 +447,17 @@ sceneBodyPresentation(ctx: FrameView): SceneBodyPresentation
   // the one binding every pass shares. Each call sorts afresh: no cached per-view answer (the pick path
   // derives frame contexts speculatively).
 sceneBodyPartition(state: PassState, ctx: FrameView)   // signature and return ({ glints, flat, textured, meshes }) kept
-  // core's own bodies out of sceneBodyPresentation(ctx), found by core's rosters (state.data.bodies.planets,
-  // ctx.snapshot.meshBodies): glints = their unresolved; their resolved → meshes, textured (texture registry
-  // and residency, as today) or flat
+  // core's own bodies out of sceneBodyPresentation(ctx), by id in coreSceneBodyIds(ctx.snapshot.meshBodies):
+  // glints = their unresolved; their resolved → meshes, textured (texture registry and residency, as today) or flat
 
-near0SphereBodies(resolved: readonly PositionedSceneBody[],
-                  rosters: { planets: readonly PlanetBody[]; meshBodies: readonly MeshBody[] }): readonly PositionedSceneBody[]
-  // LEFTOVER (T7-5): the resolved bodies outside core's own rosters, which NEAR0 draws today. Stands in for
-  // the per-body slab field the bodies-into-Layers PR adds, and is deleted there. Rosters: `SCENE_PLANETS`
-  // (the table `createEngineData` seeds `state.data.bodies.planets` from, so `deriveView` needs no `state`)
-  // and `snapshot.meshBodies`. Never the slab rows: a Layer's own row in `state.slabRows` would leak in.
+coreSceneBodyIds(meshBodies: readonly MeshBody[]): ReadonlySet<string>
+  // the one definition of core's own scene bodies: SCENE_PLANETS ids plus the frame's mesh body ids
+
+near0SphereBodies(resolved: readonly PositionedSceneBody[], meshBodies: readonly MeshBody[]): readonly PositionedSceneBody[]
+  // LEFTOVER (T7-5): the resolved bodies outside coreSceneBodyIds(meshBodies), which NEAR0 draws today. Stands
+  // in for the per-body slab field the bodies-into-Layers PR adds, and is deleted there. `SCENE_PLANETS` is the
+  // table `createEngineData` seeds `state.data.bodies.planets` from, so `deriveView` needs no `state`. Never
+  // the slab rows: a Layer's own row in `state.slabRows` would leak in.
 
 // src/layers/starCatalog/@types/SeededStarRef.d.ts
 export type SeededStarRef = {

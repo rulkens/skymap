@@ -1,6 +1,6 @@
 /**
- * sceneBodyPartition — core's own bodies (the planets and the present mesh bodies, found
- * by core's rosters) out of the frame's one scene-body sort, four ways: `glints` their
+ * sceneBodyPartition — core's own bodies (`coreSceneBodyIds`: the planets and the present
+ * mesh bodies) out of the frame's one scene-body sort, four ways: `glints` their
  * unresolved; their resolved into `meshes`, `textured` or `flat`. Every consumer reads this
  * one binding, so no body is textured to one pass and flat to another (z-fighting).
  * Residency is asked of the renderer (`hasMap` on the surface map), never the loading
@@ -15,6 +15,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
+import { coreSceneBodyIds } from './coreSceneBodyIds';
 import { sceneBodyPresentation } from './sceneBodyPresentation';
 
 export function sceneBodyPartition(
@@ -26,8 +27,8 @@ export function sceneBodyPartition(
   textured: readonly PlanetBody[];
   meshes: readonly MeshBody[];
 } {
-  const own = new Set<SceneBody>([...state.data.bodies.planets, ...ctx.snapshot.meshBodies]);
-  const isOwn = (body: SceneBody): body is PlanetBody | MeshBody => own.has(body);
+  const own = coreSceneBodyIds(ctx.snapshot.meshBodies);
+  const isOwn = (body: SceneBody): body is PlanetBody | MeshBody => own.has(body.id);
   const { unresolved, resolved } = sceneBodyPresentation(ctx);
   const glints: (PlanetBody | MeshBody)[] = [];
   const flat: PlanetBody[] = [];

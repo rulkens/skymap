@@ -780,9 +780,8 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
   });
 
   it('a Layer slab row anchored on a body leaves NEAR0 spanning it', () => {
-    // A Layer's own body-frame content around the Sun (the planned heliosphere) rides a
-    // slab row anchored on it; the Sun's sphere still draws in NEAR0. The cast stands in
-    // for the host id that Layer will add.
+    // A Layer's own slab row anchored on a star must not pull that star out of NEAR0. The
+    // cast is the one every body anchor takes (`bodySlabRowOf`).
     const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
     const layerRow: SlabRow = {
       anchorId: 'sun' as SlabHostId,

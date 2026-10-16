@@ -13,9 +13,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
 import { constellationsFade } from './constellationsFade';
@@ -31,7 +29,7 @@ const CONSTELLATION_PROMINENCE_PX = CAPTION_PRIORITY.constellation * CAPTION_TIE
 
 export function produceConstellationCaptions(
   runtime: ConstellationsRuntime,
-): (state: EngineState, ctx: FrameView, fade: number) => Label2DProducerOutput {
+): LayerScreenLabel<'constellations'>['produceLabels'] {
   // Memoized on the artifact's identity (static once its slot lands); a
   // released slot drops the set to empty so the captions dissolve with it.
   // Scoped to this closure, not module-level: a second engine instance must

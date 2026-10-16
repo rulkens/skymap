@@ -23,6 +23,7 @@ import { LABEL_CATEGORIES } from '../data/structure/labelCategories';
 import { CATEGORY_DISPLAY_INFO } from '../data/structure/categoryDisplayInfo';
 import { memoizeLastByKeys } from '../utils/cache/memoizeLastByKeys';
 import { visibilityEntryOf } from '../utils/visibility/visibilityEntryOf';
+import { visibilityClusterOf } from '../utils/visibility/visibilityClusterOf';
 import { visibilitySwitchOf } from '../utils/visibility/visibilitySwitchOf';
 import { setVisibility } from '../state/settings/setVisibilityAction';
 import { APP_VISIBILITY } from './appVisibility';
@@ -77,7 +78,7 @@ export function selectToggleRows(
       label: row.label,
       enabled: layerValues[index]!,
       set: (on: boolean) =>
-        setVisibility({ cluster: entries[index]!.cluster ?? row.toggle, field: 'enabled', on }),
+        setVisibility({ cluster: visibilityClusterOf(entries[index]!), field: 'enabled', on }),
     })),
   ]);
 }

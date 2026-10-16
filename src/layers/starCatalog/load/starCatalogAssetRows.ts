@@ -12,10 +12,11 @@ import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { STAR_CATALOG_SOURCE_ROWS } from '../sources/starCatalogSourceRows';
 import { starCatalogVisibility } from '../visibility';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { visibilitySwitchOf } from '../../../utils/visibility/visibilitySwitchOf';
 
-// The star show entry: its switch, section rule included, is what demands a catalog.
-const [STAR_SHOW_ENTRY] = starCatalogVisibility;
+// The star show entry, by its key: its switch, section rule included, is what demands a catalog.
+const STAR_SHOW_ENTRY = visibilityEntryOf(starCatalogVisibility, 'starCatalog');
 
 export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly AssetWiringRow[] {
   const surveyRows = STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
