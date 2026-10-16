@@ -107,6 +107,28 @@ The thirty-odd findings below reduce to seven recurring shapes. Fix the shape an
 - No `react-redux` outside `src/store`; sagas reach the engine only through injected closures; the settings root is composed from Layer slices and stays serializable.
 - The attribution gate ties every raw key and upstream host to an ATTRIBUTIONS entry.
 
+## Early decisions that have outgrown the project
+
+Dated from `git log --diff-filter=A`. Each was right for what it was sized for; the column that matters is what it carries now.
+
+| Decision | Decided | Sized for | Carries now | Better shape at today's size |
+| --- | --- | --- | --- | --- |
+| Numeric `Source` byte as the one identity | 2026-05-03 | 3 catalogs, 1 byte | 37 codes doing registry key, pick code, mask bit and switch arm; mask wraps at 32 | String `SourceId`; a dense per-use code (pick, mask) minted from the composed registry |
+| Packed 6+26-bit pick identity | 2026-05-11 | SDSS at 500k rows | 67M-per-source cap (REGALADE is 71.5M), 6-bit field spent by non-pickable rows, no width assertion | Pick carries `(layerOrdinal, localIdx)` with the width owned by the Layer's `selection` row; assert at pack time |
+| Whole-file tier variants (`small` / `medium` / `large`) | 2026-05-05 | One point cloud, three device classes | `Tier` has 34 consumers and doubles as data budget and device class; SDSS large is capped at 500k "so every perf number holds"; stars already left for a chunked octree with per-source budgets (2026-10-11); galaxy octree streaming is in research | Spatial chunking per family with per-Layer budgets; `Tier` shrinks to a device-class hint |
+| In-memory cross-match of three catalogs | 2026-05-03 | 3 all-sky inputs that fit in RAM | Hard-coded `[sdss, 2mrs, glade]` rank, patch and bypass modes in code, no RA wrap, 16 GB heaps for stars | Streaming per-source parse, HEALPix-keyed dedup with `dedupRank` / `dedupMode` on the registry row, staged atomic outputs |
+| One hand-written binary format per family | 2026-05-03 | One format | Ten families, ten headers, one typed stale-version path, folder names that drift from `VERSION` | One container (magic, schema version, column table) or at least one format table that every decoder, DATA.md and `DATA_FAMILIES` read |
+| `EngineState` as the bag boot phases mutate | 2026-05-12 | One renderer, four phases | 28 fields, ~90 reachable members, 79 importers, live store getters, `PassState` leaking `gpu` to Layers | Typed phase products; a frozen per-frame view; `PassState` narrowed to settings, tier, selection |
+| Central hand-ordered frame table | 2026-05-08 (`HDR_PASSES`) → ADR 0011 2026-08-17 → `frameSections.ts` 2026-09-21 | "around thirteen steps, small and stable" | 383 lines naming every Layer's passes, targets and capture rosters; Layers cannot place their own passes | Keep the ordered step list (the ADR's semantic-ordering argument still holds) but reverse who holds the names: a Layer pins each pass to `(target, slab, step)` from its side, and the table holds only steps. ADR 0011 already said "layers pin to `(target, slab)` as data"; the implementation did not follow through |
+| Shaders outside Layers, one WESL package root | 2026-05-07 | One shader folder | 29 shader families, 148 `?static` imports invisible to `tsc`, the one standing exception to Layer self-containment | Per-Layer package roots if the linker allows it; otherwise a resolver test over every `?static` specifier so `typecheck` catches a rename |
+| `tools/` imports `src/` for formats | 2026-05 | One repo, two tsconfigs | 412 import sites; the Rust star builder and any Python builder have no spec to target | A `packages/formats` beside `packages/website`: encoders, decoders, version table, fixtures |
+| URL hash as the unversioned share format | 2026-05-06 | One `#focus=` key | Six keys, three codecs, no version or alias table; the only contract users hold across releases; settings persistence not yet started | A version key and an id-alias table now, before settings persistence adds a second unversioned contract |
+| Tests mirror `src` file by file | 2026-05 | A small tree | 326 test files import engine internals; 175k test lines against ~140k of `src`; every core move pays a rewrite tax first | Mirror Layers and `utils/`; test core through its contracts (boot product, frame program, store) rather than per file. `testing.md` already states the philosophy; the mirror rule is what contradicts it |
+
+**Held up well.** The Layer contract (2026-09), content-hashed data with the manifest uploaded last, the floating origin (ADR 0010), core-owned fades (ADR 0001), the RTK slice composition, and redux-saga as the effects vehicle (ADR 0008). The saga layer is not outdated, it is under-applied: ADR 0007's intent-centric principle stops at the camera, which is the only field with a single-writer ratchet.
+
+**Leftover, not a decision.** `galaxyGenerator/v1` is marked "to be deleted" in CLAUDE.md and is still imported by 11 files outside itself, mostly the Milky Way model.
+
 ## Order of attack
 
 Smallest change that removes the most instances of a pattern first.
