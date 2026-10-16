@@ -11,8 +11,7 @@ import FeatureHead from './FeatureHead.astro';
 import FeatureLead from './FeatureLead.astro';
 import FeatureList from './FeatureList.astro';
 import FeatureShot from './FeatureShot.astro';
-import Sources from './Sources.astro';
-import { FEATURE_FACT_IDS, FEATURE_GROUPS } from '../data/features';
+import { FEATURE_GROUPS } from '../data/features';
 
 // Two rows of the grid for each group: its name, then its list. The index and the stage span them all.
 const rows = FEATURE_GROUPS.length * 2;
@@ -50,9 +49,6 @@ const rows = FEATURE_GROUPS.length * 2;
       ))
     }
   </div>
-  <div class="foot">
-    <Sources ids={FEATURE_FACT_IDS} />
-  </div>
 </div>
 
 <script>
@@ -69,11 +65,7 @@ const rows = FEATURE_GROUPS.length * 2;
 <style>
   .layout {
     --stick: calc(var(--nav-height) + 2.5rem);
-    padding-block: 5rem calc(var(--section-space) / 2);
-  }
-
-  .foot {
-    padding-bottom: var(--section-space);
+    padding-block: 5rem var(--section-space);
   }
 
   .index ul {

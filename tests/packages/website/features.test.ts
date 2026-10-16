@@ -10,8 +10,7 @@ import GithubSlugger from 'github-slugger';
 import { describe, expect, it } from 'vitest';
 
 import { DOCS_TREE } from '../../../packages/website/src/data/docsTree';
-import { fact } from '../../../packages/website/src/data/fact';
-import { FEATURE_FACT_IDS, FEATURE_GROUPS } from '../../../packages/website/src/data/features';
+import { FEATURE_GROUPS } from '../../../packages/website/src/data/features';
 import { SITE_LOOPS } from '../../../packages/website/src/data/siteLoops';
 import { SITE_SHOTS } from '../../../packages/website/src/data/siteShots';
 
@@ -35,10 +34,6 @@ const anchorsOf = (path: string): Set<string> => {
 it('group ids are unique', () => {
   const ids = FEATURE_GROUPS.map((group) => group.id);
   expect(new Set(ids).size).toBe(ids.length);
-});
-
-it('every source the page lists is a fact row', () => {
-  for (const id of FEATURE_FACT_IDS) expect(() => fact(id), id).not.toThrow();
 });
 
 describe.each(FEATURE_GROUPS)('feature group $id', (group) => {

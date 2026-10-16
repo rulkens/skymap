@@ -272,23 +272,3 @@ export const FEATURE_GROUPS: readonly FeatureGroup[] = [
     ],
   },
 ];
-
-/** The fact rows behind what the page says about the sky, for its Sources list (data/facts.ts). */
-export const FEATURE_FACT_IDS: readonly string[] = [
-  'sci-earth-clouds',
-  'sci-ephemeris',
-  'sci-atmospheres',
-  'sci-star-observables',
-  'gloss-local-bubble',
-  'sci-milky-way',
-  'sci-black-hole',
-  'scene-s-stars',
-  'sci-zoa-band',
-  'sci-colour',
-  'sci-deepest',
-  'sci-galaxy-discs',
-  'sci-density-field',
-  'sci-filaments',
-  'sci-flows',
-  'sci-horizon-shell',
-];
