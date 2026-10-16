@@ -157,6 +157,7 @@
     "@types/node": "25.6.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/ws": "8.18.2",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "@vitejs/plugin-react": "6.0.1",
     "@vitest/coverage-v8": "4.1.5",
@@ -179,6 +180,7 @@
     "wesl-plugin": "0.6.74",
     "wgslender": "1.4.1",
     "wrangler": "4.148.0",
+    "ws": "8.22.0",
     "xatlas-wasm": "0.1.3"
   },
   "dependencies": {
