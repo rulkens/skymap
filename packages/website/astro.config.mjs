@@ -135,6 +135,9 @@ export default defineConfig({
   // The whole stylesheet is under 6 KB compressed: inlined, it saves the one render-blocking round trip.
   build: { format: 'directory', inlineStylesheets: 'always' },
   server: { port: DEV_PORTS.website },
+  // The toolbar strips `data-astro-source-*` from the page as it boots, before the islands hydrate, so React
+  // finds the server's markup without the pointers its own render carries. The feedback overlay is the tool here.
+  devToolbar: { enabled: false },
   // One accent on the page: a code block is set in the mono face and not coloured by token.
   markdown: { syntaxHighlight: false },
   integrations: [react(), mdx(), devRootStatics, crawlFiles, searchIndex],
