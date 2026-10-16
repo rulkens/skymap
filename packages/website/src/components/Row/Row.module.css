@@ -1,0 +1,36 @@
+.root {
+  padding-block: 0.75rem;
+  border-top: 1px solid var(--border-divider);
+}
+
+.label {
+  composes: small from '../../styles/type.module.css';
+  color: var(--site-text-dim);
+}
+
+.words {
+  min-width: 0;
+  margin: 0;
+  color: var(--site-text-muted);
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 700px) {
+  .root {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+    column-gap: var(--col-gap);
+  }
+
+  .label {
+    grid-column: 1 / span 2;
+    padding-top: 0.125rem;
+  }
+
+  .words {
+    grid-column: 3 / -1;
+  }
+}

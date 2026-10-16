@@ -7,22 +7,23 @@
  */
 import { getCollection, render } from 'astro:content';
 
-import Caveat from '../../components/Caveat.astro';
-import CodeBlock from '../../components/CodeBlock.astro';
-import DocFigure from '../../components/DocFigure.astro';
-import DocLink from '../../components/DocLink.astro';
-import DocTable from '../../components/DocTable.astro';
-import Example from '../../components/Example.astro';
-import FactText from '../../components/FactText.astro';
-import Flow from '../../components/Flow.astro';
-import Formula from '../../components/Formula.astro';
-import Keys from '../../components/Keys.astro';
-import Links from '../../components/Links.astro';
-import Note from '../../components/Note.astro';
-import RepoLink from '../../components/RepoLink.astro';
-import SourceLink from '../../components/SourceLink.astro';
-import Spans from '../../components/Spans.astro';
-import View from '../../components/View.astro';
+import Caveat from '../../components/Caveat/Caveat.tsx';
+import CodeBlock from '../../components/CodeBlock/CodeBlock.tsx';
+import CopyListener from '../../components/CopyListener/CopyListener.tsx';
+import DocFigure from '../../components/DocFigure/DocFigure.tsx';
+import DocLink from '../../components/DocLink/DocLink.tsx';
+import DocTable from '../../components/DocTable/DocTable.tsx';
+import Example from '../../components/Example/Example.tsx';
+import FactText from '../../components/FactText/FactText.tsx';
+import Flow from '../../components/Flow/Flow.tsx';
+import Formula from '../../components/Formula/Formula.tsx';
+import Keys from '../../components/Keys/Keys.tsx';
+import Links from '../../components/Links/Links.tsx';
+import Note from '../../components/Note/Note.tsx';
+import RepoLink from '../../components/RepoLink/RepoLink.tsx';
+import SourceLink from '../../components/SourceLink/SourceLink.tsx';
+import Spans from '../../components/Spans/Spans.tsx';
+import View from '../../components/View/View.tsx';
 import Docs from '../../layouts/Docs.astro';
 
 export async function getStaticPaths() {
@@ -62,4 +63,5 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       Repo: RepoLink,
     }}
   />
+  <CopyListener client:idle />
 </Docs>

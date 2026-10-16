@@ -5,11 +5,14 @@
  * and `Use` term on it is the record's own, in the families of the list of
  * all sources. Only the opening and the two closing sections are written here.
  */
-import CreditEntry from '../../components/CreditEntry.astro';
-import DocFigure from '../../components/DocFigure.astro';
-import DocLink from '../../components/DocLink.astro';
-import FactText from '../../components/FactText.astro';
-import UseLegend from '../../components/UseLegend.astro';
+import CopyListener from '../../components/CopyListener/CopyListener.tsx';
+import CreditEntry from '../../components/CreditEntry/CreditEntry.tsx';
+import DocFigure from '../../components/DocFigure/DocFigure.tsx';
+import DocLink from '../../components/DocLink/DocLink.tsx';
+import FactText from '../../components/FactText/FactText.tsx';
+import UseLegend from '../../components/UseLegend/UseLegend.tsx';
+import linkStyles from '../../styles/links.module.css';
+import typeStyles from '../../styles/type.module.css';
 import { ISSUES_URL } from '../../data/contact';
 import { DATA_ENTRIES, DATA_FAMILIES_USED } from '../../data/dataPages';
 import { REPO_BLOB } from '../../data/siteIdentity';
@@ -68,7 +71,7 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
     families.map((family) => (
       <>
         <h2 id={family.id}>{family.name}</h2>
-        <p class="small tap-links">
+        <p class={`${typeStyles.small} ${linkStyles['tap-links']}`}>
           {family.entries.map((entry, i) => (
             <>
               {i > 0 && ', '}
@@ -97,4 +100,5 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
       >open an issue in the repository</a
     >. We correct the licence record first, and this page follows it at the next build.
   </p>
+  <CopyListener client:idle />
 </Docs>
