@@ -45,8 +45,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
@@ -149,11 +148,7 @@ function deriveFamousLabelInputs(
 
 export function produceFamousGalaxyLabels(
   runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>,
-): (
-  state: EngineState,
-  ctx: FrameView,
-  fade: Readonly<Record<'famousGalaxy', number>>,
-) => Label2DProducerOutput {
+): LayerScreenLabel<'famousGalaxy'>['produceLabels'] {
   return (state, ctx, fade) => {
     const empty: Label2DProducerOutput = { labels: [], awake: false };
 

@@ -7,17 +7,25 @@
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { LabelItemOf } from '../../../@types/animation/LabelItemOf';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
+import type { CaptionKind } from './captionPriority';
 import { sceneBodyLabels } from './sceneBodyLabels';
-import { CAPTION_FADE_RULES } from './captionFadeRules';
 import { SCENE_BODY_CAPTION_LABEL } from '../../../data/labels/sceneBodyCaptionLabel';
+import { EARTH_ENTRY } from '../../../data/sources/earth';
+import { PLANET_ENTRY } from '../../../data/sources/planet';
+import { MESH_BODY_ENTRY } from '../../../data/sources/mesh-body';
 import { claimedLabelItemsOf } from '../../../utils/visibility/claimedLabelItemsOf';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
+
+// Which item of core's own `label:body` entry carries each kind `sceneBodyLabels` emits:
+// the source entry the kind's bodies caption under.
+const BODY_CAPTION_ITEM: Readonly<
+  Partial<Record<CaptionKind, LabelItemOf<typeof SCENE_BODY_CAPTION_LABEL>>>
+> = { earth: EARTH_ENTRY.id, planet: PLANET_ENTRY.id, meshBody: MESH_BODY_ENTRY.id };
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.
@@ -50,19 +58,17 @@ function claimedBy(entries: readonly VisibilityEntry[]): ReadonlySet<string> {
   return claimed;
 }
 
-export function produceSceneBodyCaptions(
-  state: EngineState,
-  ctx: FrameView,
-  fade: Readonly<Record<string, number>>,
-): Label2DProducerOutput {
+export const produceSceneBodyCaptions: LayerScreenLabel<
+  typeof SCENE_BODY_CAPTION_LABEL
+>['produceLabels'] = (state, ctx, fade) => {
   const composeCtx = captionComposeContextOf(state, ctx);
   const labels = baseLabelsFor(
     sceneBodyStates(state, ctx),
     ctx.snapshot.simDays,
     claimedBy(state.visibilityEntries),
   ).map((label) =>
-    composeForegroundCaption(composeCtx, label, fade[CAPTION_FADE_RULES[label.kind].fadeItem!]!),
+    composeForegroundCaption(composeCtx, label, fade[BODY_CAPTION_ITEM[label.kind]!]),
   );
 
   return { labels, awake: false };
-}
+};

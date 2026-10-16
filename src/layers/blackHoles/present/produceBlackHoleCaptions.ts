@@ -6,9 +6,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
@@ -30,11 +28,7 @@ const BLACK_HOLE_CAPTION_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
 const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
 
-export function produceBlackHoleCaptions(): (
-  state: EngineState,
-  ctx: FrameView,
-  fade: Readonly<Record<string, number>>,
-) => Label2DProducerOutput {
+export function produceBlackHoleCaptions(): LayerScreenLabel<'blackHole'>['produceLabels'] {
   return (state, ctx, fade) => {
     const composeCtx = captionComposeContextOf(state, ctx);
     const states = sceneBodyStates(state, ctx);
@@ -48,7 +42,7 @@ export function produceBlackHoleCaptions(): (
         'sgrAStar',
         packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
       );
-      return composeForegroundCaption(composeCtx, caption, fade[row.id]!);
+      return composeForegroundCaption(composeCtx, caption, fade[row.id]);
     });
 
     return { labels, awake: false };

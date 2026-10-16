@@ -575,10 +575,13 @@ sourceMaskOf(fade: Readonly<Record<GalaxyCatalogId, number>>): number
 **Contract:**
 
 ```ts
-// CaptionFadeRule (captionFadeRules.ts:51-57) keeps only `fadeTarget` and `fadeItem`:
-//   `fadeHandle: FadeId | null` → `fadeItem: string | null` (the item inside the producing Layer's own
-//   label entry: sun → 'sun', star → 'famousStar', earth → 'earth', planet → 'planet',
-//   meshBody → MESH_BODY_ENTRY.id, sgrAStar → SGR_A_STAR_ID, constellation → null).
+// CaptionFadeRule (captionFadeRules.ts:51-57) keeps only `fadeTarget`; `fadeHandle` goes, and no core
+//   table names a Layer's label item (final fix round, ruling q2Ye). Each caption producer names its own
+//   item from its own data: the star captions from their catalog row (`CaptionSourceRow.item`, with
+//   `STAR_CAPTION_KIND` keyed by the `label:starCatalog` items), the black-hole and missions captions
+//   from their row or craft id, and core's scene-body captions from a kind → item map over its own
+//   body source entries (earth → EARTH_ENTRY.id, planet → PLANET_ENTRY.id, meshBody → MESH_BODY_ENTRY.id).
+//   Each producer is typed as its row's `LayerScreenLabel<'<label>'>['produceLabels']`.
 //   The `labelEnabled` axis goes: the handed value already carries the switch and its fade-out tail.
 //   The `subjectVisible` axis goes (U2): the star label entry's `of: 'starCatalog'` carries "the caption
 //   never outlives the dot", per item, in core; every other kind was UNGATED. `UNGATED` goes with it.

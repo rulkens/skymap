@@ -13,10 +13,7 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import type { StructureId } from '../../../@types/data/structure/StructureId';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { StructureStore } from '../@types/StructureStore';
 import { structurePickId } from '../../../utils/picking/structurePickId';
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
@@ -39,11 +36,7 @@ import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from './structureVisibleBands';
 export function produceStructureLabels(
   store: StructureStore,
   scale: StructureScale,
-): (
-  state: EngineState,
-  ctx: FrameView,
-  fade: Readonly<Record<StructureId, number>>,
-) => Label2DProducerOutput {
+): LayerScreenLabel<'structure'>['produceLabels'] {
   return (state, ctx, fade) => {
     const labels: Label2D[] = [];
 

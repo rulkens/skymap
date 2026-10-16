@@ -5,9 +5,7 @@
  * these ids from core's scene-body captions, so each craft has exactly one captioner.
  */
 
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
 import { SAMPLED_BODY_IDS } from '../../../data/missions/sampledBodyIds';
@@ -23,11 +21,11 @@ const CRAFT = SAMPLED_BODY_IDS.map((id) =>
   findByIdOrThrow(SCENE_MESH_BODIES, id, 'produceMissionCaptions'),
 ).filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id));
 
-export function produceMissionCaptions(
-  state: EngineState,
-  ctx: FrameView,
-  fade: Readonly<Record<string, number>>,
-): Label2DProducerOutput {
+export const produceMissionCaptions: LayerScreenLabel<'missions'>['produceLabels'] = (
+  state,
+  ctx,
+  fade,
+) => {
   const { simDays } = ctx.snapshot;
   const present = CRAFT.filter((body) => spacecraftPresent(body.id, simDays));
   if (present.length === 0) return { labels: [], awake: false };
@@ -44,4 +42,4 @@ export function produceMissionCaptions(
     ),
   );
   return { labels, awake: false };
-}
+};

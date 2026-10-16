@@ -11,9 +11,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
@@ -35,11 +33,11 @@ const MILKY_WAY_LABEL_FADE_BAND: FadeBand = { fullAt: 0.6, goneAt: 2.0 };
 
 const LABEL_TEXT = 'You are here';
 
-export function produceMilkyWayLabel(
-  state: EngineState,
-  ctx: FrameView,
-  fade: number,
-): Label2DProducerOutput {
+export const produceMilkyWayLabel: LayerScreenLabel<'milkyWay'>['produceLabels'] = (
+  state,
+  ctx,
+  fade,
+) => {
   if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
     return { labels: [], awake: false };
 
@@ -131,4 +129,4 @@ export function produceMilkyWayLabel(
   // already wakes the loop. `awake: alpha < 1` would instead pin the loop for as
   // long as the camera parked inside the 0.6–2.0 Mpc fade band.
   return { labels, awake: false };
-}
+};

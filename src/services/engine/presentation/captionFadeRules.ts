@@ -1,15 +1,10 @@
 /**
  * captionFadeRules — per-caption-kind fade routing for the foreground scene-body
  * captions, AS DATA. Sibling of `captionPriority` (which answers "who wins a
- * collision"): this table answers "how hard should this caption show". Two facts
- * hang off a caption's `kind` and always move together, so they live as one row
- * rather than parallel dispatches scattered through `labelsNearPass.draw`:
- *
- *   1. `fadeTarget` — the distance band the caption rides, so its name eases in
- *      rather than popping at a threshold.
- *   2. `fadeItem` — which item of the producing Layer's own label entry carries the
- *      caption's switch, fade, recession and clip: the producer indexes the value
- *      core hands it by this. `null` states "this kind composes its own value".
+ * collision"): this table answers "how hard should this caption show" from where
+ * it is. `fadeTarget` is the distance band the caption rides, so its name eases in
+ * rather than popping at a threshold. Which label item switches a caption is its
+ * producer's own data, never this table's.
  *
  * `Record<CaptionKind, …>` makes the table compiler-complete: a new
  * `CaptionKind` fails the build until it gets a row. An annotation rather
@@ -26,13 +21,7 @@ import type { CaptionKind } from './captionPriority';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SOURCE_REGISTRY, Source } from '../../../data/sources';
-import { MESH_BODY_ENTRY } from '../../../data/sources/mesh-body';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
-
-// Through the registry: the row is the blackHoles Layer's, and core reads a
-// Layer's data through the composition, never an import.
-const SGR_A_STAR_ID = SOURCE_REGISTRY[Source.SgrAStar].id;
 
 /**
  * One caption kind's fade routing. `distanceMpc` is the caption anchor's
@@ -43,8 +32,6 @@ const SGR_A_STAR_ID = SOURCE_REGISTRY[Source.SgrAStar].id;
  */
 export type CaptionFadeRule = {
   readonly fadeTarget: (distanceMpc: number, camDistMpc: number) => number;
-  /** Required, not optional: a new CaptionKind must STATE its stance. */
-  readonly fadeItem: string | null;
 };
 
 /**
@@ -66,25 +53,22 @@ const PRODUCER_SUPPLIED = (): number => 0;
 
 export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> = {
   /**
-   * The descent's aim point. Its own star-catalog item governs the name, so
-   * muting the curated neighbourhood leaves the Sun captioning; the star label
-   * entry's `of` keeps the name from outliving the dot. The band makes the name
+   * The descent's aim point. The band makes the name
    * fade IN smoothly on the way down: exactly 0 at the layer's enable gate (no
    * pop) up to full alpha by half that distance.
    */
   sun: {
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc),
-    fadeItem: 'sun',
   },
 
   /** Inside the caption range Earth is simply on — no band. */
-  earth: { fadeTarget: SOLAR_SYSTEM_REACH, fadeItem: 'earth' },
+  earth: { fadeTarget: SOLAR_SYSTEM_REACH },
 
   /**
    * The Moon rides the 'planet' kind, so it follows this row. Like Earth: on
    * inside the caption range.
    */
-  planet: { fadeTarget: SOLAR_SYSTEM_REACH, fadeItem: 'planet' },
+  planet: { fadeTarget: SOLAR_SYSTEM_REACH },
 
   /**
    * The curated local star map. The band is a LOCAL STAR MAP rather than
@@ -95,14 +79,11 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
   star: {
     fadeTarget: (distanceMpc) =>
       fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC),
-    fadeItem: 'famousStar',
   },
 
   /**
-   * The Galactic Centre's name, owned by the blackHoles Layer's label entry —
-   * riding the `star` row above would hide it whenever the famous-star catalog
-   * is muted, and would key its band on a 2.3 kpc star map it sits 8 kpc
-   * outside. Only its scale band gates it.
+   * The Galactic Centre's name: riding the `star` row above would key its band
+   * on a 2.3 kpc star map it sits 8 kpc outside. Only its scale band gates it.
    *
    * It does NOT take Earth's and the planets' `SOLAR_SYSTEM_REACH` row: this is
    * the one caption that must survive OUTSIDE the solar system's range, since
@@ -111,7 +92,6 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    */
   sgrAStar: {
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
-    fadeItem: SGR_A_STAR_ID,
   },
 
   /**
@@ -120,7 +100,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * reach. Both bodies share the one registry row, hence one shared caption
    * toggle.
    */
-  meshBody: { fadeTarget: SOLAR_SYSTEM_REACH, fadeItem: MESH_BODY_ENTRY.id },
+  meshBody: { fadeTarget: SOLAR_SYSTEM_REACH },
 
   /**
    * The stick-figure names. They never reach the body-caption pipeline this
@@ -130,9 +110,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * handed `label:constellations` value, keyed on the camera's origin distance,
    * not on an anchor distance). The row exists so the table stays total over the
    * kind union; leaving the kind implicit would let it silently inherit the star
-   * map's parsec band. `fadeItem` is `null` for the same reason: the handed value
-   * already folds switch, fade, recession and clip, and a second read here would
-   * double-count it.
+   * map's parsec band.
    */
-  constellation: { fadeTarget: PRODUCER_SUPPLIED, fadeItem: null },
+  constellation: { fadeTarget: PRODUCER_SUPPLIED },
 };

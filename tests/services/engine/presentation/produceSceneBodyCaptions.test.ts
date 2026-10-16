@@ -21,7 +21,6 @@ import { describe, it, expect } from 'vitest';
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
 import { constellationLayerOpacity } from '../../../../src/layers/constellations/present/constellationLayerOpacity';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -275,10 +274,6 @@ describe('produceSceneBodyCaptions', () => {
   });
 
   it('constellation captions do not double-count the registry', () => {
-    // The row states its stance rather than omitting it: `null`, because
-    // `produceConstellationCaptions` already paints with its handed value.
-    expect(CAPTION_FADE_RULES.constellation.fadeItem).toBeNull();
-
     const layerFade = 0.5;
     const camPos: Vec3 = [5e-4, 0, 0];
     const runtime = {
