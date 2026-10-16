@@ -21,9 +21,6 @@ export function frameContextInputOf(
     readonly worldPose: CameraPose;
     /** `pick`'s clock is `performance.now()`; `runFrame`'s is its own stamp. */
     readonly nowMs: number;
-    /** Draw mask (fade-out tail included) for `runFrame`; pick mask (intent
-     *  only) for `pickFrameContext` — see `deriveSourceMasks`. */
-    readonly visibleSourceMask: number;
     /** The committed pose basis, off the caller's own snapshot — never a
      *  live re-read here, so both callers stay on their ONE store read. */
     readonly poseBasis: Mat3;
@@ -37,7 +34,7 @@ export function frameContextInputOf(
     readonly simDays: number;
   },
 ): { readonly input: FrameContextInput; readonly cam: AssembledOrbitCamera } {
-  const { worldPose, nowMs, visibleSourceMask, poseBasis, upBasis, simDays } = args;
+  const { worldPose, nowMs, poseBasis, upBasis, simDays } = args;
   // The DISPLAYED pose, not the authored register: the authored register is
   // untilted in-window and a pick against it misses (round-12c two-box
   // contract) — a plain field read, `state.cameraRuntime` already THIS
@@ -52,7 +49,7 @@ export function frameContextInputOf(
   // Eye→pivot-surface range NEAR0's bracket is sized from.
   const altitudeMpc = pivotSurfaceRangeMpc(arm, worldPose.distance, state.selectionRows.focus);
   return {
-    input: { cam, arm, altitudeMpc, nowMs, simDays, visibleSourceMask },
+    input: { cam, arm, altitudeMpc, nowMs, simDays },
     cam,
   };
 }

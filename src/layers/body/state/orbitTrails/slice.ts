@@ -1,4 +1,8 @@
-/** orbitTrails — core's near-field Keplerian orbit-trails singleton overlay. */
+/**
+ * orbitTrails — the body Layer's near-field Keplerian orbit-trails switch. It
+ * also governs the star catalog's S-star trails, which the same core
+ * `orbitTrailsPass` draws.
+ */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 

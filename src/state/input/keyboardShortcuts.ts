@@ -28,8 +28,8 @@ import { stepRate } from '../../utils/time/stepRate';
 import { shortcutKeys } from '../../utils/input/shortcutKeys';
 import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
-import { selectSelectedRef } from '../selection/selectors';
-import { clearSelection, updateSelectionFocus } from '../selection/selectionSlice';
+import { focusSelected } from '../selection/focusSelected';
+import { clearSelection } from '../selection/selectionSlice';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
@@ -54,13 +54,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   // `exitTakeover` ends whatever runs — a tour, an exhibit, a registry clip, or
   // the debug path replay — and is a no-op when nothing does.
   { keys: 'escape', run: () => [clearSelection(), exitTakeover()] },
-  {
-    keys: 'f',
-    run: (s) => {
-      const ref = selectSelectedRef(s);
-      return ref ? updateSelectionFocus(ref) : null;
-    },
-  },
+  { keys: 'f', run: () => focusSelected() },
   { keys: 'h,e', run: () => goHome() },
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },
   { keys: 'l', run: () => logCameraState() },

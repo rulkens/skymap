@@ -4,6 +4,7 @@ import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMeshBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -18,12 +19,15 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES, CONST_J2000);
 
-  it('emits one label per core scene body (Earth + planets + non-anchored mesh bodies)', () => {
-    // The seeded stars and the Sun caption from the star Layer's own producer
-    // (`produceStarCaptions`) now, not here — core keeps only the bodies whose
+  it('emits one label per core scene body (Earth + planets + non-anchored, non-sampled mesh bodies)', () => {
+    // The seeded stars, the Sun and the sampled craft caption from their
+    // Layers' own producers, not here — core keeps only the bodies whose
     // identity core owns.
     const captioned = SCENE_MESH_BODIES.filter(
-      (body) => !ANCHORED_MESH_BODY_IDS.has(body.id) && spacecraftPresent(body.id, CONST_J2000),
+      (body) =>
+        !ANCHORED_MESH_BODY_IDS.has(body.id) &&
+        !SAMPLED_BODY_IDS.includes(body.id) &&
+        spacecraftPresent(body.id, CONST_J2000),
     );
     expect(labels).toHaveLength(1 + SCENE_PLANETS.length + captioned.length);
   });

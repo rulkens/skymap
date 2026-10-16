@@ -81,8 +81,6 @@ export type ReadyFrameContext = {
   simDays: number;
   /** Eye→pivot-surface range NEAR0's bracket is sized from — `FrameContextInput.altitudeMpc`. */
   altitudeMpc: number;
-  /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
-  visibleSourceMask: number;
   /**
    * The offscreen render-target table (`hdr`, `cosmic-web-density`, …).  Forwarded
    * here from `state.gpu.renderTargets` — same reference, no allocation —

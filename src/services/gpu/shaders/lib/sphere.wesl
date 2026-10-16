@@ -50,9 +50,9 @@ struct SphereUniforms {
 
 // ── TintedSphereUniforms ─────────────────────────────────────────────
 //
-// 'SphereUniforms' plus one solid colour — the uniform layout for
-// renderers that bind a single per-draw RGB alongside the MVP through a
-// non-dynamic uniform buffer.  The star renderer is the current
+// 'SphereUniforms' plus one solid colour and its opacity — the uniform
+// layout for renderers that bind a single per-draw RGB alongside the MVP
+// through a non-dynamic uniform buffer.  The star renderer is the current
 // consumer (its emissive spectral colour); centralising the struct here
 // (rather than duplicating it per renderer) keeps the byte layout a
 // single source of truth across the vertex/fragment module pair and its
@@ -73,18 +73,21 @@ struct SphereUniforms {
 //   offset  0..63: mvp  (mat4x4<f32>, column-major, 64 bytes)
 //   offset 64..75: tint (vec3<f32> — 16-byte ALIGNED, starting at the
 //                        already-aligned offset 64; 12 bytes of data)
-//   offset 76..79: implicit trailing pad — a struct's size rounds up
-//                  to its alignment (16), so 76 rounds to 80.
-//   total: 80 bytes.
+//   offset 76..79: opacity (f32 — packs into the vec3's trailing 4 bytes,
+//                  the slot that was the struct's implicit pad)
+//   total: 80 bytes, unchanged; iOS rejects a struct larger than its
+//   80-byte buffer, so a new field must never grow it past this.
 //
 // The CPU side therefore uploads 20 f32s: 16 for the mvp, 3 for the
-// tint, one zeroed pad float.  'tint' carries the star's spectral
+// tint, one for the opacity.  'tint' carries the star's spectral
 // emissive colour, linear RGB, correct for the rgba16float HDR
-// foreground target.
+// foreground target; 'opacity' is the straight alpha the pipeline's
+// OVER blend reads.
 
 struct TintedSphereUniforms {
   mvp: mat4x4<f32>,
   tint: vec3<f32>,
+  opacity: f32,
 };
 
 // ── LitBodyUniforms ──────────────────────────────────────────────────

@@ -101,6 +101,15 @@ describe('sceneOccluderSpheres', () => {
     expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES)))).toBe(false);
   });
 
+  const sunRadiusKm =
+    innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
+
+  it('holds a resolved Sun, sized at the draw camera', () => {
+    // 1e6 km out the Sun spans ~1200 px.
+    const radii = occluderRadiiKm(makeCtx('sun', 1e6));
+    expect(radii.filter((r) => Math.abs(r - sunRadiusKm) < 1)).toHaveLength(1);
+  });
+
   it('drops the Sun once it demotes to a point at Jupiter-range', () => {
     // The Sun subtends ~1.6 px from Jupiter: drawn as an additive point by
     // starPointsPass, so it is no longer an opaque sphere.

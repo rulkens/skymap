@@ -10,7 +10,6 @@ export const OPEN_CLUSTER_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'milkyWay',
-  labelLayer: 'structure',
   detailLabel: 'Open Cluster',
   shortLabel: 'Open cluster',
   plural: 'Open clusters',

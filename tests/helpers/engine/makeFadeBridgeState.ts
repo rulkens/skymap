@@ -101,7 +101,7 @@ export function makeFadeBridgeState(): {
     cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: true },
-    missions: { trails: false },
+    missionTrails: { enabled: false },
   } as unknown as EngineSettingsState;
 
   const state = {

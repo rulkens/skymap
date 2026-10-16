@@ -25,7 +25,6 @@ export const SUN_ENTRY = {
   // matches the other non-catalog rows.
   allSky: true,
   bearsLabel: true,
-  labelLayer: 'starCatalog',
   bearsMarker: false,
   detailLabel: 'Sun',
   shortLabel: 'Sun',
