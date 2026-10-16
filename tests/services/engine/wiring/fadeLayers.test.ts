@@ -22,21 +22,6 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
-import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
-import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import { structureFadeRows } from '../../../../src/layers/structure/present/structureFadeRows';
-
-/** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
-const GALAXY_RUNTIME = {
-  pointRenderer: { hasCatalog: () => true },
-} as unknown as GalaxyCatalogRuntime;
-
-/** No cube resident: the density rows' guards read the renderer, their seeds do not. */
-const DENSITY_RUNTIME = {
-  renderer: { listIds: () => [] },
-} as unknown as CosmicWebDensityRuntime;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -100,13 +85,7 @@ function makeState(
     subsystems: {
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
-    // `seedFades` walks the COMPOSED rows: the core manifest plus the density
-    // and structure Layers', whose seeds are pinned below.
-    fadeRows: [
-      ...FADE_LAYERS,
-      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
-      ...structureFadeRows(),
-    ],
+    fadeRows: [...FADE_LAYERS],
   } as unknown as EngineState;
 }
 
@@ -179,41 +158,6 @@ describe('seedFades', () => {
     expect([...reached].sort()).toEqual([...captionBearingBodyIds].sort());
     expect(reached).not.toContain('s-star');
   });
-
-  it('seeds a disabled ring at 0 and a disabled label at 0', () => {
-    // The persisted per-category visibility is honoured from frame 1: a ring or
-    // label the user turned off seeds at 0 so it doesn't flash before a fade.
-    const ring = STRUCTURE_IDS[0]!;
-    const label = STRUCTURE_IDS[STRUCTURE_IDS.length - 1]!;
-    const state = makeState({
-      ringVisibility: { [ring]: false },
-      labelVisibility: { [label]: false },
-    });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'structure', id: ring })).toBe(0);
-    expect(
-      state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', item: label }),
-    ).toBe(0);
-  });
-
-  // ── demand-loaded sets (seed 0 so first-load fade-in isn't lost) ──
-
-  it('seeds EVERY volume field at 0', () => {
-    const state = makeState();
-    seedFades(state);
-    // Derive the expected set from the registry — every type:'cosmicWebDensity'
-    // entry. Not hardcoded.
-    const volumeIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'cosmicWebDensity')
-      .map((e) => e.id);
-    expect(volumeIds.length).toBeGreaterThan(0);
-    for (const id of volumeIds) {
-      expect(
-        state.subsystems.fades.opacityOf({ kind: 'cosmicWebDensityField', id }),
-        `cosmicWebDensityField{${id}} should seed at 0`,
-      ).toBe(0);
-    }
-  });
 });
 
 // ── Intent-subset closures ───────────────────────────────────────────
@@ -237,12 +181,7 @@ describe('FADE_LAYERS intent subset', () => {
     settings.cosmicWebDensity.items = {
       mcpm: { enabled: true },
     } as unknown as EngineSettingsState['cosmicWebDensity']['items'];
-    for (const row of [
-      ...FADE_LAYERS,
-      ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
-      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
-      ...structureFadeRows(),
-    ]) {
+    for (const row of FADE_LAYERS) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);
     }

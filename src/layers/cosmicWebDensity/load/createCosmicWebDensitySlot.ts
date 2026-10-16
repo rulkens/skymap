@@ -1,10 +1,5 @@
 /**
  * createCosmicWebDensitySlot — one density row's asset slot, construction-pure.
- *
- * The upload must land synchronously inside `commit`, before the slot reports
- * `ready`: `installFadeOnArrival` re-runs the field fade row's guard
- * (`renderer.listIds()`) on that edge, and an upload after it misses the
- * false→true flip, so the cube never fades in.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';

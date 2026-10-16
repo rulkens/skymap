@@ -2,7 +2,7 @@
  * The cosmicWebDensity Layer: the Physarum density cubes (MCPM, Polyphorm
  * 2MRS, the MCPM workbench export) — one renderer holding every cube, its
  * additive upsample, both passes, the `cosmic-web-density` render target, one
- * slot and asset row per source row, the master + per-cube fade rows, and
+ * slot and asset row per source row, its one show entry, and
  * both its SettingsPanel and DebugPanel sections.
  */
 
@@ -16,7 +16,6 @@ import { destroy } from './destroy';
 import { cosmicWebDensityPass } from './passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from './passes/cosmicWebDensityUpsamplePass';
 import { cosmicWebDensityAssetRows } from './load/cosmicWebDensityAssetRows';
-import { cosmicWebDensityFadeRows } from './present/cosmicWebDensityFadeRows';
 import CosmicWebDensitySectionContainer from './ui/CosmicWebDensitySectionContainer';
 import CosmicWebDensityTuningSectionContainer from './ui/CosmicWebDensityTuningSectionContainer';
 
@@ -40,7 +39,6 @@ export const cosmicWebDensityLayer = defineLayer({
   destroy,
   passes: (runtime) => [cosmicWebDensityPass(runtime), cosmicWebDensityUpsamplePass(runtime)],
   assets: cosmicWebDensityAssetRows,
-  fades: cosmicWebDensityFadeRows,
   ui: [
     { slot: 'main', content: CosmicWebDensitySectionContainer },
     { slot: 'debug', content: CosmicWebDensityTuningSectionContainer },

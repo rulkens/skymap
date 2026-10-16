@@ -21,9 +21,6 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { MilkyWayRuntime } from '../@types/MilkyWayRuntime';
 import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
 import { milkyWayCamPosModel } from '../../../services/engine/galaxyGenerator/v1/milkyWayCamPosModel';
@@ -48,26 +45,23 @@ import { milkyWayModelCached } from '../../../services/engine/galaxyGenerator/v1
  */
 const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
-export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass {
-  function enabled(state: PassState, ctx: FrameView, _view: SlabView): boolean {
-    return deriveMilkyWayCloudAlpha(state, ctx) !== null;
-  }
-
+export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
   return {
     name: 'milky-way',
+    fade: 'milkyWayDisk',
 
-    enabled,
+    enabled: (state, ctx, _view, fade) => deriveMilkyWayCloudAlpha(state, ctx, fade) !== null,
 
     // Narrower than `enabled` — composed over it so pick stays a strict
     // subset of draw; see `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above.
-    pickEnabled(state, ctx, view) {
-      if (!enabled(state, ctx, view)) return false;
+    pickEnabled(state, ctx, view, fade) {
+      if (deriveMilkyWayCloudAlpha(state, ctx, fade) === null) return false;
       const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
       return camDistMpc >= MILKY_WAY_PICK_MIN_DISTANCE_MPC;
     },
 
-    draw(pass, view, ctx, state) {
-      const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);
+    draw(pass, view, ctx, state, fade) {
+      const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx, fade);
       if (fadeAlpha === null) return;
 
       runtime.cloudRenderer.drawDust(pass, {

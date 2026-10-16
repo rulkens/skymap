@@ -24,8 +24,6 @@ import {
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { makeFadeBridgeState } from '../../../helpers/engine/makeFadeBridgeState';
-import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 //
@@ -197,19 +195,7 @@ describe('applyIntent', () => {
 // expands and intents run end to end and we assert the registry spy calls directly.
 
 // The intent keys whose handles a full (no-`only`) sync must drive…
-const INTENT_KEYS = [
-  'survey',
-  'surveyLabel',
-  'starCatalogLabel',
-  'bodyLabel',
-  'structureRing',
-  'structureLabel',
-  'cosmicWebDensityField',
-  'cosmicWebDensity',
-  'orbitTrails',
-  'milkyWayDisk',
-  'milkyWayLabel',
-] as const;
+const INTENT_KEYS = ['starCatalogLabel', 'bodyLabel', 'orbitTrails'] as const;
 // …and the registration-only handles it must NEVER touch.
 const REGISTRATION_ONLY_HANDLES: readonly FadeId[] = [
   { kind: 'overlay', id: 'proceduralDisks' },
@@ -229,16 +215,15 @@ describe('syncVisibilityFades', () => {
   it('with `only` filters to that row’s handles', () => {
     const { state, fadeTo } = makeFadeBridgeState();
 
-    syncVisibilityFades(state, { animate: true, only: ['survey'] });
+    syncVisibilityFades(state, { animate: true, only: ['orbitTrails'] });
 
-    // Every survey (galaxy-catalog) handle faded…
-    for (const id of GALAXY_CATALOG_IDS) {
-      expect(fadedHandle(fadeTo, { kind: 'galaxyCatalog', id }), `survey ${id}`).toBe(true);
-    }
+    // The orbit-trails handle faded…
+    expect(fadedHandle(fadeTo, { kind: 'orbitTrails' })).toBe(true);
     // …and nothing from another intent row did.
-    expect(fadedHandle(fadeTo, { kind: 'structure', id: STRUCTURE_IDS[0]! })).toBe(false);
-    expect(fadedHandle(fadeTo, { kind: 'cosmicWebDensity' })).toBe(false);
-    expect(fadedHandle(fadeTo, { kind: 'milkyWay' })).toBe(false);
+    expect(
+      fadedHandle(fadeTo, { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' }),
+    ).toBe(false);
+    expect(fadedHandle(fadeTo, { kind: 'labelLayer', layer: 'body', item: 'earth' })).toBe(false);
   });
 
   it('with no `only` covers every intent row and skips registration-only rows', () => {
@@ -246,34 +231,15 @@ describe('syncVisibilityFades', () => {
 
     syncVisibilityFades(state, { animate: true });
 
-    // A representative handle for each intent key faded at least once. The
-    // cosmicWebDensityField row fans out per CosmicWebDensityFieldId, so it's
-    // checked by kind below rather than against one hardcoded id.
-    const intentSamples: Record<
-      Exclude<(typeof INTENT_KEYS)[number], 'cosmicWebDensityField'>,
-      FadeId
-    > = {
-      survey: { kind: 'galaxyCatalog', id: GALAXY_CATALOG_IDS[0]! },
-      surveyLabel: { kind: 'labelLayer', layer: 'galaxy' },
+    // A representative handle for each intent key faded at least once.
+    const intentSamples: Record<(typeof INTENT_KEYS)[number], FadeId> = {
       starCatalogLabel: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
       bodyLabel: { kind: 'labelLayer', layer: 'body', item: 'earth' },
-      structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
-      structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
-      cosmicWebDensity: { kind: 'cosmicWebDensity' },
       orbitTrails: { kind: 'orbitTrails' },
-      milkyWayDisk: { kind: 'milkyWay' },
-      milkyWayLabel: { kind: 'labelLayer', layer: 'milkyWay' },
     };
     for (const key of INTENT_KEYS) {
-      if (key === 'cosmicWebDensityField') continue;
       expect(fadedHandle(fadeTo, intentSamples[key]), `intent ${key}`).toBe(true);
     }
-    // At least one cosmicWebDensityField handle faded (the row fans out per
-    // registry id).
-    expect(
-      fadeTo.mock.calls.some(([id]) => (id as { kind: string }).kind === 'cosmicWebDensityField'),
-      'intent cosmicWebDensityField',
-    ).toBe(true);
 
     // The registration-only handles were never faded.
     for (const handle of REGISTRATION_ONLY_HANDLES) {
@@ -321,23 +287,25 @@ describe('syncVisibilityFades', () => {
 // which sweeps every item the row expands to. The slot commit uses it so a
 // concurrent tier-swap reload of source A doesn't re-drive source B's fade.
 //
-// We drive the REAL `structureRing` row: it's a MULTI-item row (expands to
-// STRUCTURE_IDS) with no `post`, so the fixture stays light and we can assert
-// that exactly one of its sibling handles faded.
+// We drive the REAL `bodyLabel` row: it's a MULTI-item row (expands to the
+// caption-bearing bodies) with no `post`, so the fixture stays light and we can
+// assert that exactly one of its sibling handles faded.
 
 describe('syncVisibilityFadeItem', () => {
   it('drives exactly the one named item, not its row siblings', () => {
     const { state, fadeTo } = makeFadeBridgeState();
-    const idA = STRUCTURE_IDS[0]!;
-    const idB = STRUCTURE_IDS[1]!;
 
-    syncVisibilityFadeItem(state, 'structureRing', idA);
+    syncVisibilityFadeItem(state, 'bodyLabel', 'earth');
 
-    // Exactly one fade, on idA's handle, to the intent target (enabled → 1).
+    // Exactly one fade, on earth's handle, to the intent target (enabled → 1).
     expect(fadeTo).toHaveBeenCalledTimes(1);
-    expect(fadeTo).toHaveBeenCalledWith({ kind: 'structure', id: idA }, 1, FADE_IN_DURATION_MS);
-    // The sibling structure id was never touched.
-    expect(fadedHandle(fadeTo, { kind: 'structure', id: idB })).toBe(false);
+    expect(fadeTo).toHaveBeenCalledWith(
+      { kind: 'labelLayer', layer: 'body', item: 'earth' },
+      1,
+      FADE_IN_DURATION_MS,
+    );
+    // The sibling body was never touched.
+    expect(fadedHandle(fadeTo, { kind: 'labelLayer', layer: 'body', item: 'planet' })).toBe(false);
   });
 });
 
@@ -349,7 +317,7 @@ describe('applyIntent does not re-issue fadeTo to a target already held, through
     const { state, fadeTo, targetOf } = makeFadeBridgeState();
     targetOf.mockReturnValue(1); // every row here has intent true → target 1
 
-    syncVisibilityFades(state, { animate: true, only: ['structureRing'] });
+    syncVisibilityFades(state, { animate: true, only: ['bodyLabel'] });
 
     expect(fadeTo).not.toHaveBeenCalled();
   });
@@ -358,7 +326,7 @@ describe('applyIntent does not re-issue fadeTo to a target already held, through
     const { state, fadeTo, targetOf } = makeFadeBridgeState();
     targetOf.mockReturnValue(1);
 
-    syncVisibilityFadeItem(state, 'structureRing', STRUCTURE_IDS[0]!);
+    syncVisibilityFadeItem(state, 'bodyLabel', 'earth');
 
     expect(fadeTo).not.toHaveBeenCalled();
   });

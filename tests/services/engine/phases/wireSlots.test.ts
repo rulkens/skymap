@@ -130,7 +130,6 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
-import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
@@ -140,8 +139,6 @@ import { createStructureCatalogSlot } from '../../../../src/layers/structure/loa
 import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
 import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
-import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
-import { milkyWayFadeRows } from '../../../../src/layers/milkyWay/present/milkyWayFadeRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
@@ -439,12 +436,7 @@ function makeState(
       ...cosmicWebDensityAssetRows(densityRuntime),
       ...structureAssetRows(structureRuntime),
     ]),
-    fadeRows: [
-      ...FADE_LAYERS,
-      ...galaxyCatalogFadeRows(galaxyRuntime),
-      ...cosmicWebDensityFadeRows(densityRuntime),
-      ...milkyWayFadeRows(),
-    ],
+    fadeRows: [...FADE_LAYERS],
     // The entries of the Layers whose rows are composed above.
     visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
     layerSlots,
@@ -589,7 +581,7 @@ describe('wireSlots', () => {
     expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
-  it('registers the overlay, volume-master, and label-layer fade handles', async () => {
+  it('registers the overlay and label-layer fade handles', async () => {
     // seedFades pins each layer's frame-1 opacity in the fade
     // registry.  A missed handle means that layer's toggle has nothing to
     // multiply against (or flashes at the wrong opacity on frame 1).  We
@@ -606,27 +598,15 @@ describe('wireSlots', () => {
     const hasHandle = (h: unknown): boolean =>
       handles.some((got) => JSON.stringify(got) === JSON.stringify(h));
 
-    expect(hasHandle({ kind: 'milkyWay' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
-    expect(hasHandle({ kind: 'cosmicWebDensity' })).toBe(true);
-    expect(hasHandle({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(true);
-    // No item-less structure handle: structure labels use per-item handles,
-    // and produceStructureLabels fires each category's load-in.
-    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxy' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
 
-    // Opacities are deterministic under the default fixture (milkyWay disk +
-    // label enabled, volumes master enabled) — all gate to 1.
+    // Opacities are deterministic under the default fixture.
     const opacityFor = (h: unknown): number | undefined => {
       const call = register.mock.calls.find((c) => JSON.stringify(c[0]) === JSON.stringify(h));
       return call?.[1] as number | undefined;
     };
-    expect(opacityFor({ kind: 'milkyWay' })).toBe(1);
-    expect(opacityFor({ kind: 'cosmicWebDensity' })).toBe(1);
-    // The milkyWay label layer is seeded from settings.milkyWay.labelEnabled
-    // (default true), rather than registered at 0 for a producer to ramp.
-    expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 

@@ -1,7 +1,7 @@
 /**
  * wireGalaxyCatalogSourceSlot — one per-source galaxy-catalog slot, built by
  * `create`. WHEN it loads belongs to the Layer's asset rows, and the arrival
- * fade to core's `installFadeOnArrival`, not here. `subscribe` keeps the
+ * fade to core (the row's `gates`), not here. `subscribe` keeps the
  * provenance fact at today's beat; the catalog-landed pulse rides the Layer's
  * `sourceCounts` feed, which subscribes to this same slot.
  */

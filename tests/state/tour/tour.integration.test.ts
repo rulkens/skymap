@@ -23,6 +23,9 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/sources';
+import { APP_VISIBILITY } from '../../../src/compositions/appVisibility';
+import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
+import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
@@ -251,6 +254,8 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   ): EngineState {
     return {
       subsystems: { fades, clipPlayer },
+      // The composed entries core resolves the handed value from.
+      visibilityEntries: APP_VISIBILITY,
       settings: {
         milkyWay: { enabled: true },
         galaxyCatalogs: { items: makeGalaxyCatalogItems() },
@@ -277,7 +282,13 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       viewportPx: [CANVAS.width, CANVAS.height],
       camPos: SURVEY_CAM_POS,
     } as unknown as SlabView;
-    galaxyPointSpritesPass(runtime).draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
+    // Through core's gate, which resolves the value the pass is handed.
+    gatePassByFade(galaxyPointSpritesPass(runtime), state).draw(
+      {} as unknown as GPURenderPassEncoder,
+      view,
+      ctx,
+      state,
+    );
     const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }
@@ -313,16 +324,19 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     // no played cue can reach this site until it is fixed.
     const fades = createFadeRegistry({ requestRender: () => {} });
 
-    const unmasked = deriveMilkyWayCloudAlpha(
-      makeDrawState(fades, makeClipStub(1)),
-      makeDrawCtx(0, MW_CAM_POS),
-    );
+    const alphaWith = (clipFactor: number): number | null => {
+      const state = makeDrawState(fades, makeClipStub(clipFactor));
+      const ctx = makeDrawCtx(0, MW_CAM_POS);
+      return deriveMilkyWayCloudAlpha(
+        state,
+        ctx,
+        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
+      );
+    };
+    const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);
 
-    const masked = deriveMilkyWayCloudAlpha(
-      makeDrawState(fades, makeClipStub(0.4)),
-      makeDrawCtx(0, MW_CAM_POS),
-    );
+    const masked = alphaWith(0.4);
     expect(masked).toBeCloseTo(0.4, 6);
   });
 });

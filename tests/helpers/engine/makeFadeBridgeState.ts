@@ -12,31 +12,11 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
-import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
-import { cosmicWebDensityFadeRows } from '../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
-import { milkyWayFadeRows } from '../../../src/layers/milkyWay/present/milkyWayFadeRows';
-import { structureFadeRows } from '../../../src/layers/structure/present/structureFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { CosmicWebDensityRuntime } from '../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
-
-/** Every catalog committed, so the `survey` row's demand-loaded guard passes. */
-const GALAXY_RUNTIME = {
-  pointRenderer: { hasCatalog: () => true },
-} as unknown as GalaxyCatalogRuntime;
-
-/**
- * MCPM is default-on and loads first, so by the time a real sync runs the
- * renderer already holds it — the field row's guard needs at least one
- * resident id for the fan-out to have anything to fade.
- */
-const DENSITY_RUNTIME = {
-  renderer: { listIds: () => ['mcpm'] },
-} as unknown as CosmicWebDensityRuntime;
 
 export function makeFadeBridgeState(): {
   state: FadeBridgeState;
@@ -99,16 +79,8 @@ export function makeFadeBridgeState(): {
       fades: { fadeTo, setImmediate, targetOf },
       scheduler: { requestRender },
     },
-    // The COMPOSED rows — core's manifest plus every Layer's, which is what
-    // `createLayers` writes and what the `survey` assertions exercise.
-    fadeRows: [
-      ...FADE_LAYERS,
-      ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
-      ...starCatalogFadeRows(),
-      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
-      ...milkyWayFadeRows(),
-      ...structureFadeRows(),
-    ],
+    // The COMPOSED rows — core's manifest plus every Layer's still on the old path.
+    fadeRows: [...FADE_LAYERS, ...starCatalogFadeRows()],
   } as unknown as FadeBridgeState;
 
   return { state, fadeTo, setImmediate, targetOf, requestRender, settings };

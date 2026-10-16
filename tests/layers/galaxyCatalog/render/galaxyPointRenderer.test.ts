@@ -259,7 +259,6 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       pointSizePx: 1,
       brightness: 1,
       selectedPacked: 0xffffffff >>> 0,
-      visibleSourceMask: 0xffffffff,
       camPosWorld: [0, 0, 0],
       pxPerRad: 1,
       provenance: {
@@ -316,7 +315,6 @@ describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
       pointSizePx: 1,
       brightness: 1,
       selectedPacked: 0xffffffff >>> 0,
-      visibleSourceMask: 0xffffffff,
       camPosWorld: [0, 0, 0] as const,
       pxPerRad: 1,
       provenance: {

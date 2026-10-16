@@ -7,8 +7,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { FADE_IN_DURATION_MS } from '../../../../src/services/animation/fadeController';
 import { installFadeOnArrival } from '../../../../src/services/engine/wiring/installFadeOnArrival';
 import { makeFadeBridgeState } from '../../../helpers/engine/makeFadeBridgeState';
@@ -17,7 +15,6 @@ import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FadeBridgeState } from '../../../helpers/engine/FadeBridgeState';
 
 /** One slot whose `ready` notification the test issues by hand, as a commit would. */
@@ -98,27 +95,5 @@ describe('installFadeOnArrival', () => {
 
     expect(fadeTo).not.toHaveBeenCalled();
     expect(post).not.toHaveBeenCalled();
-  });
-
-  it('drives only the item whose guard opened, not its row siblings', () => {
-    const { state, fadeTo } = makeFadeBridgeState();
-    const opening = GALAXY_CATALOG_IDS[0]!;
-    const sibling = GALAXY_CATALOG_IDS[1]!;
-    const committed = new Set<string>([sibling]);
-    (state as FadeBridgeState).fadeRows = galaxyCatalogFadeRows({
-      pointRenderer: { hasCatalog: (id: string) => committed.has(id) },
-    } as unknown as GalaxyCatalogRuntime);
-    const { slots, notifyReady } = makeStubSlot();
-
-    installFadeOnArrival(state as EngineState, slots);
-    committed.add(opening);
-    notifyReady();
-
-    expect(fadeTo).toHaveBeenCalledTimes(1);
-    expect(fadeTo).toHaveBeenCalledWith(
-      { kind: 'galaxyCatalog', id: opening },
-      1,
-      FADE_IN_DURATION_MS,
-    );
   });
 });

@@ -2,7 +2,7 @@
  * The structure Layer: the extended-structure categories of both scales (cosmic
  * on COSMO, Milky Way on NEAR0) — the record store and its bulk catalog, the
  * per-view marker planner, one ring/halo pass and one label producer per slab,
- * the ring and label fade rows, the selection row, the Structures settings
+ * the ring and label entries, the selection row, the Structures settings
  * section and the InfoCard detail cards.
  */
 
@@ -17,7 +17,6 @@ import { structureMarkersPlanner } from './frame';
 import { structureAssetRows } from './load/structureAssetRows';
 import { structureMarkersCosmoPass } from './passes/structureMarkersCosmoPass';
 import { structureMarkersNearPass } from './passes/structureMarkersNearPass';
-import { structureFadeRows } from './present/structureFadeRows';
 import { produceStructureLabels } from './present/produceStructureLabels';
 import { structureSelectionRow } from './present/structureSelectionRow';
 import StructuresSectionContainer from './ui/StructuresSectionContainer';
@@ -43,16 +42,17 @@ export const structureLayer = defineLayer({
       {
         id: 'structureLabelsCosmo',
         slab: COSMO,
+        label: 'structure',
         produceLabels: produceStructureLabels(runtime.store, 'cosmic'),
       },
       {
         id: 'structureLabelsNear',
         slab: NEAR0,
+        label: 'structure',
         produceLabels: produceStructureLabels(runtime.store, 'milkyWay'),
       },
     ],
   }),
-  fades: structureFadeRows,
   selection: (runtime) => [structureSelectionRow(runtime.store)],
   ui: [
     { slot: 'main', content: StructuresSectionContainer },
