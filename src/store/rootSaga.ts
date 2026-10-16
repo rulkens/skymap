@@ -27,6 +27,7 @@ import { watchLogCameraStateSaga } from '../state/camera/watchLogCameraStateSaga
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
+import { watchFocusSelectedSaga } from '../state/selection/watchFocusSelectedSaga';
 import { watchHashSaga } from '../state/url/watchHashSaga';
 import { arrivalSaga } from '../state/arrival/arrivalSaga';
 
@@ -49,6 +50,7 @@ export function* mainSaga() {
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),
     watchGoHomeSaga(),
+    watchFocusSelectedSaga(),
     watchHashSaga(),
     arrivalSaga(),
   ]);

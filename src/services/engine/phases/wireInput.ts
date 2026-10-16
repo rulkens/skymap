@@ -20,11 +20,10 @@ import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import {
   updateSelectionSelect,
-  updateSelectionFocus,
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef } from '../../../state/selection/selectors';
+import { focusSelected } from '../../../state/selection/focusSelected';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -210,10 +209,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
           });
       },
       onDoubleClick: () => {
-        // Read the select ref the preceding single-click wrote rather than
+        // Focuses the ref the preceding single-click selected rather than
         // running a second pick — racing readbacks resolve out of order.
-        const ref = selectSelectedRef(store.getState());
-        store.dispatch(updateSelectionFocus(ref));
+        store.dispatch(focusSelected());
       },
     },
   );
