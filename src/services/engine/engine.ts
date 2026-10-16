@@ -31,7 +31,6 @@ import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaption
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { createInputAggregator } from './subsystems/inputAggregator';
 import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
@@ -227,10 +226,6 @@ export function createEngine(
         getEngineState: () => state,
       }),
 
-      // Eager, because the first rAF can beat the async `wireInput` phase that
-      // attaches the recognizer.
-      inputAggregator: createInputAggregator(),
-
       clipPathInspector: createClipPathInspector(),
 
       // Constructed eagerly, not as a deferred shim: anyone capturing the scheduler
@@ -425,8 +420,6 @@ export function createEngine(
     state.subsystems.inputBindings = null;
     detachControlsRef.current?.();
     detachControlsRef.current = null;
-    // Drop anything the recognizer queued but no frame ever drained.
-    state.subsystems.inputAggregator.destroy();
     // Undefined only if the GPU IIFE errored before registering the HDR-capability
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();

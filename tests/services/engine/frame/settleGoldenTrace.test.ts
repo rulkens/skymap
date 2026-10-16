@@ -105,7 +105,7 @@ function snapshot(state: EngineState, label: string): Step {
  */
 function runScript(northUp: boolean): Trace {
   const harness = makeCameraSimHarness({ focusBody: 'earth', bootHR: BOOT_HR });
-  const { store, state, frame, push, wheel } = harness;
+  const { store, state, frame, press, moveTo, release, wheel } = harness;
   store.dispatch(setCameraTuning({ northUp }));
   const trace: Step[] = [];
   const record = (label: string) => trace.push(snapshot(state, label));
@@ -122,17 +122,16 @@ function runScript(northUp: boolean): Trace {
     expectMode: string,
   ) => {
     store.dispatch(beginDrag());
-    push({ kind: 'gestureStart' });
-    push({ kind: 'dragAnchor', xPx: from[0], yPx: from[1] });
+    press(mode, from);
     moves.forEach(([x, y], i) => {
-      push({ kind: 'dragMove', mode, xPx: x, yPx: y });
+      moveTo([x, y]);
       frame();
       record(`${label} move ${i}`);
     });
     // The script must exercise the mode it names, or the trace is silently
     // pinning a different gesture.
     expect(state.cameraRuntime.gesture.value?.gesture).toMatchObject({ mode: expectMode });
-    push({ kind: 'gestureEnd' });
+    release();
     frame();
     record(`${label} end`);
   };

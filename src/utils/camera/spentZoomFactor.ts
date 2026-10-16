@@ -1,4 +1,4 @@
-/** The zoom a folded notch may SPEND on the body arm. `inputAggregator` multiplies a
+/** The zoom a folded notch may SPEND on the body arm. The `input` slice multiplies a
  *  frame's wheel events, so the settle prices off this, never off the unbounded fold. */
 
 const MIN_FACTOR = 0.5;

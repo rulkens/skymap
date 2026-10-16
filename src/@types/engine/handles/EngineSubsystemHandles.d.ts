@@ -25,7 +25,6 @@ import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
-import type { InputAggregator } from '../subsystems/InputAggregator';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { FadeRegistry } from '../../animation/FadeRegistry';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
@@ -42,13 +41,6 @@ export type EngineSubsystemHandles = {
   surfaceTiles: SurfaceTileSubsystem | null;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
-  /**
-   * Queue between the orbit-controls gesture recognizer (which only emits) and
-   * `runFrame`'s replay, the frame's one input-apply site. Eager — the recognizer is
-   * attached in `wireInput`, but `runFrame` drains from its first tick, which
-   * can precede that async phase.
-   */
-  inputAggregator: InputAggregator;
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered

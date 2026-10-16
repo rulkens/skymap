@@ -159,7 +159,7 @@ function seedPose(
  * cursor pick and the focus coincide and hides every pivot defect they exist
  * for — the fixtures would be choosing the one input the bug cannot occur on.
  */
-const WHEEL_PX = { xPx: 70, yPx: 30 } as const;
+const WHEEL_PX = [70, 30] as const;
 
 /** Angle between the last DRAWN sightline and the rover — off screen centre. */
 function offRoverRad(rover: BodyState): number {
@@ -340,7 +340,7 @@ describe('runFrame — the regime fold', () => {
     // sub-eye footprint) until the band's far edge hands the arm back.
     let flipAt = -1;
     for (let i = 0; i < 12 && flipAt < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.notch(240, [50, 50]);
       h.frame(1); // the zoom lands, and on the last of these the fold flips
       if (h.state.cameraRuntime.register.pose.frame === 'absolute') {
         flipAt = probe.drawnPoses.length - 1;
@@ -389,7 +389,7 @@ describe('runFrame — the regime fold', () => {
 
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       if (h.store.getState().camera.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
@@ -426,11 +426,10 @@ describe('runFrame — the regime fold', () => {
     // eye every frame and the quiet frame would have no baseline of its own.
     h.frame(40);
     h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'pan', xPx: 52, yPx: 50 });
+    h.press('pan', [50, 50]);
+    h.moveTo([52, 50]);
     h.frame(1);
-    h.push({ kind: 'gestureEnd' });
+    h.release();
     h.store.dispatch(endDrag());
     h.frame(2);
     const panOffset = h.state.cameraRuntime.follow?.panOffset ?? [0, 0, 0];
@@ -441,13 +440,13 @@ describe('runFrame — the regime fold', () => {
     // In past the engage edge, then back out through `disengageHR`. Two frames
     // per notch so each one is fully folded before the next arrives.
     for (let i = 0; i < 60 && h.store.getState().camera.base.frame === 'absolute'; i++) {
-      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+      h.notch(-240, WHEEL_PX);
       h.frame(2);
     }
     expect(h.store.getState().camera.base.frame).toEqual(EARTH_ARM);
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       if (h.store.getState().camera.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
@@ -494,7 +493,7 @@ describe('runFrame — the regime fold', () => {
     let restedTilt: number[] = [];
     let crossed = false;
     for (let i = 0; i < 80 && !crossed; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       const arm = h.state.cameraRuntime.register.pose;
       if (isBodyArm(arm)) {
@@ -588,7 +587,7 @@ describe('runFrame — the regime fold', () => {
       // makes the floor's shove stand out against its neighbours. 60 of them
       // because the settle starts the climb at 10.73 m, not the seed's 150 —
       // the site band's far edge is 80 of the rover's bounding radii away.
-      h.push({ kind: 'wheel', deltaY: 60, duringGesture: false, ...WHEEL_PX });
+      h.notch(60, WHEEL_PX);
       h.frame(1);
       const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
       eyeStepM.push(
@@ -634,12 +633,12 @@ describe('runFrame — the regime fold', () => {
     // Out of the site arm first — the park's own frame is what engages it, so
     // the test is AFTER the frame, never before it.
     for (let i = 0; i < 40; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
       if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
     }
     for (let i = 0; i < 12; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.notch(240, WHEEL_PX);
       h.frame(1);
     }
     expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
@@ -649,7 +648,7 @@ describe('runFrame — the regime fold', () => {
     let prev = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
     let engaged = 0;
     for (let i = 0; i < 60 && engaged < 3; i++) {
-      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+      h.notch(-240, WHEEL_PX);
       h.frame(1);
       const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
       fwdStep.push(
@@ -687,17 +686,17 @@ describe('runFrame — the regime fold', () => {
     const screenUp: Vec3[] = [];
     for (let cycle = 0; cycle < 2; cycle++) {
       for (let i = 0; i < 60; i++) {
-        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.notch(240, WHEEL_PX);
         h.frame(1);
         if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
       }
       for (let i = 0; i < 12; i++) {
-        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.notch(240, WHEEL_PX);
         h.frame(1);
       }
       expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
       for (let i = 0; i < 80; i++) {
-        h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+        h.notch(-240, WHEEL_PX);
         h.frame(1);
         if (isSiteArm(h.state.cameraRuntime.register.pose)) break;
       }
@@ -896,7 +895,8 @@ describe('runFrame — the regime fold', () => {
     // in a body arm the range belongs to the anchored zoom gesture, which keeps
     // the pose in body-fixed metres. `applyWheelZoom`'s answer would arrive as
     // an ABSOLUTE arm, which is what the frame assertion below rules out.
-    const { store, state, deps } = makeHarness();
+    const harness = makeHarness();
+    const { store, state, deps } = harness;
     seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
 
     runFrame(state, deps, 0);
@@ -904,13 +904,7 @@ describe('runFrame — the regime fold', () => {
     expect(engaged.frame).toEqual(EARTH_ARM);
 
     const spy = vi.spyOn(store, 'dispatch');
-    state.subsystems.inputAggregator.push({
-      kind: 'wheel',
-      deltaY: 240,
-      duringGesture: false,
-      xPx: 500,
-      yPx: 500,
-    });
+    harness.notch(240, [500, 500]);
     runFrame(state, deps, 16);
 
     const commits = commitCalls(spy) as { payload: FramedCameraPose }[];

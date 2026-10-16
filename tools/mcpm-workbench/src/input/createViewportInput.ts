@@ -5,7 +5,7 @@
  * math below (dispatched per move); a miss routes it into a plain camera register
  * that reaches the store once, at `gestureEnd` or a rest-wheel tick.
  */
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { createInputAggregator } from '../../../utils/input/createInputAggregator';
 import { attachOrbitControls } from '../../../../src/services/camera/orbitControls';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';

@@ -52,6 +52,9 @@ import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
+import { selectPendingInput } from '../../../state/input/selectors';
+import { inputConsumed } from '../../../state/input/inputSlice';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
@@ -101,8 +104,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The frame's ONE store snapshot. The camera step runs before
   // `deriveFrameContext` so a camera-only-ready frame still makes motion
   // progress before the missing-GPU early return.
-  const steps = state.subsystems.inputAggregator.drain();
   const stored = deps.cb.store.getState();
+  const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
+  const pending = selectPendingInput(stored);
+  const steps = pendingToInputSteps(pending, canvasPx);
 
   // The sim instant is derived BEFORE the step: the follow driver aims at where
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
@@ -120,7 +125,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
     simDays,
     rootState: stored,
-    canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+    canvasPx,
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
@@ -132,6 +137,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // listener fired by a commit sees this frame's register, not last frame's.
   state.cameraRuntime = next;
   for (const action of actions) deps.cb.store.dispatch(action);
+  // Same task as the read above, so no source dispatch can land in between.
+  if (pending.length > 0) deps.cb.store.dispatch(inputConsumed());
   if (requestRender) state.subsystems.scheduler.requestRender();
 
   const upBasis = next.outputs.upBasis;

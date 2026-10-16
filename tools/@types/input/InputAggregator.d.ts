@@ -1,6 +1,6 @@
 /**
- * InputAggregator — the queue between the DOM gesture recognizer and the
- * frame's single input-apply site.
+ * InputAggregator — a workbench's queue between the DOM gesture recognizer
+ * and its frame's single input-apply site.
  *
  * `push` runs in a DOM handler and only accumulates; `drain` runs once per
  * frame and hands over everything since the last frame, with consecutive
@@ -9,8 +9,8 @@
  * per-event sum and the net-delta application agree.
  */
 
-import type { InputGestureEvent } from '../../camera/InputGestureEvent';
-import type { InputStep } from '../../camera/InputStep';
+import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
+import type { InputStep } from '../../../src/@types/camera/InputStep';
 
 export type InputAggregator = {
   push(event: InputGestureEvent): void;

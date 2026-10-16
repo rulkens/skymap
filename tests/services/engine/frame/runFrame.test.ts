@@ -109,7 +109,12 @@ import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/Fr
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import {
+  inputSourceAttached,
+  inputGestureStarted,
+  inputMoved,
+  inputConsumed,
+} from '../../../../src/state/input/inputSlice';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -200,8 +205,6 @@ function makeState(): EngineState {
       texturedDisks: null,
       clickResolver: null,
       inputBindings: null,
-      // Non-nullable from t=0: runFrame drains it before the produce step.
-      inputAggregator: createInputAggregator(),
       loadProgress: null,
     },
     booted: false,
@@ -325,10 +328,18 @@ describe('runFrame — the input drain runs before the produce step', () => {
     // The emit sink's DOM-time edge, so `orbitDrag` (priority 80) is the winner.
     store.dispatch(beginDrag());
 
-    const agg = state.subsystems.inputAggregator;
-    agg.push({ kind: 'gestureStart' });
-    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
-    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
+    // px (100, 100) → (150, 100) on the 100 × 100 canvas, in source units.
+    store.dispatch(inputSourceAttached({ source: 'canvas', aspect: 1 }));
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
+    const motion = {
+      intent: 'orbit',
+      dx: 0.5,
+      dy: 0,
+      ratio: 1,
+      at: { x: 1.5, y: 1 },
+      held: true,
+    } as const;
+    store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
 
     runFrame(state, deps, 0);
 
@@ -1111,7 +1122,7 @@ describe('runFrame — effective intent', () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
 
-    h.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+    h.notch(100, [500, 500]);
     h.frame();
 
     const committed = worldArmOf(h.store.getState().camera.base).distance;
@@ -1148,16 +1159,16 @@ describe('runFrame — effective intent', () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
     h.frame(4);
     h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 56, yPx: 50 });
+    h.press('orbit', [50, 50]);
+    h.moveTo([56, 50]);
     h.frame();
-    h.push({ kind: 'gestureEnd' });
+    h.release();
 
     const recorded: string[] = [];
     const inner = h.store.dispatch.bind(h.store);
     h.store.dispatch = ((action: { type: string }) => {
-      recorded.push(action.type);
+      // Filtered as the golden trace's recorder filters it: drain bookkeeping.
+      if (action.type !== inputConsumed.type) recorded.push(action.type);
       return inner(action as never);
     }) as typeof h.store.dispatch;
     h.frame();
@@ -1174,10 +1185,9 @@ describe('runFrame — effective intent', () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
     h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
-    h.push({ kind: 'gestureEnd' });
+    h.press('orbit', [100, 100]);
+    h.moveTo([150, 100]);
+    h.release();
 
     h.frame();
 

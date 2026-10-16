@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import { createInputAggregator } from '../../../../tools/utils/input/createInputAggregator';
 
 describe('inputAggregator', () => {
   it('collapses a frame of moves into one step, measured from the press point', () => {

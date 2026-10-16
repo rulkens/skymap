@@ -1,5 +1,6 @@
 /**
- * inputAggregator — collapse a frame's DOM gesture events into ordered steps.
+ * createInputAggregator — collapse a frame's DOM gesture events into ordered
+ * steps, for the workbench tools (the app now drains the `input` slice).
  *
  * Consecutive motion of the same kind folds into one step; gesture boundaries
  * and a change of kind close the current run, so arrival ORDER survives. That
@@ -8,11 +9,11 @@
  * would apply the second drag at the wrong rate.
  */
 
-import type { InputAggregator } from '../../../@types/engine/subsystems/InputAggregator';
-import type { InputGestureEvent } from '../../../@types/camera/InputGestureEvent';
-import type { InputStep } from '../../../@types/camera/InputStep';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import { WHEEL_ZOOM_K } from '../../../data/input/wheelZoomK';
+import type { InputAggregator } from '../../@types/input/InputAggregator';
+import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
+import type { InputStep } from '../../../src/@types/camera/InputStep';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
+import { WHEEL_ZOOM_K } from '../../../src/data/input/wheelZoomK';
 
 export function createInputAggregator(): InputAggregator {
   const steps: InputStep[] = [];

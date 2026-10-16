@@ -146,7 +146,7 @@ describe('engaged-arm clock invariance (spec §14)', () => {
     let nowMs = 0;
     let crossing = -1;
     for (let i = 0; i < 200 && crossing < 0; i += 1) {
-      h.push({ kind: 'wheel', deltaY: 60, duringGesture: false, xPx: 50, yPx: 50 });
+      h.notch(60, [50, 50]);
       h.tick(nowMs);
       nowMs += 16;
       if ((probe.renderPose[i] as FramedCameraPose).frame === 'absolute') crossing = i;

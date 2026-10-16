@@ -178,8 +178,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     });
   };
 
-  // The recognizer only emits; `runFrame` replays the queue at the top of
-  // `runFrame`, so waking the loop is this sink's job. The two gesture-start
+  // The recognizer only emits, so waking the loop is this sink's job. The two gesture-start
   // STORE edges fire here at DOM time, not at the drain: `onDoubleClick`
   // dispatches focus synchronously and `watchFocusTweenSaga` reaches
   // `put(startCameraTween)` with no intervening yield, so a `cancelCameraTween`
@@ -192,7 +191,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         store.dispatch(beginDrag());
         store.dispatch(cancelCameraTween());
       }
-      state.subsystems.inputAggregator.push(event);
       state.subsystems.scheduler.requestRender();
     },
     {

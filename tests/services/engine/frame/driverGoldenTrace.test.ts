@@ -37,6 +37,7 @@ import {
   setAutoRotate,
   startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { inputConsumed } from '../../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
@@ -127,7 +128,8 @@ function runScript(): Trace {
   const actions: string[] = [];
   const inner = store.dispatch.bind(store);
   store.dispatch = ((action: { type: string }) => {
-    actions.push(action.type);
+    // The input slice's drain is transport, not the camera's action stream.
+    if (action.type !== inputConsumed.type) actions.push(action.type);
     return inner(action as never);
   }) as typeof store.dispatch;
 
@@ -147,7 +149,7 @@ function runScript(): Trace {
     return last;
   };
   const notch = (label: string): void => {
-    harness.push({ kind: 'wheel', deltaY: -100, duringGesture: false, xPx: 50, yPx: 50 });
+    harness.notch(-100, [50, 50]);
     step(`${label} a`);
     step(`${label} b`);
   };
@@ -155,13 +157,12 @@ function runScript(): Trace {
   expect(steps(4, 'boot').winner).toBe('resting');
 
   store.dispatch(beginDrag());
-  harness.push({ kind: 'gestureStart' });
-  harness.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+  harness.press('orbit', [50, 50]);
   for (let i = 0; i < 4; i += 1) {
-    harness.push({ kind: 'dragMove', mode: 'orbit', xPx: 50 + 6 * i, yPx: 50 });
+    harness.moveTo([50 + 6 * i, 50]);
     expect(step(`drag ${i}`).winner).toBe('orbitDrag');
   }
-  harness.push({ kind: 'gestureEnd' });
+  harness.release();
   step('drag end');
 
   harness.focus('earth');
@@ -229,13 +230,12 @@ function runScript(): Trace {
   harness.focus('earth');
   expect(steps(4, 'refocus').winner).toBe('followApproach');
   store.dispatch(beginDrag());
-  harness.push({ kind: 'gestureStart' });
-  harness.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+  harness.press('pan', [50, 50]);
   for (let i = 0; i < 3; i += 1) {
-    harness.push({ kind: 'dragMove', mode: 'pan', xPx: 55 + 5 * i, yPx: 53 + 3 * i });
+    harness.moveTo([55 + 5 * i, 53 + 3 * i]);
     expect(step(`pan ${i}`).winner).toBe('orbitDrag');
   }
-  harness.push({ kind: 'gestureEnd' });
+  harness.release();
   step('pan end');
   const settled = steps(4, 'pan settle');
   expect(settled.winner).toBe('followApproach');
