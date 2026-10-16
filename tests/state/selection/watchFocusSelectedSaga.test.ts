@@ -10,7 +10,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFocusSelectedSaga } from '../../../src/state/selection/watchFocusSelectedSaga';
 import { focusSelected } from '../../../src/state/selection/focusSelected';
-import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
+import {
+  updateSelectionFocus,
+  updateSelectionSelect,
+} from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 
@@ -35,8 +38,9 @@ describe('watchFocusSelectedSaga', () => {
     expect(store.getState()[selectionRoute].focus).toEqual(ref);
   });
 
-  it('focusSelected with nothing selected leaves focus unchanged', async () => {
+  it('focusSelected with nothing selected releases focus', async () => {
     const store = build();
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
 
     store.dispatch(focusSelected());
     await flush();
