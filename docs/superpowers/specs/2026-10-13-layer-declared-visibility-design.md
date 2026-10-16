@@ -36,7 +36,11 @@ type Common = {
   readonly items?: readonly string[];      // per-item: settings[cluster].items[id].<field>
   readonly recession?: 'strong' | 'mild';  // focus recession; omitted = does not recede
 };
-export type ShowEntry = Common & { readonly key: string; readonly field?: 'enabled' };
+export type ShowEntry = Common & {
+  readonly key: string;
+  readonly field?: 'enabled';
+  readonly bodies?: Readonly<Partial<Record<string, readonly SceneBody[]>>>; // per item: the scene bodies it draws (T7-1)
+};
 export type LabelEntry = Common & {
   readonly label: string;   // field is labelEnabled
   readonly cluster: string;
@@ -85,7 +89,7 @@ An address/item is gated exactly when some asset row names it. Today's guards ma
 
 - **Passes and planners**: `ContentPass` and `FrameContentPlanner` gain `readonly fade?: ShowKey`. Core computes the value before `enabled`, skips the pass when it is 0 (every item 0 for a per-item entry), and passes it to `enabled`, `draw`, `pickEnabled` and `drawPick`: `number` for an entry without items, `Readonly<Record<ItemId, number>>` with items. One value gates draw and pick (SQ2). A planner gets the same value as a trailing argument to `plan` and is never skipped: its output feeds passes that gate themselves (U6).
 - **Label producers**: every `LayerScreenLabel` / world-label row that draws labels declares `readonly label: <label name>`; there is no other form (ruled 2026-10-14: no special case for constellations or zone-of-avoidance labels). Core skips the producer when no item is live (an item is live while its held target is 1 or its raw fade is above 0), and otherwise passes the value (`number` or `Record`) as a third argument to `produceLabels`.
-- **Near spheres** (V2): a Layer that draws opaque spheres on the NEAR0 row declares them through `nearSpheres` (contract below), and core reads them from there for NEAR0's depth range and for the scene occluders. Core binds each source's `live(item)` to core's one liveness predicate (the one the producer skip uses) for the entry the source names in `fade`; core never names the address itself, and the source never reads a switch or a fade. The star Layer is today's one source: its seeded star helpers (`visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution`, `PositionedStar`) move into it (prep), so no core file names `starCatalog`.
+- **Scene bodies** (REVERT ruling 2026-10-15, T7-1 to T7-4): the seeded stars are scene bodies already (`SCENE_BODIES` spreads `SCENE_STARS`; the frame's `bodyStates` positions every star), so core sorts ONE roster of scene bodies, planets, moons, craft and stars alike (contract below). A show entry declares the bodies each item covers in an optional `bodies` field; the star show entry declares `bodies: SEEDED_STAR_CATALOGS`. Core admits a body while every entry item covering it has a handed value above 0, the same value every consumer reads; a body no entry covers (planets, moons, craft) is always admitted. Each body carries its own dot/sphere size as data on its seed record. `deriveView`'s NEAR0 range, `sceneOccluderBodies` and every body-drawing pass read that one sort. Core never names the star key: it reads the entries. The two members this needs, `ShowEntry.bodies` and `ReadyFrameContext.sceneBodies`, were consented (T7-1, T7-3); the earlier `Layer.nearSpheres` seam (V2) was reverted because it was added without consent.
 - **Galaxy draw mask** (V3): the galaxy catalog's per-source bitmask is a consumer's skip of its own items, not core state. The Layer builds it from its handed `survey` record (`sourceMaskOf(fade)`: a catalog's bit is set while its value is above 0), once per `plan`, for the disk walk, the hi-res famous planner and the structure member count. The point pass needs no mask: its renderer already skips a source whose opacity is exactly 0, and its pick filters on the same value (SQ2). `ReadyFrameContext` and `FrameContextInput` lose `visibleSourceMask`; `runFrame`, the cubemap capture and the pick context derive nothing for galaxies. `deriveSourceMasks` moves into the Layer as `sourceMaskOf`, so no core file names `survey` (prep, still on today's switch and fade reads, keeping today's pick split).
 - **Star spheres** (V1): both sphere passes hand their star's catalog value to the sphere renderer as an opacity, which the fragment emits as alpha (`TintedSphereUniforms.opacity`, in the struct's existing trailing pad, so the block stays 80 bytes). The pipeline blends straight-alpha OVER (the cloud shell's factors) and keeps depth test and depth write, so at opacity 1 it draws exactly as the opaque replace does today. The slot and the blend land in the prep PR at a fixed opacity of 1; the visibility PR hands the value. No frame-order change: the spheres are the only content of the NEAR0 row in the foreground chain.
 - **`of`**: a label entry may name the show entry it labels. Its target is then `of`'s target && its own switch && present, so hiding the thing hides its label, and the label fades with it. `of` works per item: an item-less label names an item-less show entry; a per-item label names a per-item show entry that has every one of the label's items, and label item X follows show item X. Any other pairing (a label item the `of` entry lacks, or mixed item shapes) fails the `APP_VISIBILITY` test; there is no fallback. Labels that today vanish with their thing declare `of`: constellation names, zone-of-avoidance lettering and light-time captions (with a new `labelEnabled` switch, default on, in their cluster); structure labels, which follow their ring by a hand gate (U3); star captions, which follow their star by a hand AND (`captionFadeRules.ts` `subjectVisible`, U2). Labels that are independent today (Milky Way, famous galaxy, body, black hole, the Voyager captions) do not declare `of`; making every label follow its thing is a later step.
@@ -93,30 +97,32 @@ An address/item is gated exactly when some asset row names it. Today's guards ma
 - **Clip channel**: `ClipOpacityChannel` is keyed by `VisibilityAddress`; the clip factor stays per address, not per item, as today.
 - **Panel rows**: a `labelsAndGuides` ui contribution may be `{ slot: 'labelsAndGuides', content: { toggle: ShowKey, label: string } }` (SQ7); core (`selectToggleRows`) builds the checkbox from the entry's switch and writes through `setVisibility`. The Orbit trails checkbox is the body Layer's row of this shape (U4); the Labels & guides section hand-authors no toggle.
 
-### Near spheres
+### The scene-body sort
 
 ```ts
-// Layer gains:
-nearSpheres?(runtime: Runtime): NearSphereSource;
+// Each seed record (StarBody, PlanetBody, MeshBody, EarthBody) gains, as data (T7-2):
+readonly resolvePx: number;   // stars STAR_RESOLVE_PX = 4; planets, moons, craft, Earth BODY_GLINT_MAX_PX = 3
 
-// src/@types/engine/frame/{NearSphere,NearSphereSource,NearSphereProvider}.d.ts
-type NearSphere = { readonly positionMpc: Readonly<Vec3>; readonly surface: BodySurface };
-type NearSphereSource = {
-  readonly fade: ShowKey; // the entry whose items `live` answers for
-  spheres(input: {
-    readonly bodyStates: ReadonlyMap<BodyId, BodyState>; // the frame's one sample
-    readonly camPosMpc: Readonly<Vec3>;
-    readonly pxPerRad: number;
-    readonly live: (item: string) => boolean;
-  }): readonly NearSphere[]; // the opaque spheres this source draws on NEAR0 for that camera
+// src/@types/engine/frame/PositionedSceneBody.d.ts, SceneBodyPresentation.d.ts
+type PositionedSceneBody = { readonly body: SceneBody; readonly positionMpc: Readonly<Vec3> };
+type SceneBodyPresentation = {
+  readonly unresolved: readonly PositionedSceneBody[];   // below the body's resolvePx: a point or glint
+  readonly resolved: readonly PositionedSceneBody[];     // at or above it: a sphere or mesh
 };
-type NearSphereProvider = (camPosMpc: Readonly<Vec3>, pxPerRad: number) => readonly NearSphere[];
-// ReadyFrameContext.positionedStars → nearSpheres: NearSphereProvider (bound once per frame,
-// like bodyPose); deriveView (NEAR0 range, outer radius) and sceneOccluderBodies (inner
-// radius) both call it with their own camera and pixel scale.
+
+// ReadyFrameContext.positionedStars → (T7-3, a data field)
+sceneBodies: readonly PositionedSceneBody[];
+  // every admitted scene body except Earth, positioned once per frame in frameContext.ts:
+  // core's planets, the present mesh bodies, and every body a composed show entry's `bodies` lists;
+  // admitted iff every identity covering it has a handed value above 0 (T7-4)
+
+partitionBodiesByPresentation({ bodies, camPosMpc, pxPerRad }): SceneBodyPresentation
+  // resolved iff the apparent diameter >= body.resolvePx; pure, disjoint and covering; filters nothing
 ```
 
-The source returns surfaces, not radii: the range spans the outer bound and the occluders take the inner bound (`sceneOccluderBodies.ts` header), so core picks the radius per consumer. The field-star sphere stays out of the set, as today.
+The sizes are per body, carried on the seed record: a planet or craft resolves at 3 px (the `bodyGlint` fade band's `goneAt`, so the glint has faded out when the sphere or mesh takes over), a star at 4 px (its handoff swaps a soft point for a sphere of the same emissive colour, near-seamless at a few pixels), as today. Admission reads the handed value, not liveness (T7-4): a star switched off keeps drawing, occluding and sizing NEAR0 through its fade-out, and a star faded or clipped to 0 hides nothing and stretches no slab. The producer skip keeps its liveness test.
+
+`deriveView` and `sceneOccluderBodies` sort `sceneBodies` through the pure helper with their own camera and pixel scale. Each drawing pass takes the bodies it owns from each branch, identified by its own data: core's `bodyGlintsPass`, `planetsPass`, `texturedBodiesPass` and mesh passes by core's rosters (through `sceneBodyPartition`, whose four-branch result stays), the star Layer's `starSpheresPass` and `starPointsPass` by the star Layer's own seed refs (which also carry each star's pick id and catalog item). The occluders are the resolved bodies with a ground surface, as today's flat, textured and star-sphere sets are. NEAR0's range spans the resolved bodies NEAR0 draws: today the star spheres, since planets and craft draw in their own `'body'` slab rows. No data says so yet, so until the bodies-into-Layers PR gives each body row a slab field, a named leftover (`near0SphereBodies`, T7-5) takes the resolved bodies outside core's own rosters, the complement of `sceneBodyPartition`'s rule. The field-star sphere stays out of the sort, as today: its star is a catalogued Gaia star, not a scene body.
 
 ### Writes
 
@@ -145,11 +151,11 @@ Writes `settings[cluster][field]`, or `settings[cluster].items[item][field]`. `o
 | milkyWay | `{ key: 'milkyWayDisk', cluster: 'milkyWay', recession: 'strong' }`, `{ label: 'milkyWay', cluster: 'milkyWay' }` |
 | galaxyCatalog | `{ key: 'survey', cluster: 'galaxyCatalogs', items: GALAXY_CATALOG_IDS }`, `{ label: 'famousGalaxy', cluster: 'galaxyCatalogs', items: <galaxy catalogs with bearsLabel>, recession: 'mild' }` |
 | structure | `{ key: 'structureRing', cluster: 'structures', items: STRUCTURE_IDS, recession: 'mild' }`, `{ label: 'structure', cluster: 'structures', items: STRUCTURE_IDS, of: 'structureRing', recession: 'mild' }` |
-| starCatalog | `{ key: 'starCatalog', cluster: 'starCatalogs', items: STAR_CATALOG_IDS }`, `{ label: 'starCatalog', cluster: 'starCatalogs', items: <label-bearing star catalogs>, of: 'starCatalog', recession: 'mild' }`; `nearSpheres` source `{ fade: 'starCatalog', … }` |
+| starCatalog | `{ key: 'starCatalog', cluster: 'starCatalogs', items: STAR_CATALOG_IDS }`, `{ label: 'starCatalog', cluster: 'starCatalogs', items: <label-bearing star catalogs>, of: 'starCatalog', recession: 'mild' }`; the show entry also declares `bodies: SEEDED_STAR_CATALOGS` (the seeded stars it covers) |
 | blackHoles | `{ label: 'blackHole', cluster: 'blackHoles', items: BLACK_HOLE_IDS, recession: 'mild' }` |
 | body (new `layer.ts`) | `{ key: 'orbitTrails' }`, `{ label: 'body', cluster: 'bodies', items: <label-bearing body ids>, recession: 'mild' }`; panel row `{ toggle: 'orbitTrails', label: 'Orbit trails' }` |
 
-The star show entry declares no `recession`: the star layers have no fade row today, so they do not recede. Every star pass, the star planner and the star `nearSpheres` source declare `fade: 'starCatalog'`.
+The star show entry declares no `recession`: the star layers have no fade row today, so they do not recede. Every star pass and the star planner declare `fade: 'starCatalog'`; the seeded stars enter core's scene-body sort through the entry's `bodies`.
 
 The plan re-verifies each recession value against `focusRecession.ts` and each item list against today's fade rows before deleting them. Where an entry and today's rows disagree, today's behaviour wins unless "Behaviour changes" lists it.
 
@@ -167,7 +173,7 @@ A minimal `src/layers/body/layer.ts` (`defineLayer` with `settings`, `visibility
 - The five `labelsAndGuides` row files (localBubble, constellations, lightTime, zoneOfAvoidance, missions), `selectMissionTrailsEnabled` and `setMissionTrailsEnabled` once their readers go, and `LayerSettingsRow` if nothing else uses it.
 - Hand-built `FadeId`s and the off-and-faded check inside each label producer, including the structure label's ring gate (`produceStructureLabels.ts:103-111`).
 - The hand ANDs of a section switch with an item switch: `deriveCosmicWebDensityLiveness.ts`, `visibleStars.ts`, `starSourcesInBand.ts` with `starSourceDrawOpacity.ts`, `starCatalogAssetRows.ts`'s demand, and `captionFadeRules.ts`'s `subjectVisible` axis (sun, famous star), with its `labelEnabled` axis.
-- (prep) `ReadyFrameContext.positionedStars` (replaced by `nearSpheres`), and core's star reads in `frameContext.ts` (NEAR0's range input) and `sceneOccluderBodies.ts`. Core's star scene-set helpers leave core: `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution` (with `STAR_RESOLVE_PX`) and the `PositionedStar` type move into the star Layer (moved, not deleted).
+- Core's second, star-only partition: `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution` and `resolvesToSphere` (deleted: the stars are bodies of the one scene-body sort), `ReadyFrameContext.positionedStars` (replaced by `sceneBodies`), and core's star switch reads in `frameContext.ts` (NEAR0's range input) and `sceneOccluderBodies.ts`. `STAR_RESOLVE_PX` and `BODY_GLINT_MAX_PX` move to `src/data/bodies/` (the makers set each record's `resolvePx` from them); `PositionedStar` stays as the star point renderer's input.
 - The galaxy LOD disks' raw fade read (`galaxyCatalog/frame.ts` `sourceOpacity`).
 - (prep) `ReadyFrameContext.visibleSourceMask` and `FrameContextInput.visibleSourceMask`, and core's three `deriveSourceMasks` calls (`runFrame.ts`, `cubemapCaptureFrame.ts`, `pickFrameContext.ts`); `deriveSourceMasks` itself moves into the galaxy Layer as `sourceMaskOf` (moved, not deleted).
 - `SourceMasks` (its `pick` mask retires with SQ2), and `GalaxyPointDrawSettings.visibleSourceMask` with the point renderer's mask skip (its exact-0 opacity skip is the same test once both read the handed value).
@@ -183,12 +189,12 @@ A minimal `src/layers/body/layer.ts` (`defineLayer` with `settings`, `visibility
 
 The user ruled for no special cases (2026-10-14: "make them work like everything else"). The branch delivers that only if all of the following hold. The final audit checks them:
 
-- Every Layer declares through the same contracts: show and label entries in its `visibility.ts`, `label:` on its label producers, `fade:` on its passes, planners and `nearSpheres` source, `gates` on its asset rows, and `{ toggle, label }` for a Labels & guides row. If two Layers declare the same kind of thing in different shapes, that is a defect.
+- Every Layer declares through the same contracts: show and label entries in its `visibility.ts`, `label:` on its label producers, `fade:` on its passes and planners, `gates` on its asset rows, and `{ toggle, label }` for a Labels & guides row. If two Layers declare the same kind of thing in different shapes, that is a defect.
 - No core code branches on a Layer id, show key, label name, source type or item id. The section rule, the liveness predicate (and the producer skip on it), `of`, recession and clip are each written once, for every entry.
-- No file under `src/services/` or `src/state/` names a show key or label name as a visibility address. The exceptions are the body Layer's consumers that stay in core (`orbitTrailsPass`'s `fade: 'orbitTrails'`; the scene-body caption label, which lives in `src/data/labels/` and which the row and the claim lookup import; see "The body Layer").
-- No core file reads a Layer's settings cluster or id list to shape that Layer's content: the star scene set, the galaxy mask and the Voyager caption emphasis live in their Layers (prep), and which bodies a Layer captions comes from its label entry's `items` (M4).
+- No file under `src/services/` or `src/state/` names a show key or label name as a visibility address. The exceptions are the body Layer's consumers that stay in core (`orbitTrailsPass`'s `fade: 'orbitTrails'`; the scene-body caption label, which lives in `src/data/labels/` and which the row and the claim lookup import; see "The body Layer"). No core file holds a star identity: which bodies the star entry covers comes from its `bodies`.
+- No core file reads a Layer's settings cluster or id list to shape that Layer's content: the galaxy mask and the Voyager caption emphasis live in their Layers (prep); the star scene set is core's one scene-body sort, admitting each body by the entries that cover it (no core file reads `starCatalogs` or a seeded star table), and each drawing pass finds its own bodies by its own data; and which bodies a Layer captions comes from its label entry's `items` (M4).
 - No consumer multiplies in its own recession, clip or switch AND, or runs its own off-and-faded skip, on top of the value core hands it. A consumer may skip one of its own items whose handed value is 0.
-- The only per-Layer differences are the data in the entries (`items`, `recession`, `of`, `cluster`) and behaviour changes 1–13 below.
+- The only per-Layer differences are the data in the entries (`items`, `recession`, `of`, `cluster`, `bodies`) and behaviour changes 1–13 below.
 
 ## Behaviour changes
 
@@ -217,7 +223,7 @@ Judged by `docs/superpowers/conventions/testing.md`. Each new test is mutation-c
 - Label producer skip: off and faded out → not called; off and still fading → called with the falling value; on → called.
 - `of` per item: label item X is off while show item X is off, and a sibling label item is untouched; an `of` label's value carries its `of` entry's clip. Every `of` pairing in `APP_VISIBILITY` obeys the item rule.
 - Stars: the Gaia cut's source opacity is the crossfade times the handed value; star points scale their colour by their catalog's value; the field-star sphere is off while its catalog's value is 0; each sphere pass draws with its catalog's value as opacity; (prep) the sphere renderer writes that opacity into the uniform slot the shader reads (byte 76) and blends instead of replacing.
-- Near spheres: core's frame provider admits a source's sphere only while the item is live for the entry the source names.
+- Scene-body sort: each body resolves at its own size (a planet at 3 px, a star at 4 px); the frame admits a covered body only while every covering item's handed value is above 0 (a clip to 0 included), and an uncovered body always; a star faded to 0 neither sizes NEAR0 nor occludes; `sceneBodyPartition` takes only core's own bodies; every `bodies` key is an item of its entry.
 - Galaxy mask: a catalog's bit is set exactly while its handed value is above 0; the planner's walk hides a catalog whose handed value is 0 while the registry still holds 1.
 - `setVisibility`: scalar write; item write that leaves the item's other fields intact.
 - (prep) Black holes: the initial `blackHoles.items` has a row for every black-hole id (derived, so a new hole cannot be missing), and the reducer writes the field.
@@ -239,7 +245,7 @@ Its own prep is a separate PR that lands first (SPLIT), every item behaviour-neu
 - `src/layers/body/layer.ts` with `settings` only, last in `APP_COMPOSITION`; the `orbitTrails` cluster moves into the body Layer.
 - M1: split `missionTrails: { enabled }` out of `missions` (which keeps `craft` and `speed`), re-pointing every reader and writer, the Voyager exhibit's settings and the website's settings row.
 - M2: the Voyager captions move from core's `produceSceneBodyCaptions` into a missions Layer caption producer, with the emphasis dim inside it; `captionComposeContextOf` is shared by the NEAR0 caption producers. Core's `sceneBodyLabels` skips the craft by a `SAMPLED_BODY_IDS` filter until the visibility PR replaces it with the claimed-body rule (M4).
-- V2: core's star scene-set helpers move into the star Layer behind the generic `Layer.nearSpheres` member; the source reads today's switches through a `settings` input, which the visibility PR replaces with core's `live`.
+- V2 (reverted 2026-10-15): moving core's star scene-set helpers into the star Layer behind a new `Layer.nearSpheres` member extended the Layer contract without consent and duplicated core's scene-body partition. Core keeps the helpers through the prep PR; the visibility PR puts the stars into core's one scene-body sort instead ("The scene-body sort").
 - V3: `deriveSourceMasks` → `src/layers/galaxyCatalog/present/sourceMaskOf.ts`; `visibleSourceMask` leaves core's frame context; the Layer computes both masks itself, so today's draw/pick split holds until SQ2.
 - V1: `TintedSphereUniforms.opacity` at byte 76 and a straight-alpha OVER sphere pipeline, at a fixed opacity of 1.
 
@@ -247,5 +253,7 @@ Its own prep is a separate PR that lands first (SPLIT), every item behaviour-neu
 
 - Panels with richer UI (galaxy catalogs, stars, structures): they keep their own setters.
 - Moving body render/load code into the body Layer.
+- Bodies moving out of core into Layers: each Layer contributes its body rows as data, like `Layer.slabs` (planets and moons, missions, mesh bodies, stars). Ruled 2026-10-15: not in this PR; it is the last Layer refactor PR, after this one. The scene-body sort here is an interim step shaped not to block it: core sorts one roster, no core table names a Layer key, and each body carries its own data. That PR adds a per-body slab field and deletes the `near0SphereBodies` leftover (T7-5).
+- Unruled side findings: mesh picking uses the bounding sphere (imprecise), and captions are never occluded by mesh bodies.
 - Layer-owned scale fade bands (`docs/backlog/2026-09-19-layer-owned-scale-fade-bands.md`): distance bands, a different concern.
 - The heliosphere Layer itself (the feature PR).

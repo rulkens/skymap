@@ -6,12 +6,14 @@
 
 **Architecture:** per-Layer `visibility.ts` tuples → `APP_VISIBILITY` in `src/compositions/` → derived address types. At runtime core composes the same entries off `deps.composition.layers` into `state.visibilityEntries`. One flow: `target(address, item) = switch && present && (of's target for the same item, for a label that declares one)`. The switch follows one data-driven section rule for every per-item show entry; present is the gating slot's `committed() !== null`. The target is recomputed on every settings write and every gating-slot notification; the fade registry animates toward it; core multiplies recession × clip once (an `of` label also × its `of` entry's clip) and hands passes, planners and label producers a plain number (or `Record<item, number>`). One root write (`setVisibility`) and one cue path (write, then sync with the cue's `over`). The old bridges run beside the new one until every Layer has migrated, then go.
 
-**Spec:** `docs/superpowers/specs/2026-10-13-layer-declared-visibility-design.md` (rationale: `docs/grill-sessions/layer-declared-fades-2026-10-13.md`; rulings after the spec, including U1–U7, V1–V3, SPLIT and M1–M4: `.superpowers/grill/2026-10-13-layer-declared-fades-rulings.md`).
+**Spec:** `docs/superpowers/specs/2026-10-13-layer-declared-visibility-design.md` (rationale: `docs/grill-sessions/layer-declared-fades-2026-10-13.md`; rulings after the spec, including U1–U7, V1–V3, SPLIT, M1–M4, the 2026-10-15 REVERT of V2 and T7-1–T7-4: `.superpowers/grill/2026-10-13-layer-declared-fades-rulings.md`).
+
+**Not in this PR: bodies move out of core into Layers** (ruled 2026-10-15). Each Layer will contribute its body rows as data, like `Layer.slabs`: planets and moons, missions, mesh bodies, stars. That is the LAST Layer refactor PR, after this one. Task 7 is an interim step shaped not to block it: core sorts one roster of scene bodies, no core table names a Layer key, and each body carries its own data. Also out of scope, unruled side findings: mesh picking uses the bounding sphere (imprecise), and captions are never occluded by mesh bodies.
 
 **Built on PR 1.** These exist when this PR starts, still on today's fade reads; the tasks below switch them to handed values:
 - `src/layers/body/layer.ts` (settings only), last in `APP_COMPOSITION`, holding the `orbitTrails` cluster.
 - The missions Layer's `missionTrails: { enabled }` cluster (M1) and its Voyager caption producer `produceMissionCaptions` (M2), with the emphasis dim inside it; `captionComposeContextOf`, shared by every NEAR0 caption producer; `SAMPLED_BODY_IDS` (`src/data/missions/sampledBodyIds.ts`, a `readonly string[]`), which core's `sceneBodyLabels.ts` still filters on until Task 10 (M4).
-- `Layer.nearSpheres` and `ReadyFrameContext.nearSpheres` (V2), with the star helpers in the star Layer; the star source still reads the star switches through its `settings` input.
+- Core still holds its star scene-set helpers, as on `main` (V2 was reverted from PR 1): `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution` (with `STAR_RESOLVE_PX`) under `src/services/engine/frame/`, `PositionedStar`, and `ReadyFrameContext.positionedStars`. Task 7 replaces them with one sort over every scene body, the stars included, and deletes the separate star partition.
 - `src/layers/galaxyCatalog/present/sourceMaskOf.ts` (V3), still `(state, nowMs) → { draw, pick }`; no core file derives a galaxy mask.
 - `TintedSphereUniforms.opacity` at byte 76 and a straight-alpha OVER sphere pipeline (V1); both sphere passes draw at opacity 1.
 - `blackHoles.items` complete; `SourceEntryBase.labelLayer` deleted.
@@ -21,6 +23,7 @@ Line citations below are at `7ab7ec0fd`; in files PR 1 touched they may have mov
 ## Global Constraints
 
 - **No special cases, ever silently.** If a Layer seems to need a special case, or a declaration unlike its siblings (a different entry shape, an extra skip, its own recession, clip or switch AND, a core branch on its id), STOP and report it in your reply. Never add it silently. The same applies to anything a task's text did not foresee.
+- **No Layer contract change beyond this plan's** (ruled 2026-10-15). The plan adds exactly: `Layer.visibility` (Task 1), `ContentPass.fade` and `FrameContentPlanner.fade` with their trailing value parameter (Tasks 1, 4), `LayerScreenLabel.label`, `LayerWorldLabel` (typing `LayerGuides.worldLabels`) and `produceLabels`' third argument (Task 1), `AssetWiringRow.gates` (Task 3), `LayerUiSlots.labelsAndGuides: LayerToggleRow` (Task 6), the optional show-entry field `ShowEntry.bodies` (Task 7, T7-1), `ReadyFrameContext.sceneBodies` in place of `ReadyFrameContext.positionedStars` (Task 7, T7-3: a consented core frame change, a data field, not a function), and removes `Layer.fades` (Task 12). A task that seems to need any other new or widened member of `Layer`, `LayerInstance`, `ContentPass`, `FrameContentPlanner`, a label row, `LayerUiSlots` or `ReadyFrameContext` STOPs and reports: it needs the user's consent.
 - Never add `Co-Authored-By` (or any attribution trailer) to a commit. One commit per task, message in the plan's voice. Never rebase, force-push or merge.
 - Stage by path, never `git add -A`. `npx prettier --write <files you touched>`, never `npm run format`.
 - Move or rename TS files only with `npm run move-files -- <from> <to>` (run `--dry` first), never `git mv` plus hand-edited imports. Afterwards grep for the old path, because string literals and `vi.mock` paths are not rewritten.
@@ -48,22 +51,23 @@ The likeliest failure modes CI would not see unless a test pins them:
 8. **A per-item `of` resolves against the wrong item.** Structure label `void` must follow ring `void`, not "any ring on" or the item-less entry. Pinned in Task 3 by `a per-item of label follows its own item`. A label item its `of` entry lacks fails Task 1's `every of pairing obeys the item rule`.
 9. **A star consumer keeps reading settings.** The star passes, the cut and the field-star sphere each had their own switch read; one left behind keeps popping. Pinned in Task 8 by the star tests.
 10. **The reactive sync pre-empts the cue's `over`.** Finding by reading the code: `watchFadesSaga` runs synchronously inside `dispatch`. The clip tick dispatches from the frame loop, outside any saga task, so redux-saga 1.5's `asap` runs the `takeEvery` worker at once (`@redux-saga/core` `stdChannel.put` → `asap` → `immediately(fork)`). Its `syncFades()` issues `fadeTo` with the default 600 ms / 100 ms before `applySceneEffect`'s explicit sync runs (`applySceneEffect.ts:33-47`). The explicit sync then finds the target already held (`syncVisibilityFades.ts:35`) and drops the cue's duration. If this reading is right, bare cues ignore `over` today too, and `over: 0` fades over 100 ms instead of snapping. Task 11's first test decides it; the fix for the failing case is ruled (U5) and is in that task.
-11. **A near-sphere source's `live` is bound to the wrong identity.** Core binds `live(item)` from the source's declared `fade` entry; binding it to `() => true`, to the item as an address, or to the resolved value instead of liveness would keep a hidden Sun occluding trails and sizing NEAR0, or drop a fading one. Pinned in Task 7 by `the near-sphere provider admits a sphere only while its item is live`.
+11. **A scene body admitted on the wrong test.** Core admits a body into `ReadyFrameContext.sceneBodies` while every identity covering it (from the show entries' `bodies`) has a handed value above 0 (T7-4); a body no entry covers is always admitted. Testing liveness (held target or raw fade) instead would keep a star clipped to 0 occluding trails and sizing NEAR0; admitting every body would keep a hidden Sun there; treating an uncovered body as not admitted would drop every planet. The producer skip keeps testing liveness (Review Focus #3): the two rules differ by ruling, so do not merge them. Pinned in Task 7 by `a covered body is admitted only while every covering item's handed value is above 0` and `a star faded to 0 neither sizes NEAR0 nor occludes`.
 12. **A sphere pass keeps drawing at opacity 1.** PR 1 left both sphere passes handing `1`; one left behind pops instead of fading. Pinned in Task 8 by `a sphere draws with its catalog's handed value` (both passes).
 13. **A claimed body captioned twice, or not at all** (M4). The claim set counting core's own `label:body` entry would drop Earth's caption (`'earth'` is both a body id and that entry's item); a missing claim captions a craft in core and in its Layer. Pinned in Task 10 by `each claimed body is captioned once, by its claimant`.
+14. **Each body keeps its own resolve size.** One sort over planets, craft and stars must still resolve a planet or craft at 3 px (`BODY_GLINT_MAX_PX`, the `bodyGlint` fade band's `goneAt`) and a star at 4 px (`STAR_RESOLVE_PX`). The size is data on each body's seed record (`resolvePx`, T7-2); a shared constant in the sort moves one handoff by a pixel. Pinned in Task 7 by `each body resolves at its own size`.
 
 ### Final review mandate
 
 The one whole-branch review at the end, and every `review: yes` mid-branch review (there scoped to the diff so far; Layers not yet migrated read "old path"), does all of the following. The reviewer reports findings against the spec's **"Uniformity"** section by name, one invariant at a time, alongside the table:
 
-- **(a) A cross-Layer table.** One row per Layer: localBubble, constellations, cosmicWebFilaments, flow, lightTime, zoneOfAvoidance, missions, milkyWay, cosmicWebDensity, galaxyCatalog, structure, starCatalog, blackHoles, body, and heliosphere-ready (none: the feature PR adds it, so its row checks that a new Layer would need no core edit). Columns: show entries; label entries (with `of`, and any body ids their `items` claim from core's captions); the label producers' `label:`; the passes', planners' and `nearSpheres` source's `fade`; the asset rows' `gates`; panel rows; and any consumer still doing its own recession, clip, skip or switch AND. Every row or cell that differs from its siblings is a finding unless the spec's "Behaviour changes" names it or it appears in (e) below.
+- **(a) A cross-Layer table.** One row per Layer: localBubble, constellations, cosmicWebFilaments, flow, lightTime, zoneOfAvoidance, missions, milkyWay, cosmicWebDensity, galaxyCatalog, structure, starCatalog, blackHoles, body, and heliosphere-ready (none: the feature PR adds it, so its row checks that a new Layer would need no core edit). Columns: show entries; label entries (with `of`, and any body ids their `items` claim from core's captions); the label producers' `label:`; the passes' and planners' `fade`; the show entries' `bodies` (starCatalog: `SEEDED_STAR_CATALOGS`; every other Layer: none, its bodies, if any, still in core); the asset rows' `gates`; panel rows; and any consumer still doing its own recession, clip, skip or switch AND. Every row or cell that differs from its siblings is a finding unless the spec's "Behaviour changes" names it or it appears in (e) below.
 - **(b) Core branches.** Any core code that branches on a Layer id, show key, label name, source type or item id is a finding.
 - **(c) The `entanglement-radar` skill** over the branch diff.
 - **(d) Leftover greps** in migrated Layers and core: hand-rolled off-and-faded skips like `produceMilkyWayLabel.ts:46-53` (`labelEnabled && … === 0`, `enabled || opacity > 0`); their own `focusRecession(`, `clipOpacityOf(`, `fades.opacityOf(` and `resolveLayerOpacity(` calls; `settings.<cluster>.enabled &&` ANDs; `subjectVisible`. Plus the core-address grep (spec "Uniformity", fourth invariant), run from the worktree root:
   ```bash
   grep -rnE "(address|fade|toggle|gates|of): '|'label:|label: '(constellations|lightTime|zoneOfAvoidance|milkyWay|famousGalaxy|structure|starCatalog|blackHole|body|missions)'" src/services src/state
   ```
-  The only allowed hit is `orbitTrailsPass.ts`'s `fade: 'orbitTrails'` (a body Layer consumer that stays in core). The scene-body caption label lives in `src/data/labels/sceneBodyCaptionLabel.ts` (Task 10), outside the grep, so `engine.ts`'s row and the claim lookup import it rather than repeat it. Any other hit in code is a finding; a comment that quotes an address as an example is not. Bare quoted keys are not grepped: `'body'`, `'starCatalog'`, `'structure'` and `'survey'` are also selection kinds and source types all over core.
+  The only allowed hit is `orbitTrailsPass.ts`'s `fade: 'orbitTrails'` (a body Layer consumer that stays in core). No core file holds a star identity: core learns which bodies the star entry covers from its `bodies` (Task 7). The scene-body caption label lives in `src/data/labels/sceneBodyCaptionLabel.ts` (Task 10), outside the grep, so `engine.ts`'s row and the claim lookup import it rather than repeat it. Any other hit in code is a finding; a comment that quotes an address as an example is not. Bare quoted keys are not grepped: `'body'`, `'starCatalog'`, `'structure'` and `'survey'` are also selection kinds and source types all over core.
 - **(e) Known leftovers, recorded and not chased.** Each appears in the table marked "leftover"; anything else that differs is a finding.
   - Asset `demand` predicates are load policy, not visibility: each keeps today's meaning. The star row's demand calls `visibilitySwitchOf` (U2: its hand AND goes); the density rows keep reading the item switch alone (they prefetch while the section is off).
   - The structure bulk `.ccat` and the famous-star meta sidecar gate nothing (spec "Gating").
@@ -78,11 +82,11 @@ Four grouped dispatches, one commit per task, one whole-branch review at the end
 | Group | Tasks | Theme | Model |
 |---|---|---|---|
 | A | 1, 2, 3, 4 | Contracts and entries; `setVisibility` and the section rule; the target, gating and per-item `of`; the resolver, liveness and core gates | Opus (`review: yes` inside) |
-| B | 5, 6, 7, 8 | Single-toggle Layers (missions included) with their new label entries; panel rows (Mission trails and Orbit trails included); the star Layer: core binds its near-sphere liveness (V2), its show entry (U2), its spheres take the handed value (V1) | Opus (`review: yes` on 7) |
+| B | 5, 6, 7, 8 | Single-toggle Layers (missions included) with their new label entries; panel rows (Mission trails and Orbit trails included); one sort over every scene body, the stars included (REVERT, T7-1–T7-4), the star show entry (U2), the spheres take the handed value (V1) | Opus (`review: yes` on 7) |
 | C | 9, 10 | Per-item cosmic Layers (SQ1, SQ2, SQ3, U3, U6), the galaxy mask on the handed value (V3); near-field captions (SQ5, SQ6, U2's captions, the missions captions and the claimed-body rule, M3, M4) | Sonnet |
 | D | 11, 12 | One cue path over the derived vocabulary (SQ4, U5); delete the old tables | Opus (`review: yes` inside) |
 
-Group B runs on Opus because Task 7 changes a Layer contract member to reach `ShowKey` (the Task 1 cycle class). Tasks 5 and 6 are light; the group stays one dispatch because 7 and 8 share the star files and 5–6 are mechanical.
+Group B runs on Opus because Task 7 changes `ReadyFrameContext`, re-routes NEAR0's painter range and the scene occluders, and makes core's frame context resolve handed values. Task 7 carries one named leftover (`near0SphereBodies`, T7-5) that the bodies-into-Layers PR deletes. Tasks 5 and 6 are light; the group stays one dispatch because 7 and 8 share the star files and 5–6 are mechanical.
 
 ---
 
@@ -160,7 +164,7 @@ readonly fade?: ShowKey;
 | milkyWay | `{ key: 'milkyWayDisk', cluster: 'milkyWay', recession: 'strong' }`, `{ label: 'milkyWay', cluster: 'milkyWay' }` |
 | galaxyCatalog | `{ key: 'survey', cluster: 'galaxyCatalogs', items: GALAXY_CATALOG_IDS }`, `{ label: 'famousGalaxy', cluster: 'galaxyCatalogs', items: <galaxy-catalog entries with bearsLabel> (= ['famousGalaxy']), recession: 'mild' }` |
 | structure | `{ key: 'structureRing', cluster: 'structures', items: STRUCTURE_IDS, recession: 'mild' }`, `{ label: 'structure', cluster: 'structures', items: STRUCTURE_IDS, of: 'structureRing', recession: 'mild' }` |
-| starCatalog | `{ key: 'starCatalog', cluster: 'starCatalogs', items: STAR_CATALOG_IDS }` (no recession: the star layers have no fade row today), `{ label: 'starCatalog', cluster: 'starCatalogs', items: <label-bearing star catalogs> (= sun, famousStar), of: 'starCatalog', recession: 'mild' }` |
+| starCatalog | `{ key: 'starCatalog', cluster: 'starCatalogs', items: STAR_CATALOG_IDS }` (no recession: the star layers have no fade row today; Task 7 adds `bodies: SEEDED_STAR_CATALOGS`), `{ label: 'starCatalog', cluster: 'starCatalogs', items: <label-bearing star catalogs> (= sun, famousStar), of: 'starCatalog', recession: 'mild' }` |
 | blackHoles | `{ label: 'blackHole', cluster: 'blackHoles', items: <ids of BLACK_HOLE_SOURCE_ROWS>, recession: 'mild' }` |
 | body | `{ key: 'orbitTrails' }`, `{ label: 'body', cluster: 'bodies', items: <SOURCE_ENTRIES type 'body' with bearsLabel> (= earth, planet, mesh-body), recession: 'mild' }` |
 
@@ -277,12 +281,12 @@ resolveVisibilityOpacity(state: Pick<EngineState, 'subsystems' | 'visibilityEntr
                          address: VisibilityAddress, item?: string): number
   // fades.opacityOf({address, item}, nowMs) × recessionFactor(entry.recession, focusBlend)
   //   × clipOpacityOf(address, nowMs) × (entry.of ? clipOpacityOf(entry.of, nowMs) : 1)   (U7)
+  // The handed value. Task 7's scene-body admission tests it > 0 (T7-4).
 resolveFadeValue(state, snapshot, address): number | Readonly<Record<string, number>>   // per entry shape
 visibilityLiveOf(state: Pick<EngineState, 'subsystems'>, id: FadeIdentity, nowMs: number): boolean
   // the registry's held target is 1 OR the RAW fade (no recession, no clip) is above 0. The one
-  // liveness predicate: the producer skip and core's binding of each near-sphere source's `live`
-  // (Task 7) both use it. Core always passes an address read from data (an entry, a row's `label`,
-  // a source's `fade`), never a literal.
+  // liveness predicate, used by the producer skip. Core always passes an identity read from data
+  // (an entry, a row's `label`), never a literal.
 gatePassByFade(pass: ContentPass): ContentPass
   // no `fade` → returns pass unchanged; else enabled/pickEnabled → false without calling the inner when the
   // value is 0 (every item 0), and enabled/draw/pickEnabled/drawPick all get the SAME value as their last
@@ -353,53 +357,134 @@ Reading `state.settings` here is safe for the memo: the per-row values are boole
 - [ ] `selectToggleRows.test.ts`: pass the composed rows (`layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides')`, one stable array) instead of `NO_LAYER_ROWS`, and run `a row's set builds the action that flips its own value` (`:25-32`) over `toggle-orbitTrails` and `toggle-missionTrails` in place of `toggle-orbit-trails`. Keep `returns the same array when an unrelated slice changes` (`:19-23`): it guards the memo the boolean keys feed.
 - [ ] Commit.
 
-### Task 7: Core binds each near-sphere source's liveness (V2)
+### Task 7: One sort over every scene body; the star entry declares the bodies it covers
 
-**review: yes**: a Layer contract member that now reaches `ShowKey` (Task 1's type-cycle class; the `tsc` gate is the check), and it feeds NEAR0's painter range.
+**review: yes**: it changes `ReadyFrameContext` (consented, T7-3), re-routes NEAR0's painter range and the scene occluders, and makes the frame context resolve handed values.
 
-PR 1 moved the star helpers into the star Layer behind `Layer.nearSpheres`, with the source reading the star switches from a `settings` input. Here the source stops reading switches: it names its show entry in `fade`, and core binds `live(item)` to the one liveness predicate (Task 4's `visibilityLiveOf`) for that entry. Core still names no address: it reads `source.fade`. Behaviour is unchanged until Task 8: the star passes keep an interim switch predicate.
+**NEAR0's bodies: a named leftover (T7-5, ruled 2026-10-16).** NEAR0's depth range (`deriveView`) spans the resolved bodies the NEAR0 row draws: today the star spheres, since planets and craft draw in their own `'body'` slab rows (spanning a resolved planet would move NEAR0 in the painter order, `slabs.ts:365-372`). No data says this yet. The bodies-into-Layers PR gives each body row a slab field that says which slab draws it; until then, NEAR0 spans the resolved bodies outside core's own rosters (`state.data.bodies.planets`, `ctx.snapshot.meshBodies`), the complement of the rule `sceneBodyPartition` uses. That filter is the leftover: one function, `near0SphereBodies`, in `src/services/engine/frame/`, whose header names it as the stand-in for the slab field and the PR that deletes it. It branches on core's rosters, never on a Layer key, a star table or a body kind.
 
-**Files:** modify `src/@types/engine/frame/NearSphereSource.d.ts`, `src/services/engine/frame/frameContext.ts` (the provider closure), `src/layers/starCatalog/present/{visibleStars,positionedVisibleStars,starNearSpheres}.ts`, `src/layers/starCatalog/@types/PositionedStar.d.ts` (`catalogId`), `src/layers/starCatalog/create.ts` (boot seed), `src/layers/starCatalog/passes/{starPointsPass,starSpheresPass}.ts`; tests `tests/services/engine/frame/frameContext.test.ts`, `tests/layers/starCatalog/present/{visibleStars,positionedVisibleStars}.test.ts`, and whichever of `tests/services/engine/frame/{deriveView,sceneOccluderSpheres}.test.ts`, `tests/layers/starCatalog/passes/{starPointsPass,starSpheresPass}.test.ts` seed star switches only to reach the star set.
+Ruled 2026-10-15 and 2026-10-16 (REVERT, T7-1 to T7-4). Today core runs two sorts. `partitionBodiesByPresentation` splits planets and mesh bodies at `BODY_GLINT_MAX_PX = 3` (glint below; flat, textured or mesh at or above). `partitionStarsByResolution` splits `visibleStars(settings.starCatalogs)` at `STAR_RESOLVE_PX = 4` (point below, sphere at or above), and core picks the star set by reading the star switches by name (`visibleStars.ts`, `frameContext.ts:113-119`, `sceneOccluderBodies.ts:34-39`, `deriveView.ts:116-133`). After this task there is one sort over one roster, and every rule in it reads data:
+
+- **Which bodies an entry covers (T7-1).** A show entry may declare `bodies`: per item, the scene bodies that item draws. The star show entry declares `bodies: SEEDED_STAR_CATALOGS`; no other entry declares it. Core reads it off `state.visibilityEntries` and never names the key.
+- **Admission (T7-4).** A body is admitted while every identity covering it has a handed value (fade × recession × clip, the value every consumer reads) above 0. A body no entry covers (planets, moons, craft) is always admitted. A star faded or clipped to 0 is in neither NEAR0's depth range nor the occluder set.
+- **The dot/sphere size (T7-2).** Each scene body carries its own `resolvePx` on its seed record; the sort reads it and branches on nothing else.
+- **The frame field (T7-3).** `ReadyFrameContext.positionedStars` becomes `sceneBodies`: every admitted scene body, positioned once per frame in `frameContext.ts`. A data field, not a function.
+- **Who draws what.** The sort splits every body by presentation into two branches. Each drawing pass takes the bodies it owns from each branch, identified by its own data: core's body passes by core's rosters, the star passes by the star Layer's seed refs. No pass and no core file branches on a Layer key or a body kind to find its bodies.
+
+**Files:**
+- create `src/@types/engine/frame/PositionedSceneBody.d.ts`, `src/@types/engine/frame/SceneBodyPresentation.d.ts`, `src/@types/engine/frame/CoveredSceneBody.d.ts`, `src/utils/visibility/sceneBodyCoverageOf.ts`, `src/services/engine/frame/sceneBodyPresentation.ts`, `src/services/engine/frame/near0SphereBodies.ts` (the T7-5 leftover), `src/data/bodies/starResolvePx.ts`, `src/data/bodies/bodyGlintMaxPx.ts`, `src/layers/starCatalog/@types/SeededStarRef.d.ts`, `src/layers/starCatalog/present/seededStarRefs.ts`
+- modify `src/@types/engine/layer/ShowEntry.d.ts` (`bodies?`), `src/layers/starCatalog/visibility.ts` (the star show entry's `bodies`)
+- modify `src/@types/scene/{StarBody,PlanetBody,MeshBody,EarthBody}.d.ts` (`resolvePx`), the record builders `src/data/bodies/makers/{star,heliocentricPlanet,satelliteBody,meshBody}.ts`, `src/data/bodies/sceneSStars.ts` (builds its `StarBody` records inline), `src/data/bodies/sceneEarth.ts`
+- modify `src/services/engine/frame/partitionBodiesByPresentation.ts` (two branches; `BODY_GLINT_MAX_PX` moves out), `src/services/engine/frame/sceneBodyPartition.ts` (reads the presentation; signature kept), `src/services/engine/frame/frameContext.ts` (builds `sceneBodies`; the `visibleStars` read goes), `src/@types/engine/frame/ReadyFrameContext.d.ts`, `src/services/engine/frame/deriveView.ts`, `src/services/engine/frame/sceneOccluderBodies.ts`; the `BODY_GLINT_MAX_PX` importers `src/services/engine/presentation/scaleFadeBands.ts` and `src/utils/scene/bodyGlintBrightness.ts`
+- modify the star Layer: `src/layers/starCatalog/passes/{starPointsPass,starSpheresPass}.ts` (their share of the presentation), `src/layers/starCatalog/passes/fieldStarSpherePass.ts` (the `STAR_RESOLVE_PX` import; its header's `visibleStars`/`partitionStarsByResolution` lines), `src/layers/starCatalog/create.ts` (the boot seed)
+- comments naming a deleted helper: `src/@types/scene/{StarBody,PositionedStar}.d.ts`, `src/data/bodies/seededStarCatalogs.ts` (core no longer reads it; the star entry's `bodies` does), `src/services/engine/data/createEngineData.ts:16`, `src/@types/engine/data/BodyStore.d.ts:17`, `src/utils/scene/bodyApparentDiameterPx.ts:7`, `src/utils/picking/seedIndexOfBody.ts:5`, `src/services/engine/frame/passes/{bodyGlintsPass,planetsPass,texturedBodiesPass}.ts` headers where they name the partition's branches
+- delete `src/services/engine/frame/{visibleStars,positionedVisibleStars,partitionStarsByResolution}.ts` and `src/utils/star/resolvesToSphere.ts` (its only caller is the star partition), with `tests/services/engine/frame/{visibleStars,positionedVisibleStars,partitionStarsByResolution}.test.ts` and `tests/utils/star/resolvesToSphere.test.ts`; `tests/services/engine/frame/frameFilePurity.test.ts` loses its `'frame/visibleStars'`, `'frame/partitionStarsByResolution'` and `'frame/partitionBodiesByPresentation'` rows (the ratchet shrinks: the last one's offender was the `BODY_GLINT_MAX_PX` export)
+- tests: `tests/compositions/appVisibility.test.ts`, `tests/services/engine/frame/{partitionBodiesByPresentation,sceneBodyPartition.presence,frameContext,deriveView,sceneOccluderSpheres}.test.ts`, `tests/layers/starCatalog/passes/{starPointsPass,starSpheresPass,fieldStarSpherePass}.test.ts`, and whichever of `tests/services/engine/frame/{frameContext.meshBodyHost,runFrame,renderFrame}.test.ts`, `tests/services/engine/helpers/pickFrameContext.test.ts`, `tests/services/engine/frame/passes/{orbitTrailsPass,planetsPass}.test.ts`, `tests/layers/starCatalog/present/produceStarCaptions.test.ts`, `tests/data/bodies/sceneAnchors.test.ts` and `tests/data/sources/sStarSource.test.ts` build a `ReadyFrameContext`, mock `sceneBodyPartition`, import a deleted helper, or stub `starCatalogs` only to reach the star set. Every test fixture that builds a body record literal gains `resolvePx` (let `npx tsc --noEmit` list them).
 
 **Contract:**
 
 ```ts
-// NearSphereSource.d.ts (PR 1's `settings` input goes; `fade` and `live` arrive)
-type NearSphereSource = {
-  readonly fade: ShowKey; // the entry whose items `live` answers for
-  spheres(input: {
-    readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
-    readonly camPosMpc: Readonly<Vec3>;
-    readonly pxPerRad: number;
-    readonly live: (item: string) => boolean;
-  }): readonly NearSphere[];
-  // the opaque spheres this source draws on NEAR0 for that camera; reads no settings and no fade
-};
-// frameContext binds, per source:
-//   live = (item) => visibilityLiveOf(state, { address: source.fade, item }, nowMs)   (Task 4)
+// ShowEntry gains (T7-1, consented):
+readonly bodies?: Readonly<Partial<Record<string, readonly SceneBody[]>>>;
+  // per item: the scene bodies that item draws. Every key is an item of the entry.
+// src/layers/starCatalog/visibility.ts: the star show entry declares `bodies: SEEDED_STAR_CATALOGS`
+//   (data only: `visibility.ts` still imports no Layer-typed module)
 
-// star Layer, present/:
-visibleStars(live: (id: StarCatalogId) => boolean)
-  : readonly (StarBody & { source: StarCatalogSourceType; seedIndex: number; catalogId: StarCatalogId })[]
-  // the seeded stars of every catalog `live` admits; reads no settings
-positionedVisibleStars(bodyStates: ReadonlyMap<BodyId, BodyState>, live: (id: StarCatalogId) => boolean)
-  : readonly PositionedStar[]          // PositionedStar gains catalogId
-starNearSpheres: NearSphereSource      // { fade: 'starCatalog', spheres: … over positionedVisibleStars(bodyStates, live) }
+// StarBody, PlanetBody, MeshBody and EarthBody gain (T7-2), as seed-record data, not a Layer member:
+readonly resolvePx: number;
+  // apparent diameter (px) at or above which the body draws resolved (sphere or mesh); below it, a point or glint
+// star maker and sceneSStars.ts:                         resolvePx: STAR_RESOLVE_PX
+// heliocentricPlanet, satelliteBody, meshBody, sceneEarth: resolvePx: BODY_GLINT_MAX_PX
+// src/data/bodies/starResolvePx.ts   STAR_RESOLVE_PX = 4, with its doc moved from partitionStarsByResolution.ts:
+//   a star's handoff swaps a soft point for a sphere of the same emissive colour, near-seamless at a few px
+// src/data/bodies/bodyGlintMaxPx.ts  BODY_GLINT_MAX_PX = 3, with its doc moved from partitionBodiesByPresentation.ts:
+//   equal to the `bodyGlint` fade band's `goneAt`, so the glint has faded out when the sphere or mesh takes over
+
+// src/@types/engine/frame/PositionedSceneBody.d.ts
+export type PositionedSceneBody = { readonly body: SceneBody; readonly positionMpc: Readonly<Vec3> };
+// src/@types/engine/frame/SceneBodyPresentation.d.ts
+export type SceneBodyPresentation = {
+  readonly unresolved: readonly PositionedSceneBody[];  // apparent diameter below the body's resolvePx
+  readonly resolved: readonly PositionedSceneBody[];    // at or above it
+};
+// src/@types/engine/frame/CoveredSceneBody.d.ts
+export type CoveredSceneBody = { readonly body: SceneBody; readonly coveredBy: readonly FadeIdentity[] };
+
+sceneBodyCoverageOf(entries: readonly VisibilityEntry[]): ReadonlyMap<string, CoveredSceneBody>
+  // keyed by body id, in entry, item and table order; coveredBy holds { address: the entry's key, item }
+  // for every item whose `bodies` lists the body. Memoised on the `entries` reference
+  // (createLayers composes `state.visibilityEntries` once).
+
+// ReadyFrameContext (T7-3, consented): positionedStars goes
+sceneBodies: readonly PositionedSceneBody[];
+  // every admitted scene body except Earth (its own renderer, as today), at this frame's bodyStates
+// deriveFrameContext builds it once per frame:
+//   roster: state.data.bodies.planets, the present meshBodies, then every body sceneBodyCoverageOf lists
+//   (a body appears once)
+//   admitted iff every identity in its coveredBy (none for an uncovered body) resolves above 0:
+//     resolveVisibilityOpacity(state, { nowMs, focusBlend: 0 }, id.address, id.item) > 0
+//   Recession never reaches 0 (STRONG_RECESSION is its floor), so the sign does not depend on the blend,
+//   which runFrame fills in later. Resolve once per distinct identity per frame, not once per body.
+
+partitionBodiesByPresentation(input: {
+  bodies: readonly PositionedSceneBody[];
+  camPosMpc: Readonly<Vec3>;
+  pxPerRad: number;
+}): SceneBodyPresentation
+  // resolved iff bodyApparentDiameterPx(positionMpc, bodyFootprintRadiusM(body)) >= body.resolvePx
+  // pure, disjoint and covering, input order kept per branch; filters nothing; no branch on body kind
+sceneBodyPresentation(ctx: FrameView): SceneBodyPresentation
+  // partitionBodiesByPresentation over ctx.snapshot.sceneBodies at ctx.drawCamPos and ctx.drawPxPerRad:
+  // the one binding every pass shares. Each call sorts afresh: no cached per-view answer (the pick path
+  // derives frame contexts speculatively).
+sceneBodyPartition(state: PassState, ctx: FrameView)   // signature and return ({ glints, flat, textured, meshes }) kept
+  // core's own bodies out of sceneBodyPresentation(ctx), found by core's rosters (state.data.bodies.planets,
+  // ctx.snapshot.meshBodies): glints = their unresolved; their resolved → meshes, textured (texture registry
+  // and residency, as today) or flat
+
+near0SphereBodies(resolved: readonly PositionedSceneBody[],
+                  rosters: { planets: readonly PlanetBody[]; meshBodies: readonly MeshBody[] }): readonly PositionedSceneBody[]
+  // LEFTOVER (T7-5): the resolved bodies outside core's own rosters, which NEAR0 draws today. Stands in for
+  // the per-body slab field the bodies-into-Layers PR adds, and is deleted there.
+
+// src/layers/starCatalog/@types/SeededStarRef.d.ts
+export type SeededStarRef = {
+  readonly item: SeededStarCatalogId;      // the star show entry's item: the key into the handed fade (Task 8)
+  readonly source: StarCatalogSourceType;  // with seedIndex: the stable pick id, as PositionedStar carried it
+  readonly seedIndex: number;
+};
+// src/layers/starCatalog/present/seededStarRefs.ts
+export const SEEDED_STAR_REFS: ReadonlyMap<string, SeededStarRef>
+  // body id → ref, built from SEEDED_STAR_CATALOGS_BY_SOURCE (one table per source, never merged)
 ```
 
-- The star passes call `positionedVisibleStars(sceneBodyStates(state, ctx), live)`. Until Task 8, `live = (id) => visibilitySwitchOf(state.settings, <the star show entry from ../visibility>, id)`: the section rule written once in core (Task 2), equal to today's hand AND, so nothing changes visibly here. The boot seed in `create.ts:66-75` becomes `positionedVisibleStars(bootBodyStates, () => true)`.
-- Tests that need a star sphere register `starNearSpheres` and seed its identities live in the fade registry.
+- **Who draws what.** Core's `bodyGlintsPass`, `planetsPass`, `texturedBodiesPass`, `drawableMeshBodies` (and through it `meshBodiesPass`) and `scheduleProbeCapture` keep calling `sceneBodyPartition(state, ctx)` unchanged. `starSpheresPass` draws and picks the bodies of `sceneBodyPresentation(ctx).resolved` that `SEEDED_STAR_REFS` holds; `starPointsPass` those of `.unresolved`. Each gates `enabled` on its own share being non-empty, packs a star's pick id from its ref, and builds `StarPointRenderer.setStars`' `PositionedStar` from the body, its position and its ref. The star passes look their stars up by their own seed data, as `planetsPass` looks its planets up with `seedIndexOfBody(id, SCENE_PLANETS)`.
+- **`deriveView`** sizes NEAR0's range from `snapshot.sceneBodies` through `partitionBodiesByPresentation` at its own `drawCamPos` and `pxPerRad`, at `outerBoundRadiusM`, over the bodies NEAR0 draws: `near0SphereBodies` of the resolved branch (the leftover at the top of this task). Do not filter by star tables or body kind.
+- **`sceneOccluderBodies`** reads one `sceneBodyPresentation(ctx)` and takes every resolved body with a ground `surface` (the stars and the resolved planets, which are today's flat, textured and star-sphere sets) at `innerBoundRadiusM`. A mesh body has no surface and occludes through the sampled `foreground:0` depth, as today (its header). Earth stays as today, gated on `earth.resolvePx` in place of the imported constant.
+- **Pixel-neutral at rest.** A star's footprint radius is its datum (every seeded star has `reliefM: [0, 0]`), so sizing it through `bodyFootprintRadiusM` is today's `surface.datumRadiusM`. Positions come from the same `bodyStates` map `positionedVisibleStars` read. The star passes' `draw` partitioned at `view.camPos` and their `enabled` at `ctx.drawCamPos`; both now go through `sceneBodyPresentation(ctx)`. The two coincide on NEAR0 because `RENDER_ORIGIN_MPC` is the origin (`starSpheresPass.ts` header).
+- **Admission before Task 8.** Until Task 8 the star passes draw admitted stars at full value, so this commit alone holds a toggled-off star at full opacity through its 600 ms fade-out and then drops it; Task 8 turns that into the fade.
+- **Uncovered bodies.** Planets, moons and mesh bodies are covered by no entry (`BodySettings.d.ts`: `bodies.items[id].enabled` has no reader), so core admits them always, as today. A body show entry would be new behaviour, not this task.
+- **No identity in core.** Core reads `ShowEntry.bodies` off the composed entries and the identity it builds from the entry; no core file names `'starCatalog'` or imports `SEEDED_STAR_CATALOGS`.
+- **Cost, priced now.** Admission resolves three star identities per frame. Each `sceneBodyPresentation` call sizes every scene body (~160 stars plus the planets and craft): about a dozen calls a frame at a near-field pose, so ≈2,500 apparent-size evaluations (a subtract, a hypot, a divide each), tens of µs, against the seven separate star sorts per frame it replaces. If `npm run perf:cpu` shows a frame row more than 0.1 ms slower, STOP and report.
+- `fieldStarSpherePass` stays out of the sort, as today (its sphere is a catalogued Gaia star, not a scene body); it imports `STAR_RESOLVE_PX` from `src/data/bodies/starResolvePx.ts`.
+- `starCatalog/create.ts`'s boot seed uploads every `SEEDED_STAR_REFS` star at J2000 (today `visibleStars` of the boot settings; `starPointsPass` re-uploads before the first draw, so the set does not matter).
+- **Star helpers, in sum.** Deleted: `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution`, `resolvesToSphere`, `ReadyFrameContext.positionedStars`. Moved to `src/data/bodies/`: `STAR_RESOLVE_PX`, `BODY_GLINT_MAX_PX`. Kept: `PositionedStar` (the point renderer's input).
 
-- [ ] Test `the near-sphere provider admits a sphere only while its item is live` (`frameContext.test.ts`; Review Focus #11): one stub source `{ fade: <any ShowKey with items>, spheres: ({ live }) => live('a') ? [sphere] : [] }`; identity `{ address, item: 'a' }` held at target 1 → the provider returns the sphere; target 0 with raw fade 0 → empty; target 0 while still fading out → the sphere. Mutation-check by binding `live` to `() => true`.
-- [ ] Rewrite `visibleStars.test.ts` to hand a predicate: a catalog `live` rejects contributes no star; every admitted star carries its `catalogId`. Delete the cases that only restated the section AND (Task 2 pins the rule).
-- [ ] `sceneOccluderSpheres.test.ts` and `deriveView.test.ts` keep their star-sphere values, now with the source's identities seeded live.
-- [ ] **Gate:** `npx tsc --noEmit` passes (`NearSphereSource` → `ShowKey` from `Layer.d.ts`). On a circular alias, cut the `visibility.ts` import chain that reaches a Layer-typed module; never reach for `APP_COMPOSITION`.
-- [ ] The core-address grep (Final review mandate (d)) shows no `starCatalog` hit.
+- [ ] Test `every bodies key is an item of its entry` (`appVisibility.test.ts`). Mutation-check by adding a key the star entry lacks.
+- [ ] Test `each body resolves at its own size` (`partitionBodiesByPresentation.test.ts`; Review Focus #14): a planet (`resolvePx` 3) and a star (`resolvePx` 4) both at 3.5 px apparent diameter → the planet is `resolved`, the star `unresolved`; at 4.5 px both are `resolved`. Mutation-check by comparing every body against one constant.
+- [ ] Rewrite `is disjoint and covering — every body lands in exactly one bucket` over the two branches, star bodies included.
+- [ ] Move today's four-branch cases (texture residency, mesh routing, glints) from `partitionBodiesByPresentation.test.ts` to `sceneBodyPartition.presence.test.ts`, fed through `sceneBodies`, and add `takes only core's own bodies`: a resolved star in `sceneBodies` lands in none of the four branches. Mutation-check by dropping the roster lookup (the star lands in `flat`).
+- [ ] Test `a covered body is admitted only while every covering item's handed value is above 0` (`frameContext.test.ts`; Review Focus #11): a resolved Sun and one planet. The Sun's fade at 1 → the Sun is in `sceneBodies`; still fading out at 0.4 → in; at 0 → out, while the planet stays; raw fade 1 with a clip on `starCatalog` at 0 → out (T7-4). Mutation-check three ways: admit on liveness (the clip case fails), admit every body, treat an uncovered body as not admitted.
+- [ ] Test `a star faded to 0 neither sizes NEAR0 nor occludes` (`deriveView.test.ts` and `sceneOccluderSpheres.test.ts`): the Sun resolved and in `sceneBodies` → NEAR0's range spans it at its outer bound and an occluder sits at its inner bound (today's values); the Sun absent from `sceneBodies` → neither. Mutation-check by sizing NEAR0 (resp. the occluders) from anything other than `sceneBodies`. Add `NEAR0 never spans a planet`: a resolved planet in `sceneBodies` leaves NEAR0's range as the stars alone set it. Mutation-check by dropping `near0SphereBodies`.
+- [ ] `sceneOccluderSpheres.test.ts`'s `drops the Sun once it demotes to a point at Jupiter-range` keeps its value (the star's size now rides its record).
+- [ ] Star pass tests: fixtures hand `ReadyFrameContext.sceneBodies` instead of `starCatalogs` switches; the sphere/point XOR and pick-id cases keep their values. Delete the cases that only restated the section AND (Task 2 pins the rule).
+- [ ] **Gate:** `npx tsc --noEmit` passes (`ShowEntry` now reaches the scene body types, and `frameContext.ts` the resolver). On a circular alias, cut the `visibility.ts` import chain that reaches a Layer-typed module; never reach for `APP_COMPOSITION`.
+- [ ] `grep -rnE "starCatalogs|SEEDED_STAR|visibleStars|positionedVisibleStars|partitionStarsByResolution|resolvesToSphere|positionedStars|STAR_RESOLVE_PX" src/services/engine/frame src/services/engine/helpers src/@types/engine/frame` prints nothing, and the core-address grep (Final review mandate (d)) shows no `starCatalog` hit.
 - [ ] Commit.
 
 ### Task 8: The star show entry: star passes, the cut and the spheres read the handed value
 
-The hand ANDs of `starCatalogs.enabled` with an item switch go (U2). Task 7 left the passes on an interim `visibilitySwitchOf` predicate; here it gives way to the handed value, and `starSourcesInBand.ts:18` with `starSourceDrawOpacity.ts:23` and `starCatalogAssetRows.ts:23-25` go. Both sphere passes, which PR 1 left drawing at opacity 1, hand their catalog's value to `starRenderer.draw` (V1). The caption ANDs (`captionFadeRules.ts:90-91,125-126`) go in Task 10. Behaviour change #9 lands here, except the captions' half (Task 10).
+The hand ANDs of `starCatalogs.enabled` with an item switch go (U2). Task 7 put the star passes on core's one scene-body sort, drawing every admitted star at full value; here they take the handed value, and `starSourcesInBand.ts:18` with `starSourceDrawOpacity.ts:23` and `starCatalogAssetRows.ts:23-25` go. Both sphere passes, which PR 1 left drawing at opacity 1, hand their catalog's value to `starRenderer.draw` (V1). The caption ANDs (`captionFadeRules.ts:90-91,125-126`) go in Task 10. Behaviour change #9 lands here, except the captions' half (Task 10).
 
 **Files:**
 - passes, all `fade: 'starCatalog'`: `src/layers/starCatalog/passes/{starPointsPass,starSpheresPass,starCatalogPass,starAggregatesPass,starAggregateUpsamplePass,fieldStarSpherePass}.ts`
@@ -417,15 +502,15 @@ starSourceDrawOpacity(entry: SourceEntry, fade: Readonly<Record<StarCatalogId, n
 starSourcesInBand(runtime, fade, camDistPc)       // no section read
 starCatalogVisible(runtime, fade, ctx)
 starCutInputs(runtime, settings, fade, views)     // `settings` keeps only the appearance knobs
-// starSpheresPass:     starRenderer.draw(pass, mvp, star.color, fade[star.catalogId])
+// starSpheresPass:     starRenderer.draw(pass, mvp, body.color, fade[SEEDED_STAR_REFS.get(body.id)!.item])
 // fieldStarSpherePass: starRenderer.draw(pass, mvp, tint, fade[<the loaded catalog's id>])
 ```
 
-- Passes pass `live = (id) => fade[id] > 0` to `positionedVisibleStars` (a consumer skipping its own item at 0), replacing Task 7's interim predicate. `starPointsPass` multiplies each point's colour by `fade[star.catalogId]` on top of `backdropFade × focusAlphaMultiplier` (`:188-190`); the pick uses the same partition. `starSpheresPass` draws a sphere while its catalog's value is above 0, at that value. `fieldStarSpherePass` returns false from `enabled` while `fade[<the loaded catalog's id>] === 0` (today its gate reads only `currentCatalog`, `:150-155`, `:211-215`). The three Gaia passes hand `fade` to `starCatalogVisible`.
+- Core admits a seeded star only while its catalog's handed value is above 0 (Task 7, T7-4), so the two seeded-star passes need no skip of their own. Each reads a star's catalog item from its `SEEDED_STAR_REFS` ref. `starPointsPass` multiplies each point's colour by `fade[ref.item]` on top of `backdropFade × focusAlphaMultiplier` (`:188-190`); the pick uses the same branch. `starSpheresPass` draws each sphere at that value. `fieldStarSpherePass` returns false from `enabled` while `fade[<the loaded catalog's id>] === 0` (today its gate reads only `currentCatalog`, `:150-155`, `:211-215`). The three Gaia passes hand `fade` to `starCatalogVisible`.
 - The Gaia field fades through the cut's per-source `opacity` (`StarCutSourceInput.opacity`), which today carries the crossfade alone. Confirm that the GPU side already scales the draw by it. If it does not, STOP: that would be a shader change, and this PR edits no `.wesl`.
-- `starNearSpheres` (Task 7) already reads liveness from core; nothing in it changes here.
+- Core's scene-body admission (Task 7) already reads the handed value; nothing in it changes here.
 - `starCatalogAssetRows` demand becomes `visibilitySwitchOf(ctx.settings, <the star show entry>, id)`, which keeps today's section-and-item meaning.
-- **The sphere fade.** Depth write stays on while fading: the sphere is convex and back-face culled (`starRenderer.ts:144-148`), so it never blends over itself; Task 7's near-sphere set keeps a fading star as an occluder while it is live, so the sampled and analytic trail occlusion agree through the fade. No `FRAME_ORDER` change: the two sphere passes are the only content of the NEAR0 row in the foreground chain (`frameSections.ts:238`). The `foreground:0 → hdr` composite is a straight-alpha OVER (`expandFrameOrder.ts:111`, `compositor.ts:159-165`), so over an empty foreground target the visible ramp follows `a²` in colour while the background behind falls by `1 − a`; the cloud deck behaves this way today. Accepted and judged in the smoke's before/after pair. If the fade visibly dips, STOP and report: do not change the composite. A half-faded Sun half-occludes a caption behind it (the overlays read `foreground:0` alpha): that is the intended reading. Picking is a separate pipeline (`bodyPickRenderer`), gated by the same value (SQ2).
+- **The sphere fade.** Depth write stays on while fading: the sphere is convex and back-face culled (`starRenderer.ts:144-148`), so it never blends over itself; core keeps a fading star in `sceneBodies`, and so among the occluders, while its value is above 0 (Task 7), so the sampled and analytic trail occlusion agree through the fade. No `FRAME_ORDER` change: the two sphere passes are the only content of the NEAR0 row in the foreground chain (`frameSections.ts:238`). The `foreground:0 → hdr` composite is a straight-alpha OVER (`expandFrameOrder.ts:111`, `compositor.ts:159-165`), so over an empty foreground target the visible ramp follows `a²` in colour while the background behind falls by `1 − a`; the cloud deck behaves this way today. Accepted and judged in the smoke's before/after pair. If the fade visibly dips, STOP and report: do not change the composite. A half-faded Sun half-occludes a caption behind it (the overlays read `foreground:0` alpha): that is the intended reading. Picking is a separate pipeline (`bodyPickRenderer`), gated by the same value (SQ2).
 
 - [ ] Test `the Gaia cut opacity is the crossfade times the handed value` (`starCutInputs.test.ts` or `starSourcesInBand.test.ts`): `fade.gaiaStars = 0.5` inside the band → the source's `opacity` is `0.5 ×` the crossfade; `0` → the source is absent. Mutation-check by dropping the multiply.
 - [ ] Test `star points scale their colour by their catalog's value` (`starPointsPass.test.ts`): `famousStar` 0.5 and `sun` 1 → the uploaded famous-star colour is half its value-1 colour and the Sun's is unchanged. Mutation-check by dropping the multiply.
@@ -584,8 +669,8 @@ watchFadesSaga: a `setVisibility` action passes its payload's overMs to syncFade
 - [ ] `visibility.ts` in each of the 14 Layers (missions included); the body Layer (PR 1's `layer.ts`) declares `visibility` and the Orbit trails `ui` row; `APP_VISIBILITY` in `src/compositions/appVisibility.ts`; `ShowKey`, `LabelAddress`, `VisibilityAddress`, `ScopedVisibilityAddress`, `VisibilityArg`, `FadeIdentity` derived from it.
 - [ ] One density entry (`cosmicWebDensity` with items); one star show entry (`starCatalog` with items); the missions show entry on the `missionTrails` cluster and its per-craft `label:missions` entry (`items: SAMPLED_BODY_IDS`, switch `missions.items.<craft>.labelEnabled`); label entries with `of` for constellations, lightTime and zoneOfAvoidance (with a new `labelEnabled` switch), structure (`of: 'structureRing'`) and starCatalog (`of: 'starCatalog'`).
 - [ ] `setVisibility` handled in `settingsReducer.ts`; the section rule written once in `visibilitySwitchOf`.
-- [ ] `AssetWiringRow.gates` on the seven gating Layers (star survey rows included); `fade` on passes, planners and the `nearSpheres` source; `label` on every label producer row (no other form), `produceMissionCaptions` included; `visibilityLiveOf` as the one liveness predicate, bound by core into each near-sphere source's `live`; `labelsAndGuides` toggle rows in the `{ slot, content }` shape, Mission trails and Orbit trails included, built in `selectToggleRows`.
-- [ ] `NearSphereSource` names its entry in `fade` and reads no settings; `visibleStars` and `positionedVisibleStars` take a liveness predicate; `PositionedStar` carries `catalogId`.
+- [ ] `AssetWiringRow.gates` on the seven gating Layers (star survey rows included); `fade` on passes and planners; `label` on every label producer row (no other form), `produceMissionCaptions` included; `visibilityLiveOf` as the one liveness predicate, used by the producer skip; `labelsAndGuides` toggle rows in the `{ slot, content }` shape, Mission trails and Orbit trails included, built in `selectToggleRows`.
+- [ ] One sort over every scene body: each seed record carries its own `resolvePx`; the star show entry declares `bodies: SEEDED_STAR_CATALOGS`; `ReadyFrameContext.sceneBodies` (every admitted body, positioned once per frame, admitted on a handed value above 0) in place of `positionedStars`; `partitionBodiesByPresentation` splits it into `unresolved` and `resolved`, and each pass takes its own bodies by its own data; `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution` and `resolvesToSphere` gone; `STAR_RESOLVE_PX` and `BODY_GLINT_MAX_PX` in `src/data/bodies/`; no contract member beyond `ShowEntry.bodies` and `ReadyFrameContext.sceneBodies` (both consented); the NEAR0 range rule as ruled for Task 7's open question.
 - [ ] `sourceMaskOf(fade)` in `src/layers/galaxyCatalog/present/`, called only by the galaxy planner on its handed `survey` record; `SourceMasks` gone.
 - [ ] Both sphere passes draw with their catalog's handed value (PR 1's opacity slot and blend).
 - [ ] Claimed body captions (M4): `claimedLabelItemsOf` and `SCENE_BODY_CAPTION_LABEL` exist; `sceneBodyLabels.ts` names no `SAMPLED_BODY_IDS`; core's body captions skip exactly the ids other label entries claim.
@@ -599,7 +684,7 @@ watchFadesSaga: a `setVisibility` action passes its payload's overMs to syncFade
 - [ ] Label toggles in the same panel (famous galaxy, a structure category, famous stars, Sun, Earth, Galactic Centre, Mesh bodies) fade their captions. At `#focus=m31`, focusing a structure recedes every structure label and ring, the focused one's included (behaviour change #5).
 - [ ] Voyager captions (behaviour change #13) at `#exhibit=voyager-missions`: the emphasis dim holds (Voyager 2's caption dimmed while Voyager 1 is the selected craft); turning Mesh bodies off leaves the Voyager captions shown while Earth, the planets and the other mesh bodies keep their core captions (each Voyager name drawn once); `#clip=earthCosmicWebLoop`'s `hide(['labels'])` still covers them.
 - [ ] Stars (behaviour change #9): at `#focus=body-earth`, turning the Stars master off fades the point stars, the Gaia field and the Sun and famous-star captions out together; on fades them back in. Turning Famous stars off alone fades only those stars and their names. A cold load fades the Gaia field in as it arrives.
-- [ ] Star spheres (behaviour change #9, V1): a before/after pair (main vs branch) at `#focus=body-sun`, close enough that the Sun is a resolved sphere. Turning the Stars master off fades the sphere out over the default duration (main: it vanishes at the toggle); on fades it back in. At rest the sphere looks the same as on main. Repeat for the field-star sphere by flying down onto a Gaia star until its sphere resolves, then turning Gaia stars off. Watch for a darker dip mid-fade (the composite's `a²` ramp, Task 8); report it rather than tuning.
+- [ ] Star spheres (behaviour change #9, V1): a before/after pair (main vs branch) at `#focus=star-sun`, close enough that the Sun is a resolved sphere. Turning the Stars master off fades the sphere out over the default duration (main: it vanishes at the toggle); on fades it back in. At rest the sphere looks the same as on main. Repeat for the field-star sphere by flying down onto a Gaia star until its sphere resolves, then turning Gaia stars off. Watch for a darker dip mid-fade (the composite's `a²` ramp, Task 8); report it rather than tuning.
 - [ ] Structure labels (behaviour change #10): at `#focus=m31`, turning a structure category's rings off fades its labels out alongside the rings instead of holding them at full opacity until the rings are gone.
 - [ ] Local Bubble (behaviour change #1): from `#focus=body-earth`, zoom out past 40 kpc and back. The shell fades in on return instead of popping.
 - [ ] `#tour=grandTour`: the You-are-here beat reveals the Milky Way label over its authored 1 s; the deep-field beat reveals Milliquas over 6 s; the cosmic-web beat brings the density in over 9 s; the Virgo approach swaps structure rings at their authored pace (behaviour change #7).
@@ -607,4 +692,4 @@ watchFadesSaga: a `setVisibility` action passes its payload's overMs to syncFade
 - [ ] `#clip=earthCosmicWebLoop`: the zone-of-avoidance lettering is hidden with the other labels (behaviour change #4).
 - [ ] A cold load at `#focus=m31` fades the default catalogs in as they arrive. Switching to the small tier and back does not restart a sibling catalog's ramp.
 
-**Deferral boundary:** richer panels (galaxy catalogs, stars, structures) keep their own setters. Body render/load code stays in core (its `orbitTrailsPass` is the core-address grep's allowed hit; the scene-body caption row's label is `SCENE_BODY_CAPTION_LABEL` in `src/data/labels/`). `starSphereRangeM` and `slabs.ts`'s `starSphereRangeM` input keep their names. The `foreground:0 → hdr` composite stays straight-alpha OVER. Layer-owned scale fade bands are a separate item. The heliosphere Layer is the feature PR. A general "the focused subject never recedes" rule and "every label follows its thing" (Milky Way, famous galaxy, body, black hole and missions labels) are later PRs. The new `labelEnabled` switches (`missions.items.<craft>` included) get no panel rows. The tools' own declutter lists are untouched. Asset `demand` predicates keep today's load policy. Everything PR 1 delivered is not redone here.
+**Deferral boundary:** richer panels (galaxy catalogs, stars, structures) keep their own setters. Bodies moving out of core into Layers (each Layer contributing its body rows as data, like `Layer.slabs`) is the last Layer refactor PR, after this one; it adds a per-body slab field and deletes this PR's `near0SphereBodies` leftover (T7-5). Also out of scope, unruled: mesh picking uses the bounding sphere, and captions are never occluded by mesh bodies. Body render/load code stays in core (its `orbitTrailsPass` is the core-address grep's allowed hit; the scene-body caption row's label is `SCENE_BODY_CAPTION_LABEL` in `src/data/labels/`). `starSphereRangeM` and `slabs.ts`'s `starSphereRangeM` input keep their names. The `foreground:0 → hdr` composite stays straight-alpha OVER. Layer-owned scale fade bands are a separate item. The heliosphere Layer is the feature PR. A general "the focused subject never recedes" rule and "every label follows its thing" (Milky Way, famous galaxy, body, black hole and missions labels) are later PRs. The new `labelEnabled` switches (`missions.items.<craft>` included) get no panel rows. The tools' own declutter lists are untouched. Asset `demand` predicates keep today's load policy. Everything PR 1 delivered is not redone here.
