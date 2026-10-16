@@ -14,6 +14,8 @@ import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
+import { MILKY_WAY_PICK_ID } from '../../../../src/layers/milkyWay/present/milkyWayPickId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -21,26 +23,23 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const PC = SCALE_UNITS.PC_TO_MPC;
 const GALACTIC_CENTRE_POS = deriveBodyStates(CONST_J2000).get('galactic-centre')!.positionMpc;
 
-// Comfortably above the disc's apparent-size gate (12 px) and with every
-// clip/focus/fade term pinned at 1, so the returned alpha isolates the
+// Comfortably above the disc's apparent-size gate (12 px) and with the
+// handed value pinned at 1, so the returned alpha isolates the
 // approach band under test.
 const FOV_Y_RAD = (60 * Math.PI) / 180;
 const CANVAS = { width: 1280, height: 720 };
 const PX_PER_RAD = CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2));
 
 function makeState(): EngineState {
-  return {
-    settings: { milkyWay: { enabled: true } },
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
-  } as unknown as EngineState;
+  return {} as unknown as EngineState;
 }
 
-function makeCtx(camPosMpc: Vec3): FrameView {
+function makeCtx(
+  camPosMpc: Vec3,
+  focus = { focusBlend: 0, focusPickId: null as number | null },
+): FrameView {
   return {
-    snapshot: { nowMs: 0, focusBlend: 0, simDays: CONST_J2000 },
+    snapshot: { nowMs: 0, simDays: CONST_J2000, ...focus },
     drawCamPos: camPosMpc,
     drawPxPerRad: PX_PER_RAD,
     vp: new Float32Array(16) as unknown as Mat4,
@@ -54,13 +53,13 @@ function nearGalacticCentre(distMpc: number): Vec3 {
 
 describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
   it('culls the cloud entirely within 100 pc of Sgr A*', () => {
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(100 * PC)));
+    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(100 * PC)), 1);
     expect(alpha).toBeNull();
   });
 
   it('partially fades between the galactic-centre approach band edges', () => {
     const distMpc = 1000 * PC; // between goneAt (200 pc) and fullAt (4 kpc)
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(distMpc)));
+    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(distMpc)), 1);
     const expected = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, distMpc);
     expect(expected).toBeGreaterThan(0);
     expect(expected).toBeLessThan(1);
@@ -74,7 +73,18 @@ describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
     // Sun — outside each band's fullAt.
     const r0 = Math.hypot(GALACTIC_CENTRE_POS[0], GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]);
     const awayFromGc = GALACTIC_CENTRE_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc));
+    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc), 1);
     expect(alpha).toBe(1);
+  });
+});
+
+describe('deriveMilkyWayCloudAlpha — focus emphasis', () => {
+  it('the disk recedes strongly unless the Milky Way is the focus', () => {
+    const r0 = Math.hypot(GALACTIC_CENTRE_POS[0], GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]);
+    const awayFromGc = GALACTIC_CENTRE_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
+    const alphaWithFocus = (focusPickId: number | null) =>
+      deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc, { focusBlend: 1, focusPickId }), 1);
+    expect(alphaWithFocus(null)).toBeCloseTo(STRONG_RECESSION);
+    expect(alphaWithFocus(MILKY_WAY_PICK_ID)).toBe(1);
   });
 });

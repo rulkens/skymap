@@ -72,6 +72,7 @@ function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
   return {
     id: 'test-planet',
     label: 'Test Planet',
+    resolvePx: 3,
     surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     albedo: [1, 1, 1],
     ...overrides,

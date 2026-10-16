@@ -27,7 +27,7 @@ import { sourceMaskOf } from './present/sourceMaskOf';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
-): Extract<FrameContentPlanner<void>, { scope: 'once' }> {
+): Extract<FrameContentPlanner<void, 'survey'>, { scope: 'once' }> {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.
@@ -42,7 +42,8 @@ export function galaxyCatalogPlanner(
   return {
     name: 'galaxy-catalog',
     scope: 'once',
-    plan(snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState) {
+    fade: 'survey',
+    plan(snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState, fade) {
       const pgcAliasCommitted = runtime.pgcAlias.committed();
       if (pgcAliasCommitted !== null && runtime.catalogsVersion !== aliasIndexVersion) {
         aliasIndexVersion = runtime.catalogsVersion;
@@ -55,9 +56,9 @@ export function galaxyCatalogPlanner(
         });
       }
 
-      // The draw mask, so the counts, the hi-res famous gate and the disk walk
-      // keep a hidden catalog through its fade-out, as the point sprites do.
-      const visibleSourceMask = sourceMaskOf(state, snapshot.nowMs).draw;
+      // Built from the handed value, so the counts, the hi-res famous gate and the
+      // disk walk keep a hidden catalog through its fade-out, as the point sprites do.
+      const visibleSourceMask = sourceMaskOf(fade);
 
       const selectRow = state.selectionRows.select;
       if (
@@ -115,12 +116,9 @@ export function galaxyCatalogPlanner(
         pxPerRad,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
-        // popping once the fade ends and the draw mask drops the source.
-        sourceOpacity: (source: SourceType) =>
-          state.subsystems.fades.opacityOf(
-            { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },
-            snapshot.nowMs,
-          ),
+        // popping once the fade ends and the mask drops the source. The handed
+        // value itself, clip included.
+        sourceOpacity: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
       };
       runtime.diskPlannerWalk.runFrame(
         sharedInput,

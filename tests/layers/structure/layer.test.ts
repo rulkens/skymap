@@ -16,6 +16,7 @@ import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFoc
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { StructureRuntime } from '../../../src/layers/structure/@types/StructureRuntime';
 
@@ -28,23 +29,14 @@ function stubRuntime(): StructureRuntime {
   } as unknown as StructureRuntime;
 }
 
-/** Every category on, nothing focused, every fade at full opacity. */
+/** Nothing focused. */
 const STATE = {
-  settings: {
-    structures: {
-      enabled: true,
-      items: Object.fromEntries(
-        STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
-      ),
-    },
-    labels: { focusedOnly: false },
-  },
+  settings: { labels: { focusedOnly: false } },
   selection: { focus: null, select: null, hover: null },
-  subsystems: {
-    fades: { opacityOf: () => 1 },
-    clipPlayer: { clipOpacityOf: () => 1 },
-  },
 } as unknown as EngineState;
+
+/** Every category's handed value at full opacity. */
+const FADE = Object.fromEntries(STRUCTURE_IDS.map((c) => [c, 1])) as Record<StructureId, number>;
 
 // 5 Mpc out: inside the cosmic categories' visibility bands, far past the Milky
 // Way ones.
@@ -71,7 +63,7 @@ describe('structureLayer', () => {
     const idsOn = (slab: number) =>
       rows
         .filter((row) => row.slab === slab)
-        .flatMap((row) => row.produceLabels(STATE, CTX).labels.map((label) => label.id));
+        .flatMap((row) => row.produceLabels(STATE, CTX, FADE).labels.map((label) => label.id));
 
     // A cluster is cosmic: its label comes from the COSMO row, never NEAR0's.
     expect(idsOn(COSMO)).toEqual(['galaxy-cluster-virgo']);

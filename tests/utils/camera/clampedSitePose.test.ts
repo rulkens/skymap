@@ -14,6 +14,7 @@ import type { BodyId } from '../../../src/@types/data/body/BodyId';
 const BODY: MeshBody = {
   id: 'fixture',
   label: 'Fixture',
+  resolvePx: 3,
   boundingRadiusM: 1,
   albedo: [1, 1, 1],
   meshKey: 'fixture',

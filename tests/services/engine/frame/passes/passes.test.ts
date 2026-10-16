@@ -87,17 +87,7 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
   } as unknown as FrameView;
 }
 
-// `state` is forwarded through — most passes ignore it, but a fades stub
-// returning full opacity lets the ones that ask run without a live
-// FadeRegistry.
 const STATE_STUB = {
-  subsystems: {
-    fades: {
-      opacityOf: () => 1,
-      isAnyAnimating: () => false,
-    },
-    clipPlayer: { clipOpacityOf: () => 1 },
-  },
   // Passes bind the shared focus group off state.gpu.focusUniform; an opaque
   // bind group is all they read. The nullable GPU renderer fields default to
   // null (pre-bootstrap shape); individual draw tests override the one they

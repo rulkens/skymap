@@ -2,8 +2,8 @@
  * starCatalogSlot — factory for one survey star-catalog's asset slot, reused
  * across every `starCatalog` registry row (parameterized by `source`).
  * Commit installs the decoded `StarOctree`'s chunk pool (`installStarPool`);
- * release drops the stream. Unlike the volume/galaxy layers there is no fade replay —
- * the star layer's own distance crossfade (registry `crossfadePc`) covers that.
+ * release drops the stream. Its row `gates` the star entry's item, so core fades the
+ * catalog in on the commit; the registry `crossfadePc` band rides on top of that value.
  */
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { starCatalogFetcher } from './starCatalogFetcher';

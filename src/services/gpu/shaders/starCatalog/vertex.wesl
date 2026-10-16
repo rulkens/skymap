@@ -154,7 +154,7 @@ const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5;
 //   SOLAR_RADIUS_MPC       = SOLAR_RADIUS_KM (data/bodies/solarRadiusKm.ts)
 //                            * KM_TO_MPC (data/scaleUnits.ts)
 //   STAR_SPHERE_RESOLVE_PX = STAR_RESOLVE_PX
-//                            (services/engine/frame/partitionStarsByResolution.ts)
+//                            (data/bodies/starResolvePx.ts)
 const SOLAR_RADIUS_MPC: f32 = 2.25668425e-14;
 const STAR_SPHERE_RESOLVE_PX: f32 = 4.0;
 // worldLenToPx reports the true apparent size (lib/camera.wesl's pxPerRad); the

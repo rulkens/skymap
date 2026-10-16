@@ -376,7 +376,7 @@ describe('tourBodySaga', () => {
     const { store, sagaMiddleware } = buildStore({ playClip: stub });
     runTour(sagaMiddleware, makeTour(beats), { from: 1, to: 1 });
 
-    // The fold's mergeSnapshot lands synchronously, but the visibility bridge
+    // The fold's mergeSnapshot lands synchronously, but the visibility sync
     // and label-fade envelope animate that diff — the beat's fly must wait
     // out FOLD_SETTLE_MS so the film opens on a settled scene.
     expect(stub).not.toHaveBeenCalled();

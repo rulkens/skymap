@@ -10,19 +10,20 @@ import type { ZoneOfAvoidanceRuntime } from '../@types/ZoneOfAvoidanceRuntime';
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../data/zoneOfAvoidance/zoneOfAvoidanceShell';
 import { deriveZoneOfAvoidanceLiveness } from '../present/deriveZoneOfAvoidanceLiveness';
 
-export function zoneOfAvoidancePass(runtime: ZoneOfAvoidanceRuntime): ContentPass {
+export function zoneOfAvoidancePass(
+  runtime: ZoneOfAvoidanceRuntime,
+): ContentPass<'zoneOfAvoidance'> {
   return {
     name: 'zone-of-avoidance',
+    fade: 'zoneOfAvoidance',
 
-    enabled(state, ctx, _view) {
-      return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;
-    },
+    enabled: (_state, ctx, _view, fade) => deriveZoneOfAvoidanceLiveness(ctx, fade) !== null,
 
     // `view` unused: draw takes the raw OrbitCamera (`ctx.cam`) and the
     // downscaled viewport below, not the SlabView's full-canvas vp/viewportPx.
-    draw(pass, _view, ctx, state) {
+    draw(pass, _view, ctx, state, fade) {
       // Re-derive: enabled() already proved liveness, but this keeps draw pure.
-      const opacity = deriveZoneOfAvoidanceLiveness(state, ctx);
+      const opacity = deriveZoneOfAvoidanceLiveness(ctx, fade);
       if (opacity === null) return;
 
       // Viewport is the 'zoa' target's allocated size (see `sizeOf`).
@@ -42,8 +43,8 @@ export function zoneOfAvoidancePass(runtime: ZoneOfAvoidanceRuntime): ContentPas
     // program falls back to `enabled` above. The pick rays are the full
     // canvas's (`canvasSize`, not the 'zoa' downsample `draw` uses), and the
     // pick target covers `view.window` of that canvas.
-    drawPick(pass, view, ctx, state) {
-      const opacity = deriveZoneOfAvoidanceLiveness(state, ctx);
+    drawPick(pass, view, ctx, state, fade) {
+      const opacity = deriveZoneOfAvoidanceLiveness(ctx, fade);
       if (opacity === null) return;
 
       runtime.renderer.drawPick(

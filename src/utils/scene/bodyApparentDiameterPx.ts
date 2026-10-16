@@ -3,11 +3,10 @@
  * on-screen pixels at the current camera distance.
  *
  * This is the ONE place the "body record → apparent pixel size" composition
- * lives: the three LOD gates that decide a body's presentation each frame — the
- * star point↔sphere split (`partitionStarsByResolution`), the planet sub-pixel
- * cull (`planetsPass`), and the body glint↔mesh split
- * (`partitionBodiesByPresentation`) — all read the same physical size the same
- * way. Before this helper each site re-spelled the identical
+ * lives: the LOD gates that decide a body's presentation each frame — the one
+ * scene-body point/glint↔sphere/mesh sort (`partitionBodiesByPresentation`) and
+ * the planet sub-pixel cull (`planetsPass`) — all read the same physical size
+ * the same way. Before this helper each site re-spelled the identical
  * `hypot → diameterKm→kpc → apparentSizePx` block; a fix to any of them (a unit
  * factor, a degenerate guard) had to be mirrored across three copies or they
  * would silently disagree about which bodies are sub-pixel.

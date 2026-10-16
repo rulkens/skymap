@@ -17,6 +17,7 @@
  *      the packed MVP's model scale (`datumRadiusM`) defines.
  */
 
+import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 
 import { planetsPass } from '../../../../../src/services/engine/frame/passes/planetsPass';
@@ -81,6 +82,7 @@ function bodyAt(id: string, radiusM: number): SeededPlanet {
   return {
     id,
     label: id,
+    resolvePx: 3,
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.3, 0.2],
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
@@ -106,9 +108,10 @@ const PASS_STUB = {
 const CTX_STUB = {} as FrameView;
 
 /** A ctx comfortably inside the shared foreground gate, with a fixed pose for every body. */
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
+function makeCtx(state: EngineState, distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
+  const { planets, meshBodies } = state.data.bodies;
   return {
-    snapshot: { meshBodies: [] },
+    snapshot: { meshBodies, sceneBodies: positionedBodiesOf([...planets, ...meshBodies]) },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
@@ -164,13 +167,13 @@ describe('planetsPass.enabled', () => {
 
   it('is false beyond the foreground gate even for a flat body', () => {
     const state = makePartitionFixtureState();
-    const farCtx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC);
+    const farCtx = makeCtx(state, FOREGROUND_MAX_DISTANCE_MPC);
     expect(planetsPass.enabled(state, farCtx, makeBodyView('mercury' as BodyId))).toBe(false);
   });
 
   it('is true for the flat-branch row, false for the textured and glint rows', () => {
     const state = makePartitionFixtureState();
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     expect(planetsPass.enabled(state, ctx, makeBodyView('mercury' as BodyId))).toBe(true);
     expect(planetsPass.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(false);
     expect(planetsPass.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
@@ -181,7 +184,7 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
   it('draws only the flat-branch body matching this row', () => {
     const state = makePartitionFixtureState();
     const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
 
     planetsPass.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state); // textured row
     planetsPass.draw(PASS_STUB, makeBodyView('moon' as BodyId), ctx, state); // glint row
@@ -200,7 +203,7 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
     const texturedRenderer = state.gpu.texturedBodyRenderer as unknown as {
       draw: ReturnType<typeof vi.fn>;
     };
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
 
     const drawnByPlanets = new Set<string>();
     const drawnByTextured = new Set<string>();
@@ -230,7 +233,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     camLocalMock.mockClear();
     const state = makePartitionFixtureState();
     const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     const view = makeBodyView('mercury' as BodyId);
     const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
 
@@ -255,7 +258,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
   it('packs albedo@16..18, sunDirLocal@20..22 and camPosLocal@24..26 into a 28-float record', () => {
     const state = makePartitionFixtureState();
     const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
 
     planetsPass.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
@@ -286,7 +289,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
 describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)', () => {
   it('is true for the textured row even though enabled (flat-only) is false there', () => {
     const state = makePartitionFixtureState();
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     const view = makeBodyView('mars' as BodyId);
     expect(planetsPass.enabled(state, ctx, view)).toBe(false);
     expect(planetsPass.pickEnabled!(state, ctx, view)).toBe(true);
@@ -294,13 +297,13 @@ describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)',
 
   it('is false for the glint row (neither flat nor textured)', () => {
     const state = makePartitionFixtureState();
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     expect(planetsPass.pickEnabled!(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
   });
 
   it('is false beyond the foreground gate even for a textured row', () => {
     const state = makePartitionFixtureState();
-    const farCtx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC);
+    const farCtx = makeCtx(state, FOREGROUND_MAX_DISTANCE_MPC);
     expect(planetsPass.pickEnabled!(state, farCtx, makeBodyView('mars' as BodyId))).toBe(false);
   });
 });
@@ -321,7 +324,7 @@ describe('planetsPass.drawPick', () => {
       },
       data: { bodies: { planets: [flat, textured, glint], meshBodies: [] } },
     } as unknown as EngineState;
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
 
     planetsPass.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat
     planetsPass.drawPick!(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state); // textured
@@ -352,7 +355,7 @@ describe('planetsPass.drawPick', () => {
       },
     } as unknown as EngineState;
     const ctx = {
-      ...makeCtx(),
+      ...makeCtx(state),
       bodyPose: (() => pose) as FrameView['bodyPose'],
       drawPxPerRad: pxPerRad,
     };

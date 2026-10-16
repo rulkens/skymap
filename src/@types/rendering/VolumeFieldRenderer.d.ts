@@ -38,7 +38,6 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
   ): boolean;
-  listIds(): Id[];
   /**
    * Dispatch one raymarch per active field, additively blended.  The
    * per-field tunables are read each frame from `settingsOf`.

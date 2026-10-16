@@ -17,6 +17,7 @@
  *      ring" sentinel). Minnaert limb darkening is the same data-gate.
  */
 
+import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 
 import { texturedBodiesPass } from '../../../../../src/services/engine/frame/passes/texturedBodiesPass';
@@ -79,6 +80,7 @@ function bodyAt(
   return {
     id,
     label: id,
+    resolvePx: 3,
     surface: { datumRadiusM: radiusM, reliefM },
     albedo: [0.5, 0.5, 0.5],
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
@@ -104,9 +106,10 @@ const CTX_STUB = {} as FrameView;
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
+function makeCtx(state: EngineState, distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
+  const { planets, meshBodies } = state.data.bodies;
   return {
-    snapshot: { meshBodies: [] },
+    snapshot: { meshBodies, sceneBodies: positionedBodiesOf([...planets, ...meshBodies]) },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
@@ -159,7 +162,7 @@ describe('texturedBodiesPass.enabled', () => {
     expect(
       texturedBodiesPass.enabled(
         state,
-        makeCtx(FOREGROUND_MAX_DISTANCE_MPC),
+        makeCtx(state, FOREGROUND_MAX_DISTANCE_MPC),
         makeBodyView('mars' as BodyId),
       ),
     ).toBe(false);
@@ -167,7 +170,7 @@ describe('texturedBodiesPass.enabled', () => {
 
   it('is false for a registry body that is NOT resident (it is flat, drawn by planetsPass)', () => {
     const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
-    expect(texturedBodiesPass.enabled(state, makeCtx(), makeBodyView('mars' as BodyId))).toBe(
+    expect(texturedBodiesPass.enabled(state, makeCtx(state), makeBodyView('mars' as BodyId))).toBe(
       false,
     );
   });
@@ -177,7 +180,7 @@ describe('texturedBodiesPass.enabled', () => {
       bodyAt('mars', 3390000),
       bodyAt('jupiter', 69911000),
     ]);
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     expect(texturedBodiesPass.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(true);
     expect(texturedBodiesPass.enabled(state, ctx, makeBodyView('jupiter' as BodyId))).toBe(false);
   });
@@ -189,7 +192,7 @@ describe('texturedBodiesPass.draw', () => {
     camLocalMock.mockClear();
     const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
     const state = makeState(makeRendererSpy(['mars']), [mars]);
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
     const view = makeBodyView('mars' as BodyId);
 
     texturedBodiesPass.draw(PASS_STUB, view, ctx, state);
@@ -214,7 +217,7 @@ describe('texturedBodiesPass.draw', () => {
     const jupiter = bodyAt('jupiter', 69911000);
     const renderer = makeRendererSpy(['mars', 'jupiter']);
     const state = makeState(renderer, [mars, jupiter]);
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
 
     texturedBodiesPass.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
@@ -231,7 +234,7 @@ describe('texturedBodiesPass.draw', () => {
     const jupiter = bodyAt('jupiter', 69911000); // has a LIMB_DARKENING_PARAMS row
     const renderer = makeRendererSpy(['mars', 'jupiter']);
     const state = makeState(renderer, [mars, jupiter]);
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
 
     texturedBodiesPass.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state);
     texturedBodiesPass.draw(PASS_STUB, makeBodyView('jupiter' as BodyId), ctx, state);
@@ -271,7 +274,7 @@ describe('texturedBodiesPass.draw', () => {
     const mars = bodyAt('mars', 3390000);
     const renderer = makeRendererSpy(['saturn', 'mars']);
     const state = makeState(renderer, [saturn, mars]);
-    const ctx = makeCtx();
+    const ctx = makeCtx(state);
 
     texturedBodiesPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), ctx, state);
     texturedBodiesPass.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state);

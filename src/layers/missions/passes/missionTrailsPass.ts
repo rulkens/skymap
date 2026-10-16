@@ -1,6 +1,6 @@
 /**
  * missionTrailsPass — Voyager-style sampled-craft trails, additive into HDR
- * beside `orbitTrailsPass` (same NEAR0 step) but on its own `missionTrails` setting and fade.
+ * beside `orbitTrailsPass` (same NEAR0 step) but on its own `missionTrails` show entry.
  * The renderer builds and uploads vertices once per `trajectoryRegistry.version()`;
  * per frame the pass only picks `k`, the vertices at or before the sim clock, and
  * ends the trail on the snapshot position so it welds to the mesh. The vp is
@@ -21,24 +21,18 @@ import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOcclud
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
-export function missionTrailsPass(runtime: MissionsRuntime): ContentPass {
+export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missionTrails'> {
   return {
     name: 'mission-trails',
+    fade: 'missionTrails',
 
-    enabled(state, ctx, _view) {
-      if (
-        !state.settings.missionTrails.enabled &&
-        state.subsystems.fades.opacityOf({ kind: 'missionTrails' }, ctx.snapshot.nowMs) <= 0
-      ) {
-        return false;
-      }
+    enabled(_state, ctx, _view) {
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       return SAMPLED_BODIES.some(({ id }) => spacecraftPresent(id, ctx.snapshot.simDays));
     },
 
-    draw(pass, view, ctx, state) {
+    draw(pass, view, ctx, state, fade) {
       const { renderer } = runtime;
       const states = sceneBodyStates(state, ctx);
       const tracks = renderer.ensureTracks(
@@ -54,7 +48,6 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass {
         occluders: sceneOccluderSpheres(state, ctx),
         depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
       });
-      const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'missionTrails' });
       for (const { id, trailColor } of SAMPLED_BODIES) {
         const track = tracks.get(id);
         if (track === undefined) continue;
@@ -63,7 +56,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass {
         if (k === 0) continue;
         // Past the last vertex the craft is held on it: no head segment to draw.
         const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
-        renderer.drawTrail(pass, id, trailColor, layerOpacity * dim, k - 1, head);
+        renderer.drawTrail(pass, id, trailColor, fade * dim, k - 1, head);
       }
     },
   };

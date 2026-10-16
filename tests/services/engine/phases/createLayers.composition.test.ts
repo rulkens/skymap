@@ -8,7 +8,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { createLayers } from '../../../../src/services/engine/phases/createLayers';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -72,7 +71,6 @@ function contributingLayer(
     assets: () => [
       { key: assetKey, factory, req: () => undefined, demand: () => false, priority: 1 },
     ],
-    fades: () => [{ key: `${tag}-fade`, expand: () => [], handle: () => ({}), seed: () => 0 }],
     guides: () => ({
       screenLabels: [{ id: `${tag}-labels`, slab: COSMO, produceLabels: () => ({}) }],
     }),
@@ -118,7 +116,7 @@ function orbitTrailLayer(tag: string, row: OrbitalElements): Layer<string, unkno
 }
 
 describe('createLayers composition', () => {
-  it("composes a Layer's passes, assets, fades and labels after core's, in tuple order", async () => {
+  it("composes a Layer's passes, assets and labels after core's, in tuple order", async () => {
     const { store } = createAppStore();
     const registerProducer = vi.fn();
     const slotA = { name: 'slot-a' };
@@ -136,11 +134,6 @@ describe('createLayers composition', () => {
       ...CONTENT_PASSES.map((pass) => pass.name),
       'a-pass',
       'b-pass',
-    ]);
-    expect(state.fadeRows.map((row) => row.key)).toEqual([
-      ...FADE_LAYERS.map((row) => row.key),
-      'a-fade',
-      'b-fade',
     ]);
     expect(state.assetRows.map((row) => row.key).slice(-2)).toEqual(['a-asset', 'b-asset']);
     expect(state.layerSlots.get('a-asset' as never)).toBe(slotA);

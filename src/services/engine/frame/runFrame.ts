@@ -52,6 +52,7 @@ import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
 import { inputConsumed } from '../../../state/input/inputSlice';
@@ -230,6 +231,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   snapshot.focusBlend = focusUniforms.blend;
   snapshot.focus = focusUniforms;
+  snapshot.focusPickId = encodeSelectionPick(
+    state.selectionKindRows,
+    state.subsystems.structureFocus.lastFocusRef(),
+  );
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this

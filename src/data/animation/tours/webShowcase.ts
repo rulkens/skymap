@@ -23,7 +23,7 @@
  *      Scene strip + camera move; no focus change.
  *   2. Virgo Cluster — `flyAndFocusOnClip` fires a `focus(id)` cue at beat
  *      start, then moves the camera in. The focus cue isolates the cluster:
- *      members stay bright, the rest of the sky recedes via `focusRecession`.
+ *      members stay bright, the rest of the sky recedes via `emphasisOf`.
  *   3. M87 Galaxy — `flyToClip` moves only the camera to M87 (Virgo A, the
  *      cluster's dominant member). It does NOT dispatch a focus cue, so
  *      `selection.focus` stays on `galaxy-cluster-virgo-m87` from beat 2. M87 —
@@ -55,7 +55,7 @@ const establishTheWeb: ClipData = (() => {
   const fly = flyToClip(focusId('milkyWay'));
   return {
     ...fly,
-    timeline: [hide(['cosmicWebDensity', 'cosmicWebFilaments', 'surveyLabel'], 0), ...fly.timeline],
+    timeline: [hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0), ...fly.timeline],
   };
 })();
 

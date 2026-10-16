@@ -8,21 +8,25 @@
  * dither frequency finer on the upsampled output.
  */
 
+import type { ShowKey } from '../../../../@types/animation/ShowKey';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { ScalarVolumePassRow } from '../../../../@types/engine/frame/ScalarVolumePassRow';
 
-export function createScalarVolumePass<Id extends string>(
-  row: ScalarVolumePassRow<Id>,
-): ContentPass {
+export function createScalarVolumePass<Id extends string, K extends ShowKey = ShowKey>(
+  row: ScalarVolumePassRow<Id, K>,
+): ContentPass<K> {
+  const erased = row as ScalarVolumePassRow<Id>;
+  // The cast bridges `K`'s conditional `fade`: the row's own `fade` and value carry over as-is.
   return {
-    name: row.name,
+    name: erased.name,
+    fade: erased.fade,
 
-    enabled(state, ctx, _view) {
-      return row.liveness(state, ctx) !== null;
+    enabled(state, ctx, _view, fade) {
+      return erased.liveness(state, ctx, fade) !== null;
     },
 
-    draw(pass, view, ctx, state) {
-      const liveness = row.liveness(state, ctx);
+    draw(pass, view, ctx, state, fade) {
+      const liveness = erased.liveness(state, ctx, fade);
       if (liveness === null) return;
 
       const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf(row.targetId);
@@ -38,5 +42,5 @@ export function createScalarVolumePass<Id extends string>(
         liveness.fadeOpacityOf,
       );
     },
-  };
+  } as ContentPass as ContentPass<K>;
 }

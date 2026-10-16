@@ -13,7 +13,7 @@ a single Layer:
 | Rows                                       | Only reader                                                         |
 | ------------------------------------------ | ------------------------------------------------------------------- |
 | `localBubble`, `localBubbleRecede`         | `src/layers/localBubble/present/localBubbleOpacity.ts`              |
-| `zoneOfAvoidance`, `zoneOfAvoidanceRecede` | `src/layers/zoneOfAvoidance/present/zoneOfAvoidanceLayerOpacity.ts` |
+| `zoneOfAvoidance`, `zoneOfAvoidanceRecede` | `src/layers/zoneOfAvoidance/present/deriveZoneOfAvoidanceLiveness.ts` |
 | `constellations`                           | `src/layers/constellations/present/constellationLayerOpacity.ts`    |
 
 So tuning or reading a Layer means visiting a second, central place.
@@ -48,8 +48,9 @@ the rows across Layers.
 - The "Move `scaleFadeBands` to `src/data`" backlog item (`ready`,
   2026-08-31). Rule on both together, because this design may make that
   move moot.
-- The "Bundle-declared fade rows — union totality" item (2026-08-20). This
-  is the same composition question, for `FadeLayer` rows.
+- The "Bundle-declared fade rows — union totality" item (2026-08-20), since
+  answered by each Layer's `visibility.ts` entries: the same composition
+  question, for scale bands.
 - "Filaments + flow field lack scale fade bands" (2026-07-24). Those would
   be the first Layers born under the new shape.
 - Layer composition step (3), structure cleanup, which is parked: this is a
