@@ -98,14 +98,10 @@ export function pickDepthFormat(slabIndex: number): GPUTextureFormat {
   return slabIndex === COSMO ? COSMO_DEPTH_FORMAT : NEAR0_DEPTH_FORMAT;
 }
 
-// One pass's attachments: the r32uint colour texture and its depth. `width` /
-// `height` let a debug target be reused while the canvas size holds and
-// reallocated on resize; `pick()`'s shared pair is always 1×1.
+// One pass's attachments: the r32uint colour texture and its depth.
 type PickSlabTarget = {
   pickTexture: GPUTexture;
   depthTexture: GPUTexture;
-  width: number;
-  height: number;
 };
 
 /**
@@ -166,8 +162,6 @@ export function createPickProgram(deps: {
         format: depthFormat,
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       }),
-      width: w,
-      height: h,
     };
   }
 
@@ -190,13 +184,15 @@ export function createPickProgram(deps: {
       });
       sharedDepth.set(depthFormat, depth);
     }
-    return { pickTexture: sharedColour, depthTexture: depth, width: 1, height: 1 };
+    return { pickTexture: sharedColour, depthTexture: depth };
   }
 
   /** `slabIndex`'s debug target, reused when the viewport size still matches. */
   function ensureDebugTarget(slabIndex: number, w: number, h: number): PickSlabTarget {
     const existing = debugTargets.get(slabIndex);
-    if (existing && existing.width === w && existing.height === h) return existing;
+    if (existing && existing.pickTexture.width === w && existing.pickTexture.height === h) {
+      return existing;
+    }
 
     existing?.pickTexture.destroy();
     existing?.depthTexture.destroy();
@@ -388,8 +384,7 @@ export function createPickProgram(deps: {
 
     // Record every slab's pass + texel copy on ONE encoder; the staging
     // buffers are collected in slab order (near→far) so the readback fold is a
-    // simple "first non-zero". Windowing comes after `pickablesBySlab` has
-    // gated on the whole-canvas view.
+    // simple "first non-zero".
     const stagingInOrder: GPUBuffer[] = [];
     for (const { slabIndex, view, passes: slabPickables } of groups) {
       const target = ensureSharedTarget(slabIndex);
