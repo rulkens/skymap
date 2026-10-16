@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import RemotePage from '../../../src/components/RemotePage/RemotePage';
 import { createLocalTransport } from '../../../src/services/remote/createLocalTransport';
 import type { DomeStatus } from '../../../src/@types/remote/DomeStatus';
+import type { RemoteLinkStatus } from '../../../src/@types/remote/RemoteLinkStatus';
 
 vi.mock('../../../src/services/remote/createLocalTransport', () => ({
   createLocalTransport: vi.fn(),
@@ -16,13 +17,24 @@ const status: DomeStatus = {
   toggles: [{ id: 'constellations', label: 'Constellations', enabled: false }],
 };
 
-let deliver: (text: string) => void;
+// One listener per rendered page, in render order.
+const delivers: ((text: string) => void)[] = [];
+const deliver = (text: string): void => delivers.at(-1)!(text);
+let reportStatus: (status: RemoteLinkStatus) => void;
+let resizePad: () => void;
+// Like a socket: sends made before the link reports `open` are dropped.
+let linkOpen: boolean;
 const sent: string[] = [];
 
 beforeEach(() => {
   vi.useFakeTimers();
   sent.length = 0;
+  delivers.length = 0;
+  linkOpen = true;
   globalThis.ResizeObserver = class {
+    constructor(callback: () => void) {
+      resizePad = callback;
+    }
     observe() {}
     disconnect() {}
     unobserve() {}
@@ -32,12 +44,15 @@ beforeEach(() => {
     newRoom: () => 'ABCD2345',
     pairingOrigins: async () => [],
     open: () => ({
-      send: (text) => sent.push(text),
+      send: (text) => void (linkOpen && sent.push(text)),
       onText: (listener) => {
-        deliver = listener;
+        delivers.push(listener);
         return () => {};
       },
-      onStatus: () => () => {},
+      onStatus: (listener) => {
+        reportStatus = listener;
+        return () => {};
+      },
       close: () => {},
     }),
   });
@@ -51,11 +66,9 @@ const menu = {
 };
 const sendMenu = (): void => act(() => deliver(JSON.stringify({ kind: 'menu', menu })));
 const sendStatus = (): void => act(() => deliver(JSON.stringify({ kind: 'status', status })));
-const commands = (): unknown[] =>
-  sent
-    .map((s) => JSON.parse(s))
-    .filter((m) => m.kind === 'command')
-    .map((m) => m.command);
+const messages = (kind: string): Record<string, unknown>[] =>
+  sent.map((s) => JSON.parse(s)).filter((m) => m.kind === kind);
+const commands = (): unknown[] => messages('command').map((m) => m.command);
 
 describe('RemotePage', () => {
   it('a status renders the running tour and its controls', () => {
@@ -97,5 +110,35 @@ describe('RemotePage', () => {
       name: 'toggleSet',
       payload: { id: 'constellations', enabled: true },
     });
+  });
+
+  it('the trackpad size reaches the dome once the link opens', () => {
+    linkOpen = false;
+    render(<RemotePage />);
+    act(() => resizePad());
+    expect(sent).toEqual([]);
+    linkOpen = true;
+    act(() => reportStatus('open'));
+    expect(messages('device').map((m) => (m.event as { kind: string }).kind)).toEqual(['resize']);
+  });
+
+  it("another remote's search results are ignored", () => {
+    // Two remotes in one room, both on their first non-empty search: the relay hands each the other's results.
+    const pageA = within(render(<RemotePage />).container);
+    const pageB = within(render(<RemotePage />).container);
+    for (const page of [pageA, pageB]) {
+      fireEvent.change(page.getByRole('searchbox'), { target: { value: 'andro' } });
+    }
+    act(() => void vi.advanceTimersByTime(200));
+    const fromA = messages('hello')[0]!.from;
+    const requestA = messages('search').find((m) => m.from === fromA)!;
+    const resultsForA = JSON.stringify({
+      kind: 'searchResults',
+      requestId: requestA.requestId,
+      matches: [{ name: 'Andromeda', kind: 'galaxy', action: { kind: 'focus', focusId: 'm31' } }],
+    });
+    act(() => delivers.forEach((listener) => listener(resultsForA)));
+    expect(pageA.queryByRole('button', { name: /Andromeda/ })).toBeTruthy();
+    expect(pageB.queryByRole('button', { name: /Andromeda/ })).toBeNull();
   });
 });

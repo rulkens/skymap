@@ -1,7 +1,9 @@
 /**
  * useRemoteLink — the remote page's whole conversation with the dome as plain React state: the
  * link, a `hello` every second, the latest status and menu, and "the dome is gone" after three silent
- * seconds. The id is per page load, so a reload is a new remote to the dome.
+ * seconds. The id is per page load, so a reload is a new remote to the dome. Every time the link
+ * opens, the last trackpad size goes again: the dome attaches a remote's input only after a
+ * `resize`, and the pad's first one is sent while the socket is still connecting, so it is lost.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -31,6 +33,7 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
   const linkRef = useRef<RemoteLink | null>(null);
   const [from] = useState(newRemoteId);
   const requestRef = useRef(0);
+  const lastResize = useRef<DeviceEvent | null>(null);
 
   useEffect(() => {
     if (!room) return;
@@ -45,6 +48,12 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     armSilence();
     hello();
     const beat = setInterval(hello, HELLO_INTERVAL_MS);
+    const offStatus = link.onStatus((linkStatus) => {
+      if (linkStatus !== 'open') return;
+      hello();
+      const event = lastResize.current;
+      if (event) link.send(JSON.stringify({ from, kind: 'device', event }));
+    });
     const offText = link.onText((text) => {
       const message = parseDomeMessage(text);
       if (!message) return;
@@ -54,7 +63,7 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
         armSilence();
       } else if (message.kind === 'menu') {
         setMenu(message.menu);
-      } else if (message.requestId === String(requestRef.current)) {
+      } else if (message.requestId === `${from}:${requestRef.current}`) {
         setMatches(message.matches);
       }
     });
@@ -62,6 +71,7 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
       clearInterval(beat);
       clearTimeout(silence);
       offText();
+      offStatus();
       link.close();
       linkRef.current = null;
     };
@@ -76,12 +86,16 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     [send, from],
   );
   const sendDevice = useCallback(
-    (event: DeviceEvent): void => send({ from, kind: 'device', event }),
+    (event: DeviceEvent): void => {
+      if (event.kind === 'resize') lastResize.current = event;
+      send({ from, kind: 'device', event });
+    },
     [send, from],
   );
   const search = useCallback(
     (query: string): void => {
-      const requestId = String(++requestRef.current);
+      // The relay hands results to every socket in the room, so the id must be this remote's own.
+      const requestId = `${from}:${++requestRef.current}`;
       if (query === '') setMatches([]);
       else send({ from, kind: 'search', requestId, query });
     },

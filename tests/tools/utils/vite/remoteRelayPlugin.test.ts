@@ -14,16 +14,16 @@ afterEach(() => {
   for (const server of servers.splice(0)) server.close();
 });
 
-async function startRelay(): Promise<number> {
+async function startRelay(heartbeatMs?: number): Promise<number> {
   const server = createServer();
-  attachRemoteRelay(server);
+  attachRemoteRelay(server, heartbeatMs);
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, resolve));
   return (server.address() as AddressInfo).port;
 }
 
-async function join(port: number, room: string): Promise<WebSocket> {
-  const socket = new WebSocket(`ws://localhost:${port}/__remote/${room}`);
+async function join(port: number, room: string, autoPong = true): Promise<WebSocket> {
+  const socket = new WebSocket(`ws://localhost:${port}/__remote/${room}`, { autoPong });
   sockets.push(socket);
   await new Promise<void>((resolve, reject) => {
     socket.once('open', resolve);
@@ -81,12 +81,26 @@ describe('remote relay', () => {
     const code = await new Promise<number>((resolve) => fifth.once('close', resolve));
     expect(code).toBe(1008);
   });
+
+  it('a socket that stops answering pings is dropped and frees its slot', async () => {
+    const port = await startRelay(30);
+    const asleep = await join(port, 'ROOM', false);
+    for (let i = 0; i < 3; i++) await join(port, 'ROOM');
+    await new Promise((resolve) => asleep.once('close', resolve));
+    const fourth = await join(port, 'ROOM');
+    await settle();
+    expect(fourth.readyState).toBe(WebSocket.OPEN);
+  });
 });
 
 describe('listRemoteOrigins', () => {
   it('origins lists localhost last', () => {
-    const origins = listRemoteOrigins(5174);
+    const origins = listRemoteOrigins(5174, true, false);
     expect(origins.at(-1)).toBe('http://localhost:5174');
     expect(origins.every((origin) => origin.endsWith(':5174'))).toBe(true);
+  });
+
+  it('a server not exposed on the LAN lists only localhost', () => {
+    expect(listRemoteOrigins(5174, false, true)).toEqual(['https://localhost:5174']);
   });
 });
