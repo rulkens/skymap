@@ -29,6 +29,7 @@ import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
 import { toolPages } from '../../tools/utils/io/toolPages.ts';
 import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
+import { jsxSourceAttributes } from '../../tools/site/jsxSourceAttributes.ts';
 import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
 import { BASE, INDEXABLE } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
@@ -72,10 +73,12 @@ const devRootStatics = {
       if (command === 'dev')
         updateConfig({
           publicDir: pathToFileURL(`${publicDir}/`),
-          // The feedback and review endpoints (src/dev/feedback, src/dev/review) ride the dev server only.
+          // The feedback and review endpoints (src/dev/feedback, src/dev/review) ride the dev server only,
+          // as does the source pointer on React elements that feedback notes read.
           vite: {
             plugins: [
               rootStatics,
+              jsxSourceAttributes(resolve(import.meta.dirname, 'src')),
               feedbackPlugin(`${BASE}__feedback`),
               reviewPlugin(`${BASE}__review`),
             ],

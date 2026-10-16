@@ -59,9 +59,9 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Contract:** in `astro dev` only, every host JSX element (lower-case tag) written in a website `.tsx` file gets `data-astro-source-file="<absolute path>"` and `data-astro-source-loc="<line>:<col>"`, the same attributes and value format Astro writes, so `describeElement.ts` and the note JSON stay unchanged. Absent from `astro build` output.
 
-- [ ] Implement as a Babel plugin passed through `@astrojs/react`'s `babel.plugins` option, applied when `command === 'serve'`.
-- [ ] Test `jsxSourceAttributes adds file and loc to host elements, not to components`: transform a two-line fixture, assert `<p>` gets both attributes with the right `line:col` and `<Foo>` gets none.
-- [ ] Check in a browser on your own dev server: leave a note on React-rendered text, the note JSON's `element.source.file` names the `.tsx`.
+- [x] Implement as a `serve`-only, `pre` Vite plugin using the TypeScript parser (`tools/site/utils/stampJsxSource.ts`): `@astrojs/react` 7 removed its `babel` option, so there is no Babel hook to pass a plugin through. `loc` is Astro's own value, the 1-based position just after the opening tag's `>`.
+- [x] Test `jsxSourceAttributes adds file and loc to host elements, not to components`: transform a two-line fixture, assert `<p>` gets both attributes with the right `line:col` and `<Foo>` gets none.
+- [x] Check in a browser on your own dev server: the feedback tool's copy of the pointer (`__feedbackSources`, which the dev toolbar's attribute removal makes the only place it survives) names `Icon/Icon.tsx` for the `<svg>`.
 
 ### Task 0.3: `npm run site:compare` — the visual gate
 
