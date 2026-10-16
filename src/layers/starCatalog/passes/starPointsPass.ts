@@ -108,9 +108,10 @@ const STAR_BACKDROP_REGION = regionById('solar-neighbourhood');
 /** The regime whose satellites the Galactic Centre's click target covers. */
 const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
 
-export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
+export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
   return {
     name: 'star-points',
+    fade: 'starCatalog',
     // Deliberately OFF the sky-cubemap capture roster: the capture face pose
     // carries a placeholder `distance: 1` Mpc (`cubemapCaptureFrame.ts`'s pose)
     // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
@@ -138,7 +139,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       );
     },
 
-    draw(pass, view, ctx, state) {
+    draw(pass, view, ctx, state, catalogFade) {
       const points = positionedSeededStars(sceneBodyPresentation(ctx).unresolved);
 
       // Rebase into the camera-relative frame in f64 so the f32 upload carries no
@@ -172,8 +173,12 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       // `compositor.ts` BLEND_TABLE), which discards the fragment's unscaled alpha
       // channel — so multiplying rgb here is the whole story.
       const rebasedPoints = points.map((star) => {
-        // Stars outside a focused structure's sphere recede with the survey.
-        const fade = backdropFade * focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus);
+        // Stars outside a focused structure's sphere recede with the survey; each fades
+        // with its own catalog's handed value.
+        const fade =
+          backdropFade *
+          focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus) *
+          catalogFade[SEEDED_STAR_REFS.get(star.id)!.item];
         return {
           ...star,
           positionMpc: [

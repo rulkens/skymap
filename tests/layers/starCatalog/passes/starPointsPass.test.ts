@@ -61,6 +61,9 @@ import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/Po
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
+
 /**
  * The `starCatalogs` appearance slice the layer reads: the shared sizePx slider,
  * the brightness trim, and the three exposure-ramp anchors. Concrete non-default
@@ -209,11 +212,11 @@ describe('starPointsPass.enabled', () => {
     // Renderer + the Sun alone with the camera half an AU off it: the Sun
     // resolves to a sphere, so the points branch is empty.
     const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc), ZERO_FOCUS, { sun: true });
-    expect(pass.enabled(makeState(), onSunCtx, VIEW_STUB)).toBe(false);
+    expect(pass.enabled(makeState(), onSunCtx, VIEW_STUB, ALL_ON)).toBe(false);
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(pass.enabled(makeState(), nearCtx, VIEW_STUB)).toBe(true);
+    expect(pass.enabled(makeState(), nearCtx, VIEW_STUB, ALL_ON)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
@@ -223,9 +226,9 @@ describe('starPointsPass.enabled', () => {
     // wholesale. Derived from the gate so a farther seed growing it carries.
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     const state = makeState();
-    expect(pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB)).toBe(
-      false,
-    );
+    expect(
+      pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB, ALL_ON),
+    ).toBe(false);
   });
 
   it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
@@ -238,7 +241,7 @@ describe('starPointsPass.enabled', () => {
     expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     const state = makeState();
-    expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB)).toBe(false);
+    expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB, ALL_ON)).toBe(false);
   });
 });
 
@@ -313,7 +316,7 @@ describe('starPointsPass.draw', () => {
     const view = makeNear0View(camPos);
     const state = makeState();
 
-    pass.draw!(PASS_STUB, view, makeCtx(camPos), state);
+    pass.draw!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, vpArg, viewportArg] = renderer.draw.mock.calls[0]!;
@@ -336,7 +339,7 @@ describe('starPointsPass.draw', () => {
     const view = makeNear0View(camPos);
     const state = makeState();
 
-    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state);
+    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
     // Parsecs from everything, so the whole roster rides the points branch —
@@ -366,7 +369,7 @@ describe('starPointsPass.draw', () => {
     const view = makeNear0View(camPos);
     const state = makeState();
 
-    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state);
+    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
     const uploadedIds = renderer.setStars.mock.calls[0]![0].map((star) => star.id);
@@ -383,8 +386,8 @@ describe('starPointsPass.draw', () => {
     // Two galaxy-scale frames with identical membership: because the anchors
     // are rebased per frame there is no membership cache — each draw re-uploads.
     const farCam: Vec3 = [0, 0, 5];
-    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
-    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
+    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state, ALL_ON);
+    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state, ALL_ON);
     expect(renderer.setStars).toHaveBeenCalledTimes(2);
     expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toContain(SIRIUS.id);
 
@@ -392,7 +395,7 @@ describe('starPointsPass.draw', () => {
     // uploaded point set — otherwise it would draw as point AND sphere. The
     // Sun and Proxima stay points (parsecs away, sub-pixel).
     const nearCam = halfAuFrom(SIRIUS.positionMpc);
-    pass.draw!(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
+    pass.draw!(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state, ALL_ON);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
     const afterClose = renderer.setStars.mock.calls[2]![0].map((star) => star.id);
     expect(afterClose).toEqual(expect.arrayContaining([SUN.id, PROXIMA.id]));
@@ -419,6 +422,7 @@ describe('starPointsPass.draw', () => {
       makeNear0View(camPos),
       makeCtx(camPos),
       state,
+      ALL_ON,
     );
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
@@ -449,11 +453,36 @@ describe('starPointsPass.draw', () => {
       makeNear0View(camPos),
       makeCtx(camPos, focus),
       makeState(),
+      ALL_ON,
     );
     const uploaded = renderer.setStars.mock.calls[0]![0];
     const colorOf = (id: string) => uploaded.find((star) => star.id === id)!.color;
     expect(colorOf(PROXIMA.id)[0]).toBeCloseTo(PROXIMA.color[0] * backdropFade, 12);
     expect(colorOf(SIRIUS.id)[0]).toBeCloseTo(SIRIUS.color[0] * backdropFade * 0.08, 12);
+  });
+
+  it("star points scale their colour by their catalog's value", () => {
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const colourOf = (fade: Record<keyof typeof ALL_ON, number>, id: string) => {
+      const renderer = makeRenderer();
+      starPointsPass(makeRuntime(renderer)).draw!(
+        PASS_STUB,
+        makeNear0View(camPos),
+        makeCtx(camPos),
+        makeState(),
+        fade,
+      );
+      return renderer.setStars.mock.calls[0]![0].find((star) => star.id === id)!.color;
+    };
+    const halfFamous = { ...ALL_ON, famousStar: 0.5 };
+
+    const famousFull = colourOf(ALL_ON, PROXIMA.id);
+    const famousHalf = colourOf(halfFamous, PROXIMA.id);
+    expect(famousFull[0]).toBeGreaterThan(0);
+    expect(famousHalf).toEqual(famousFull.map((c) => c * 0.5));
+    expect(colourOf(halfFamous, SUN.id)).toEqual(colourOf(ALL_ON, SUN.id));
   });
 
   it('hands the renderer the sizePx slider and brightness × exposure-ramp factor', () => {
@@ -472,6 +501,7 @@ describe('starPointsPass.draw', () => {
       makeNear0View(camPos),
       makeCtx(camPos),
       state,
+      ALL_ON,
     );
 
     const opts = renderer.draw.mock.calls[0]![3];
@@ -503,6 +533,7 @@ describe('starPointsPass.draw', () => {
       makeNear0View(camPos),
       makeCtx(camPos, ZERO_FOCUS, { sun: true }),
       state,
+      ALL_ON,
     );
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
@@ -553,7 +584,7 @@ describe('the Galactic Centre footprint exclusion', () => {
   const stampedIds = (catalogs: Catalogs, camPos: Vec3, view = makeNear0View(camPos)): number[] => {
     const state = makeState();
     const pass = starPointsPass(makeRuntime(makeRenderer()));
-    pass.drawPick!(PASS_STUB, view, makeCtx(camPos, ZERO_FOCUS, catalogs), state);
+    pass.drawPick!(PASS_STUB, view, makeCtx(camPos, ZERO_FOCUS, catalogs), state, ALL_ON);
     const renderer = state.gpu.bodyPickRenderer as unknown as {
       drawPoints: ReturnType<typeof vi.fn>;
     };
@@ -601,6 +632,7 @@ describe('the Galactic Centre footprint exclusion', () => {
       makeNear0View(camPos),
       makeCtx(camPos, focus),
       state,
+      ALL_ON,
     );
     const renderer = state.gpu.bodyPickRenderer as unknown as {
       drawPoints: ReturnType<typeof vi.fn>;

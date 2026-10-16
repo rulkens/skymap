@@ -11,6 +11,11 @@ import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalog
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { STAR_CATALOG_SOURCE_ROWS } from '../sources/starCatalogSourceRows';
+import { starCatalogVisibility } from '../visibility';
+import { visibilitySwitchOf } from '../../../utils/visibility/visibilitySwitchOf';
+
+// The star show entry: its switch, section rule included, is what demands a catalog.
+const [STAR_SHOW_ENTRY] = starCatalogVisibility;
 
 export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly AssetWiringRow[] {
   const surveyRows = STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
@@ -20,9 +25,7 @@ export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly Asse
         key: source,
         factory: () => runtime.catalogs.get(source)!,
         req: (tier) => ({ source, tier }),
-        demand: (ctx) =>
-          ctx.settings.starCatalogs.enabled &&
-          ctx.settings.starCatalogs.items[id]?.enabled === true,
+        demand: (ctx) => visibilitySwitchOf(ctx.settings, STAR_SHOW_ENTRY, id),
         priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
         gates: { address: 'starCatalog', item: id },
       };

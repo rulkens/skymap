@@ -1,7 +1,8 @@
 /**
  * `starCutInputs` — what the frame reduces to for the GPU cut: frustum planes
  * per view, the angular cull margin sized for the widest view, and each
- * source's budget at the tier its catalog was committed at.
+ * source's budget at the tier its catalog was committed at and its opacity:
+ * the crossfade times the handed value.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -10,6 +11,8 @@ import { FLOATS_PER_VIEW } from '../../../../../src/layers/starCatalog/render/st
 import { STAR_PICK_MIN_RADIUS_PX } from '../../../../../src/data/starCullSlack';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
+import { starCrossfadeOpacity } from '../../../../../src/utils/star/starCrossfadeOpacity';
+import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -53,7 +56,6 @@ function runtime(committedTier: Tier, requestedTier: Tier = committedTier): Star
 const RUNTIME = runtime('medium');
 
 const SETTINGS = {
-  enabled: true,
   sizePx: 2.5,
   brightness: 1,
   refineThreshold: 0.05,
@@ -62,8 +64,10 @@ const SETTINGS = {
   exposureNearX: 1,
   exposureMidX: 1,
   exposureFarX: 1,
-  items: { gaiaStars: { enabled: true, labelEnabled: false } },
 } as unknown as StarCatalogSettings;
+
+const fadeOf = (gaiaStars: number) => ({ famousStar: 1, gaiaStars, sStar: 1, sun: 1 });
+const ALL_ON = fadeOf(1);
 
 // 1000 pc: inside Gaia's crossfade band.
 const EYE = [1000 * SCALE_UNITS.PC_TO_MPC, 0, 0] as const;
@@ -79,20 +83,29 @@ function view(pxPerRad: number): FrameView {
 
 describe('starCutInputs', () => {
   it('writes six planes per view', () => {
-    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600), view(600)]);
+    const inputs = starCutInputs(RUNTIME, SETTINGS, ALL_ON, [view(600), view(600)]);
     expect(inputs!.cut.planes).toHaveLength(2 * FLOATS_PER_VIEW);
   });
 
   it('sizes the leaf margin for the widest view (fewest pixels per radian)', () => {
-    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600), view(300)]);
+    const inputs = starCutInputs(RUNTIME, SETTINGS, ALL_ON, [view(600), view(300)]);
     expect(inputs!.cut.leafMarginRad).toBeCloseTo(STAR_PICK_MIN_RADIUS_PX / 300, 12);
   });
 
   it('the cut reads the budget of the tier its catalog was committed at', () => {
     // Mid-reload: the slot still holds the small catalog while large is in flight.
-    const inputs = starCutInputs(runtime('small', 'large'), SETTINGS, [view(600)]);
+    const inputs = starCutInputs(runtime('small', 'large'), SETTINGS, ALL_ON, [view(600)]);
     expect(inputs!.cut.sources).toEqual([
       expect.objectContaining({ source: Source.GaiaStars, drawBudget: 100 }),
     ]);
+  });
+
+  it('the Gaia cut opacity is the crossfade times the handed value', () => {
+    const crossfade = starCrossfadeOpacity(GAIA_STARS_ENTRY.crossfadePc, 1000);
+    expect(crossfade).toBeGreaterThan(0);
+    const half = starCutInputs(RUNTIME, SETTINGS, fadeOf(0.5), [view(600)]);
+    expect(half!.cut.sources[0]!.opacity).toBeCloseTo(0.5 * crossfade, 12);
+    // At 0 the source leaves the cut: with no other source in band, there is no cut.
+    expect(starCutInputs(RUNTIME, SETTINGS, fadeOf(0), [view(600)])).toBeNull();
   });
 });

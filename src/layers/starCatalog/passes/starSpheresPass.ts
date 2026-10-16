@@ -70,9 +70,10 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/fore
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
-export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
+export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
   return {
     name: 'star-spheres',
+    fade: 'starCatalog',
 
     enabled(_state, ctx, _view) {
       // Distance first, sort last — see the module header's gate note.
@@ -80,7 +81,7 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
       return sceneBodyPresentation(ctx).resolved.some(({ body }) => SEEDED_STAR_REFS.has(body.id));
     },
 
-    draw(pass, view, ctx) {
+    draw(pass, view, ctx, _state, fade) {
       const spheres = positionedSeededStars(sceneBodyPresentation(ctx).resolved);
 
       // Compose each resolved star's MVP from the slab's f64 vp — see the
@@ -98,8 +99,10 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
           IDENTITY_MAT3,
           star.oblateness,
         );
-        // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-        runtime.starRenderer.draw(pass, narrowMat4(mvp), star.color, 1);
+        // Narrow here, at the GPU draw call — composeBodyMvp returns f64. The sphere
+        // blends at its catalog's value; core admits it only while that is above 0.
+        const opacity = fade[SEEDED_STAR_REFS.get(star.id)!.item];
+        runtime.starRenderer.draw(pass, narrowMat4(mvp), star.color, opacity);
       }
     },
 

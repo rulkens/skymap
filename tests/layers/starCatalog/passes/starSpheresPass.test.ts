@@ -55,6 +55,9 @@ vi.mock('../../../../src/utils/camera/composeBodyMvp', () => ({
 }));
 import { composeBodyMvp } from '../../../../src/utils/camera/composeBodyMvp';
 
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
+
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 
 // The frame's scene bodies as core hands them: positioned at the snapshot instant,
@@ -152,18 +155,18 @@ describe('starSpheresPass.enabled', () => {
     // sub-pixel at 5 kpc, so the spheres branch is empty (the Sun demotes to
     // a point rather than holding a row alive with an invisible sphere).
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(pass.enabled(makeState(), nearCtx, VIEW_STUB)).toBe(false);
+    expect(pass.enabled(makeState(), nearCtx, VIEW_STUB, ALL_ON)).toBe(false);
     // A camera half an AU off the Sun: the Sun resolves and the
     // spheres branch is non-empty.
     const sunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(pass.enabled(makeState(), sunCtx, VIEW_STUB)).toBe(true);
+    expect(pass.enabled(makeState(), sunCtx, VIEW_STUB, ALL_ON)).toBe(true);
   });
 
   it('finds its stars by their seed refs: a resolved planet alone keeps it off', () => {
     const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
     const [mars] = positionedOf(SCENE_PLANETS.filter((p) => p.id === 'mars'));
     const ctx = makeCtx(halfAuFrom(mars!.positionMpc), [mars!]);
-    expect(pass.enabled(makeState(), ctx, VIEW_STUB)).toBe(false);
+    expect(pass.enabled(makeState(), ctx, VIEW_STUB, ALL_ON)).toBe(false);
   });
 
   it('is disabled beyond the foreground gate', () => {
@@ -172,10 +175,10 @@ describe('starSpheresPass.enabled', () => {
     // (foreground:0, NEAR0) step can be skipped wholesale.
     const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
     const state = makeState();
-    expect(pass.enabled(state, makeCtx([0, 0, 0.43]), VIEW_STUB)).toBe(false);
-    expect(pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]), VIEW_STUB)).toBe(
-      false,
-    );
+    expect(pass.enabled(state, makeCtx([0, 0, 0.43]), VIEW_STUB, ALL_ON)).toBe(false);
+    expect(
+      pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]), VIEW_STUB, ALL_ON),
+    ).toBe(false);
   });
 });
 
@@ -190,7 +193,7 @@ describe('starSpheresPass.draw', () => {
     const view = makeNear0View(camPos);
     const pass = starSpheresPass(makeRuntime({ draw: drawSpy }));
 
-    pass.draw!(PASS_STUB, view, makeCtx(camPos), makeState());
+    pass.draw!(PASS_STUB, view, makeCtx(camPos), makeState(), ALL_ON);
 
     expect(composeMock).toHaveBeenCalledTimes(1);
     const call = composeMock.mock.calls[0]!;
@@ -214,6 +217,20 @@ describe('starSpheresPass.draw', () => {
     expect(color).toBe(SEEDED_STAR_CATALOGS.sun[0]!.color);
   });
 
+  it("a sphere draws with its catalog's handed value", () => {
+    const drawSpy = vi.fn();
+    const camPos = halfAuFrom(SUN.positionMpc);
+    const pass = starSpheresPass(makeRuntime({ draw: drawSpy }));
+
+    pass.draw!(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(), {
+      ...ALL_ON,
+      sun: 0.5,
+    });
+
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+    expect(drawSpy.mock.calls[0]![3]).toBe(0.5);
+  });
+
   it('a famous star’s drawn position comes from the snapshot', () => {
     composeMock.mockClear();
     // The star record carries no position at all, so the only place the drawn
@@ -224,7 +241,7 @@ describe('starSpheresPass.draw', () => {
     const camPos = halfAuFrom(SIRIUS.positionMpc);
     const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
 
-    pass.draw!(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState());
+    pass.draw!(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(), ALL_ON);
 
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(
@@ -243,7 +260,7 @@ describe('starSpheresPass.draw', () => {
     const view = makeNear0View(camPos);
     const pass = starSpheresPass(makeRuntime({ draw: drawSpy }));
 
-    pass.draw!(PASS_STUB, view, makeCtx(camPos), makeState());
+    pass.draw!(PASS_STUB, view, makeCtx(camPos), makeState(), ALL_ON);
 
     // Exactly the resolved star composed, by identity.
     expect(composeMock).toHaveBeenCalledTimes(1);
@@ -265,6 +282,7 @@ describe('starSpheresPass.draw', () => {
       makeNear0View(halfAuFrom(SIRIUS.positionMpc)),
       makeCtx(halfAuFrom(SIRIUS.positionMpc), SUN_ONLY),
       makeState(),
+      ALL_ON,
     );
     expect(composeMock).not.toHaveBeenCalled();
 
@@ -277,6 +295,7 @@ describe('starSpheresPass.draw', () => {
       makeNear0View(halfAuFrom(SUN.positionMpc)),
       makeCtx(halfAuFrom(SUN.positionMpc), SUN_ONLY),
       makeState(),
+      ALL_ON,
     );
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(SUN.positionMpc);
@@ -315,7 +334,7 @@ describe('starSpheresPass.drawPick', () => {
     const state = { gpu: { bodyPickRenderer } } as unknown as EngineState;
     const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
 
-    pass.drawPick!(PASS_STUB, view, makeCtx(camPos), state);
+    pass.drawPick!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     // Exactly one sphere pick recorded — only Sirius resolved.
     expect(bodyPickRenderer.drawSphere).toHaveBeenCalledTimes(1);

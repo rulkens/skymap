@@ -127,6 +127,8 @@ import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFloo
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';
 import { starResidency } from '../load/starResidency';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
+import { SOURCE_REGISTRY } from '../../../data/sources';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
 type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };
@@ -204,15 +206,18 @@ function nextPresent(
   return null;
 }
 
-export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
+export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
   return {
     name: 'field-star-sphere',
+    fade: 'starCatalog',
 
-    enabled(_state, ctx, _view) {
+    enabled(_state, ctx, _view, fade) {
       // The presence query needs the live catalog; null (no catalog committed
-      // yet) disables before any distance math.
+      // yet), or one handed 0, disables before any distance math.
       const loaded = currentCatalog(runtime);
-      if (loaded === null) return false;
+      if (loaded === null || fade[SOURCE_REGISTRY[loaded.source].id as StarCatalogId] === 0) {
+        return false;
+      }
       const catalog = loaded.octree;
 
       const onMpc = resolveDistanceMpc(STAR_RESOLVE_PX, ctx.drawPxPerRad);
@@ -233,7 +238,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
       return next !== null;
     },
 
-    draw(pass, view, _ctx, _state) {
+    draw(pass, view, _ctx, _state, fade) {
       const loaded = currentCatalog(runtime);
       if (loaded === null) return;
       const present = presentByCatalog.get(loaded.octree);
@@ -250,7 +255,8 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
         IDENTITY_MAT3,
       );
       // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-      runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp), 1);
+      const opacity = fade[SOURCE_REGISTRY[loaded.source].id as StarCatalogId];
+      runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp), opacity);
     },
 
     // Pick aspect — stamps the present star's identity into the NEAR0 r32uint pick

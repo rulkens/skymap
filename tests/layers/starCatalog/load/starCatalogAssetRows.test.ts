@@ -44,9 +44,8 @@ function makeCtx(over: {
 
 describe('starCatalogAssetRows demand predicates', () => {
   it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
-    // The star-catalog cluster mirrors the galaxy-catalog cluster: a coarse
-    // master gate (`starCatalogs.enabled`) AND a per-catalog `items[id].enabled`
-    // bit must BOTH be true for the layer to load.
+    // Demand is the star show entry's switch: the section (`starCatalogs.enabled`)
+    // AND the item bit, so a catalog switched off by either never loads.
     const gaia = rowFor(Source.GaiaStars);
     const on = (starCatalogs: unknown) => gaia.demand(makeCtx({ settings: { starCatalogs } }));
     // Master on + item on ⇒ demanded.
@@ -55,8 +54,6 @@ describe('starCatalogAssetRows demand predicates', () => {
     expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toBe(false);
     // Item off under an on master ⇒ not demanded.
     expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toBe(false);
-    // Absent item row (nothing seeded) ⇒ not demanded.
-    expect(on({ enabled: true, items: {} })).toBe(false);
   });
 
   it('famousStarsMeta is eagerly demanded, unconditionally', () => {

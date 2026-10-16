@@ -17,6 +17,9 @@ import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@typ
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
+
 const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 
 // The pass reads its viewport via `sizeOf('star-aggregates')`; a capture draw's
@@ -74,7 +77,7 @@ describe('starAggregatesPass', () => {
   it('records the AGGREGATE stream, sized to the half-res offscreen without mutating the shared view', () => {
     const { runtime, drawCut } = makeRuntime();
     const view = makeNear0View();
-    starAggregatesPass(runtime).draw!(PASS_STUB, view, makeCtx(), STATE);
+    starAggregatesPass(runtime).draw!(PASS_STUB, view, makeCtx(), STATE, ALL_ON);
 
     const args = drawCut.mock.calls[0]![1];
     expect(args.stream).toBe('aggregate');
@@ -87,7 +90,7 @@ describe('starAggregatesPass', () => {
 
   it('sizes against the capture face during a capture draw', () => {
     const { runtime, drawCut } = makeRuntime();
-    starAggregatesPass(runtime).draw!(PASS_STUB, makeNear0View(), makeCtx(true), STATE);
+    starAggregatesPass(runtime).draw!(PASS_STUB, makeNear0View(), makeCtx(true), STATE, ALL_ON);
     expect(drawCut.mock.calls[0]![1].viewportPx).toEqual([256, 256]);
     expect(drawCut.mock.calls[0]![1].pxPerRad).toBe(600);
   });
