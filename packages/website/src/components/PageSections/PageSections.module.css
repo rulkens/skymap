@@ -50,7 +50,7 @@
   left: -0.5rem;
 }
 
-/* A list the object catalogue's filter has emptied of its section (scripts/initObjectFinder.ts). */
+/* A list the object catalogue's filter has emptied of its section (components/ObjectFinder). */
 .root a[aria-disabled] {
   color: var(--site-text-faint);
   pointer-events: none;

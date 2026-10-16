@@ -3,8 +3,8 @@ import type { FlightTimeline } from '../../@types/FlightTimeline';
 import { flightAt } from '../../utils/flightAt';
 import { clamp } from '../overlay/clamp';
 
-// The tall track the flight scrolls through: `.track` as an .astro component, `Flight-track` as a module.
-const TRACK = '.track, [class*="Flight-track"]';
+// The tall track the flight scrolls through (`Flight-track`, the module's class).
+const TRACK = '[class*="Flight-track"]';
 
 /** The flight's progress, read the way the flight reads it, so a note says where in the film it was. */
 export function flightState(): FeedbackFlight | null {
