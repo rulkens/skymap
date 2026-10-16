@@ -115,7 +115,15 @@ export type RemoteMessage = { from: RemoteId } & (
 
 export type DomeMessage =
   | { kind: 'status'; status: DomeStatus }
+  | { kind: 'menu'; menu: RemoteMenu }
   | { kind: 'searchResults'; requestId: string; matches: readonly RemoteSearchMatch[] };
+
+export type RemoteMenuItem<Id extends string> = { id: Id; label: string };
+export type RemoteMenu = {
+  tours: readonly RemoteMenuItem<TourId>[];
+  exhibits: readonly RemoteMenuItem<ExhibitId>[];
+  clips: readonly RemoteMenuItem<ClipId>[];
+};
 
 export type DomeStatus = {
   focus: { id: string } | null; // the durable focus id; the remote names it if it can (see below)
@@ -130,6 +138,10 @@ export type RemoteSearchMatch = { name: string; kind: string; action: PaletteAct
 - **Status is a full snapshot**, sent on change (at most four a second) and in answer to every `hello`. The remote
   drives the heartbeat, so the dome keeps no timer of its own. A late or reconnecting remote heals on its next
   `hello`; the remote treats three seconds without a status as "dome not there".
+- **The menu** (ruled 2026-10-16) is the remote's tour, exhibit and clip lists, built by the dome from `tourRegistry`,
+  `APP_EXHIBITS` and `clipRegistry` and sent with the status in answer to every `hello`, so a reloaded or
+  reconnected remote has it within a second. Tours and clips marked `dev` stay off it; `Clip` gains the optional
+  `dev` flag `Tour` already has, set on the grand tour's beat clips and `flyPathDemo`.
 - **Search results carry the `PaletteAction`** the remote sends back in a `goTo` command, so the remote never
   encodes a focus id. The dome ranks with `rankPaletteMatches` over the same four selectors the palette container
   reads, and maps each `ScoredRow` to `actionForRow` plus `paletteRowLabel(row): { name; kind }`, a new pure
@@ -232,7 +244,8 @@ The trackpad is an input source like the canvas: no new gesture code on either s
   Once joined it sends `hello` every second for as long as the page is open.
 - **Sections:** a trackpad; search and home; tours (list, and previous / pause / next while one runs); exhibits and
   clips; time (pause, rate, direction, date, live); the label toggles.
-- **Lists** of tours, exhibits and clips come from the same registries the app uses. The page follows
+- **Lists** of tours, exhibits and clips arrive in the dome's `menu` (see "Messages"); the page imports no
+  registry, since each one carries its full program and drags engine code and React into the bundle. The page follows
   `docs/superpowers/conventions/ui-ux.md` and imports the app's `tokens.css`.
 
 ### The local relay
