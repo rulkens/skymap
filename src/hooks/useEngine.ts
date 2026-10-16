@@ -53,6 +53,9 @@ import { useSetSagaContext } from '../store/SagaContextProvider';
 import { useRunSaga } from '../store/RunSagaProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
 import { installSkymapHook } from '../state/automation/installSkymapHook';
+import { inputSourceSaga } from '../state/input/inputSourceSaga';
+import { createCanvasDeviceChannel } from '../services/input/createCanvasDeviceChannel';
+import type { Task } from 'redux-saga';
 
 export function useEngine(): UseEngineReturn {
   // The injected settings store — created in main.tsx, shared with React via
@@ -80,12 +83,16 @@ export function useEngine(): UseEngineReturn {
     // The engine is most of the bundle, so it loads as its own chunk: the UI
     // renders from the entry chunk alone and the engine starts when it arrives.
     let handle: EngineHandle | undefined;
+    let canvasSource: Task | undefined;
     let unmounted = false;
     void Promise.all([import('../services/engine'), import('../compositions/app')]).then(
       ([{ createEngine }, { APP_COMPOSITION }]) => {
         if (unmounted) return;
         handle = createEngine(canvas, { store, setSagaContext, runSaga }, APP_COMPOSITION);
         handleRef.current = handle;
+        // The canvas is the first input source: it only dispatches `input/*`
+        // actions, which the engine's frame and pick driver read from the store.
+        canvasSource = runSaga(() => inputSourceSaga('canvas', createCanvasDeviceChannel(canvas)));
 
         // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed
         // here (not main.tsx) because it needs the live engine handle to reach the
@@ -98,6 +105,7 @@ export function useEngine(): UseEngineReturn {
 
     return () => {
       unmounted = true;
+      canvasSource?.cancel();
       handle?.destroy();
       handleRef.current = null;
     };

@@ -640,7 +640,6 @@ function makeInput(
         // 'nothing in flight' values.
         picking: {
           pickInFlight: false,
-          pointerDown: false,
         },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both

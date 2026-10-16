@@ -1,65 +1,27 @@
 /**
- * EnginePickingState — pointer-event-throttle sub-bag of the canonical
- * `EngineState`.
+ * EnginePickingState — the pick driver's mutables on the canonical `EngineState`.
  *
- * ### What this sub-bag owns
- *
- *   - `pickInFlight` — gate against issuing a new pick before the
- *                       previous `copyTextureToBuffer` readback resolves;
- *                       the readback is async and stacking picks would
- *                       waste GPU work and risk reading stale results.
- *   - `pointerDown` — true while the user is dragging to orbit the
- *                      camera; the `hoverPickDriver` skips picks while
- *                      dragging to avoid a pick storm.
- *
- * Nothing camera-shaped lives here anymore.  The point pick pass rebuilds
- * its own uniform bytes from plain values at pick time (see
- * `pickUniformBytesOf`), the Milky-Way and structure-ring picks pack their
- * camera from the pick-time slab view, and the Milky-Way pick gate reads
- * that camera through `milkyWayPass.enabled(state, pickCtx)` — so no
- * frame→pick camera mirror is stashed on this bag.
- *
- * ### What used to live here but doesn't anymore
- *
- * `hovered` / `selected` (the user-facing identity refs) moved into the
- * RTK `selection` store slice.  The store is the truth — per-frame readers
- * go through `state.selection.*` (refs) or `state.selectionRows.*` (resolved
- * display rows) instead of this bag.
- *
- * `latestMouseCss` / `lastPickedMouseCss` (the per-frame hover throttle
- * dedup keys) were removed when the in-frame hover-pick block was deleted.
- * Hover picking is now fully pointer-driven via `hoverPickDriver`
- * (see `wireInput.ts`), which maintains its own `latest` / `picked`
- * locals — they never needed to live on engine state.
- *
- * ### Why a separate type
- *
- * The picking pipeline crosses the engine, the click resolver, and the
- * input bindings.  Keeping the mutables in one named bag lets each of
- * those helpers accept exactly the slice they touch, without leaking
- * unrelated state.
+ * Nothing camera-shaped lives here: the pick passes rebuild their camera from
+ * plain values at pick time (`pickUniformBytesOf`, the pick-time slab view), and
+ * hover / select identity lives in the RTK `selection` slice. Pending hover and
+ * select requests live in the `input` slice; `createPickDriver` answers them.
  */
 
 import type { Vec2 } from '../../math/Vec2';
 
 export type EnginePickingState = {
+  /**
+   * One pick at a time, shared by hover and select: `pickProgram.pick` resolves
+   * null for a second call while a readback is in flight.
+   */
   pickInFlight: boolean;
   /**
    * Live pointer position in TEXTURE pixels (`cssToTexPx` applied at the
-   * listener, so every frame-side reader is already in the viewport's own
+   * writer, so every frame-side reader is already in the viewport's own
    * space). Written ONLY while the `terrain-pick-marker` debug overlay is on —
    * that toggle is what makes a pointermove worth a wake and a frame-visible
    * write; off, this stays null and the whole debug path is unreachable.
    * `null` also means "no mouse has moved yet" (touch and pen never write it).
    */
   cursorTexPx: Vec2 | null;
-  /**
-   * True while the user holds the pointer button down to orbit the camera.
-   * `hoverPickDriver` returns early in `maybeFire()` when this is true so
-   * orbit drags do not trigger hover picks — a drag is not a hover, and
-   * firing picks every readback cycle mid-drag causes a pick-per-readback
-   * storm and spurious `updateSelectionHover` dispatches.
-   * Written by `wireInput.ts`; read by `hoverPickDriver.ts`.
-   */
-  pointerDown: boolean;
 };

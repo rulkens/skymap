@@ -1,11 +1,11 @@
 /**
- * Engine — the imperative WebGPU core. It owns the device, the camera and the raw
- * browser input, and knows nothing about React: every observable piece of state
+ * Engine — the imperative WebGPU core. It owns the device and the camera, reads
+ * input from the `input` slice, and knows nothing about React: every observable piece of state
  * (lifecycle, scale, counts, load progress, selection) is dispatched straight to the
  * Redux store, and `EngineCallbacks` carries only the injected `store` +
  * `setSagaContext` — no event-callback clusters. Leaf helpers and cohesive
  * subsystems live in sibling modules; the async bootstrap runs as the `phases/`
- * sequence. The public handle and the `frameRef` / `detachControlsRef` / `handleRef`
+ * sequence. The public handle and the `frameRef` / `handleRef`
  * boxes stay inline because those phases write them through the `{current}` pattern.
  */
 
@@ -33,7 +33,6 @@ import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabe
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { createInputAggregator } from './subsystems/inputAggregator';
 import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
@@ -149,7 +148,6 @@ export function createEngine(
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
-      pointerDown: false,
       cursorTexPx: null,
     },
     gpu: {
@@ -229,10 +227,6 @@ export function createEngine(
         getEngineState: () => state,
       }),
 
-      // Eager, because the first rAF can beat the async `wireInput` phase that
-      // attaches the recognizer.
-      inputAggregator: createInputAggregator(),
-
       clipPathInspector: createClipPathInspector(),
 
       // Constructed eagerly, not as a deferred shim: anyone capturing the scheduler
@@ -263,8 +257,8 @@ export function createEngine(
       // not the thumbnail queue's `MAX_CONCURRENT_FETCHES`.
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
-      clickResolver: null,
-      inputBindings: null,
+      pickDriver: null,
+      resizeWake: null,
       loadProgress: null,
     },
     booted: false,
@@ -327,11 +321,6 @@ export function createEngine(
     }),
   );
 
-  // Orbit-controls attachment lives outside `inputBindings` because it needs a
-  // fully-constructed OrbitCamera, absent at engine() time; boxed because
-  // `attachOrbitControls` runs in the sibling `wireInput` phase.
-  const detachControlsRef: { current: (() => void) | null } = { current: null };
-
   // One instance feeds both the dev panel and the load-progress emitter, so the
   // loading bar and the panel agree on what is in flight.
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
@@ -361,7 +350,6 @@ export function createEngine(
     cb,
     composition,
     frameRef,
-    detachControlsRef,
     handleRef,
     allSlots,
     selection,
@@ -427,12 +415,8 @@ export function createEngine(
     state.subsystems.scheduler.destroy();
     state.subsystems.assetQueue.destroy();
 
-    state.subsystems.inputBindings?.destroy();
-    state.subsystems.inputBindings = null;
-    detachControlsRef.current?.();
-    detachControlsRef.current = null;
-    // Drop anything the recognizer queued but no frame ever drained.
-    state.subsystems.inputAggregator.destroy();
+    state.subsystems.resizeWake?.destroy();
+    state.subsystems.resizeWake = null;
     // Undefined only if the GPU IIFE errored before registering the HDR-capability
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
@@ -451,8 +435,8 @@ export function createEngine(
     // WebGPU releases on GC.
     state.subsystems.surfaceTiles?.destroy();
     state.subsystems.surfaceTiles = null;
-    state.subsystems.clickResolver?.destroy();
-    state.subsystems.clickResolver = null;
+    state.subsystems.pickDriver?.destroy();
+    state.subsystems.pickDriver = null;
     state.subsystems.loadProgress?.destroy();
     state.subsystems.loadProgress = null;
 

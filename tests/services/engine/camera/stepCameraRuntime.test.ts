@@ -26,6 +26,9 @@ import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldTo
 import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
+import { selectPendingInput } from '../../../../src/state/input/selectors';
+import { inputConsumed } from '../../../../src/state/input/inputSlice';
+import { pendingToInputSteps } from '../../../../src/utils/input/pendingToInputSteps';
 import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
@@ -72,17 +75,19 @@ const EARTH_ROW: SelectionRow = {
   driver: bodyDriverGeometry('earth'),
 };
 
-/** The frame's inputs as `runFrame` would build them, off the harness's live store and aggregator. */
+/** The frame's inputs as `runFrame` would build them, off the harness's live store, draining its pending input. */
 function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs> = {}): StepInputs {
   const rootState = h.store.getState();
   const simDays = deriveSimDays(selectTimeState(rootState), nowMs);
+  const pending = selectPendingInput(rootState);
+  if (pending.length > 0) h.store.dispatch(inputConsumed());
   return {
     nowMs,
     simDays,
     rootState,
     canvasPx: [100, 100],
     aspect: 1,
-    steps: h.state.subsystems.inputAggregator.drain(),
+    steps: pendingToInputSteps(pending, [100, 100]),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
     // No fixture here engages a real atlas, so the datum-only stub matches
     // production's own `?? 0` miss (F3a, spec §8.3).
@@ -102,11 +107,10 @@ describe('stepCameraRuntime', () => {
     const h = makeCameraSimHarness();
     h.frame(2);
     const prev = deepFreeze(h.state.cameraRuntime);
-    h.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 50, yPx: 50 });
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'pan', xPx: 60, yPx: 50 });
-    h.push({ kind: 'gestureEnd' });
+    h.notch(100, [50, 50]);
+    h.press('pan', [50, 50]);
+    h.moveTo([60, 50]);
+    h.release();
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 48));
 

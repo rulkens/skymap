@@ -540,7 +540,6 @@ describe('renderFrame visual baseline', () => {
         // engine-state shape carries it.
         picking: {
           pickInFlight: false,
-          pointerDown: false,
         },
         subsystems: {
           fades: {

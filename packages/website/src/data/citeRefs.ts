@@ -59,7 +59,7 @@ const ELEK_2021: CiteRef = {
 
 /**
  * The papers to cite for the catalogues and fields a statement made with
- * skymap can rest on, keyed by entry id of ATTRIBUTIONS.md, whose entries name
+ * Skymap can rest on, keyed by entry id of ATTRIBUTIONS.md, whose entries name
  * each paper only as "Huchra et al. 2012". Authors, year, title, journal,
  * volume and page are as the DOI's record at doi.org gave them on the check
  * date (up to four authors in full; of more, three and then "et al."); a

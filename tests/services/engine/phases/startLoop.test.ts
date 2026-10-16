@@ -118,7 +118,6 @@ function makeDeps(): BootstrapDeps {
     cb: { store: { dispatch: vi.fn(), getState: () => ({}) } } as never,
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
     // startLoop never reads a resolver — a resolver that always returns null

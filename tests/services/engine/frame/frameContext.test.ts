@@ -105,7 +105,7 @@ function makeState(
     settings: {
       bodies: { items: {} },
     },
-    picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+    picking: { pickInFlight: false, cursorTexPx: null },
   } as unknown as EngineState;
 }
 

@@ -4,10 +4,10 @@ import { REPO_BLOB } from './siteIdentity';
 import { formatDate } from '../utils/formatDate';
 
 const CHECKED = '2026-10-06';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 
 /**
- * The Science page's claims, spread into FACTS. A claim about what skymap does
+ * The Science page's claims, spread into FACTS. A claim about what Skymap does
  * cites the file that does it; a claim about the sky cites the paper or the
  * catalogue's own page. Numbers worked out from two inputs (the horizon for a
  * given Hubble constant, a velocity as megaparsecs) are redone in
@@ -370,9 +370,9 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-cite-skymap',
     about: 'app',
-    text: `skymap is archived on Zenodo. The DOI ${CITATION.conceptDoi} always points to the newest version; version ${CITATION.version}, released on ${formatDate(CITATION.released)}, ${CITATION.versionDoi ? `has its own DOI, ${CITATION.versionDoi}` : 'gets a DOI of its own from Zenodo, which we print here once it is in the citation file'}.`,
+    text: `Skymap is archived on Zenodo. The DOI ${CITATION.conceptDoi} always points to the newest version; version ${CITATION.version}, released on ${formatDate(CITATION.released)}, ${CITATION.versionDoi ? `has its own DOI, ${CITATION.versionDoi}` : 'gets a DOI of its own from Zenodo, which we print here once it is in the citation file'}.`,
     source: `https://doi.org/${CITATION.conceptDoi}`,
-    sourceLabel: 'skymap on Zenodo',
+    sourceLabel: 'Skymap on Zenodo',
     checked: CHECKED,
   },
   {

@@ -17,7 +17,7 @@ import Docs from '../../layouts/Docs.astro';
 import { formatDate } from '../../utils/formatDate';
 
 const USE = 'How each may be used';
-const OURS = 'skymap itself';
+const OURS = 'Skymap itself';
 const REPORT = 'A missing or wrong credit';
 const families = DATA_FAMILIES_USED.map((family) => ({
   ...family,
@@ -34,12 +34,12 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
 
 <Docs
   path="/docs/credits/"
-  description="Credits for all the data, imagery, 3D models, fonts and code in skymap, each with its licence."
+  description="Credits for all the data, imagery, 3D models, fonts and code in Skymap, each with its licence."
   headings={headings}
   factIds={[]}
 >
   <p>
-    skymap is built from other people’s work. Here are all {DATA_ENTRIES.length} sources: who made each, the credit its makers ask for,
+    Skymap is built from other people’s work. Here are all {DATA_ENTRIES.length} sources: who made each, the credit its makers ask for,
     and how it may be used. A holder’s own words are set apart as a quotation, with a control that copies them.
   </p>
 
@@ -50,11 +50,11 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
   <DocFigure id="hubble" eager />
   <p>
     Everything under a name comes from our licence record, the file <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>ATTRIBUTIONS.md</a> in the
-    repository, last compared with the holders’ own pages on {formatDate(checked)}. “Ours” leads into a credit line skymap itself
+    repository, last compared with the holders’ own pages on {formatDate(checked)}. “Ours” leads into a credit line Skymap itself
     prints. These are terms as stated, not legal advice.
   </p>
   <p>
-    To credit a picture or a paper made with skymap, see <DocLink href="/docs/cite/">Cite</DocLink>.
+    To credit a picture or a paper made with Skymap, see <DocLink href="/docs/cite/">Cite</DocLink>.
   </p>
 
   <h2 id="use">{USE}</h2>
@@ -88,7 +88,7 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
   <FactText id="about-licence" />
   <FactText id="about-ai" />
   <p>
-    Everyone else whose work is in skymap is named above, under what they made.
+    Everyone else whose work is in Skymap is named above, under what they made.
   </p>
 
   <h2 id="report">{REPORT}</h2>

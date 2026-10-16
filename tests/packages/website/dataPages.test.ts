@@ -44,7 +44,7 @@ describe('data pages', () => {
     const titles = DATA_PAGES.map((page) => page.title);
     expect(titles.filter((title, i) => titles.indexOf(title) !== i)).toEqual([]);
     expect(
-      DATA_PAGES.filter((page) => `${page.title} | skymap docs`.length > 60).map(
+      DATA_PAGES.filter((page) => `${page.title} | Skymap docs`.length > 60).map(
         (page) => page.title,
       ),
     ).toEqual([]);

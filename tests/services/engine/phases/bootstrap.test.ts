@@ -108,7 +108,6 @@ function makeDeps(): any {
     canvas: { width: 100, height: 100 } as any,
     cb: {} as any,
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
   };

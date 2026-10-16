@@ -413,7 +413,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // engine-state shape carries it.
       picking: {
         pickInFlight: false,
-        pointerDown: false,
       },
       subsystems: {
         proceduralDisks: null,

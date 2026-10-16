@@ -1,0 +1,205 @@
+---
+/*
+ * Features, variant B, "the index and the stage": the groups' names stand
+ * still on the left with the current one marked, the features scroll in the
+ * middle, and on the right one picture at a time stands still and changes to
+ * the current group's (scripts/initFeatureStage.ts). All three share one grid,
+ * so the pictures are in the document beside their groups: a phone shows each
+ * above its group, with the index as a row of links under the top bar.
+ */
+import FeatureHead from './FeatureHead.astro';
+import FeatureLead from './FeatureLead.astro';
+import FeatureList from './FeatureList.astro';
+import FeatureShot from './FeatureShot.astro';
+import { FEATURE_GROUPS } from '../data/features';
+
+// Two rows of the grid for each group: its name, then its list. The index and the stage span them all.
+const rows = FEATURE_GROUPS.length * 2;
+---
+
+<FeatureLead />
+<div class="wrap">
+  <div class="layout grid" data-stage style={`--rows:${rows}`}>
+    <nav class="index" data-index aria-label="Groups on this page">
+      <ul>
+        {
+          FEATURE_GROUPS.map((group) => (
+            <li>
+              <a class="ring small" href={`#${group.id}`}>
+                {group.title}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    {
+      FEATURE_GROUPS.map((group, i) => (
+        <section class="group" aria-labelledby={`${group.id}-title`}>
+          <div class="mark" id={group.id} data-mark style={`grid-row:${i * 2 + 1}`} />
+          <div class="head" style={`grid-row:${i * 2 + 1}`}>
+            <FeatureHead group={group} quiet={!group.shot} />
+          </div>
+          <FeatureShot group={group} sizes="(max-width: 900px) 100vw, 46vw" eager={i === 0} />
+          <div class="list" style={`grid-row:${i * 2 + 2}`}>
+            <FeatureList items={group.items} />
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  import { initFeatureFilms } from '../scripts/initFeatureFilms';
+  import { initFeatureStage } from '../scripts/initFeatureStage';
+
+  const layout = document.querySelector<HTMLElement>('[data-stage]');
+  if (layout) {
+    initFeatureStage(layout);
+    initFeatureFilms(layout);
+  }
+</script>
+
+<style>
+  .layout {
+    --stick: calc(var(--nav-height) + 2.5rem);
+    padding-block: 5rem var(--section-space);
+  }
+
+  .index ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The current group's marker is filled and its name is bright; the rest are dim. */
+  .index a {
+    min-height: 2.25rem;
+    padding-block: 0.25rem;
+    color: var(--site-text-dim);
+  }
+
+  .index a[aria-current] {
+    color: var(--color-fg);
+  }
+
+  .index a[aria-current]::before {
+    background: var(--color-accent);
+  }
+
+  .mark {
+    scroll-margin-top: 2.5rem;
+  }
+
+  .list {
+    padding-top: 1.75rem;
+  }
+
+  @media (min-width: 901px) {
+    .index {
+      grid-area: 1 / 1 / span var(--rows) / span 3;
+      align-self: start;
+      position: sticky;
+      top: var(--stick);
+    }
+
+    /* The group's parts are the grid's own items, so its picture can leave it for the stage. */
+    .group {
+      display: contents;
+    }
+
+    .mark,
+    .head,
+    .list {
+      grid-column: 4 / span 4;
+    }
+
+    .group:not(:first-of-type) > :is(.mark, .head) {
+      margin-top: 7rem;
+    }
+
+    .layout :global(.fshot) {
+      grid-column: 8 / -1;
+      grid-row: span 2;
+      align-self: start;
+      --cols: 5;
+      --shot-room: calc(100svh - var(--stick) - 11rem);
+    }
+
+    .group:not(:first-of-type) > :global(.fshot) {
+      margin-top: 7rem;
+    }
+
+    /* The stage: every picture in one place, under the top bar, and only the current one seen. */
+    .layout[data-live] :global(.fshot) {
+      grid-row: 1 / span var(--rows);
+      position: sticky;
+      top: var(--stick);
+      margin-top: 0;
+      transition: opacity 0.25s ease-out;
+    }
+
+    .layout[data-live] :global(.fshot:not([data-here])) {
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity 0.25s ease-in,
+        visibility 0s linear 0.25s;
+    }
+  }
+
+  /* Narrow: the index is a row of links that scrolls sideways under the top bar, and each picture heads its group. */
+  @media (max-width: 900px) {
+    .layout {
+      display: block;
+      padding-top: 2rem;
+    }
+
+    .index {
+      position: sticky;
+      top: var(--nav-height);
+      z-index: 2;
+      margin-inline: calc(-1 * var(--gutter));
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--border-divider);
+    }
+
+    .index ul {
+      display: flex;
+      gap: 1.5rem;
+      padding-inline: var(--gutter);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .index a {
+      min-height: var(--tap);
+      white-space: nowrap;
+    }
+
+    .group {
+      display: flex;
+      flex-direction: column;
+      padding-top: 3.5rem;
+    }
+
+    .mark {
+      order: -2;
+      scroll-margin-top: calc(var(--tap) + 1rem);
+    }
+
+    .group > :global(.fshot) {
+      order: -1;
+      margin-bottom: 2rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .layout[data-live] :global(.fshot),
+    .layout[data-live] :global(.fshot:not([data-here])) {
+      transition: none;
+    }
+  }
+</style>

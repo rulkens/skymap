@@ -25,7 +25,7 @@ const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => A
 
 <Docs
   path="/docs/data/"
-  description="Every catalogue, picture, model, typeface and piece of code in skymap that somebody else made, with how each may be used and a page of its own."
+  description="Every catalogue, picture, model, typeface and piece of code in Skymap that somebody else made, with how each may be used and a page of its own."
   headings={[
     { depth: 2, slug: 'use', text: BY_USE },
     ...families.map((family) => ({ depth: 2, slug: family.id, text: family.name })),
@@ -33,7 +33,7 @@ const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => A
   factIds={[]}
 >
   <p>
-    Everything in skymap that somebody else made: catalogues, pictures, height maps, 3D models, typefaces, ported code and the services
+    Everything in Skymap that somebody else made: catalogues, pictures, height maps, 3D models, typefaces, ported code and the services
     the app calls. {DATA_ENTRIES.length} sources in {families.length} families.
   </p>
   <DocFigure id="galaxies-measured" eager />
@@ -43,7 +43,7 @@ const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => A
     something could not be opened, and their pages say what. These pages state terms. They are not legal advice.
   </p>
   <p>
-    A picture made with skymap carries the terms of every source in it: see <DocLink href="/about/#press"
+    A picture made with Skymap carries the terms of every source in it: see <DocLink href="/about/#press"
       >Pictures and their terms</DocLink
     >. The lines to print are on <DocLink href="/docs/credits/">Credits</DocLink>, and how the files become what the app loads is on <DocLink
       href="/docs/data/pipeline/">From catalogue to pixels</DocLink
