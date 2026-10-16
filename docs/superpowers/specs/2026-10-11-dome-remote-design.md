@@ -23,19 +23,20 @@ A second device (phone, tablet or laptop) drives skymap while it runs on a dome 
 | Pairing | QR on the dome, plus the remote's address printed in the terminal |
 | Room code | A long token on the public relay (QR only); a short typed code on the local relay |
 | Command wire shape | Named commands, each building existing actions (revised from "raw actions" after the ground check) |
-| Gesture wire shape | The pointer recognizer's events, with positions as fractions of the surface |
+| Gesture wire shape | Device events in unit space; the dome runs them through the input architecture's source pump (revised 2026-10-16) |
+| Trackpad tap | Same as the canvas: a tap selects at the matching dome point, a double-tap focuses the selection |
+| Liveness | The remote's `hello` is a one-second heartbeat; three seconds of silence closes that remote's source |
 | Toggle scope | The Labels & Guides rows only |
-| Prep packaging | Its own PR, before the feature |
+| Prep packaging | Its own PR, before the feature (shipped as #888) |
 
 
 ## Ground preparation
 
-Ground check run 2026-10-11: 3 of 10 touchpoints were special cases. Three prep commits, shipped as their own PR
-before the feature. The spec below is written against the code as it stands after them.
+Ground check run 2026-10-11: 3 of 10 touchpoints were special cases. Preps 2 and 3 shipped as their own PR (#888);
+prep 1 became the input architecture (#913). The spec below is written against main after both.
 
-1. **Dropped:** the gesture sink in the saga context was built, rejected as a bolt-on and reverted. Remote input
-   enters through the input architecture (`docs/grill-sessions/input-architecture-2026-10-14.md`); this spec's
-   "Gestures" section is superseded by it and is rewritten before the remote is built.
+1. **Remote input enters through the input architecture** ([spec](completed/2026-10-15-input-architecture-design.md)).
+   A gesture sink in the saga context was built first, rejected as a bolt-on and reverted.
 2. **Palette search and its go-to runner leave the component folder.** `rankPaletteMatches`, `actionForRow`,
    `paletteRowModel` and the `RUN_ACTION` table move out of `src/components/` to `src/utils/palette/` (types to
    `src/@types/palette/`, the name list to `src/data/palette/`) (via `npm run move-files`), and the
@@ -64,6 +65,10 @@ export function selectToggleRows(
 ```
 
 The other seven touchpoints are plain additions. LAN binding needs no config change: Vite's own `--host` flag does it.
+
+Re-check 2026-10-16, after #913: one rename, riding the feature PR. `createCanvasDeviceChannel(canvas)` reads
+nothing canvas-specific, so it becomes `createDeviceChannel(element: HTMLElement)` (via `npm run move-files`) and the
+remote page runs it on its trackpad.
 
 ## Shape
 
@@ -99,11 +104,14 @@ itself: the local transport asks the relay, and the public-site transport return
 Two disjoint unions. Each side parses only its inbound union, so its own echoes and anything unknown are dropped.
 
 ```ts
-export type RemoteMessage =
-  | { kind: 'hello' } // asks for a status now
+export type RemoteId = string; // random per remote page load, so two remotes in one room are two input sources
+
+export type RemoteMessage = { from: RemoteId } & (
+  | { kind: 'hello' } // the heartbeat, once a second; asks for a status now
   | { kind: 'command'; command: RemoteCommand }
-  | { kind: 'gesture'; event: RemoteGestureEvent }
-  | { kind: 'search'; requestId: string; query: string };
+  | { kind: 'device'; event: DeviceEvent }
+  | { kind: 'search'; requestId: string; query: string }
+);
 
 export type DomeMessage =
   | { kind: 'status'; status: DomeStatus }
@@ -119,10 +127,13 @@ export type DomeStatus = {
 export type RemoteSearchMatch = { name: string; kind: string; action: PaletteAction };
 ```
 
-- **Status is a full snapshot**, sent on change (at most four a second) and every two seconds as a heartbeat. A late
-  or reconnecting remote heals on the next one. The remote treats five seconds without a status as "dome not there".
+- **Status is a full snapshot**, sent on change (at most four a second) and in answer to every `hello`. The remote
+  drives the heartbeat, so the dome keeps no timer of its own. A late or reconnecting remote heals on its next
+  `hello`; the remote treats three seconds without a status as "dome not there".
 - **Search results carry the `PaletteAction`** the remote sends back in a `goTo` command, so the remote never
-  encodes a focus id.
+  encodes a focus id. The dome ranks with `rankPaletteMatches` over the same four selectors the palette container
+  reads, and maps each `ScoredRow` to `actionForRow` plus `paletteRowLabel(row): { name; kind }`, a new pure
+  function that `ROW_VIEW` also reads for its primary text, so the two lists never name a row differently.
 - **No version field.** Remote and dome ship from one build, and unknown kinds already drop.
 
 ### Commands
@@ -132,7 +143,7 @@ clock is stamped, so no wire payload carries `nowMs`.
 
 ```ts
 export type RemoteCommandPayloads = {
-  goTo: PaletteAction; // focus, exhibit, tour, fly-to
+  goTo: PaletteAction; // focus, exhibit, tour, flyTo
   home: null;
   tourAdvance: null;
   tourPrev: null;
@@ -162,45 +173,49 @@ export type RemoteCommandSpec<P> = {
 export const REMOTE_COMMANDS: { [K in keyof RemoteCommandPayloads]: RemoteCommandSpec<RemoteCommandPayloads[K]> };
 ```
 
-- `goTo` reuses `actionsForPaletteAction`. Its parser checks ids against the tour, exhibit and clip registries and
-  bounds every number; a focus id is a length-capped string, resolved by the existing focus saga.
+- `goTo` reuses `actionsForPaletteAction`. Its parser checks ids against `tourRegistry`, `APP_EXHIBITS` and
+  `clipRegistry`, and bounds `flyTo`'s `lonDeg`, `latDeg` and `altKm`; a focus id is a length-capped string, resolved
+  by the existing focus saga. `APP_EXHIBITS` is a composition value, so `REMOTE_COMMANDS` lives in `src/compositions/`
+  beside `selectToggleRows`.
+- **The dome's clock, never the wire's.** Rows that need a time stamp read `env.nowMs`; `timeGoLive` builds
+  `goLiveNowAction()`, which is what the time bar's Now button dispatches and reads the dome's clocks itself.
+  `timeSetDate` is `setSimDays`: the clock keeps its rate and its paused state.
 - `toggleSet` looks its id up in `env.toggleRows` and drops an unknown one.
 - Tour pause stays a toggle because `togglePause` is the only action that exists; the remote shows the dome's
   reported state, so a lost message corrects itself on the next status.
 
 ### Gestures
 
-> Superseded by the input architecture (`docs/grill-sessions/input-architecture-2026-10-14.md`); rewritten before
-> the remote is built.
+The trackpad is an input source like the canvas: no new gesture code on either side.
 
-The remote runs the existing recognizer (`attachOrbitControls`) on its trackpad element and forwards what it emits,
-with pixels replaced by fractions. The dome scales them to its own canvas and calls `pushGesture`.
-
-```ts
-export type RemoteGestureEvent =
-  | { kind: 'gestureStart' }
-  | { kind: 'gestureEnd' }
-  | { kind: 'dragAnchor'; x: number; y: number } // fractions of surface width and height
-  | { kind: 'dragMove'; mode: DragMode; x: number; y: number }
-  | { kind: 'pinchAnchor'; dist: number } // fraction of the surface's short side
-  | { kind: 'pinchMove'; dist: number }
-  | { kind: 'wheel'; deltaY: number; duringGesture: boolean; x: number; y: number };
-
-export function toRemoteGesture(event: InputGestureEvent, surface: Size): RemoteGestureEvent;
-export function fromRemoteGesture(event: RemoteGestureEvent, canvas: Size): InputGestureEvent;
-```
-
-A gesture left open ends when its link closes or goes quiet for two seconds: the dome pushes the `gestureEnd` itself,
-so a dropped connection cannot leave the camera in a drag.
+- **The remote** runs `createDeviceChannel(trackpad)` and sends each `DeviceEvent` as it comes. They are already in
+  unit space, the wheel already a zoom ratio, `t` the remote's own clock; recognition needs only differences
+  within one source, so the two clocks never meet.
+- **The dome** runs `inputSourceSaga('remote:' + from, channel)` per remote, the same pump the canvas uses: the
+  dome's recognizer, the dome's active control scheme, the dome's tap and double-tap timing. A remote's surface
+  aspect reaches the camera through its source record, so a portrait phone moves the sky isotropically.
+- **Validation:** `parseDeviceEvent(raw: unknown): DeviceEvent | null` (`src/utils/remote/`) accepts the
+  `DeviceEvent` kinds only, every number finite, `at` inside 0..1, sizes positive and bounded, pointer ids small
+  integers. Anything else drops the message.
+- **Lifetime of a remote's source:** forked on that remote's first device event; its channel closes when the remote
+  is silent for three seconds or the link closes, and `inputSourceSaga`'s `finally` ends any open gesture and
+  detaches the source. A dropped connection cannot leave the camera in a drag, and a finger resting still on the
+  trackpad stays a live drag because the heartbeat keeps arriving.
+- **Size on return:** the pump waits for a `resize` before it attaches. The receiver keeps each remote's last
+  `resize` and puts it first into the next channel it opens for that remote, so a remote that went quiet resumes
+  without resending its size.
+- **Hover follows too:** a laptop mouse over the trackpad hovers the matching dome point, as on the canvas.
+- **Two remotes** are two sources; the latest to start a held gesture takes the camera over (input architecture, Q6).
 
 ### The dome side
 
 - **Gate:** `?remote`, read once at boot. Without it nothing below exists on the page.
 - **Receiver saga:** forked through `runSaga`, not added to `mainSaga`. It opens the link, reads it through an event
-  channel, parses each text into a `RemoteMessage`, and routes: commands through `REMOTE_COMMANDS`, gestures through
-  `fromRemoteGesture` into `pushGesture`, searches through `rankPaletteMatches` (ten matches at most, query capped at
-  64 characters), `hello` into an immediate status.
-- **Status:** `selectDomeStatus(state, nowMs)`, published by the same saga.
+  channel, parses each text into a `RemoteMessage`, and routes: commands through `REMOTE_COMMANDS`, device events
+  into that remote's source channel (see "Gestures"), searches through `rankPaletteMatches` (ten matches at most,
+  query capped at 64 characters), `hello` into an immediate status. Every message from a remote counts as a sign of
+  life for its source.
+- **Status:** `selectDomeStatus(state, nowMs)`, published by the same saga on change and on `hello`.
 - **A `remote` slice:** `{ phase: 'off' | 'waiting' | 'paired'; code: RoomCode | null; pairingUrl: string | null }`.
   It is a per-device report, like `arrival`.
 - **Pairing overlay:** shown while `phase` is `waiting`: the QR, the code, and the address. On the first `hello` the
@@ -211,6 +226,7 @@ so a dropped connection cannot leave the camera in a drag.
 - **Entry:** `remote.html` with its own small React root, added to the Vite build inputs. It constructs no engine
   and never touches `navigator.gpu`, so it loads over plain `http://` on a LAN address.
 - **Opening it:** `remote.html#<code>` joins that room. Without a code it shows one field to type the code in.
+  Once joined it sends `hello` every second for as long as the page is open.
 - **Sections:** a trackpad; search and home; tours (list, and previous / pause / next while one runs); exhibits and
   clips; time (pause, rate, direction, date, live); the label toggles.
 - **Lists** of tours, exhibits and clips come from the same registries the app uses. The page follows
@@ -224,7 +240,10 @@ A Vite plugin under `tools/utils/vite/`, active on the dev and preview servers.
 - **`GET /__remote/origins`** returns the server's network addresses.
 - **Limits:** messages over 2 KB are dropped, a room holds at most four sockets, and an empty room is forgotten.
 - **Startup line:** it prints the remote's address beside Vite's own, for a device that cannot scan.
-- **Dependency:** `ws`, as an explicit dev dependency.
+- **Dependency:** `ws` and `@types/ws`, as explicit dev dependencies.
+- **Build:** `vite.config.ts` gains `build.rollupOptions.input` for `index.html` and `remote.html`;
+  `inlineEntryCssPlugin` is checked against a second entry.
+- **QR:** `qrcode-generator` (no dependencies of its own) draws the pairing code; nothing in the repo encodes QR today.
 
 ### Pairing
 
@@ -250,11 +269,13 @@ A Vite plugin under `tools/utils/vite/`, active on the dev and preview servers.
 ## Verification
 
 - **Command registry:** every row rejects a malformed payload and an unknown id; an unknown command name is dropped;
-  time rows stamp the `nowMs` they are handed, never one from the wire.
-- **Gestures:** `fromRemoteGesture(toRemoteGesture(e, a), a)` returns `e`, and a different canvas size scales as
-  expected.
-- **Receiver saga:** a command message dispatches exactly its row's actions; a gesture reaches `pushGesture`; an open
-  gesture is ended when the link closes; a search answers with the same `requestId`.
+  no row takes a time stamp from the wire.
+- **`parseDeviceEvent`:** every `DeviceEvent` kind round-trips through JSON; an unknown kind, a non-finite number, an
+  `at` outside 0..1 and a zero or huge size are each dropped.
+- **Receiver saga (real store):** a command message dispatches exactly its row's actions; a remote's device events
+  reach the `input` slice under `remote:<id>`; three seconds of silence, and separately a closed link, end an open
+  gesture and detach the source; a remote that returns attaches again with its last size; two remotes are two
+  sources; a search answers with the same `requestId`; a `hello` is answered with a status.
 - **Relay:** two sockets in one room hear each other and not themselves; a second room hears nothing; an oversized
   message and a fifth socket are refused.
 - **Remote bundle:** the `remote.html` entry's import graph contains nothing under `src/services/gpu/` or
@@ -264,7 +285,7 @@ A Vite plugin under `tools/utils/vite/`, active on the dev and preview servers.
 
 ## Build order
 
-1. **Prep PR:** the three ground-preparation commits.
-2. **Feature PR, local:** link contract and messages, command registry, gesture conversion, receiver saga and status,
-   relay plugin, remote page, pairing overlay.
+1. **Prep PRs:** #888 (palette, toggle rows) and #913 (input architecture). Both merged.
+2. **Feature PR, local:** the `createDeviceChannel` rename, link contract and messages, `parseDeviceEvent`, command
+   registry, receiver saga and status, relay plugin, remote page, pairing overlay.
 3. **Feature PR, public site:** the Durable Object relay and its transport, the Worker route, join rate limits.
