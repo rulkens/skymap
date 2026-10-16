@@ -1,0 +1,30 @@
+.root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147482000;
+  pointer-events: none;
+  font: 600 0.875rem / 1 var(--font-body);
+}
+
+.pin {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.dot {
+  position: absolute;
+  top: -0.75rem;
+  left: -0.75rem;
+  pointer-events: auto;
+  box-shadow: 0 0 0 2px #000;
+  cursor: help;
+}
+
+.pin:has(.dot:hover) {
+  border: 2px dashed var(--color-accent);
+  background: rgba(168, 208, 255, 0.1);
+}

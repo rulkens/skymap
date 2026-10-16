@@ -177,9 +177,9 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Contract unchanged:** the `__feedback` and `__review` routes and their JSON (`tools/site/@types/Feedback*.d.ts`, `DocsReview*.d.ts`), the keys (`f`, `?`, Shift+drag, `c` `w` `g` `m` `h`, Esc, Enter), the Keys box behaviour and its localStorage key, the section icons and panels, Apply and its polling. The overlay never appears in `astro build` output (the gate greps the build for `fb-`, `review-` and the overlay's module class prefixes).
 
-- [ ] Rewrite as React components (panels, pins, marks, Keys box) with module CSS; DOM-walking helpers that read the page (`describeElement`, `cssSelector`, `sectionsOf`, `wordsIn`…) stay plain functions.
-- [ ] `cssSelector.ts:6-8` drops `astro-*` classes; it keeps the `{Folder}-{class}` module names, which are stable and make good selectors.
-- [ ] Browser check on your own dev server, at 1600 and 400 px: leave a note, add each mark kind, open a section panel, open the Keys box, Apply page; screenshots in the report.
+- [x] Rewrite as React components (panels, pins, marks, Keys box) with module CSS; DOM-walking helpers that read the page (`describeElement`, `cssSelector`, `sectionsOf`, `wordsIn`…) stay plain functions.
+- [x] `cssSelector.ts:6-8` drops `astro-*` classes; it keeps the `{Folder}-{class}` module names, which are stable and make good selectors.
+- [x] Browser check on your own dev server, at 1600 and 400 px: leave a note, add each mark kind, open a section panel, open the Keys box, Apply page; screenshots in the report.
 
 **Wave 5 done:** the owner leaves one note and one mark on Home and both arrive as before.
 

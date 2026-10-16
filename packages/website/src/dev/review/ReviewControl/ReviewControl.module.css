@@ -1,0 +1,54 @@
+/*
+ * ReviewControl — the review's one button and one text field, as a vocabulary: no component, no `.root`.
+ * Take a class with `composes: button from '../ReviewControl/ReviewControl.module.css'`; to change a
+ * composed property, raise the specificity of the rule (`.root .save`), since the copy lands later.
+ * `--review-line` comes from the page (ReviewPage.module.css `.on`).
+ */
+.button {
+  min-height: 24px;
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+}
+
+/* A phone's target is a finger's. */
+@media (max-width: 900px) {
+  .button {
+    min-height: var(--tap);
+  }
+}
+
+.field {
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.button:focus-visible,
+.field:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
