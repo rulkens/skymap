@@ -30,7 +30,7 @@ export type ClipOpacityChannel = {
   fadeTo(key: VisibilityAddress, target: number, durationMs: number, nowMs?: number): void;
   /** The clip-opacity factor for a layer at `now` — default 1 (untouched layers). */
   factorOf(key: VisibilityAddress, nowMs?: number): number;
-  /** Advance every controller's clock (called from clipPlayer.tick). */
+  /** Stamp the channel's default clock (called from clipPlayer.tick). */
   tick(nowMs: number): void;
   /** Whether any controller is mid-ramp (keeps the loop awake; mirrors structureFocus). */
   isAnimating(nowMs?: number): boolean;

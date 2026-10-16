@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { localBubblePass } from '../../../../src/layers/localBubble/passes/localBubblePass';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { LocalBubbleRuntime } from '../../../../src/layers/localBubble/@types/LocalBubbleRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

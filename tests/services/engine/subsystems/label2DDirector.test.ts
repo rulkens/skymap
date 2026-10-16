@@ -20,7 +20,7 @@ import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/data/mildRecession';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but

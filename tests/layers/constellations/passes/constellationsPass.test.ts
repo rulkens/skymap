@@ -9,7 +9,7 @@ import { constellationsPass } from '../../../../src/layers/constellations/passes
 import { NEAR0, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

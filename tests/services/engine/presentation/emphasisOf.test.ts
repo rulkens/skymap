@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { emphasisOf } from '../../../../src/services/engine/presentation/emphasisOf';
-import {
-  MILD_RECESSION,
-  STRONG_RECESSION,
-} from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/data/mildRecession';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 
 const FOCUS = 42;
 const atFullFocus = { focusBlend: 1, focusPickId: FOCUS };

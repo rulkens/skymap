@@ -22,14 +22,6 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(h, 1000)).toBe(0.5);
   });
 
-  it('unregister drops the controller; opacityOf reverts to fail-safe 1.0', () => {
-    const r = makeRegistry();
-    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
-    r.register(h, 0);
-    r.unregister(h);
-    expect(r.opacityOf(h, 1000)).toBe(1.0);
-  });
-
   it('serialization is stable across handle equality', () => {
     const r = makeRegistry();
     const h1: FadeIdentity = { address: 'survey', item: 'sdss' };
@@ -65,20 +57,14 @@ describe('createFadeRegistry', () => {
     expect(requestRender).not.toHaveBeenCalled();
   });
 
-  it('fadeTo ramps opacity and resolves via tick', async () => {
+  it('fadeTo ramps opacity', () => {
     const r = makeRegistry();
     const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
-    let done = false;
-    r.fadeTo(h, 1, 600, 0).then(() => {
-      done = true;
-    });
+    r.fadeTo(h, 1, 600, 0);
     expect(r.opacityOf(h, 0)).toBeCloseTo(0, 5);
     expect(r.opacityOf(h, 300)).toBeCloseTo(0.5, 5);
     expect(r.opacityOf(h, 600)).toBeCloseTo(1, 5);
-    r.tick(600);
-    await Promise.resolve();
-    expect(done).toBe(true);
   });
 
   it('fadeTo without nowMs starts at the last ticked frame time', () => {
@@ -143,7 +129,7 @@ describe('createFadeRegistry', () => {
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('register, unregister, setImmediate, tick and opacityOf do not wake', () => {
+  it('register, setImmediate, tick and opacityOf do not wake', () => {
     const requestRender = vi.fn();
     const r = createFadeRegistry({ requestRender });
     const h: FadeIdentity = { address: 'cosmicWebFilaments' };
@@ -151,7 +137,6 @@ describe('createFadeRegistry', () => {
     r.setImmediate(h, 0.5);
     r.tick(100);
     r.opacityOf(h, 100);
-    r.unregister(h);
     expect(requestRender).not.toHaveBeenCalled();
   });
 });

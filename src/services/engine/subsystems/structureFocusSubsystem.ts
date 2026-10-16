@@ -97,18 +97,17 @@ export function createStructureFocusSubsystem(
     focusedId = targetId;
     if (next !== null) {
       active = next;
-      void fade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
+      fade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
     } else {
       // Keep `active` latched so the shader keeps the correct predicate
       // until blend settles at 0 (dropped lazily in produceFocusUniforms).
-      void fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
+      fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     }
     // Essential wake: private fade controller — no FadeRegistry wake covers it.
     deps.requestRender();
   }
 
   function produceFocusUniforms(nowMs: number): FocusUniformsValue {
-    fade.tick(nowMs);
     const blend = fade.currentOpacity(nowMs);
     if (active !== null && blend === 0 && !fade.isAnimating(nowMs)) {
       active = null;

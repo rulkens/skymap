@@ -57,7 +57,7 @@ const GALACTIC_LATITUDE_PITCH = 0.263728;
 
 /**
  * LOAD-BEARING, and not a framing choice: the band is only drawn between
- * roughly 0.15 Mpc and 6 Mpc. `zoneOfAvoidanceLayerOpacity` composes an
+ * roughly 0.15 Mpc and 6 Mpc. `deriveZoneOfAvoidanceLiveness` composes an
  * approach band with `SCALE_FADE_BANDS.zoneOfAvoidanceRecede` (full at 2 Mpc,
  * gone by 6), because the guide is scoped to the Milky-Way-context shot. Frame
  * this exhibit at cosmic-web distances and it renders nothing at all.

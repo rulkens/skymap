@@ -30,7 +30,7 @@
  *     knobs.
  *
  *   - `focus` — set the selection focus to `ref` (or `null` to clear). Drives the
- *     structure-isolation dim (`focusRecession` channel). `SelectionRef` carries
+ *     structure-isolation dim (`emphasisOf` recession). `SelectionRef` carries
  *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
  *
  *   - `frameTo` — cue-style orientation-frame reorientation. Fires

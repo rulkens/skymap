@@ -20,9 +20,6 @@ export function visibilitySwitchOf(
   const name = visibilityClusterOf(entry);
   const field = isShow ? 'enabled' : 'labelEnabled';
   const where = item === undefined ? `${name}.${field}` : `${name}.items.${item}.${field}`;
-  if ((entry.items === undefined) !== (item === undefined)) {
-    throw new Error(`visibility switch ${where}: the item does not match the entry's shape`);
-  }
   const cluster = settingsClusterOf(settings, name);
   const own = item === undefined ? cluster[field] : cluster.items?.[item]?.[field];
   if (typeof own !== 'boolean') throw new Error(`visibility switch ${where} is not a boolean`);

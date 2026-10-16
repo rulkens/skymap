@@ -14,7 +14,7 @@ import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import { MILKY_WAY_PICK_ID } from '../../../../src/layers/milkyWay/present/milkyWayPickId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

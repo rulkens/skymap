@@ -30,9 +30,5 @@ export function applyVisibilityTarget(
     fades.setImmediate(id, target);
     return;
   }
-  void fades.fadeTo(
-    id,
-    target,
-    overMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS),
-  );
+  fades.fadeTo(id, target, overMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS));
 }

@@ -381,8 +381,7 @@ function makeState(
       // wireSlots seeds every visibility identity — stub so it doesn't crash.
       fades: {
         register: vi.fn(),
-        unregister: vi.fn(),
-        fadeTo: vi.fn(() => Promise.resolve()),
+        fadeTo: vi.fn(),
         setImmediate: vi.fn(),
         targetOf: vi.fn(() => null),
         opacityOf: vi.fn(() => 1),

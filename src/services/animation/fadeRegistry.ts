@@ -77,10 +77,6 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     controllers.set(key, createFadeController(initialOpacity, 0));
   }
 
-  function unregister(id: FadeIdentity): void {
-    controllers.delete(fadeIdentityKey(id));
-  }
-
   function requireController(id: FadeIdentity): FadeController {
     const c = controllers.get(fadeIdentityKey(id));
     if (!c) {
@@ -89,15 +85,9 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     return c;
   }
 
-  function fadeTo(
-    id: FadeIdentity,
-    target: number,
-    durationMs: number,
-    nowMs?: number,
-  ): Promise<void> {
-    const promise = requireController(id).fadeTo(target, durationMs, nowMs ?? lastTickNowMs);
+  function fadeTo(id: FadeIdentity, target: number, durationMs: number, nowMs?: number): void {
+    requireController(id).fadeTo(target, durationMs, nowMs ?? lastTickNowMs);
     deps.requestRender();
-    return promise;
   }
 
   function setImmediate(id: FadeIdentity, value: number): void {
@@ -125,11 +115,9 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
   }
 
   function tick(nowMs?: number): void {
-    // An argless tick is a no-op time-wise: it re-reads the last stamped
+    // An argless tick is a no-op time-wise: it keeps the last stamped
     // frame time rather than advancing (or resetting) the clock.
-    const now = nowMs ?? lastTickNowMs;
-    lastTickNowMs = now;
-    for (const c of controllers.values()) c.tick(now);
+    lastTickNowMs = nowMs ?? lastTickNowMs;
   }
 
   function destroy(): void {
@@ -139,7 +127,6 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
   return {
     label: 'fadeRegistry',
     register,
-    unregister,
     fadeTo,
     setImmediate,
     targetOf,

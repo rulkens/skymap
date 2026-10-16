@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { runLabel3DProducers } from '../../../../src/services/engine/frame/runLabel3DProducers';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 
 describe('runLabel3DProducers', () => {
   it('walks state.label3DProducers, not the core constant', () => {

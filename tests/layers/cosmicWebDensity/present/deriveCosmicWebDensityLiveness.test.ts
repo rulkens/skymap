@@ -9,7 +9,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { deriveCosmicWebDensityLiveness } from '../../../../src/layers/cosmicWebDensity/present/deriveCosmicWebDensityLiveness';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';

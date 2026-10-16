@@ -37,7 +37,7 @@ function milkyWayRow() {
 // Switched off at t=0, so the raw fade is still falling at `MID_FADE_MS`.
 function fadingOut(fades: ReturnType<typeof createFadeRegistry>, id: FadeIdentity): void {
   fades.register(id, 1);
-  void fades.fadeTo(id, 0, 1000, 0);
+  fades.fadeTo(id, 0, 1000, 0);
 }
 
 describe('gateLabelProducer', () => {

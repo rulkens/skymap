@@ -29,12 +29,9 @@ export type FadeRegistry = Destroyable & {
    */
   register(id: FadeIdentity, initialOpacity?: number): void;
 
-  /** Drop an id and its controller. */
-  unregister(id: FadeIdentity): void;
-
   /**
    * Start (or retarget) the fade for an id. Forwards to the
-   * controller's `fadeTo`. Returns the controller's Promise. Also wakes
+   * controller's `fadeTo`. Also wakes
    * the render scheduler — callers never follow up with `requestRender`.
    *
    * If the id is not registered, throws — a quiet no-op would hide bugs
@@ -45,7 +42,7 @@ export type FadeRegistry = Destroyable & {
    * at the last `tick(nowMs)` frame time — event-driven starts quantize
    * to the frame clock rather than sampling `performance.now()`.
    */
-  fadeTo(id: FadeIdentity, target: number, durationMs: number, nowMs?: number): Promise<void>;
+  fadeTo(id: FadeIdentity, target: number, durationMs: number, nowMs?: number): void;
 
   /** Forwards to the controller's `setImmediate`. Throws if unregistered. */
   setImmediate(id: FadeIdentity, value: number): void;
@@ -73,8 +70,7 @@ export type FadeRegistry = Destroyable & {
 
   /**
    * Called once per frame from `runFrame`. Records `nowMs` as the
-   * registry's default clock, then walks the controllers and fires any
-   * due Promise resolutions. An argless tick re-reads the last stamped
+   * registry's default clock. An argless tick keeps the last stamped
    * time (a time-wise no-op).
    */
   tick(nowMs?: number): void;

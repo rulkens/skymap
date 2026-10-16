@@ -24,15 +24,6 @@
  * resetting every layer's clip factor to 1 — because untouched keys always
  * return 1 by the lazy-default rule. Clearing is therefore correct teardown.
  *
- * ### tick vs currentOpacity
- *
- * The FadeController's opacity is time-based: `currentOpacity(now)` computes
- * the smoothstep position at `now` without needing `tick`. `tick` advances
- * the controller's internal bookkeeping (resolves pending Promises). This
- * channel calls `tick` on every controller so the FadeController lifecycle
- * is properly maintained even though this channel does not expose the
- * underlying Promises.
- *
  * ### The default clock is the last ticked frame time
  *
  * When a caller omits `nowMs`, the channel falls back to the time of the
@@ -87,7 +78,7 @@ export function createClipOpacityChannel(
     const now = nowMs ?? lastTickNowMs;
     const controller = getOrCreate(key, now);
     // durationMs === 0 snaps instantly via FadeController's Math.max(0, durationMs) path.
-    void controller.fadeTo(target, durationMs, now);
+    controller.fadeTo(target, durationMs, now);
   }
 
   function factorOf(key: VisibilityAddress, nowMs?: number): number {
@@ -98,14 +89,7 @@ export function createClipOpacityChannel(
   }
 
   function tick(nowMs: number): void {
-    // Record the frame clock as the channel's default time (see module
-    // header), then advance every controller's bookkeeping (resolves
-    // pending Promises). Factor values advance by the stamped clock via
-    // currentOpacity regardless of tick; tick is for lifecycle correctness.
     lastTickNowMs = nowMs;
-    for (const controller of controllers.values()) {
-      controller.tick(nowMs);
-    }
   }
 
   function isAnimating(nowMs?: number): boolean {

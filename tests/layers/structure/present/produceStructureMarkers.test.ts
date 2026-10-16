@@ -2,7 +2,7 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { describe, expect, it } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../src/layers/structure/present/produceStructureMarkers';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/data/mildRecession';
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
 import type { StructureStore } from '../../../../src/layers/structure/@types/StructureStore';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

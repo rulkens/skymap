@@ -544,8 +544,7 @@ describe('renderFrame visual baseline', () => {
         subsystems: {
           fades: {
             register: vi.fn(),
-            unregister: vi.fn(),
-            fadeTo: vi.fn(() => Promise.resolve()),
+            fadeTo: vi.fn(),
             setImmediate: vi.fn(),
             opacityOf: vi.fn(() => 1),
             isAnyAnimating: vi.fn(() => false),
