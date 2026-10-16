@@ -13,7 +13,7 @@ export function emphasisOf(
   snapshot: Pick<ReadyFrameContext, 'focusBlend' | 'focusPickId'>,
   pickId?: number,
 ): number {
-  return pickId !== undefined && pickId === snapshot.focusPickId
+  return pickId === snapshot.focusPickId
     ? 1
     : recessionFactor(entry.recession, snapshot.focusBlend);
 }

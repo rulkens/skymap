@@ -103,8 +103,8 @@ function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined
 
 describe('produceStarCaptions', () => {
   it('scales by the handed value exactly once', () => {
-    // At full blend: the director recedes captions, so a producer that receded or
-    // clipped on its own would land below 0.25.
+    // At full blend: the director recedes captions, so a producer that receded on
+    // its own would land below 0.25.
     const alphaOf = (value: number, blend: number) =>
       fadeAlphaOf(
         produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend), handed(value)).labels,

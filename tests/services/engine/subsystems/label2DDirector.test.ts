@@ -192,7 +192,7 @@ describe('label2DDirector', () => {
 
     dir.runFrame(state, ctxAt(0));
     dir.runFrame(state, ctxAt(300));
-    const alphaOf = (id: string) => dir.labels().find((l) => l.id === id)?.fadeAlpha ?? 1;
+    const alphaOf = (id: string) => dir.labels().find((l) => l.id === id)!.fadeAlpha ?? 1;
     expect(alphaOf('a')).toBe(1);
     expect(alphaOf('b')).toBeCloseTo(MILD_RECESSION);
   });

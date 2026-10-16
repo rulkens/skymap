@@ -117,7 +117,7 @@ export function galaxyCatalogPlanner(
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
         // popping once the fade ends and the mask drops the source. The handed
-        // value itself (no recession for `survey`), clip included.
+        // value itself, clip included.
         sourceOpacity: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
       };
       runtime.diskPlannerWalk.runFrame(
