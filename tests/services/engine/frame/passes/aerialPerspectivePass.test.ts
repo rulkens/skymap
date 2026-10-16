@@ -68,6 +68,7 @@ function makeBodyView(bodyId: BodyId): SlabView {
     vp: new Float32Array(16),
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
   };
 }
 

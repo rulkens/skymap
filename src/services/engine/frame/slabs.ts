@@ -396,5 +396,6 @@ export function slabViewOf(ctx: FrameView, slabIndex: number): SlabView {
     vp: Float32Array.from(slab.vp),
     camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+    window: { originPx: [0, 0], sizePx: [ctx.canvasSize.width, ctx.canvasSize.height] },
   };
 }

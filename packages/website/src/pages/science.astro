@@ -24,9 +24,9 @@ import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'The science behind skymap: data, methods, limits';
+const title = 'The science behind Skymap: data, methods, limits';
 const description =
-  'Where skymap’s numbers come from, how we turn catalogues into pixels, and where we simplify. Each claim links to its source.';
+  'Where Skymap’s numbers come from, how we turn catalogues into pixels, and where we simplify. Each claim links to its source.';
 
 const MEASURED = [
   { term: 'Directions', id: 'sci-directions' },
@@ -124,9 +124,9 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Science', path: '/science/' }])]}
 >
   <PictureBand id="science-wedges" gap="none" eager>
-    <h1>The science behind skymap</h1>
+    <h1>The science behind Skymap</h1>
     <p class="say">
-      skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says
+      Skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says
       what is measured, what is derived and what is drawn, and lists where we simplify.
     </p>
     <ShotCaption id="science-wedges" />
@@ -152,7 +152,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   <section class="wrap section" id="sources">
     <SectionHead title="The sources">
       <p>
-        This is every dataset skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and
+        This is every dataset Skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and
         the imagery. We list them so that anything you see in the app can be traced to who measured it. Each name opens a page
         with its licence and the files we use.
       </p>
@@ -234,7 +234,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 
   <section class="wrap section" id="cite">
     <SectionHead title="How to cite">
-      <p><a href={sitePath('/docs/cite/')}>Cite skymap</a> for the pictures, and the catalogues for the data in them.</p>
+      <p><a href={sitePath('/docs/cite/')}>Cite Skymap</a> for the pictures, and the catalogues for the data in them.</p>
     </SectionHead>
     <Columns count={2}>
       <div>
@@ -254,8 +254,8 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
       <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
       <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
-      <ObjLink hang href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
-      <ObjLink hang href={sitePath('/classroom/')}>Use skymap in the classroom</ObjLink>
+      <ObjLink hang href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
+      <ObjLink hang href={sitePath('/classroom/')}>Use Skymap in the classroom</ObjLink>
       <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
     </div>
     <div class="link-row onward">

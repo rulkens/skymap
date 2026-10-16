@@ -148,6 +148,7 @@ function makeNear0View(camPos: Vec3): SlabView {
     vp: f32Vp,
     camPos,
     viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
   };
 }
 

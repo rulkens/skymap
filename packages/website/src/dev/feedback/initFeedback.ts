@@ -11,7 +11,6 @@ import type { FlightTimeline } from '../../@types/FlightTimeline';
 import { flightAt } from '../../utils/flightAt';
 import { devOverlay } from '../overlay/devOverlay';
 import { make } from '../overlay/make';
-import { overlayKeys } from '../overlay/overlayKeys';
 import { pageNotes } from '../overlay/pageNotes';
 import { recall } from '../overlay/recall';
 import { remember } from '../overlay/remember';
@@ -72,8 +71,6 @@ function initFeedback(): void {
   const mark = make('div', 'fb-mark', root);
   const panel = make('form', 'fb-panel', root);
   const dock = make('div', 'fb-dock', root);
-  // On a page with a review the review bar carries the keys instead (review.css hides this line).
-  const keys = make('p', 'fb-keys', dock);
   const list = make('section', 'fb-list', dock);
   const toggle = make('button', 'ring small', dock);
   const layer = make('div', 'fb-pins');
@@ -84,7 +81,6 @@ function initFeedback(): void {
   const cancel = make('button', 'ring small', actions);
   make('p', 'fb-hint', actions).textContent = '⌘/Ctrl+Enter saves, Esc cancels';
 
-  keys.textContent = overlayKeys(false);
   toggle.type = 'button';
   toggle.textContent = 'Feedback';
   toggle.setAttribute('aria-pressed', 'false');
@@ -99,14 +95,7 @@ function initFeedback(): void {
   save.textContent = 'Save';
   cancel.type = 'button';
   cancel.textContent = 'Cancel';
-  capture.hidden =
-    hover.hidden =
-    mark.hidden =
-    panel.hidden =
-    list.hidden =
-    layer.hidden =
-    keys.hidden =
-      true;
+  capture.hidden = hover.hidden = mark.hidden = panel.hidden = list.hidden = layer.hidden = true;
   document.body.append(root);
   document.documentElement.append(layer);
 
@@ -226,7 +215,7 @@ function initFeedback(): void {
   function setMode(next: boolean): void {
     on = next;
     toggle.setAttribute('aria-pressed', String(on));
-    capture.hidden = layer.hidden = keys.hidden = !on;
+    capture.hidden = layer.hidden = !on;
     if (!on) endSelection();
     renderPins();
     showHover();

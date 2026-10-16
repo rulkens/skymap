@@ -1,5 +1,5 @@
 ---
-description: How skymap draws each kind of thing, from a galaxy that is one triangle to a black hole that bends the sky, with the paper each method comes from.
+description: How Skymap draws each kind of thing, from a galaxy that is one triangle to a black hole that bends the sky, with the paper each method comes from.
 facts: [sci-tone, sci-surfaces, sci-planet-maps, sim-true-size, sim-point-floor, sci-galaxy-discs, sim-exposure, sci-atmospheres, pipe-earth-tiles, sci-milky-way, sci-density-field, sci-filaments, sci-black-hole, settings-hdr]
 ---
 
@@ -61,7 +61,7 @@ Sky colour, the red of a sunset and the thin blue line at the edge of a planet a
 
 <Fact id="render-atmosphere-tables" />
 
-E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (2008), made this fast: precompute the integrals and keep them in lookup tables, one of them four-dimensional. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (2020), removed the large table: the sky is recomputed each frame into small ones, and light scattered more than once is treated as isotropic. skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire, and adds the air of other worlds: each body has its own list of up to four gases and hazes. Earth’s numbers are the papers’; the others mix published values, values derived from them and values chosen for the look, and the file marks which is which.
+E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (2008), made this fast: precompute the integrals and keep them in lookup tables, one of them four-dimensional. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (2020), removed the large table: the sky is recomputed each frame into small ones, and light scattered more than once is treated as isotropic. Skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire, and adds the air of other worlds: each body has its own list of up to four gases and hazes. Earth’s numbers are the papers’; the others mix published values, values derived from them and values chosen for the look, and the file marks which is which.
 
 <Fact id="render-aerial" />
 

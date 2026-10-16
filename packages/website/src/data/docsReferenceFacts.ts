@@ -2,7 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-07';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 const SHORTCUTS = `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`;
 const SHORTCUTS_LABEL = `the keyboard shortcuts, ${IN_REPO}`;
 const POINTER = `${REPO_BLOB}/src/services/input/createCanvasDeviceChannel.ts`;
@@ -600,7 +600,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'gloss-vizier',
     about: 'app',
-    text: 'skymap downloads 2MRS, GLADE, Cosmicflows-4, MCXC and MSCC from VizieR, the catalogue service of the Centre de Données astronomiques de Strasbourg (CDS).',
+    text: 'Skymap downloads 2MRS, GLADE, Cosmicflows-4, MCXC and MSCC from VizieR, the catalogue service of the Centre de Données astronomiques de Strasbourg (CDS).',
     source: `${REPO_BLOB}/tools/utils/io/rawDataRegistry.ts`,
     sourceLabel: `the raw data registry, ${IN_REPO}`,
     checked: CHECKED,

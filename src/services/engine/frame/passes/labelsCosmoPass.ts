@@ -81,7 +81,7 @@ export const labelsCosmoPass: ContentPass = {
   // caption pixels behind a nearer body (`fragmentOcclude`), which the flat
   // pick quad can't see — so an occluded label stays clickable. Pick wider
   // than draw is the safe direction for a click affordance.
-  drawPick(pass, _view, ctx, state) {
+  drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.labelPickRendererCosmo;
     const fontAtlases = state.gpu.fontAtlases;
     if (pickRenderer === null || fontAtlases === null) return;
@@ -92,6 +92,6 @@ export const labelsCosmoPass: ContentPass = {
       projection,
       measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
-    pickRenderer.draw(pass, quads, projection.viewportPx);
+    pickRenderer.draw(pass, quads, view.window);
   },
 };

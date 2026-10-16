@@ -217,6 +217,7 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
     vp: f32Vp,
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
     sampledDepth: { view: DEPTH_VIEW_STUB, row: sampledRow },
   };
 }

@@ -113,7 +113,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
-- [ ] **Pick targets are canvas-sized to read one texel** `needs-design` — after #899's shared target, still 25 MB at 1080p / 100 MB at 4K; a cropped projection in every pick shader would shrink it to a few pixels. → [details](backlog/2026-10-13-pick-targets-canvas-sized.md)
 - [ ] **Lazy-allocate GPU resources for off features** `ready` — flow particles (26.6 MB, off by default), bloom with bloom disabled, hidden layers' render targets. → [details](backlog/2026-10-13-lazy-gpu-allocation.md)
 - [ ] **Pack the galaxy point record 56 B → 32 B** `needs-design` — 13 of 14 f32 slots pack to snorm16/f16; −43%, 60–84 MB at large. → [details](backlog/2026-10-13-galaxy-point-record-packing.md)
 - [ ] **Compressed body textures** `needs-design` — every map is uncompressed rgba8; KTX2 → BC7/ASTC cuts ~4×. → [details](backlog/2026-10-13-compressed-body-textures.md)

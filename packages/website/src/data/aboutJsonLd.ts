@@ -23,7 +23,7 @@ export function aboutJsonLd(site: URL, pageUrl: string, whatIs: string): Record<
       '@context': 'https://schema.org',
       '@type': 'AboutPage',
       url: pageUrl,
-      name: 'About skymap',
+      name: 'About Skymap',
       description: whatIs,
       inLanguage: 'en-GB',
       about: { '@id': `${home}#app` },

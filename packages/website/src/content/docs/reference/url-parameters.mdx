@@ -1,5 +1,5 @@
 ---
-description: The parameters a link to skymap can carry, each with the form of its value, a worked example, what it does and whether the app writes it back.
+description: The parameters a link to Skymap can carry, each with the form of its value, a worked example, what it does and whether the app writes it back.
 facts:
   [
     takeover-links,
@@ -41,7 +41,7 @@ export const FLAGS = DOCS_URL_PARAMS.filter((param) => param.part === 'query' &&
 export const DEV_FLAGS = DOCS_URL_PARAMS.filter((param) => param.development);
 export const TOURS = DOCS_TOUR_IDS.filter((row) => row.id !== 'demo');
 
-A link to skymap is the app’s address with parameters added to it. [Sharing a view](/docs/guide/sharing/) is about copying one from the app; this page is for writing one by hand.
+A link to Skymap is the app’s address with parameters added to it. [Sharing a view](/docs/guide/sharing/) is about copying one from the app; this page is for writing one by hand.
 
 ## The parts of an address
 
@@ -243,6 +243,6 @@ A pose with the wrong number of values, a value that is not a number or a name t
 
 ## For development
 
-Four flags are for the people who build skymap: <Codes of={DEV_FLAGS.map((param) => param.example)} />. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline /> What each does is on [Debug panel and flags](/docs/developers/debug/#flags).
+Four flags are for the people who build Skymap: <Codes of={DEV_FLAGS.map((param) => param.example)} />. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline /> What each does is on [Debug panel and flags](/docs/developers/debug/#flags).
 
 Such a link may also carry `clip`, which plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the [home page of this site](/) opens. The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables.

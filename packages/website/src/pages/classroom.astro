@@ -11,7 +11,6 @@ import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
 import Remark from '../components/Remark.astro';
 import SectionHead from '../components/SectionHead.astro';
-import Sources from '../components/Sources.astro';
 import Step from '../components/Step.astro';
 import Steps from '../components/Steps.astro';
 import { appLink } from '../data/appLink';
@@ -20,37 +19,14 @@ import { CLASS_VIEWS } from '../data/classViews';
 import { fact } from '../data/fact';
 import { HOME_LINKS } from '../data/homeLinks';
 import { HONESTY_BINS } from '../data/honestyBins';
-import { LESSON_TOPICS } from '../data/lessons';
 import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'Use skymap in the classroom | skymap';
+const title = 'Use Skymap in the classroom | Skymap';
 const description =
   'Pupils fly the distances of space at true scale, from the Moon to the galaxies. A five-minute tour, ready-made lesson links, no accounts, no install.';
 
-const lessons = LESSON_TOPICS.flatMap((topic) => topic.lessons);
-// Every fact row the page prints, so the Sources list cannot drift from the copy.
-const said = [
-  'double-click-focus',
-  'date-entry-utc',
-  'date-entry-paused',
-  'lesson-link',
-  'link-pose',
-  'webgpu-required',
-  'webgpu-browsers',
-  'app-browser-advice',
-  'no-account',
-  'privacy-counter',
-  'english-only',
-  'phone-data-size',
-  'earth-orbit-speed',
-];
-const factIds = [
-  ...CLASS_FEATURES.flatMap((feature) => feature.factIds),
-  ...said,
-  ...lessons.flatMap((lesson) => (lesson.factId ? [lesson.factId] : [])),
-];
 const says = (id: string) => fact(id).short ?? fact(id).text;
 ---
 
@@ -60,9 +36,9 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Classrooms', path: '/classroom/' }])]}
 >
   <PictureBand views={CLASS_VIEWS} gap="none" eager>
-    <h1>Use skymap in the classroom</h1>
+    <h1>Use Skymap in the classroom</h1>
     <p class="say">
-      Distances in space are hard to feel from a page. In skymap your pupils <a href={sitePath('/docs/guide/moving/')}>fly</a> across them, from the Moon to the
+      Distances in space are hard to feel from a page. In Skymap your pupils <a href={sitePath('/docs/guide/moving/')}>fly</a> across them, from the Moon to the
       galaxies, at true scale.
     </p>
     <p>You <a href={sitePath('/docs/guide/sharing/')}>share a view as a link</a>, and every pupil who opens it lands on the same object at the same date.</p>
@@ -186,7 +162,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
       }
     </Columns>
     <div class="link-row">
-      <ObjLink hang href={sitePath('/science/#bins')}>The science behind skymap</ObjLink>
+      <ObjLink hang href={sitePath('/science/#bins')}>The science behind Skymap</ObjLink>
     </div>
   </section>
 
@@ -198,7 +174,6 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   </div>
 
   <div class="wrap section last">
-    <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>

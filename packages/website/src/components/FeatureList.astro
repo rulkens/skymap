@@ -1,0 +1,72 @@
+---
+/*
+ * FeatureList — the features of one group of the Features page: each a name,
+ * which links to its page in the docs, over one line saying what it does.
+ * `columns` 2 runs the list down two columns of the page grid when wide.
+ */
+import type { FeatureItem } from '../@types/FeatureItem';
+import { sitePath } from '../utils/sitePath';
+
+type Props = { items: readonly FeatureItem[]; columns?: 1 | 2 };
+
+const { items, columns = 1 } = Astro.props;
+---
+
+<ul class:list={['flist', { two: columns === 2 }]}>
+  {
+    items.map((item) => (
+      <li>
+        <a href={sitePath(item.doc)}>{item.name}</a>
+        <span class="small">{item.line}</span>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .flist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    padding-bottom: 1.125rem;
+    break-inside: avoid;
+  }
+
+  /* A name is as bright as a heading and a weight up from the text; the hairline under it says it is a link. */
+  a {
+    justify-self: start;
+    padding-block: 0.125rem;
+    font-weight: var(--weight-small);
+    line-height: 1.3;
+    color: var(--color-fg);
+    text-decoration-color: rgb(232 238 255 / 0.3);
+    text-decoration-thickness: 1px;
+  }
+
+  @media (hover: hover) {
+    a:hover {
+      color: var(--color-accent);
+      text-decoration-color: currentColor;
+    }
+  }
+
+  a:focus-visible {
+    outline-offset: 2px;
+  }
+
+  span {
+    max-width: var(--measure);
+    color: var(--site-text-dim);
+  }
+
+  @media (min-width: 901px) {
+    .two {
+      columns: 2;
+      column-gap: var(--col-gap);
+    }
+  }
+</style>

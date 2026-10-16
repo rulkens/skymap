@@ -1,0 +1,125 @@
+---
+/*
+ * FeatureHead — the name of one group of the Features page, the line saying
+ * what the group is for, and its film where it has one: a loop in a disc, as
+ * on Home's places, which plays while it is on screen (scripts/initFeatureFilms.ts)
+ * and has a button to stop it. `quiet` sets the closing group's name small.
+ */
+import type { FeatureGroup } from '../@types/FeatureGroup';
+import { SITE_LOOPS } from '../data/siteLoops';
+import { loopUrl } from '../utils/loopUrl';
+import Shot from './Shot.astro';
+
+type Props = { group: FeatureGroup; quiet?: boolean };
+
+const { group, quiet = false } = Astro.props;
+// The film lies over the picture it starts from, so the two never differ when it begins.
+const still = group.film ? SITE_LOOPS.find((loop) => loop.id === group.film)?.shot : undefined;
+---
+
+<header class:list={['fhead', { quiet }]}>
+  <h2 id={`${group.id}-title`}>{group.title}</h2>
+  <p>{group.line}</p>
+  {
+    group.film && still && (
+      <div class="film" data-feature-film data-src={loopUrl(group.film)}>
+        <span class="disc">
+          <span class="screen" data-screen>
+            <Shot id={still} sizes="9rem" alt="" />
+          </span>
+        </span>
+        <div class="words">
+          <p class="small">{group.filmSays}</p>
+          <button class="ring small" type="button" hidden>
+            Pause film
+          </button>
+        </div>
+      </div>
+    )
+  }
+</header>
+
+<style>
+  h2 {
+    margin-bottom: 0.3em;
+  }
+
+  .quiet h2 {
+    font-size: var(--text-h3);
+  }
+
+  .fhead > p {
+    margin-bottom: 0;
+  }
+
+  .film {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 2rem;
+  }
+
+  /* The disc of a place on Home: a hairline ring with the picture inset. */
+  .disc {
+    flex: none;
+    width: 9rem;
+    aspect-ratio: 1;
+    padding: 0.5rem;
+    border: 1px solid rgb(168 208 255 / 0.3);
+    border-radius: 50%;
+  }
+
+  .screen {
+    position: relative;
+    display: block;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+
+  .screen :global(img),
+  .screen :global(video) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The film lies over its own first frame and appears once it has a frame to show. */
+  .screen :global(video) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+  }
+
+  .film[data-film] .screen :global(video) {
+    opacity: 1;
+  }
+
+  /* Shown by the script: without it there is no film to stop. */
+  .words button[hidden] {
+    display: none;
+  }
+
+  .words p {
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .screen :global(video) {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .disc {
+      width: 6.5rem;
+    }
+
+    .film {
+      margin-top: 1.5rem;
+    }
+  }
+</style>

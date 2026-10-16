@@ -1,7 +1,7 @@
 ---
 /*
  * CiteCaption — the Cite page's worked example: what to print with one
- * picture made with skymap. `picture` is a row of data/pressPictures.ts (its
+ * picture made with Skymap. `picture` is a row of data/pressPictures.ts (its
  * credit line), `cite` the entries of the licence record whose
  * papers the picture rests on. The caption, the reference list and the
  * acknowledgements are put together from those rows, the shot's address and
@@ -38,7 +38,7 @@ const view = siteShot(picture)
 const address = `${new URL(Astro.site!).host}${APP_BASE}#${view}`;
 const cited = `${CITATION.authors[0]!.family} ${CITATION.released.slice(0, 4)}`;
 const asking = entries.filter((entry) => asksAcknowledgement(entry.record.fields.Attribution ?? ''));
-const caption = `${siteShot(picture).title}. ${press.credit}. Made with skymap ${CITATION.version} (${cited}), from the view at ${address}.`;
+const caption = `${siteShot(picture).title}. ${press.credit}. Made with Skymap ${CITATION.version} (${cited}), from the view at ${address}.`;
 ---
 
 <div class="sample" data-embed>
