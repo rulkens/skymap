@@ -12,7 +12,6 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
-import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
@@ -80,7 +79,7 @@ export function makeFadeBridgeState(): {
       scheduler: { requestRender },
     },
     // The COMPOSED rows — core's manifest plus every Layer's still on the old path.
-    fadeRows: [...FADE_LAYERS, ...starCatalogFadeRows()],
+    fadeRows: [...FADE_LAYERS],
   } as unknown as FadeBridgeState;
 
   return { state, fadeTo, setImmediate, targetOf, requestRender, settings };

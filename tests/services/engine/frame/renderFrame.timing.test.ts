@@ -22,6 +22,8 @@ import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDe
 import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
@@ -226,6 +228,12 @@ function makeCam(): OrbitCamera {
 // SCENE's `plan` row names 'structure-markers' by string, not by object
 // identity — a stub with an empty result satisfies `runPlanSteps` without
 // dragging in `produceStructureMarkers`'s own state (see renderFrame.test.ts).
+// What `createLayers` gates each pass with: every fade resolves to 1 here.
+const PASS_GATE_STATE = {
+  subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
+  visibilityEntries: APP_VISIBILITY,
+} as unknown as Parameters<typeof gatePassByFade>[1];
+
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
@@ -439,7 +447,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         milkyWayAggregatePass(milkyWayRuntime),
         milkyWayUpsamplePass(milkyWayRuntime),
         milkyWayPass(milkyWayRuntime),
-      ],
+      ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
       computes: CORE_COMPUTES,
       planners: STUB_PLANNERS,
     } as never,

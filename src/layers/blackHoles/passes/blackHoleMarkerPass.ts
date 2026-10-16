@@ -5,8 +5,8 @@
  * glints' apparent-size or solar-system backdrop fades: a hole is meant to read
  * from anywhere in the foreground range. NEAR0 + camera-relative anchors paired
  * with a rebased vp, the same f64 seam as `bodyGlintsPass`.
- * `drawPick` stamps each hole while `blackHolePickable` holds, which reaches
- * inside the band where only the caption shows.
+ * `drawPick` stamps each hole while its marker shows (`blackHolePickable`);
+ * inside the band, where only the caption shows, the caption takes the click.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

@@ -21,7 +21,6 @@ import { blackHoleMarkerPass } from './passes/blackHoleMarkerPass';
 import { blackHoleSlabRow } from './present/blackHoleSlabRow';
 import { blackHoleSelectionRow } from './present/blackHoleSelectionRow';
 import { blackHoleSearch } from './present/blackHoleSearch';
-import { blackHoleFadeRows } from './present/blackHoleFadeRows';
 import { produceBlackHoleCaptions } from './present/produceBlackHoleCaptions';
 import { SKY_CUBEMAP_TARGET } from './render/skyCubemapTarget';
 import BlackHoleLensingTuningSectionContainer from './ui/BlackHoleLensingTuningSectionContainer';
@@ -38,10 +37,14 @@ export const blackHolesLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [blackHoleLensingPass(runtime), blackHoleMarkerPass(runtime)],
-  fades: blackHoleFadeRows,
   guides: () => ({
     screenLabels: [
-      { slab: NEAR0, id: 'blackHoleCaptions', produceLabels: produceBlackHoleCaptions() },
+      {
+        slab: NEAR0,
+        id: 'blackHoleCaptions',
+        label: 'blackHole',
+        produceLabels: produceBlackHoleCaptions(),
+      },
     ],
   }),
   selection: () => [blackHoleSelectionRow()],

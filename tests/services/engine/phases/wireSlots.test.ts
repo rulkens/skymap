@@ -581,35 +581,6 @@ describe('wireSlots', () => {
     expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
-  it('registers the overlay and label-layer fade handles', async () => {
-    // seedFades pins each layer's frame-1 opacity in the fade
-    // registry.  A missed handle means that layer's toggle has nothing to
-    // multiply against (or flashes at the wrong opacity on frame 1).  We
-    // assert the handle shapes as a SUBSET — wireSlots also registers a
-    // filament overlay/label handle when it mints the filaments slot, so an
-    // exact-length check would break for the wrong reason.
-    const state = makeState({ points: bootPointSlots() });
-    const deps = makeDeps();
-
-    await wireSlots(state, deps);
-
-    const register = state.subsystems.fades.register as ReturnType<typeof vi.fn>;
-    const handles = register.mock.calls.map((c) => c[0]);
-    const hasHandle = (h: unknown): boolean =>
-      handles.some((got) => JSON.stringify(got) === JSON.stringify(h));
-
-    expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
-    expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
-    expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
-
-    // Opacities are deterministic under the default fixture.
-    const opacityFor = (h: unknown): number | undefined => {
-      const call = register.mock.calls.find((c) => JSON.stringify(c[0]) === JSON.stringify(h));
-      return call?.[1] as number | undefined;
-    };
-    expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
-  });
-
   it('demand loop loads the default boot sidecar set (structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
     // Boot parity: the cluster catalog (structures visible) and
     // famous-galaxies-meta load at boot; filaments (off) and the lazy PGC

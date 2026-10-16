@@ -23,7 +23,6 @@ import { starCatalogPass } from './passes/starCatalogPass';
 import { starAggregateUpsamplePass } from './passes/starAggregateUpsamplePass';
 import { starSpheresPass } from './passes/starSpheresPass';
 import { fieldStarSpherePass } from './passes/fieldStarSpherePass';
-import { starCatalogFadeRows } from './present/starCatalogFadeRows';
 import { starCatalogSelectionRow } from './present/starCatalogSelectionRow';
 import { produceStarCaptions } from './present/produceStarCaptions';
 import { STAR_AGGREGATES_TARGET } from './render/starAggregatesTarget';
@@ -52,9 +51,15 @@ export const starCatalogLayer = defineLayer({
   computes: (runtime) => [starCutCompute(runtime)],
   assets: starCatalogAssetRows,
   sourceCounts: starCatalogSourceCounts,
-  fades: starCatalogFadeRows,
   guides: () => ({
-    screenLabels: [{ slab: NEAR0, id: 'starCaptions', produceLabels: produceStarCaptions() }],
+    screenLabels: [
+      {
+        slab: NEAR0,
+        id: 'starCaptions',
+        label: 'starCatalog',
+        produceLabels: produceStarCaptions(),
+      },
+    ],
     orbitTrails: S_STAR_ORBITAL_ELEMENTS,
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],

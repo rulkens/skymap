@@ -13,6 +13,9 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
+import { SCENE_BODY_CAPTION_LABEL } from '../../../../src/data/labels/sceneBodyCaptionLabel';
+import { claimedLabelItemsOf } from '../../../../src/utils/visibility/claimedLabelItemsOf';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
@@ -78,11 +81,16 @@ const drawnIds = (simDays: number): string[] => {
   const { glints, meshes } = sceneBodyPartition(STATE as never, view);
   return [...glints, ...meshes].map((body) => body.id);
 };
-// Core captions every body but the sampled craft, which the missions Layer captions.
+// Core captions every body but the sampled craft, which the missions Layer claims and captions.
+const CRAFT_FADE = Object.fromEntries(SAMPLED_BODY_IDS.map((id) => [id, 1]));
 const labelIds = (simDays: number): string[] =>
   [
-    ...sceneBodyLabels(deriveBodyStates(simDays), simDays),
-    ...produceMissionCaptions(STATE, viewAt(simDays)).labels,
+    ...sceneBodyLabels(
+      deriveBodyStates(simDays),
+      simDays,
+      claimedLabelItemsOf(APP_VISIBILITY, SCENE_BODY_CAPTION_LABEL),
+    ),
+    ...produceMissionCaptions(STATE, viewAt(simDays), CRAFT_FADE).labels,
   ].map((label) => label.id);
 
 describe('spacecraft presence', () => {

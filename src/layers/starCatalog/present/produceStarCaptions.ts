@@ -9,7 +9,6 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { CaptionSourceRow } from '../@types/CaptionSourceRow';
 import type { ForegroundCaption } from '../../../services/engine/presentation/foregroundCaption';
@@ -19,6 +18,7 @@ import { captionComposeContextOf } from '../../../utils/labels/captionComposeCon
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
+import { CAPTION_FADE_RULES } from '../../../services/engine/presentation/captionFadeRules';
 import { STAR_CAPTION_KIND } from './starCaptionKinds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
@@ -63,28 +63,19 @@ function baseCaptionsFor(bodyStates: ReadonlyMap<string, BodyState>): readonly F
   return cachedCaptions;
 }
 
-export function produceStarCaptions(): Label2DProducer['produceLabels'] {
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
-    const now = ctx.snapshot.nowMs;
-    // The Sun's tour-clip grouping rides WITH the bodies ('bodyLabel'), even
-    // though its persistent Stars-panel toggle lives in the starCatalog
-    // registry cluster — the two gates are independent by design (mirrors
-    // `produceSceneBodyCaptions`'s identical split, preserved here verbatim).
-    const clipFactorBody = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
-    const clipFactorStarCatalog = state.subsystems.clipPlayer.clipOpacityOf(
-      'starCatalogLabel',
-      now,
-    );
-
+export function produceStarCaptions(): (
+  state: EngineState,
+  ctx: FrameView,
+  fade: Readonly<Record<string, number>>,
+) => Label2DProducerOutput {
+  return (state, ctx, fade) => {
     const composeCtx = captionComposeContextOf(state, ctx);
 
-    const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) => {
-      return composeForegroundCaption(
-        composeCtx,
-        label,
-        label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody,
-      );
-    });
+    // Each caption reads its own item of the `label:starCatalog` value: the Sun and
+    // the curated stars switch, fade and clip independently.
+    const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) =>
+      composeForegroundCaption(composeCtx, label, fade[CAPTION_FADE_RULES[label.kind].fadeItem!]!),
+    );
 
     return { labels, awake: false };
   };

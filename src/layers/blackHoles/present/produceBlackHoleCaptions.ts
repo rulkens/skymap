@@ -8,7 +8,6 @@
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -31,12 +30,12 @@ const BLACK_HOLE_CAPTION_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
 const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
 
-export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
-    const now = ctx.snapshot.nowMs;
-    // A tour cue addresses this caption with the near-field bodies' key, as it
-    // did while Sgr A* was a body.
-    const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
+export function produceBlackHoleCaptions(): (
+  state: EngineState,
+  ctx: FrameView,
+  fade: Readonly<Record<string, number>>,
+) => Label2DProducerOutput {
+  return (state, ctx, fade) => {
     const composeCtx = captionComposeContextOf(state, ctx);
     const states = sceneBodyStates(state, ctx);
 
@@ -49,7 +48,7 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
         'sgrAStar',
         packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
       );
-      return composeForegroundCaption(composeCtx, caption, clipFactor);
+      return composeForegroundCaption(composeCtx, caption, fade[row.id]!);
     });
 
     return { labels, awake: false };

@@ -1,11 +1,8 @@
 /**
- * syncVisibilityFades — the private per-row `applyIntent` and the public batch
- * bridge.
- *
- * `applyIntent` is driven against hand-built FadeLayer rows whose
- * intent/guard/post/handle the test controls, isolating one obligation per test.
- * The bridge tests instead drive the REAL `FADE_LAYERS`, so the intent-subset walk
- * and the asymmetric batch wake are exercised against the production manifest.
+ * syncVisibilityFades — the private per-row `applyIntent`, driven against hand-built
+ * FadeLayer rows whose intent/guard/post/handle the test controls, isolating one
+ * obligation per test. The manifest holds no rows any more, so nothing drives the
+ * public bridges here.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -17,13 +14,8 @@ import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
 } from '../../../../src/services/animation/fadeController';
-import {
-  applyIntentForTest,
-  syncVisibilityFades,
-  syncVisibilityFadeItem,
-} from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { applyIntentForTest } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
-import { makeFadeBridgeState } from '../../../helpers/engine/makeFadeBridgeState';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 //
@@ -186,148 +178,5 @@ describe('applyIntent', () => {
 
     expect(fadeTo).toHaveBeenCalledTimes(1);
     expect(fadeTo).toHaveBeenCalledWith(HANDLE, 0, FADE_OUT_DURATION_MS);
-  });
-});
-
-// ── syncVisibilityFades (public bridge over the REAL FADE_LAYERS) ──────
-//
-// These tests drive the shared `makeFadeBridgeState` stub, so the real manifest
-// expands and intents run end to end and we assert the registry spy calls directly.
-
-// The intent keys whose handles a full (no-`only`) sync must drive…
-const INTENT_KEYS = ['starCatalogLabel', 'bodyLabel', 'orbitTrails'] as const;
-// …and the registration-only handles it must NEVER touch.
-const REGISTRATION_ONLY_HANDLES: readonly FadeId[] = [
-  { kind: 'overlay', id: 'proceduralDisks' },
-  { kind: 'overlay', id: 'texturedDisks' },
-  { kind: 'labelLayer', layer: 'scaleBar' },
-];
-
-/** True iff any fadeTo call matched the given handle (deep-equal on FadeId). */
-function fadedHandle(
-  fadeTo: ReturnType<typeof vi.fn<(id: FadeId, target: number, dur?: number) => Promise<void>>>,
-  handle: FadeId,
-): boolean {
-  return fadeTo.mock.calls.some(([id]) => JSON.stringify(id) === JSON.stringify(handle));
-}
-
-describe('syncVisibilityFades', () => {
-  it('with `only` filters to that row’s handles', () => {
-    const { state, fadeTo } = makeFadeBridgeState();
-
-    syncVisibilityFades(state, { animate: true, only: ['orbitTrails'] });
-
-    // The orbit-trails handle faded…
-    expect(fadedHandle(fadeTo, { kind: 'orbitTrails' })).toBe(true);
-    // …and nothing from another intent row did.
-    expect(
-      fadedHandle(fadeTo, { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' }),
-    ).toBe(false);
-    expect(fadedHandle(fadeTo, { kind: 'labelLayer', layer: 'body', item: 'earth' })).toBe(false);
-  });
-
-  it('with no `only` covers every intent row and skips registration-only rows', () => {
-    const { state, fadeTo } = makeFadeBridgeState();
-
-    syncVisibilityFades(state, { animate: true });
-
-    // A representative handle for each intent key faded at least once.
-    const intentSamples: Record<(typeof INTENT_KEYS)[number], FadeId> = {
-      starCatalogLabel: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
-      bodyLabel: { kind: 'labelLayer', layer: 'body', item: 'earth' },
-      orbitTrails: { kind: 'orbitTrails' },
-    };
-    for (const key of INTENT_KEYS) {
-      expect(fadedHandle(fadeTo, intentSamples[key]), `intent ${key}`).toBe(true);
-    }
-
-    // The registration-only handles were never faded.
-    for (const handle of REGISTRATION_ONLY_HANDLES) {
-      expect(fadedHandle(fadeTo, handle), `registration-only ${JSON.stringify(handle)}`).toBe(
-        false,
-      );
-    }
-  });
-
-  it('animate:false issues exactly one requestRender after the batch', () => {
-    const { state, setImmediate, requestRender, fadeTo } = makeFadeBridgeState();
-
-    syncVisibilityFades(state, { animate: false });
-
-    expect(fadeTo).not.toHaveBeenCalled();
-    expect(setImmediate.mock.calls.length).toBeGreaterThan(0);
-    // setImmediate doesn't wake — the batch issues exactly one explicit wake.
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-
-  it('animate:true issues no requestRender (fadeTo owns the wake)', () => {
-    const { state, requestRender } = makeFadeBridgeState();
-
-    syncVisibilityFades(state, { animate: true });
-
-    expect(requestRender).not.toHaveBeenCalled();
-  });
-
-  it('threads durationMs to every animated fadeTo call', () => {
-    const { state, fadeTo } = makeFadeBridgeState();
-
-    syncVisibilityFades(state, { animate: true, durationMs: 750 });
-
-    // Every fadeTo call must have received the override, not a default constant.
-    expect(fadeTo.mock.calls.length).toBeGreaterThan(0);
-    for (const [, , dur] of fadeTo.mock.calls) {
-      expect(dur).toBe(750);
-    }
-  });
-});
-
-// ── syncVisibilityFadeItem (scoped single-item bridge) ────────────────
-//
-// The single-item entry applies ONE row's intent to ONE item — vs the batch,
-// which sweeps every item the row expands to. The slot commit uses it so a
-// concurrent tier-swap reload of source A doesn't re-drive source B's fade.
-//
-// We drive the REAL `bodyLabel` row: it's a MULTI-item row (expands to the
-// caption-bearing bodies) with no `post`, so the fixture stays light and we can
-// assert that exactly one of its sibling handles faded.
-
-describe('syncVisibilityFadeItem', () => {
-  it('drives exactly the one named item, not its row siblings', () => {
-    const { state, fadeTo } = makeFadeBridgeState();
-
-    syncVisibilityFadeItem(state, 'bodyLabel', 'earth');
-
-    // Exactly one fade, on earth's handle, to the intent target (enabled → 1).
-    expect(fadeTo).toHaveBeenCalledTimes(1);
-    expect(fadeTo).toHaveBeenCalledWith(
-      { kind: 'labelLayer', layer: 'body', item: 'earth' },
-      1,
-      FADE_IN_DURATION_MS,
-    );
-    // The sibling body was never touched.
-    expect(fadedHandle(fadeTo, { kind: 'labelLayer', layer: 'body', item: 'planet' })).toBe(false);
-  });
-});
-
-// Ruling 1: the contentVersion bake key is what makes it safe for the item
-// bridge to stop re-issuing fadeTo on every re-commit — this pins that the
-// skip covers both public entry points identically.
-describe('applyIntent does not re-issue fadeTo to a target already held, through either bridge', () => {
-  it('via syncVisibilityFades', () => {
-    const { state, fadeTo, targetOf } = makeFadeBridgeState();
-    targetOf.mockReturnValue(1); // every row here has intent true → target 1
-
-    syncVisibilityFades(state, { animate: true, only: ['bodyLabel'] });
-
-    expect(fadeTo).not.toHaveBeenCalled();
-  });
-
-  it('via syncVisibilityFadeItem', () => {
-    const { state, fadeTo, targetOf } = makeFadeBridgeState();
-    targetOf.mockReturnValue(1);
-
-    syncVisibilityFadeItem(state, 'bodyLabel', 'earth');
-
-    expect(fadeTo).not.toHaveBeenCalled();
   });
 });

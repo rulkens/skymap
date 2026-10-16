@@ -1,9 +1,8 @@
 /**
- * composeForegroundCaption — the per-caption compose `produceSceneBodyCaptions`
- * and `produceStarCaptions` each ran as their own copy: fade rule → registry
- * opacity → clip factor → overflow → prominence → occlusion → `occludeNearKm`
- * → lift. `clipFactor` is the caller's — core reads one key for every body,
- * the star Layer picks per caption between `bodyLabel`/`starCatalogLabel`.
+ * composeForegroundCaption — the per-caption compose every NEAR0 caption producer
+ * shares: fade rule → overflow → prominence → occlusion → `occludeNearKm` → lift.
+ * `fade` is the caller's: the per-item value core hands its label entry (switch,
+ * fade, recession and clip already folded in), so nothing here reads the registry.
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -11,7 +10,6 @@ import type { Label2D } from '../../@types/rendering/Label2D';
 import type { CaptionComposeContext } from '../../@types/rendering/CaptionComposeContext';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
 import { isPickableUnderFocus } from '../structure/isPickableUnderFocus';
-import { focusRecession } from '../../services/engine/presentation/focusRecession';
 import { CAPTION_FADE_RULES } from '../../services/engine/presentation/captionFadeRules';
 import {
   CAPTION_PRIORITY,
@@ -27,7 +25,7 @@ import { LEADER_LINE_BOTTOM_GAP_PX } from '../../services/engine/presentation/le
 export function composeForegroundCaption(
   ctx: CaptionComposeContext,
   label: ForegroundCaption,
-  clipFactor: number,
+  fade: number,
 ): Label2D {
   const anchor: Vec3 = [
     label.worldPos[0] - ctx.camPos[0],
@@ -42,21 +40,12 @@ export function composeForegroundCaption(
   });
 
   const rule = CAPTION_FADE_RULES[label.kind];
-  const registryOpacity =
-    rule.fadeHandle === null ? 1 : ctx.fades.opacityOf(rule.fadeHandle, ctx.nowMs);
-  const ruleGate =
-    rule.subjectVisible(ctx.settings) && (rule.labelEnabled(ctx.settings) || registryOpacity > 0)
-      ? 1
-      : 0;
   const revealAlpha = label.revealBand === undefined ? 1 : fadeBand(label.revealBand, distanceMpc);
   const fadeAlpha =
-    ruleGate *
     rule.fadeTarget(distanceMpc, ctx.camOrbitDistanceMpc) *
     revealAlpha *
     overflowFade(subjectSizePx, ctx.viewportShortSidePx) *
-    registryOpacity *
-    clipFactor *
-    (rule.fadeHandle === null ? 1 : focusRecession(rule.fadeHandle, ctx.focus.blend));
+    fade;
 
   const prominencePx =
     CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +

@@ -1,20 +1,15 @@
 /**
  * captionFadeRules — per-caption-kind fade routing for the foreground scene-body
  * captions, AS DATA. Sibling of `captionPriority` (which answers "who wins a
- * collision"): this table answers "should this caption be visible, and how
- * hard". Four facts hang off a caption's `kind` and always move together, so
- * they live as one row rather than parallel dispatches scattered through
- * `labelsNearPass.draw`:
+ * collision"): this table answers "how hard should this caption show". Two facts
+ * hang off a caption's `kind` and always move together, so they live as one row
+ * rather than parallel dispatches scattered through `labelsNearPass.draw`:
  *
- *   1. `labelEnabled` — the caption axis of the kind's own settings row
- *      (muting is per-row, not one cross-cutting bag).
- *   2. `subjectVisible` — the kind's separate VISIBILITY axis, so a caption
- *      never outlives the dot it names; `UNGATED` when there is none.
- *   3. `fadeTarget` — the distance band the caption rides once both gates
- *      are open, so its name eases in rather than popping at a threshold.
- *   4. `fadeHandle` — the fade-registry id this kind's opacity ramps through
- *      on a Labels toggle. `null` states "this kind composes its own
- *      registry read elsewhere" rather than leaving the row silent.
+ *   1. `fadeTarget` — the distance band the caption rides, so its name eases in
+ *      rather than popping at a threshold.
+ *   2. `fadeItem` — which item of the producing Layer's own label entry carries the
+ *      caption's switch, fade, recession and clip: the producer indexes the value
+ *      core hands it by this. `null` states "this kind composes its own value".
  *
  * `Record<CaptionKind, …>` makes the table compiler-complete: a new
  * `CaptionKind` fails the build until it gets a row. An annotation rather
@@ -22,14 +17,12 @@
  * INFERRED arity and reject a caller passing both `fadeTarget` arguments to
  * a row that only reads `distanceMpc`.
  *
- * The rows are pure functions of an explicit settings bag — nothing here
- * closes over a frame's locals — so the table is a module-level constant
- * the per-label loop indexes without allocating.
+ * The rows are pure functions of their arguments — nothing here closes over a
+ * frame's locals — so the table is a module-level constant the per-label loop
+ * indexes without allocating.
  */
 
 import type { CaptionKind } from './captionPriority';
-import type { EngineSettingsState } from '../../../@types/settings/EngineSettingsState';
-import type { FadeId } from '../../../@types/animation/FadeId';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -49,15 +42,10 @@ const SGR_A_STAR_ID = SOURCE_REGISTRY[Source.SgrAStar].id;
  * kinds whose REACH is the solar system's consult it (see `SOLAR_SYSTEM_REACH`).
  */
 export type CaptionFadeRule = {
-  readonly labelEnabled: (settings: EngineSettingsState) => boolean;
-  readonly subjectVisible: (settings: EngineSettingsState) => boolean;
   readonly fadeTarget: (distanceMpc: number, camDistMpc: number) => number;
   /** Required, not optional: a new CaptionKind must STATE its stance. */
-  readonly fadeHandle: FadeId | null;
+  readonly fadeItem: string | null;
 };
-
-/** An axis a kind doesn't carry: the gate is permanently open. */
-const UNGATED = (): boolean => true;
 
 /**
  * On inside the solar system's caption range, off outside it — per-kind
@@ -78,62 +66,43 @@ const PRODUCER_SUPPLIED = (): number => 0;
 
 export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> = {
   /**
-   * The descent's aim point. Its own star-catalog row governs the name, so
-   * muting the curated neighbourhood leaves the Sun captioning; the visibility
-   * axis is BOTH levels, exactly as the star show entry's switch composes them, so the caption
-   * never outlives the dot. The band makes the name fade IN smoothly on the way
-   * down: exactly 0 at the layer's enable gate (no pop) up to full alpha by half
-   * that distance.
+   * The descent's aim point. Its own star-catalog item governs the name, so
+   * muting the curated neighbourhood leaves the Sun captioning; the star label
+   * entry's `of` keeps the name from outliving the dot. The band makes the name
+   * fade IN smoothly on the way down: exactly 0 at the layer's enable gate (no
+   * pop) up to full alpha by half that distance.
    */
   sun: {
-    labelEnabled: (settings) => settings.starCatalogs.items.sun.labelEnabled,
-    subjectVisible: (settings) =>
-      settings.starCatalogs.enabled && settings.starCatalogs.items.sun.enabled,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc),
-    fadeHandle: { kind: 'labelLayer', layer: 'starCatalog', item: 'sun' },
+    fadeItem: 'sun',
   },
 
-  /** Inside the caption range Earth is simply on — no band, no visibility axis. */
-  earth: {
-    labelEnabled: (settings) => settings.bodies.items.earth.labelEnabled,
-    subjectVisible: UNGATED,
-    fadeTarget: SOLAR_SYSTEM_REACH,
-    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'earth' },
-  },
+  /** Inside the caption range Earth is simply on — no band. */
+  earth: { fadeTarget: SOLAR_SYSTEM_REACH, fadeItem: 'earth' },
 
   /**
    * The Moon rides the 'planet' kind, so it follows this row. Like Earth: on
    * inside the caption range.
    */
-  planet: {
-    labelEnabled: (settings) => settings.bodies.items.planet.labelEnabled,
-    subjectVisible: UNGATED,
-    fadeTarget: SOLAR_SYSTEM_REACH,
-    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'planet' },
-  },
+  planet: { fadeTarget: SOLAR_SYSTEM_REACH, fadeItem: 'planet' },
 
   /**
-   * The curated local star map. The visibility axis is BOTH levels, exactly as
-   * the star show entry's switch composes them — a caption must not survive the cluster master
-   * that hid the dot it names. The band is a LOCAL STAR MAP rather than
+   * The curated local star map. The band is a LOCAL STAR MAP rather than
    * per-body approach labels: full alpha inside the stellar neighbourhood (the
    * whole map reads from Earth), gone beyond it. It keys on PARSECS, hence the
    * named unit conversion.
    */
   star: {
-    labelEnabled: (settings) => settings.starCatalogs.items.famousStar.labelEnabled,
-    subjectVisible: (settings) =>
-      settings.starCatalogs.enabled && settings.starCatalogs.items.famousStar.enabled,
     fadeTarget: (distanceMpc) =>
       fadeBand(SCALE_FADE_BANDS.starCaption, distanceMpc / SCALE_UNITS.PC_TO_MPC),
-    fadeHandle: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
+    fadeItem: 'famousStar',
   },
 
   /**
-   * The Galactic Centre's name, owned by the blackHoles Layer's settings —
+   * The Galactic Centre's name, owned by the blackHoles Layer's label entry —
    * riding the `star` row above would hide it whenever the famous-star catalog
    * is muted, and would key its band on a 2.3 kpc star map it sits 8 kpc
-   * outside. No visibility axis: the hole has no toggle, only its scale band.
+   * outside. Only its scale band gates it.
    *
    * It does NOT take Earth's and the planets' `SOLAR_SYSTEM_REACH` row: this is
    * the one caption that must survive OUTSIDE the solar system's range, since
@@ -141,24 +110,17 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * one framing the whole galaxy.
    */
   sgrAStar: {
-    labelEnabled: (settings) => settings.blackHoles.items[SGR_A_STAR_ID].labelEnabled,
-    subjectVisible: UNGATED,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
-    fadeHandle: { kind: 'labelLayer', layer: 'blackHoles', item: SGR_A_STAR_ID },
+    fadeItem: SGR_A_STAR_ID,
   },
 
   /**
    * The whale and the petunias. They ride the planets' presentation partition
    * and sit in Earth orbit, so they take the planets' row wholesale — same
-   * reach, and no visibility axis because nothing gates their geometry. Both
-   * bodies share the one registry row, hence one shared caption toggle.
+   * reach. Both bodies share the one registry row, hence one shared caption
+   * toggle.
    */
-  meshBody: {
-    labelEnabled: (settings) => settings.bodies.items[MESH_BODY_ENTRY.id].labelEnabled,
-    subjectVisible: UNGATED,
-    fadeTarget: SOLAR_SYSTEM_REACH,
-    fadeHandle: { kind: 'labelLayer', layer: 'body', item: MESH_BODY_ENTRY.id },
-  },
+  meshBody: { fadeTarget: SOLAR_SYSTEM_REACH, fadeItem: MESH_BODY_ENTRY.id },
 
   /**
    * The stick-figure names. They never reach the body-caption pipeline this
@@ -166,18 +128,11 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * `constellationCaptions` appends the figure names further down with their own
    * per-frame target (`constellationsFade`: the layer's distance band × the
    * handed `label:constellations` value, keyed on the camera's origin distance,
-   * not on an anchor distance). Their switch is that label entry, whose `of`
-   * ties the names to the lines, so both gates here are open and the target is
-   * the producer's. The row exists so the table stays total over the kind union;
-   * leaving the kind implicit would let it silently inherit the star map's
-   * parsec band and the star map's visibility toggle. `fadeHandle` is `null`
-   * for the same reason: the handed value already folds fade, recession and
-   * clip, and a second registry read here would double-count it.
+   * not on an anchor distance). The row exists so the table stays total over the
+   * kind union; leaving the kind implicit would let it silently inherit the star
+   * map's parsec band. `fadeItem` is `null` for the same reason: the handed value
+   * already folds switch, fade, recession and clip, and a second read here would
+   * double-count it.
    */
-  constellation: {
-    labelEnabled: UNGATED,
-    subjectVisible: UNGATED,
-    fadeTarget: PRODUCER_SUPPLIED,
-    fadeHandle: null,
-  },
+  constellation: { fadeTarget: PRODUCER_SUPPLIED, fadeItem: null },
 };

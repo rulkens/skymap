@@ -61,6 +61,8 @@ import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCata
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+// The handed value is full: this fixture is about the ill-conditioned-projection regression, not the fade channels.
+const STAR_FADE = { sun: 1, famousStar: 1 };
 
 function makeLabelStub(): LabelRenderer {
   return {
@@ -106,15 +108,6 @@ function makeState(): EngineState {
           sStar: { enabled: true, labelEnabled: false },
         },
       },
-    },
-    // Fail-safe pass-throughs (the real registry's unregistered-id default,
-    // the real clip player's no-clip-playing default): every row here is
-    // already `labelEnabled: true`, so these leave `produceStarCaptions`'s
-    // composition unchanged from its pre-fade-wire value — this fixture is
-    // about the ill-conditioned-projection regression, not the fade channels.
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }
@@ -225,7 +218,10 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub, () => null);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+    });
     const state = makeState();
 
     dir.runFrame(state, makeCtx(eyeA, makeRealNear0Slab(eyeA, star.worldPos)));
@@ -265,7 +261,10 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub, () => null);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+    });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
     const cap = emittedCaption(labelStub, star.id);
@@ -307,7 +306,10 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub, () => null);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+    });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;
     expect(cap).toBeDefined();

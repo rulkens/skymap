@@ -24,7 +24,14 @@ export const missionsLayer = defineLayer({
   destroy,
   passes: (runtime) => [missionTrailsPass(runtime)],
   guides: () => ({
-    screenLabels: [{ slab: NEAR0, id: 'missionCaptions', produceLabels: produceMissionCaptions }],
+    screenLabels: [
+      {
+        slab: NEAR0,
+        id: 'missionCaptions',
+        label: 'missions',
+        produceLabels: produceMissionCaptions,
+      },
+    ],
   }),
   ui: [{ slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } }],
 });

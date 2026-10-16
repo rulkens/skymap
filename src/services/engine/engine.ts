@@ -28,6 +28,8 @@ import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
+import { gateLabelProducer } from './layer/gateLabelProducer';
+import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabel';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -318,10 +320,13 @@ export function createEngine(
   // Scene-body captions first so an equal-prominence tiebreak favours the
   // navigation aid over the diffuse constellation overlay — the constellations
   // Layer's own producer registers later, from `createLayers`, landing second.
-  state.subsystems.foregroundLabelDirector.registerProducer({
-    id: 'sceneBodyCaptions',
-    produceLabels: produceSceneBodyCaptions,
-  });
+  state.subsystems.foregroundLabelDirector.registerProducer(
+    gateLabelProducer({
+      id: 'sceneBodyCaptions',
+      label: SCENE_BODY_CAPTION_LABEL,
+      produceLabels: produceSceneBodyCaptions,
+    }),
+  );
 
   // Orbit-controls attachment lives outside `inputBindings` because it needs a
   // fully-constructed OrbitCamera, absent at engine() time; boxed because
