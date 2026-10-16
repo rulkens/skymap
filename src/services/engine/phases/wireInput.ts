@@ -10,7 +10,7 @@
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createPickDriver } from '../interaction/createPickDriver';
-import { attachEngineInputs } from '../interaction/inputBindings';
+import { attachResizeWake } from '../interaction/attachResizeWake';
 import { DEFAULT_FOV_Y_RAD, NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../camera/cameraFraming';
 import { homePose } from '../camera/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
@@ -101,5 +101,5 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   });
   store.dispatch(commitCameraPose(homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis)));
 
-  state.subsystems.inputBindings = attachEngineInputs(state.subsystems.scheduler);
+  state.subsystems.resizeWake = attachResizeWake(state.subsystems.scheduler);
 }

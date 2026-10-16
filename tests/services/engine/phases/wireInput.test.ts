@@ -61,8 +61,8 @@ vi.mock('../../../../src/services/engine/interaction/createPickDriver', () => ({
   createPickDriver: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 
-vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
-  attachEngineInputs: vi.fn(() => ({ detach: vi.fn() })),
+vi.mock('../../../../src/services/engine/interaction/attachResizeWake', () => ({
+  attachResizeWake: vi.fn(() => ({ detach: vi.fn() })),
 }));
 
 // Imported AFTER the mocks so wireInput picks them up.
@@ -138,7 +138,7 @@ function makeState(): EngineState {
       scheduler: { requestRender: vi.fn() },
       selection: { setHovered: vi.fn(), setSelected: vi.fn() },
       pickDriver: null,
-      inputBindings: null,
+      resizeWake: null,
     } as never,
     booted: false,
     cameraRuntime: {
@@ -258,7 +258,7 @@ describe('wireInput', () => {
     await wireInput(state, deps);
 
     expect(state.booted).toBe(true);
-    expect(state.subsystems.inputBindings).not.toBeNull();
+    expect(state.subsystems.resizeWake).not.toBeNull();
   });
 
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {

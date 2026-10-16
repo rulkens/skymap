@@ -133,7 +133,6 @@ describe('inputSlice', () => {
     store.dispatch(inputHovered({ source: 'canvas', at: { x: 0.2, y: 0.3 } }));
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     expect(selectPickRequests(store.getState()).hover).toEqual({
-      source: 'canvas',
       at: null,
       seq: 2,
     });
@@ -170,7 +169,6 @@ describe('inputSlice', () => {
     store.dispatch(inputTapped({ source: 'canvas', at: { x: 0.9, y: 0.9 } }));
     store.dispatch(inputPickResolved({ which: 'select', seq: 1 }));
     expect(selectPickRequests(store.getState()).select).toEqual({
-      source: 'canvas',
       at: { x: 0.9, y: 0.9 },
       seq: 2,
     });

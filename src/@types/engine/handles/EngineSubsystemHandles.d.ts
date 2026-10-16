@@ -10,7 +10,7 @@
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
  *   - Lazy (inside the GPU init IIFE): `earthTiles`, `pickDriver`,
- *     `inputBindings`.
+ *     `resizeWake`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
  * null-checks stay honest and `destroy()` can null fields back out
@@ -39,7 +39,7 @@ export type EngineSubsystemHandles = {
   surfaceTiles: SurfaceTileSubsystem | null;
   /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
   pickDriver: Destroyable | null;
-  inputBindings: Destroyable | null;
+  resizeWake: Destroyable | null;
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered

@@ -1,11 +1,11 @@
 /**
- * inputBindings — the engine's resize wake. Vitest runs `node` here (no
+ * attachResizeWake — the engine's resize wake. Vitest runs `node` here (no
  * jsdom), so a recorder stands in for `window` and the test fires by type.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { attachEngineInputs } from '../../../../src/services/engine/interaction/inputBindings';
+import { attachResizeWake } from '../../../../src/services/engine/interaction/attachResizeWake';
 import type { RenderScheduler } from '../../../../src/@types/engine/subsystems/RenderScheduler';
 
 type Listener = (e: unknown) => void;
@@ -44,15 +44,15 @@ afterEach(() => {
   else g.window = originalWindow;
 });
 
-describe('attachEngineInputs', () => {
+describe('attachResizeWake', () => {
   it('a window resize wakes the loop', () => {
-    attachEngineInputs(scheduler);
+    attachResizeWake(scheduler);
     fire('resize');
     expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
   it('destroy() removes the resize listener', () => {
-    attachEngineInputs(scheduler).destroy();
+    attachResizeWake(scheduler).destroy();
     expect(listeners).toHaveLength(0);
     fire('resize');
     expect(scheduler.requestRender).not.toHaveBeenCalled();

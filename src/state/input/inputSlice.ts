@@ -48,7 +48,7 @@ const inputSlice = createSlice({
       }
       input.owner = source;
       input.pending.push({ kind: 'start', source });
-      input.pick.hover = { source, at: null, seq: ++input.pickSeq };
+      input.pick.hover = { at: null, seq: ++input.pickSeq };
     },
     inputGestureEnded: (input, action: PayloadAction<{ source: SourceId }>) => {
       if (input.owner !== action.payload.source) return;
@@ -85,10 +85,10 @@ const inputSlice = createSlice({
 
     inputHovered: (input, action: PayloadAction<{ source: SourceId; at: UnitPoint | null }>) => {
       if (input.owner !== null) return;
-      input.pick.hover = { ...action.payload, seq: ++input.pickSeq };
+      input.pick.hover = { at: action.payload.at, seq: ++input.pickSeq };
     },
     inputTapped: (input, action: PayloadAction<{ source: SourceId; at: UnitPoint }>) => {
-      input.pick.select = { ...action.payload, seq: ++input.pickSeq };
+      input.pick.select = { at: action.payload.at, seq: ++input.pickSeq };
     },
 
     // Clearing everything is exact, not lossy: `runFrame` reads the snapshot and

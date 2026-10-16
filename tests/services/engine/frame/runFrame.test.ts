@@ -202,7 +202,7 @@ function makeState(): EngineState {
       proceduralDisks: null,
       texturedDisks: null,
       pickDriver: null,
-      inputBindings: null,
+      resizeWake: null,
       loadProgress: null,
     },
     booted: false,

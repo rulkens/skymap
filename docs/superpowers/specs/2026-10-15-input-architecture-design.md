@@ -175,7 +175,7 @@ export type PendingStep =
   | ({ readonly kind: 'motion'; readonly source: SourceId; readonly aspect: number } & Motion);
 
 // src/@types/input/PickRequest.d.ts
-export type PickRequest = { readonly source: SourceId; readonly at: UnitPoint; readonly seq: number };
+export type PickRequest = { readonly at: UnitPoint; readonly seq: number };
 
 // src/@types/input/InputState.d.ts
 export type InputState = {

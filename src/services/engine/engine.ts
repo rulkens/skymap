@@ -256,7 +256,7 @@ export function createEngine(
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
       pickDriver: null,
-      inputBindings: null,
+      resizeWake: null,
       loadProgress: null,
     },
     booted: false,
@@ -409,8 +409,8 @@ export function createEngine(
     state.subsystems.scheduler.destroy();
     state.subsystems.assetQueue.destroy();
 
-    state.subsystems.inputBindings?.destroy();
-    state.subsystems.inputBindings = null;
+    state.subsystems.resizeWake?.destroy();
+    state.subsystems.resizeWake = null;
     // Undefined only if the GPU IIFE errored before registering the HDR-capability
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
