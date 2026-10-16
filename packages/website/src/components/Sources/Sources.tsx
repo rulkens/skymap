@@ -19,12 +19,13 @@ function Sources({ ids, all = false }: SourcesProps) {
     <details className={styles.root}>
       <summary className={styles.toggle}>
         <Icon name="cite" />
-        Sources for this page ({rows.length})
+        {`Sources for this page (${rows.length})`}
       </summary>
       <ol>
         {rows.map((row, i) => (
           <li key={i}>
-            {row.text} <a href={row.source}>{row.sourceLabel}</a>{' '}
+            {`${row.text} `}
+            <a href={row.source}>{row.sourceLabel}</a>{' '}
             <span className={styles.checked}>
               checked <span className={styles.date}>{formatDate(row.checked)}</span>
             </span>

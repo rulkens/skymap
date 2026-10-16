@@ -89,8 +89,8 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Files:** the five component folders; delete `src/scripts/initDocsSearch.ts`.
 
-- [ ] Nav menu, DocsNav and Footer's light line are islands. DocsNav's and DocsSearch's `is:inline` scripts (`DocsNav.astro:99`, `DocsSearch.astro:34`) move to the document shell or the island, whichever keeps their timing (DocsNav scrolls to the current page before first paint: keep that).
-- [ ] DocsSearch keeps loading the pagefind index with a native `import()` that Vite must not bundle.
+- [x] Nav menu (`NavMenu`, `client:load`), DocsNav (`client:visible`, search and page sections inside it) and Footer's light line (`LightLine`, `client:visible`) are islands; Nav and Footer themselves are static, taking the island as a `menu` / `light` ReactNode slot prop, since an island can only be made from a `.astro` file. DocsNav's pre-paint script stays an inline `<script>` in its markup (a string in the component), so the first paint is unchanged. The docs index passes its `DocsSearch` to `DocsMap` the same way.
+- [x] DocsSearch keeps loading the pagefind index with a native `import(/* @vite-ignore */ url)`; `initDocsSearch.ts` and the `SearchSheet` type are gone.
 
 ### Task 1.3: Shared leaves
 

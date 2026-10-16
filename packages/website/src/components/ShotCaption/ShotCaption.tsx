@@ -48,7 +48,7 @@ function ShotCaption({ id, label, open = true }: ShotCaptionProps) {
             {shot.credit && (
               <dl>
                 <dt>Credit</dt>
-                <dd>{shot.credit}.</dd>
+                <dd>{`${shot.credit}.`}</dd>
               </dl>
             )}
           </div>

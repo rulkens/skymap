@@ -7,8 +7,11 @@ import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
 // The site's own card (npm run site:shots); the app keeps its own at /og-image.jpg.
 import cardUrl from '../assets/og-card.jpg?url';
 import { siteShot } from '../data/siteShot';
-import Nav from '../components/Nav.astro';
-import Footer from '../components/Footer.astro';
+import Nav from '../components/Nav/Nav.tsx';
+import NavMenu from '../components/Nav/NavMenu.tsx';
+import Footer from '../components/Footer/Footer.tsx';
+import LightLine from '../components/Footer/LightLine.tsx';
+import { fact } from '../data/fact';
 import DevFeedback from '../dev/feedback/DevFeedback.astro';
 import DevReview from '../dev/review/DevReview.astro';
 import { INDEXABLE } from '../data/site';
@@ -63,13 +66,17 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}
     <slot name="head" />
   </head>
-  <body class={heroNav ? 'hero-nav' : undefined}>
+  <body>
     <a class="skip-link" href={`#${skipTo}`}>Skip to content</a>
-    <Nav />
+    <Nav path={Astro.url.pathname} hero={heroNav}>
+      <NavMenu slot="menu" path={Astro.url.pathname} client:load />
+    </Nav>
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    <Footer path={Astro.url.pathname}>
+      <LightLine slot="light" text={fact('speed-of-light').short!} client:visible />
+    </Footer>
     {import.meta.env.DEV && <DevFeedback />}
     {import.meta.env.DEV && <DevReview />}
   </body>

@@ -12,7 +12,7 @@ import type { MarkdownHeading } from 'astro';
 
 import Base from './Base.astro';
 import DocBody from '../components/DocBody.astro';
-import DocsNav from '../components/DocsNav.astro';
+import DocsNav from '../components/DocsNav/DocsNav.tsx';
 import FigureSheet from '../components/FigureSheet/FigureSheet.tsx';
 import ObjLink from '../components/ObjLink/ObjLink.tsx';
 import PageSections from '../components/PageSections/PageSections.tsx';
@@ -57,7 +57,7 @@ const turns = [
   ]}
 >
   <div class="wrap grid docs">
-    <DocsNav current={path} sections={sections} />
+    <DocsNav client:visible current={path} sections={sections} />
 
     <article class="page" id="page" data-pagefind-body data-pagefind-meta={`group:${group.name}`}>
       <header data-opening>
