@@ -147,13 +147,14 @@ describe('remoteReceiverSaga', () => {
     expect(input().sources['remote:a']).toBeUndefined();
   });
 
-  it('a closed link ends an open gesture and detaches', async () => {
+  it('a closed link ends an open gesture and detaches every remote', async () => {
     const { device, input, link } = await setup();
     await device('a', resize(), press('down'));
+    await device('b', resize());
     link.linkStatus('closed');
     await settle();
     expect(input().owner).toBeNull();
-    expect(input().sources['remote:a']).toBeUndefined();
+    expect(input().sources).toEqual({});
   });
 
   it('a returning remote attaches again with its last size', async () => {
@@ -227,6 +228,20 @@ describe('remoteReceiverSaga', () => {
     await settle();
     expect(statuses().length).toBeLessThanOrEqual(4);
     await vi.advanceTimersByTimeAsync(1000);
+    const last = statuses().at(-1);
+    expect(last?.kind === 'status' && last.status.time.paused).toBe(false);
+  });
+
+  it('a change inside the cool-down still goes out once it ends', async () => {
+    const { store, statuses } = await setup();
+    await vi.advanceTimersByTimeAsync(1000);
+    store.dispatch(pause({ nowMs: 0 }));
+    await settle();
+    const before = statuses().length;
+    await vi.advanceTimersByTimeAsync(10);
+    store.dispatch(resume({ nowMs: 10 }));
+    await vi.advanceTimersByTimeAsync(250);
+    expect(statuses().length).toBe(before + 1);
     const last = statuses().at(-1);
     expect(last?.kind === 'status' && last.status.time.paused).toBe(false);
   });

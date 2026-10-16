@@ -9,12 +9,18 @@
  */
 
 import type { Action } from '@reduxjs/toolkit';
-import { buffers, eventChannel, type Channel, type SagaIterator, type Task } from 'redux-saga';
+import {
+  buffers,
+  channel,
+  eventChannel,
+  type Channel,
+  type SagaIterator,
+  type Task,
+} from 'redux-saga';
 import { actionChannel, call, cancel, delay, fork, put, select, take } from 'typed-redux-saga';
 
 import { remotePaired, remotePairingStarted } from './remoteSlice';
 import { selectRemote } from './selectors';
-import { createRemoteSourceChannel } from './createRemoteSourceChannel';
 import { inputSourceSaga } from '../input/inputSourceSaga';
 import { setUiHidden } from '../ui/uiSlice';
 import {
@@ -73,6 +79,7 @@ export function* remoteReceiverSaga(
   function* closeAfterSilence(from: RemoteId) {
     yield* delay(REMOTE_SILENCE_MS);
     closeSource(from);
+    watchdogs.delete(from);
   }
 
   function* closeAllOnLinkClosed() {
@@ -129,7 +136,9 @@ export function* remoteReceiverSaga(
           const { event } = message;
           let source = sources.get(from);
           if (!source) {
-            source = createRemoteSourceChannel();
+            // A plain channel, not an event channel: this loop puts into it, so
+            // nothing dispatches late, and every down and up must reach the pump.
+            source = channel<DeviceEvent>(buffers.expanding());
             sources.set(from, source);
             const size = lastResize.get(from);
             if (size) yield* put(source, size);

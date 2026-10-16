@@ -272,7 +272,7 @@ export function selectDomeStatus(state: RootState, toggleRows: readonly ToggleRo
 **Files:**
 - Create: `src/@types/remote/RemoteState.d.ts`, `src/state/remote/remoteSlice.ts`, `src/state/remote/selectors.ts`
 - Modify: `src/store/constants.ts` (add `remoteRoute`, beside `arrivalRoute` at :46), `src/store/rootReducer.ts`
-- Create: `src/state/remote/remoteReceiverSaga.ts`, `src/state/remote/createRemoteSourceChannel.ts`
+- Create: `src/state/remote/remoteReceiverSaga.ts`
 - Create: `src/data/remote/remoteTimings.ts` (`HELLO_INTERVAL_MS` 1000, `REMOTE_SILENCE_MS` 3000,
   `STATUS_MIN_INTERVAL_MS` 250; one symbol per file — split into three files)
 - Create: `tests/helpers/remote/createMemoryTransport.ts` (an in-memory `RemoteTransport`: the test sends text "from
@@ -305,7 +305,7 @@ export function* remoteReceiverSaga(transport: RemoteTransport, layerRows: reado
 - Messages are parsed with `parseRemoteMessage(text, parseRemoteCommand)`.
 - `command`: `runRemoteCommand(command, { nowMs: performance.now(), toggleRows })`, put each action in order.
 - `device`: route to that remote's source. With no live source for `from`, open a channel
-  (`createRemoteSourceChannel`), put the remote's last `resize` into it first if one is remembered, and fork
+  (a plain `channel(buffers.expanding())`), put the remote's last `resize` into it first if one is remembered, and fork
   `inputSourceSaga('remote:' + from, channel)`. Remember every `resize` per remote.
 - Silence: a remote with no message for `REMOTE_SILENCE_MS` has its channel closed (END), so the pump's `finally`
   ends any open gesture and detaches. A link `closed` status closes every remote's channel.
