@@ -1,12 +1,3 @@
-/* The page scrolls; the app's global.css (overflow hidden) is not loaded here. */
-:global(html),
-:global(body) {
-  margin: 0;
-  background: var(--color-bg);
-  color: var(--color-fg);
-  font-family: var(--font-family-mono);
-}
-
 .root {
   box-sizing: border-box;
   max-width: 40rem;
@@ -37,5 +28,6 @@
 
 .homeRow {
   display: flex;
+  gap: var(--space-4);
   padding: var(--space-8);
 }

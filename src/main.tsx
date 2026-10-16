@@ -48,10 +48,9 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
-import { APP_COMPOSITION } from './compositions/app';
+import { APP_LABELS_AND_GUIDES_ROWS } from './compositions/appLabelsAndGuidesRows';
 import { createLocalTransport } from './services/remote/createLocalTransport';
 import { remoteReceiverSaga } from './state/remote/remoteReceiverSaga';
-import { layerUiContents } from './utils/layer/layerUiContents';
 import { hasUrlGate } from './utils/url/hasUrlGate';
 import { createAppStore } from './store/createAppStore';
 import { SagaContextProvider } from './store/SagaContextProvider';
@@ -103,12 +102,7 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   });
   // `?remote` puts this page's pairing and command receiver on the local relay.
   if (hasUrlGate('remote')) {
-    runSaga(() =>
-      remoteReceiverSaga(
-        createLocalTransport(),
-        layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides'),
-      ),
-    );
+    runSaga(() => remoteReceiverSaga(createLocalTransport(), APP_LABELS_AND_GUIDES_ROWS));
   }
   // Store lives for the page lifetime; unsubscribe is intentionally not held.
   persistValues(store, PERSISTED_VALUES);

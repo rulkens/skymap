@@ -7,11 +7,11 @@
 
 import { isRecord } from '../object/isRecord';
 import { parseDeviceEvent } from './parseDeviceEvent';
+import { MAX_SEARCH_QUERY_CHARS } from '../../data/remote/maxSearchQueryChars';
 import type { RemoteCommand } from '../../@types/remote/RemoteCommand';
 import type { RemoteMessage } from '../../@types/remote/RemoteMessage';
 
 const MAX_ID_CHARS = 64;
-const MAX_QUERY_CHARS = 64;
 
 const isId = (raw: unknown): raw is string =>
   typeof raw === 'string' && raw.length >= 1 && raw.length <= MAX_ID_CHARS;
@@ -38,7 +38,7 @@ export function parseRemoteMessage(
     case 'search': {
       const { requestId, query } = raw;
       if (!isId(requestId) || typeof query !== 'string') return null;
-      return { from, kind: 'search', requestId, query: query.slice(0, MAX_QUERY_CHARS) };
+      return { from, kind: 'search', requestId, query: query.slice(0, MAX_SEARCH_QUERY_CHARS) };
     }
     case 'command': {
       const command = parseCommand(raw.command);

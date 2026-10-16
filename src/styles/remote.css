@@ -1,0 +1,8 @@
+/* The page scrolls; the app's global.css (overflow hidden) is not loaded here. */
+html,
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family-mono);
+}

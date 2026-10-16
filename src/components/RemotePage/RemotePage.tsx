@@ -22,18 +22,21 @@ const roomFromHash = (): string | null => location.hash.slice(1) || null;
 function RemotePage() {
   const [room, setRoom] = useState(roomFromHash);
   const { status, domeThere, menu, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
+  // The code lives in the address so a reload rejoins: iOS reloads a tab it evicted from memory.
+  const join = (code: string | null): void => {
+    location.hash = code ?? '';
+    setRoom(code);
+  };
 
   if (!room) {
     return (
       <main className={styles.root}>
-        <JoinField onJoin={setRoom} />
+        <JoinField onJoin={join} />
       </main>
     );
   }
 
-  const focus = status?.focus
-    ? (focusNameFrom(status.focus.id, { searchMatches: matches }) ?? 'Focused')
-    : null;
+  const focus = status?.focus ? (focusNameFrom(status.focus.id, matches) ?? 'Focused') : null;
   const link = !domeThere ? 'Dome not there' : status ? 'Connected' : 'Looking for the dome';
 
   return (
@@ -53,6 +56,11 @@ function RemotePage() {
         >
           Home
         </button>
+        {!domeThere && (
+          <button type="button" className={controls.button} onClick={() => join(null)}>
+            Change code
+          </button>
+        )}
       </div>
       <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />
       <TourSection tours={menu?.tours ?? []} tour={status?.tour ?? null} onCommand={sendCommand} />

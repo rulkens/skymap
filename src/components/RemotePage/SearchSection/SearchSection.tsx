@@ -1,13 +1,13 @@
 /** SearchSection — type a name, get the dome's matches, tap one to fly there. */
 
 import { useEffect, useState } from 'react';
+import { MAX_SEARCH_QUERY_CHARS } from '../../../data/remote/maxSearchQueryChars';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteSearchMatch } from '../../../@types/remote/RemoteSearchMatch';
 import controls from '../remoteControls.module.css';
 import styles from './SearchSection.module.css';
 
 const DEBOUNCE_MS = 200;
-const MAX_QUERY = 64;
 
 export type SearchSectionProps = {
   matches: readonly RemoteSearchMatch[];
@@ -31,7 +31,7 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
         aria-label="Search the sky"
         placeholder="Galaxy, planet, cluster"
         value={query}
-        maxLength={MAX_QUERY}
+        maxLength={MAX_SEARCH_QUERY_CHARS}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}

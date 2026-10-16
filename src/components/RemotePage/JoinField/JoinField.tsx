@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { ROOM_CODE_LENGTH } from '../../../data/remote/roomCodeLength';
 import controls from '../remoteControls.module.css';
 import styles from './JoinField.module.css';
 
@@ -31,14 +32,14 @@ function JoinField({ onJoin }: JoinFieldProps) {
         className={styles.input}
         value={code}
         onChange={(e) => setCode(normalise(e.target.value))}
-        maxLength={8}
+        maxLength={ROOM_CODE_LENGTH}
         autoCapitalize="characters"
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
         autoFocus
       />
-      <button type="submit" className={controls.button} disabled={code.length !== 8}>
+      <button type="submit" className={controls.button} disabled={code.length !== ROOM_CODE_LENGTH}>
         Join
       </button>
     </form>
