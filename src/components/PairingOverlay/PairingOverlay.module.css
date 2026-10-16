@@ -1,0 +1,68 @@
+/* src/components/PairingOverlay/PairingOverlay.module.css */
+
+/* Centred over the sky; click-through, so the dome stays steerable while it waits. */
+.root {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-bottom-stack);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: calc(100vw - 2 * var(--space-8));
+  padding: var(--space-12);
+  box-sizing: border-box;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  color: var(--color-fg);
+  font-family: var(--font-family-mono);
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  font-size: var(--font-size-input);
+}
+
+/* A QR needs light modules' contrast: the page's lightest text token over its black. */
+.qr {
+  width: min(16rem, 100%);
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+.qrLight {
+  fill: var(--color-fg);
+}
+
+.qrDark {
+  fill: var(--color-bg);
+}
+
+.hint,
+.address,
+.code {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  text-align: center;
+}
+
+.hint,
+.codeLabel {
+  color: var(--color-fg-muted);
+}
+
+.address,
+.code {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  letter-spacing: 0.08em;
+}
