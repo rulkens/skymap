@@ -2,7 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-07';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 
 /**
  * What the two Start pages of the docs say the app does and holds, spread into
@@ -43,7 +43,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-bodies',
     about: 'app',
-    text: 'The solar system in skymap is the Sun, the eight planets, Pluto and 24 moons: the Moon, Phobos and Deimos, four moons of Jupiter, seven of Saturn, six of Uranus, three of Neptune, and Charon.',
+    text: 'The solar system in Skymap is the Sun, the eight planets, Pluto and 24 moons: the Moon, Phobos and Deimos, four moons of Jupiter, seven of Saturn, six of Uranus, three of Neptune, and Charon.',
     source: `${REPO_BLOB}/src/data/bodies/scenePlanets.ts`,
     sourceLabel: `the list of planets and moons, ${IN_REPO}`,
     checked: CHECKED,

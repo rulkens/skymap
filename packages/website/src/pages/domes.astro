@@ -10,7 +10,6 @@ import ObjLink from '../components/ObjLink.astro';
 import Offer from '../components/Offer.astro';
 import Remark from '../components/Remark.astro';
 import SectionHead from '../components/SectionHead.astro';
-import Sources from '../components/Sources.astro';
 import Step from '../components/Step.astro';
 import Steps from '../components/Steps.astro';
 import ViewLink from '../components/ViewLink.astro';
@@ -21,23 +20,10 @@ import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'Domes and museums | skymap';
+const title = 'Domes and museums | Skymap';
 const description =
   'We deliver a live fisheye picture, a dome or 4K film, or a screen built round one exhibit.';
 
-// Every fact row the page prints, so the Sources list cannot drift from the copy.
-const factIds = [
-  'dome-flag',
-  'dome-rig',
-  'dome-tilt',
-  'film-recorder',
-  'film-silent',
-  'exhibits',
-  'kiosk-planned',
-  'imagery-licences',
-  'gaia-licence',
-  'earth-rotation',
-];
 const STEPS = [
   {
     title: 'You write to us',
@@ -87,7 +73,7 @@ const STEPS = [
       <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
       <Fragment slot="today">{`${fact('dome-rig').text} ${fact('dome-tilt').text}`}</Fragment>
       <Fragment slot="work">
-        Another tilt, labels or captions on the dome, and control without a mouse. skymap gives one disc: dividing it
+        Another tilt, labels or captions on the dome, and control without a mouse. Skymap gives one disc: dividing it
         between projectors is the job of your dome system.
       </Fragment>
       <ViewLink slot="link" hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>
@@ -134,12 +120,12 @@ const STEPS = [
           Star and galaxy positions come from published <a href={sitePath('/docs/data/')}>catalogues</a>. Some of the scene is a model: nobody has
           photographed <a href={sitePath('/docs/science/#the-milky-way')}>the Milky Way</a> from outside, so on your dome it is drawn.
         </p>
-        <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/science/')}>The science behind Skymap</ObjLink>
       </div>
       <div>
         <h3>Credits and licences</h3>
         <p class="small">
-          Some data and imagery in skymap carry non-commercial licences. The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data.{' '}
+          Some data and imagery in Skymap carry non-commercial licences. The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data.{' '}
           {fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source
           by source, ask the rights holders where the terms require it, and replace what may not be shown.
         </p>
@@ -151,7 +137,7 @@ const STEPS = [
           <a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye is made</a> before anyone
           signs anything.
         </p>
-        <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
       </div>
     </Columns>
     <Remark text={fact('earth-rotation').short!} live="dome-turn" />
@@ -175,7 +161,7 @@ const STEPS = [
       <div>
         <h2>Write to us</h2>
         <p>
-          If you teach, <a href={sitePath('/classroom/')}>Use skymap in the classroom</a> has links you can use today
+          If you teach, <a href={sitePath('/classroom/')}>Use Skymap in the classroom</a> has links you can use today
           without asking anyone.
         </p>
       </div>
@@ -184,7 +170,6 @@ const STEPS = [
   </section>
 
   <div class="wrap section last">
-    <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>

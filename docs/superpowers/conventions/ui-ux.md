@@ -135,7 +135,7 @@ The first six are the owner's rulings; the rest come from the sources, where the
 - **No counts that go stale.** "The catalogs", not "three catalogs", unless the number is computed. [owner]
 - **No dates in titles** unless the date is what the reader is looking for. [owner]
 - **Tables hold phrases, not sentences.** No full stop in a cell. [owner]
-- **The product name is lower-case `skymap`**, also at the start of a sentence. [owner]
+- **The product name is `Skymap` in running text**, also at the start of a sentence; lower-case `skymap` stays only in the logo, a one-word headline, and code (URLs, paths, identifiers). [owner, 2026-10-16]
 - **A button says what it does**, verb first: "Save note", not "OK". A link names its destination,
   never "click here" or "learn more". [HIG-writing, NN-ok, WCAG 2.4.4, Google-style]
 - **Sentence case** for headings, labels and buttons; no final full stop on a heading. One

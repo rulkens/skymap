@@ -5,6 +5,7 @@ export type IconName =
   | 'dome'
   | 'science'
   | 'docs'
+  | 'features'
   | 'app'
   | 'view'
   | 'outbound'

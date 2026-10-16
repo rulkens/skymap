@@ -1,7 +1,8 @@
 /**
  * reviewPlugin — the dev server's half of the docs review mode
- * (packages/website/src/dev/review). One JSON file per docs page under `.superpowers/`
- * (gitignored): the cutter writes it, GET hands it to the page, and PUT stores the
+ * (packages/website/src/dev/review). One JSON file per page under `.superpowers/`
+ * (gitignored): a cutter or the first PUT writes it, GET hands it to the page (404 until
+ * then, and the page starts empty), and PUT stores the
  * owner's rulings back whole. Registered for `astro dev` only, like feedbackPlugin.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
