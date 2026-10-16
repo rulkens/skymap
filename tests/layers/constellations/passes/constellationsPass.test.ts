@@ -1,7 +1,7 @@
 /**
- * constellationsPass — the hard distance cull ("opacity 0 ⇒ no render") must
- * win over the settings toggle, and the draw call is gated on
- * `runtime.renderer.hasData()` — the slot commit's job, never this pass's.
+ * constellationsPass — the hard distance cull ("opacity 0 ⇒ no render") gates the
+ * row on its own, and the draw call is gated on `runtime.renderer.hasData()` — the
+ * slot commit's job, never this pass's.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -42,10 +42,9 @@ function makeCtx(camPos: readonly [number, number, number]): FrameView {
   } as unknown as FrameView;
 }
 
-function makeState(enabled: boolean, fadeOpacity = 0): EngineState {
+function makeState(): EngineState {
   return {
-    settings: { constellations: { enabled, intensity: 1 } },
-    subsystems: { fades: { opacityOf: () => fadeOpacity }, clipPlayer: { clipOpacityOf: () => 1 } },
+    settings: { constellations: { enabled: true, intensity: 1 } },
   } as unknown as EngineState;
 }
 
@@ -59,9 +58,8 @@ function makeRuntime(
 const PASS_STUB = {} as GPURenderPassEncoder;
 
 describe('constellationsPass enabled', () => {
-  it('the hard distance cull disables the row even while the toggle is on', () => {
-    // Past `goneAt`, the band alone is 0, and `enabled` never reaches the
-    // toggle/fade-opacity branch below it.
+  it('the hard distance cull disables the row even at full value', () => {
+    // Past `goneAt`, the band alone is 0.
     const farCamPos: readonly [number, number, number] = [
       SCALE_FADE_BANDS.constellations.goneAt * 10,
       0,
@@ -69,17 +67,7 @@ describe('constellationsPass enabled', () => {
     ];
     const ctx = makeCtx(farCamPos);
     const pass = constellationsPass(makeRuntime(true));
-    expect(pass.enabled(makeState(true), ctx, slabViewOf(ctx, NEAR0))).toBe(false);
-  });
-
-  it('inside the band, the toggle governs (on → true, off with zero fade → false)', () => {
-    const nearCamPos: readonly [number, number, number] = [0, 0, 0];
-    const ctx = makeCtx(nearCamPos);
-    const pass = constellationsPass(makeRuntime(true));
-    expect(pass.enabled(makeState(true), ctx, slabViewOf(ctx, NEAR0))).toBe(true);
-    expect(pass.enabled(makeState(false, 0), ctx, slabViewOf(ctx, NEAR0))).toBe(false);
-    // Fade-out tail: toggle off but opacity still > 0 keeps drawing.
-    expect(pass.enabled(makeState(false, 0.4), ctx, slabViewOf(ctx, NEAR0))).toBe(true);
+    expect(pass.enabled(makeState(), ctx, slabViewOf(ctx, NEAR0), 1)).toBe(false);
   });
 });
 
@@ -91,7 +79,8 @@ describe('constellationsPass draw', () => {
       PASS_STUB,
       slabViewOf(ctx, NEAR0),
       ctx,
-      makeState(true),
+      makeState(),
+      1,
     );
     expect(drawSpy).not.toHaveBeenCalled();
   });
@@ -103,7 +92,8 @@ describe('constellationsPass draw', () => {
       PASS_STUB,
       slabViewOf(ctx, NEAR0),
       ctx,
-      makeState(true),
+      makeState(),
+      1,
     );
     expect(drawSpy).toHaveBeenCalledTimes(1);
   });

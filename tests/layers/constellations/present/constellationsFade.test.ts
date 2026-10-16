@@ -1,7 +1,7 @@
 /**
  * constellationsFade / constellationsBand — the three call sites collapsed
  * (constellationsPass `enabled`/`draw`, produceConstellationCaptions) used
- * to hand-compute the same band×toggle product independently; this pins the
+ * to hand-compute the same band × value product independently; this pins the
  * shared formula's actual behaviour, not just that it compiles.
  */
 
@@ -12,7 +12,6 @@ import { constellationsFade } from '../../../../src/layers/constellations/presen
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const BAND = SCALE_FADE_BANDS.constellations;
@@ -26,38 +25,27 @@ function makeCtx(camDistMpc: number): FrameView {
   } as unknown as FrameView;
 }
 
-// `focusRecession` is neutral at the fixture's blend 0 and the clip factor is
-// stubbed to 1, so this stub isolates the toggle term.
-function makeState(toggle: number): Pick<EngineState, 'subsystems'> {
-  return {
-    subsystems: {
-      fades: { opacityOf: () => toggle },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
-  } as unknown as Pick<EngineState, 'subsystems'>;
-}
-
 describe('constellationsFade / constellationsBand', () => {
   it('zeroes the product once the camera clears the band, at any toggle', () => {
     const ctx = makeCtx(BAND.goneAt * 10);
     expect(constellationsBand(ctx)).toBe(0);
-    expect(constellationsFade(makeState(1), ctx)).toBe(0);
+    expect(constellationsFade(ctx, 1)).toBe(0);
   });
 
-  it('scales the mid-band product by the layer toggle', () => {
+  it('scales the mid-band product by the handed value', () => {
     const ctx = makeCtx(MID_BAND_DIST_MPC);
     const band = constellationsBand(ctx);
     expect(band).toBeGreaterThan(0);
     expect(band).toBeLessThan(1);
-    expect(constellationsFade(makeState(0.6), ctx)).toBeCloseTo(band * 0.6, 10);
+    expect(constellationsFade(ctx, 0.6)).toBeCloseTo(band * 0.6, 10);
   });
 
-  it('constellationsBand ignores the toggle that constellationsFade applies', () => {
+  it('constellationsBand ignores the value that constellationsFade applies', () => {
     const ctx = makeCtx(MID_BAND_DIST_MPC);
     const band = constellationsBand(ctx);
 
-    const lowToggle = constellationsFade(makeState(0.2), ctx);
-    const highToggle = constellationsFade(makeState(0.9), ctx);
+    const lowToggle = constellationsFade(ctx, 0.2);
+    const highToggle = constellationsFade(ctx, 0.9);
 
     expect(constellationsBand(ctx)).toBe(band);
     expect(lowToggle).toBeCloseTo(band * 0.2, 10);

@@ -1,8 +1,7 @@
 /**
  * create — the constellations family's construction in dependency order: the
- * renderer, then the slot that commits into it. No fade is driven here; core
- * owns the arrival edge (`installFadeOnArrival`), and the commit's `upload` is
- * what opens the fade row's guard.
+ * renderer, then the slot that commits into it. No fade is driven here: the
+ * asset row's `gates` lets core fade the Layer in on the slot's commit.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

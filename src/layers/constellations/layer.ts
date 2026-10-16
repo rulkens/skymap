@@ -1,7 +1,7 @@
 /**
  * The constellations Layer: the 88 classical asterisms drawn as true-3D stick
  * figures between their real member stars — one renderer, one pass, one asset
- * slot, one fade row, one source, and the figure-name captions.
+ * slot, one source, and the figure-name captions, a show and a label entry.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -13,7 +13,6 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { constellationsAssetRows } from './load/constellationsAssetRows';
 import { constellationsPass } from './passes/constellationsPass';
-import { constellationsFadeRows } from './present/constellationsFadeRows';
 import { produceConstellationCaptions } from './present/produceConstellationCaptions';
 import { constellationsSettingsRow } from './ui/constellationsSettingsRow';
 
@@ -26,7 +25,6 @@ export const constellationsLayer = defineLayer({
   destroy,
   passes: (runtime) => [constellationsPass(runtime)],
   assets: constellationsAssetRows,
-  fades: constellationsFadeRows,
   guides: (runtime) => ({
     screenLabels: [
       // NEAR0, not COSMO: the figure anchors sit at parsec distances, inside
@@ -35,6 +33,7 @@ export const constellationsLayer = defineLayer({
       {
         slab: NEAR0,
         id: 'constellationCaptions',
+        label: 'constellations',
         produceLabels: produceConstellationCaptions(runtime),
       },
     ],

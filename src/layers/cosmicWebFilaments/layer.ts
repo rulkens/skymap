@@ -1,6 +1,6 @@
 /**
  * The cosmicWebFilaments Layer: the DisPerSE cosmic-web skeleton — one
- * renderer, one pass, one asset slot, one fade row, one source and its own
+ * renderer, one pass, one asset slot, one show entry, one source and its own
  * SettingsPanel section (a sibling of `cosmicWebDensity`'s, not a shared
  * one — the Style-picker shortcut that once batched both masters is gone).
  */
@@ -13,7 +13,6 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { filamentsAssetRows } from './load/filamentsAssetRows';
 import { filamentsPass } from './passes/filamentsPass';
-import { filamentsFadeRows } from './present/filamentsFadeRows';
 import CosmicWebFilamentsSectionContainer from './ui/CosmicWebFilamentsSectionContainer';
 
 export const cosmicWebFilamentsLayer = defineLayer({
@@ -25,6 +24,5 @@ export const cosmicWebFilamentsLayer = defineLayer({
   destroy,
   passes: (runtime) => [filamentsPass(runtime)],
   assets: filamentsAssetRows,
-  fades: filamentsFadeRows,
   ui: [{ slot: 'main', content: CosmicWebFilamentsSectionContainer }],
 });

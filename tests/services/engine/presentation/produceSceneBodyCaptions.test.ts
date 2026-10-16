@@ -298,7 +298,7 @@ describe('produceSceneBodyCaptions', () => {
 
   it('constellation captions do not double-count the registry', () => {
     // The row states its stance rather than omitting it: `null`, because
-    // `produceConstellationCaptions` already composes its own registry read.
+    // `produceConstellationCaptions` already paints with its handed value.
     expect(CAPTION_FADE_RULES.constellation.fadeHandle).toBeNull();
 
     const layerFade = 0.5;
@@ -316,19 +316,13 @@ describe('produceSceneBodyCaptions', () => {
         }),
       },
     } as unknown as ConstellationsRuntime;
-    const state = {
-      subsystems: {
-        fades: { opacityOf: () => layerFade },
-        clipPlayer: { clipOpacityOf: () => 1 },
-      },
-    } as unknown as EngineState;
     const ctx = {
       snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS },
       cam: { distance: 5e-4 },
       drawCamPos: camPos,
     } as unknown as FrameView;
 
-    const out = produceConstellationCaptions(runtime)(state, ctx);
+    const out = produceConstellationCaptions(runtime)({} as EngineState, ctx, layerFade);
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(constellationLayerOpacity(camDistMpc, layerFade));
   });

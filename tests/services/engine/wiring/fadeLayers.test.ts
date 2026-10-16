@@ -21,10 +21,8 @@ import type { VisibilityLayerKey } from '../../../../src/@types/animation/Visibi
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
-import { missionTrailsFadeRows } from '../../../../src/layers/missions/present/missionTrailsFadeRows';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
-import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
@@ -242,9 +240,7 @@ describe('FADE_LAYERS intent subset', () => {
     for (const row of [
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
-      ...zoneOfAvoidanceFadeRows(),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
-      ...missionTrailsFadeRows(),
       ...structureFadeRows(),
     ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;

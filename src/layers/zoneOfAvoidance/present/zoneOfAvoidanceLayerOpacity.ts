@@ -1,10 +1,10 @@
 /**
  * zoneOfAvoidanceLayerOpacity — the ONE home for the zone-of-avoidance
  * overlay's opacity scalar: the composition of approach band × recede band ×
- * layer fade-registry opacity. The band fades IN as the Milky Way frames up
+ * the handed value. The band fades IN as the Milky Way frames up
  * and back OUT once the Local Group is the subject — the guide is scoped to
  * the Milky-Way-context shot, not a permanent cosmic-scale fixture. Feeds
- * both the band and label draws, which share one fade toggle.
+ * both the band and label draws, each over its own handed value.
  */
 
 import { fadeWindow } from '../../../utils/math/fadeWindow';

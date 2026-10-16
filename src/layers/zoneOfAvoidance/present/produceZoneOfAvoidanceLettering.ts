@@ -1,8 +1,8 @@
 /**
  * produceZoneOfAvoidanceLettering — the sole `Label3DProducer` today: the
  * curved "Zone of Avoidance" caption riding the galactic plane. Reads the
- * same `deriveZoneOfAvoidanceLiveness` gate the band pass reads, so band
- * and lettering can never independently go stale. Both `LABEL_RADIUS_MPC`
+ * same `deriveZoneOfAvoidanceLiveness` gate the band pass reads, over its
+ * label value, whose `of` keeps it from outliving the band. Both `LABEL_RADIUS_MPC`
  * and `LABEL_EM_MPC` — visual-pass placeholders — live here.
  */
 
@@ -34,8 +34,9 @@ const LABEL_EM_MPC = 2;
 export function produceZoneOfAvoidanceLettering(
   state: EngineState,
   ctx: FrameView,
+  fade: number,
 ): Label3DProducerOutput {
-  const fadeAlpha = deriveZoneOfAvoidanceLiveness(state, ctx);
+  const fadeAlpha = deriveZoneOfAvoidanceLiveness(ctx, fade);
   if (fadeAlpha === null) return { labels: [], awake: false };
 
   const tuning = state.settings.zoneOfAvoidance;

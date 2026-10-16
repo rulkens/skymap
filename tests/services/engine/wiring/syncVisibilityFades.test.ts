@@ -206,12 +206,9 @@ const INTENT_KEYS = [
   'structureLabel',
   'cosmicWebDensityField',
   'cosmicWebDensity',
-  'cosmicWebFilaments',
   'orbitTrails',
-  'missionTrails',
   'milkyWayDisk',
   'milkyWayLabel',
-  'flow',
 ] as const;
 // …and the registration-only handles it must NEVER touch.
 const REGISTRATION_ONLY_HANDLES: readonly FadeId[] = [
@@ -263,12 +260,9 @@ describe('syncVisibilityFades', () => {
       structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
       structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
       cosmicWebDensity: { kind: 'cosmicWebDensity' },
-      cosmicWebFilaments: { kind: 'cosmicWebFilaments' },
       orbitTrails: { kind: 'orbitTrails' },
-      missionTrails: { kind: 'missionTrails' },
       milkyWayDisk: { kind: 'milkyWay' },
       milkyWayLabel: { kind: 'labelLayer', layer: 'milkyWay' },
-      flow: { kind: 'flow' },
     };
     for (const key of INTENT_KEYS) {
       if (key === 'cosmicWebDensityField') continue;

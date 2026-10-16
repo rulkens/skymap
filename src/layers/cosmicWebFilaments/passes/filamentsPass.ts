@@ -8,25 +8,20 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { CosmicWebFilamentsRuntime } from '../@types/CosmicWebFilamentsRuntime';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 import { FILAMENT_LINE_HALFWIDTH_PX } from '../../../data/filament/filamentLineHalfwidthPx';
 import { FILAMENT_BASE_TINT } from '../../../data/filament/filamentBaseTint';
 import { FILAMENT_HOT_TINT } from '../../../data/filament/filamentHotTint';
 
-export function filamentsPass(runtime: CosmicWebFilamentsRuntime): ContentPass {
+export function filamentsPass(
+  runtime: CosmicWebFilamentsRuntime,
+): ContentPass<'cosmicWebFilaments'> {
   return {
     name: 'cosmic-web-filaments',
+    fade: 'cosmicWebFilaments',
 
-    enabled(state, ctx, _view) {
-      // Either-or on purpose: the setting is intent, opacity is the visual state,
-      // so a fade-out keeps drawing after the toggle flips off until it hits 0.
-      if (state.settings.cosmicWebFilaments.enabled) return true;
-      return (
-        state.subsystems.fades.opacityOf({ kind: 'cosmicWebFilaments' }, ctx.snapshot.nowMs) > 0
-      );
-    },
+    enabled: () => true,
 
-    draw(pass, view, ctx, state) {
+    draw(pass, view, ctx, state, fade) {
       runtime.renderer.draw(
         pass,
         view.vp,
@@ -34,10 +29,7 @@ export function filamentsPass(runtime: CosmicWebFilamentsRuntime): ContentPass {
         ctx.drawPxPerRad,
         FILAMENT_LINE_HALFWIDTH_PX,
         state.settings.cosmicWebFilaments.intensity,
-        // Focus recession is applied HERE (on the drawn opacity), not on the
-        // `enabled` gate above: recession ∈ [STRONG_RECESSION, 1] can never
-        // zero the layer, so the gate keeps reading the pure toggle opacity.
-        resolveLayerOpacity(state, ctx, { kind: 'cosmicWebFilaments' }),
+        fade,
         FILAMENT_BASE_TINT,
         FILAMENT_HOT_TINT,
       );

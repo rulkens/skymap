@@ -164,17 +164,15 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * The stick-figure names. They never reach the body-caption pipeline this
    * table drives — `sceneBodyLabels` emits only the body kinds above, and
    * `constellationCaptions` appends the figure names further down with their own
-   * per-frame target (`constellationLayerOpacity`: the layer's distance band ×
-   * the fade-registry toggle, keyed on the camera's origin distance, not on an
-   * anchor distance). They carry no per-source caption toggle either — the one
-   * `constellations.enabled` switch governs lines and names together through
-   * that fade registry — so both gates are open and the target is the
-   * producer's. The row exists so the table stays total over the kind union;
+   * per-frame target (`constellationsFade`: the layer's distance band × the
+   * handed `label:constellations` value, keyed on the camera's origin distance,
+   * not on an anchor distance). Their switch is that label entry, whose `of`
+   * ties the names to the lines, so both gates here are open and the target is
+   * the producer's. The row exists so the table stays total over the kind union;
    * leaving the kind implicit would let it silently inherit the star map's
    * parsec band and the star map's visibility toggle. `fadeHandle` is `null`
-   * for the same reason: `produceConstellationCaptions` already folds
-   * `resolveLayerOpacity({kind:'constellations'})` into its own target, and a
-   * second registry read here would double-count it.
+   * for the same reason: the handed value already folds fade, recession and
+   * clip, and a second registry read here would double-count it.
    */
   constellation: {
     labelEnabled: UNGATED,

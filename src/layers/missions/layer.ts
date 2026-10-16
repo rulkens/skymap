@@ -11,7 +11,6 @@ import { loadSpacecraftTracksSaga } from './sagas/loadSpacecraftTracksSaga';
 import { create } from './create';
 import { destroy } from './destroy';
 import { missionTrailsPass } from './passes/missionTrailsPass';
-import { missionTrailsFadeRows } from './present/missionTrailsFadeRows';
 import { produceMissionCaptions } from './present/produceMissionCaptions';
 import { missionTrailsSettingsRow } from './ui/missionTrailsSettingsRow';
 import { missionsLayerExhibits } from './exhibits/exhibits';
@@ -25,7 +24,6 @@ export const missionsLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [missionTrailsPass(runtime)],
-  fades: missionTrailsFadeRows,
   guides: () => ({
     screenLabels: [{ slab: NEAR0, id: 'missionCaptions', produceLabels: produceMissionCaptions }],
   }),

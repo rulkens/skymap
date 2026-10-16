@@ -1,6 +1,6 @@
 /**
  * The flow Layer: the CF4++ peculiar-velocity ribbon field — one renderer,
- * one compute row, one pass, one asset slot, one fade row, one source, and
+ * one compute row, one pass, one asset slot, one show entry, one source, and
  * both its Settings and Debug panel sections.
  */
 
@@ -14,7 +14,6 @@ import { flowPlanner } from './frame';
 import { flowAssetRows } from './load/flowAssetRows';
 import { flowFieldPass } from './passes/flowFieldPass';
 import { flowCompute } from './computes/flowCompute';
-import { flowFadeRows } from './present/flowFadeRows';
 import FlowSectionContainer from './ui/FlowSectionContainer';
 import FlowTuningSectionContainer from './ui/FlowTuningSectionContainer';
 
@@ -28,7 +27,6 @@ export const flowLayer = defineLayer({
   passes: (runtime) => [flowFieldPass(runtime)],
   computes: (runtime) => [flowCompute(runtime)],
   assets: flowAssetRows,
-  fades: flowFadeRows,
   planners: (runtime) => [flowPlanner(runtime)],
   ui: [
     { slot: 'main', content: FlowSectionContainer },

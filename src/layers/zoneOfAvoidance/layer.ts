@@ -1,7 +1,7 @@
 /**
  * The zoneOfAvoidance Layer: the galactic-plane dust-band guide — one
  * renderer, its additive upsample, both passes, the `zoa` render target, the
- * fade row, the world-space lettering, the selection row, the source entry,
+ * show and label entries, the world-space lettering, the selection row, the source entry,
  * its settings and its two DebugPanel/Labels-and-guides UI slots.
  */
 
@@ -14,7 +14,6 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { zoneOfAvoidancePass } from './passes/zoneOfAvoidancePass';
 import { zoneOfAvoidanceUpsamplePass } from './passes/zoneOfAvoidanceUpsamplePass';
-import { zoneOfAvoidanceFadeRows } from './present/zoneOfAvoidanceFadeRows';
 import { produceZoneOfAvoidanceLettering } from './present/produceZoneOfAvoidanceLettering';
 import { zoneOfAvoidanceSelectionRow } from './present/zoneOfAvoidanceSelectionRow';
 import { zoneOfAvoidanceSettingsRow } from './ui/zoneOfAvoidanceSettingsRow';
@@ -41,10 +40,13 @@ export const zoneOfAvoidanceLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [zoneOfAvoidancePass(runtime), zoneOfAvoidanceUpsamplePass(runtime)],
-  fades: zoneOfAvoidanceFadeRows,
   guides: () => ({
     worldLabels: [
-      { id: 'zoneOfAvoidanceLettering', produceLabels3D: produceZoneOfAvoidanceLettering },
+      {
+        id: 'zoneOfAvoidanceLettering',
+        label: 'zoneOfAvoidance',
+        produceLabels3D: produceZoneOfAvoidanceLettering,
+      },
     ],
   }),
   selection: () => [zoneOfAvoidanceSelectionRow()],

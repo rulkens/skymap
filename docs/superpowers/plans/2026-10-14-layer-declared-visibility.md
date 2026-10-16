@@ -336,9 +336,9 @@ Per Layer: drop the `fades` member and delete its `present/*FadeRows.ts` (and th
 
 Keep `localBubblePass`'s `hasMesh()` check, `flowFieldPass`'s `slotReady` check, and `missionTrailsPass`'s distance cut, presence and track checks and `emphasisDim` (Final review (e)). None is fade logic.
 
-- [ ] Migrate each Layer. Rewrite the tests that stubbed `fades.opacityOf` for these passes and producers so they pass the value as the last argument; delete assertions that only restated the "setting OR opacity" gate.
-- [ ] No new test: `gatePassByFade`/`gateLabelProducer` own the skip, Tasks 3 and 4 pin `of` and its clip, and each consumer's own value-use tests remain.
-- [ ] Commit.
+- [x] Migrate each Layer. Rewrite the tests that stubbed `fades.opacityOf` for these passes and producers so they pass the value as the last argument; delete assertions that only restated the "setting OR opacity" gate.
+- [x] No new test: `gatePassByFade`/`gateLabelProducer` own the skip, Tasks 3 and 4 pin `of` and its clip, and each consumer's own value-use tests remain.
+- [x] Commit.
 
 ### Task 6: Panel rows name their entry, the Orbit trails row included
 

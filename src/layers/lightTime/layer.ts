@@ -9,7 +9,6 @@ import { lightTimeVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { lightTimeSpheresPass } from './passes/lightTimeSpheresPass';
-import { lightTimeFadeRows } from './present/lightTimeFadeRows';
 import { produceLightTimeCaptions } from './present/produceLightTimeCaptions';
 import { lightTimeSettingsRow } from './ui/lightTimeSettingsRow';
 
@@ -20,10 +19,14 @@ export const lightTimeLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [lightTimeSpheresPass(runtime)],
-  fades: lightTimeFadeRows,
   guides: () => ({
     screenLabels: [
-      { slab: NEAR0, id: 'lightTimeCaptions', produceLabels: produceLightTimeCaptions },
+      {
+        slab: NEAR0,
+        id: 'lightTimeCaptions',
+        label: 'lightTime',
+        produceLabels: produceLightTimeCaptions,
+      },
     ],
   }),
   ui: [{ slot: 'labelsAndGuides', content: lightTimeSettingsRow }],

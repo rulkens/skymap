@@ -8,7 +8,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { filamentsFadeRows } from '../../../../src/layers/cosmicWebFilaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { FADE_IN_DURATION_MS } from '../../../../src/services/animation/fadeController';
 import { installFadeOnArrival } from '../../../../src/services/engine/wiring/installFadeOnArrival';
@@ -18,7 +17,6 @@ import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FadeBridgeState } from '../../../helpers/engine/FadeBridgeState';
 
@@ -59,20 +57,16 @@ function makeGuardedRow(over: Partial<FadeLayer<undefined>>): FadeLayer<undefine
 describe('installFadeOnArrival', () => {
   it('fades a row in when its guard opens on slot ready', () => {
     const { state, fadeTo } = makeFadeBridgeState();
-    let hasCloud = false;
-    // A REAL row, over a renderer the test commits into by hand — the guard
-    // transition under test is the one an upload actually opens.
-    (state as FadeBridgeState).fadeRows = filamentsFadeRows({
-      renderer: { hasCloud: () => hasCloud },
-    } as unknown as CosmicWebFilamentsRuntime) as FadeBridgeState['fadeRows'];
+    let arrived = false;
+    (state as FadeBridgeState).fadeRows = [makeGuardedRow({ guard: () => arrived })];
     const { slots, notifyReady } = makeStubSlot();
 
     installFadeOnArrival(state as EngineState, slots);
-    hasCloud = true; // the commit body uploaded the cloud
+    arrived = true; // the commit body uploaded the asset
     notifyReady();
 
     expect(fadeTo).toHaveBeenCalledTimes(1);
-    expect(fadeTo).toHaveBeenCalledWith({ kind: 'cosmicWebFilaments' }, 1, FADE_IN_DURATION_MS);
+    expect(fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
   });
 
   it('does not re-fire when an already-ready slot re-notifies', () => {

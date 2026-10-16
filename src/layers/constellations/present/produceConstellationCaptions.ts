@@ -3,8 +3,8 @@
  * true-3D constellation stick-figure names, mirroring
  * `produceSceneBodyCaptions`: declutter, envelope, and lift run in
  * `label2DDirector`. Every figure shares ONE fade target this frame
- * (`constellationsFade`, the same home the stick-figure pass reads)
- * and is emitted even at target 0 — only a genuinely unloaded artifact
+ * (`constellationsFade` over the names' label value, the same band the
+ * stick-figure pass reads) and is emitted even at target 0 — only an unloaded artifact
  * returns no candidates at all. No `lift` field: the anchor is empty space
  * at a figure centroid, not a body, so there is nothing to float a caption
  * above.
@@ -15,7 +15,6 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
@@ -32,7 +31,7 @@ const CONSTELLATION_PROMINENCE_PX = CAPTION_PRIORITY.constellation * CAPTION_TIE
 
 export function produceConstellationCaptions(
   runtime: ConstellationsRuntime,
-): Label2DProducer['produceLabels'] {
+): (state: EngineState, ctx: FrameView, fade: number) => Label2DProducerOutput {
   // Memoized on the artifact's identity (static once its slot lands); a
   // released slot drops the set to empty so the captions dissolve with it.
   // Scoped to this closure, not module-level: a second engine instance must
@@ -55,7 +54,7 @@ export function produceConstellationCaptions(
     return cachedCaptions;
   }
 
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
+  return (_state, ctx, fade) => {
     const artifact = runtime.slot.committed()?.value;
     const captions = captionsFor(artifact);
     if (captions.length === 0) return { labels: [], awake: false };
@@ -63,7 +62,7 @@ export function produceConstellationCaptions(
     const camPos = ctx.drawCamPos;
     // ORIGIN distance, not the per-anchor distance the body captions read —
     // see `constellationsBand`.
-    const fadeAlpha = constellationsFade(state, ctx);
+    const fadeAlpha = constellationsFade(ctx, fade);
 
     const labels: Label2D[] = captions.map((label) => {
       const anchor: Vec3 = [

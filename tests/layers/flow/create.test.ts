@@ -78,6 +78,5 @@ describe('flow create', () => {
     expect(flowLayer.passes(runtime).map((p) => p.name)).toEqual(['flow']);
     expect(flowLayer.computes?.(runtime).map((c) => c.name)).toEqual(['flow']);
     expect(flowLayer.assets?.(runtime).map((a) => a.key)).toEqual(['flow']);
-    expect(flowLayer.fades?.(runtime).map((f) => f.key)).toEqual(['flow']);
   });
 });

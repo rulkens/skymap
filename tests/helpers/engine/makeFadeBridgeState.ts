@@ -12,20 +12,15 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
-import { filamentsFadeRows } from '../../../src/layers/cosmicWebFilaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
-import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 import { cosmicWebDensityFadeRows } from '../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
 import { milkyWayFadeRows } from '../../../src/layers/milkyWay/present/milkyWayFadeRows';
-import { missionTrailsFadeRows } from '../../../src/layers/missions/present/missionTrailsFadeRows';
 import { structureFadeRows } from '../../../src/layers/structure/present/structureFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { CosmicWebFilamentsRuntime } from '../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { CosmicWebDensityRuntime } from '../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
 
@@ -33,15 +28,6 @@ import type { FadeBridgeState } from './FadeBridgeState';
 const GALAXY_RUNTIME = {
   pointRenderer: { hasCatalog: () => true },
 } as unknown as GalaxyCatalogRuntime;
-
-const FILAMENTS_RUNTIME = {
-  renderer: { hasCloud: () => true },
-} as unknown as CosmicWebFilamentsRuntime;
-
-/** `fieldLoaded` true, so the `flow` row's demand-loaded guard passes. */
-const FLOW_RUNTIME = {
-  renderer: { fieldLoaded: () => true },
-} as unknown as FlowRuntime;
 
 /**
  * MCPM is default-on and loads first, so by the time a real sync runs the
@@ -119,11 +105,8 @@ export function makeFadeBridgeState(): {
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...starCatalogFadeRows(),
-      ...filamentsFadeRows(FILAMENTS_RUNTIME),
-      ...flowFadeRows(FLOW_RUNTIME),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
       ...milkyWayFadeRows(),
-      ...missionTrailsFadeRows(),
       ...structureFadeRows(),
     ],
   } as unknown as FadeBridgeState;
