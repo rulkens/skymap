@@ -80,7 +80,7 @@ These files do not touch either changed contract, so they come over from the #83
 
 **Order:** `ControlSchemeId` stays `'skymap'` in this task. The settings slice types its `scheme` field as `'skymap' | 'openspace'` through `ControlSchemeId` only from Task 2 onward. Until then the slice compiles against a local widening, or Task 1 lands the `ControlSchemeId` edit together with a temporary `openspace: CONTROL_BINDINGS.skymap` / `composeControlSchemes` row. The implementer picks whichever keeps every commit green and says which in the report.
 
-- [ ] Carry over, then run typecheck plus the carried tests. Commit as `feat(camera): carry the OpenSpace navigator, settings and UI over from #837`.
+- [x] Carry over, then run typecheck plus the carried tests. Commit as `feat(camera): carry the OpenSpace navigator, settings and UI over from #837`.
 
 ### Task 2: The openspace driver rows on the new driver contract — `review: yes`
 
