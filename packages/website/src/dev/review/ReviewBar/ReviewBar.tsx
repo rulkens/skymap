@@ -97,7 +97,7 @@ function ReviewBar({
   const applyingScope = apply?.scope === 'page' ? 'the page' : `“${apply?.scope}”`;
 
   return (
-    <div ref={bar} className={styles.root} data-overlay-ui="">
+    <div ref={bar} className={styles.root} data-overlay-ui="" data-review-bar="">
       <strong className={styles.name}>Review</strong>
       <input
         className={styles.job}

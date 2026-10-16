@@ -58,3 +58,8 @@
     top: 100%;
   }
 }
+
+/* Our own span in the heading; the icon positions against the heading, not this. */
+.host {
+  display: contents;
+}

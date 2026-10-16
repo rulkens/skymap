@@ -1,9 +1,11 @@
 /*
  * SectionIcons — the entry icon in each reviewed heading: a count of its marks and notes, tinted by the
  * commonest mark state. The icon carries no text of its own (the § and the count are drawn by CSS), so
- * a heading's text, which marks are matched against, is the same with or without it.
+ * a heading's text, which marks are matched against, is the same with or without it. Each icon is
+ * portalled into a span of ours in the heading, never into the heading: React rejects a portal into an
+ * element it renders with text of its own, which a heading in a page island is.
  */
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cx } from '../../../utils/cx.ts';
@@ -22,13 +24,42 @@ type SectionIconsProps = {
 };
 
 function SectionIcons({ sections, open, onToggle }: SectionIconsProps) {
+  // One host per heading for as long as it is a section, so an icon keeps its focus as the marks change.
+  const hosts = useRef(new Map<Element, HTMLElement>());
+  const hostOf = (heading: Element) => {
+    let host = hosts.current.get(heading);
+    if (!host) {
+      host = document.createElement('span');
+      host.className = styles.host!;
+      hosts.current.set(heading, host);
+    }
+    return host;
+  };
+
   useLayoutEffect(() => {
-    const headings = sections.map((section) => section.heading);
-    for (const heading of headings) heading.classList.add(reviewPage.anchor!);
-    return () => {
-      for (const heading of headings) heading.classList.remove(reviewPage.anchor!);
-    };
+    const current = new Set(sections.map((section) => section.heading));
+    for (const [heading, host] of hosts.current) {
+      if (current.has(heading)) continue;
+      host.remove();
+      heading.classList.remove(reviewPage.anchor!);
+      hosts.current.delete(heading);
+    }
+    for (const [heading, host] of hosts.current) {
+      heading.classList.add(reviewPage.anchor!);
+      if (host.parentNode !== heading) heading.append(host);
+    }
   }, [sections]);
+
+  useLayoutEffect(() => {
+    const all = hosts.current;
+    return () => {
+      for (const [heading, host] of all) {
+        host.remove();
+        heading.classList.remove(reviewPage.anchor!);
+      }
+      all.clear();
+    };
+  }, []);
 
   return sections.map((section, index) => {
     const counts = countItems(section.items);
@@ -52,7 +83,7 @@ function SectionIcons({ sections, open, onToggle }: SectionIconsProps) {
           onToggle(section);
         }}
       />,
-      section.heading,
+      hostOf(section.heading),
       String(index),
     );
   });

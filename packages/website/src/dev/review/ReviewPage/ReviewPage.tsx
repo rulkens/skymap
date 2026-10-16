@@ -16,6 +16,7 @@ import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
 import { useDevOverlayOn } from '../../overlay/useDevOverlayOn';
 import { useDevOverlayPress } from '../../overlay/useDevOverlayPress';
 import { useListener } from '../../overlay/useListener';
+import type { ChipMade } from '../@types/ChipMade';
 import type { ReviewOpen } from '../@types/ReviewOpen';
 import type { ReviewReveal } from '../@types/ReviewReveal';
 import type { ReviewSection } from '../@types/ReviewSection';
@@ -35,6 +36,7 @@ import { wordsIn } from '../wordsIn';
 import KeysHelp from '../KeysHelp/KeysHelp.tsx';
 import ReviewBar from '../ReviewBar/ReviewBar.tsx';
 import SectionIcons from '../SectionIcons/SectionIcons.tsx';
+import SelectionChip from '../SelectionChip/SelectionChip.tsx';
 import SectionPanel from '../SectionPanel/SectionPanel.tsx';
 import reviewPage from './ReviewPage.module.css';
 
@@ -56,6 +58,8 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
   const [reveal, setReveal] = useState<ReviewReveal>();
   // A mark just made or cycled: its panel opens once the page has been painted and its section is known.
   const [pending, setPending] = useState<ReviewReveal>();
+  // The mark just made from a selection, which the chip confirms.
+  const [made, setMade] = useState<ChipMade | null>(null);
   const serial = useRef(0);
   const swallowClick = useRef(false);
 
@@ -118,6 +122,7 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
     if (!active) {
       setOpen(null);
       setHelp(null);
+      setMade(null);
     } else if (claimKeysIntro()) setHelp({ focus: false });
   }, [active]);
 
@@ -159,6 +164,7 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
     const text = selection!.toString().replace(/\s+/g, ' ').trim();
     if (!text) return;
     const mark = addMark(text, state);
+    setMade({ state, words: wordsIn(text) });
     selection!.removeAllRanges();
     setPending({ key: `mark:${mark.id}`, focus: true });
   };
@@ -298,6 +304,7 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
       >
         {help && <KeysHelp focus={help.focus} />}
       </ReviewBar>
+      <SelectionChip article={article} made={made} save={saveFlag} onDone={() => setMade(null)} />
       {open && section && sectionWords && (
         <SectionPanel
           key={open.serial}
