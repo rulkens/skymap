@@ -13,6 +13,7 @@ import Places from '../components/Places/Places.tsx';
 import Tour from '../components/Tour/Tour.tsx';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { homeJsonLd } from '../data/homeJsonLd';
+import layout from '../styles/layout.module.css';
 import { flightStills } from '../utils/flightStills';
 import { heroVideoUrl } from '../utils/heroVideoUrl';
 
@@ -41,7 +42,7 @@ const first = stills[0]!;
   <Dome />
   <Honesty />
   <Closing />
-  <div class="wrap section last">
+  <div class={`${layout.wrap} ${layout.section}`}>
     <Credits />
   </div>
 </Base>

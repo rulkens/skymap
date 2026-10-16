@@ -29,9 +29,8 @@ function ShotCaption({ id, label, open = true }: ShotCaptionProps) {
   // The view a manifest picture was taken at, where the label is to open it.
   const view = row && open ? row : undefined;
   const notes = Boolean(shot.drawn || shot.credit);
-  // `caption` too: the name an .astro host's `:global(.caption)` rule selects, until the last host is rewritten.
   return (
-    <div className={`caption ${styles.root}`}>
+    <div className={styles.root}>
       <div className={styles.plate}>
         <p className={cx(styles.what, !notes && styles.alone)}>
           <strong>{shot.title}</strong>

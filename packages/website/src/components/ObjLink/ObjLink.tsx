@@ -35,10 +35,6 @@ function ObjLink({
         styles.root,
         size !== 'default' && styles[size],
         hang && styles.hang,
-        // The global names too, while an .astro host's `:global(.ring)` rule still selects a link.
-        'ring',
-        size !== 'default' && size,
-        hang && 'hang',
         className,
       )}
       {...rest}

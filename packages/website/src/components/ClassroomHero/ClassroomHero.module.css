@@ -1,4 +1,4 @@
-/* The lead of an opening section: the type vocabulary sizes it by the section's `data-opening`. */
+/* The lead of an opening section, sized by the type vocabulary. */
 .say {
   composes: say from '../../styles/type.module.css';
 }

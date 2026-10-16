@@ -1,7 +1,7 @@
 /*
  * Icon — one of the site's own line drawings (data/icons.ts), always beside a
  * text label, so it is hidden from assistive technology. Sized and stroked by
- * `.glyph` in styles/site.css, next to the ring it stands in for; `data-icon`
+ * `.glyph` in styles/ring.module.css, next to the ring it stands in for; `data-icon`
  * lets that sheet set one drawing apart (the view mark is small and dim).
  */
 import type { IconName } from '../../@types/IconName';
@@ -10,11 +10,10 @@ import ring from '../../styles/ring.module.css';
 
 type IconProps = { name: IconName };
 
-/* Both names: the global `glyph` while an .astro ring still uses site.css, the module's for a React ring. */
 function Icon({ name }: IconProps) {
   return (
     <svg
-      className={`glyph ${ring.glyph}`}
+      className={ring.glyph}
       data-icon={name}
       viewBox="0 0 24 24"
       aria-hidden="true"

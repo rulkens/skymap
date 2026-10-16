@@ -46,7 +46,7 @@
 }
 
 /* A reading page's title: the largest type on it, and well under a landing page's, whose title has a picture to hold. */
-.opening[data-opening] h1 {
+.opening h1 {
   margin-bottom: 1.25rem;
   font-size: var(--text-doc-title);
 }
@@ -55,8 +55,8 @@
   composes: say from '../../styles/type.module.css';
 }
 
-/* The attribute as well as the class: an opening lead's size is also set for every `[data-opening]` (styles/type.module.css). */
-.opening[data-opening] .lead {
+/* Under the lead size the type vocabulary gives an opening, and so a rule of two classes. */
+.opening .lead {
   max-width: none;
   margin: 0;
   font-size: var(--text-body);
@@ -132,7 +132,7 @@
 
 /* Where the window would set the line, the text's own measure does (DocBody has the same). */
 @media (max-width: 900px) {
-  .opening[data-opening] .lead {
+  .opening .lead {
     max-width: 35rem;
   }
 }

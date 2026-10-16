@@ -36,7 +36,7 @@ function Band({ views, words, gap, eager, zoom, gallery, children }: BandProps) 
     <section
       ref={gallery?.root}
       className={cx(styles.root, styles[words], styles[gap], zoom !== 1 && styles.zoomed)}
-      // The opening section of a page: site.css sets its title and lead by this.
+      // The opening section of a page: only `npm run site:fold` reads this, to measure it against the first screen.
       data-opening={gap === 'none' ? '' : undefined}
       style={
         {

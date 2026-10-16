@@ -20,6 +20,7 @@ import { fact } from '../data/fact';
 import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
 import layout from '../styles/layout.module.css';
 import links from '../styles/links.module.css';
+import text from '../styles/type.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
@@ -69,7 +70,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
 >
   <PictureBand id="about-milky-way" gap="none" eager>
     <h1>About Skymap</h1>
-    <p class="say">Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
+    <p class={text.say}>Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
     <ShotCaption id="about-milky-way" />
   </PictureBand>
 

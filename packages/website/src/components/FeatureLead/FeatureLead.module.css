@@ -1,10 +1,6 @@
 .root {
   composes: wrap from '../../styles/layout.module.css';
   padding-top: 4.5rem;
-
-  & h1 {
-    font-size: var(--text-h2);
-  }
 }
 
 .say {

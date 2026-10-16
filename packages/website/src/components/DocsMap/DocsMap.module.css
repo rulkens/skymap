@@ -3,8 +3,8 @@
   padding-block: var(--open-top) 3.5rem;
 }
 
-/* The attribute as well as the class: the opening title's size is also set for every `[data-opening] h1` in site.css. */
-.opening[data-opening] h1 {
+/* A reading page's title, under the section heading size every `h1` has (site.css). */
+.opening h1 {
   margin-bottom: 0.25em;
   font-size: var(--text-doc-title);
 }

@@ -23,6 +23,7 @@ import { fact } from '../data/fact';
 import { REPO_URL } from '../data/siteIdentity';
 import layout from '../styles/layout.module.css';
 import links from '../styles/links.module.css';
+import text from '../styles/type.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
@@ -131,7 +132,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 >
   <PictureBand id="science-wedges" gap="none" eager>
     <h1>The science behind Skymap</h1>
-    <p class="say">
+    <p class={text.say}>
       Skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says
       what is measured, what is derived and what is drawn, and lists where we simplify.
     </p>

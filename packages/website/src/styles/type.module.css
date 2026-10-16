@@ -30,8 +30,8 @@
 
 /*
  * An opening section's lead, the same on every page; it shrinks with a short window and stops at 20px,
- * the floor for Jost 300. The section's title (`[data-opening] h1`) is an element rule in site.css.
+ * the floor for Jost 300. The section's title is the `h1` element rule in site.css.
  */
-[data-opening] .say {
+.say {
   font-size: clamp(1.25rem, 3svh, var(--text-lead));
 }

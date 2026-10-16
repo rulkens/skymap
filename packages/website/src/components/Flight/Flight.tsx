@@ -75,7 +75,7 @@ function Flight({ stills, videoUrl }: FlightProps) {
       style={{ '--units': TIMELINE.units.toFixed(3) } as CSSProperties}
     >
       <div ref={parts.track} className={styles.track}>
-        {/* data-opening: the page's opening section, as site.css and the first-screen check know it. */}
+        {/* data-opening: the page's opening section, as the first-screen check (`npm run site:fold`) knows it. */}
         <div className={styles.stage} data-opening>
           <Intro ref={parts.intro} />
           <Stops stops={stops} near={near} pictures={parts.pictures} captions={parts.captions} />

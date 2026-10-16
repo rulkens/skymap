@@ -1,9 +1,4 @@
-/*
- * The class twice: a component's own rules, while it is still an .astro file, carry an attribute that adds to their
- * weight, and the text's rules must still win over the root of an embedded component (a list, a figure) as they
- * always have. Drop one when the last such component has a module of its own (Wave 2).
- */
-.root.root {
+.root {
   /* The longest line of running text; a column sets it on a wide window, this on one of 600 to 900px. */
   --doc-measure: none;
   font: var(--weight-small) 1.125rem / 1.65 var(--font-body);
@@ -115,35 +110,17 @@
   }
 
   /*
-   * Until Wave 2 gives each of these its own component module, the markup still wears a global class: the
-   * caveat's gaps, a view link standing by itself in the text (a line of its own, as far from the paragraph
-   * above as from the one below; its 44px for the thumb is more than a line of text, so the margins take the
-   * difference back), and a ring in a cell or a sentence, which keeps its 44px and the line its height.
+   * A view link standing by itself in the text (a link row sets its own gaps): a line of its own, as far from the
+   * paragraph above as from the one below; its 44px for the thumb is more than a line of text, so the margins take
+   * the difference back.
    */
-  & :global(.caveat) {
-    margin-block: 2.5rem;
-  }
-
-  & :global(.caveat h3) {
-    margin-top: 0;
-  }
-
-  & > :global(:is(a.ring, .link-row)) {
+  & > a {
     display: flex;
     width: fit-content;
     margin: -0.75rem 0 0.75rem;
   }
 
-  & :global(:is(td, th, p:not(.link-row)) > a.ring) {
-    margin-block: -0.75rem;
-    vertical-align: middle;
-  }
-
   @media (max-width: 900px) {
     --doc-measure: 35rem;
-
-    & > :global(:is(.code-block, .caveat, .example)) {
-      max-width: var(--doc-measure);
-    }
   }
 }
