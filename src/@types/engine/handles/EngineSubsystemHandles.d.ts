@@ -9,7 +9,7 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `earthTiles`, `clickResolver`,
+ *   - Lazy (inside the GPU init IIFE): `earthTiles`, `pickDriver`,
  *     `inputBindings`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
@@ -23,7 +23,6 @@ import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
-import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { FadeRegistry } from '../../animation/FadeRegistry';
@@ -39,7 +38,8 @@ export type EngineSubsystemHandles = {
    * that never approaches Earth pays nothing. Null before `wireSlots` runs.
    */
   surfaceTiles: SurfaceTileSubsystem | null;
-  clickResolver: ClickResolver | null;
+  /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
+  pickDriver: Destroyable | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
   /**

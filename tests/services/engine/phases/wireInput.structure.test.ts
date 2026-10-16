@@ -30,10 +30,10 @@ const wireInputPath = resolve(__dirname, '../../../../src/services/engine/phases
 describe('wireInput structure wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
 
-  it('passes the composed resolver to createClickResolver', () => {
+  it('passes the composed resolver to createPickDriver', () => {
     // Structure hits reach the structure Layer's store through the composed
     // resolver's structure row (`composeSelectionRows` → `resolvePick`), not
-    // a direct field on the click-resolver input (D5). The resolver is
+    // a direct field on the pick-driver deps (D5). The resolver is
     // threaded in from `deps.selection` (engine.ts's one instance), not
     // rebuilt here — see F1.
     expect(src).toContain('resolvePick: deps.selection.resolvePick');

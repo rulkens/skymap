@@ -62,8 +62,8 @@ vi.mock('../../../../src/services/engine/frame/pickProgram', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/engine/interaction/clickHandler', () => ({
-  createClickResolver: vi.fn(() => ({ resolveClick: vi.fn() })),
+vi.mock('../../../../src/services/engine/interaction/createPickDriver', () => ({
+  createPickDriver: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 
 vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
@@ -118,9 +118,8 @@ function makeState(): EngineState {
       },
     },
     bias: {} as never,
-    picking: { pointerDown: false } as never,
-    // createClickResolver captures the store accessors for resolvePick;
-    // createClickResolver is module-mocked here, so the accessors are
+    picking: { pickInFlight: false, cursorTexPx: null },
+    // createPickDriver is module-mocked here, so resolvePick's accessors are
     // never invoked — an empty galaxies/structures stub is enough.
     data: {
       structures: { byCategory: () => [] },
@@ -146,7 +145,7 @@ function makeState(): EngineState {
     subsystems: {
       scheduler: { requestRender: vi.fn() },
       selection: { setHovered: vi.fn(), setSelected: vi.fn() },
-      clickResolver: null,
+      pickDriver: null,
       inputBindings: null,
     } as never,
     booted: false,
@@ -180,7 +179,7 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
-    // `createClickResolver` is module-mocked above, so no test here exercises
+    // `createPickDriver` is module-mocked above, so no test here exercises
     // a resolution — a resolver that always returns null is enough.
     selection: {
       resolvePick: () => null,

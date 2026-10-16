@@ -350,7 +350,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   });
 
   // After the submit as a latency choice only; it owns its own encoder with
-  // `loadOp: 'load'`. Hover picking is pointer-driven (hoverPickDriver).
+  // `loadOp: 'load'`. Hover and select picks run in `createPickDriver`.
   drawPickDebugOverlay(state, deps);
 
   // Render-on-demand. Tick the FadeRegistry BEFORE the predicate reads

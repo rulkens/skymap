@@ -50,8 +50,8 @@
  *
  * Wake contract: listeners whose effects no change channel covers
  * (pointerleave, pointerdown, resize) call `scheduler.requestRender()`
- * themselves; pointermove is wake-free — hover is handled by the
- * hoverPickDriver which dispatches to the store with no frame needed;
+ * themselves; pointermove is wake-free — hover is answered by the
+ * pick driver, which dispatches to the store with no frame needed;
  * Escape stays wake-free (the selection setters own that wake) and
  * pointerup only flips a flag the next frame reads.
  */
@@ -92,7 +92,7 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
 
   // ── Canvas pointer events ────────────────────────────────────────────
   //
-  // `onPointerMove` feeds the `hoverPickDriver` (constructed in wireInput).
+  // Hover is answered by the pick driver (constructed in wireInput).
   // The driver schedules its own GPU pick asynchronously and dispatches the
   // hover result to the store, which React reads via selectors — no render
   // frame is needed. Omitting `requestRender` here is intentional: a mouse

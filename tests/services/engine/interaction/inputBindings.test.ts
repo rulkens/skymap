@@ -106,7 +106,7 @@ describe('attachEngineInputs', () => {
     expect(onPointerMove).toHaveBeenCalledWith({ x: 42, y: 99 });
   });
 
-  // Wake ownership: hover is driven by the hoverPickDriver, which owns its
+  // Wake ownership: hover is driven by the pick driver, which owns its
   // own async pick path (no frame needed). pointermove feeds the driver via
   // onPointerMove and must NOT call requestRender — every mouse move over a
   // static scene would otherwise force a full 2.5M-point re-render.

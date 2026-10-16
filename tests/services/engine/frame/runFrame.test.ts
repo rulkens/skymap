@@ -168,7 +168,6 @@ function makeState(): EngineState {
     },
     picking: {
       pickInFlight: false,
-      pointerDown: false,
     },
     gpu: {
       galaxyPointRenderer: null,
@@ -203,7 +202,7 @@ function makeState(): EngineState {
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
-      clickResolver: null,
+      pickDriver: null,
       inputBindings: null,
       loadProgress: null,
     },
@@ -786,7 +785,7 @@ describe('runFrame — sim clock (Task 8)', () => {
 
 describe('runFrame — hover-pick removed from frame body', () => {
   it('does not call galaxyPickRenderer.pick inside the frame body', () => {
-    // Hover picking is fully pointer-driven via hoverPickDriver (wired in
+    // Hover picking is driven by createPickDriver (wired in
     // wireInput.ts); runFrame itself must never call galaxyPickRenderer.pick.
     // This test pins that invariant — a re-added hover-pick block in the
     // frame body would be caught here.

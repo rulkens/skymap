@@ -146,7 +146,6 @@ export function createEngine(
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
-      pointerDown: false,
       cursorTexPx: null,
     },
     gpu: {
@@ -256,7 +255,7 @@ export function createEngine(
       // not the thumbnail queue's `MAX_CONCURRENT_FETCHES`.
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 
-      clickResolver: null,
+      pickDriver: null,
       inputBindings: null,
       loadProgress: null,
     },
@@ -438,8 +437,8 @@ export function createEngine(
     // WebGPU releases on GC.
     state.subsystems.surfaceTiles?.destroy();
     state.subsystems.surfaceTiles = null;
-    state.subsystems.clickResolver?.destroy();
-    state.subsystems.clickResolver = null;
+    state.subsystems.pickDriver?.destroy();
+    state.subsystems.pickDriver = null;
     state.subsystems.loadProgress?.destroy();
     state.subsystems.loadProgress = null;
 

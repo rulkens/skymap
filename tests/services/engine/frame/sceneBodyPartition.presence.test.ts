@@ -41,7 +41,7 @@ const STATE = {
     bodies: { items: makeBodyItems() },
     missions: { craft: null },
   },
-  picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+  picking: { pickInFlight: false, cursorTexPx: null },
 } as unknown as EngineState;
 
 const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e-9 };
