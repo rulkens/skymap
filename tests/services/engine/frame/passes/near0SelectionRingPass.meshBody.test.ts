@@ -11,6 +11,7 @@
  * moves one path and not the other fails here.
  */
 
+import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 import { meshBodiesPass } from '../../../../../src/services/engine/frame/passes/meshBodiesPass';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
@@ -112,6 +113,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const ctx = {
     snapshot: {
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: positionedBodiesOf(SCENE_MESH_BODIES, states),
       simDays: SIM_DAYS,
       // No body row has drawn into `foreground:0` in this fixture, so the
       // ring takes its un-occluded pipeline — the axis these cases are about.

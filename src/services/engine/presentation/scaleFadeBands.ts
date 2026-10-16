@@ -12,7 +12,7 @@
 import type { FadeBand } from '../../../@types/math/FadeBand';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
-import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
+import { BODY_GLINT_MAX_PX } from '../../../data/bodies/bodyGlintMaxPx';
 import { regionById } from '../../../utils/regions/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';

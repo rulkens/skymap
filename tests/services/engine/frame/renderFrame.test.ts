@@ -470,7 +470,7 @@ function makeInput(
     bodyPose: () => null,
     slabBodyCandidates: [] as never[],
     meshBodies: [] as never[],
-    positionedStars: [] as never[],
+    sceneBodies: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
     plans: createFramePlannerResultStore(),
     cursorTexPx: null,

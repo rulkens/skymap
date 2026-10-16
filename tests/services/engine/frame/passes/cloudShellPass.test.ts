@@ -76,6 +76,7 @@ const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orien
 const EARTH: SeededEarth = {
   id: 'earth',
   label: 'Earth',
+  resolvePx: 3,
   surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
   positionMpc: [0, 0, 0],
   orientation: IDENTITY_MAT3,

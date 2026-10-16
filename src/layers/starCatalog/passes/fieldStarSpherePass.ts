@@ -52,10 +52,10 @@
  *
  * ### Why option B (a thin sphere layer), NOT option A (a transient scene star)
  *
- * Appending the resolved star to `visibleStars`' result so
- * `partitionStarsByResolution` / `starSpheresPass` pick it up "for free" reads
- * tidy but braids two independent things: it makes the authored SCENE-BODY star
- * set (a static seed table + one settings toggle) depend on the RUNTIME star cut,
+ * Adding the resolved star to the frame's scene bodies so core's scene-body
+ * sort and `starSpheresPass` pick it up "for free" reads tidy but braids two
+ * independent things: it makes the authored SCENE-BODY star set (a static seed
+ * table + its show entry) depend on the RUNTIME star cut,
  * and it drives the catalog star through the point-partition path it does not
  * need — the star ALREADY has a representation there (its `starCatalog` sprite).
  * Option A would draw the resolved star as a scene point AND a Gaia sprite across
@@ -64,7 +64,7 @@
  * geometry to exactly the near star at exactly close range — growth at the
  * "NEAR0 foreground sphere layer" seam, reusing the RENDERER machinery
  * (`starRenderer`, `composeBodyMvp`, `RENDER_ORIGIN_MPC`, `SCALE_UNITS`) rather
- * than the SCENE-SET machinery (`visibleStars` / `partitionStarsByResolution`),
+ * than the SCENE-SET machinery (`sceneBodies` / `partitionBodiesByPresentation`),
  * which is authored-body plumbing.
  *
  * ### Why the f64 `composeBodyMvp` seam kills the wobble
@@ -121,7 +121,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { STAR_RESOLVE_PX } from '../../../services/engine/frame/partitionStarsByResolution';
+import { STAR_RESOLVE_PX } from '../../../data/bodies/starResolvePx';
 import { starTintFromBpRp } from '../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';

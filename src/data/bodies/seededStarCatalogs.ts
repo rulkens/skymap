@@ -1,8 +1,8 @@
 /**
  * SEEDED_STAR_CATALOGS — the drawn rows behind every star catalog that ships
  * no `.bin`, keyed by registry id; total over `SeededStarCatalogId`, so a new
- * row is a compile error until it has a table. Lives in `data/`, not the
- * Layer, because core's slab/occluder seam reads the drawn seeded set.
+ * row is a compile error until it has a table. The star show entry declares
+ * it as its `bodies`, so core learns the stars from the entry, never from here.
  * Tables stay separate: a packed pick id indexes ONE, never merged.
  */
 

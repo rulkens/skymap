@@ -26,4 +26,6 @@ export type MeshBody = {
   /** UTC instant the body enters the scene (launch, deployment, landing); absent
    *  before it. Omitted for a body that is always there. */
   readonly presentFromIso?: string;
+  /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */
+  readonly resolvePx: number;
 };

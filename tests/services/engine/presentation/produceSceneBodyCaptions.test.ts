@@ -40,6 +40,8 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 
 // The producer binds its caption epoch to `ctx.simDays`; pin it at J2000 so
 // this file's anchors match the producer's internal `sceneBodyStates` read.
@@ -60,12 +62,19 @@ function worldPosOf(id: string): Vec3 {
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
+// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
+const SCENE_BODIES = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+  deriveBodyStates(CONST_J2000),
+);
+
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
     snapshot: {
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: SCENE_BODIES,
       focusBlend: 0,
       focus: ZERO_FOCUS,
     },
@@ -111,6 +120,7 @@ function makeState(
         earth: SCENE_EARTH,
         planets: SCENE_PLANETS,
         meshBodies: SCENE_MESH_BODIES,
+        sceneBodies: SCENE_BODIES,
       },
     },
     settings: {

@@ -47,6 +47,15 @@ describe('APP_VISIBILITY', () => {
     }
   });
 
+  it('every bodies key is an item of its entry', () => {
+    const withBodies = SHOWS.filter((e) => e.bodies !== undefined);
+    expect(withBodies.length).toBeGreaterThan(0);
+    for (const entry of withBodies) {
+      const strays = Object.keys(entry.bodies!).filter((key) => !entry.items?.includes(key));
+      expect(strays, `${entry.key}: bodies keys that are not items`).toEqual([]);
+    }
+  });
+
   it('APP_VISIBILITY lists exactly the entries the composed Layers declare', () => {
     // `U` pinned: `layers` is a tuple of unlike Layer types.
     const declared = APP_COMPOSITION.layers.flatMap<VisibilityEntry>(

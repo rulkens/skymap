@@ -17,9 +17,16 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
+
+// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
+const SCENE_BODIES = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES],
+  deriveBodyStates(CONST_J2000),
+);
 
 function makeCtx(camPos: Vec3, distance: number): FrameView {
   return {
@@ -27,6 +34,7 @@ function makeCtx(camPos: Vec3, distance: number): FrameView {
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: SCENE_BODIES,
       focusBlend: 0,
       focus: ZERO_FOCUS,
     },

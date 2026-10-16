@@ -1,22 +1,21 @@
 /**
- * starSpheresPass — the resolved-partition stars as true-scale,
- * flat-emissive spheres in the depth-bearing `foreground:0` target.
+ * starSpheresPass — the resolved seeded stars as true-scale, flat-emissive
+ * spheres in the depth-bearing `foreground:0` target.
  *
  * ### What it draws
  *
- * The `spheres` branch of `partitionStarsByResolution` — every seeded star
- * whose apparent size clears `STAR_RESOLVE_PX` (the Sun included: below the
- * threshold it demotes to an additive point like any other star, so it
- * never vanishes) — each composed as a unit sphere scaled to the body's
+ * The seeded stars (found by `SEEDED_STAR_REFS`) in the `resolved` branch of
+ * core's one scene-body sort — every admitted star whose apparent size clears
+ * its `resolvePx` (the Sun included: below it the star demotes to an additive
+ * point like any other, so it never vanishes) — each composed as a unit sphere scaled to the body's
  * equatorial radius (`surface.datumRadiusM` → Mpc via `SCALE_UNITS.M_TO_MPC`) and
  * translated to its `positionMpc` in the `RENDER_ORIGIN_MPC`-relative frame,
  * tinted by its blackbody colour — derived from its `temperatureK` via
  * `temperatureToLinearRgb`. A star's optional `oblateness` flattens
  * the polar (model-Z) axis via `composeBodyMvp` — the sphere is the
- * `oblateness` absent (⇒ 0) case. `starPointsPass` draws the complementary
- * `points` branch of the SAME partition call, so a star is a sphere XOR a
- * point by construction — see the partition module's docblock for the
- * structural-disjointness argument.
+ * `oblateness` absent (⇒ 0) case. `starPointsPass` draws the stars of the
+ * complementary `unresolved` branch of the SAME sort, so a star is a sphere XOR
+ * a point by construction.
  *
  * ### Renderer uniform caveat (known gap)
  *
@@ -45,13 +44,12 @@
  * `enabled` gates on the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC` — beyond it every seeded star is a
  * deep-sub-pixel speck, and gating with the NEAR0 siblings lets the executor
- * skip the whole foreground pass group as empty), AND a non-empty `spheres`
- * branch — the same partition `draw` consumes, so the enable gate and the
- * draw set cannot disagree. The distance gate runs first so the per-star
- * partition is not computed at all when the camera is far. `enabled` reads
- * the camera from `ctx.drawCamPos` (absolute frame) while `draw` reads
- * `view.camPos` (NEAR0's origin-relative frame); the two coincide because
- * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
+ * skip the whole foreground pass group as empty), AND a resolved seeded star —
+ * the same sort `draw` consumes, so the enable gate and the draw set cannot
+ * disagree. The distance gate runs first so the sort is not run at all when the
+ * camera is far. The sort is bound at `ctx.drawCamPos` (absolute frame) while the
+ * MVPs compose at `view.camPos` (NEAR0's origin-relative frame); the two coincide
+ * because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  *
  * `RENDER_ORIGIN_MPC` is imported directly as a constant (not threaded
  * through ctx state) — the render origin is fixed at the Sun for the
@@ -65,11 +63,9 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import {
-  partitionStarsByResolution,
-  STAR_RESOLVE_PX,
-} from '../../../services/engine/frame/partitionStarsByResolution';
-import { positionedVisibleStars } from '../../../services/engine/frame/positionedVisibleStars';
+import { sceneBodyPresentation } from '../../../services/engine/frame/sceneBodyPresentation';
+import { positionedSeededStars } from '../present/positionedSeededStars';
+import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -78,26 +74,14 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
   return {
     name: 'star-spheres',
 
-    enabled(state, ctx, _view) {
-      // Distance first, partition last — see the module header's gate note.
+    enabled(_state, ctx, _view) {
+      // Distance first, sort last — see the module header's gate note.
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      return (
-        partitionStarsByResolution({
-          stars: positionedVisibleStars(state, ctx),
-          camPosMpc: ctx.drawCamPos,
-          thresholdPx: STAR_RESOLVE_PX,
-          pxPerRad: ctx.drawPxPerRad,
-        }).spheres.length > 0
-      );
+      return sceneBodyPresentation(ctx).resolved.some(({ body }) => SEEDED_STAR_REFS.has(body.id));
     },
 
-    draw(pass, view, ctx, state) {
-      const { spheres } = partitionStarsByResolution({
-        stars: positionedVisibleStars(state, ctx),
-        camPosMpc: view.camPos,
-        thresholdPx: STAR_RESOLVE_PX,
-        pxPerRad: ctx.drawPxPerRad,
-      });
+    draw(pass, view, ctx) {
+      const spheres = positionedSeededStars(sceneBodyPresentation(ctx).resolved);
 
       // Compose each resolved star's MVP from the slab's f64 vp — see the
       // module header's "f64 seam" note for why `view.slab.vp`, not `view.vp`.
@@ -123,15 +107,13 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
     // the NEAR0 r32uint pick pass, one `drawSphere` per body (each with its own
     // MVP + packed id, so the sphere picks never collapse onto the last star — the
     // writeBuffer-vs-submit race `bodyPickRenderer` guards with per-draw dynamic
-    // offsets). The resolved set is the SAME `partitionStarsByResolution` call
-    // `draw` runs — `positionedVisibleStars` split at `STAR_RESOLVE_PX` against
-    // `view.camPos` and `view.viewportPx[1]` — so a star is pickable-as-a-sphere
-    // exactly when it draws as a sphere (its complement rides `starPointsPass`'s
-    // point pick), never both and never neither.
+    // offsets). The resolved set is the SAME sort `draw` reads, so a star is
+    // pickable-as-a-sphere exactly when it draws as a sphere (its complement rides
+    // `starPointsPass`'s point pick), never both and never neither.
     //
     // The packed id carries the source + STABLE seed-table index the drawn row
-    // was tagged with, NOT its slot in the sphere partition (which shifts as a
-    // star crosses `STAR_RESOLVE_PX`); one table per source, never merged, so the
+    // was tagged with, NOT its slot in the sort (which shifts as a star crosses
+    // its `resolvePx`); one table per source, never merged, so the
     // index means nothing without the code beside it. The MVP folds
     // `oblateness` the same way `draw` does, so the pick silhouette matches.
     //
@@ -141,18 +123,12 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
       const pickRenderer = state.gpu.bodyPickRenderer;
       if (pickRenderer === null) return;
 
-      const { spheres } = partitionStarsByResolution({
-        stars: positionedVisibleStars(state, ctx),
-        camPosMpc: view.camPos,
-        thresholdPx: STAR_RESOLVE_PX,
-        pxPerRad: ctx.drawPxPerRad,
-      });
-
+      const spheres = positionedSeededStars(sceneBodyPresentation(ctx).resolved);
       for (const star of spheres) {
         const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
         // Floor the PICK radius to the shared min footprint (visual sphere
         // untouched) via the shared `drawFlooredSpherePick` recipe: a just-resolved
-        // star near STAR_RESOLVE_PX is only a few pixels across. A resolved star is
+        // star near its `resolvePx` is only a few pixels across. A resolved star is
         // a rotation-invariant emissive sphere (IDENTITY_MAT3) that carries its
         // measured `oblateness`.
         drawFlooredSpherePick(pickRenderer, pass, {

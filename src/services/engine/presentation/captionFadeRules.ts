@@ -80,7 +80,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
   /**
    * The descent's aim point. Its own star-catalog row governs the name, so
    * muting the curated neighbourhood leaves the Sun captioning; the visibility
-   * axis is BOTH levels, exactly as `visibleStars` composes them, so the caption
+   * axis is BOTH levels, exactly as the star show entry's switch composes them, so the caption
    * never outlives the dot. The band makes the name fade IN smoothly on the way
    * down: exactly 0 at the layer's enable gate (no pop) up to full alpha by half
    * that distance.
@@ -114,7 +114,7 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
 
   /**
    * The curated local star map. The visibility axis is BOTH levels, exactly as
-   * `visibleStars` composes them — a caption must not survive the cluster master
+   * the star show entry's switch composes them — a caption must not survive the cluster master
    * that hid the dot it names. The band is a LOCAL STAR MAP rather than
    * per-body approach labels: full alpha inside the stellar neighbourhood (the
    * whole map reads from Earth), gone beyond it. It keys on PARSECS, hence the

@@ -449,9 +449,11 @@ sceneBodyPartition(state: PassState, ctx: FrameView)   // signature and return (
   // and residency, as today) or flat
 
 near0SphereBodies(resolved: readonly PositionedSceneBody[],
-                  rosters: { planets: readonly PlanetBody[]; meshBodies: readonly MeshBody[] }): readonly PositionedSceneBody[]
+                  rosters: { slabBodyCandidates: readonly SlabRow[]; meshBodies: readonly MeshBody[] }): readonly PositionedSceneBody[]
   // LEFTOVER (T7-5): the resolved bodies outside core's own rosters, which NEAR0 draws today. Stands in for
-  // the per-body slab field the bodies-into-Layers PR adds, and is deleted there.
+  // the per-body slab field the bodies-into-Layers PR adds, and is deleted there. `deriveView` holds no
+  // `state`, so core's planet roster reaches it as the snapshot's `slabBodyCandidates` (every planet's row,
+  // built from `state.data.bodies.planets`); the mesh roster is `snapshot.meshBodies`.
 
 // src/layers/starCatalog/@types/SeededStarRef.d.ts
 export type SeededStarRef = {
@@ -476,17 +478,17 @@ export const SEEDED_STAR_REFS: ReadonlyMap<string, SeededStarRef>
 - `starCatalog/create.ts`'s boot seed uploads every `SEEDED_STAR_REFS` star at J2000 (today `visibleStars` of the boot settings; `starPointsPass` re-uploads before the first draw, so the set does not matter).
 - **Star helpers, in sum.** Deleted: `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution`, `resolvesToSphere`, `ReadyFrameContext.positionedStars`. Moved to `src/data/bodies/`: `STAR_RESOLVE_PX`, `BODY_GLINT_MAX_PX`. Kept: `PositionedStar` (the point renderer's input).
 
-- [ ] Test `every bodies key is an item of its entry` (`appVisibility.test.ts`). Mutation-check by adding a key the star entry lacks.
-- [ ] Test `each body resolves at its own size` (`partitionBodiesByPresentation.test.ts`; Review Focus #14): a planet (`resolvePx` 3) and a star (`resolvePx` 4) both at 3.5 px apparent diameter → the planet is `resolved`, the star `unresolved`; at 4.5 px both are `resolved`. Mutation-check by comparing every body against one constant.
-- [ ] Rewrite `is disjoint and covering — every body lands in exactly one bucket` over the two branches, star bodies included.
-- [ ] Move today's four-branch cases (texture residency, mesh routing, glints) from `partitionBodiesByPresentation.test.ts` to `sceneBodyPartition.presence.test.ts`, fed through `sceneBodies`, and add `takes only core's own bodies`: a resolved star in `sceneBodies` lands in none of the four branches. Mutation-check by dropping the roster lookup (the star lands in `flat`).
-- [ ] Test `a covered body is admitted only while every covering item's handed value is above 0` (`frameContext.test.ts`; Review Focus #11): a resolved Sun and one planet. The Sun's fade at 1 → the Sun is in `sceneBodies`; still fading out at 0.4 → in; at 0 → out, while the planet stays; raw fade 1 with a clip on `starCatalog` at 0 → out (T7-4). Mutation-check three ways: admit on liveness (the clip case fails), admit every body, treat an uncovered body as not admitted.
-- [ ] Test `a star faded to 0 neither sizes NEAR0 nor occludes` (`deriveView.test.ts` and `sceneOccluderSpheres.test.ts`): the Sun resolved and in `sceneBodies` → NEAR0's range spans it at its outer bound and an occluder sits at its inner bound (today's values); the Sun absent from `sceneBodies` → neither. Mutation-check by sizing NEAR0 (resp. the occluders) from anything other than `sceneBodies`. Add `NEAR0 never spans a planet`: a resolved planet in `sceneBodies` leaves NEAR0's range as the stars alone set it. Mutation-check by dropping `near0SphereBodies`.
-- [ ] `sceneOccluderSpheres.test.ts`'s `drops the Sun once it demotes to a point at Jupiter-range` keeps its value (the star's size now rides its record).
-- [ ] Star pass tests: fixtures hand `ReadyFrameContext.sceneBodies` instead of `starCatalogs` switches; the sphere/point XOR and pick-id cases keep their values. Delete the cases that only restated the section AND (Task 2 pins the rule).
-- [ ] **Gate:** `npx tsc --noEmit` passes (`ShowEntry` now reaches the scene body types, and `frameContext.ts` the resolver). On a circular alias, cut the `visibility.ts` import chain that reaches a Layer-typed module; never reach for `APP_COMPOSITION`.
-- [ ] `grep -rnE "starCatalogs|SEEDED_STAR|visibleStars|positionedVisibleStars|partitionStarsByResolution|resolvesToSphere|positionedStars|STAR_RESOLVE_PX" src/services/engine/frame src/services/engine/helpers src/@types/engine/frame` prints nothing, and the core-address grep (Final review mandate (d)) shows no `starCatalog` hit.
-- [ ] Commit.
+- [x] Test `every bodies key is an item of its entry` (`appVisibility.test.ts`). Mutation-check by adding a key the star entry lacks.
+- [x] Test `each body resolves at its own size` (`partitionBodiesByPresentation.test.ts`; Review Focus #14): a planet (`resolvePx` 3) and a star (`resolvePx` 4) both at 3.5 px apparent diameter → the planet is `resolved`, the star `unresolved`; at 4.5 px both are `resolved`. Mutation-check by comparing every body against one constant.
+- [x] Rewrite `is disjoint and covering — every body lands in exactly one bucket` over the two branches, star bodies included.
+- [x] Move today's four-branch cases (texture residency, mesh routing, glints) from `partitionBodiesByPresentation.test.ts` to `sceneBodyPartition.presence.test.ts`, fed through `sceneBodies`, and add `takes only core's own bodies`: a resolved star in `sceneBodies` lands in none of the four branches. Mutation-check by dropping the roster lookup (the star lands in `flat`).
+- [x] Test `a covered body is admitted only while every covering item's handed value is above 0` (`frameContext.test.ts`; Review Focus #11): a resolved Sun and one planet. The Sun's fade at 1 → the Sun is in `sceneBodies`; still fading out at 0.4 → in; at 0 → out, while the planet stays; raw fade 1 with a clip on `starCatalog` at 0 → out (T7-4). Mutation-check three ways: admit on liveness (the clip case fails), admit every body, treat an uncovered body as not admitted.
+- [x] Test `a star faded to 0 neither sizes NEAR0 nor occludes` (`deriveView.test.ts` and `sceneOccluderSpheres.test.ts`): the Sun resolved and in `sceneBodies` → NEAR0's range spans it at its outer bound and an occluder sits at its inner bound (today's values); the Sun absent from `sceneBodies` → neither. Mutation-check by sizing NEAR0 (resp. the occluders) from anything other than `sceneBodies`. Add `NEAR0 never spans a planet`: a resolved planet in `sceneBodies` leaves NEAR0's range as the stars alone set it. Mutation-check by dropping `near0SphereBodies`.
+- [x] `sceneOccluderSpheres.test.ts`'s `drops the Sun once it demotes to a point at Jupiter-range` keeps its value (the star's size now rides its record).
+- [x] Star pass tests: fixtures hand `ReadyFrameContext.sceneBodies` instead of `starCatalogs` switches; the sphere/point XOR and pick-id cases keep their values. Delete the cases that only restated the section AND (Task 2 pins the rule).
+- [x] **Gate:** `npx tsc --noEmit` passes (`ShowEntry` now reaches the scene body types, and `frameContext.ts` the resolver). On a circular alias, cut the `visibility.ts` import chain that reaches a Layer-typed module; never reach for `APP_COMPOSITION`.
+- [x] `grep -rnE "starCatalogs|SEEDED_STAR|visibleStars|positionedVisibleStars|partitionStarsByResolution|resolvesToSphere|positionedStars|STAR_RESOLVE_PX" src/services/engine/frame src/services/engine/helpers src/@types/engine/frame` prints nothing, and the core-address grep (Final review mandate (d)) shows no `starCatalog` hit.
+- [x] Commit.
 
 ### Task 8: The star show entry: star passes, the cut and the spheres read the handed value
 

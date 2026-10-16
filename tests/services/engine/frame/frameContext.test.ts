@@ -45,6 +45,10 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -89,14 +93,14 @@ function makeState(
     // the raw cam.distance, the near-field bracket every arithmetic assertion
     // was written against.
     selectionRows: { hover: null, select: null, focus: null },
-    // No seeded bodies/stars — `visibleSlabBodies` and `visibleStars` (both
-    // read unconditionally past the ready gate now) get an empty registry, so
-    // every fixture below stays a 2-row (NEAR0+COSMO) slab table, matching
-    // what every assertion in this file was written against.
+    // No seeded bodies and no covered stars — `visibleSlabBodies` and the
+    // scene-body roster (both read unconditionally past the ready gate) get an
+    // empty registry, so every fixture below stays a 2-row (NEAR0+COSMO) slab
+    // table, matching what every assertion in this file was written against.
     slabRows: [],
+    visibilityEntries: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
-      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: {} },
     },
     picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
@@ -360,5 +364,42 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
     // Provider A's own derivation, called directly — not a floor comparison:
     // the seam did not touch 'mars' at all, so the two must match exactly.
     expect(actualMars).toEqual(expectedMars);
+  });
+});
+
+describe('deriveFrameContext — scene-body admission', () => {
+  const MARS = findByIdOrThrow(SCENE_PLANETS, 'mars', 'test');
+
+  /** The frame's admitted ids with the Sun's raw fade and the `starCatalog` clip as given. */
+  function admittedIds(sunFade: number, starClip = 1): readonly string[] {
+    const state = {
+      ...makeState(),
+      visibilityEntries: APP_VISIBILITY,
+      data: { bodies: { earth: null, planets: [MARS], meshBodies: [] } },
+      subsystems: {
+        texturedDisks: {},
+        fades: {
+          opacityOf: (id: FadeIdentity) =>
+            id.address === 'starCatalog' && id.item === 'sun' ? sunFade : 1,
+        },
+        clipPlayer: {
+          clipOpacityOf: (address: string) => (address === 'starCatalog' ? starClip : 1),
+        },
+      },
+    } as unknown as EngineState;
+    const snapshot = deriveFrameContext(state, frameInput(RESTING_POSE));
+    if (!snapshot.isReady) throw new Error('fixture not ready');
+    return snapshot.sceneBodies.map(({ body }) => body.id);
+  }
+
+  it("a covered body is admitted only while every covering item's handed value is above 0", () => {
+    expect(admittedIds(1)).toContain('sun');
+    expect(admittedIds(0.4)).toContain('sun');
+    expect(admittedIds(0)).not.toContain('sun');
+    // A raw fade of 1 under a clip at 0 hands 0: the clip hides it too (T7-4).
+    expect(admittedIds(1, 0)).not.toContain('sun');
+    // A body no entry covers is always admitted.
+    expect(admittedIds(0)).toContain('mars');
+    expect(admittedIds(1, 0)).toContain('mars');
   });
 });

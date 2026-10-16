@@ -2,6 +2,7 @@
 
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
+import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 
 // The survey Gaia bin and the S-stars draw no names. A single-parameter `.filter` is what
@@ -11,7 +12,12 @@ const LABEL_BEARING_STAR_CATALOG_IDS = STAR_CATALOG_SOURCE_ROWS.map(([, entry]) 
   .map((entry) => entry.id);
 
 export const starCatalogVisibility = [
-  { key: 'starCatalog', cluster: 'starCatalogs', items: STAR_CATALOG_IDS },
+  {
+    key: 'starCatalog',
+    cluster: 'starCatalogs',
+    items: STAR_CATALOG_IDS,
+    bodies: SEEDED_STAR_CATALOGS,
+  },
   {
     label: 'starCatalog',
     cluster: 'starCatalogs',

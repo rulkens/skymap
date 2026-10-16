@@ -21,6 +21,8 @@
  * null handle. The roster is `state.orbitTrailRows`, composed at boot.
  */
 
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
+import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 import { mat4d } from 'wgpu-matrix';
 
@@ -127,6 +129,13 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as FrameView;
 
+// Every scene body the frame admits with every catalog on: the planets and the seeded stars.
+const sceneBodiesAt = (simDays: number) =>
+  positionedBodiesOf(
+    [...SCENE_PLANETS, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+    deriveBodyStates(simDays),
+  );
+
 // 720-px viewport, 45° fovY, tangent-exact — every ctx fixture below reads
 // this instead of restating (canvasSize, fovYRad).
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
@@ -138,7 +147,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
 // `distance` argument alone drives the foreground-gate assertions.
 function makeCtx(distance: number): FrameView {
   return {
-    snapshot: { nowMs: 0, meshBodies: [] },
+    snapshot: { nowMs: 0, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -159,6 +168,7 @@ function makeDrawCtx(): FrameView {
   return {
     snapshot: {
       meshBodies: [],
+      sceneBodies: sceneBodiesAt(CONST_J2000),
       simDays: CONST_J2000,
       focusBlend: 0,
       nowMs: 0,
@@ -226,6 +236,7 @@ function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
   return {
     snapshot: {
       meshBodies: [],
+      sceneBodies: sceneBodiesAt(simDays),
       simDays,
       focusBlend: 0,
       nowMs: 0,
@@ -260,22 +271,14 @@ function makeState(
   const layerOpacity = opts.layerOpacity ?? 1;
   return {
     gpu: { orbitTrailRenderer, texturedBodyRenderer: null },
-    // The seeded body bag + the registry gates `sceneOccluderSpheres` reads
-    // through `sceneBodyPartition` / `visibleStars` — everything on, so the
-    // occluder set is decided by apparent size alone.
+    // The seeded body bag `sceneOccluderSpheres` reads beside the frame's
+    // scene bodies (every catalog admitted, `sceneBodiesAt`), so the occluder
+    // set is decided by apparent size alone.
     data: {
       bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: [] },
     },
     settings: {
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
-      starCatalogs: {
-        enabled: true,
-        items: {
-          famousStar: { enabled: true },
-          sun: { enabled: true },
-          sStar: { enabled: true },
-        },
-      },
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
       },
@@ -348,7 +351,7 @@ describe('orbitTrailsPass.enabled', () => {
     // pass plan instead of packing zero records.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000, meshBodies: [] },
+      snapshot: { simDays: CONST_J2000, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
       cam: { distance: 1e-6 },
       drawCamPos: [1e-6, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -362,7 +365,7 @@ describe('orbitTrailsPass.enabled', () => {
     // region cull can drop the layer; the AU-to-lunar trails are ~1e-5 px there.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000, meshBodies: [] },
+      snapshot: { simDays: CONST_J2000, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
       cam: { distance: 8.178e-3 },
       drawCamPos: [8.178e-3, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -557,6 +560,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = {
       snapshot: {
         meshBodies: [],
+        sceneBodies: sceneBodiesAt(simDays),
         simDays,
         focusBlend: 0,
         nowMs: 0,
@@ -770,6 +774,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = {
       snapshot: {
         meshBodies: [],
+        sceneBodies: sceneBodiesAt(simDays),
         simDays,
         focusBlend: 0,
         nowMs: 0,
@@ -827,7 +832,13 @@ describe('orbitTrailsPass.draw', () => {
     // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
     // apparent-size cull threshold, so nothing is packed and no draw is issued.
     const farCtx = {
-      snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0, meshBodies: [] },
+      snapshot: {
+        simDays: CONST_J2000,
+        focusBlend: 0,
+        nowMs: 0,
+        meshBodies: [],
+        sceneBodies: sceneBodiesAt(CONST_J2000),
+      },
       drawCamPos: [1, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1 },

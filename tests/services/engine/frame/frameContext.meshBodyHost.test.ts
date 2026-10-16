@@ -39,11 +39,11 @@ const STATE = {
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
+  visibilityEntries: [],
   data: {
     bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },
   },
   settings: {
-    starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
     bodies: { items: {} },
   },
   picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },

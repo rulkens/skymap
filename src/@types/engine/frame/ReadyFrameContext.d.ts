@@ -12,7 +12,7 @@ import type { Mat3 } from '../../math/Mat3';
 import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
-import type { PositionedStar } from '../../scene/PositionedStar';
+import type { PositionedSceneBody } from './PositionedSceneBody';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
@@ -58,9 +58,11 @@ export type ReadyFrameContext = {
   /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
    *  the hosts of mesh bodies riding someone else's slab row. */
   meshBodies: readonly MeshBody[];
-  /** The visible seeded stars with this frame's positions resolved — a view
-   *  partitions them by apparent size (`partitionStarsByResolution`). */
-  positionedStars: readonly PositionedStar[];
+  /** Every admitted scene body but Earth (its own renderer), at this frame's
+   *  `bodyStates`: core's planets and present mesh bodies, plus every body a show
+   *  entry's `bodies` covers while each covering item hands a value above 0. A view
+   *  sorts them by apparent size (`partitionBodiesByPresentation`). */
+  sceneBodies: readonly PositionedSceneBody[];
   /**
    * The frame's stamped clock — `performance.now()`-shaped, taken from
    * `runFrame`'s single wall-clock sample.  Every per-frame-evaluated

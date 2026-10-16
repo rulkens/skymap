@@ -56,6 +56,8 @@ import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
@@ -90,6 +92,7 @@ function makeState(): EngineState {
         earth: SCENE_EARTH,
         planets: SCENE_PLANETS,
         meshBodies: SCENE_MESH_BODIES,
+        sceneBodies: SCENE_BODIES,
       },
     },
     settings: {
@@ -152,12 +155,19 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
 const FIXTURE_FRUSTUM = symmetricFrustum(1, 1280 / 720);
 const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDown);
 
+// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
+const SCENE_BODIES = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+  deriveBodyStates(CONST_J2000),
+);
+
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
     snapshot: {
       nowMs: 0,
       simDays: CONST_J2000,
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: SCENE_BODIES,
       focusBlend: 0,
       focus: ZERO_FOCUS,
     },

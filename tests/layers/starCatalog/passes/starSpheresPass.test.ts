@@ -11,11 +11,11 @@
  * the fixture's `slab.vp` is a recognisable `Float64Array` and `vp` is a
  * deliberately different `Float32Array`.
  *
- * The partition matters here too: the layer draws EXACTLY the `spheres`
- * branch of `partitionStarsByResolution` — the stars whose apparent size
- * crosses `STAR_RESOLVE_PX`, the Sun included (sub-resolve it demotes to a
+ * The sort matters here too: the layer draws EXACTLY the seeded stars in the
+ * `resolved` branch of core's scene-body sort — the stars whose apparent size
+ * crosses their `resolvePx`, the Sun included (sub-resolve it demotes to a
  * point like any other star) — while `starPointsPass` draws the
- * complementary `points` branch of the same call. The two layer suites
+ * complementary `unresolved` branch. The two layer suites
  * share the camera-half-an-AU-off-Sirius mixed fixture, so the sphere set
  * asserted here and the point set asserted there are disjoint and cover the
  * input (the structural XOR).
@@ -28,9 +28,8 @@ import { seedIndexOfBody } from '../../../../src/utils/picking/seedIndexOfBody';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
-import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
-import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
-import { makeBodyItems } from '../../../fixtures/makeBodyItems';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
@@ -43,8 +42,8 @@ import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
-import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
+import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
+import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Mock composeBodyMvp so the test can (a) assert which vp it consumed by
@@ -58,37 +57,18 @@ import { composeBodyMvp } from '../../../../src/utils/camera/composeBodyMvp';
 
 const composeMock = composeBodyMvp as unknown as ReturnType<typeof vi.fn>;
 
-// The record + the position this frame resolves for it — the pairing
-// `positionedVisibleStars` builds. A star is an anchor, so the resolved
-// position IS the anchor's array, by reference, which is what lets the compose
-// assertions below check the seam by identity.
-/**
- * The star cluster's gates, as the pass reads them. Each seeded source gates
- * itself, so "which stars" is a set of item bits rather than an injected list.
- * Cast: the pass reads only the gates, so the fixture states only the gates.
- */
-const starSettings = (items: Record<string, boolean>): StarCatalogSettings =>
-  ({
-    enabled: true,
-    items: {
-      famousStar: { enabled: items.famousStar ?? false },
-      sun: { enabled: items.sun ?? false },
-      sStar: { enabled: items.sStar ?? false },
-    },
-  }) as unknown as StarCatalogSettings;
+// The frame's scene bodies as core hands them: positioned at the snapshot instant,
+// so a star's position IS its anchor's array, by reference, which is what lets the
+// compose assertions below check the seam by identity.
+const STATES = deriveBodyStates(CONST_J2000);
+const positionedOf = (bodies: readonly SceneBody[]): readonly PositionedSceneBody[] =>
+  bodies.map((body) => ({ body, positionMpc: STATES.get(body.id)!.positionMpc }));
+const EVERY_SEEDED = positionedOf(Object.values(SEEDED_STAR_CATALOGS).flat());
+const SUN_ONLY = positionedOf(SEEDED_STAR_CATALOGS.sun);
+const starAt = (id: string) => EVERY_SEEDED.find((p) => p.body.id === id)!;
 
-const EVERY_SEEDED = starSettings({ famousStar: true, sun: true, sStar: true });
-const SUN_ONLY = starSettings({ sun: true });
-
-const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
-const positioned = (id: string): PositionedStar => {
-  const star = visibleStars(EVERY_SEEDED).find((s) => s.id === id)!;
-  return { ...star, positionMpc: ANCHOR_POS.get(id)! };
-};
-
-const SUN = positioned('sun');
-const PROXIMA = positioned('proxima-centauri');
-const SIRIUS = positioned('sirius');
+const SUN = starAt('sun');
+const SIRIUS = starAt('sirius');
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -106,11 +86,12 @@ const PASS_STUB = {
  * distance is |camPos| — these fixtures orbit the heliocentric origin, so
  * the two coincide.
  */
-function makeCtx(camPos: Readonly<Vec3>): FrameView {
+function makeCtx(
+  camPos: Readonly<Vec3>,
+  sceneBodies: readonly PositionedSceneBody[] = EVERY_SEEDED,
+): FrameView {
   return {
-    // The instant the star layers resolve their positions at; a star anchor is
-    // static, so any instant gives the same roster.
-    snapshot: { simDays: CONST_J2000 },
+    snapshot: { simDays: CONST_J2000, sceneBodies },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     canvasSize: { width: 1280, height: 720 },
@@ -151,12 +132,8 @@ function makeNear0View(camPos: Vec3): SlabView {
   };
 }
 
-/** `PassState`-shaped fixture with the star-catalog settings. */
-function makeState(catalogs = EVERY_SEEDED): EngineState {
-  return {
-    gpu: {},
-    settings: { starCatalogs: catalogs, bodies: { items: makeBodyItems() } },
-  } as unknown as EngineState;
+function makeState(): EngineState {
+  return { gpu: {} } as unknown as EngineState;
 }
 
 /** The Layer's runtime, carrying only the `starRenderer` this pass reads. */
@@ -180,6 +157,13 @@ describe('starSpheresPass.enabled', () => {
     // spheres branch is non-empty.
     const sunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
     expect(pass.enabled(makeState(), sunCtx, VIEW_STUB)).toBe(true);
+  });
+
+  it('finds its stars by their seed refs: a resolved planet alone keeps it off', () => {
+    const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
+    const [mars] = positionedOf(SCENE_PLANETS.filter((p) => p.id === 'mars'));
+    const ctx = makeCtx(halfAuFrom(mars!.positionMpc), [mars!]);
+    expect(pass.enabled(makeState(), ctx, VIEW_STUB)).toBe(false);
   });
 
   it('is disabled beyond the foreground gate', () => {
@@ -216,7 +200,7 @@ describe('starSpheresPass.draw', () => {
     // Position, render origin, and the m→Mpc radius carried through.
     expect(call[1]).toBe(SUN.positionMpc);
     expect(call[2]).toBe(RENDER_ORIGIN_MPC);
-    expect(call[3]).toBe(SUN.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC);
+    expect(call[3]).toBe(SEEDED_STAR_CATALOGS.sun[0]!.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC);
     // A star is a rotation-invariant emissive sphere — it forwards the identity.
     expect(call[4]).toBe(IDENTITY_MAT3);
 
@@ -227,7 +211,7 @@ describe('starSpheresPass.draw', () => {
     expect(passArg).toBe(PASS_STUB);
     expect(mvp).toBeInstanceOf(Float32Array);
     expect(mvp).toHaveLength(16);
-    expect(color).toBe(SUN.color);
+    expect(color).toBe(SEEDED_STAR_CATALOGS.sun[0]!.color);
   });
 
   it('a famous star’s drawn position comes from the snapshot', () => {
@@ -265,34 +249,34 @@ describe('starSpheresPass.draw', () => {
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls.map((c) => c[1])).toEqual([SIRIUS.positionMpc]);
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([SIRIUS.color]);
+    expect(drawSpy.mock.calls.map((c) => c[2])).toEqual([
+      SCENE_STARS.find((star) => star.id === 'sirius')!.color,
+    ]);
   });
 
-  it('with the famous-star map gate off, only the Sun can resolve — never a neighbour', () => {
+  it('draws only the stars core admitted — never a neighbour it left out', () => {
     composeMock.mockClear();
-    // Camera half an AU off Sirius, which WOULD resolve — but the famous-star
-    // row is OFF, so the layer sees the Sun alone. The Sun is parsecs away from
-    // this camera (sub-pixel), so nothing resolves: no sphere is composed.
+    // Camera half an AU off Sirius, which WOULD resolve — but core admitted the
+    // Sun alone. The Sun is parsecs away from this camera (sub-pixel), so nothing
+    // resolves: no sphere is composed.
     const offSiriusPass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
     offSiriusPass.draw!(
       PASS_STUB,
       makeNear0View(halfAuFrom(SIRIUS.positionMpc)),
-      makeCtx(halfAuFrom(SIRIUS.positionMpc)),
-      makeState(SUN_ONLY),
+      makeCtx(halfAuFrom(SIRIUS.positionMpc), SUN_ONLY),
+      makeState(),
     );
     expect(composeMock).not.toHaveBeenCalled();
 
-    // Camera half an AU off the Sun with the gate still off: the Sun answers to
-    // its own body row, so it resolves and is the sole composed sphere — the map
-    // is muted, the descent's aim point kept.
+    // Camera half an AU off the Sun: it resolves and is the sole composed sphere.
     composeMock.mockClear();
     const drawSpy = vi.fn<(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3) => void>();
     const onSunPass = starSpheresPass(makeRuntime({ draw: drawSpy }));
     onSunPass.draw!(
       PASS_STUB,
       makeNear0View(halfAuFrom(SUN.positionMpc)),
-      makeCtx(halfAuFrom(SUN.positionMpc)),
-      makeState(SUN_ONLY),
+      makeCtx(halfAuFrom(SUN.positionMpc), SUN_ONLY),
+      makeState(),
     );
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(SUN.positionMpc);
@@ -302,12 +286,12 @@ describe('starSpheresPass.draw', () => {
 // §8.1 regression — the pick id carries the body's STABLE SCENE_STARS seed
 // index, NOT its slot in the frame's camera-dependent sphere partition. This
 // bites at the real `drawPick` call site: a `bodyPickRenderer` stub captures
-// the packedId Sirius is stamped with in a frame where earlier seeds (the Sun
-// at seed 0, Proxima at seed 1) are culled to sub-pixel points, so Sirius is
-// the SOLE resolved sphere — slot 0 of the drawn list. If the layer ever
+// the packedId Sirius is stamped with in a frame where earlier seeds are culled
+// to sub-pixel points, so Sirius is the SOLE resolved sphere — slot 0 of the
+// drawn list. If the layer ever
 // stamped that pack-loop slot (the `@builtin(instance_index)` bug §8.1 guards),
 // the decoded index would be 0 and Sirius' saved selection would rename the
-// instant a sibling entered or left the partition. The helper's own
+// instant a sibling entered or left the sort. The helper's own
 // determinism has plain unit tests in `seedIndexOfBody.test.ts`; this proves
 // the call site actually feeds it the seed table.
 describe('starSpheresPass.drawPick', () => {
@@ -328,10 +312,7 @@ describe('starSpheresPass.drawPick', () => {
     };
     const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
-    const state = {
-      gpu: { bodyPickRenderer },
-      settings: { starCatalogs: EVERY_SEEDED, bodies: { items: makeBodyItems() } },
-    } as unknown as EngineState;
+    const state = { gpu: { bodyPickRenderer } } as unknown as EngineState;
     const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
 
     pass.drawPick!(PASS_STUB, view, makeCtx(camPos), state);

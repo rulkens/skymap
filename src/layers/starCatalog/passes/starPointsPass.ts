@@ -1,16 +1,16 @@
 /**
- * starPointsPass — the point-partition stars (everything not resolved to a
+ * starPointsPass — the unresolved seeded stars (everything not resolved to a
  * sphere) as additive point sprites in the depthless HDR accumulation.
  *
  * ### What it draws
  *
- * The `points` branch of `partitionStarsByResolution` — every seeded star
- * whose apparent size stays below `STAR_RESOLVE_PX`, the Sun included (its
- * sphere is sub-pixel beyond ~tens of AU, and a point is what keeps it
- * visible from the rest of the neighbourhood). `starSpheresPass` draws the
- * complementary `spheres` branch of the SAME partition call, so a star is a
- * point XOR a sphere by construction — see the partition module's docblock
- * for the structural-disjointness argument.
+ * The seeded stars (found by `SEEDED_STAR_REFS`) in the `unresolved` branch of
+ * core's one scene-body sort — every admitted star whose apparent size stays
+ * below its `resolvePx`, the Sun included (its sphere is sub-pixel beyond ~tens
+ * of AU, and a point is what keeps it visible from the rest of the
+ * neighbourhood). `starSpheresPass` draws the stars of the complementary
+ * `resolved` branch of the SAME sort, so a star is a point XOR a sphere by
+ * construction.
  *
  * ### The odd row out: `hdr` target, NEAR0 slab
  *
@@ -60,8 +60,8 @@
  *
  * `enabled` gates on the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC`), the backdrop-dissolve band
- * (`SCALE_FADE_BANDS.starBackdrop` > 0), AND a non-empty `points` branch —
- * the same partition `draw` consumes, so the enable gate and the uploaded
+ * (`SCALE_FADE_BANDS.starBackdrop` > 0), AND an unresolved seeded star —
+ * the same sort `draw` consumes, so the enable gate and the uploaded
  * set cannot disagree. The backdrop is a minimum-size additive sprite field,
  * so at galaxy framing the whole roster collapses onto a few pixels into one
  * bright blob; the `starBackdrop` band dissolves it smoothly (its rgb scaled
@@ -69,11 +69,10 @@
  * gate's hard cut lands on already-black sprites and never pops. Once the band
  * hits 0 the layer disables outright — the "opacity 0 ⇒ no render" house rule
  * — which also empties the `(hdr, NEAR0)` render step the executor then skips.
- * The distance gate and the band run before the per-star partition so it is not
- * computed at all when the camera is far. `enabled` reads the camera from
- * `ctx.drawCamPos` (absolute frame) while `draw` reads `view.camPos`
- * (NEAR0's origin-relative frame); the two coincide because
- * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
+ * The distance gate and the band run before the sort so it is not run at all
+ * when the camera is far. The sort is bound at `ctx.drawCamPos` (absolute
+ * frame) while `draw` rebases at `view.camPos` (NEAR0's origin-relative frame);
+ * the two coincide because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -81,11 +80,9 @@ import type { BodyRegionId } from '../../../@types/data/BodyRegionId';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyPointPick } from '../../../@types/rendering/bodyPickRenderer/BodyPointPick';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
-import {
-  partitionStarsByResolution,
-  STAR_RESOLVE_PX,
-} from '../../../services/engine/frame/partitionStarsByResolution';
-import { positionedVisibleStars } from '../../../services/engine/frame/positionedVisibleStars';
+import { sceneBodyPresentation } from '../../../services/engine/frame/sceneBodyPresentation';
+import { positionedSeededStars } from '../present/positionedSeededStars';
+import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
@@ -120,7 +117,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
     // anything. The S-stars need finite-distance lensing rather than an
     // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
 
-    // Distance first, backdrop-band second, partition last — see the module
+    // Distance first, backdrop-band second, sort last — see the module
     // header's gate note.
     enabled(state, ctx, _view) {
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
@@ -136,23 +133,13 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
         sceneBodyStates(state, ctx),
       );
       if (fadeBand(SCALE_FADE_BANDS.starBackdrop, regionDistMpc) <= 0) return false;
-      return (
-        partitionStarsByResolution({
-          stars: positionedVisibleStars(state, ctx),
-          camPosMpc: ctx.drawCamPos,
-          thresholdPx: STAR_RESOLVE_PX,
-          pxPerRad: ctx.drawPxPerRad,
-        }).points.length > 0
+      return sceneBodyPresentation(ctx).unresolved.some(({ body }) =>
+        SEEDED_STAR_REFS.has(body.id),
       );
     },
 
     draw(pass, view, ctx, state) {
-      const { points } = partitionStarsByResolution({
-        stars: positionedVisibleStars(state, ctx),
-        camPosMpc: view.camPos,
-        thresholdPx: STAR_RESOLVE_PX,
-        pxPerRad: ctx.drawPxPerRad,
-      });
+      const points = positionedSeededStars(sceneBodyPresentation(ctx).unresolved);
 
       // Rebase into the camera-relative frame in f64 so the f32 upload carries no
       // catastrophic cancellation — see the module header's f64-seam note.
@@ -208,8 +195,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       // The same shared star appearance the survey (Gaia bin) leaf stage reads, so
       // a famous star obeys the identical sizePx slider and exposure model. These
       // are the cluster's APPEARANCE knobs, read unconditionally — the cluster's
-      // visibility gate is applied upstream, where `visibleStars` composes
-      // `starCatalogs.enabled` with the famous-star row's own bit. `brightness`
+      // visibility is core's: it admits a star into the sort by its show entry. `brightness`
       // folds the SAME scale-dependent `starExposureRamp` `starCatalogPass`
       // applies: the user trim times the camera-distance ramp, keyed on the
       // camera's heliocentric Mpc distance (the ramp's own input unit).
@@ -238,19 +224,17 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
     // pick pass as ONE instanced pick-billboard draw (each expanded to a generous
     // clickable 18 px footprint by `bodyPickRenderer` — these labelled scene stars
     // are click-invited targets), so a sub-pixel star stays easily pickable at its
-    // true screen position. The point set is the SAME
-    // `partitionStarsByResolution` call `draw` runs — `positionedVisibleStars`
-    // split at `STAR_RESOLVE_PX` against `view.camPos`/`view.viewportPx[1]` — so a star
-    // is pickable-as-a-point exactly when it draws as one (its complement rides
-    // `starSpheresPass`'s sphere pick).
+    // true screen position. The point set is the SAME sort `draw` reads, so a
+    // star is pickable-as-a-point exactly when it draws as one (its complement
+    // rides `starSpheresPass`'s sphere pick).
     //
     // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit —
     // each caller claims its own slot (see `bodyPickRenderer`'s module header). This layer calls it exactly once
     // per `drawPick`.
     //
     // Each point's packed id carries the source + STABLE seed-table index its
-    // drawn row was tagged with, NOT its slot in the point partition (which
-    // shifts as a star crosses `STAR_RESOLVE_PX`). One table per source, never
+    // drawn row was tagged with, NOT its slot in the sort (which shifts as a
+    // star crosses its `resolvePx`). One table per source, never
     // merged: the index means nothing without the code beside it. Anchors are rebased
     // into the camera-relative frame in f64 before narrowing, the SAME seam
     // `draw` uses — the backdrop-dissolve colour scale is a visual-only concern
@@ -260,12 +244,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       const pickRenderer = state.gpu.bodyPickRenderer;
       if (pickRenderer === null) return;
 
-      const { points } = partitionStarsByResolution({
-        stars: positionedVisibleStars(state, ctx),
-        camPosMpc: view.camPos,
-        thresholdPx: STAR_RESOLVE_PX,
-        pxPerRad: ctx.drawPxPerRad,
-      });
+      const points = positionedSeededStars(sceneBodyPresentation(ctx).unresolved);
 
       const camPos = view.camPos;
       const pickPoints: BodyPointPick[] = [];
