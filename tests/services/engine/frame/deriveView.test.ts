@@ -31,6 +31,8 @@ import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRad
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
+import type { SlabHostId } from '../../../../src/@types/engine/frame/SlabHostId';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
@@ -775,5 +777,22 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
       deriveView(sunAlone.snapshot, sunAlone.cam, spec()).slabs[NEAR0]!.distanceRangeM,
     );
     expect(range).not.toBeNull();
+  });
+
+  it('a Layer slab row anchored on a body leaves NEAR0 spanning it', () => {
+    // A Layer's own body-frame content around the Sun (the planned heliosphere) rides a
+    // slab row anchored on it; the Sun's sphere still draws in NEAR0. The cast stands in
+    // for the host id that Layer will add.
+    const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
+    const layerRow: SlabRow = {
+      anchorId: 'sun' as SlabHostId,
+      drawRadiusM: () => SUN_OUTER_M,
+      footprintRadiusM: SUN_OUTER_M,
+      source: 'foreground',
+    };
+    const withRow = { ...snapshot, slabBodyCandidates: [...snapshot.slabBodyCandidates, layerRow] };
+    expect(deriveView(withRow, cam, spec()).slabs[NEAR0]!.distanceRangeM).toEqual(
+      deriveView(snapshot, cam, spec()).slabs[NEAR0]!.distanceRangeM,
+    );
   });
 });

@@ -449,11 +449,11 @@ sceneBodyPartition(state: PassState, ctx: FrameView)   // signature and return (
   // and residency, as today) or flat
 
 near0SphereBodies(resolved: readonly PositionedSceneBody[],
-                  rosters: { slabBodyCandidates: readonly SlabRow[]; meshBodies: readonly MeshBody[] }): readonly PositionedSceneBody[]
+                  rosters: { planets: readonly PlanetBody[]; meshBodies: readonly MeshBody[] }): readonly PositionedSceneBody[]
   // LEFTOVER (T7-5): the resolved bodies outside core's own rosters, which NEAR0 draws today. Stands in for
-  // the per-body slab field the bodies-into-Layers PR adds, and is deleted there. `deriveView` holds no
-  // `state`, so core's planet roster reaches it as the snapshot's `slabBodyCandidates` (every planet's row,
-  // built from `state.data.bodies.planets`); the mesh roster is `snapshot.meshBodies`.
+  // the per-body slab field the bodies-into-Layers PR adds, and is deleted there. Rosters: `SCENE_PLANETS`
+  // (the table `createEngineData` seeds `state.data.bodies.planets` from, so `deriveView` needs no `state`)
+  // and `snapshot.meshBodies`. Never the slab rows: a Layer's own row in `state.slabRows` would leak in.
 
 // src/layers/starCatalog/@types/SeededStarRef.d.ts
 export type SeededStarRef = {

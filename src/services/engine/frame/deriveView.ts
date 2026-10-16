@@ -30,6 +30,7 @@ import { deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { near0SphereBodies } from './near0SphereBodies';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
 export function deriveView(
   snapshot: ReadyFrameContext,
@@ -125,7 +126,7 @@ export function deriveView(
     // Outer: distanceRangeM is the painter-sort interval and must SPAN the row's
     // drawn content (Slab.d.ts). Body rows bracket theirs off the same outer
     // footprint (`bodySlabRow`'s `marginM`), so the NEAR0 row has to match that currency.
-    spheres: near0SphereBodies(resolved, { slabBodyCandidates, meshBodies }).map((sphere) => ({
+    spheres: near0SphereBodies(resolved, { planets: SCENE_PLANETS, meshBodies }).map((sphere) => ({
       positionMpc: sphere.positionMpc,
       radiusM: bodyFootprintRadiusM(sphere.body),
     })),
