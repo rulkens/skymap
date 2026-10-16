@@ -60,11 +60,6 @@ export type FlowFieldRenderer = {
    */
   reconcile(seed: Pick<FlowSettings, 'mode' | 'count'>): void;
   /**
-   * True once a velocity cube is uploaded and bound. Lets the flow fade row's
-   * guard gate flow's fade on real renderable-ness.
-   */
-  fieldLoaded(): boolean;
-  /**
    * Dispatch the compute work into the per-frame encoder: the `seed` pass when
    * a reseed is pending (then cleared), followed by the `advect` or `streamline`
    * integrator for `flow.mode`. Reads particle count / motion knobs off `flow`.

@@ -68,7 +68,6 @@ describe('flow create', () => {
     // The slot's own renderer, not a second copy reached via `state.gpu` —
     // there is no `state` argument for it to reach through.
     expect(uploadSpy).toHaveBeenCalledWith(cube);
-    expect(runtime.renderer.fieldLoaded()).toBe(true);
   });
 
   it('contributes exactly one named "flow" row to each runtime-bound surface', () => {

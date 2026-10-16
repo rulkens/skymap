@@ -278,8 +278,7 @@ export function createCatalogStore(init: {
   }
 
   // Whether a catalog's buffer is committed — the survey fade row guards on
-  // this (same demand-loaded pattern as filamentRenderer.hasCloud): a fade
-  // toward "visible" is suppressed until there is something to fade in.
+  // this: a fade toward "visible" is suppressed until there is something to fade in.
   function hasCatalog(id: GalaxyCatalogId): boolean {
     return galaxyCatalogs.has(id);
   }
