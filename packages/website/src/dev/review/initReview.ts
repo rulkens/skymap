@@ -1,7 +1,7 @@
 /*
  * initReview — dev-only, a part of the overlay `f` turns on (../overlay/devOverlay.ts): when
- * a cutter has written a review for this docs page (tools/site/reviewPlugin.ts), the article
- * reads as plain text and each reviewed heading carries an icon that opens that section's
+ * on any page (tools/site/reviewPlugin.ts keeps a file per page, empty until the first mark),
+ * the article or main region reads as plain text and each reviewed heading carries an icon that opens that section's
  * panel: its marks, the feedback notes inside it, the owner's notes. Select text and press
  * c, w or g to add a mark; m shows the marks in the text (click one to cycle its state); h
  * flips between the original and the result.
@@ -38,13 +38,16 @@ const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'good', good: 'cut' 
 const APPLY_POLL_MS = 3000;
 
 async function initReview(): Promise<void> {
-  const article = document.getElementById('page');
-  if (!article || !location.pathname.startsWith(`${BASE}docs/`)) return;
+  const article = document.getElementById('page') ?? document.getElementById('main');
+  if (!article) return;
   const page = `/${location.pathname.slice(BASE.length)}`;
   const url = `${ROUTE}?page=${encodeURIComponent(page)}`;
   const found = await fetch(url).catch(() => null);
-  if (!found?.ok) return;
-  const review = (await found.json()) as DocsReview;
+  // No cutter has been here: the page starts from an empty review, and the first save writes its file.
+  if (found?.status !== 200 && found?.status !== 404) return;
+  const review: DocsReview = found.ok
+    ? ((await found.json()) as DocsReview)
+    : { page, job: '', words: { before: wordsIn(article.textContent ?? '') }, marks: [] };
 
   const bar = make('div', 'review-bar', document.body);
   bar.dataset.reviewUi = '';
@@ -68,6 +71,7 @@ async function initReview(): Promise<void> {
   const flag = make('span', 'review-flag', bar);
   job.value = review.job;
   job.setAttribute('aria-label', 'The question a reader comes to this page with');
+  job.placeholder = 'The question a reader comes to this page with';
   confirm.hidden = true;
   confirmText.setAttribute('role', 'status');
   for (const [button, label] of [
