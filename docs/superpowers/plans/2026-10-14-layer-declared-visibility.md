@@ -174,16 +174,16 @@ readonly fade?: ShowKey;
 
 Each file exports `<layer>Visibility = [...] as const satisfies readonly VisibilityEntry[]`. The body Layer's `layer.ts` (PR 1) gains `visibility: bodyVisibility`; Task 6 adds its `ui` row.
 
-- [ ] Write the four entry types and the derived address types. Pin the generic plumbing (`ShowItemOf`, `LabelItemOf`, `FadeValueOf`) so the `@ts-expect-error` lines below hold.
-- [ ] Add `labelEnabled: boolean` (default `true`) to the constellations, lightTime and zoneOfAvoidance clusters, `missions.items` (above), and the two `NOT_IN_PANEL` patterns. No setter and no panel row: cues and `setVisibility` reach them.
-- [ ] Write the 14 `visibility.ts` files and `APP_VISIBILITY`. Declare `visibility` on every `defineLayer` call, the body Layer's included.
-- [ ] Add the types-only fields to `ContentPass`, `FrameContentPlanner`, `LayerScreenLabel`, `LayerWorldLabel` and `LayerGuides.worldLabels`.
-- [ ] Test `every address in APP_VISIBILITY is declared once`: show keys and label names unique; no show key equal to `label` or `labels` (an item suffix must never collide with a label address); items unique within an entry.
-- [ ] Test `every of pairing obeys the item rule`: every `of` names a show entry; item-less labels name item-less entries; every item of a per-item `of` label is an item of its `of` entry. Mutation-check by adding a bogus item to the structure label's list (or pointing the star label's `of` at an item-less key): the test must fail.
-- [ ] Test `APP_VISIBILITY lists exactly the entries the composed Layers declare` against `APP_COMPOSITION.layers.flatMap((l) => l.visibility ?? [])` (precedent: `tests/compositions/sourceRegistryCoverage.test.ts`).
-- [ ] Type-level lines in the same file: `// @ts-expect-error` on `const a: VisibilityArg = 'flwo'`, `const b: ScopedVisibilityAddress = 'survey:bogus'`, `const c: ScopedVisibilityAddress = 'label:structure:bogus'`, plus one non-error line each for `'label:structure:void'`, `'survey:milliquas'`, `'cosmicWebDensity:mcpm'` and `'starCatalog:sun'`.
-- [ ] **Gate:** `npx tsc --noEmit` passes. This proves `ContentPass` (→ `PassState` → the settings root) can reference `ShowKey`. If `tsc` reports a circular alias, find the `visibility.ts` import chain that reaches a Layer-typed module and cut it. Do not reach for `APP_COMPOSITION`.
-- [ ] Commit.
+- [x] Write the four entry types and the derived address types. Pin the generic plumbing (`ShowItemOf`, `LabelItemOf`, `FadeValueOf`) so the `@ts-expect-error` lines below hold.
+- [x] Add `labelEnabled: boolean` (default `true`) to the constellations, lightTime and zoneOfAvoidance clusters, `missions.items` (above), and the two `NOT_IN_PANEL` patterns. No setter and no panel row: cues and `setVisibility` reach them.
+- [x] Write the 14 `visibility.ts` files and `APP_VISIBILITY`. Declare `visibility` on every `defineLayer` call, the body Layer's included.
+- [x] Add the types-only fields to `ContentPass`, `FrameContentPlanner`, `LayerScreenLabel`, `LayerWorldLabel` and `LayerGuides.worldLabels`.
+- [x] Test `every address in APP_VISIBILITY is declared once`: show keys and label names unique; no show key equal to `label` or `labels` (an item suffix must never collide with a label address); items unique within an entry.
+- [x] Test `every of pairing obeys the item rule`: every `of` names a show entry; item-less labels name item-less entries; every item of a per-item `of` label is an item of its `of` entry. Mutation-check by adding a bogus item to the structure label's list (or pointing the star label's `of` at an item-less key): the test must fail.
+- [x] Test `APP_VISIBILITY lists exactly the entries the composed Layers declare` against `APP_COMPOSITION.layers.flatMap((l) => l.visibility ?? [])` (precedent: `tests/compositions/sourceRegistryCoverage.test.ts`).
+- [x] Type-level lines in the same file: `// @ts-expect-error` on `const a: VisibilityArg = 'flwo'`, `const b: ScopedVisibilityAddress = 'survey:bogus'`, `const c: ScopedVisibilityAddress = 'label:structure:bogus'`, plus one non-error line each for `'label:structure:void'`, `'survey:milliquas'`, `'cosmicWebDensity:mcpm'` and `'starCatalog:sun'`.
+- [x] **Gate:** `npx tsc --noEmit` passes. This proves `ContentPass` (→ `PassState` → the settings root) can reference `ShowKey`. If `tsc` reports a circular alias, find the `visibility.ts` import chain that reaches a Layer-typed module and cut it. Do not reach for `APP_COMPOSITION`.
+- [x] Commit.
 
 ### Task 2: `setVisibility` and the switch reader with the section rule
 

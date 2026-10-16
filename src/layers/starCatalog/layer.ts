@@ -9,6 +9,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { starCatalogLayerSettings } from './state/slices';
+import { starCatalogVisibility } from './visibility';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -34,6 +35,7 @@ import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 export const starCatalogLayer = defineLayer({
   name: 'starCatalog',
   settings: starCatalogLayerSettings,
+  visibility: starCatalogVisibility,
   sources: STAR_CATALOG_SOURCE_ROWS,
   facts: { famousStarsMeta: [], chunkSlotsError: null } as StarCatalogFacts,
   targets: [STAR_AGGREGATES_TARGET],

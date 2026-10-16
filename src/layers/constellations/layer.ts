@@ -7,6 +7,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { constellationsLayerSettings } from './state/slices';
+import { constellationsVisibility } from './visibility';
 import { CONSTELLATIONS_SOURCE_ROWS } from './sources/constellationsSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -19,6 +20,7 @@ import { constellationsSettingsRow } from './ui/constellationsSettingsRow';
 export const constellationsLayer = defineLayer({
   name: 'constellations',
   settings: constellationsLayerSettings,
+  visibility: constellationsVisibility,
   sources: CONSTELLATIONS_SOURCE_ROWS,
   create,
   destroy,

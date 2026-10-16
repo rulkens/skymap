@@ -25,6 +25,7 @@ import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { SourceCountReport } from './SourceCountReport';
+import type { VisibilityEntry } from './VisibilityEntry';
 
 export type Layer<
   Name extends string,
@@ -65,6 +66,9 @@ export type Layer<
    * SettingsPanel, `debug` in DebugPanel) or a `labelsAndGuides` data row,
    * appended after the core rows in `LabelsAndGuidesSectionContainer`. */
   readonly ui?: readonly LayerUiEntry[];
+  /** What this Layer can show and label. The address types derive from `APP_VISIBILITY`,
+   * which imports the same tuple from the Layer's `visibility.ts`, never from here. */
+  readonly visibility?: readonly VisibilityEntry[];
 
   // Lifecycle. Every member below is invoked from exactly one place —
   // `instantiateLayer` — which is where to look to see the call shapes together.

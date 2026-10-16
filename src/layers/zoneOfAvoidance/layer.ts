@@ -8,6 +8,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { zoneOfAvoidanceLayerSettings } from './state/slices';
+import { zoneOfAvoidanceVisibility } from './visibility';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from './sources/zoneOfAvoidanceSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -24,6 +25,7 @@ import CompactZoneOfAvoidanceCard from './ui/CompactZoneOfAvoidanceCard/CompactZ
 export const zoneOfAvoidanceLayer = defineLayer({
   name: 'zoneOfAvoidance',
   settings: zoneOfAvoidanceLayerSettings,
+  visibility: zoneOfAvoidanceVisibility,
   sources: ZONE_OF_AVOIDANCE_SOURCE_ROWS,
   targets: [
     {

@@ -6,6 +6,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { missionsLayerSettings } from './state/slices';
+import { missionsVisibility } from './visibility';
 import { loadSpacecraftTracksSaga } from './sagas/loadSpacecraftTracksSaga';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -18,6 +19,7 @@ import { missionsLayerExhibits } from './exhibits/exhibits';
 export const missionsLayer = defineLayer({
   name: 'missions',
   settings: missionsLayerSettings,
+  visibility: missionsVisibility,
   sagas: [loadSpacecraftTracksSaga],
   exhibits: missionsLayerExhibits,
   create,

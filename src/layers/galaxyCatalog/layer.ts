@@ -8,6 +8,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { COSMO } from '../../services/engine/frame/slabs';
 import { galaxyCatalogLayerSettings } from './state/slices';
+import { galaxyCatalogVisibility } from './visibility';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -27,6 +28,7 @@ import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 export const galaxyCatalogLayer = defineLayer({
   name: 'galaxyCatalog',
   settings: galaxyCatalogLayerSettings,
+  visibility: galaxyCatalogVisibility,
   sources: GALAXY_CATALOG_SOURCE_ROWS,
   facts: {
     famousMeta: [],

@@ -9,6 +9,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { COSMO } from '../../services/engine/frame/slabs';
 import { milkyWayLayerSettings } from './state/slices';
+import { milkyWayVisibility } from './visibility';
 import { MILKY_WAY_SOURCE_ROWS } from './sources/milkyWaySourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -28,6 +29,7 @@ import CompactMilkyWayCard from './ui/CompactMilkyWayCard/CompactMilkyWayCard';
 export const milkyWayLayer = defineLayer({
   name: 'milkyWay',
   settings: milkyWayLayerSettings,
+  visibility: milkyWayVisibility,
   sources: MILKY_WAY_SOURCE_ROWS,
   targets: [MILKY_WAY_AGGREGATE_TARGET],
   create,

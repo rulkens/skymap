@@ -9,6 +9,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { cosmicWebDensityLayerSettings } from './state/slices';
+import { cosmicWebDensityVisibility } from './visibility';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -22,6 +23,7 @@ import CosmicWebDensityTuningSectionContainer from './ui/CosmicWebDensityTuningS
 export const cosmicWebDensityLayer = defineLayer({
   name: 'cosmicWebDensity',
   settings: cosmicWebDensityLayerSettings,
+  visibility: cosmicWebDensityVisibility,
   sources: COSMIC_WEB_DENSITY_SOURCE_ROWS,
   targets: [
     {

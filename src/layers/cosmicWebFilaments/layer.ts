@@ -7,6 +7,7 @@
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { cosmicWebFilamentsLayerSettings } from './state/slices';
+import { cosmicWebFilamentsVisibility } from './visibility';
 import { FILAMENTS_SOURCE_ROWS } from './sources/filamentsSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -18,6 +19,7 @@ import CosmicWebFilamentsSectionContainer from './ui/CosmicWebFilamentsSectionCo
 export const cosmicWebFilamentsLayer = defineLayer({
   name: 'cosmicWebFilaments',
   settings: cosmicWebFilamentsLayerSettings,
+  visibility: cosmicWebFilamentsVisibility,
   sources: FILAMENTS_SOURCE_ROWS,
   create,
   destroy,

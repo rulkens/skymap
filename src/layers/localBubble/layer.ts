@@ -6,6 +6,7 @@
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { localBubbleLayerSettings } from './state/slices';
+import { localBubbleVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { localBubbleAssetRows } from './load/localBubbleAssetRows';
@@ -17,6 +18,7 @@ import { localBubbleSettingsRow } from './ui/localBubbleSettingsRow';
 export const localBubbleLayer = defineLayer({
   name: 'localBubble',
   settings: localBubbleLayerSettings,
+  visibility: localBubbleVisibility,
   create,
   destroy,
   passes: (runtime) => [localBubblePass(runtime)],

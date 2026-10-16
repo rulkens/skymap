@@ -6,6 +6,7 @@
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { flowLayerSettings } from './state/slices';
+import { flowVisibility } from './visibility';
 import { FLOW_SOURCE_ROWS } from './sources/flowSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -20,6 +21,7 @@ import FlowTuningSectionContainer from './ui/FlowTuningSectionContainer';
 export const flowLayer = defineLayer({
   name: 'flow',
   settings: flowLayerSettings,
+  visibility: flowVisibility,
   sources: FLOW_SOURCE_ROWS,
   create,
   destroy,

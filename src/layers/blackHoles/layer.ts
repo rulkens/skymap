@@ -11,6 +11,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { blackHolesLayerSettings } from './state/slices';
+import { blackHolesVisibility } from './visibility';
 import { BLACK_HOLE_SOURCE_ROWS } from './sources/blackHoleSourceRows';
 import { BLACK_HOLES } from './data/blackHoles';
 import { create } from './create';
@@ -30,6 +31,7 @@ import CompactBlackHoleCard from './ui/CompactBlackHoleCard/CompactBlackHoleCard
 export const blackHolesLayer = defineLayer({
   name: 'blackHoles',
   settings: blackHolesLayerSettings,
+  visibility: blackHolesVisibility,
   sources: BLACK_HOLE_SOURCE_ROWS,
   targets: [SKY_CUBEMAP_TARGET],
   slabs: BLACK_HOLES.map(blackHoleSlabRow),

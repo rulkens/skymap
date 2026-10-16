@@ -9,6 +9,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 import { structureLayerSettings } from './state/slices';
+import { structureVisibility } from './visibility';
 import { STRUCTURE_SOURCE_ROWS } from './sources/structureSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -27,6 +28,7 @@ import type { StructureFacts } from './@types/StructureFacts';
 export const structureLayer = defineLayer({
   name: 'structure',
   settings: structureLayerSettings,
+  visibility: structureVisibility,
   sources: STRUCTURE_SOURCE_ROWS,
   facts: { counts: {}, searchList: [], bulk: 'idle' } as StructureFacts,
   create,
