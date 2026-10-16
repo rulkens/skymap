@@ -49,6 +49,13 @@ describe('buildInitialUiState', () => {
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(false);
     });
+
+    it('is false under ?dome and under ?remote even on a first visit', () => {
+      for (const url of ['/?dome', '/?remote']) {
+        window.history.replaceState(null, '', url);
+        expect(buildInitialUiState().splash.visible).toBe(false);
+      }
+    });
   });
 
   describe('splash.dismissedVersion', () => {
