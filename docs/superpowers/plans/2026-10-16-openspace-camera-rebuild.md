@@ -118,7 +118,7 @@ These files do not touch either changed contract, so they come over from the #83
 - The spec, adding a short "Rebuilt on #913 and #854" section that lists rulings 1–9.
 - `docs/RENDERER.md` and `docs/grill-sessions/globe-camera-pivot-2026-08-24.md`, carrying the #837 notes and replacing their `orbitControls` and aggregator references with the new path.
 
-- [ ] Write, then grep for stale `bindAxis`, `openSpaceAxisFor`, `InputGestureEvent` and `inputAggregator` mentions in the touched docs. Commit.
+- [x] Write, then grep for stale `bindAxis`, `openSpaceAxisFor`, `InputGestureEvent` and `inputAggregator` mentions in the touched docs. Commit.
 
 ## Definition of Done
 
