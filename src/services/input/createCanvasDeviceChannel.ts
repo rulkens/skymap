@@ -23,9 +23,6 @@ const modsOf = (e: MouseEvent): Modifiers => ({
 });
 
 export function createCanvasDeviceChannel(canvas: HTMLCanvasElement): EventChannel<DeviceEvent> {
-  // No DOM ⇒ a channel that never emits, so `take` parks and `close()` is safe.
-  if (typeof window === 'undefined') return eventChannel<DeviceEvent>(() => () => {});
-
   return eventChannel<DeviceEvent>((emit) => {
     const unitAt = (e: MouseEvent): UnitPoint => {
       const r = canvas.getBoundingClientRect();

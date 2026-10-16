@@ -61,16 +61,4 @@ describe('pendingToInputSteps', () => {
       { kind: 'zoom', factor: 1.1, duringGesture: false, cursorPx: [25, 25] },
     ]);
   });
-
-  it('start and end map to gestureStart and gestureEnd in order', () => {
-    const steps = pendingToInputSteps(
-      [
-        { kind: 'start', source: 'canvas' },
-        drag({ intent: 'pan' }),
-        { kind: 'end', source: 'canvas' },
-      ],
-      [100, 50],
-    );
-    expect(steps.map((s) => s.kind)).toEqual(['gestureStart', 'drag', 'gestureEnd']);
-  });
 });

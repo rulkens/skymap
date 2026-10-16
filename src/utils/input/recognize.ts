@@ -30,10 +30,7 @@ function onDown(s: RecognizerState, e: PointerDeviceEvent): RecognizeResult {
   // A mouse is strictly single-pointer: with no pointer capture a release outside
   // the window sends no `up`, and the stale entry would turn the next click into a
   // pinch. Touch gets implicit capture, so only a mouse heals.
-  const base: RecognizerState =
-    e.pointerType === 'mouse'
-      ? { ...s, pointers: new Map(), held: null, pinching: false, pinchBroken: false }
-      : s;
+  const base: RecognizerState = e.pointerType === 'mouse' ? { ...s, pointers: new Map() } : s;
   const pointers = new Map(base.pointers).set(e.pointer, e.at);
   if (base.pointers.size === 0) {
     const press: Press = { button: e.button, pointerType: e.pointerType, ...e.mods };

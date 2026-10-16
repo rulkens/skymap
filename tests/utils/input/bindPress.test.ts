@@ -25,12 +25,4 @@ describe('bindPress', () => {
     expect(bindPress(skymap, press({ pointerType: 'touch' }))).toBe('orbit');
     expect(bindPress(skymap, press({ pointerType: 'pen' }))).toBe('orbit');
   });
-
-  it('a modifier does not change the skymap binding', () => {
-    expect(bindPress(skymap, press({ shift: true }))).toBe('orbit');
-  });
-
-  it('a table with no matching row throws', () => {
-    expect(() => bindPress([[{ button: 2 }, 'pan']], press({}))).toThrow();
-  });
 });

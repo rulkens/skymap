@@ -48,7 +48,7 @@ export function createPickDriver(deps: PickDriverDeps): Destroyable {
   }
 
   function pump(): void {
-    while (live && !state.picking.pickInFlight) {
+    while (!state.picking.pickInFlight) {
       const requests = selectPickRequests(store.getState());
       const which =
         requests.select && requests.select.seq !== taken.select

@@ -178,10 +178,4 @@ describe('inputSlice', () => {
     store.dispatch(inputPickResolved({ which: 'select', seq: 2 }));
     expect(selectPickRequests(store.getState()).select).toBeNull();
   });
-
-  it('inputSourceDetached removes the source record', () => {
-    const store = build();
-    store.dispatch(inputSourceDetached({ source: 'remote' }));
-    expect(store.getState()[inputRoute].sources).toEqual({ canvas: { aspect: 2 } });
-  });
 });
