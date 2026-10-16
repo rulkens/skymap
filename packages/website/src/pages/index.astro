@@ -1,15 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
-import Flight from '../components/Flight.astro';
-import Lead from '../components/Lead.astro';
-import Places from '../components/Places.astro';
-import Tour from '../components/Tour.astro';
-import Classroom from '../components/Classroom.astro';
-import Dome from '../components/Dome.astro';
-import Closing from '../components/Closing.astro';
-import FullFigure from '../components/FullFigure.astro';
-import Honesty from '../components/Honesty.astro';
-import Credits from '../components/Credits.astro';
+import Classroom from '../components/Classroom/Classroom.tsx';
+import Closing from '../components/Closing/Closing.tsx';
+import Credits from '../components/Credits/Credits.tsx';
+import Dome from '../components/Dome/Dome.tsx';
+import Flight from '../components/Flight/Flight.tsx';
+import { prePaintScript } from '../components/Flight/prePaintScript.ts';
+import FullFigure from '../components/FullFigure/FullFigure.tsx';
+import Honesty from '../components/Honesty/Honesty.tsx';
+import Lead from '../components/Lead/Lead.tsx';
+import Places from '../components/Places/Places.tsx';
+import Tour from '../components/Tour/Tour.tsx';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { homeJsonLd } from '../data/homeJsonLd';
 import { flightStills } from '../utils/flightStills';
@@ -28,10 +29,12 @@ const first = stills[0]!;
   <Fragment slot="head">
     <link rel="preload" as="image" type="image/avif" media="(orientation: portrait)" imagesrcset={first.portrait.avif} imagesizes={first.portrait.sizes} fetchpriority="high" />
     <link rel="preload" as="image" type="image/avif" media="(orientation: landscape)" imagesrcset={first.landscape.avif} imagesizes={first.landscape.sizes} fetchpriority="high" />
+    <!-- Before first paint, so the flight's layout is decided once; the island takes over from it. -->
+    <script is:inline set:html={prePaintScript()} />
   </Fragment>
-  <Flight stills={stills} videoUrl={heroVideoUrl()} />
-  <Places />
-  <Lead />
+  <Flight stills={stills} videoUrl={heroVideoUrl()} client:load />
+  <Places client:visible />
+  <Lead client:visible />
   <FullFigure id="hubble" tall="hubble-portrait" />
   <Tour />
   <Classroom />

@@ -1,0 +1,20 @@
+.root {
+  composes: wrap from '../../styles/layout.module.css';
+  padding-top: 4.5rem;
+
+  & h1 {
+    font-size: var(--text-h2);
+  }
+}
+
+.say {
+  max-width: var(--measure-lead);
+  margin-bottom: 0;
+  font-size: var(--text-lead);
+}
+
+@media (max-width: 900px) {
+  .root {
+    padding-top: 2.5rem;
+  }
+}

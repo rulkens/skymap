@@ -1,0 +1,54 @@
+.root {
+  margin: 0;
+}
+
+.picture img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.caption {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 901px) {
+  .picture {
+    --bleed: max(var(--gutter), (100vw - var(--wrap-max)) / 2 + var(--gutter));
+    margin-right: calc(-1 * var(--bleed));
+
+    /* The app's panels stand at the left of an interface shot, so a cut keeps that side. */
+    & img {
+      max-height: var(--shot-room, none);
+      object-fit: cover;
+      object-position: 0 50%;
+    }
+  }
+
+  .root {
+    transition: opacity 0.25s ease-out;
+  }
+
+  /* Seen once, on the stage: the others wait invisible and fade as the reader moves on. */
+  .away {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.25s ease-in,
+      visibility 0s linear 0.25s;
+  }
+}
+
+/* Narrow, the picture runs to both edges of the screen; its label keeps the text edge. */
+@media (max-width: 900px) {
+  .picture {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .away {
+    transition: none;
+  }
+}

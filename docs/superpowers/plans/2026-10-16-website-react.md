@@ -136,17 +136,21 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Files:** `Flight/` (island, `client:load`), delete `src/scripts/initFlight.ts`; `pages/index.astro`.
 
-- [ ] The pre-paint `is:inline` script (`Flight.astro:56`: sets `data-live`/`data-film` and `--nav-ground` before first paint) stays an `is:inline` script, emitted by the page or the shell right after the island's markup, so the first paint is unchanged. The island takes over from that state on hydration, without a flash.
-- [ ] `pages/index.astro:21` keeps its top-level `await flightStills()` and passes the result as a prop.
-- [ ] Gate: Home compared with the flight at progress 0 AND at the last stop (scroll to the end), at both widths.
+- [x] The pre-paint `is:inline` script (`Flight.astro:56`: sets `data-live`/`data-film` and `--nav-ground` before first paint) stays an `is:inline` script, emitted by the page or the shell right after the island's markup, so the first paint is unchanged. The island takes over from that state on hydration, without a flash. Deviation: the script's text is built by `Flight/prePaintScript.ts` (the film query lives once, in `filmQuery.ts`) and `index.astro` puts it in the head slot, and it marks `<html>` (`data-flight-live`, `data-flight-film`) instead of the section, so no attribute is set on markup React owns and nothing mismatches on hydration; the Flight modules read it as `:root[data-flight-live] .x`.
+- [x] `pages/index.astro:21` keeps its top-level `await flightStills()` and passes the result as a prop.
+- [x] Gate: Home compared with the flight at progress 0 AND at the last stop (scroll to the end), at both widths.
 
 ### Task 3.2: Places, PictureBand, Features
 
 **Files:** Places (+ initPlaceDrift, initPlaceFilms), PictureBand (+ initGallery; `site.css:290-300` gallery rule moves into its module), FeatureStage, FeatureHead, FeatureLead, FeatureList, FeatureShot (+ initFeatureStage, initFeatureFilms); delete the five scripts.
 
+- [x] Done. Deviation: a gallery band's parts (pictures, CaptionGallery, ViewWords) share the current view through React context, so the band is an island only where its words are React too: `Lead` (Home) and the new `ClassroomHero` (made for the classroom page, whose band was a gallery in `.astro`). A band with one view stays static and takes its words as children from any page.
+
 ### Task 3.3: The rest of Home
 
 **Files:** Lead, Closing, CaptionGallery, Classroom, Dome, Honesty, Tour, FullFigure.
+
+- [x] Done.
 
 **Wave 3 done:** gate green on Home and Features, both widths, flight start and end.
 

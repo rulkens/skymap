@@ -1,0 +1,133 @@
+/*
+ * `:root[data-flight-live]` is the page the pre-paint script marked (prePaintScript.ts): the stops
+ * then lie on the stage; without it they are a list of captioned pictures.
+ */
+.stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stop img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+@media (orientation: portrait) {
+  .stop img {
+    aspect-ratio: 4 / 5;
+  }
+}
+
+.cap {
+  padding: 1.25rem var(--gutter) 2.5rem;
+}
+
+.name {
+  max-width: none;
+  margin: 0 0 0.35em;
+  font: var(--weight-display) var(--text-h2) / 1.05 var(--font-family-display);
+  letter-spacing: -0.015em;
+  color: var(--color-fg);
+  text-wrap: balance;
+}
+
+.line {
+  max-width: 34rem;
+  margin: 0;
+  line-height: 1.45;
+  color: var(--site-text);
+}
+
+:root[data-flight-live] .stops,
+:root[data-flight-live] .stop {
+  position: absolute;
+  inset: 0;
+}
+
+:root[data-flight-live] .stop picture {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+:root[data-flight-live] .stop:first-child picture {
+  opacity: 1;
+}
+
+/* A still two stops away is not fetched yet: only the first is in the first load. */
+:root[data-flight-live] .stop:not(.near) picture {
+  display: none;
+}
+
+:root[data-flight-live] .stop img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+/* Every caption is set in the bottom left corner; only the scroll's opacity tells them apart. */
+:root[data-flight-live] .cap {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  bottom: 0;
+  max-width: min(54rem, 100%);
+  padding: 0 3.5rem 3.5rem var(--gutter);
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 0 0.5rem rgb(0 0 0 / 0.9);
+}
+
+/* A local scrim: under the words only, so the rest of the frame keeps its light. */
+:root[data-flight-live] .cap::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -7rem -9rem 0 0;
+  background: radial-gradient(
+    ellipse 100% 100% at 0% 100%,
+    rgb(0 0 0 / 0.9) 0%,
+    rgb(0 0 0 / 0.8) 55%,
+    rgb(0 0 0 / 0) 100%
+  );
+}
+
+/* Upright screens: the words take the bottom. */
+@media (max-width: 760px) and (orientation: portrait) {
+  :root[data-flight-live] .cap {
+    padding: 0 var(--gutter) 2.75rem;
+  }
+
+  :root[data-flight-live] .cap::before {
+    inset: -6rem 0 0;
+    background: linear-gradient(
+      0deg,
+      rgb(0 0 0 / 0.9) 0%,
+      rgb(0 0 0 / 0.72) 55%,
+      rgb(0 0 0 / 0) 100%
+    );
+  }
+}
+
+/* Short screens (a phone on its side): everything smaller, nothing stacked. */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root[data-flight-live] .cap {
+    max-width: 62%;
+    padding-bottom: 2rem;
+  }
+
+  .name {
+    font-size: 2rem;
+  }
+
+  :root[data-flight-live] .line {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+  }
+}
