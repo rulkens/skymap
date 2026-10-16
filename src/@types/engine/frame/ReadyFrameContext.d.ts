@@ -95,11 +95,12 @@ export type ReadyFrameContext = {
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
-   * The focus encoded as the packed pick word its own geometry and label stamp
-   * (`encodeSelectionPick` over `selection.focus`); null with no focus, or while its row
-   * cannot encode it. `emphasisOf` compares records against it.
+   * The structure `focusBlend` is about (structureFocus's latched one, so it outlasts
+   * `selection.focus` through the fade-out), encoded as the pick word its own geometry
+   * and label stamp; null at blend 0. Set with the blend, from the same tick.
+   * `emphasisOf` compares records against it.
    */
-  readonly focusPickId: number | null;
+  focusPickId: number | null;
   /**
    * This frame's `plan` rows' answers, one store shared by every `FrameView`
    * (`createFramePlannerResultStore()`, minted once by `deriveFrameContext`). `runPlanSteps`

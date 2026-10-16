@@ -244,8 +244,6 @@ function makeState(): EngineState {
     // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
     // ready gate.
     selectionRows: { focus: null },
-    selection: { hover: null, select: null, focus: null },
-    selectionKindRows: [],
   } as unknown as EngineState;
 }
 
@@ -1019,6 +1017,46 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
   });
+
+  it('the outgoing focused structure keeps full emphasis through the fade-out', () => {
+    const VIRGO_WORD = 42;
+    const base = makeReadyState(
+      () => false,
+      () => false,
+    );
+    const structureFocus = createStructureFocusSubsystem({ requestRender: vi.fn() }, 0);
+    const state = {
+      ...base,
+      selectionKindRows: [
+        {
+          type: 'structure',
+          encodePick: (ref: { id: string }) => (ref.id === 'virgo' ? VIRGO_WORD : null),
+        },
+      ],
+      subsystems: {
+        ...base.subsystems,
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        structureFocus,
+      },
+    } as unknown as EngineState;
+    // Virgo was focused and settled; the focus is already cleared (the fixture's
+    // focus row is null), so the frames below tick its fade-out.
+    structureFocus.update({ id: 'virgo', worldPos: [1, 0, 0], physicalRadiusMpc: 2 } as never, 0);
+    structureFocus.produceFocusUniforms(500);
+    const deps = makeCamDeps(state);
+    const snapshotAt = (nowMs: number) => {
+      runFrame(state, deps, nowMs);
+      return vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1].snapshot;
+    };
+
+    snapshotAt(600);
+    const fading = snapshotAt(800);
+    expect(fading.focusBlend).toBeGreaterThan(0);
+    expect(fading.focusPickId).toBe(VIRGO_WORD);
+    const settled = snapshotAt(1100);
+    expect(settled.focusBlend).toBe(0);
+    expect(settled.focusPickId).toBeNull();
+  });
 });
 
 describe('runFrame — the planner keep-ticking fold', () => {
@@ -1072,6 +1110,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
             physicalRadiusMpc: 1,
             blend: 0.5,
           })),
+          lastFocusRef: () => null,
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },

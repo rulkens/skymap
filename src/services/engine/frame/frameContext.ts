@@ -36,7 +36,6 @@ import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
-import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -142,11 +141,10 @@ export function deriveFrameContext(
   for (const body of meshBodies) admit(body);
   for (const { body } of coverage.values()) admit(body);
 
-  // `focusBlend` and `focus` are at-rest placeholders that `runFrame` overwrites
-  // the moment the ready gate passes, before any consumer reads them: deriving
-  // them here would tick the structureFocus fade controller, a once-per-frame
-  // side effect this (speculatively callable) function must not have. Encoding the
-  // focus ticks nothing, so its pick word is set here for every caller at once.
+  // `focus`, `focusBlend` and `focusPickId` are at-rest placeholders that `runFrame`
+  // overwrites the moment the ready gate passes, before any consumer reads them:
+  // deriving them here would tick the structureFocus fade controller, a once-per-frame
+  // side effect this (speculatively callable) function must not have.
   return {
     isReady: true,
     camBasisWorld,
@@ -161,7 +159,7 @@ export function deriveFrameContext(
     renderTargets: state.gpu.renderTargets,
     focus: ZERO_FOCUS,
     focusBlend: 0,
-    focusPickId: encodeSelectionPick(state.selectionKindRows, state.selection.focus),
+    focusPickId: null,
     // Fresh and empty: `runPlanSteps` fills it in as each section's plan rows
     // run, ahead of every GPU step and every other planner reader this frame.
     plans: createFramePlannerResultStore(),

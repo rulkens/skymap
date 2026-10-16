@@ -38,8 +38,6 @@ const STATE = {
   },
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
-  selection: { hover: null, select: null, focus: null },
-  selectionKindRows: [],
   slabRows: [],
   visibilityEntries: [],
   data: {

@@ -35,6 +35,7 @@ import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
 /** Focus fade duration in ms. */
 const FOCUS_FADE_DURATION_MS = 400;
@@ -54,7 +55,7 @@ export const ZERO_FOCUS: FocusUniformsValue = {
 
 /** The latched display target while focus is active or fading out. */
 type ActiveFocus = {
-  readonly id: string;
+  readonly ref: Extract<SelectionRef, { type: 'structure' }>;
   readonly center: Vec3;
   readonly apparentRadiusMpc: number;
   readonly physicalRadiusMpc: number;
@@ -70,6 +71,7 @@ export function createStructureFocusSubsystem(
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
   let lastProduced: FocusUniformsValue = ZERO_FOCUS;
+  let lastRef: SelectionRef | null = null;
 
   function update(structure: StructureInfo | null, nowMs: number): void {
     // null drives a fade-out. Groups share the same fade band mechanic as
@@ -80,14 +82,14 @@ export function createStructureFocusSubsystem(
       // across the [physical, apparent] band (and supplies a soft band of
       // its own when the two are equal — SC/void have no wider extent).
       next = {
-        id: structure.id,
+        ref: { type: 'structure', id: structure.id },
         center: [structure.worldPos[0], structure.worldPos[1], structure.worldPos[2]],
         apparentRadiusMpc: structure.apparentRadiusMpc ?? structure.physicalRadiusMpc,
         physicalRadiusMpc: structure.physicalRadiusMpc,
       };
     }
 
-    const targetId = next?.id ?? null;
+    const targetId = next?.ref.id ?? null;
     // No transition → no re-fade (covers same focused structure every frame AND
     // an already-in-flight fade-out being re-observed every frame).
     if (targetId === focusedId) return;
@@ -111,6 +113,7 @@ export function createStructureFocusSubsystem(
     if (active !== null && blend === 0 && !fade.isAnimating(nowMs)) {
       active = null;
     }
+    lastRef = active?.ref ?? null;
     lastProduced =
       active === null
         ? ZERO_FOCUS
@@ -132,11 +135,13 @@ export function createStructureFocusSubsystem(
     update,
     produceFocusUniforms,
     lastFocusUniforms: () => lastProduced,
+    lastFocusRef: () => lastRef,
     isAwake,
     destroy(): void {
       active = null;
       focusedId = null;
       lastProduced = ZERO_FOCUS;
+      lastRef = null;
     },
   };
 }

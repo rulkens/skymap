@@ -23,6 +23,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
+import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
@@ -44,6 +45,8 @@ function makeState(
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
     lastFocus?: FocusUniformsValue;
+    lastFocusRef?: SelectionRef;
+    selectionKindRows?: unknown[];
     compositor?: unknown;
     texturedDisks?: unknown;
     viewRig?: EngineState['viewRig'];
@@ -65,7 +68,10 @@ function makeState(
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
-      structureFocus: { lastFocusUniforms: () => overrides.lastFocus ?? ZERO_FOCUS },
+      structureFocus: {
+        lastFocusUniforms: () => overrides.lastFocus ?? ZERO_FOCUS,
+        lastFocusRef: () => overrides.lastFocusRef ?? null,
+      },
     },
     settings: {
       orientation: 'equatorial',
@@ -74,8 +80,7 @@ function makeState(
     // No focused pivot in this fixture — see frameContext.test.ts's makeState
     // for why `deriveSlabs` needs this field once a pivot radius is threaded in.
     selectionRows: { hover: null, select: null, focus: null },
-    selection: { hover: null, select: null, focus: null },
-    selectionKindRows: [],
+    selectionKindRows: overrides.selectionKindRows ?? [],
     // No seeded bodies/stars — see frameContext.test.ts's makeState for why
     // `deriveFrameContext` needs this now.
     slabRows: [],
@@ -168,8 +173,16 @@ describe('pickFrameContext', () => {
       physicalRadiusMpc: 3e-6,
       blend: 1,
     };
-    const ctx = pickFrameContext(makeState({ lastFocus }), makeCanvas());
+    const ctx = pickFrameContext(
+      makeState({
+        lastFocus,
+        lastFocusRef: { type: 'structure', id: 'virgo' },
+        selectionKindRows: [{ type: 'structure', encodePick: () => 42 }],
+      }),
+      makeCanvas(),
+    );
     expect(ctx?.snapshot.focus).toBe(lastFocus);
     expect(ctx?.snapshot.focusBlend).toBe(1);
+    expect(ctx?.snapshot.focusPickId).toBe(42);
   });
 });
