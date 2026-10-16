@@ -8,8 +8,8 @@
 - **Superseded by:** —
 - **Related:** [ADR 0001 — Fade ownership](0001-fade-ownership.md) (extended here) ·
   [ADR 0011 — Engine composition rows](0011-engine-composition-bundle-rows.md) ·
-  spec `docs/superpowers/specs/2026-10-13-layer-declared-visibility-design.md` ·
-  plan `docs/superpowers/plans/2026-10-14-layer-declared-visibility.md` (#903, #912)
+  spec `docs/superpowers/specs/completed/2026-10-13-layer-declared-visibility-design.md` ·
+  plan `docs/superpowers/plans/completed/2026-10-14-layer-declared-visibility.md` (#903, #912)
 
 ## Context
 
