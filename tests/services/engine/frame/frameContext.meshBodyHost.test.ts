@@ -46,7 +46,7 @@ const STATE = {
     starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
     bodies: { items: {} },
   },
-  picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+  picking: { pickInFlight: false, cursorTexPx: null },
 } as unknown as EngineState;
 
 describe('deriveFrameContext — a host carrying an on-screen mesh body', () => {

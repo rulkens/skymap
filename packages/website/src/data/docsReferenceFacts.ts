@@ -5,7 +5,7 @@ const CHECKED = '2026-10-07';
 const IN_REPO = 'in the Skymap repository';
 const SHORTCUTS = `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`;
 const SHORTCUTS_LABEL = `the keyboard shortcuts, ${IN_REPO}`;
-const POINTER = `${REPO_BLOB}/src/services/camera/orbitControls.ts`;
+const POINTER = `${REPO_BLOB}/src/services/input/createCanvasDeviceChannel.ts`;
 const HASH = `${REPO_BLOB}/src/state/url/hashParamSources.ts`;
 const HASH_LABEL = `the address parameters, ${IN_REPO}`;
 const SETTINGS_PANEL = `${REPO_BLOB}/src/components/SettingsPanel/SettingsPanel.tsx`;
@@ -147,8 +147,8 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-esc-always',
     about: 'app',
     text: 'Esc unpins the card and lets go of the focus wherever the keyboard is, whatever else it closes. With the search open it closes the search and leaves a running tour or an open exhibit as it is: a second Esc leaves that.',
-    source: `${REPO_BLOB}/src/services/engine/interaction/inputBindings.ts`,
-    sourceLabel: `the scene’s own Esc, ${IN_REPO}`,
+    source: SHORTCUTS,
+    sourceLabel: SHORTCUTS_LABEL,
     checked: CHECKED,
   },
   {

@@ -71,7 +71,7 @@ function makeState(): EngineState {
       starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: {} },
     },
-    picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+    picking: { pickInFlight: false, cursorTexPx: null },
   } as unknown as EngineState;
 }
 
@@ -373,7 +373,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
       },
-      picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+      picking: { pickInFlight: false, cursorTexPx: null },
     } as unknown as EngineState;
   }
 

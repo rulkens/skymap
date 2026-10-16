@@ -9,7 +9,7 @@
  *
  * `2 * tan(fovYRad / 2) * h / (cssHeight * pivotRadiusMpc)`, where
  * `h = distance - pivotRadiusMpc`, rates the drag against the ground instead —
- * the pan path's `pxToWorld` conversion (`orbitControls.ts`) evaluated at
+ * the pan path's `pxToWorld` conversion (`applyInputToCamera.ts`) evaluated at
  * altitude rather than `distance` (pan moves the TARGET, an orbit drag sweeps
  * the GROUND), divided by the pivot's radius to convert world distance into
  * radians of rotation.

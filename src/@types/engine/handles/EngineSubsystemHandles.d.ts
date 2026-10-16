@@ -9,8 +9,8 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `earthTiles`, `clickResolver`,
- *     `inputBindings`.
+ *   - Lazy (inside the GPU init IIFE): `earthTiles`, `pickDriver`,
+ *     `resizeWake`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
  * null-checks stay honest and `destroy()` can null fields back out
@@ -23,9 +23,6 @@ import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
-import type { ClickResolver } from '../ClickResolver';
-import type { InputBindings } from '../../input/InputBindings';
-import type { InputAggregator } from '../subsystems/InputAggregator';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { FadeRegistry } from '../../animation/FadeRegistry';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
@@ -40,15 +37,9 @@ export type EngineSubsystemHandles = {
    * that never approaches Earth pays nothing. Null before `wireSlots` runs.
    */
   surfaceTiles: SurfaceTileSubsystem | null;
-  clickResolver: ClickResolver | null;
-  inputBindings: InputBindings | null;
-  /**
-   * Queue between the orbit-controls gesture recognizer (which only emits) and
-   * `runFrame`'s replay, the frame's one input-apply site. Eager — the recognizer is
-   * attached in `wireInput`, but `runFrame` drains from its first tick, which
-   * can precede that async phase.
-   */
-  inputAggregator: InputAggregator;
+  /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
+  pickDriver: Destroyable | null;
+  resizeWake: Destroyable | null;
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered

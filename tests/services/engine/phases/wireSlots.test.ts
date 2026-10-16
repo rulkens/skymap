@@ -453,7 +453,6 @@ function makeDeps(): BootstrapDeps {
     cb,
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
     // wireSlots never reads a resolver — a resolver that always returns null

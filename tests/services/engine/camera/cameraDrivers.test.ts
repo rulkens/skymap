@@ -41,12 +41,12 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
-  beginDrag,
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
   clipStarted,
 } from '../../../../src/state/camera/cameraSlice';
+import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
@@ -323,7 +323,7 @@ describe('pickWinner', () => {
     // A real store with both camera.clip set and camera.dragging true:
     // clip@95 outranks orbitDrag@80.
     const store = makeStore();
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
@@ -363,7 +363,7 @@ describe('the mission row, lifted from the timeline kind', () => {
 
   it('keeps the camera through a drag, which turns its view about the craft', () => {
     const store = inExhibit('voyager-missions');
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
     const claimed = { approachDone: false, dragClaimed: true };
     expect(pickWinner(drivers, s, claimed).id).toBe('mission');
@@ -374,7 +374,7 @@ describe('pickWinner — precedence', () => {
   it('orbitDrag wins when dragging (80 outranks the tween 60)', () => {
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
     expect(pickWinner(CAMERA_DRIVERS, s, APPROACHING).id).toBe('orbitDrag');
   });
@@ -425,7 +425,7 @@ describe("the winner's elapsed", () => {
 
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {
     const store = makeStore();
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
 

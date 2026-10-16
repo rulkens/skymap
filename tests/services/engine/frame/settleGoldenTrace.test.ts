@@ -25,7 +25,7 @@ import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
 import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag, setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -105,7 +105,7 @@ function snapshot(state: EngineState, label: string): Step {
  */
 function runScript(northUp: boolean): Trace {
   const harness = makeCameraSimHarness({ focusBody: 'earth', bootHR: BOOT_HR });
-  const { store, state, frame, push, wheel } = harness;
+  const { store, state, frame, press, moveTo, release, wheel } = harness;
   store.dispatch(setCameraTuning({ northUp }));
   const trace: Step[] = [];
   const record = (label: string) => trace.push(snapshot(state, label));
@@ -121,18 +121,16 @@ function runScript(northUp: boolean): Trace {
     label: string,
     expectMode: string,
   ) => {
-    store.dispatch(beginDrag());
-    push({ kind: 'gestureStart' });
-    push({ kind: 'dragAnchor', xPx: from[0], yPx: from[1] });
+    press(mode, from);
     moves.forEach(([x, y], i) => {
-      push({ kind: 'dragMove', mode, xPx: x, yPx: y });
+      moveTo([x, y]);
       frame();
       record(`${label} move ${i}`);
     });
     // The script must exercise the mode it names, or the trace is silently
     // pinning a different gesture.
     expect(state.cameraRuntime.gesture.value?.gesture).toMatchObject({ mode: expectMode });
-    push({ kind: 'gestureEnd' });
+    release();
     frame();
     record(`${label} end`);
   };

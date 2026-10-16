@@ -20,7 +20,6 @@ import {
   selectClipActive,
 } from '../../../src/state/camera/selectors';
 import {
-  beginDrag,
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
@@ -28,6 +27,7 @@ import {
   clipEnded,
   startFrameTween,
 } from '../../../src/state/camera/cameraSlice';
+import { inputGestureStarted } from '../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
@@ -80,7 +80,7 @@ describe('selectCameraActive', () => {
   it('is true while dragging', () => {
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
 
     expect(selectCameraActive(store.getState())).toBe(true);
   });

@@ -17,11 +17,10 @@ export function driveWheelEvents(
     readonly onFrame?: (t: number) => void;
   } = {},
 ): void {
-  const [xPx, yPx] = options.cursorPx ?? [50, 50];
   let evIdx = 0;
   for (let t = 0; t <= endT; t += 16) {
     while (evIdx < events.length && events[evIdx]!.t <= t) {
-      h.push({ kind: 'wheel', deltaY: events[evIdx]!.deltaY, duringGesture: false, xPx, yPx });
+      h.notch(events[evIdx]!.deltaY, options.cursorPx);
       evIdx += 1;
     }
     h.tick(t);

@@ -361,7 +361,6 @@ function makeDeps(): BootstrapDeps {
     cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks,
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
     // initGpu never reads a resolver — a resolver that always returns null

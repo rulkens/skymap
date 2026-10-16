@@ -42,15 +42,6 @@ export type BootstrapDeps = {
   frameRef: { current: () => void };
 
   /**
-   * Mutable: orbit-controls detach handle.  `wireInput` writes the
-   * detach function returned by `attachOrbitControls`; `engine.ts`'s
-   * `destroy()` reads `detachControlsRef.current?.()` to remove the
-   * listeners.  Boxed for the same write-across-modules reason as
-   * `frameRef`.
-   */
-  detachControlsRef: { current: (() => void) | null };
-
-  /**
    * Mutable: the public `EngineHandle`. The handle literal is evaluated
    * AFTER the bootstrap IIFE in `engine.ts` (it captures helpers that close
    * over `state`), but `wireInput`'s onDoubleClick handler reads the handle

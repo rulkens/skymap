@@ -5,11 +5,12 @@
 ## What is true today
 
 - `src/@types/camera/DragMode.d.ts` — the shared type is `'orbit' | 'pan'`.
-- `src/services/camera/orbitControls.ts:21` declares a second, local
-  `DragMode = 'orbit' | 'pan' | 'pinch'` — the recognizer's own type, not an
+- `tools/utils/input/attachOrbitControls.ts:21` (the dev workbenches'
+  recognizer; the app reads input through `recognize` + `CONTROL_BINDINGS`)
+  declares a second, local `DragMode = 'orbit' | 'pan' | 'pinch'` — not an
   import of the shared one. Line 60 sets `dragMode` to `'pan'` or `'orbit'`
   from button state; line 71 sets it to `'pinch'` for a second contact; line
-  90 gates click-to-pick on `endedMode === 'orbit'` specifically, so pan and
+  88 gates click-to-pick on `endedMode === 'orbit'` specifically, so pan and
   pinch are both (correctly, today) excluded — but only because someone
   enumerated `'orbit'` by hand, not because the switch is exhaustive.
 - `src/services/camera/applyInputToCamera.ts:49` — `if (step.mode === 'pan') { ... }`
@@ -35,7 +36,7 @@ compiles cleanly and silently reuses the orbit (or no-op) branch everywhere.
 ## What would fix it
 
 Make the shared `DragMode` the only `DragMode` — drop the local redeclaration
-in `orbitControls.ts` — and replace each `if (step.mode === 'pan')` with an
+in `attachOrbitControls.ts` (or delete it with the workbench port) — and replace each `if (step.mode === 'pan')` with an
 exhaustive `switch (step.mode)` (or an equivalent `satisfies never` default)
 so a new variant is a compile error at every consumer, including
 `steppedSitePose.ts`, until each site has decided what it does.
