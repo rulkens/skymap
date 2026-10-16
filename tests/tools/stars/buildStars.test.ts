@@ -1,3 +1,7 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,13 +11,14 @@ import {
   type GcnsRow,
 } from '../../../tools/stars/buildStars';
 import { parseHipparcos2 } from '../../../tools/parsers/hipparcos2';
-import { decodeStarCatalog } from '../../../src/data/starCatalog/starCatalogFormat';
+import { decodeOctreeIndex } from '../../../src/data/octree/decodeOctreeIndex';
+import { writeOctreeCatalog } from '../../../tools/octree/writeOctreeCatalog';
 
 /**
  * These tests drive the *pure* composition (`buildStarCatalog`) on a tiny
  * hand-built, in-memory fixture — no real Gaia data, no network, no file I/O.
- * The CSV/`.dat` reads and the `.bin` writes live behind the CLI guard in
- * `buildStars.ts` and are never touched here.
+ * The CSV/`.dat` reads live behind the CLI guard in `buildStars.ts` and are
+ * never touched here; the round-trip test writes to a temp dir.
  *
  * The fixture is engineered so every drop counter is exercised by exactly one
  * row, so each counter's expected value is 1 and is hand-countable from the
@@ -133,10 +138,10 @@ function buildFixture() {
 }
 
 describe('buildStarCatalog', () => {
-  it('produces a round-trippable catalog from a synthetic fixture', async () => {
+  it('produces a round-trippable catalog from a synthetic fixture', () => {
     const { gaia, gcns, hip, hipToSourceId, famousGaiaIds } = buildFixture();
 
-    const result = await buildStarCatalog({
+    const result = buildStarCatalog({
       gaia,
       gcns,
       hipparcos: hip.rows,
@@ -145,23 +150,25 @@ describe('buildStarCatalog', () => {
       famousGaiaIds,
     });
 
-    // Post-dedup population: g1 (kept), gc1 (supplement), HIP 42 (kept) = 3.
-    // g2 dropped (no distance), Proxima subtracted (famous), Gaia 4004
-    // subtracted (Hipparcos wins), g3/gc2 dropped (no G magnitude).
-    expect(result.totalStars).toBe(3);
-
-    // Three tiers built; with a tiny fixture every tier holds all three stars.
-    expect(result.tiers.map((t) => t.tier)).toEqual(['small', 'medium', 'large']);
-    for (const tier of result.tiers) {
-      expect(tier.starCount).toBe(3);
-      expect(tier.overBudget).toBe(false);
-      // The tier's compressed payload decodes back to the same catalog — ties
-      // the composition to the on-disk byte contract without restating offsets.
-      const decoded = await decodeStarCatalog(tier.encoded);
-      expect(decoded.starCount).toBe(tier.catalog.starCount);
-      expect(decoded.nodeCount).toBe(tier.catalog.nodeCount);
-      expect(decoded.nodes).toEqual(tier.catalog.nodes);
-      expect(decoded.records).toEqual(tier.catalog.records);
+    // The written index decodes and counts the post-dedup population: g1 (kept),
+    // gc1 (supplement), HIP 42 (kept) = 3. g2 dropped (no distance), Proxima
+    // subtracted (famous), Gaia 4004 subtracted (Hipparcos wins), g3/gc2 dropped
+    // (no G magnitude).
+    const dir = mkdtempSync(join(tmpdir(), 'stars-'));
+    try {
+      writeOctreeCatalog(result.objects, result.meta, dir, 'stars');
+      const b = readFileSync(join(dir, 'stars.bin'));
+      const index = decodeOctreeIndex(
+        b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer,
+      );
+      expect(index.header.stats.starCount).toBe(3);
+      const owned = [result.objects.index, ...result.objects.chunks].reduce(
+        (sum, o) => sum + o.nodes.ownCount.reduce((x, y) => x + y, 0),
+        0,
+      );
+      expect(owned).toBe(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
 
     // The fixture's photometry sits inside the frozen LUT windows, so nothing
@@ -180,10 +187,10 @@ describe('buildStarCatalog', () => {
     expect(set.size).toBe(1);
   });
 
-  it('reports the drop counters', async () => {
+  it('reports the drop counters', () => {
     const { gaia, gcns, hip, hipToSourceId, famousGaiaIds } = buildFixture();
 
-    const result = await buildStarCatalog({
+    const result = buildStarCatalog({
       gaia,
       gcns,
       hipparcos: hip.rows,

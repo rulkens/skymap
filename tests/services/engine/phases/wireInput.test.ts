@@ -138,8 +138,8 @@ function makeState(): EngineState {
       // needs an opaque bindGroup handle.
       focusUniform: { bindGroup: {} as GPUBindGroup },
       renderTargets: null,
-      labelRenderer: null,
-      markerLineRenderer: null,
+      labelRendererCosmo: null,
+      markerLineRendererCosmo: null,
       texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,

@@ -71,6 +71,25 @@ export const RAW_DATA = {
     description: 'VizieR ReadMe for GLADE v2.3 — byte-offset specs for the parser.',
   },
 
+  // ─── REGALADE v2 — Tranin+ 2026 ─────────────────────────────────────────
+
+  'regalade.dat': {
+    path: 'data/raw/regalade/regalade.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'REGALADE v2 all-sky galaxy compilation to 2000 Mpc — 348-byte fixed-width, 71.5 M rows, ~25 GB gunzipped. Manual download, see README.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/706/A284/regalade.dat.gz',
+    readme: 'regalade.readme',
+  },
+  'regalade.readme': {
+    path: 'data/raw/regalade/J_A+A_706_A284_ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'VizieR ReadMe for REGALADE — byte-offset specs the parser relies on.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/706/A284/ReadMe',
+  },
+
   // ─── HyperLEDA — orientation + designation cross-walk ─────────────────
 
   'hyperleda.pa': {
@@ -1754,7 +1773,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
+      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-spacecraft-tracks`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
     fetcher: 'tools/fetch/fetchHorizons.ts',
     readme: 'horizons.readme',

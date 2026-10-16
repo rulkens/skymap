@@ -58,7 +58,7 @@ import { defaultRetryPolicy } from './retryPolicy';
 import { consoleAdapterFor } from './consoleAdapter';
 
 export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): AssetSlot<T, Req> {
-  const { name, fetch: fetchFn, commit, onRelease, retry = defaultRetryPolicy } = args;
+  const { name, fetch: fetchFn, commit, onRelease, dispose, retry = defaultRetryPolicy } = args;
 
   // ── Mutable cell.  The entire stateful surface of the loading system. ──
   let generation = 0;
@@ -163,7 +163,10 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     }
 
     // ── First race-check ──────────────────────────────────────────────
-    if (myGen !== generation) return;
+    if (myGen !== generation) {
+      dispose?.(value);
+      return;
+    }
 
     // ── Acquire the commit slot ───────────────────────────────────────
     // Snapshot any in-flight prior commit, then publish ours so a
@@ -186,7 +189,10 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       // commit at all — the newer gen will do the side-effect we'd
       // otherwise duplicate.  This keeps the stale-data window to the
       // single prior commit's duration rather than compounding.
-      if (myGen !== generation) return;
+      if (myGen !== generation) {
+        dispose?.(value);
+        return;
+      }
 
       dispatch({ kind: 'committing' });
 
@@ -207,7 +213,12 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     }
 
     // ── Second race-check ─────────────────────────────────────────────
-    if (myGen !== generation) return;
+    // The commit's side effects already happened. A newer load's commit replaces
+    // them; a release (no request since) has nothing coming, so it undoes them here.
+    if (myGen !== generation) {
+      if (lastRequest === null) onRelease?.(value);
+      return;
+    }
 
     dispatch({ kind: 'committed', value, nowMs: Date.now() });
   }
@@ -267,7 +278,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
       for (const sub of subscribers) sub(state);
     },
     release(): void {
-      // The evict edge of two-way demand — distance eviction only; a request
+      // The evict edge of two-way demand — eviction only (distance or tier); a request
       // that drifts reloads the slot in place instead.
       //
       // The generation bump composes with the slot's race machinery: a fetch or

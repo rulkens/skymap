@@ -349,7 +349,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a prepared view with its own notes and sources, and each opens from its own address.',
     short: 'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
-    source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
+    source: `${REPO_BLOB}/src/compositions/appExhibits.ts`,
     sourceLabel: 'the exhibits, in the Skymap repository',
     checked: CHECKED,
   },

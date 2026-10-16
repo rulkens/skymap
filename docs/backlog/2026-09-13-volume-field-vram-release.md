@@ -2,6 +2,14 @@
 
 `needs-design` — the design is settled except for one new read surface; see "Open choice".
 
+## Scope widened (2026-10-13)
+
+The [GPU memory audit](../research/engine/gpu-memory-audit-2026-10-13.md) found the same
+gap on every settings-gated row: galaxy catalogs, the flow cube, filaments,
+constellations and structures all keep their GPU memory after their layer is switched
+off. The fade-gated `release` below is the general mechanism; design it for all rows,
+with the volumes as the first and largest user.
+
 ## Problem
 
 Unticking a field in the "Cosmic web density" panel fades it out but never frees

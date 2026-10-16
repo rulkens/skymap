@@ -14,6 +14,27 @@
 }
 
 /*
+ * Everything the hide toggle takes away lives in `.content`, so one opacity
+ * fades the lot. It cannot go on the pieces themselves: their entrance
+ * animations fill `both` and would pin opacity at 1. `visibility` flips after
+ * the fade, which is what makes the hidden notes unscrollable and unfocusable.
+ */
+.content {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s;
+}
+.hidden .content {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s 0.3s;
+}
+
+/*
  * The overlay mounts when the takeover starts, but the copy is about where
  * the camera ENDS up, so nothing appears until `--exhibit-enter-delay` (the
  * fly-in's near-landing, set inline by the container off the clip's own
@@ -154,10 +175,26 @@
   top: 40px;
   right: 44px;
   width: 360px;
+  /* Keeps the column inside short windows; it scrolls instead of clipping. */
+  max-height: calc(100dvh - 40px - 32px);
+  overflow-y: auto;
+  pointer-events: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-fg-ghost) transparent;
   display: flex;
   flex-direction: column;
   gap: 16px;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
+  /* A long column scrolls instead of running off the viewport. It opts back into
+     pointer events so the wheel scrolls it; the text column no longer orbits the
+     camera, which is the trade. The mask fades the cut edge. */
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  padding-bottom: 28px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
 
 /* One section and the hairline above it enter together, `--i` beats after the
@@ -397,11 +434,13 @@
   align-items: center;
   gap: 10px;
   padding: 6px 14px 6px 6px;
-  background: none;
-  border: 2px solid rgba(168, 208, 255, 0.18);
+  background: var(--surface-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 2px solid var(--border-hover);
   border-radius: 999px;
   cursor: pointer;
-  color: var(--color-fg-tertiary);
+  color: var(--color-fg-base);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
   /* Fade only — the pill is centred by its own transform. */
   animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
@@ -422,7 +461,7 @@
   height: 24px;
   align-items: center;
   justify-content: center;
-  color: var(--color-fg-label);
+  color: var(--color-fg-tertiary);
 }
 
 .exitLabel {
@@ -435,18 +474,63 @@
 
 .exitKey {
   padding: 2px 5px;
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-control);
   border-radius: 3px;
   font-family: var(--font-family-mono);
   font-size: 9px;
   line-height: 1;
+  color: var(--color-fg-muted);
+}
+
+/* ── Hide toggle (top-right) ───────────────────────────────────────── */
+/* Just the icon: a bare button for the a11y (label, pressed, focus ring). It
+   is the one control that survives `hidden`, so it never fades with the rest. */
+.hideToggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-fg-tertiary);
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.85));
+  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
+}
+.hideToggle svg {
+  width: 18px;
+  height: 18px;
+}
+/* Dimmer at rest while everything else is gone, still readable. */
+.hidden .hideToggle {
   color: var(--color-fg-dim);
+}
+@media (hover: hover) {
+  .hideToggle:hover {
+    color: var(--color-fg);
+  }
+}
+.hideToggle:focus-visible {
+  color: var(--color-fg);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* ── Reduced motion ─────────────────────────────────────────────────── */
 /* The slide goes, the wait does not: the copy is still about where the camera
  * ends up, so it still arrives with the landing — just by fading. */
 @media (prefers-reduced-motion: reduce) {
+  .content,
+  .hidden .content {
+    transition: none;
+  }
   .caption > *,
   .sectionGroup {
     animation-name: exhibitEnterFade;
@@ -455,9 +539,28 @@
 
 /* ── Mobile ────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* One scrolling column: the caption fills the first screen, notes follow. */
+  .root {
+    overflow-y: auto;
+    overflow-x: hidden;
+    pointer-events: auto;
+    overscroll-behavior: contain;
+  }
+  .vignetteCaption {
+    position: fixed;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 70%);
+  }
+  .vignetteNotes {
+    display: none;
+  }
   .caption {
-    left: 24px;
-    right: 24px;
+    position: relative;
+    left: auto;
+    bottom: auto;
+    box-sizing: border-box;
+    min-height: 100dvh;
+    justify-content: flex-end;
+    padding: var(--space-12) var(--space-12) calc(74px + env(safe-area-inset-bottom, 0px));
     max-width: none;
   }
   .title {
@@ -467,12 +570,32 @@
     font-size: 18px;
   }
   .notes {
-    top: 24px;
-    right: 24px;
-    left: 24px;
+    position: relative;
+    top: auto;
+    right: auto;
     width: auto;
+    max-height: none;
+    overflow: visible;
+    padding: var(--space-12) var(--space-12) calc(88px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.8) 48px);
+    animation: exhibitEnterFade 1.8s ease-out var(--exhibit-enter-delay) both;
   }
-  .vignetteNotes {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
+  .exitPill {
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 0, 0, 0.7);
+  }
+  /* The column scrolls here, so `.content` stays in flow and the toggle is pinned
+     to the viewport; hidden, the root lets touches through to the field again. */
+  .content {
+    position: static;
+  }
+  .hidden.root {
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .hideToggle {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
   }
 }

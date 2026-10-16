@@ -33,7 +33,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-reduced-targets',
     about: 'app',
-    text: 'Four soft glows are drawn into smaller images and upsampled to the frame: the cosmic web at a third of the window’s width and height, the Zone of Avoidance band at a fifth, the summed light of distant stars at a half and the Milky Way’s points of light at a sixth. A glow costs per pixel it covers, so a third of the width is a ninth of the work.',
+    text: 'Four soft glows are drawn into smaller images and upsampled to the frame: the cosmic web at a third of the window’s width and height, the Zone of Avoidance band at a fifth, the summed light of distant stars at a quarter and the Milky Way’s points of light at a sixth. A glow costs per pixel it covers, so a third of the width is a ninth of the work and a quarter is a sixteenth.',
     source: `${REPO_BLOB}/src/layers/cosmicWebDensity/layer.ts`,
     sourceLabel: `the cosmic web’s image, one of the four, ${IN_REPO}`,
     checked: CHECKED,
@@ -82,7 +82,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-star-tree',
     about: 'app',
-    text: 'The stars of a file are sorted into an octree, 6 bytes a star. Every frame the app chooses which of its boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one draws a single glow with the summed light of everything inside it.',
+    text: 'The stars are sorted into an octree stored as one index and about a thousand chunk files. Only the chunks near the camera are held, in a fixed pool of slots. Every few frames the app chooses which boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one, or one whose chunk has not arrived yet, draws a single glow with the summed light of everything inside it.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/starCatalog/cut.wesl`,
     sourceLabel: `the choice of star boxes, ${IN_REPO}`,
     checked: CHECKED,
@@ -252,7 +252,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-local-origins',
     about: 'app',
-    text: 'Two kinds of thing carry their own origin. A ground tile is sent as its corner’s offset from the camera and four angles, from which the graphics processor builds the patch. A box of stars is sent as its corner’s offset from the camera, and its stars as 10-bit steps inside the box.',
+    text: 'Two kinds of thing carry their own origin. A ground tile is sent as its corner’s offset from the camera and four angles, from which the graphics processor builds the patch. A box of stars is sent as its corner’s offset from the camera, and its stars as 16-bit steps inside the box.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/bodies/surfaceTile/io.wesl`,
     sourceLabel: `what a ground patch is sent as, ${IN_REPO}`,
     checked: CHECKED,

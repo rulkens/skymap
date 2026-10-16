@@ -20,11 +20,10 @@ export const FAMOUS_STAR_ENTRY = {
   // logic only consults this flag for galaxy-catalog footprints).
   allSky: true,
   // The star map captions its members on the final descent, so it bears labels
-  // like any other named source — the foreground-labels layer draws them on the
+  // like any other named source — the labels-near layer draws them on the
   // NEAR0 slab rather than the COSMO one, which is a routing detail, not a
   // capability difference.
   bearsLabel: true,
-  labelLayer: 'starCatalog',
   bearsMarker: false,
   detailLabel: 'Famous Star',
   shortLabel: 'Star',

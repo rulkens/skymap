@@ -28,6 +28,8 @@ export type DriverCtx = {
    */
   readonly committedWorld: CameraPose;
   readonly winnerLastFrame: DriverId;
+  /** That row's `ridesWheelTarget`: a committed `base` was invisible under it. */
+  readonly lastWinnerRidesWheel: boolean;
   /** The frame's COMMITTED orientation basis (`stepCameraRuntime`); the live
    * `upBasis` is the fold's, and no driver reads it. `Readonly` because it
    * ALIASES the `ORIENTATION_FRAMES` entry — a write here corrupts the registry. */

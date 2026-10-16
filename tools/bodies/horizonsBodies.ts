@@ -1,46 +1,66 @@
 /**
- * HORIZONS_BODIES — the bodies `fetchHorizons` pulls and `buildEphemerisCorrections` fits.
- * Planets are the points the Kepler rows describe: Mercury and Venus themselves, the Earth–Moon
- * barycentre (3), then the Mars–Neptune system barycentres. A planet's `fitStep` keeps ≥ ~20 fit
- * samples across the shortest period its residual carries. A moon is queried against its
- * parent's centre at a step ≤ P/16 that divides a day (whole-minute, grid-aligned fetch pieces),
- * fitted at ≈ P/8 (Iapetus every 2 days: its residual carries Titan's ~16-day pull, which a
- * P/8 grid aliases), and switches its correction off outside the span.
+ * HORIZONS_BODIES — the rows `fetchHorizons` pulls. Planets are the points the Kepler rows
+ * describe: Mercury and Venus themselves, the Earth–Moon barycentre (3), then the Mars–Neptune
+ * system barycentres. A moon is queried against its parent's centre at a step ≤ P/16 that
+ * divides a day (whole-minute, grid-aligned fetch pieces). Which rows are fitted, and how, lives
+ * in `FITTED_BODIES`.
  */
 import type { HorizonsBody } from './@types/HorizonsBody';
 
+const SPAN_1900_2100: HorizonsBody['span'] = ['1900-01-01', '2100-01-01'];
+
+const fitted = (id: string, target: string, centre: string, stepMinutes: number): HorizonsBody => ({
+  id,
+  target,
+  centre,
+  span: SPAN_1900_2100,
+  stepMinutes,
+  vectors: 'position',
+});
+
 export const HORIZONS_BODIES: readonly HorizonsBody[] = [
-  { id: 'mercury', target: '199', centre: '500@10', stepDays: 1, fitStep: 2, outside: 'hold' },
-  { id: 'venus', target: '299', centre: '500@10', stepDays: 1, fitStep: 4, outside: 'hold' },
-  { id: 'earth', target: '3', centre: '500@10', stepDays: 1, fitStep: 4, outside: 'hold' },
-  { id: 'mars', target: '4', centre: '500@10', stepDays: 1, fitStep: 6, outside: 'hold' },
-  { id: 'jupiter', target: '5', centre: '500@10', stepDays: 1, fitStep: 10, outside: 'hold' },
-  { id: 'saturn', target: '6', centre: '500@10', stepDays: 1, fitStep: 10, outside: 'hold' },
-  { id: 'uranus', target: '7', centre: '500@10', stepDays: 1, fitStep: 10, outside: 'hold' },
-  { id: 'neptune', target: '8', centre: '500@10', stepDays: 1, fitStep: 10, outside: 'hold' },
-  { id: 'io', target: '501', centre: '500@599', stepDays: 1 / 10, fitStep: 2, outside: 'off' },
-  { id: 'europa', target: '502', centre: '500@599', stepDays: 1 / 5, fitStep: 2, outside: 'off' },
-  { id: 'ganymede', target: '503', centre: '500@599', stepDays: 1 / 3, fitStep: 2, outside: 'off' },
-  { id: 'callisto', target: '504', centre: '500@599', stepDays: 1, fitStep: 2, outside: 'off' },
-  { id: 'mimas', target: '601', centre: '500@699', stepDays: 1 / 18, fitStep: 2, outside: 'off' },
+  fitted('mercury', '199', '500@10', 1440),
+  fitted('venus', '299', '500@10', 1440),
+  fitted('earth', '3', '500@10', 1440),
+  fitted('mars', '4', '500@10', 1440),
+  fitted('jupiter', '5', '500@10', 1440),
+  fitted('saturn', '6', '500@10', 1440),
+  fitted('uranus', '7', '500@10', 1440),
+  fitted('neptune', '8', '500@10', 1440),
+  fitted('io', '501', '500@599', 144),
+  fitted('europa', '502', '500@599', 288),
+  fitted('ganymede', '503', '500@599', 480),
+  fitted('callisto', '504', '500@599', 1440),
+  fitted('mimas', '601', '500@699', 80),
+  fitted('enceladus', '602', '500@699', 120),
+  fitted('tethys', '603', '500@699', 160),
+  fitted('dione', '604', '500@699', 240),
+  fitted('rhea', '605', '500@699', 360),
+  fitted('titan', '606', '500@699', 720),
+  fitted('iapetus', '608', '500@699', 1440),
+  fitted('triton', '801', '500@899', 480),
+  fitted('proteus', '808', '500@899', 96),
+  fitted('miranda', '705', '500@799', 120),
+  fitted('ariel', '701', '500@799', 180),
+  fitted('umbriel', '702', '500@799', 360),
+  fitted('titania', '703', '500@799', 720),
+  fitted('oberon', '704', '500@799', 720),
+  // Voyagers: daily Sun-centred state vectors from the first Horizons sample. Their dense
+  // encounter windows come from `fetchVoyagerWindows`; the fit never sees them.
   {
-    id: 'enceladus',
-    target: '602',
-    centre: '500@699',
-    stepDays: 1 / 12,
-    fitStep: 2,
-    outside: 'off',
+    id: 'voyager1',
+    target: '-31',
+    centre: '500@10',
+    span: ['1977-09-06', '2099-12-31'],
+    stepMinutes: 1440,
+    vectors: 'state',
   },
-  { id: 'tethys', target: '603', centre: '500@699', stepDays: 1 / 9, fitStep: 2, outside: 'off' },
-  { id: 'dione', target: '604', centre: '500@699', stepDays: 1 / 6, fitStep: 2, outside: 'off' },
-  { id: 'rhea', target: '605', centre: '500@699', stepDays: 1 / 4, fitStep: 2, outside: 'off' },
-  { id: 'titan', target: '606', centre: '500@699', stepDays: 1 / 2, fitStep: 4, outside: 'off' },
-  { id: 'iapetus', target: '608', centre: '500@699', stepDays: 1, fitStep: 2, outside: 'off' },
-  { id: 'triton', target: '801', centre: '500@899', stepDays: 1 / 3, fitStep: 2, outside: 'off' },
-  { id: 'proteus', target: '808', centre: '500@899', stepDays: 1 / 15, fitStep: 2, outside: 'off' },
-  { id: 'miranda', target: '705', centre: '500@799', stepDays: 1 / 12, fitStep: 2, outside: 'off' },
-  { id: 'ariel', target: '701', centre: '500@799', stepDays: 1 / 8, fitStep: 2, outside: 'off' },
-  { id: 'umbriel', target: '702', centre: '500@799', stepDays: 1 / 4, fitStep: 2, outside: 'off' },
-  { id: 'titania', target: '703', centre: '500@799', stepDays: 1 / 2, fitStep: 2, outside: 'off' },
-  { id: 'oberon', target: '704', centre: '500@799', stepDays: 1 / 2, fitStep: 2, outside: 'off' },
+  {
+    id: 'voyager2',
+    target: '-32',
+    centre: '500@10',
+    span: ['1977-08-21', '2099-12-31'],
+    stepMinutes: 1440,
+    vectors: 'state',
+  },
 ];

@@ -4,8 +4,6 @@
  * this base and adds its own discriminator (`type: '<kind>'`) plus
  * kind-specific fields.
  */
-import type { CategoryLabelLayer } from '../animation/CategoryLabelLayer';
-
 export type SourceEntryBase = {
   /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'galaxy-cluster'`). */
   readonly id: string;
@@ -27,9 +25,9 @@ export type SourceEntryBase = {
    *
    * This is a CAPABILITY, not a routing detail — a source that puts a name on
    * screen sets it, whichever renderer draws that name. The near-field bodies
-   * and the curated star map caption through `foregroundLabelsPass` on the
+   * and the curated star map caption through `labelsNearPass` on the
    * NEAR0 slab rather than the COSMO label director, and they set the flag all
-   * the same; `labelLayer` is where that routing difference is expressed.
+   * the same.
    */
   readonly bearsLabel: boolean;
   /**
@@ -39,11 +37,6 @@ export type SourceEntryBase = {
    * marker-visibility record excludes it entirely.
    */
   readonly bearsMarker: boolean;
-  /**
-   * Which fade layer this source's labels live on. Present iff bearsLabel.
-   * See `LabelLayerId` for the layer set. Absent on non-label-bearing rows.
-   */
-  readonly labelLayer?: CategoryLabelLayer;
   /**
    * Long-form label for detail surfaces (e.g. 'Galaxy Cluster', 'Famous Galaxy').
    * Present iff bearsLabel.

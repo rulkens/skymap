@@ -51,8 +51,7 @@ import { Source } from '../../../src/data/source';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -95,25 +94,22 @@ const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
 });
 
 /**
- * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via
- * `famousMeta` + the one-row FamousGalaxy cloud. All other catalogs return
- * undefined.
+ * Structure store stub: Virgo resolves via `byId`, M87 via `famousMeta` +
+ * the one-row FamousGalaxy cloud. All other catalogs return undefined.
  */
-const DIVE_DEPS: ResolveDeps = {
-  structures: {
-    byId: (id) =>
-      ({
-        type: 'structure',
-        id,
-        name: id === 'galaxy-cluster-virgo-m87' ? 'Virgo Cluster' : 'Unknown',
-        category: 'galaxy-cluster',
-        worldPos: [16.5, 12.3, -1.2] as [number, number, number],
-        physicalRadiusMpc: 2,
-        apparentRadiusMpc: 4,
-        featured: true,
-      }) as const,
-    byCategory: () => [],
-  },
+const DIVE_STRUCTURES: StructureRowFixture = {
+  byId: (id) =>
+    ({
+      type: 'structure',
+      id,
+      name: id === 'galaxy-cluster-virgo-m87' ? 'Virgo Cluster' : 'Unknown',
+      category: 'galaxy-cluster',
+      worldPos: [16.5, 12.3, -1.2] as [number, number, number],
+      physicalRadiusMpc: 2,
+      apparentRadiusMpc: 4,
+      featured: true,
+    }) as const,
+  byCategory: () => [],
 };
 
 /** The galaxyCatalog Layer's slice: the one-row M87 famous cloud + its sidecar. */
@@ -129,7 +125,7 @@ const DIVE_GALAXIES = {
   ],
 } as unknown as GalaxyRowFixture;
 
-const DIVE_SELECTION = selectionResolverOver(DIVE_DEPS, DIVE_GALAXIES);
+const DIVE_SELECTION = selectionResolverOver(DIVE_STRUCTURES, DIVE_GALAXIES);
 
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
@@ -212,10 +208,9 @@ describe('webShowcase dive invariants', () => {
       middleware: (getDefault) => getDefault().concat(sagaMiddleware),
     });
 
-    // Provide resolveDeps and cameraRuntime so the tween-build path has what
+    // Provide selection and cameraRuntime so the tween-build path has what
     // it needs — if suspendDuringClip did NOT guard, these would be used.
     sagaMiddleware.setContext({
-      resolveDeps: () => DIVE_DEPS,
       selection: DIVE_SELECTION,
       cameraRuntime: () => CAMERA_RUNTIME,
       playClip: vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined),

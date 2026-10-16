@@ -97,7 +97,7 @@ function fireFrameToCues(store: ReturnType<typeof makeStore>, clip: ClipData | u
 describe('grand tour frame ladder — effective orientation per beat', () => {
   it('runs each beat under the pole set by its own (or an earlier) frameTo cue, never reverted at a beat boundary', () => {
     const store = makeStore();
-    const snapshot = captureScene(store.getState() as RootState);
+    const snapshot = captureScene(store.getState() as RootState, 0);
 
     const orientationPerBeat: OrientationFrameId[] = [];
     for (let i = 0; i < grandTour.beats.length; i++) {

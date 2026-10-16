@@ -4,7 +4,6 @@
  * builds each one before returning, so no reader re-checks a handle.
  */
 
-import type { BiasMode } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
@@ -16,10 +15,10 @@ import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
 import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
 import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
+import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
 import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
 import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
@@ -46,11 +45,8 @@ export type GalaxyCatalogRuntime = {
   readonly texturedDiskRenderer: TexturedDiskRenderer;
   readonly proceduralDiskRenderer: ProceduralDiskRenderer;
 
-  readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap>;
+  readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap, TextureAtlas>;
   readonly texturedDisks: TexturedDiskSubsystem;
   readonly proceduralDisks: ProceduralDiskSubsystem;
   readonly diskPlannerWalk: DiskPlannerWalk;
-  readonly biasCorrection: BiasCorrectionSubsystem;
-  /** The bias mode the last bake was fired for; `frame` reconciles it against settings. */
-  biasLastApplied: BiasMode;
 };

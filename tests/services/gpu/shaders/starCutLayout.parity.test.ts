@@ -24,7 +24,8 @@ import {
   packStarCutNodes,
   writeStarCutUniforms,
 } from '../../../../src/layers/starCatalog/render/starCutLayout';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 
 function shader(file: string): string {
   return readFileSync(join(process.cwd(), 'src/services/gpu/shaders/starCatalog', file), 'utf-8');
@@ -98,12 +99,17 @@ describe('starCatalog cut WESL constants <-> starCutLayout.ts', () => {
     HALF_DIAGONAL: layout.HALF_DIAGONAL,
     GRID_AXIS_BITS: layout.GRID_AXIS_BITS,
     LEVEL_BITS: layout.LEVEL_BITS,
-    RECORD_COUNT_SHIFT: layout.RECORD_COUNT_SHIFT,
+    OWN_COUNT_SHIFT: layout.OWN_COUNT_SHIFT,
     LEAF_BLOCK_SHIFT: layout.LEAF_BLOCK_SHIFT,
     LEAF_BLOCK_INDEX_SHIFT: layout.LEAF_BLOCK_INDEX_SHIFT,
     GRID_AXIS_MASK: 2 ** layout.GRID_AXIS_BITS - 1,
     NODE_LEVEL_MASK: 2 ** layout.LEVEL_BITS - 1,
-    NODE_AGGREGATE_BIT: 2 ** layout.LEVEL_BITS,
+    NODE_BLOB_BIT: layout.NODE_BLOB_BIT,
+    NODE_RESIDENT_BIT: layout.NODE_RESIDENT_BIT,
+    NODE_FOLDED_BIT: layout.NODE_FOLDED_BIT,
+    OPACITY_CHANNELS: layout.OPACITY_CHANNELS,
+    OWN_OPACITY: layout.OWN_OPACITY,
+    BLOB_OPACITY: layout.BLOB_OPACITY,
     LEAF_ENTRY_NODE_MASK: 2 ** layout.LEAF_BLOCK_INDEX_SHIFT - 1,
     CUT_MAX_VIEWS: layout.CUT_MAX_VIEWS,
   };
@@ -139,13 +145,17 @@ describe('struct CutUniforms', () => {
     camFrac: layout.CAM_FRAC_FLOAT_INDEX,
     refineThresholdSq: layout.REFINE_THRESHOLD_SQ_FLOAT_INDEX,
     fadeStep: layout.FADE_STEP_FLOAT_INDEX,
-    budgetTypical: layout.BUDGET_TYPICAL_U32_INDEX,
+    drawBudget: layout.DRAW_BUDGET_U32_INDEX,
     worldSpread: layout.WORLD_SPREAD_FLOAT_INDEX,
     leafMarginRad: layout.LEAF_MARGIN_RAD_FLOAT_INDEX,
     viewCount: layout.VIEW_COUNT_U32_INDEX,
     nodeCount: layout.NODE_COUNT_U32_INDEX,
     opacity: layout.OPACITY_FLOAT_INDEX,
-    _pad: layout.PLANES_FLOAT_INDEX - 1,
+    indexNodes: layout.INDEX_NODES_U32_INDEX,
+    chunkNodeCap: layout.CHUNK_NODE_CAP_U32_INDEX,
+    _pad0: layout.PLANES_FLOAT_INDEX - 3,
+    _pad1: layout.PLANES_FLOAT_INDEX - 2,
+    _pad2: layout.PLANES_FLOAT_INDEX - 1,
     planes: layout.PLANES_FLOAT_INDEX,
   };
 
@@ -159,16 +169,16 @@ describe('struct CutUniforms', () => {
 
   it('writeStarCutUniforms lands each value where the struct says', () => {
     const catalog = {
-      cellEdgePc: 2,
-      gridOrigin: [0, 0, 0],
-      nodes: new Array(5),
-    } as unknown as StarCatalog;
+      grid: { bits: 9, cellEdge: 2, origin: [0, 0, 0] },
+      nodes: { count: 5 },
+      chunkNodeCap: 4,
+    } as unknown as StarOctree;
     const planes = new Float32Array(FLOATS_PER_VIEW).fill(0.75);
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    writeStarCutUniforms(buf, catalog, [0, 0, 0], {
+    writeStarCutUniforms(buf, catalog, { slots: 3 }, [0, 0, 0], {
       refineThreshold: 0.5,
       fadeStep: 0.125,
-      budgetTypical: 777,
+      drawBudget: 777,
       worldSpread: 3.5,
       leafMarginRad: 0.0625,
       opacity: 0.25,
@@ -180,11 +190,13 @@ describe('struct CutUniforms', () => {
     expect(f32[at('cellEdgeMpc')]).toBeCloseTo(2e-6, 12);
     expect(f32[at('refineThresholdSq')]).toBe(0.25);
     expect(f32[at('fadeStep')]).toBe(0.125);
-    expect(u32[at('budgetTypical')]).toBe(777);
+    expect(u32[at('drawBudget')]).toBe(777);
     expect(f32[at('worldSpread')]).toBe(3.5);
     expect(f32[at('leafMarginRad')]).toBe(0.0625);
     expect(u32[at('viewCount')]).toBe(1);
-    expect(u32[at('nodeCount')]).toBe(5);
+    expect(u32[at('nodeCount')]).toBe(5 + 3 * 4);
+    expect(u32[at('indexNodes')]).toBe(5);
+    expect(u32[at('chunkNodeCap')]).toBe(4);
     expect(f32[at('opacity')]).toBe(0.25);
     expect(f32[at('planes')]).toBe(0.75);
   });
@@ -196,7 +208,7 @@ describe('struct CutNode', () => {
     grid: layout.NODE_GRID_WORD,
     firstRecord: layout.NODE_FIRST_RECORD_WORD,
     bits: layout.NODE_BITS_WORD,
-    subtreeCount: layout.NODE_SUBTREE_COUNT_WORD,
+    blobCount: layout.NODE_BLOB_COUNT_WORD,
     parent: layout.NODE_PARENT_WORD,
     refineDelta: layout.NODE_REFINE_DELTA_WORD,
   };
@@ -209,7 +221,7 @@ describe('struct CutNode', () => {
   });
 
   it('packStarCutNodes lands each value where the struct says', () => {
-    const catalog: StarCatalog = {
+    const catalog = starOctreeFromSkst({
       starCount: 3,
       nodeCount: 2,
       mortonBitsPerAxis: 9,
@@ -220,16 +232,30 @@ describe('struct CutNode', () => {
         { mortonIndex: 0, level: 1, childMask: 0b10, firstRecord: 43, recordCount: 1 },
       ],
       records: new Uint8Array(6 * 44),
-    };
-    const words = packStarCutNodes(catalog);
+    });
+    const words = packStarCutNodes(catalog, 0);
     const at = (node: number, name: string) =>
       words[node * CUT_NODE_WORDS + fields.find((f) => f.name === name)!.byteOffset / WORD_BYTES];
     expect(at(0, 'grid')).toBe(1);
     expect(at(0, 'firstRecord')).toBe(40);
-    expect(at(0, 'bits')).toBe((3 << 8) | 0);
-    expect(at(0, 'subtreeCount')).toBe(3);
+    // A v1 leaf: own records, children resident (it has none). A v1 aggregate:
+    // no own records, a blob over its leaf's 3 stars.
+    expect(at(0, 'bits')).toBe((3 << 8) | (1 << 5) | 0);
+    expect(at(0, 'blobCount')).toBe(0);
     expect(at(0, 'parent')).toBe(1);
-    expect(at(1, 'bits')).toBe((1 << 8) | (1 << 4) | 1);
+    expect(at(1, 'bits')).toBe((0 << 8) | (1 << 5) | (1 << 4) | 1);
+    expect(at(1, 'blobCount')).toBe(3);
     expect(at(1, 'refineDelta')).toBe(2);
+  });
+});
+
+describe('struct CutStream', () => {
+  it('declares the fields at the word slots the TS indices name, within its 16 bytes', () => {
+    const { fields } = structFields(cutIo, 'CutStream');
+    expect(fields.map((f) => [f.name, f.byteOffset / WORD_BYTES])).toEqual([
+      ['blockShift', layout.STREAM_BLOCK_SHIFT_WORD],
+      ['isBlob', layout.STREAM_IS_BLOB_WORD],
+    ]);
+    expect(fields.length * WORD_BYTES).toBeLessThanOrEqual(layout.CUT_STREAM_BYTES);
   });
 });

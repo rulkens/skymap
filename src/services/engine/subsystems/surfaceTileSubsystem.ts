@@ -35,6 +35,7 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ResidentHeightLookup } from '../../../@types/scene/ResidentHeightLookup';
 import { createTileStreamSubsystem } from './tileStreamSubsystem';
+import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
@@ -123,8 +124,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // lifecycle, so one nullable record replaces three fields a null check
   // used to have to keep in sync.
   let atlas: {
-    readonly stream: TileStreamSubsystem<ImageBitmap>;
-    readonly heightStream: TileStreamSubsystem<HeightTileImage>;
+    readonly stream: TileStreamSubsystem<ImageBitmap, TextureAtlas>;
+    readonly heightStream: TileStreamSubsystem<HeightTileImage, TextureAtlas>;
     readonly slotsPerRow: number;
     readonly bodyId: BodyId;
   } | null = null;
@@ -256,33 +257,39 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    */
   function engage(tilePx: number, bodyId: BodyId): NonNullable<typeof atlas> {
     const slotsPerRow = SURFACE_TILE_ATLAS_SIDE / tilePx;
-    const created = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const created = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, {
+        atlasSide: SURFACE_TILE_ATLAS_SIDE,
+        slotSide: tilePx,
+        format: ATLAS_FORMAT,
+        label: 'surface-tiles-albedo',
+      }),
       requestRender,
-      atlasSide: SURFACE_TILE_ATLAS_SIDE,
-      slotSide: tilePx,
-      format: ATLAS_FORMAT,
-      label: 'surface-tiles-albedo',
       concurrency: SURFACE_TILE_CONCURRENCY,
       upload: uploadBitmapToAtlas,
       release: closeBitmap,
     });
     // Post count and the Terrain-RGB format are compiled constants, not manifest fields
     // (spec §5.2), so the height atlas's geometry never depends on the bake.
-    const createdHeight = createTileStreamSubsystem<HeightTileImage>({
-      device,
+    const createdHeight = createTileStreamSubsystem<HeightTileImage, TextureAtlas>({
+      slots: new TextureAtlas(device, {
+        atlasSide: HEIGHT_TILE_ATLAS_SIDE,
+        slotSide: HEIGHT_POSTS_PER_TILE,
+        format: HEIGHT_ATLAS_FORMAT,
+        label: 'surface-tiles-height',
+      }),
       requestRender,
-      atlasSide: HEIGHT_TILE_ATLAS_SIDE,
-      slotSide: HEIGHT_POSTS_PER_TILE,
-      format: HEIGHT_ATLAS_FORMAT,
-      label: 'surface-tiles-height',
       concurrency: SURFACE_TILE_CONCURRENCY,
       upload: (heightAtlas, slotIdx, image) =>
         uploadBitmapToAtlas(heightAtlas, slotIdx, image.bitmap),
       release: (image) => closeBitmap(image.bitmap),
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
-    created.setEvictHandler((key) => resident.delete(key));
+    // A queued fetch dropped on eviction never reports back, so its pending row goes here.
+    created.setEvictHandler((key) => {
+      resident.delete(key);
+      pendingLevelOf.delete(key);
+    });
     createdHeight.setEvictHandler((key) => heightResident.delete(key));
     atlas = { stream: created, heightStream: createdHeight, slotsPerRow, bodyId };
     return atlas;
@@ -429,7 +436,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   /**
    * Resolve one exact tile's atlas residency — the callback `cutSurfaceTiles`
    * walks ancestors through. Reuses `TextureAtlas.slotUv` (via the stream's
-   * own `slotUv`) rather than re-deriving the slot-rect math.
+   * `slots`) rather than re-deriving the slot-rect math.
    */
   function residentSlot(tile: SurfaceTileId): {
     slot: number;
@@ -444,7 +451,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     const entry = (isHeight ? heightResident : resident).get(key);
     if (entry === undefined) return null;
     const stream = isHeight ? atlas.heightStream : atlas.stream;
-    const [u0, v0, u1, v1] = stream.slotUv(entry.slot);
+    const [u0, v0, u1, v1] = stream.slots.slotUv(entry.slot);
     return {
       slot: entry.slot,
       atlasUvOrigin: [u0, v0],
@@ -611,8 +618,11 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       lastCut = cut;
     },
     getLastCut: () => lastCut,
-    getAtlasView: () => atlas?.stream.getTextureView() ?? null,
-    getHeightAtlasView: () => atlas?.heightStream.getTextureView() ?? null,
+    // `runFrame` feeds `update` only `SURFACE_TILE_REGISTRY` hosts.
+    engagedBodyId: () => (atlas?.bodyId ?? null) as SurfaceTileBodyId | null,
+    release: standDown,
+    getAtlasView: () => atlas?.stream.slots.getTextureView() ?? null,
+    getHeightAtlasView: () => atlas?.heightStream.slots.getTextureView() ?? null,
     isAnimating,
     getDebugSnapshot,
     destroy,

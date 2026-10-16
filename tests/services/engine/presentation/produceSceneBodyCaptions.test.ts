@@ -8,7 +8,7 @@
  * clip-channel split; the shared fade-band / occlusion / registry-ramp
  * mechanics stay covered here, once, on core's bodies.
  *
- * Cases moved from `foregroundLabelsPass.test.ts` (Task 4, spec §12): the
+ * Cases moved from `labelsNearPass.test.ts` (Task 4, spec §12): the
  * producer emits EVERY candidate caption every frame — declutter and the
  * temporal envelope moved to the director — so each case now reads the
  * candidate's `fadeAlpha` (the producer's TARGET) instead of asking whether
@@ -44,7 +44,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 // The producer binds its caption epoch to `ctx.simDays`; pin it at J2000 so
 // this file's anchors match the producer's internal `sceneBodyStates` read.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
-const BASE = sceneBodyLabels(J2000_STATES);
+const BASE = sceneBodyLabels(J2000_STATES, CONST_J2000);
 
 const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
@@ -62,7 +62,13 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
+    snapshot: {
+      simDays: CONST_J2000,
+      nowMs: 0,
+      meshBodies: SCENE_MESH_BODIES,
+      focusBlend: 0,
+      focus: ZERO_FOCUS,
+    },
     cam: { distance },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -74,7 +80,7 @@ function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
  * `bodyLabels` seeds ALL body rows from one flag by default, so a test that
  * only cares whether body captions are on at all passes a bare boolean; the
  * per-row cases pass the bits separately, which is the axis those rows buy.
- * Moved verbatim from `foregroundLabelsPass.test.ts`'s `makeState`.
+ * Moved verbatim from `labelsNearPass.test.ts`'s `makeState`.
  *
  * `starCatalogs` is a fixed, uninteresting fixture: `sceneOccluderBodies`
  * reads it (for the star-sphere occluder set), but no case here inspects a

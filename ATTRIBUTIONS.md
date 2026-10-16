@@ -239,6 +239,32 @@ unclear, and no entry here reads them as a licence.
   <https://cdsarc.cds.unistra.fr/ftp/VII/281/ReadMe>,
   <https://vizier.cds.unistra.fr/viz-bin/cat/VII/281>
 
+### REGALADE v2, the all-sky galaxy compilation to 2000 Mpc
+
+<!-- attribution: id=regalade; keys=regalade.*; hosts=cdsarc.cds.unistra.fr -->
+
+- **What:** 71.5 million galaxies over the whole sky with a recommended
+  distance, optical and WISE photometry and ellipse shapes, merged from
+  twelve catalogues.
+- **By:** Tranin et al. 2026, A&A 706, A284.
+- **Licence:** Not stated on VizieR, in the paper or in the authors' GitHub
+  repository. skymap uses the copy CDS serves, and the CDS terms apply to it:
+  "The data retrieved with VizieR are free of usage in a scientific context",
+  and "The commercial usage of the data is subject to rules depending of the
+  origin".
+- **Use:** No licence stated
+- **Attribution:** Cite the paper. Ask the authors (htranin at icc.ub.edu)
+  before redistributing derived `.bin` files.
+- **Upstream:** <https://cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/706/A284>;
+  <https://github.com/htranin/regalade>
+- **Enters skymap:** `data/raw/regalade/regalade.dat` →
+  `tools/parsers/regalade.ts` (parser only; no `.bin` is built yet).
+- **Modified:** Not yet. The parser derives redshift from the luminosity
+  distance and keeps a subset of the columns.
+- **Checked:** 2026-10-11: <https://cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/706/A284>,
+  <https://github.com/htranin/regalade>,
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+
 ### HyperLEDA
 
 <!-- attribution: id=hyperleda; keys=hyperleda.* -->
@@ -373,7 +399,7 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://gea.esac.esa.int/tap-server/tap/sync> (the Gaia
   archive's TAP service).
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/gaia_page_*.csv` →
-  `npm run build-stars` → `public/data/star-catalog/`.
+  `npm run build-stars` → `public/data/star-catalog/v2/`.
 - **Modified:** Yes. Selected, given distances, deduplicated, quantised into an
   octree.
 - **Checked:** 2026-10-07: <https://www.cosmos.esa.int/web/gaia-users/license>,
@@ -1013,8 +1039,11 @@ paying a fee."
 
 <!-- attribution: id=dss; hosts=alasky.cds.unistra.fr,aladin.cds.unistra.fr -->
 
-- **What:** The fallback when SDSS has no image: a DSS2 colour cutout from the
-  CDS `hips2fits` service. The cards also link to Aladin Lite.
+- **What:** A DSS2 colour cutout from the CDS `hips2fits` service: the
+  fallback when SDSS has no image, and the shot of the featured structures: every
+  open cluster, globular cluster, nebula and Galactic Centre anchor, and the
+  galaxy clusters and groups under 5 degrees across. The cards also link
+  to Aladin Lite.
 - **By:** The Digitized Sky Surveys, produced at the Space Telescope Science
   Institute from Palomar and UK Schmidt plates; "Colored & Healpixed by CDS".
 - **Licence:** Copyrighted. STScI: "Scientists and educators conducting
@@ -1038,12 +1067,43 @@ paying a fee."
 
 - **Upstream:** `https://alasky.cds.unistra.fr/hips-image-services/hips2fits`
 - **Enters skymap:** `src/utils/math/dssThumbnailUrl.ts` →
-  `src/utils/network/fetchGalaxyBitmap.ts`, in the visitor's browser.
-- **Modified:** Drawn on a disc with a faded edge.
+  `src/utils/network/fetchGalaxyBitmap.ts`, in the visitor's browser; and
+  `tools/capture/captureStructureCutouts.ts`, which writes those shots to
+  `public/images/structures/` that ship with the app.
+- **Modified:** Drawn on a disc with a faded edge. The structure shots are
+  resampled to 204×204 pixels and re-encoded as webp.
 - **Checked:** 2026-10-07: <https://archive.stsci.edu/publishing/data-use>,
   <https://archive.stsci.edu/dss/copyright.html>,
   <https://archive.stsci.edu/dss/acknowledging.html>,
   <https://alasky.cds.unistra.fr/DSS/DSSColor/properties>
+
+### 2MASS image cutout (one shipped image)
+
+<!-- attribution: id=2mass-images -->
+
+- **What:** A 2MASS colour cutout of the open cluster Trumpler 14 from CDS
+  `hips2fits`, used where the DSS2 plates saturate (in the Carina Nebula).
+- **By:** The Two Micron All Sky Survey (University of Massachusetts and
+  IPAC/Caltech); "Colored & Healpixed by CDS" for the tile set.
+- **Licence:** Not stated for the images. The survey's archive, IRSA, says:
+  "Most data served by IRSA is public, with no usage restrictions." (it does
+  not name 2MASS in that sentence). The 2MASS pages read state no licence for
+  the image data products.
+- **Use:** No licence stated
+- **Attribution:** The standard acknowledgement for use of the 2MASS data
+  products: "This publication makes use of data products from the Two Micron
+  All Sky Survey, which is a joint project of the University of Massachusetts
+  and the Infrared Processing and Analysis Center/California Institute of
+  Technology, funded by the National Aeronautics and Space Administration and
+  the National Science Foundation." The primary journal reference is
+  Skrutskie et al. 2006, AJ 131, 1163 (see entry: 2mass-xsc).
+- **Upstream:** `https://alasky.cds.unistra.fr/hips-image-services/hips2fits`
+- **Enters skymap:** `tools/capture/captureStructureCutouts.ts`, through the
+  `STRUCTURE_CUTOUT_OVERRIDES` row for Trumpler 14.
+- **Modified:** Yes. Resampled to 204×204 pixels and re-encoded as webp.
+- **Checked:** 2026-10-11, from the 2MASS and IRSA wording already recorded
+  under 2MASS Extended Source Catalog (XSC); the 2MASS image terms were not
+  fetched again.
 
 ### StarNet2 (star removal)
 

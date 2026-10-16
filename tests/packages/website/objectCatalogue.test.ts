@@ -16,9 +16,9 @@ import { objectSubLists } from '../../../packages/website/src/utils/objectSubLis
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
-import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
-import { buildStaticAnchorStructures } from '../../../src/data/structure/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../src/layers/structure/load/buildStaticAnchorStructures';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { encodeBlackHoleFocusId } from '../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
@@ -62,7 +62,7 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   'galaxy-cluster': (id) => structureIds.has(id),
   supercluster: (id) => structureIds.has(id),
   void: (id) => structureIds.has(id),
-  exhibit: (id) => id in exhibitRegistry,
+  exhibit: (id) => id in APP_EXHIBITS,
   tour: (id) => id in tourRegistry,
   place: () => false,
 };
@@ -117,7 +117,7 @@ describe('object catalogue', () => {
         'void',
       ),
     ).toEqual([...structureIds].sort());
-    expect(ids('exhibit')).toEqual(Object.keys(exhibitRegistry).sort());
+    expect(ids('exhibit')).toEqual(Object.keys(APP_EXHIBITS).sort());
     expect(ids('tour')).toEqual(
       Object.values(tourRegistry)
         .filter((tour) => tour.dev !== true)

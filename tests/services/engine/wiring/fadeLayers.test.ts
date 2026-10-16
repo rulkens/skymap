@@ -21,12 +21,14 @@ import type { VisibilityLayerKey } from '../../../../src/@types/animation/Visibi
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
+import { missionTrailsFadeRows } from '../../../../src/layers/missions/present/missionTrailsFadeRows';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import { structureFadeRows } from '../../../../src/layers/structure/present/structureFadeRows';
 
 /** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
 const GALAXY_RUNTIME = {
@@ -81,6 +83,7 @@ function makeState(
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+      missionTrails: { enabled: false },
       // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
       // labels reuse the galaxy layer), so seedFades indexes this leaf.
       galaxyCatalogs: {
@@ -100,8 +103,12 @@ function makeState(
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
     // `seedFades` walks the COMPOSED rows: the core manifest plus the density
-    // Layer's, whose master and per-cube seeds are pinned below.
-    fadeRows: [...FADE_LAYERS, ...cosmicWebDensityFadeRows(DENSITY_RUNTIME)],
+    // and structure Layers', whose seeds are pinned below.
+    fadeRows: [
+      ...FADE_LAYERS,
+      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...structureFadeRows(),
+    ],
   } as unknown as EngineState;
 }
 
@@ -143,6 +150,7 @@ function makeSettings(
     cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
+    missionTrails: { enabled: false },
   } as unknown as EngineSettingsState;
 }
 
@@ -236,6 +244,8 @@ describe('FADE_LAYERS intent subset', () => {
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...zoneOfAvoidanceFadeRows(),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...missionTrailsFadeRows(),
+      ...structureFadeRows(),
     ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);

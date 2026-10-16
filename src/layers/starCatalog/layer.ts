@@ -28,13 +28,14 @@ import { produceStarCaptions } from './present/produceStarCaptions';
 import { STAR_AGGREGATES_TARGET } from './render/starAggregatesTarget';
 import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
 import StarsSectionContainer from './ui/StarsSectionContainer';
+import StarCatalogTuningSectionContainer from './ui/StarCatalogTuningSectionContainer';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 
 export const starCatalogLayer = defineLayer({
   name: 'starCatalog',
   settings: starCatalogLayerSettings,
   sources: STAR_CATALOG_SOURCE_ROWS,
-  facts: { famousStarsMeta: [] } as StarCatalogFacts,
+  facts: { famousStarsMeta: [], chunkSlotsError: null } as StarCatalogFacts,
   targets: [STAR_AGGREGATES_TARGET],
   create,
   destroy,
@@ -56,5 +57,8 @@ export const starCatalogLayer = defineLayer({
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
   planners: (runtime) => [starCatalogPlanner(runtime)],
-  ui: [{ slot: 'main', content: StarsSectionContainer }],
+  ui: [
+    { slot: 'main', content: StarsSectionContainer },
+    { slot: 'debug', content: StarCatalogTuningSectionContainer },
+  ],
 });

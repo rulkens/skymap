@@ -7,9 +7,8 @@
  * added by extending this union; nothing in the registry itself needs to learn
  * the new value.
  *
- * The names track the SOURCE TYPE that produces the layer's labels, so a
- * registry row's `labelLayer` reads as "which of my siblings do I share a fade
- * with". `scaleBar` is the one member with no producing source type — it is a
+ * The names track the SOURCE TYPE that produces the layer's labels.
+ * `scaleBar` is the one member with no producing source type — it is a
  * React-side HUD element, reserved for tour integration.
  *
  * Current layers:
@@ -21,9 +20,9 @@
  *                   `produceStructureLabels`.
  *   - galaxy      — per-galaxy name labels (the famous-galaxy atlas names).
  *   - starCatalog — curated star-map captions, emitted through the
- *                   foreground-labels layer on the NEAR0 slab.
+ *                   labels-near layer on the NEAR0 slab.
  *   - body        — scene-body captions (Sun, Earth, planets), likewise on the
- *                   foreground-labels layer.
+ *                   labels-near layer.
  *   - blackHoles  — the black holes' captions (the Galactic Centre), likewise.
  *   - scaleBar    — the on-screen scale-bar HUD. Constructed by React,
  *                   not a GPU layer; reserved for tour integration.

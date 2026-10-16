@@ -9,9 +9,14 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
-import type { GalaxyRowFixture, StarRowFixture } from '../../../support/selectionResolverOver';
+import type {
+  GalaxyRowFixture,
+  StarRowFixture,
+  StructureRowFixture,
+} from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { Source } from '../../../../src/data/sources';
@@ -27,17 +32,17 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 
@@ -90,24 +95,26 @@ function galaxiesWith(...sources: readonly SourceType[]): GalaxyRowFixture {
   } as GalaxyRowFixture;
 }
 
-const deps: ResolveDeps = {
-  structures: {
-    byId: (id) => (id === 'virgo' ? virgo : null),
-    byCategory: (cat) => (cat === 'galaxy-cluster' ? [virgo] : []),
-  },
+const structures: StructureRowFixture = {
+  byId: (id) => (id === 'virgo' ? virgo : null),
+  byCategory: (cat) => (cat === 'galaxy-cluster' ? [virgo] : []),
 };
 
 /** The starCatalog Layer's slice of the composed resolver — its own live read. */
-function starsFixture(catalog: StarCatalog | null): StarRowFixture {
+function starsFixture(catalog: StarOctree | null): StarRowFixture {
   return {
     renderer: {
       loadedCatalogs: () =>
-        (catalog ? [{ source: Source.GaiaStars, catalog }] : [])[Symbol.iterator](),
+        (catalog ? [{ source: Source.GaiaStars, octree: catalog }] : [])[Symbol.iterator](),
+      // No chunks: a pool index is its ordinal.
+      recordOrdinal: (_source: unknown, poolIndex: number) => poolIndex,
+      poolRecordIndex: (_source: unknown, ordinal: number) => ordinal,
     },
+    chunkStreams: new Map(),
   } as unknown as StarRowFixture;
 }
 
-const resolver = selectionResolverOver(deps, galaxies, starsFixture(null));
+const resolver = selectionResolverOver(structures, galaxies, starsFixture(null));
 
 // ─── resolvePick dispatch (was resolvePick.test.ts / resolvePickTable.test.ts) ──
 
@@ -234,8 +241,8 @@ describe('extractRow, composed', () => {
 
   it('survey star ref resolves against the loaded catalog', async () => {
     const catalog = await makeStarCatalog();
-    const starResolver = selectionResolverOver(deps, galaxies, starsFixture(catalog));
-    const record = resolveStarRecord(catalog, 1)!;
+    const starResolver = selectionResolverOver(structures, galaxies, starsFixture(catalog));
+    const record = resolveStarRecord(catalog, residencyOf(), 1)!;
     expect(
       starResolver.extractRow(
         { type: 'starCatalog', source: Source.GaiaStars, index: 1 },
@@ -304,7 +311,7 @@ describe('extractRow, composed', () => {
   });
 });
 
-async function makeStarCatalog(): Promise<StarCatalog> {
+async function makeStarCatalog(): Promise<StarOctree> {
   const octree = buildStarOctree(
     [
       { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },
@@ -312,7 +319,7 @@ async function makeStarCatalog(): Promise<StarCatalog> {
     ],
     { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] },
   );
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 // ─── resolveFocusId / focusIdOf (was resolveFocusId.test.ts) ────────────────
@@ -329,7 +336,7 @@ describe('resolveFocusId, composed', () => {
       index: 0,
     });
     expect(resolver.resolveFocusId('sdss-9999')).toBeNull();
-    const noSdss = selectionResolverOver(deps, galaxiesWith());
+    const noSdss = selectionResolverOver(structures, galaxiesWith());
     expect(noSdss.resolveFocusId('sdss-1237668393006604288')).toBeNull();
   });
 
@@ -360,7 +367,7 @@ describe('resolveFocusId, composed', () => {
     // permissive id class + meta scan) but decode returns null — D6'2's
     // deferral, not an unclaimed miss.
     const noCloud = selectionResolverOver(
-      deps,
+      structures,
       galaxiesWith(Source.SDSS, Source.Glade, Source.TwoMRS),
     );
     expect(noCloud.resolveFocusId('m31')).toBeNull();
@@ -419,7 +426,11 @@ describe('resolveFocusId, composed', () => {
     // bin commits instead of resolving to a record nothing can extract.
     expect(resolver.resolveFocusId('star-42')).toBeNull();
 
-    const loaded = selectionResolverOver(deps, galaxies, starsFixture(await makeStarCatalog()));
+    const loaded = selectionResolverOver(
+      structures,
+      galaxies,
+      starsFixture(await makeStarCatalog()),
+    );
     const ref: SelectionRef = { type: 'starCatalog', source: Source.GaiaStars, index: 42 };
     expect(loaded.resolveFocusId('star-42')).toEqual(ref);
     expect(loaded.focusIdOf(ref)).toBe('star-42');
@@ -435,7 +446,7 @@ describe('resolveFocusId, composed', () => {
   });
 
   it('pos@ra,dec → nearest galaxy ref within 30 arcsec; beyond it and malformed → null', () => {
-    const posOnly = selectionResolverOver(deps, galaxiesWith(Source.SDSS));
+    const posOnly = selectionResolverOver(structures, galaxiesWith(Source.SDSS));
     expect(posOnly.resolveFocusId('pos@0.0000,0.0000')).toEqual({
       type: 'galaxyCatalog',
       source: Source.SDSS,
@@ -457,7 +468,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   it('GLADE ref (objId 0n) → pos@ra,dec → same ref', () => {
     // objId 0 is the "no durable id" sentinel, so the encoder falls back to
     // the positional form — only GLADE is loaded, and with that objId.
-    const posDeps = selectionResolverOver(deps, {
+    const posDeps = selectionResolverOver(structures, {
       ...galaxies,
       catalogs: new Map([[Source.Glade, makeCloud(0n, [1, 0, 0])]]),
     } as GalaxyRowFixture);
@@ -549,6 +560,7 @@ describe('composeSelectionRows — picking gate', () => {
     type: 'structure',
     pickSources: [Source.GalaxyCluster],
     resolvePick: () => ({ type: 'structure', id: 'virgo' }),
+    encodePick: () => null,
     extractRow: () => virgo,
     focusId: {
       claims: (id) => id.startsWith('galaxy-cluster-'),

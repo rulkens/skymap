@@ -1,15 +1,10 @@
 /**
- * StarDetailCard — rich panel for a selected star, from any catalog.
- *
- * Star variant of the shared galaxy/structure/Milky-Way detail layout: the rows
- * every star shares (headline, distance) and then the one block its `detail`
- * carries. A star that has a featured card shows it, with the lead rows beside
- * it as summary lines — the body card's layout. A star with nothing to add (a
- * seeded star whose sidecar has not landed) renders its headline alone: one
- * fail-soft path, no loading branch, and no image over an empty column.
- *
- * The outer wrapper's tag + className stays stable across hover ↔ pin
- * transitions so InfoCard's single-wrapper layout keeps its DOM identity.
+ * StarDetailCard — rich panel for a selected star, from any catalog: the shared
+ * detail layout, the rows every star has, then the one block its `detail`
+ * carries. A featured star shows its card shot with the lead rows beside it; a
+ * star with nothing to add renders its headline alone (one fail-soft path, no
+ * loading branch). The outer wrapper's tag + className stay stable across
+ * hover and pin so InfoCard keeps its DOM identity.
  */
 
 import type { ReactNode } from 'react';
@@ -27,18 +22,20 @@ import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import type { CardRowProps } from '../CardRow/CardRow';
+import ShotSummary from '../ShotSummary/ShotSummary';
 import Thumbnail from '../Thumbnail/Thumbnail';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
+import type { CardLayout } from '../../../@types/components/infoCard/CardLayout';
 import styles from '../cardChrome.module.css';
 import local from './StarDetailCard.module.css';
 
 type StarDetailCardProps = {
   target: StarInfo;
   isPinned?: boolean;
-  hasChrome?: boolean;
+  layout?: CardLayout;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -182,11 +179,15 @@ function detailBlock(
 function StarDetailCard({
   target,
   isPinned = false,
-  hasChrome = true,
+  layout = 'panel',
   onFocus,
   onClose,
 }: StarDetailCardProps): ReactNode {
-  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
+  const outerClass = cx(
+    local.root,
+    isPinned && styles.pinned,
+    layout === 'phone' && styles.chromeless,
+  );
   const { detail } = target;
   const aliases = detail.kind === 'curated' ? detail.meta.names.slice(1) : [];
 
@@ -197,6 +198,11 @@ function StarDetailCard({
   // all, so it never has a shot).
   const shotId = target.id === null ? null : `${STAR_FOCUS_PREFIX}${target.id}`;
   const hasShot = detail.kind === 'curated' && shotId !== null && SHOT_CARD_IDS.has(shotId);
+  // The phone sheet (chromeless) carries the shot in its header instead of beside the rows.
+  const shotBeside = hasShot && layout === 'panel';
+  const thumbnail = hasShot ? (
+    <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
+  ) : undefined;
 
   // The "where / how bright" rows: beside the shot as summary lines, or heading
   // the curated block as CardRows. Distance is the star's own row for every
@@ -228,31 +234,36 @@ function StarDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        layout={layout}
         eyebrow="Star"
+        title={
+          // The sheet's peek cuts below the header, so its aliases ride in the name.
+          layout === 'panel' || aliases.length === 0 ? (
+            target.displayName
+          ) : (
+            <>
+              {target.displayName}
+              <span className={styles.headlineAlias}> · {aliases.join(' · ')}</span>
+            </>
+          )
+        }
+        badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
+        thumbnail={thumbnail}
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={isPinned ? onClose : undefined}
       />
 
-      <CardRow
-        type="headline"
-        badge={detail.kind === 'photometry' ? detail.spectralClass : undefined}
-      >
-        {target.displayName}
-      </CardRow>
-      {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
+      {layout === 'panel' && aliases.length > 0 && (
+        <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>
+      )}
 
-      {hasShot && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.displayName} thumbnail`} />
-          <div className={styles.cardSummary}>
-            {leadRows.map((row, i) => (
-              <div key={i} className={styles.cardDistLine}>
-                <span>{row.label}</span> {row.value}
-              </div>
-            ))}
-          </div>
-        </div>
+      {shotBeside && (
+        <ShotSummary
+          url={cardShotUrl(shotId)}
+          alt={`${target.displayName} thumbnail`}
+          rows={leadRows}
+        />
       )}
 
       {detail.kind !== 'curated' && target.distancePc > 0 && (
@@ -264,7 +275,7 @@ function StarDetailCard({
         </div>
       )}
 
-      {detailBlock(detail, hasShot ? [] : leadRows)}
+      {detailBlock(detail, shotBeside ? [] : leadRows)}
     </div>
   );
 }

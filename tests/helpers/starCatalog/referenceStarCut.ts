@@ -1,14 +1,14 @@
 /**
  * referenceStarCut: the executable reference for `cut.wesl`. It runs the same
- * three steps (histogram, pickThreshold, emit) over the packed node table and
- * the written `CutUniforms` on the CPU, so tests can pin the algorithm. The two
- * must change together; only the proxy is rounded to f32. The GPU's list order
- * is nondeterministic, this one is node order.
+ * three steps (histogram, pickThreshold, emit) over the packed pool table
+ * (index rows, then chunk rows) and the written `CutUniforms` on the CPU, so
+ * tests can pin the algorithm. The two must change together; only the proxy is
+ * rounded to f32. The GPU's list order is nondeterministic, this one is row order.
  */
 
 import type { ReferenceStarCut } from './@types/ReferenceStarCut';
 import {
-  BUDGET_TYPICAL_U32_INDEX,
+  DRAW_BUDGET_U32_INDEX,
   CAM_CELL_INT_INDEX,
   CAM_FRAC_FLOAT_INDEX,
   CELL_EDGE_MPC_FLOAT_INDEX,
@@ -21,15 +21,22 @@ import {
   LEAF_BLOCK_INDEX_SHIFT,
   LEAF_BLOCK_SHIFT,
   LEAF_MARGIN_RAD_FLOAT_INDEX,
+  BLOB_OPACITY,
+  INDEX_NODES_U32_INDEX,
   LEVEL_BITS,
   MIN_DIST_SQ,
   NODE_BITS_WORD,
+  NODE_BLOB_BIT,
   NODE_COUNT_U32_INDEX,
+  NODE_FOLDED_BIT,
   NODE_GRID_WORD,
   NODE_PARENT_WORD,
   NODE_REFINE_DELTA_WORD,
+  NODE_RESIDENT_BIT,
+  OPACITY_CHANNELS,
+  OWN_COUNT_SHIFT,
+  OWN_OPACITY,
   PLANES_FLOAT_INDEX,
-  RECORD_COUNT_SHIFT,
   REFINE_THRESHOLD_SQ_FLOAT_INDEX,
   VIEW_COUNT_U32_INDEX,
   WORLD_SPREAD_FLOAT_INDEX,
@@ -48,8 +55,10 @@ export function referenceStarCut(
 
   const bitsOf = (i: number) => nodes[i * CUT_NODE_WORDS + NODE_BITS_WORD]!;
   const edgeCells = (i: number) => 2 ** (bitsOf(i) & ((1 << LEVEL_BITS) - 1));
-  const isAggregate = (i: number) => (bitsOf(i) & (1 << LEVEL_BITS)) !== 0;
-  const recordCount = (i: number) => bitsOf(i) >>> RECORD_COUNT_SHIFT;
+  const hasBlob = (i: number) => (bitsOf(i) & NODE_BLOB_BIT) !== 0;
+  const childrenResident = (i: number) => (bitsOf(i) & NODE_RESIDENT_BIT) !== 0;
+  const ownCount = (i: number) => bitsOf(i) >>> OWN_COUNT_SHIFT;
+  const root = u32[INDEX_NODES_U32_INDEX]! - 1;
 
   const minCells = (i: number): number[] => {
     const grid = nodes[i * CUT_NODE_WORDS + NODE_GRID_WORD]!;
@@ -75,16 +84,17 @@ export function referenceStarCut(
     return Math.floor(Math.min(Math.max(octaves * CUT_BINS_PER_OCTAVE, 0), CUT_BINS - 1));
   };
 
-  const wantsRefine = (i: number, proxy: number) => isAggregate(i) && proxy >= thresholdSq;
+  const wantsRefine = (i: number, proxy: number) =>
+    hasBlob(i) && childrenResident(i) && proxy >= thresholdSq;
 
-  const offScreen = (i: number): boolean => {
+  const offScreen = (i: number, isBlob: boolean): boolean => {
     const viewCount = u32[VIEW_COUNT_U32_INDEX]!;
     if (viewCount === 0) return false;
     const edge = edgeCells(i);
     const cellEdgeMpc = f32[CELL_EDGE_MPC_FLOAT_INDEX]!;
     const center = minCells(i).map((lo) => (lo + edge * 0.5) * cellEdgeMpc);
     const halfDiag = edge * cellEdgeMpc * HALF_DIAGONAL;
-    const radius = isAggregate(i)
+    const radius = isBlob
       ? halfDiag * f32[WORLD_SPREAD_FLOAT_INDEX]!
       : halfDiag + Math.hypot(...center) * f32[LEAF_MARGIN_RAD_FLOAT_INDEX]!;
     for (let v = 0; v < viewCount; v++) {
@@ -104,13 +114,13 @@ export function referenceStarCut(
   const hist = new Array<number>(CUT_BINS).fill(0);
   for (let i = 0; i < nodeCount; i++) {
     const proxy = proxyOf(i);
-    if (!wantsRefine(i, proxy) || offScreen(i)) continue;
+    if (!wantsRefine(i, proxy) || offScreen(i, true)) continue;
     hist[binOf(proxy)]! += nodes[i * CUT_NODE_WORDS + NODE_REFINE_DELTA_WORD]!;
   }
 
   // pickThreshold
-  const budget = u32[BUDGET_TYPICAL_U32_INDEX]!;
-  let instances = recordCount(nodeCount - 1);
+  const budget = u32[DRAW_BUDGET_U32_INDEX]!;
+  let instances = ownCount(root) + (hasBlob(root) ? 1 : 0);
   let cutBin = 0;
   for (let b = CUT_BINS; b > 0; b--) {
     if (instances >= budget) {
@@ -122,25 +132,28 @@ export function referenceStarCut(
 
   // emit
   const refines = (i: number) => {
-    const proxy = proxyOf(i);
-    return wantsRefine(i, proxy) && binOf(proxy) >= cutBin;
+    const folded = (bitsOf(i) & NODE_FOLDED_BIT) !== 0;
+    const j = folded ? nodes[i * CUT_NODE_WORDS + NODE_PARENT_WORD]! : i;
+    const proxy = proxyOf(j);
+    return wantsRefine(j, proxy) && binOf(proxy) >= cutBin;
   };
   const fadeStep = f32[FADE_STEP_FLOAT_INDEX]!;
   const opacity = Float32Array.from(opacityIn);
   const leafEntries: number[] = [];
   const aggregates: number[] = [];
+  const step = (o: number, goal: number) =>
+    (opacity[o] = opacity[o]! + Math.min(Math.max(goal - opacity[o]!, -fadeStep), fadeStep));
   for (let i = 0; i < nodeCount; i++) {
+    // Padding: cut.wesl rules it out by its slot's live row count; a real row is never all zero.
+    if (bitsOf(i) === 0) continue;
     const parent = nodes[i * CUT_NODE_WORDS + NODE_PARENT_WORD]!;
-    const inCut = (parent === i || refines(parent)) && !refines(i);
-    const goal = inCut ? 1 : 0;
-    const op = opacity[i]! + Math.min(Math.max(goal - opacity[i]!, -fadeStep), fadeStep);
-    opacity[i] = op;
-    if (op <= 0 || offScreen(i)) continue;
-    if (isAggregate(i)) {
-      aggregates.push(i);
-      continue;
-    }
-    const blocks = (recordCount(i) + (1 << LEAF_BLOCK_SHIFT) - 1) >>> LEAF_BLOCK_SHIFT;
+    const drawOwn = i === root || refines(parent);
+    const drawBlob = drawOwn && !refines(i);
+    const ownOp = step(i * OPACITY_CHANNELS + OWN_OPACITY, drawOwn ? 1 : 0);
+    const blobOp = step(i * OPACITY_CHANNELS + BLOB_OPACITY, drawBlob ? 1 : 0);
+    if (blobOp > 0 && hasBlob(i) && !offScreen(i, true)) aggregates.push(i);
+    if (ownOp <= 0 || ownCount(i) === 0 || offScreen(i, false)) continue;
+    const blocks = (ownCount(i) + (1 << LEAF_BLOCK_SHIFT) - 1) >>> LEAF_BLOCK_SHIFT;
     for (let k = 0; k < blocks; k++) leafEntries.push(i | (k << LEAF_BLOCK_INDEX_SHIFT));
   }
   return { cutBin, opacity, leafEntries, aggregates };

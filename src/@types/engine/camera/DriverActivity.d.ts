@@ -6,4 +6,6 @@
 export type DriverActivity = {
   // The follow memory saturated last frame; only `followApproach` reads it.
   readonly approachDone: boolean;
+  // An exhibit row is active, so it reads the drag itself; `orbitDrag` would orbit a frozen point.
+  readonly dragClaimed: boolean;
 };

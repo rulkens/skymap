@@ -49,7 +49,7 @@ const FRAME: StarCutInputs = {
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,
-    sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
+    sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 100 }],
   },
   nowMs: 0,
   sizePx: 2.5,
@@ -65,7 +65,13 @@ function makeRuntime() {
 }
 
 function makeNear0View(): SlabView {
-  return { slab: makeSlab(), vp: new Float32Array(16), camPos: [0, 0, 0], viewportPx: [1280, 720] };
+  return {
+    slab: makeSlab(),
+    vp: new Float32Array(16),
+    camPos: [0, 0, 0],
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
 }
 
 const STATE = {} as unknown as PassState;

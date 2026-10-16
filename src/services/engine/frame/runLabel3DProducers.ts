@@ -2,7 +2,7 @@
  * runLabel3DProducers — concatenate Label3D descriptors in producer order,
  * flush them to `label3DRenderer`, and fold `awake` across producers. Walks
  * `state.label3DProducers` (core + every Layer's, composed by `createLayers`).
- * Mirrors `runMarkerProducers`'s walk; no sort/filter/dedupe.
+ * Concatenates only: no sort, filter or dedupe.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

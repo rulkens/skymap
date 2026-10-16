@@ -45,11 +45,11 @@ vi.mock('../../../src/hooks/useEngine', () => ({
 
 // jsdom omits matchMedia; useIsMobile calls it at mount. Desktop (false)
 // keeps the normal-mode HUD in its default layout.
-function stubMatchMedia(): void {
+function stubMatchMedia(matches = false): void {
   window.matchMedia = vi.fn<(query: string) => MediaQueryList>(
     (query: string) =>
       ({
-        matches: false,
+        matches,
         media: query,
         onchange: null,
         addEventListener: vi.fn<MediaQueryList['addEventListener']>(),
@@ -152,5 +152,16 @@ describe('App cinema mode', () => {
     for (const selector of HUD_SELECTORS) {
       expect(container.querySelector(selector)).not.toBeNull();
     }
+  });
+
+  // One HUD per width: the phone's dock replaces the desktop panels, never joins them.
+  it('swaps the desktop panels for the dock on a phone', () => {
+    vi.mocked(isCinemaMode).mockReturnValue(false);
+    stubMatchMedia(true);
+    const { container } = renderApp(makeStore());
+
+    expect(container.querySelector('nav[aria-label="Dock"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Navigation cheatsheet"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Scale reference"]')).toBeNull();
   });
 });

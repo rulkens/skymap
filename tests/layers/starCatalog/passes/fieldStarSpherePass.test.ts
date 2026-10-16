@@ -17,16 +17,19 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { residencyOf } from '../../../fixtures/residencyOf';
 
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
+import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../src/services/engine/frame/partitionStarsByResolution';
@@ -56,14 +59,14 @@ function sorted(stars: OctreeLeafStar[]): OctreeLeafStar[] {
  * AU-scale resolve radius, so only record 1 is ever in range. Built through the
  * real octree + encode/decode path so the reconstruction matches the runtime.
  */
-async function threeStarCatalog(): Promise<StarCatalog> {
+async function threeStarCatalog(): Promise<StarOctree> {
   const stars: OctreeLeafStar[] = [
     { mortonIndex: 0, offset: [100, 100, 100], absMag: 5, bpRp: 0.3 },
     { mortonIndex: 0, offset: [500, 500, 500], absMag: 4, bpRp: 0.65 },
     { mortonIndex: 0, offset: [900, 900, 900], absMag: 3, bpRp: 0.9 },
   ];
   const octree = buildStarOctree(sorted(stars), GRID);
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 /** Distance (Mpc) at which a solar-radius sphere subtends `px` — the gate inversion. */
@@ -81,6 +84,8 @@ function camAt(starPos: Readonly<Vec3>, distMpc: number): Vec3 {
   return [starPos[0] + distMpc, starPos[1], starPos[2]];
 }
 
+const NO_CHUNKS: StarResidency = residencyOf();
+
 function makeCtx(camPos: Vec3): FrameView {
   return {
     drawCamPos: camPos,
@@ -95,15 +100,21 @@ function makeCtx(camPos: Vec3): FrameView {
  * renderer (`draw`).
  */
 function makeRuntime(
-  catalog: StarCatalog | null,
+  catalog: StarOctree | null,
   overrides: Record<string, unknown> = {},
 ): StarCatalogRuntime {
   const renderer =
     catalog === null
       ? { loadedCatalogs: () => [] }
-      : { loadedCatalogs: () => [{ source: Source.GaiaStars, catalog }] };
+      : {
+          loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }],
+          // A v1 catalog has no chunks: its pool index is its ordinal.
+          poolRecordIndex: (_source: unknown, ordinal: number) => ordinal,
+          snapshotPickSlots: () => {},
+        };
   return {
     renderer,
+    chunkStreams: new Map(),
     starRenderer: { draw: vi.fn() },
     ...overrides,
   } as unknown as StarCatalogRuntime;
@@ -124,14 +135,20 @@ const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 /** A NEAR0 view whose f64 `slab.vp` differs from the f32 `vp` (the compose seam). */
 function makeNear0View(camPos: Vec3): SlabView {
   const slab: Slab = makeSlab();
-  return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, VIEWPORT_H] };
+  return {
+    slab,
+    vp: new Float32Array(16),
+    camPos,
+    viewportPx: [1280, VIEWPORT_H],
+    window: { originPx: [0, 0], sizePx: [1280, VIEWPORT_H] },
+  };
 }
 
 describe('fieldStarSpherePass.enabled', () => {
   it('is present for a nearby star with NO selection at all — the core un-braid', async () => {
     const cat = await threeStarCatalog();
     const pass = fieldStarSpherePass(makeRuntime(cat));
-    const starPos = resolveStarRecord(cat, 1)!.positionMpc;
+    const starPos = resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc;
     // Camera well within the ON distance; state carries no selectionRows.
     const cam = camAt(starPos, ON_MPC * 0.5);
     expect(pass.enabled(makeState(), makeCtx(cam), makeNear0View(cam))).toBe(true);
@@ -144,7 +161,7 @@ describe('fieldStarSpherePass.enabled', () => {
     // frame keeps it. Fresh catalog so the WeakMap starts empty.
     const catA = await threeStarCatalog();
     const passA = fieldStarSpherePass(makeRuntime(catA));
-    const posA = resolveStarRecord(catA, 1)!.positionMpc;
+    const posA = resolveStarRecord(catA, NO_CHUNKS, 1)!.positionMpc;
     const camAOn = camAt(posA, ON_MPC * 0.5);
     expect(passA.enabled(makeState(), makeCtx(camAOn), makeNear0View(camAOn))).toBe(true);
     const camABand = camAt(posA, bandDist);
@@ -154,7 +171,7 @@ describe('fieldStarSpherePass.enabled', () => {
     // separate catalog keeps its WeakMap entry independent of sub-case A.
     const catB = await threeStarCatalog();
     const passB = fieldStarSpherePass(makeRuntime(catB));
-    const posB = resolveStarRecord(catB, 1)!.positionMpc;
+    const posB = resolveStarRecord(catB, NO_CHUNKS, 1)!.positionMpc;
     const camBBand = camAt(posB, bandDist);
     expect(passB.enabled(makeState(), makeCtx(camBBand), makeNear0View(camBBand))).toBe(false);
   });
@@ -162,7 +179,7 @@ describe('fieldStarSpherePass.enabled', () => {
   it('is absent (and clears its stored state) once the camera recedes past OFF', async () => {
     const cat = await threeStarCatalog();
     const pass = fieldStarSpherePass(makeRuntime(cat));
-    const starPos = resolveStarRecord(cat, 1)!.positionMpc;
+    const starPos = resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc;
     // Adopt it up close, then pull well past OFF — the star drops.
     const camOn = camAt(starPos, ON_MPC * 0.5);
     expect(pass.enabled(makeState(), makeCtx(camOn), makeNear0View(camOn))).toBe(true);
@@ -184,7 +201,7 @@ describe('fieldStarSpherePass.enabled', () => {
 describe('fieldStarSpherePass.draw', () => {
   it('draws the resolved present star (populated by enabled, read here)', async () => {
     const cat = await threeStarCatalog();
-    const starPos = resolveStarRecord(cat, 1)!.positionMpc;
+    const starPos = resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc;
     const cam = camAt(starPos, ON_MPC * 0.5);
     const drawSpy = vi.fn();
     const pass = fieldStarSpherePass(makeRuntime(cat, { starRenderer: { draw: drawSpy } }));
@@ -200,7 +217,7 @@ describe('fieldStarSpherePass.draw', () => {
 describe('fieldStarSpherePass.drawPick', () => {
   it('packs the PRESENT star’s Gaia record index — the id the point pick packs', async () => {
     const cat = await threeStarCatalog();
-    const starPos = resolveStarRecord(cat, 1)!.positionMpc;
+    const starPos = resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc;
     const cam = camAt(starPos, ON_MPC * 0.5);
 
     let packedId = -1;

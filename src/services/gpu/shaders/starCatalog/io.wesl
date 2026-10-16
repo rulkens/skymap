@@ -50,6 +50,6 @@ struct VSOut {
   // Peak intensity, scaled so a record's integrated luminance follows its flux
   // (vertex.wesl derives it).
   @location(3) intensity: f32,
-  // Bin-global record index; the pick fragment packs it, 'resolveStarRecord' inverts it.
+  // Pool-absolute record index; the pick fragment packs it, the renderer maps it to an ordinal.
   @location(4) @interpolate(flat) recordIdx: u32,
 };

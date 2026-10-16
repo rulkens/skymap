@@ -33,15 +33,6 @@ vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 
-// deriveSourceMasks is mocked here so the clipPlayer tick-ordering test can
-// observe the call sequence without needing a full FadeRegistry seeded for
-// every galaxy catalog source. Returns inert masks (draw 0, pick 0) — the
-// renderer-null bail-out fires before any renderer reads the masks, so they
-// do not need to be realistic in this test suite.
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: vi.fn(() => ({ draw: 0, pick: 0 })),
-}));
-
 // The GPU dispatch and pick-overlay composite are real WebGPU calls against
 // `deps.device`/`deps.context` — no JSDOM stub can service them. Mocked out
 // so the wake-fold test below can drive `runFrame` all the way through a
@@ -86,9 +77,8 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
-import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
+import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import {
@@ -116,7 +106,6 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
@@ -161,16 +150,6 @@ function makeState(): EngineState {
         brightness: 0.5,
         depthFade: false,
         provenance: DEFAULT_GALAXY_PROVENANCE,
-        // deriveSourceMasks (called at the top of runFrame, before the
-        // renderer-null bail-out) iterates EVERY GALAXY_CATALOG_SOURCES code and reads
-        // items[id].enabled, so a partial record would throw on the first
-        // missing id. Seed them all enabled.
-        items: Object.fromEntries(
-          GALAXY_CATALOG_SOURCES.map((s) => [
-            SOURCE_REGISTRY[s].id,
-            { enabled: true, labelEnabled: true },
-          ]),
-        ),
       },
       tonemap: { exposure: 1, curve: 'linear' },
       bias: { mode: 'off', absMagLimit: -19 },
@@ -193,11 +172,6 @@ function makeState(): EngineState {
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
-      // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', id}) for every
-      // galaxy catalog to compute the fade-out draw tail; 0 everywhere (no fade in
-      // flight) is the right baseline for these fixtures. With the module mock
-      // above this value is also mocked out, but the real fades stub is kept
-      // here for completeness and so the type constraint is satisfied.
       fades: { opacityOf: () => 0 },
       // Minimal selection-subsystem stub.  The runFrame body reads
       // `focused()` (cluster-focus fade) + `selected()` (halo) for the
@@ -253,6 +227,8 @@ function makeState(): EngineState {
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
+      own: {},
+      pivotBody: null,
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,
@@ -289,7 +265,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     context: {} as unknown as GPUCanvasContext,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
-    controlSchemes: CONTROL_SCHEMES,
+    controlSchemes: composeControlSchemes([]),
   };
 }
 
@@ -326,7 +302,7 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
       clientWidth: 100,
       clientHeight: 100,
     } as unknown as HTMLCanvasElement,
-    controlSchemes: CONTROL_SCHEMES,
+    controlSchemes: composeControlSchemes([]),
   };
 }
 
@@ -718,43 +694,26 @@ describe('runFrame — demand re-evaluation', () => {
 });
 
 describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
-  it('ticks clipPlayer before deriveSourceMasks — scene cues fire before mask derivation', () => {
-    // Task 12 contract: `clipPlayer.tick(nowMs)` must be the FIRST statement of
-    // `runFrame`, before `deriveSourceMasks` and `reevaluateDemand`. Scene cues
-    // (e.g. a visibility toggle dispatched by a cue) must be committed before
-    // this frame derives its draw masks from state, so a cue's effects are
-    // visible in the same frame rather than lagging one frame behind.
-    //
-    // Strategy: both `clipPlayer.tick` and `deriveSourceMasks` are replaced with
-    // spies. Each spy pushes a marker into a shared `callOrder` array. After
-    // running one frame we assert tick appeared before deriveSourceMasks.
+  it('ticks clipPlayer before reevaluateDemand', () => {
+    // `clipPlayer.tick(nowMs)` is the FIRST statement of `runFrame`: a cue's
+    // dispatch (e.g. a visibility toggle) must be in the store before this
+    // frame derives demand, so its effect shows this frame, not the next.
     const callOrder: string[] = [];
 
     const store = makeStore();
     const state = makeState();
 
-    // Replace the clipPlayer tick stub so it records its position in callOrder.
     state.subsystems.clipPlayer.tick = vi.fn<ClipPlayer['tick']>((clipEpoch) => {
       callOrder.push('tick');
       return { clipEpoch };
     });
-
-    // Replace the deriveSourceMasks mock's implementation for this test.
-    vi.mocked(deriveSourceMasks).mockImplementationOnce(() => {
-      callOrder.push('deriveSourceMasks');
-      return { draw: 0, pick: 0 };
+    vi.mocked(reevaluateDemand).mockImplementationOnce(() => {
+      callOrder.push('reevaluateDemand');
     });
 
-    const deps = makeDeps(store);
-    runFrame(state, deps, 500);
+    runFrame(state, makeDeps(store), 500);
 
-    // tick must precede deriveSourceMasks in the call sequence.
-    const tickIdx = callOrder.indexOf('tick');
-    const masksIdx = callOrder.indexOf('deriveSourceMasks');
-
-    expect(tickIdx).toBeGreaterThanOrEqual(0); // tick was called
-    expect(masksIdx).toBeGreaterThanOrEqual(0); // deriveSourceMasks was called
-    expect(tickIdx).toBeLessThan(masksIdx); // tick came first
+    expect(callOrder).toEqual(['tick', 'reevaluateDemand']);
   });
 
   it('passes nowMs to clipPlayer.tick', () => {
@@ -1019,7 +978,6 @@ describe('runFrame — the label-director wake fold', () => {
         renderTargets: { reconcile: vi.fn() },
         compositor: {},
         starCatalogRenderer: null,
-        structureMarkerCosmoRenderer: null,
         label3DRenderer: { setLabels: vi.fn() },
       },
       subsystems: {
@@ -1088,7 +1046,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
         renderTargets: { reconcile: vi.fn() },
         compositor: {},
         starCatalogRenderer: null,
-        structureMarkerCosmoRenderer: null,
         label3DRenderer: { setLabels: vi.fn() },
       },
       subsystems: {

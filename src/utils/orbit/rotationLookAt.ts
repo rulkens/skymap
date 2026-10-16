@@ -21,6 +21,8 @@ import { normalize3 } from '../math/normalize3';
 // projection has no direction left to carry the roll, so a second, always
 // non-parallel reference takes over — the equinox, the frame's own +X.
 const DEGENERATE_RESIDUAL = 1e-6;
+// Mpc; far below any real craft-to-target separation (1 m is ~3e-23 Mpc).
+const COINCIDENT = 1e-30;
 
 /** `v` with its `axis` component removed; `axis` must be unit. */
 function reject(v: Readonly<Vec3>, axis: Readonly<Vec3>): Vec3 {
@@ -29,11 +31,11 @@ function reject(v: Readonly<Vec3>, axis: Readonly<Vec3>): Vec3 {
 }
 
 export function rotationLookAt(bodyPosMpc: Readonly<Vec3>, targetPosMpc: Readonly<Vec3>): Mat3 {
-  const forward = normalize3([
-    targetPosMpc[0] - bodyPosMpc[0],
-    targetPosMpc[1] - bodyPosMpc[1],
-    targetPosMpc[2] - bodyPosMpc[2],
-  ]);
+  const dx = targetPosMpc[0] - bodyPosMpc[0];
+  const dy = targetPosMpc[1] - bodyPosMpc[1];
+  const dz = targetPosMpc[2] - bodyPosMpc[2];
+  // A craft parked on its target (an absent Voyager sits at Earth) has no direction.
+  const forward: Vec3 = Math.hypot(dx, dy, dz) < COINCIDENT ? [1, 0, 0] : normalize3([dx, dy, dz]);
 
   const poleResidual = reject(ECLIPTIC_FRAME.normal, forward);
   const up = normalize3(

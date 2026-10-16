@@ -54,7 +54,7 @@ function makeCtx(bodyId: string, offsetKm: number): FrameView {
   const p = STATES.get(bodyId)!.positionMpc;
   const drawCamPos: Vec3 = [p[0] + offsetKm * KM_TO_MPC, p[1], p[2]];
   return {
-    snapshot: { simDays: CONST_J2000 },
+    snapshot: { simDays: CONST_J2000, meshBodies: SCENE_MESH_BODIES },
     drawCamPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
@@ -99,6 +99,15 @@ describe('sceneOccluderSpheres', () => {
     // `data.bodies.meshBodies` could put it in the set.
     const ctx = makeCtx('whale', 20 * SCALE_UNITS.M_TO_KM);
     expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES)))).toBe(false);
+  });
+
+  const sunRadiusKm =
+    innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
+
+  it('holds a resolved Sun, sized at the draw camera', () => {
+    // 1e6 km out the Sun spans ~1200 px.
+    const radii = occluderRadiiKm(makeCtx('sun', 1e6));
+    expect(radii.filter((r) => Math.abs(r - sunRadiusKm) < 1)).toHaveLength(1);
   });
 
   it('drops the Sun once it demotes to a point at Jupiter-range', () => {

@@ -38,7 +38,7 @@ export type RunFrameDeps = {
    */
   timingService: GpuTimingService;
   /**
-   * Control-scheme registry (`CONTROL_SCHEMES`, overridable by a fixture); each
+   * Control-scheme registry (`composeControlSchemes`, overridable by a fixture); each
    * scheme's driver table feeds `pickWinner`, which picks the single
    * highest-priority active winner each frame and is also the source of truth
    * for "is the camera animating" (render-on-demand gate).

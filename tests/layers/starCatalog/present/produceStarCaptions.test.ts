@@ -58,6 +58,7 @@ function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
     snapshot: {
       simDays: CONST_J2000,
       nowMs: 0,
+      meshBodies: SCENE_MESH_BODIES,
       focusBlend,
       focus: { ...ZERO_FOCUS, blend: focusBlend },
     },
@@ -154,7 +155,7 @@ describe('produceStarCaptions', () => {
     // `bodyCaption`'s source/index packing ever drifts from the seed table
     // `seededStarCatalogsBySource.ts` tags picks against.
     const resolver = selectionResolverOver(
-      { structures: { byId: () => null, byCategory: () => [] } },
+      { byId: () => null, byCategory: () => [] },
       undefined,
       NO_STARS_LOADED,
     );

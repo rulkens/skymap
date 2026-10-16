@@ -1,13 +1,13 @@
 /**
- * detailCardTable — folds core's four FocusableTarget arms with every Layer's
+ * detailCardTable — folds core's three FocusableTarget arms with every Layer's
  * `detailCard` ui-slot contribution into the `DetailCardTable` InfoCard
  * dispatches on. Called once at module load (`InfoCard.tsx`), so a missing arm
  * throws at boot naming the union member nobody claimed — a composition
  * wiring bug, not one to surface per-render.
  *
  * Each core entry is the card component itself — `GalaxyDetailCard` /
- * `CompactCard` for a galaxy, `StructureDetailCard` / `CompactStructureCard`
- * for a structure, and so on — InfoCard renders `entry.Detail`/`entry.Compact`
+ * `CompactCard` for a galaxy, `StarDetailCard` / `CompactStarCard` for a star,
+ * and so on — InfoCard renders `entry.Detail`/`entry.Compact`
  * as JSX, so every card's own props type must already match
  * `DetailCardProps<K>`/`CompactCardProps<K>` (the table key `K` is the
  * narrowing proof; a card never re-checks `target.type`).
@@ -28,27 +28,18 @@ import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
-import StructureDetailCardContainer from '../containers/StructureDetailCardContainer';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
-import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
 import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
 import CompactStarCard from './CompactStarCard/CompactStarCard';
 
-/** The four focusable kinds core still owns outright — no Layer claims them.
- * `zoneOfAvoidance` and `milkyWay` are the arms missing here: they arrive via
- * `layerUiContents`, from their own Layer's `ui` entry. */
+/** The three focusable kinds core still owns outright — no Layer claims them.
+ * `zoneOfAvoidance`, `milkyWay` and `structure` are the arms missing here: they
+ * arrive via `layerUiContents`, from their own Layer's `ui` entry. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
     Detail: GalaxyDetailCard,
     Compact: CompactCard,
-  },
-  structure: {
-    // Detail renders through a store container: the "N galaxies" figure is a
-    // live-computed fact, not part of every arm's shared props (store-boundary
-    // rule — same shape as the body arm below).
-    Detail: StructureDetailCardContainer,
-    Compact: CompactStructureCard,
   },
   body: {
     // Detail renders through a store container: a focused body's distance is

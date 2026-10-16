@@ -1,0 +1,120 @@
+/*
+ * MobileSheet.module.css — rest positions and glass surface of the phone
+ * bottom sheet.
+ *
+ * `.root` spans the viewport above the bottom stack and ignores pointer events
+ * so the canvas stays interactive; only `.sheet` captures them. It clips, so a
+ * peeking sheet's lower part hides below the stack. Heights use dvh so the
+ * browser's collapsing address bar cannot push the sheet under the dock.
+ */
+
+.root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--bottom-stack-height);
+  height: calc(100dvh - var(--bottom-stack-height));
+  z-index: var(--z-bottom-stack);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Rests on the stack when expanded; `.peeking` slides it down so only the peek
+ * shows. `--drag` is the live finger offset, clamped so it never lifts off the stack.
+ *
+ * The sheet owns the blur. The chromeless card inside must not set its own: a
+ * nested backdrop-filter would leave this strip (grabber included) unblurred.
+ */
+.sheet {
+  --rest: 0px;
+  flex: 0 1 auto;
+  max-height: calc(100% - var(--mobile-sheet-peek));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  transform: translateY(max(0px, calc(var(--rest) + var(--drag, 0px))));
+  transition: transform var(--duration-base) var(--ease-standard);
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border-top: 1px solid var(--border-card);
+  border-top-left-radius: var(--radius-2xl);
+  border-top-right-radius: var(--radius-2xl);
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
+}
+
+/* The whole peek is a drag surface; the browser must not claim the gesture as a pan. */
+.peeking {
+  --rest: max(0px, calc(100% - var(--mobile-sheet-peek)));
+  overflow-y: hidden;
+  touch-action: none;
+}
+
+.dragging {
+  transition: none;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 0 1 auto;
+  max-height: min(var(--sheet-panel-max-height), calc(100% - var(--mobile-sheet-peek)));
+}
+
+/* The panel's scroller: .panel clips, so the content scrolls inside it under the title row. */
+.body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--space-7) var(--space-6);
+  user-select: none;
+}
+
+/* A full-width strip (the expanded sheet's drag zone) around the drawn grabber bar. */
+.handle {
+  height: var(--space-8);
+  touch-action: none;
+}
+
+.handle::before {
+  content: '';
+  display: block;
+  width: var(--sheet-handle-width);
+  height: var(--space-2);
+  margin: var(--space-2) auto 0;
+  border-radius: var(--radius-md);
+  background: var(--border-control);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* The close button's touch-target box already holds the title off the content. */
+  padding: 0 var(--space-4) 0 var(--space-7);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: normal;
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-fg-dim);
+}
+
+.close {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}

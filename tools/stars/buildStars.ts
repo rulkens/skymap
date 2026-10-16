@@ -1,82 +1,24 @@
 /**
- * buildStars — the Gaia star-bin build orchestrator.
+ * buildStars — the Gaia star build: parse → resolve distance → dedup (`selectStars`) → distance
+ * cap → one `OctreeBuildInput` → `buildOctreeCatalog`, written once by `writeOctreeCatalog`.
+ * One bake per catalog serves every tier; the runtime's per-tier budgets cut it.
  *
- * This is the thin composition layer that wires the already-landed pure
- * stages (parse → resolve distance → set-algebra dedup → Morton sort →
- * octree flux-mip → encode) into the three tiered `stars-{small,medium,
- * large}.bin` files the runtime fetches. Every non-trivial decision lives
- * in one of those pure stages; this module's job is only to feed them the
- * real inputs, tier the result to fit each transfer budget, and report the
- * drop/clamp counters an operator watches during a build.
- *
- * ── Memory profile ─────────────────────────────────────────────────────────
- *
- * The real build holds the full parsed Gaia superset (~16.8 M rows at the
- * G<14 magnitude cut) plus the derived per-star structures — distance
- * resolution, dedup set algebra, Morton sort, octree flux-mip — all live in
- * memory at once, on the order of 10 GB. That is why the `build-stars` npm
- * script raises Node's `--max-old-space-size` above the default heap ceiling
- * rather than relying on it; without the raised ceiling the process OOMs
- * partway through. A machine without roughly that much free RAM should not
- * run the real build — use the tiny in-memory fixture below instead.
- *
- * ── The pure/impure seam ──────────────────────────────────────────────────
- *
- * `buildStarCatalog` is a *pure function over parsed rows*: given the Gaia
- * main-catalog rows, the GCNS supplement, the Hipparcos-2 bright rows, the
- * HIP→source_id cross-match, and the famous-star id set, it returns the three
- * tier catalogs plus the counters — no file reads, no writes, no `process`.
- * The CSV/`.dat` I/O and the per-tier `.bin` writes live only in `runCli`,
- * behind the `import.meta.url === argv[1]` guard, so importing this module
- * from a test drives the composition on a tiny in-memory fixture without
- * touching disk or the network.
- *
- * The one asymmetry — Gaia main rows arrive as an already-parsed array
- * (streamed from the paged CSVs; the ~16.8 M-row superset is far too large to
- * hold as one `readFileSync` string), while `hipNonPositivePlx` is threaded in
- * as a bare count from the parser's own skip tally — is essential, not
- * accidental: the streaming boundary forces the array, and the count that a
- * parser owns is owned by the parser, surfaced here for the single report.
- *
- * ── How GCNS "rides every tier" ────────────────────────────────────────────
- *
- * The Gaia Catalogue of Nearby Stars supplies two distinct things. For a
- * main-catalog row that ALSO appears in GCNS (matched by source_id) it offers
- * a vetted distance, joined here as the lowest-priority fallback in
- * `resolveStarDistancePc` (photogeo → geo → GCNS). And for the *faint* nearby
- * stars GCNS covers that never made the G<14 main cut, it contributes brand-new
- * rows. Those GCNS-only rows are tagged `isSupplement` and are exempt from the
- * per-tier apparent-magnitude truncation — a 100 pc M-dwarf is faint on the sky
- * but scientifically load-bearing for a *local* star map, so it is never the
- * star a tier drops to hit its byte budget. Every other star is truncatable.
- *
- * ── Carrying per-star tags through `selectStars` ──────────────────────────
- *
- * The tier logic needs each surviving star's apparent magnitude (the truncation
- * sort key) and its supplement flag. Those two tags ride *on the `StarInput`
- * row itself* (`appMag`/`isSupplement`), so they survive `selectStars`'s dedup
- * with no re-join: the same object that carries a star's position and photometry
- * carries its truncation tag. `selectStars` still owns the set algebra and never
- * interprets the tags — it only forwards them, exactly as it forwards
- * `absMag`/`bpRp`.
- *
- * An earlier design instead re-joined the tags after the fact via a `Map` keyed
- * on each output position array's identity. That crashed on the real catalog:
- * V8 caps both `Map` and `Set` at 2^24 = 16,777,216 entries, and the real build
- * deduplicates ~16.8 M stars — one entry per star overflows the cap. Any
- * collection whose size scales with the total star count is off the table here;
- * the tag-on-the-row form has no such collection at all.
+ * `buildStarCatalog` is pure over parsed rows, so tests drive it on an in-memory fixture; the
+ * CSV reads and the writes live in `runCli` behind the direct-invocation guard. The real bake
+ * holds the ~16.8 M-row Gaia superset in memory, hence the npm script's raised heap. Nothing
+ * here may hold one Map or Set entry per star: V8 caps both at 2^24 entries.
  */
 
-import { createReadStream, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { createReadStream, readFileSync, readdirSync, statSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import type { Tier } from '../../src/@types/data/Tier';
-import { TIER_LADDER } from '../../src/data/tierLadder';
-import type { StarCatalog } from '../../src/@types/data/starCatalog/StarCatalog';
+import type { OctreeGrid } from '../../src/@types/octree/OctreeGrid';
+import type { OctreeStratify } from '../../src/@types/octree/OctreeStratify';
+import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
+import type { OctreeObjects } from '../@types/octree/OctreeObjects';
 import { parseHipparcos2, type Hip2Row } from '../parsers/hipparcos2';
 import { resolveStarDistancePc } from './resolveStarDistancePc';
 import {
@@ -85,7 +27,6 @@ import {
   type HipBrightRow,
   type StarInput,
 } from './selectStars';
-import { buildStarOctree, type OctreeLeafStar, type StarOctreeGrid } from './buildStarOctree';
 import {
   parseFamousStarsSeed,
   selectDedupEntries,
@@ -93,21 +34,23 @@ import {
 } from '../parsers/famousStarsSeed';
 import { keepStar } from './supplementTaper';
 import { bvToBpRp } from '../utils/color/bvToBpRp';
-import { mortonEncode3 } from '../../src/utils/math/mortonEncode3';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
 import {
-  encodeStarCatalog,
-  HEADER_BYTES,
-  NODE_BYTES,
+  absMagToLutIndex,
+  bpRpToColorIdx,
+  colorIdxToBpRp,
+  lutIndexToAbsMag,
   STAR_ABSMAG_MIN,
   STAR_ABSMAG_STEP,
   STAR_ABSMAG_LEVELS,
-  STAR_CATALOG_DATA_PREFIX,
   STAR_COLORIDX_MIN,
   STAR_COLORIDX_STEP,
   STAR_COLORIDX_LEVELS,
 } from '../../src/data/starCatalog/starCatalogFormat';
-import { STAR_BIN_CODEC } from '../../src/data/starCatalog/starBinCodec';
+import { STAR_COLUMN_SCHEMA, STAR_OCTREE_DATA_PREFIX } from '../../src/data/octree/octreeFormat';
+import { initialState } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
+import { buildOctreeCatalog } from '../octree/buildOctreeCatalog';
+import { writeOctreeCatalog } from '../octree/writeOctreeCatalog';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /** Hipparcos-2 bright-star cut: Gaia saturates on stars brighter than this. */
@@ -132,28 +75,19 @@ const HP_BRIGHT_CUT = 4.0;
  */
 const MAX_STAR_DISTANCE_PC = 12_000;
 
-/**
- * Octree grid resolution — 10 bits/axis = 1024³ leaf cells. This fits the
- * locked SKST format with no version bump: a node's `mortonIndex` is a uint32
- * and 3×10 = 30 bits stay inside it, and the runtime reads `mortonBitsPerAxis`
- * + `cellEdgePc` from the header rather than assuming a resolution.
- */
+/** Octree grid resolution: 10 bits/axis keeps a Morton key inside 30 bits of a u32. */
 const DEFAULT_MORTON_BITS = 10;
 
 /**
- * Per-tier compressed-transfer budgets, in *decimal* megabytes (matching the
- * fetch tooling's `bytes / 1e6` convention). A tier's stars are truncated
- * brightest-first until the measured gzip size fits its budget.
+ * The bake writes the runtime's default `thr`, so stratification and the cut agree. mLim = 10:
+ * at cellEdge ≈ 23 pc the brightest stars (M ≈ −6) land at level 7 and M ≈ −3 at level 5, above
+ * typical chunk roots, so the zoomed-out sky draws from the index alone (plan ruling 3).
  */
-export const TIER_BUDGET_BYTES: Readonly<Record<Tier, number>> = {
-  small: 10_000_000,
-  medium: 30_000_000,
-  large: 75_000_000,
+export const GAIA_STRATIFY: OctreeStratify = {
+  thr: initialState.refineThreshold,
+  mLim: 10,
+  refUnit: 10,
 };
-
-/** A tier whose mandatory content overshoots its budget by more than this is a
- * loud STOP-and-report: the codec is too weak and escalating is user-gated. */
-const CODEC_MISS_TOLERANCE = 1.2;
 
 /**
  * One parsed Gaia main-catalog row (the paged `gaia_page_*.csv` schema).
@@ -204,16 +138,6 @@ export type BuildStarInputs = {
   hipToSourceId: ReadonlyMap<number, bigint>;
   famousGaiaIds: ReadonlySet<bigint>;
   mortonBitsPerAxis?: number;
-  tierBudgets?: Readonly<Record<Tier, number>>;
-  /**
-   * Optional progress sink for the tier search. The tier phase is otherwise
-   * silent for tens of minutes on the real catalog (every probe is a
-   * multi-second octree-build + gzip), so `buildTier` emits one preformatted
-   * line per probe and one per tier completion. It is threaded *in* rather than
-   * writing `process.stderr` directly to keep `buildStarCatalog` pure over its
-   * inputs — the CLI supplies a stderr sink, tests omit it and stay silent.
-   */
-  onProgress?: (line: string) => void;
 };
 
 /** Drop counters gathered across the parse/resolve/dedup stages. */
@@ -232,28 +156,12 @@ export type StarClampCounts = {
   colorIdx: number;
 };
 
-/** One tier's built catalog plus its size accounting. */
-export type StarTierResult = {
-  tier: Tier;
-  starCount: number;
-  /** Faintest included main-star apparent G (the truncation boundary); `null`
-   * when the tier holds only the always-included supplement. */
-  gCutMag: number | null;
-  rawBytes: number;
-  compressedBytes: number;
-  budgetBytes: number;
-  /** Compressed size overshoots budget by >20% — the codec-ratio gate trips. */
-  overBudget: boolean;
-  catalog: StarCatalog;
-  encoded: ArrayBuffer;
-};
-
 export type BuildStarResult = {
-  tiers: StarTierResult[];
-  drops: StarDropCounts;
-  clamps: StarClampCounts;
-  totalStars: number; // full deduped population (all tiers truncate from this)
-  grid: StarOctreeGrid;
+  readonly objects: OctreeObjects;
+  /** Everything `writeOctreeCatalog` needs beyond the objects. */
+  readonly meta: OctreeCatalogMeta;
+  readonly drops: StarDropCounts;
+  readonly clamps: StarClampCounts;
 };
 
 /** Absolute magnitude from apparent: M = m − 5·log10(d_pc) + 5. */
@@ -275,11 +183,8 @@ export function seedToFamousGaiaIds(
   return new Set(selectDedupEntries(entries).map((e) => BigInt(e.gaiaDr3)));
 }
 
-/**
- * Build the three tiered star catalogs from parsed rows. Pure over its inputs
- * (no I/O, no `process`); async only because the format encoder compresses.
- */
-export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildStarResult> {
+/** Build the chunked star octree from parsed rows. Pure over its inputs: no I/O, no `process`. */
+export function buildStarCatalog(inputs: BuildStarInputs): BuildStarResult {
   const {
     gaia,
     gcns,
@@ -288,8 +193,6 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
     hipToSourceId,
     famousGaiaIds,
     mortonBitsPerAxis = DEFAULT_MORTON_BITS,
-    tierBudgets = TIER_BUDGET_BYTES,
-    onProgress,
   } = inputs;
 
   // ── Gaia main rows: resolve distance, drop the placeless ones ─────────────
@@ -331,23 +234,20 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
       position: raDecDistToCartesian(row.raDeg, row.decDeg, distPc),
       absMag: absoluteMagnitude(row.gMag, distPc),
       bpRp: row.bpRp,
-      appMag: row.gMag,
-      isSupplement: false,
     });
   }
 
   // ── GCNS-only rows: the faint nearby stars the G<14 cut never saw ─────────
   // A GCNS row whose source_id is already a main row contributed only its
   // distance (joined above); here we add the ones with no main counterpart as
-  // supplement stars, tagged so tier truncation never drops them.
+  // supplement stars.
   //
   // Before a supplement row joins the population it passes the outer-edge taper
   // (`keepStar`): the supplement stops abruptly at ~100 pc, so its members are
   // thinned probabilistically over the outer 30 pc to fade into the survey floor
   // rather than end in a hard shell (see supplementTaper.ts for the measured
-  // step). The decision is a pure hash of `source_id`, so it is taken ONCE here —
-  // before tier selection — and every tier sees the same tapered set. `distPc`
-  // is the GCNS row's already-parsec distance, equal to `|position|`.
+  // step). The decision is a pure hash of `source_id`, so every bake sees the
+  // same tapered set. `distPc` is the GCNS row's already-parsec distance.
   for (const row of gcns) {
     if (gcnsSeenInMain.has(row.sourceId)) continue;
     if (!keepStar({ sourceId: row.sourceId, distPc: row.distPc, isSupplement: true })) continue;
@@ -362,8 +262,6 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
       position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
       absMag: absoluteMagnitude(row.gMag, row.distPc),
       bpRp: row.bpRp,
-      appMag: row.gMag,
-      isSupplement: true,
     });
   }
 
@@ -376,8 +274,6 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
       position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
       absMag: absoluteMagnitude(row.hpMag, row.distPc),
       bpRp: bvToBpRp(row.bv),
-      appMag: row.hpMag,
-      isSupplement: false,
     });
   }
 
@@ -390,10 +286,9 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   });
 
   // ── Distance cap: drop far outliers before the grid is derived ────────────
-  // The grid, the pre-quantized leaves, and every tier below are all built from
-  // THIS `stars` array, so capping it here guarantees no surviving star can land
-  // outside the tightened grid (see MAX_STAR_DISTANCE_PC for the measured
-  // evidence). `filter` preserves order, which the later stable sorts observe.
+  // The grid and the octree are built from THIS `stars` array, so capping it here
+  // guarantees no surviving star lands outside the tightened grid (see
+  // MAX_STAR_DISTANCE_PC for the measured evidence).
   const maxDistSqPc = MAX_STAR_DISTANCE_PC * MAX_STAR_DISTANCE_PC;
   const stars = selected.stars.filter((s) => {
     const [x, y, z] = s.position;
@@ -415,168 +310,38 @@ export async function buildStarCatalog(inputs: BuildStarInputs): Promise<BuildSt
   // near-zero counts mean the frozen windows bracket the real population.
   const clamps = countClamps(stars);
 
-  // ── Grid geometry from the population bounds (shared by every tier) ────────
+  // ── One octree over the whole population ─────────────────────────────────
+  // Magnitudes and colours enter snapped to their LUT bin centres: a blob's flux must sum what
+  // its records will draw, and a star past the LUT floor draws at the floor, not its raw value.
   const grid = deriveGrid(stars, mortonBitsPerAxis);
-
-  // Pre-quantize every star once; tiers select subsets of these leaf records.
-  const quantized = stars.map((s) => quantizeStar(s, grid));
-
-  // Partition into the always-kept supplement and the truncatable main set,
-  // the latter sorted brightest-first so truncation drops the faintest.
-  const supplement: OctreeLeafStar[] = [];
-  const mainWithMag: { leaf: OctreeLeafStar; appMag: number }[] = [];
-  for (let i = 0; i < stars.length; i++) {
-    const star = stars[i]!;
-    if (star.isSupplement) supplement.push(quantized[i]!);
-    else mainWithMag.push({ leaf: quantized[i]!, appMag: star.appMag });
-  }
-  mainWithMag.sort((a, b) => a.appMag - b.appMag);
-  const mainLeaves = mainWithMag.map((m) => m.leaf);
-
-  // One `k → compressedBytes` probe cache shared across all three tier searches.
-  // Compressed size is monotonic non-decreasing in `k`, so the three budgets are
-  // three thresholds on a single `size(k)` curve; every search starts at the same
-  // high midpoints and only narrows toward its own budget boundary near the end.
-  // Sharing the cache means those expensive high-`k` probes (the multi-million-
-  // star encodes each search would otherwise repeat) are measured once, not once
-  // per tier — the bulk of the wall-clock saving. See `buildTier` for the
-  // byte-determinism argument that this sharing is safe.
-  const sizeCache = new Map<number, number>();
-  const tiers: StarTierResult[] = [];
-  for (const tier of TIER_LADDER) {
-    tiers.push(
-      await buildTier(
-        tier,
-        tierBudgets[tier],
-        supplement,
-        mainWithMag,
-        mainLeaves,
-        grid,
-        sizeCache,
-        onProgress,
-      ),
-    );
-  }
-
-  return { tiers, drops, clamps, totalStars: stars.length, grid };
-}
-
-/**
- * Truncate one tier to its budget: keep every supplement star plus the
- * brightest `k` main stars, where `k` is the largest count whose *measured*
- * compressed size still fits. We binary-search on `k`, encoding at each probe,
- * because gzip's output size is only known by running the codec — and it grows
- * monotonically enough with record count for the search to converge on the
- * budget boundary in ~log₂(mainCount) encodes. The always-included supplement
- * means `k = 0` is a valid floor; if even that overshoots the budget by >20%
- * the tier is flagged over-budget for the codec-ratio gate.
- *
- * ── The shared probe cache and why it is byte-identical ────────────────────
- *
- * The three tier searches are independent binary searches over the *same*
- * monotonic `size(k)` curve, so they re-probe many identical `k` — in
- * particular every search opens on the same high midpoints (`mainCount/2`,
- * `/4`, …) whose multi-million-star encodes are the single most expensive
- * probes in the whole build. `sizeCache` (keyed on `k`, shared across all three
- * tiers by the caller) measures each such `k` exactly once.
- *
- * This caches ONLY the measured byte size — a number — and the binary search
- * below is byte-for-byte the search that ran before: same range `[0, mainCount]`,
- * same `mid = (lo + hi) >> 1`, same `size(mid) <= budget` comparison, same
- * largest-passing-`k` result. `encodeFor` is a deterministic pure function of
- * `k`, so a cached size equals a freshly measured one; the search therefore
- * selects the identical `k` per tier and the emitted `.bin` bytes + reported
- * `gCutMag` are unchanged. The determinism guarantee rests on sharing only the
- * exact size at a given `k` — never a narrowed search range and never a cheaper
- * proxy codec (e.g. gzip level 1), either of which could pick a neighbouring
- * `k` at a gzip non-monotonicity and change the locked output bytes.
- */
-async function buildTier(
-  tier: Tier,
-  budgetBytes: number,
-  supplement: readonly OctreeLeafStar[],
-  mainWithMag: readonly { leaf: OctreeLeafStar; appMag: number }[],
-  mainLeaves: readonly OctreeLeafStar[],
-  grid: StarOctreeGrid,
-  sizeCache: Map<number, number>,
-  onProgress?: (line: string) => void,
-): Promise<StarTierResult> {
-  const report = onProgress ?? (() => {});
-  const encodeFor = async (k: number) => {
-    const selection = [...supplement, ...mainLeaves.slice(0, k)];
-    // buildStarOctree throws unless input is ascending by Morton code.
-    const sorted = [...selection].sort((a, b) => a.mortonIndex - b.mortonIndex);
-    const catalog = buildStarOctree(sorted, grid);
-    const encoded = await encodeStarCatalog(catalog);
-    const rawBytes = HEADER_BYTES + catalog.nodeCount * NODE_BYTES + catalog.records.length;
-    return { catalog, encoded, rawBytes, compressedBytes: encoded.byteLength };
+  const positions = new Float64Array(stars.length * 3);
+  const absMag = new Float32Array(stars.length);
+  const colourIndex = new Float32Array(stars.length);
+  stars.forEach((s, i) => {
+    for (let a = 0; a < 3; a++) positions[3 * i + a] = s.position[a]! - grid.origin[a]!;
+    absMag[i] = lutIndexToAbsMag(absMagToLutIndex(s.absMag));
+    colourIndex[i] = colorIdxToBpRp(bpRpToColorIdx(s.bpRp));
+  });
+  const objects = buildOctreeCatalog({
+    grid,
+    stratify: GAIA_STRATIFY,
+    positions,
+    magnitudeColumn: 'absMag',
+    columns: new Map([
+      ['absMag', absMag],
+      ['colourIndex', colourIndex],
+    ]),
+    schema: STAR_COLUMN_SCHEMA,
+  });
+  const meta: OctreeCatalogMeta = {
+    family: 'star',
+    grid,
+    stratify: GAIA_STRATIFY,
+    schema: STAR_COLUMN_SCHEMA,
+    stats: { starCount: stars.length },
   };
 
-  // Compressed size at brightest-`k`, memoized across every tier's search. A
-  // miss pays the full octree-build + gzip to *measure* the size; only the size
-  // is retained (the catalog + encoded blob for the chosen `k` is materialized
-  // once after the search, keeping the cache to a handful of numbers rather than
-  // multiple gigabytes of held-open catalogs at the real 16.5 M-star scale).
-  const probeSize = async (k: number): Promise<number> => {
-    const cached = sizeCache.get(k);
-    if (cached !== undefined) return cached;
-    const size = (await encodeFor(k)).compressedBytes;
-    sizeCache.set(k, size);
-    return size;
-  };
-
-  const mainCount = mainLeaves.length;
-  let best = 0;
-  let lo = 0;
-  let hi = mainCount;
-  let encodes = 0; // fresh octree+gzip probes this tier paid for (cache misses)
-  let hits = 0; // probes served from the shared cross-tier cache
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const cached = sizeCache.has(mid);
-    const t0 = performance.now();
-    const size = await probeSize(mid);
-    const ms = performance.now() - t0;
-    if (cached) hits++;
-    else encodes++;
-    report(
-      `  [stars ${tier}] probe k=${mid.toLocaleString()} → ` +
-        `${size.toLocaleString()} B ${size <= budgetBytes ? '≤' : '>'} ` +
-        `budget ${budgetBytes.toLocaleString()} B  ` +
-        `[${cached ? 'cache-hit' : 'encode'} ${ms.toFixed(0)}ms]\n`,
-    );
-    if (size <= budgetBytes) {
-      best = mid;
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-
-  // Materialize the chosen `k` once: the search retained only measured sizes, so
-  // the winner's catalog + encoded payload is produced here by a single encode
-  // at `best` (a small, in-budget selection). `best = 0` reproduces the original
-  // supplement-only floor when even the empty main set overshoots the budget.
-  const bestEnc = await encodeFor(best);
-
-  const gCutMag = best > 0 ? mainWithMag[best - 1]!.appMag : null;
-  report(
-    `  [stars ${tier}] selected k=${best.toLocaleString()}, ` +
-      `${gCutMag === null ? 'supplement-only' : `G≤${gCutMag.toFixed(2)}`}, ` +
-      `${bestEnc.compressedBytes.toLocaleString()} B ` +
-      `(${encodes} encodes, ${hits} cache hits, +1 final encode)\n`,
-  );
-  return {
-    tier,
-    starCount: bestEnc.catalog.starCount,
-    gCutMag,
-    rawBytes: bestEnc.rawBytes,
-    compressedBytes: bestEnc.compressedBytes,
-    budgetBytes,
-    overBudget: bestEnc.compressedBytes > budgetBytes * CODEC_MISS_TOLERANCE,
-    catalog: bestEnc.catalog,
-    encoded: bestEnc.encoded,
-  };
+  return { objects, meta, drops, clamps };
 }
 
 /** Count values that saturate the frozen absMag / colour LUT windows. */
@@ -593,16 +358,12 @@ function countClamps(stars: readonly StarInput[]): StarClampCounts {
 }
 
 /**
- * Derive the shared quantization grid from the population's bounding box: the
- * origin is the min corner, and the cell edge divides the largest axis span
- * into `2^bits` cells so every star lands inside the grid. An empty or
- * degenerate (single-point) population falls back to a unit cell — the octree
- * over it is empty or single-celled either way.
+ * Derive the quantization grid from the population's bounding box: the origin is the min
+ * corner, and the cell edge divides the largest axis span into `2^bits` cells so every star
+ * lands inside the grid. An empty or single-point population falls back to a unit cell.
  */
-function deriveGrid(stars: readonly StarInput[], mortonBitsPerAxis: number): StarOctreeGrid {
-  if (stars.length === 0) {
-    return { mortonBitsPerAxis, cellEdgePc: 1, gridOrigin: [0, 0, 0] };
-  }
+function deriveGrid(stars: readonly StarInput[], bits: number): OctreeGrid {
+  if (stars.length === 0) return { bits, cellEdge: 1, origin: [0, 0, 0] };
   const min: Vec3 = [Infinity, Infinity, Infinity];
   const max: Vec3 = [-Infinity, -Infinity, -Infinity];
   for (const s of stars) {
@@ -612,36 +373,9 @@ function deriveGrid(stars: readonly StarInput[], mortonBitsPerAxis: number): Sta
     }
   }
   const extent = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
-  const cells = 2 ** mortonBitsPerAxis;
-  // A hair of headroom so the max-corner star floors to cell < cells rather
-  // than exactly cells (which clamping would otherwise catch anyway).
-  const cellEdgePc = extent > 0 ? (extent * (1 + 1e-9)) / cells : 1;
-  return { mortonBitsPerAxis, cellEdgePc, gridOrigin: [min[0], min[1], min[2]] };
-}
-
-/** Quantize one star's world position into a leaf cell + in-cell offset. */
-function quantizeStar(star: StarInput, grid: StarOctreeGrid): OctreeLeafStar {
-  const cells = 2 ** grid.mortonBitsPerAxis;
-  const cell: [number, number, number] = [0, 0, 0];
-  const offset: Vec3 = [0, 0, 0];
-  for (let a = 0; a < 3; a++) {
-    const rel = (star.position[a]! - grid.gridOrigin[a]!) / grid.cellEdgePc;
-    const c = clampInt(Math.floor(rel), 0, cells - 1);
-    cell[a] = c;
-    offset[a] = clampInt(Math.floor((rel - c) * 1024), 0, 1023);
-  }
-  return {
-    mortonIndex: mortonEncode3(cell[0], cell[1], cell[2]),
-    offset,
-    absMag: star.absMag,
-    bpRp: star.bpRp,
-  };
-}
-
-function clampInt(v: number, lo: number, hi: number): number {
-  if (v < lo) return lo;
-  if (v > hi) return hi;
-  return v;
+  // A hair of headroom so the max-corner star floors to cell < 2^bits rather than exactly 2^bits.
+  const cellEdge = extent > 0 ? (extent * (1 + 1e-9)) / 2 ** bits : 1;
+  return { bits, cellEdge, origin: min };
 }
 
 // ───────────────────────── CLI-only: CSV/dat I/O + writes ──────────────────
@@ -795,27 +529,20 @@ async function runCli(): Promise<void> {
   const famousSeed = parseFamousStarsSeed(readFileSync(rawDataPath('famous-stars.seed'), 'utf8'));
   const famousGaiaIds = seedToFamousGaiaIds(famousSeed);
 
-  process.stderr.write('building star catalog (dedup + octree + tiers)…\n');
-  const result = await buildStarCatalog({
+  process.stderr.write('building star octree (dedup + stratify + chunk)…\n');
+  const t0 = performance.now();
+  const { objects, meta, drops, clamps } = buildStarCatalog({
     gaia,
     gcns,
     hipparcos: hip.rows,
     hipNonPositivePlx: hip.skipped,
     hipToSourceId,
     famousGaiaIds,
-    // Stream the tier-search progress to stderr so the minutes-long probe phase
-    // is no longer silent. The sink lives here (the impure CLI), keeping
-    // `buildStarCatalog` pure over its inputs.
-    onProgress: (line) => process.stderr.write(line),
   });
+  const t1 = performance.now();
 
-  const { drops, clamps } = result;
-
-  // These counters are tallied once over the whole deduped population (before
-  // any tier's brightest-first truncation) — not per tier — so they are
-  // reported once here rather than repeated under each tier's line below.
   process.stderr.write(
-    `population (${result.totalStars.toLocaleString()} stars): ` +
+    `population (${meta.stats.starCount?.toLocaleString()} stars): ` +
       `drops noBailerJones ${drops.noBailerJones.toLocaleString()}, ` +
       `hipNonPositivePlx ${drops.hipNonPositivePlx.toLocaleString()}, ` +
       `famousSubtracted ${drops.famousSubtracted.toLocaleString()}, ` +
@@ -825,40 +552,18 @@ async function runCli(): Promise<void> {
       `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
   );
 
-  const starOutDir = join(outDir, STAR_CATALOG_DATA_PREFIX);
-  mkdirSync(starOutDir, { recursive: true });
-
-  let anyOverBudget = false;
-  for (const t of result.tiers) {
-    if (t.overBudget) anyOverBudget = true;
-    const filename = `stars-${t.tier}.bin`;
-    const outPath = resolve(starOutDir, filename);
-    writeFileSync(outPath, Buffer.from(t.encoded));
-    const gCut = t.gCutMag === null ? 'supplement-only' : `G≤${t.gCutMag.toFixed(2)}`;
-    process.stderr.write(
-      `stars-${t.tier}: ${t.starCount.toLocaleString()} stars, ${gCut}, ` +
-        `raw ${t.rawBytes.toLocaleString()} B → ${STAR_BIN_CODEC} ${t.compressedBytes.toLocaleString()} B ` +
-        `(budget ${t.budgetBytes.toLocaleString()} B)` +
-        (t.overBudget ? '  ⚠ OVER BUDGET' : '') +
-        `\n` +
-        `  wrote ${outPath}\n`,
-    );
-  }
-
-  // ── Codec-ratio gate (deferred from the codec seal) ───────────────────────
-  // A tier that misses its budget by >20% means gzip is too weak for the
-  // mandatory (supplement) content. Escalating to a zstd-wasm decoder is a
-  // ~200 kB runtime dependency and a user-gated decision, never a silent swap —
-  // so we STOP loudly rather than ship an over-budget bin.
-  if (anyOverBudget) {
-    process.stderr.write(
-      `\nSTOP: one or more tiers overshoot their transfer budget by >20% under the ` +
-        `sealed '${STAR_BIN_CODEC}' codec. This is the deferred codec-ratio gate firing. ` +
-        `Escalating to a zstd-wasm decoder is a deliberate, user-gated decision (a ~200 kB ` +
-        `runtime dependency) — report this and get sign-off; do not flip the codec silently.\n`,
-    );
-    process.exit(1);
-  }
+  const starOutDir = join(outDir, STAR_OCTREE_DATA_PREFIX);
+  const header = writeOctreeCatalog(objects, meta, starOutDir, 'stars');
+  const t2 = performance.now();
+  process.stderr.write(
+    `stars octree: ${header.stats.chunkCount?.toLocaleString()} chunks ` +
+      `(${header.chunks.length.toLocaleString()} rooted in the index), ` +
+      `chunkNodeCap ${header.chunkNodeCap.toLocaleString()}, ` +
+      `index ${header.nodes.toLocaleString()} nodes / ${header.records.toLocaleString()} records / ` +
+      `${statSync(join(starOutDir, 'stars.bin')).size.toLocaleString()} B; ` +
+      `build ${((t1 - t0) / 1000).toFixed(1)} s, write ${((t2 - t1) / 1000).toFixed(1)} s\n` +
+      `  wrote ${join(starOutDir, 'stars.bin')} + ${join(starOutDir, 'stars')}/\n`,
+  );
 }
 
 // Only run the CLI when invoked directly (via tsx). A test importing this

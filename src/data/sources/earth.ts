@@ -11,10 +11,9 @@ export const EARTH_ENTRY = {
   // only consults this flag for galaxy-catalog footprints).
   allSky: true,
   // Earth captions itself on the final descent, so it bears labels like any
-  // other named source — the foreground-labels layer draws the caption on the
+  // other named source — the labels-near layer draws the caption on the
   // NEAR0 slab rather than the COSMO one, which is a routing detail.
   bearsLabel: true,
-  labelLayer: 'body',
   bearsMarker: false,
   detailLabel: 'Earth',
   shortLabel: 'Earth',

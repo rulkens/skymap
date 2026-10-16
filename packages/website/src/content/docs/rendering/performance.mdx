@@ -12,9 +12,9 @@ A frame time holds for one graphics processor, one browser and one window; what 
   head={['What is drawn', 'Its cost grows with', 'What keeps it down']}
   rows={[
     ['Galaxies as points', 'Things: the galaxies in the data size.', 'One triangle a galaxy, and one draw call for a whole catalogue.'],
-    ['Stars', 'Things, up to a fixed budget of stars a frame. A larger file gives a sharper near field for about the same work.', 'Boxes of stars outside the view are culled whole; a closed box is one glow.'],
+    ['Stars', 'Things, up to a fixed budget of stars a frame. A larger pool of chunks held in memory gives a sharper near field for about the same work.', 'Boxes of stars outside the view are culled whole; a closed box is one glow; only the chunks near the camera are held.'],
     ['The cosmic web', 'Pixels, 128 steps through the density cube for each.', 'Drawn at a third of the window’s width and height: a ninth of the pixels.'],
-    ['The other three glows', 'Pixels.', 'The Zone of Avoidance band at a fifth, the summed light of distant stars at a half, the Milky Way’s points at a sixth.'],
+    ['The other three glows', 'Pixels.', 'The Zone of Avoidance band at a fifth, the summed light of distant stars at a quarter, the Milky Way’s points at a sixth.'],
     ['Atmospheres', 'Pixels seen through air, and one sky table for each atmosphere in view, filled every frame.', 'Each pixel looks its answer up in the tables. At the small data size the sky table is a ninth of its usual size.'],
     ['The ground', 'Things: the tiles in view.', 'Tiles behind the horizon or outside the view are culled before they are fetched, and all patches are one draw call.'],
     ['The black hole', 'Pixels, 48 steps through the disc for each.', 'The bending of light is looked up in a table.'],

@@ -15,7 +15,7 @@
  *
  * Capture is a pure `select(captureScene)` and restore is `restoreSceneSaga`
  * (two `put`s), so neither watcher nor tour needs a `reconcile` stub — the
- * saga-context only carries `playClip` / `resolveDeps` / `cameraRuntime` for
+ * saga-context only carries `playClip` / `selection` / `cameraRuntime` for
  * `visitBeatSaga`.
  *
  * ### What we assert
@@ -97,8 +97,10 @@ import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
-import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import {
+  selectionResolverOver,
+  type StructureRowFixture,
+} from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -112,9 +114,7 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
   upBasisQuat: [0, 0, 0, 1],
 };
 
-const NARRATION_DEPS: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
+const NARRATION_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
@@ -132,8 +132,7 @@ function buildHarness(opts: { playClip?: PlayClipStub } = {}) {
     (vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined) as PlayClipStub);
 
   sagaMiddleware.setContext({
-    resolveDeps: () => NARRATION_DEPS,
-    selection: selectionResolverOver(NARRATION_DEPS),
+    selection: selectionResolverOver(NARRATION_STRUCTURES),
     cameraRuntime: () => CAMERA_RUNTIME,
     playClip: (clip: ClipData) => playClipFn(clip),
   });

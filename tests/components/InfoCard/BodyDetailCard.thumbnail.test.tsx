@@ -1,0 +1,42 @@
+// @vitest-environment jsdom
+//
+// The phone sheet (layout phone) moves
+// the card-shot into it. The contract pinned here: the image shows exactly once
+// per arrangement — beside the rows in the panel layout, in the header on the phone — and a
+// card with no shot gets no thumbnail slot at all.
+
+import { describe, it, expect } from 'vitest';
+import { render } from '@testing-library/react';
+import { createElement } from 'react';
+import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
+import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
+
+const body = (id: string, label: string): BodyInfo => ({
+  type: 'body',
+  id,
+  label,
+  positionMpc: [0, 0, 0],
+});
+
+describe('detail card thumbnail placement', () => {
+  it('shows a body shot once, beside the rows, in the panel layout', () => {
+    const { container } = render(createElement(BodyDetailCard, { target: body('mars', 'Mars') }));
+    expect(container.querySelectorAll('img')).toHaveLength(1);
+    expect(container.querySelector('img')?.parentElement?.textContent).toContain('Radius');
+  });
+
+  it('moves the shot into the header, and out of the body, on the phone', () => {
+    const { container } = render(
+      createElement(BodyDetailCard, { target: body('mars', 'Mars'), layout: 'phone' }),
+    );
+    expect(container.querySelectorAll('img')).toHaveLength(1);
+    expect(container.querySelector('img')?.parentElement?.textContent).not.toContain('Radius');
+  });
+
+  it('leaves no thumbnail slot for a body without a shot', () => {
+    const { container } = render(
+      createElement(BodyDetailCard, { target: body('ganymede', 'Ganymede'), layout: 'phone' }),
+    );
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+  });
+});

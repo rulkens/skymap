@@ -125,6 +125,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
 function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
+    snapshot: { meshBodies: [] },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -137,7 +138,13 @@ function makeNear0View(camPos: Vec3): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp });
-  return { slab, vp: f32Vp, camPos, viewportPx: [1280, 720] };
+  return {
+    slab,
+    vp: f32Vp,
+    camPos,
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
 }
 
 function makeRenderer() {

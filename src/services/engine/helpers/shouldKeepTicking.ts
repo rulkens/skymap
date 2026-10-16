@@ -9,11 +9,12 @@
  * imperceptibly per frame, so runFrame arms a coarse idle tick for it instead.
  */
 
+import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import { selectCameraActive } from '../../../state/camera/selectors';
 import { selectIsManualPlaying } from '../../../state/time/selectors';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
+import { ridesWheelTarget } from '../camera/ridesWheelTarget';
 
 /**
  * Ease with no camera-slice flag behind it: without this term the loop sleeps
@@ -21,9 +22,9 @@ import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
  * (the memory it saturated on), not a second copy of the ease duration — steady
  * follow of a moving body is not a wake term (the pin re-centres on wake).
  */
-function followApproachEaseActive(state: EngineState): boolean {
+function followApproachEaseActive(state: EngineState, drivers: readonly CameraDriver[]): boolean {
   const { register, follow } = state.cameraRuntime;
-  if (!isFollowDriverId(register.winner)) return false;
+  if (!ridesWheelTarget(drivers, register.winner)) return false;
   // A winning follow row always leaves memory (its null-guard arms are unreachable
   // while `followActive` holds); a null here would park the loop mid-ease.
   return follow !== null && !follow.saturated;
@@ -39,13 +40,14 @@ export function shouldKeepTicking(
     probeDue: boolean;
     layersAwake: boolean;
   },
+  drivers: readonly CameraDriver[],
 ): boolean {
   return (
     selectCameraActive(s) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
     selectIsManualPlaying(s) ||
-    followApproachEaseActive(state) ||
+    followApproachEaseActive(state, drivers) ||
     anim.surfaceTilesAnimating ||
     anim.labelsAnimating ||
     anim.probeDue ||

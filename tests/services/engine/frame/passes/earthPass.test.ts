@@ -187,6 +187,7 @@ function makeCtx(distance: number): FrameView {
     SEEDED_EARTH.positionMpc[2],
   ];
   return {
+    snapshot: { meshBodies: [] },
     cam: { distance, position: drawCamPos, target: SEEDED_EARTH.positionMpc },
     drawCamPos,
     bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
@@ -227,6 +228,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
     vp: f32Vp,
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
   };
 }
 
@@ -309,6 +311,7 @@ describe('earthPass.enabled', () => {
         vp: new Float32Array(16),
         camPos: [0, 0, 0],
         viewportPx: [1, 1],
+        window: { originPx: [0, 0], sizePx: [1, 1] },
       }),
     ).toBe(false);
     expect(earthPass.enabled(state, NEAR_CTX, makeEarthBodyView('mars'))).toBe(false);
@@ -571,6 +574,7 @@ describe('earthPass.draw', () => {
       SEEDED_EARTH.positionMpc[2],
     ];
     const closeCtx = {
+      snapshot: { meshBodies: [] },
       cam: {
         distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,
@@ -726,6 +730,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
       SEEDED_EARTH.positionMpc[2],
     ];
     return {
+      snapshot: { meshBodies: [] },
       cam: {
         distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,

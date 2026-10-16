@@ -101,23 +101,21 @@
  * attachment and both depth-test (`less`) + depth-write, the near sphere occludes
  * the far star points nearest-wins, order-independently.
  *
- * The packed id is `packSelection(Source.GaiaStars, present.recordIdx +
- * PICK_SENTINEL_OFFSET)` — byte-for-byte what `starCatalog/pickFragment.wesl`
- * writes for this star's point pick (`recordIdx` IS the bin-global record index
- * the pick ref carries), so clicking the sphere resolves to the exact same star
- * the point pick would, and the InfoCard/halo decorate the body already present.
+ * The packed id is the present star's catalog ordinal mapped to its pool index
+ * (`poolRecordIndex`) — byte-for-byte what `starCatalog/pickFragment.wesl` writes
+ * for this star's point pick — so clicking the sphere resolves to the exact same
+ * star the point pick would, and the InfoCard/halo decorate the body already present.
  *
  * `RENDER_ORIGIN_MPC` is imported directly (not threaded through ctx state) —
  * the render origin is fixed at the Sun for the zoom-to-earth fold.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { Source } from '../../../data/sources';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../utils/camera/composeBodyMvp';
@@ -127,9 +125,11 @@ import { STAR_RESOLVE_PX } from '../../../services/engine/frame/partitionStarsBy
 import { starTintFromBpRp } from '../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';
+import { starResidency } from '../load/starResidency';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
-type PresentStar = { recordIdx: number; positionMpc: Vec3; bpRp: number };
+type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };
 
 /**
  * The OFF threshold as a fraction of the ON threshold: a present star recedes to
@@ -144,11 +144,13 @@ const OFF_FRACTION = 0.8;
  * fresh catalog object — starts empty and the old entry is GC'd with the WeakMap. Holds the currently
  * shown star, or `null` once nothing is present (both read as "not present").
  */
-const presentByCatalog = new WeakMap<StarCatalog, PresentStar | null>();
+const presentByCatalog = new WeakMap<StarOctree, PresentStar | null>();
 
 /** The sole loaded star catalog (first committed Gaia catalog), or null. */
-function currentCatalog(runtime: Pick<StarCatalogRuntime, 'renderer'>): StarCatalog | null {
-  for (const { catalog } of runtime.renderer.loadedCatalogs()) return catalog;
+function currentCatalog(
+  runtime: Pick<StarCatalogRuntime, 'renderer'>,
+): { source: SourceType; octree: StarOctree } | null {
+  for (const loaded of runtime.renderer.loadedCatalogs()) return loaded;
   return null;
 }
 
@@ -184,20 +186,20 @@ function distanceMpc(positionMpc: Readonly<Vec3>, camPosMpc: Readonly<Vec3>): nu
  */
 function nextPresent(
   current: PresentStar | null,
-  nearest: { recordIdx: number; positionMpc: Vec3; bpRp: number; distanceMpc: number } | null,
+  nearest: { ordinal: number; positionMpc: Vec3; bpRp: number; distanceMpc: number } | null,
   camPosMpc: Readonly<Vec3>,
   onMpc: number,
   offMpc: number,
 ): PresentStar | null {
   if (current !== null) {
-    if (nearest !== null && nearest.recordIdx === current.recordIdx) return current;
+    if (nearest !== null && nearest.ordinal === current.ordinal) return current;
     if (nearest !== null && nearest.distanceMpc <= onMpc) {
-      return { recordIdx: nearest.recordIdx, positionMpc: nearest.positionMpc, bpRp: nearest.bpRp };
+      return { ordinal: nearest.ordinal, positionMpc: nearest.positionMpc, bpRp: nearest.bpRp };
     }
     return distanceMpc(current.positionMpc, camPosMpc) <= offMpc ? current : null;
   }
   if (nearest !== null && nearest.distanceMpc <= onMpc) {
-    return { recordIdx: nearest.recordIdx, positionMpc: nearest.positionMpc, bpRp: nearest.bpRp };
+    return { ordinal: nearest.ordinal, positionMpc: nearest.positionMpc, bpRp: nearest.bpRp };
   }
   return null;
 }
@@ -209,8 +211,9 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
     enabled(_state, ctx, _view) {
       // The presence query needs the live catalog; null (no catalog committed
       // yet) disables before any distance math.
-      const catalog = currentCatalog(runtime);
-      if (catalog === null) return false;
+      const loaded = currentCatalog(runtime);
+      if (loaded === null) return false;
+      const catalog = loaded.octree;
 
       const onMpc = resolveDistanceMpc(STAR_RESOLVE_PX, ctx.drawPxPerRad);
       const offMpc = resolveDistanceMpc(STAR_RESOLVE_PX * OFF_FRACTION, ctx.drawPxPerRad);
@@ -219,16 +222,21 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
       // ON/OFF gate then decides adopt/keep/drop. Idempotent for a fixed camera —
       // re-running re-derives the same present star from the same stored state.
       const current = presentByCatalog.get(catalog) ?? null;
-      const nearest = nearestResolvableStar(catalog, ctx.drawCamPos, offMpc);
+      const nearest = nearestResolvableStar(
+        catalog,
+        starResidency(runtime, loaded.source),
+        ctx.drawCamPos,
+        offMpc,
+      );
       const next = nextPresent(current, nearest, ctx.drawCamPos, onMpc, offMpc);
       presentByCatalog.set(catalog, next);
       return next !== null;
     },
 
     draw(pass, view, _ctx, _state) {
-      const catalog = currentCatalog(runtime);
-      if (catalog === null) return;
-      const present = presentByCatalog.get(catalog);
+      const loaded = currentCatalog(runtime);
+      if (loaded === null) return;
+      const present = presentByCatalog.get(loaded.octree);
       if (!present) return;
 
       // Compose from the slab's f64 vp — see the module header's f64 seam. Radius is
@@ -242,7 +250,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
         IDENTITY_MAT3,
       );
       // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-      runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp));
+      runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp), 1);
     },
 
     // Pick aspect — stamps the present star's identity into the NEAR0 r32uint pick
@@ -250,17 +258,20 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
     // to the shared min footprint (`minPickRadiusMpc`) so a just-resolved few-pixel
     // star stays clickable. `enabled` has already stored the present star, so this
     // runs exactly when `draw` runs; it READS that stored star (never re-queries).
-    // The packed id carries the star's bin-global record index — the very
-    // `recordIdx` the point pick fragment packs — so the sphere pick resolves to the
-    // SAME star, and both pick pipelines depth-test + depth-write the shared NEAR0
-    // depth so the near sphere occludes the far background points nearest-wins.
+    // The packed id carries the star's pool index — the very index the point pick
+    // fragment packs — so the sphere pick resolves to the SAME star; a star whose
+    // chunk has left the pool stamps nothing. Both pick pipelines depth-test +
+    // depth-write the shared NEAR0 depth, so the near sphere wins nearest-first.
     drawPick(pass, view, ctx, state) {
       const pickRenderer = state.gpu.bodyPickRenderer;
       if (pickRenderer === null) return;
-      const catalog = currentCatalog(runtime);
-      if (catalog === null) return;
-      const present = presentByCatalog.get(catalog);
+      const loaded = currentCatalog(runtime);
+      if (loaded === null) return;
+      const present = presentByCatalog.get(loaded.octree);
       if (!present) return;
+      const poolIndex = runtime.renderer.poolRecordIndex(loaded.source, present.ordinal);
+      if (poolIndex === null) return;
+      runtime.renderer.snapshotPickSlots();
 
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
@@ -269,7 +280,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,
-        packedId: packSelection(Source.GaiaStars, present.recordIdx + PICK_SENTINEL_OFFSET),
+        packedId: packSelection(loaded.source, poolIndex + PICK_SENTINEL_OFFSET),
       });
     },
   };

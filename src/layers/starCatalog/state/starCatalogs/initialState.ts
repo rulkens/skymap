@@ -21,6 +21,7 @@ export const initialState: StarCatalogSettings = {
   // not conserved: spreading it, as glowOverlap does, is exactly what makes a near
   // sub-threshold aggregate read as box-filling fog around the Sun.
   aggregateIntensityCap: 0.06,
+  chunkSlotsOverride: null,
   items: {
     gaiaStars: { enabled: true, labelEnabled: true },
     famousStar: { enabled: true, labelEnabled: true },

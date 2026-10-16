@@ -1,23 +1,25 @@
 /**
  * starCatalogRenderer — the survey (Gaia bin) stars as additive point sprites in
- * the depthless HDR accumulation. Its own pipeline: records are 6-byte cell
- * quantized octree records, vertex-pulled and rebuilt against their node's box.
+ * the depthless HDR accumulation. Its own pipeline: records are two u32 each
+ * (`packStarGpuRecords`), vertex-pulled and rebuilt against their node's box.
  * `upload` commits a catalog once; the per-frame cut is taken on the GPU
  * (`starCutGpu`) from the inputs `setFrameCut` holds, and each stream draws with
  * one `drawIndirect`. Leaves go to full-res HDR (`fs`), aggregates LINEAR to the
- * half-res `star-aggregates` offscreen (`fsLinear`); both are rgba16float.
+ * low-res `star-aggregates` offscreen (`fsLinear`); both are rgba16float.
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from '../@types/StarDrawStream';
-import { RECORD_BYTES } from '../../../data/starCatalog/starCatalogFormat';
+import type { StarChunkHost } from '../@types/StarChunkHost';
+import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -34,11 +36,19 @@ import {
   writeStarFocus,
 } from './starCatalogLayout';
 import { createStarCutGpu } from './starCutGpu';
+import { WORD_BYTES } from './starCutLayout';
+
+const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 
 /** One committed catalog's GPU records + the octree kept for the layer. */
 type LoadedStarSource = {
-  catalog: StarCatalog;
-  /** The repacked record blob (`array<u32>`, two u32 per record). */
+  octree: StarOctree;
+  slots: number;
+  /** The chunk each slot holds: the pick's pool index ↔ ordinal map, and a host slot's rows. */
+  slotChunks: (StarChunk | null)[];
+  /** `slotChunks` at the last pick draw: a readback names what was drawn, not what landed since. */
+  pickSlotChunks: (StarChunk | null)[];
+  /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
   recordsBindGroup: GPUBindGroup;
@@ -50,6 +60,7 @@ export function createStarCatalogRenderer(
 ): StarCatalogRenderer {
   // ONE fact for the whole frame, so plain closure state, not a map keyed per ctx.
   let frameCut: StarCutInputs | null = null;
+  let frameRecut = true;
   const cut = createStarCutGpu(device);
 
   const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
@@ -63,7 +74,7 @@ export function createStarCatalogRenderer(
   // each carry a different vp, all before one `submit()`, and a shared buffer
   // would hand every draw the LAST write (docs/RENDERER.md landmine #1).
   // And one ring per stream: in the real view the aggregate stream rasterises
-  // a half-res target, so its viewport and pxPerRad differ from the leaf's.
+  // a low-res target, so its viewport and pxPerRad differ from the leaf's.
   const makeCameraRing = (stream: StarDrawStream) =>
     createViewSlotUniformRing({
       device,
@@ -109,37 +120,21 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  /**
-   * Repack 6-byte records into two u32 each (`lo` = on-disk bytes 0..2, `hi` =
-   * bytes 3..5; the record is two independent 24-bit halves, JS bitwise ops
-   * being signed-32). Costs 8/6 VRAM, buys aligned addressing in the shader.
-   */
-  function repackRecords(records: Uint8Array): Uint32Array {
-    const total = records.length / RECORD_BYTES;
-    const out = new Uint32Array(total * 2);
-    for (let r = 0; r < total; r++) {
-      const at = r * RECORD_BYTES;
-      const lo = records[at]! | (records[at + 1]! << 8) | (records[at + 2]! << 16);
-      const hi = records[at + 3]! | (records[at + 4]! << 8) | (records[at + 5]! << 16);
-      out[r * 2] = lo >>> 0;
-      out[r * 2 + 1] = hi >>> 0;
-    }
-    return out;
-  }
-
-  function upload(source: SourceType, catalog: StarCatalog): void {
-    // Empty catalog is the unload signal (a tier swap that drops the bin);
-    // `createBuffer({size:0})` is forbidden.
-    const packed = catalog.records.length === 0 ? null : repackRecords(catalog.records);
-    cut.upload(source, catalog);
+  function upload(source: SourceType, octree: StarOctree, slots: number): number {
+    const poolSlots = Math.min(slots, octree.chunkCount);
+    // Throws past a pool cap before anything below is created or released.
+    cut.upload(source, octree, poolSlots);
+    // `createBuffer({size:0})` is forbidden, and a degenerate bake (a `--limit` dev run)
+    // can leave no records.
+    const packed = octree.records.count === 0 ? null : packStarGpuRecords(octree.records);
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
-    if (packed === null) return;
+    if (packed === null) return poolSlots;
 
     const recordsBuffer = device.createBuffer({
       label: `star-catalog-records-${source}`,
-      size: packed.byteLength,
+      size: (octree.records.count + poolSlots * octree.chunkCapacity) * GPU_RECORD_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
@@ -148,12 +143,95 @@ export function createStarCatalogRenderer(
       layout: recordsBgl,
       entries: [{ binding: 0, resource: { buffer: recordsBuffer } }],
     });
-    sources.set(source, { catalog, recordsBuffer, recordsBindGroup });
+    sources.set(source, {
+      octree,
+      slots: poolSlots,
+      slotChunks: new Array<StarChunk | null>(poolSlots).fill(null),
+      pickSlotChunks: new Array<StarChunk | null>(poolSlots).fill(null),
+      recordsBuffer,
+      recordsBindGroup,
+    });
+    return poolSlots;
   }
 
-  function* loadedCatalogs(): IterableIterator<{ source: SourceType; catalog: StarCatalog }> {
+  function hostOf(
+    { octree, slotChunks }: LoadedStarSource,
+    hostSlot: number | null,
+  ): StarChunkHost {
+    if (hostSlot === null) return { nodes: octree.nodes, nodeBase: 0 };
+    return {
+      nodes: slotChunks[hostSlot]!.nodes,
+      nodeBase: octree.nodes.count + hostSlot * octree.chunkNodeCap,
+    };
+  }
+
+  function uploadChunk(
+    source: SourceType,
+    slot: number,
+    chunk: StarChunk,
+    hostSlot: number | null,
+  ): void {
+    const entry = sources.get(source);
+    if (entry === undefined || slot < 0 || slot >= entry.slots) {
+      throw new Error(`starCatalogRenderer: no slot ${slot} for source ${source}`);
+    }
+    const { octree } = entry;
+    const host = hostOf(entry, hostSlot);
+    // The records land before the cut marks the chunk's roots resident.
+    const recordBase = octree.records.count + slot * octree.chunkCapacity;
+    device.queue.writeBuffer(
+      entry.recordsBuffer,
+      recordBase * GPU_RECORD_BYTES,
+      packStarGpuRecords(chunk.records),
+    );
+    cut.uploadChunk(source, slot, chunk, host);
+    entry.slotChunks[slot] = chunk;
+  }
+
+  function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
+    const entry = sources.get(source);
+    const chunk = entry?.slotChunks[slot] ?? null;
+    if (entry === undefined || chunk === null) return;
+    cut.evictChunk(source, slot, chunk, hostOf(entry, hostSlot));
+    entry.slotChunks[slot] = null;
+  }
+
+  function snapshotPickSlots(): void {
+    for (const entry of sources.values()) {
+      entry.slotChunks.forEach((chunk, slot) => (entry.pickSlotChunks[slot] = chunk));
+    }
+  }
+
+  function recordOrdinal(source: SourceType, poolIndex: number): number | null {
+    const entry = sources.get(source);
+    if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
+    const { octree } = entry;
+    const indexRecords = octree.records.count;
+    if (poolIndex < indexRecords) return poolIndex;
+    const slot = Math.floor((poolIndex - indexRecords) / octree.chunkCapacity);
+    const chunk = slot < entry.slots ? entry.pickSlotChunks[slot]! : null;
+    if (chunk === null) return null;
+    const local = poolIndex - indexRecords - slot * octree.chunkCapacity;
+    return local < chunk.ref.records ? chunk.ref.recordBase + local : null;
+  }
+
+  function poolRecordIndex(source: SourceType, ordinal: number): number | null {
+    const entry = sources.get(source);
+    if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
+    const { octree } = entry;
+    if (ordinal < octree.records.count) return ordinal;
+    const slot = entry.slotChunks.findIndex(
+      (c) =>
+        c !== null && ordinal >= c.ref.recordBase && ordinal < c.ref.recordBase + c.ref.records,
+    );
+    if (slot < 0) return null;
+    const local = ordinal - entry.slotChunks[slot]!.ref.recordBase;
+    return octree.records.count + slot * octree.chunkCapacity + local;
+  }
+
+  function* loadedCatalogs(): IterableIterator<{ source: SourceType; octree: StarOctree }> {
     for (const [source, entry] of sources) {
-      yield { source, catalog: entry.catalog };
+      yield { source, octree: entry.octree };
     }
   }
 
@@ -186,8 +264,9 @@ export function createStarCatalogRenderer(
     pass.drawIndirect(cutDraw.indirect, cutDraw.indirectOffset);
   }
 
-  function setFrameCut(next: StarCutInputs | null): void {
+  function setFrameCut(next: StarCutInputs | null, recut: boolean): void {
     frameCut = next;
+    frameRecut = recut;
   }
 
   function getFrameCut(): StarCutInputs | null {
@@ -195,7 +274,7 @@ export function createStarCatalogRenderer(
   }
 
   function encodeCut(encoder: GPUCommandEncoder, claimTimestampWrites: ClaimTimestampWrites): void {
-    if (frameCut !== null) cut.encode(encoder, frameCut, claimTimestampWrites);
+    if (frameCut !== null) cut.encode(encoder, frameCut, frameRecut, claimTimestampWrites);
   }
 
   function pickResources(): StarCatalogPickResources {
@@ -219,6 +298,11 @@ export function createStarCatalogRenderer(
   const renderer: StarCatalogRenderer = {
     label: 'starCatalogRenderer',
     upload,
+    uploadChunk,
+    evictChunk,
+    snapshotPickSlots,
+    recordOrdinal,
+    poolRecordIndex,
     loadedCatalogs,
     drawCut,
     encodeCut,

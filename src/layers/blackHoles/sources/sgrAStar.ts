@@ -14,7 +14,6 @@ export const SGR_A_STAR_ENTRY = {
   label: 'Galactic Centre',
   allSky: true,
   bearsLabel: true,
-  labelLayer: 'blackHoles',
   bearsMarker: false,
   detailLabel: 'Sagittarius A*',
   shortLabel: 'Galactic Centre',

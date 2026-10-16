@@ -20,12 +20,13 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Six formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Seven formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| SKMP   | `0x504D4B53` | 9       | Galaxy point cloud: position, photometry, shape, stellar mass. 16-byte header + 64 bytes/galaxy.                                                                  | [`galaxyCatalogFormat.ts`](../src/data/galaxyCatalog/galaxyCatalogFormat.ts)   |
+| SKMP   | `0x504D4B53` | 10      | Galaxy point cloud: position, photometry, shape, stellar mass, baked angular bias weight (u8 at byte 55). 16-byte header + 64 bytes/galaxy.                       | [`galaxyCatalogFormat.ts`](../src/data/galaxyCatalog/galaxyCatalogFormat.ts)   |
 | SKST   | `0x54534B53` | 1       | Stars in a spatial octree, cell-quantized to 6-byte records; interior nodes carry flux-weighted aggregates as a built-in LOD mip. 64-byte header + 16 bytes/node. | [`starCatalogFormat.ts`](../src/data/starCatalog/starCatalogFormat.ts)         |
+| SKOI / SKOC | ASCII   | 1       | Chunked octree container: 10-byte framing + JSON header + 24 B node rows + columnar records; one index per catalog, one object per chunk; chunks nest, and each object lists only the chunks rooted in its rows. | [`octreeFormat.ts`](../src/data/octree/octreeFormat.ts) |
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
@@ -35,8 +36,9 @@ Six formats, each a magic + version header followed by fixed- or variable-size r
 
 Each format has its own `<family>/v<N>/` folder, where `N` is that format's current version. A version bump moves the family to a new folder so a CDN can never serve a stale `.bin` alongside code that expects the new layout (`max-age=86400` on these responses would otherwise pair mismatched bytes and code for up to a day):
 
-- `galaxy-catalog/v9/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
-- `star-catalog/v1/`: `stars-{small,medium,large}.bin`
+- `galaxy-catalog/v10/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
+- `star-catalog/v1/`: `stars-{small,medium,large}.bin` (SKST, the `format: 'skst'` side of the A/B)
+- `star-catalog/v2/`: `stars.bin` (the index) + `stars/<level>-<morton>.<hash>.bin` (one per chunk, named by its first root; a chunk packs several chunk roots' subtrees). Chunk names carry the bake's own content hash, so `build-data-manifest` neither hashes nor lists them. Chunks nest: the index names the chunks rooted in its own rows, each chunk names the next depth's, and the runtime resolves a chunk path straight through once its parent has decoded.
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
 - `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
@@ -44,7 +46,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
-[`allowDataFile`](../tools/deploy/r2/allowDataFile.ts) is the allow-list of exactly which files under `public/data/` are tracked, hashed, manifested, and synced to R2 (matched by basename so it survives the family/epoch nesting). A few files live in these folders without being tracked: in `galaxy-catalog/v9/`, `sdss.bin` and `glade.bin` are pre-tier inputs to DisPerSE, not runtime tiers; in `filament/v1/`, `filaments-sdss.bin` is the matching diagnostic input. A `.scfd` can also exist on disk with no `SOURCE_REGISTRY` row yet, when a data pipeline ships ahead of its renderer wiring — the Edenhofer dust volume did this, but it still got an `allowDataFile` entry from day one (`/^edenhofer-dust-(small|medium|large)\.scfd$/`), so it was tracked, hashed and synced despite having no UI toggle. Only truly untracked-by-design files (the DisPerSE/diagnostic inputs above) skip `allowDataFile` entirely.
+[`allowDataFile`](../tools/deploy/r2/allowDataFile.ts) is the allow-list of exactly which files under `public/data/` are tracked, hashed, manifested, and synced to R2 (matched by basename so it survives the family/epoch nesting). A few files live in these folders without being tracked: in `galaxy-catalog/v10/`, `sdss.bin` and `glade.bin` are pre-tier inputs to DisPerSE, not runtime tiers; in `filament/v1/`, `filaments-sdss.bin` is the matching diagnostic input. A `.scfd` can also exist on disk with no `SOURCE_REGISTRY` row yet, when a data pipeline ships ahead of its renderer wiring — the Edenhofer dust volume did this, but it still got an `allowDataFile` entry from day one (`/^edenhofer-dust-(small|medium|large)\.scfd$/`), so it was tracked, hashed and synced despite having no UI toggle. Only truly untracked-by-design files (the DisPerSE/diagnostic inputs above) skip `allowDataFile` entirely.
 
 ### Content hash + manifest
 
@@ -78,7 +80,7 @@ Build everything with:
 npm run build-all
 ```
 
-With no flags it auto-detects the newest `Skyserver_*.csv` under `data/raw/sdss/` by mtime, plus the stable 2MRS/GLADE/Milliquas filenames, and silently skips whichever inputs aren't present, so downloading just one survey is a fine workflow. Override any input with `--sdss`, `--twomrs`, `--glade`, `--milliquas`, or `--out-dir`; `--glade-spec-only` drops GLADE's photo-z rows, `--glade-isotropic` drops SDSS-DR12-only GLADE rows (both optional, see [`buildAllBins.ts`](../tools/catalog/buildAllBins.ts) for the full flag set).
+With no flags it auto-detects the newest `Skyserver_*.csv` under `data/raw/sdss/` by mtime, plus the stable 2MRS/GLADE/Milliquas filenames, and silently skips whichever inputs aren't present, so downloading just one survey is a fine workflow. Override any input with `--sdss`, `--twomrs`, `--glade`, `--milliquas`, or `--out-dir`; `--glade-spec-only` drops GLADE's photo-z rows, `--glade-isotropic` drops SDSS-DR12-only GLADE rows (both optional); `--bias-weight angular|schechter|vmax|none` (default `angular`) picks the per-galaxy bias weight baked into byte 55, computed per tier file over that file's own rows, the sample the tier draws (see [`buildAllBins.ts`](../tools/catalog/buildAllBins.ts) for the full flag set).
 
 ### The SQL 500,000-row trap
 
@@ -133,7 +135,7 @@ A small hand-curated catalog of well-known galaxies (Messier + NGC greatest-hits
 ```bash
 npm run build-tiers            # the survey .bin files (build-famous's own docblock requires this order)
 npm run fetch-famous-images    # downloads + processes thumbnails; idempotent, --force to re-fetch
-npm run build-famous           # public/data/galaxy-catalog/v9/famous.bin + famous_galaxies_meta.json
+npm run build-famous           # public/data/galaxy-catalog/v10/famous.bin + famous_galaxies_meta.json
 ```
 
 To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.
@@ -176,9 +178,9 @@ Flags: `--cut N` (persistence sigma, default 5), `--smooth N` (default 2), `--so
 npm run build-stars
 ```
 
-Consumes `data/raw/gaia/`: paged Gaia DR3 CSVs, the GCNS 100 pc supplement, the Hipparcos-2 bright-star patch. It emits the per-tier SKST binaries. The full build holds the Gaia superset in memory at once, so the npm script raises Node's heap to 16 GB (`NODE_OPTIONS=--max-old-space-size=16384`) accordingly.
+Consumes `data/raw/gaia/`: paged Gaia DR3 CSVs, the GCNS 100 pc supplement, the Hipparcos-2 bright-star patch. It emits the v2 octree under `star-catalog/v2/`: the index `stars.bin` and one object per chunk, from one bake that serves every tier (a tier picks the pool size at runtime, not a file). Chunks are written before the objects that name them and the index last, so an interrupted bake leaves the previous index pointing at its own chunks. The bake re-chunks the rows left above the chunk roots until the index fits a chunk's own two bounds (32,768 records, 2,048 rows), so the object fetched before first paint stays small however large the catalog grows (2026-10-11 bake: index 145 rows / 9,067 records / 80 KB, 993 chunks two deep). Magnitudes and colours enter the bake snapped to the frozen LUT bin centres, so each blob's flux sums exactly what its records draw. The full build holds the Gaia superset in memory at once, so the npm script raises Node's heap to 16 GB (`NODE_OPTIONS=--max-old-space-size=16384`); the first full v2 bake peaked at 10.85 GB RSS and took 111 s.
 
-For real-scale runs the canonical builder is the Rust port, `npm run build-stars-rs` (requires a Rust toolchain). It shares the TypeScript builder's encode/quantize/tier pipeline but is not byte-identical: it adds two dedup rules the TypeScript reference doesn't have, so its output subtracts a few more stars from the same inputs. The TypeScript build stays the reference implementation the Vitest suite exercises. See [`tools/stars-rs/README.md`](../tools/stars-rs/README.md) for the parity contract and the constellation-resolution stage it also runs.
+The Rust port, `npm run build-stars-rs` (requires a Rust toolchain), still emits the v1 SKST tiers under `star-catalog/v1/`; a v2 port is its own later plan. It shares the TypeScript builder's encode/quantize/tier pipeline but is not byte-identical: it adds two dedup rules the TypeScript reference doesn't have, so its output subtracts a few more stars from the same inputs. The TypeScript build stays the reference implementation the Vitest suite exercises. See [`tools/stars-rs/README.md`](../tools/stars-rs/README.md) for the parity contract and the constellation-resolution stage it also runs.
 
 ## Cosmic-web volumes
 
@@ -201,6 +203,8 @@ Earth's whole-globe base texture and its surface tile pyramid are two publicatio
 ### Planet and moon positions (JPL Horizons)
 
 Each planet's position is its Keplerian row plus a fitted correction series that matches JPL DE to ≤ 1,000 km over 1900–2100; each Jupiter and Saturn moon, Neptune's Triton and Proteus, and Uranus's Miranda, Ariel, Umbriel, Titania and Oberon, matches to the same bound relative to its parent. The bodies, their Horizons centres and steps live in one table, `tools/bodies/horizonsBodies.ts`. `npm run fetch-horizons` pulls ICRF vectors (gitignored) into `data/raw/horizons/<centre>/` — the planets are 1-day heliocentric, 8 × ~3 MB in `500@10/`; the moons are centred on Jupiter (`500@599/`), Saturn (`500@699/`), Neptune (`500@899/`) or Uranus (`500@799/`) at ≤ P/16, ~8.5M rows — and `npm run build-ephemeris-corrections` fits them into the committed `src/data/bodies/ephemerisCorrections.generated.ts`. A moon's correction is a mean-anomaly series added before Kepler (it stays on its conic, so its trail stays centred) plus a small Cartesian residual. Each row carries its own out-of-span policy: planets hold the edge value, moons switch the correction off before 1900 and after 2100. Regenerate after any element-row or frame change. The exact query is in [`data/raw/horizons/README.md`](../data/raw/horizons/README.md).
+
+The Voyagers ride the same fetch but not the fit: `voyager1`/`voyager2` rows (targets `-31`/`-32`, daily Sun-centred state vectors from the first Horizons sample, 1977-09-06 and 1977-08-21, to 2099-12-31) are not in `FITTED_BODIES`. `fetch-voyager-windows` adds the launch sample, `500@10/<target>.dense.csv` (Sun-chain state, 1 h within ±60 d and 1 min within ±2 d of each encounter), and the DE441 pair per encounter: the craft against the system barycentre (`500@5`–`500@8/<target>.csv`) and the barycentre against the Sun (`500@10/<bary>.<date>.csv`), plus the craft against each body centre for closest approach. Horizons' Sun-chain craft vectors use the craft file's own planet positions, up to 13,600 km off DE441 at Neptune, so the build blends each encounter onto DE441 (full within ±20 d, cosine taper to ±120 d). `build-spacecraft-tracks` also emits `MISSION_EVENTS` (`missionEvents.generated.ts`, sorted): launches from `voyagerLaunches.ts`, flybys measured from the body-centre fetch (`id`, `targetId`, `closestKm` from the centre), and boundary and milestone instants as cited literals in `tools/bodies/voyagerMilestones.ts` (day-precision ones sit at 00:00 UTC; the termination-shock days and the Pioneer 10 pass are marked UNSURE there). It merges, decimates to a 1 km Hermite tolerance and writes `public/data/spacecraftTracks.bin` (tracked in `allowDataFile`, so it hashes and syncs to R2). In a worktree whose `public/data` is a symlink the manifest step skips, so the new file is served by its logical name until the owning checkout rebuilds the manifest.
 
 ### Earth surface tile pyramid
 
@@ -250,7 +254,9 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | DESI                   | `fetch-desi`                                    | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)                      |
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
 | Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
+| Voyager 1/2 tracks     | `fetch-horizons -- voyager1 voyager2` + `fetch-voyager-windows` | `build-spacecraft-tracks` (`spacecraftTracks.bin` + generated `missionEvents.generated.ts`) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
+| Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 

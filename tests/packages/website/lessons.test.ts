@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { LESSON_TOPICS } from '../../../packages/website/src/data/lessons';
-import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
 import { FEATURED_TABS } from '../../../src/data/palette/featuredTabs';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 
@@ -19,7 +19,7 @@ const paletteFocusIds = new Set(
 describe.each(lessons)('lesson $shot', (lesson) => {
   it('opens an exhibit or an object the app knows', () => {
     const { view } = linkIntentFrom(lesson.hash);
-    if (view.kind === 'exhibit') expect(Object.keys(exhibitRegistry)).toContain(view.id);
+    if (view.kind === 'exhibit') expect(Object.keys(APP_EXHIBITS)).toContain(view.id);
     else {
       expect(view.kind).toBe('focus');
       expect(paletteFocusIds.has(view.kind === 'focus' ? view.id : '')).toBe(true);

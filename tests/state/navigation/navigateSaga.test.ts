@@ -33,6 +33,8 @@ import {
   commitCameraPose,
   startCameraTween,
 } from '../../../src/state/camera/cameraSlice';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../src/state/time/timeSlice';
 import {
   selectFocusRef,
@@ -42,25 +44,23 @@ import {
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
-import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-const resolveDeps = (): ResolveDeps =>
-  ({
-    structures: { byId: () => null, byCategory: () => [], loaded: () => true },
-  }) as unknown as ResolveDeps;
+const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 const PLAYS = [
   ['tour', 'grandTour', startTour.match],
@@ -85,9 +85,12 @@ function build() {
     middleware: (g) => g().concat(recorder, mw),
   });
   mw.setContext({
-    resolveDeps,
     selection: composeSelectionRows(
-      () => [...coreSelectionRows(resolveDeps), milkyWaySelectionRow()],
+      () => [
+        ...coreSelectionRows(),
+        structureSelectionRow(EMPTY_STRUCTURES),
+        milkyWaySelectionRow(),
+      ],
       () => ALL_KINDS_ENABLED,
     ),
     cameraRuntime: () => ({
@@ -165,6 +168,22 @@ describe('navigateSaga', () => {
     expect(types.indexOf(setSimDays.type)).toBeLessThan(types.indexOf(commitCameraPose.type));
   });
 
+  it('a t= link that supersedes a running exhibit lands at the link instant', async () => {
+    const h = build();
+    await h.navigate({ view: { kind: 'exhibit', id: 'observableUniverse' } }, 'cut');
+    await flush();
+    const t = Date.UTC(1990, 0, 1);
+
+    await h.navigate({ view: { kind: 'exhibit', id: 'cosmicWeb' }, t }, 'cut');
+    await flush();
+
+    expect(selectTakeoverSource(h.store.getState())).toMatchObject({ id: 'cosmicWeb' });
+    expect(deriveSimDays(h.store.getState().time, performance.now() + 1e7)).toBeCloseTo(
+      unixMsToJulianDays(t),
+      5,
+    );
+  });
+
   it('navigate exhibit cut commits the fitted pose and plays no clip', async () => {
     const h = build();
     const outcome = await h.navigate(
@@ -176,7 +195,7 @@ describe('navigateSaga', () => {
     expect(outcome).toEqual({ ok: true });
     expect(h.playClip).not.toHaveBeenCalled();
     expect(h.commits()).toBe(1);
-    const { fitRadiusMpc } = exhibitRegistry.observableUniverse;
+    const { fitRadiusMpc } = APP_EXHIBITS.observableUniverse;
     expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
       sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
     );
@@ -185,6 +204,14 @@ describe('navigateSaga', () => {
       id: 'observableUniverse',
       entry: 'cut',
     });
+  });
+
+  it('opens an exhibit link flagged fromLink, so its exit lands on the live clock', async () => {
+    const h = build();
+    await h.navigate({ view: { kind: 'exhibit', id: 'observableUniverse' } }, 'cut');
+    await flush();
+
+    expect(h.recorded.find(openExhibit.match)?.payload.fromLink).toBe(true);
   });
 
   it('exhibit link selects nothing even with a focus key', async () => {

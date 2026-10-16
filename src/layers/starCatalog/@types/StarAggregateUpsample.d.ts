@@ -1,5 +1,5 @@
 /**
- * StarAggregateUpsample — fullscreen pass that samples the half-resolution
+ * StarAggregateUpsample — fullscreen pass that samples the low-resolution
  * survey-star aggregate offscreen with bilinear filtering, re-applies the star
  * pass's hue-preserving knee to the SUMMED aggregate field, and additively
  * blends the result into the HDR target.
@@ -23,7 +23,7 @@
  * ### Why no `resize` method
  *
  * The pipeline is viewport-independent (the covering triangle covers any
- * viewport) and the half-res texture view is rebound on every `draw` call
+ * viewport) and the low-res texture view is rebound on every `draw` call
  * (passed in rather than cached), so a resize of the offscreen needs no
  * bookkeeping here.
  */
@@ -37,11 +37,11 @@ export type StarAggregateUpsample = {
    *
    * @param pass          The render pass encoder writing into the HDR target
    *                      (opened with an additive-compatible `loadOp`).
-   * @param halfResView   The half-resolution `star-aggregates` offscreen view
+   * @param lowResView   The low-resolution `star-aggregates` offscreen view
    *                      to sample. Bound fresh every draw because the view
    *                      changes on canvas resize.
    */
-  draw(pass: GPURenderPassEncoder, halfResView: GPUTextureView): void;
+  draw(pass: GPURenderPassEncoder, lowResView: GPUTextureView): void;
   /**
    * No-op — sampler, bind-group-layout, and pipeline are GC'd when their last
    * reference drops. Present for lifecycle symmetry so the engine's teardown

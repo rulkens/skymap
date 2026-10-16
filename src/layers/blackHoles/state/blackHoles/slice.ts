@@ -15,7 +15,7 @@ export const blackHolesSlice = createSlice({
       blackHoles,
       action: PayloadAction<{ id: BlackHoleId; enabled: boolean }>,
     ) => {
-      blackHoles.items[action.payload.id] = { labelEnabled: action.payload.enabled };
+      blackHoles.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
   },
 });

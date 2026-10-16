@@ -3,7 +3,7 @@
  * a time (§ registry-driven, one engaged — `SURFACE_TILE_REGISTRY`). A third
  * layer above the two the body's own renderer already has: base texture and
  * placeholder are untouched, so every failure path falls back to today's
- * picture rather than a hole. Owns the `TileStreamSubsystem<ImageBitmap>` and manifest;
+ * picture rather than a hole. Owns the `TileStreamSubsystem<ImageBitmap, TextureAtlas>` and manifest;
  * `cutSurfaceTiles` stays pure and calls back into `residentSlot` to resolve
  * what it can draw. GPU resources allocate lazily on first engage; the
  * subsystem never wakes the render loop, only votes via `isAnimating()`.
@@ -17,6 +17,7 @@ import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnaps
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { BodyId } from '../../data/body/BodyId';
+import type { SurfaceTileBodyId } from '../../data/SurfaceTileBodyId';
 import type { Vec3 } from '../../math/Vec3';
 
 export type SurfaceTileSubsystem = Destroyable & {
@@ -96,6 +97,12 @@ export type SurfaceTileSubsystem = Destroyable & {
    * transition to track.
    */
   getAtlasView(): GPUTextureView | null;
+
+  /** The body whose atlases are allocated, or `null` while none are. */
+  engagedBodyId(): SurfaceTileBodyId | null;
+
+  /** Destroy the atlases and residency; the next engaged frame starts over. */
+  release(): void;
 
   /** The HEIGHT atlas's texture view (Terrain-RGB `rgba8unorm`, 129-post
    *  slots, decoded in the shader), or `null` before the first engaged frame. */

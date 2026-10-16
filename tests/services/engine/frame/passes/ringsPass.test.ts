@@ -124,7 +124,13 @@ function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
-  return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
+  return {
+    slab,
+    vp: f32Vp,
+    camPos: [0, 0, 5],
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
 }
 
 /**

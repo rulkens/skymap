@@ -10,9 +10,6 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 // Reads window.devicePixelRatio, which the node environment has no window for.
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
@@ -33,7 +30,13 @@ import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadius
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import { commitCameraPose, startFrameTween } from '../../../../src/state/camera/cameraSlice';
+import {
+  aimCamera,
+  commitCameraPose,
+  startFrameTween,
+} from '../../../../src/state/camera/cameraSlice';
+import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
+import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -41,6 +44,12 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
+import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
+import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
+import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
+import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
@@ -382,5 +391,24 @@ describe('a commit mid-approach', () => {
     expect(h.store.getState().camera.base).toBe(bodyArm);
     expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
     expect(h.state.cameraRuntime.register.winner).not.toBe('followApproach');
+  });
+});
+
+describe('the wheel under a mission', () => {
+  it('zooms down to the craft’s own size, not the surfaceless floor', () => {
+    loadVoyagerStopWindows();
+    const neptune = MISSION_EVENTS.find((e) => e.id === 'voyager2-neptune')!;
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, fovDeg: 50 });
+    h.store.dispatch(
+      setSimDays({ simDays: unixMsToJulianDays(missionEventMs(neptune)), nowMs: 0 }),
+    );
+    h.store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
+    h.store.dispatch(setMissionCraft('voyager2'));
+    h.store.dispatch(aimCamera({ ease: false }));
+    h.frame(4);
+    expect(h.state.cameraRuntime.register.winner).toBe('mission');
+    for (let i = 0; i < 250; i++) h.wheel(-100);
+    // The surfaceless floor is about 309 km; Voyager's hull standoff is metres.
+    expect(readFollowMemory(h.state).distanceTarget! / SCALE_UNITS.KM_TO_MPC).toBeLessThan(1);
   });
 });

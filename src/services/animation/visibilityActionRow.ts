@@ -23,7 +23,8 @@ import {
 } from '../../layers/milkyWay/state/milkyWay/slice';
 import { setCosmicWebFilamentsEnabled } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
-import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
+import { setMissionTrailsEnabled } from '../../layers/missions/state/missionTrails/slice';
+import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
 import {
   setCosmicWebDensityEnabled,
   writeCosmicWebDensityField,
@@ -55,6 +56,7 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
   cosmicWebFilaments: { actions: (on) => [setCosmicWebFilamentsEnabled(on)] },
   localBubble: { actions: (on) => [setLocalBubbleEnabled(on)] },
   orbitTrails: { actions: (on) => [setOrbitTrailsEnabled(on)] },
+  missionTrails: { actions: (on) => [setMissionTrailsEnabled(on)] },
   cosmicWebDensity: { actions: (on) => [setCosmicWebDensityEnabled(on)] },
   flow: { actions: (on) => [setFlowEnabled(on)] },
   constellations: { actions: (on) => [setConstellationsEnabled(on)] },
@@ -111,8 +113,6 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
       ),
   },
 
-  // `cosmicWebDensity.items` is a Partial record — a field is absent until
-  // its slot commits — so only present ids are emitted.
   cosmicWebDensityField: {
     actions: (on, settings) =>
       Object.keys(settings.cosmicWebDensity.items).map((id) =>

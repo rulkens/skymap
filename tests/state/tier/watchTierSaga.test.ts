@@ -19,7 +19,7 @@
  *
  * The re-anchor suite seeds a galaxy select/focus ref BEFORE dispatching
  * `requestTier`, then simulates the new cloud arriving via the count pulse.
- * The `resolveDeps` closure is mutable: before the swap the cloud holds
+ * The galaxies fixture's `catalogs` getter is mutable: before the swap the cloud holds
  * objID at index 0; after the swap the new cloud has the same objID at index 3.
  * Asserting `select.index === 3` after the count pulse proves the saga re-anchored
  * via the durable id rather than preserving the stale positional index.
@@ -47,7 +47,6 @@ import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -57,10 +56,6 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 /** The galaxyCatalog Layer's slice with nothing loaded — the default for the
  * cases that never seed a galaxy ref. */
 const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
-
-const EMPTY_DEPS: ResolveDeps = {
-  structures: { byId: () => null, byCategory: () => [] },
-};
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
 
@@ -87,10 +82,7 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
 describe('watchTierSaga', () => {
   let store: ReturnType<typeof buildStore>;
 
-  function buildStore(
-    resolveDeps: () => ResolveDeps = () => EMPTY_DEPS,
-    galaxies: GalaxyRowFixture = NO_GALAXIES,
-  ) {
+  function buildStore(galaxies: GalaxyRowFixture = NO_GALAXIES) {
     const sagaMiddleware = createSagaMiddleware();
     const built = configureStore({
       reducer: rootReducer,
@@ -99,7 +91,7 @@ describe('watchTierSaga', () => {
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
       selection: composeSelectionRows(
-        () => [...coreSelectionRows(resolveDeps), galaxyCatalogSelectionRow(galaxies)],
+        () => [...coreSelectionRows(), galaxyCatalogSelectionRow(galaxies)],
         () => ALL_KINDS_ENABLED,
       ),
     });
@@ -141,9 +133,6 @@ describe('watchTierSaga', () => {
     const SDSS_OBJ_ID = 99n;
     let currentCloud = makeCloud(SDSS_OBJ_ID, 0, 1);
 
-    const resolveDeps = (): ResolveDeps => ({
-      structures: { byId: () => null, byCategory: () => [] },
-    });
     // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
     // cloud in place and the re-anchor must resolve against the NEW one.
     const galaxies = {
@@ -153,7 +142,7 @@ describe('watchTierSaga', () => {
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
-    store = buildStore(resolveDeps, galaxies);
+    store = buildStore(galaxies);
     store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
 
     store.dispatch(requestTier('large'));
@@ -193,9 +182,6 @@ describe('watchTierSaga', () => {
     }
 
     let currentCloud = buildCloud(objIDsOld);
-    const resolveDeps = (): ResolveDeps => ({
-      structures: { byId: () => null, byCategory: () => [] },
-    });
     // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
     // cloud in place and the re-anchor must resolve against the NEW one.
     const galaxies = {
@@ -205,7 +191,7 @@ describe('watchTierSaga', () => {
       famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
-    store = buildStore(resolveDeps, galaxies);
+    store = buildStore(galaxies);
     // select → objID_A at old index 0; focus → objID_B at old index 1.
     store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 }));

@@ -32,6 +32,7 @@ const LIVE_TIME: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: false,
+  profile: null,
 };
 
 const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
@@ -234,6 +235,7 @@ describe('cameraDebugSnapshotOf', () => {
       rateIndex: 6,
       direction: 1,
       paused: false,
+      profile: null,
     };
 
     const healthy = cameraDebugSnapshotOf({

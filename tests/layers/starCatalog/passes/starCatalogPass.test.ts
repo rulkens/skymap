@@ -21,7 +21,7 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
 import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
@@ -54,8 +54,8 @@ function makeFrame(originMpc: Vec3): StarCutInputs {
       worldSpread: 1,
       leafMarginRad: 0.001,
       sources: [
-        { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
-        { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
+        { source: Source.GaiaStars, opacity: 1, drawBudget: 100 },
+        { source: Source.GaiaStars, opacity: 1, drawBudget: 100 },
       ],
     },
     nowMs: 0,
@@ -68,10 +68,11 @@ function makeFrame(originMpc: Vec3): StarCutInputs {
 
 function makeRuntime(frame: StarCutInputs | null) {
   const drawCut = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogCutDrawArgs) => void>();
-  const catalog = { starCount: 1 } as unknown as StarCatalog;
+  const catalog = { starCount: 1 } as unknown as StarOctree;
   const renderer = {
-    loadedCatalogs: () => [{ source: Source.GaiaStars, catalog }][Symbol.iterator](),
+    loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }][Symbol.iterator](),
     getFrameCut: () => frame,
+    snapshotPickSlots: () => {},
     drawCut,
   };
   const pickDraw = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogPickDrawArgs) => void>();
@@ -92,7 +93,13 @@ function makePassState(settings: StarCatalogSettings): PassState {
 
 // Distinct f64 slab vp and f32 vp, so identity reveals which one is rebased.
 function makeNear0View(camPos: Vec3): SlabView {
-  return { slab: makeSlab(), vp: new Float32Array(16), camPos, viewportPx: [1280, 720] };
+  return {
+    slab: makeSlab(),
+    vp: new Float32Array(16),
+    camPos,
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
 }
 
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;

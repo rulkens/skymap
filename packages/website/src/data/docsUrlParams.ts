@@ -162,6 +162,7 @@ export const DOCS_EXHIBIT_IDS: readonly DocsNamedId[] = [
   { id: 'cosmicWeb', name: 'Cosmic Web' },
   { id: 'zoneOfAvoidance', name: 'Zone of Avoidance' },
   { id: 'observableUniverse', name: 'Observable Universe' },
+  { id: 'voyager-missions', name: 'The Voyager missions' },
 ];
 
 /** The values of `tour`. The search lists the first two; `demo` opens from a link only. */

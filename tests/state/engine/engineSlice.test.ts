@@ -18,12 +18,10 @@ import reducer, {
   engineSourceCountReported,
   engineScaleChanged,
   engineBodyDistanceReported,
-  engineStructureSearchListChanged,
   factsReported,
   layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
 import type { CoreEngineSliceState } from '../../../src/@types/store/CoreEngineSliceState';
-import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import { Source } from '../../../src/data/source';
 
 /** A state widened with a stub Layer's facts key, standing in for a landed Layer. */
@@ -37,9 +35,7 @@ const base = (): CoreEngineSliceState => ({
   focusedBodyDistanceMpc: null,
   hdrCapable: false,
   sourceCounts: {},
-  structureCounts: {},
   loadProgress: null,
-  structureSearchList: [],
   layerSearch: {},
 });
 
@@ -83,22 +79,6 @@ describe('engineSlice — engineBodyDistanceReported', () => {
     const s: CoreEngineSliceState = { ...base(), focusedBodyDistanceMpc: null };
     const next = reducer(s, engineBodyDistanceReported(3.4e-6));
     expect(next.focusedBodyDistanceMpc).toBe(3.4e-6);
-  });
-});
-
-describe('engineSlice — engineStructureSearchListChanged', () => {
-  it('engineStructureSearchListChanged replaces the list wholesale', () => {
-    const first: StructureSearchEntry = {
-      id: 'cluster-virgo',
-      name: 'Virgo Cluster',
-      category: 'galaxy-cluster',
-      abell: null,
-      description: '',
-    };
-    const s: CoreEngineSliceState = { ...base(), structureSearchList: [first] };
-    const second: StructureSearchEntry = { ...first, id: 'cluster-coma', name: 'Coma Cluster' };
-    const next = reducer(s, engineStructureSearchListChanged([second]));
-    expect(next.structureSearchList).toEqual([second]);
   });
 });
 

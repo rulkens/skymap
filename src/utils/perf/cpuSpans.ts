@@ -1,6 +1,6 @@
 /**
  * cpuSpans — main-thread milliseconds per named frame row (`plan:<name>`,
- * `compute:<name>`, `draw:<name>`), summed since the last `clear`.
+ * `compute:<name>`, `draw:<name>`, `labels:<cosmo|near0>`), summed since the last `clear`.
  * Off unless the perf hook's `collectCpu` is sampling: a call site reads
  * `cpuSpans.on` before and after the row, so an idle frame never reads the clock.
  */

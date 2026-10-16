@@ -110,10 +110,10 @@ This downloads the catalog, star, structure, and filament binaries from R2 into 
 
 The render loop lives in a long-running imperative engine. React subscribes to it for the handful of state slices the UI needs and owns nothing that updates per frame. The engine renders on demand: input and loading events request a frame, and the loop goes idle when nothing is moving. Every visible pass draws into one `rgba16float` HDR target, tone-mapped to the display at the end of the frame. Reversed-Z depth and a floating-origin camera hold precision across the full 10⁷–10²⁶ m range.
 
-Catalog data ships in five binary formats, tiered, content-hashed, and streamed from R2 through a manifest fetched at boot:
+Catalog data ships in binary formats, tiered, content-hashed, and streamed from R2 through a manifest fetched at boot:
 
 - **SKMP v9**: galaxies, 64 bytes per row
-- **SKST v1**: stars
+- **SKOI / SKOC v1**: stars as an octree index plus chunk objects (SKST v1 tier bins remain as the alternative `format: 'skst'`)
 - **CCAT v1**: structures (clusters, superclusters, voids, groups)
 - **SCFD v3**: scalar fields (density and flow volumes)
 - **FILA v1**: filaments

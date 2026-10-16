@@ -68,6 +68,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     dragging: false,
     clip: null,
     frameTween: null,
+    aim: null,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };
@@ -102,6 +103,24 @@ describe('advanceEpochs', () => {
       nowMs: 1000,
     });
     expect(result.tween).toEqual({ ref: tween, startMs: 1000 });
+  });
+
+  it('the aim epoch restarts on each new aim token, and only under a row that names it', () => {
+    const aim = { ease: false };
+    const intent = makeCameraState({ aim });
+    const args = { intent, focus: null, clip: UNSTARTED_EPOCHS.clip, nowMs: 1000 };
+    expect(advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: undefined }).aim).toBe(
+      UNSTARTED_EPOCHS.aim,
+    );
+    const started = advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: 'aim' as const });
+    expect(started.aim).toEqual({ ref: aim, startMs: 1000 });
+    const bumped = advanceEpochs(started, {
+      ...args,
+      intent: makeCameraState({ aim: { ease: true } }),
+      winnerEpoch: 'aim' as const,
+      nowMs: 1500,
+    });
+    expect(bumped.aim.startMs).toBe(1500);
   });
 
   it('the frameTween epoch advances on a frame no driver owns it', () => {

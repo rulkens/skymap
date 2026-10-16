@@ -36,7 +36,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **Plans coexist**: multiple in-flight plans is normal — check `docs/BACKLOG.md` and the plans file list before starting work, to reuse what exists and avoid stomping on it.
 - **TDD via plans**: substantial features get a bite-sized-task plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`, executed via the `subagent-driven-development` workflow under the lean protocol in [`sdd-execution.md`](docs/superpowers/conventions/sdd-execution.md) (grouped dispatches, one whole-branch review at the end, CI as the gate) and written per [`plan-style.md`](docs/superpowers/conventions/plan-style.md) — contract code yes, implementation code no, overriding the `writing-plans` skill; `/feature-done` gates the DoD and files plan + spec under `*/completed/`.
 - **Add a feature** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` first; if substantial, write a plan via the `writing-plans` skill rather than coding inline, and remove the matching backlog item in the same change.
-- **Refactor the ground before building**: spec/plan-sized features run the `refactor-ground` skill after brainstorming converges and **before the spec is written**, so the spec carries a "Ground preparation" section (filled, or "none needed — because X") and targets the post-refactor architecture; prep refactors are their own commits, sequenced first, and separate-PR vs riding the feature PR is an explicit ask at the checkpoint, every time.
+- **Refactor the ground before building**: spec/plan-sized features run the `refactor-ground` skill (shared across projects, from the bluecode repo; skymap's specifics are in [`.claude/refactor-ground.md`](.claude/refactor-ground.md)) after brainstorming converges and **before the spec is written**, so the spec carries a "Ground preparation" section (filled, or "none needed — because X") and targets the post-refactor architecture; prep refactors are their own commits, sequenced first, and separate-PR vs riding the feature PR is an explicit ask at the checkpoint, every time.
 - **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work as very short index lines (title + readiness tag + one clause + `→ [details]` to `docs/backlog/YYYY-MM-DD-<slug>.md` for design-bearing items; anything longer goes in that detail file, never inline); picking an item up deletes index line **and** detail file in the same change, and done items are deleted, never struck through.
 - **Test what can break**: judge every test by "will it ever fail on a real bug no other test or compiler check catches?" — see [`testing.md`](docs/superpowers/conventions/testing.md). The 600+-file suite must stay green.
 - **Simplicity over ease**: judge a design by the artifact, not the keystrokes, and un-braid concerns that could vary independently ([`simplicity.md`](docs/superpowers/conventions/simplicity.md)); run `entanglement-radar` over a diff/module **and at design time over a spec/plan**, where a section teaching handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal.
@@ -78,7 +78,9 @@ npm run perf        # headless GPU-timing harness → tools/perf/README.md
 npm run perf:cpu    # main-thread ms per frame row at the perf poses → tools/perf/README.md
 npm run shot        # screenshot of any deep link → tools/shot/README.md
 npm run loadtime    # cold-load milestones on throttled 3G/4G → tools/loadtime/README.md
-npm run capture-featured # palette-card thumbnails → tools/capture/README.md
+npm run phone       # Android phone over USB: serve, open, shot, net, trace → tools/phone/README.md
+npm run capture-featured # palette-card + cosmic-structure thumbnails → tools/capture/README.md
+npm run capture-structures # structure thumbnails from DSS2 sky cutouts → tools/capture/README.md
 npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
 ```
 

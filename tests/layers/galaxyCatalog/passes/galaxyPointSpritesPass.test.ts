@@ -15,6 +15,8 @@ import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/pas
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -41,14 +43,7 @@ function makeCam(): OrbitCamera {
  * perform once per frame — works against these fixtures without a bespoke
  * double.
  */
-/**
- * `visibleSourceMask` (frame-owned) nests under `snapshot`; every other
- * override (`drawCamPos`) is a view field, spread at the top level.
- */
-function makeCtx(
-  overrides: { drawCamPos?: Readonly<[number, number, number]>; visibleSourceMask?: number } = {},
-): FrameView {
-  const { visibleSourceMask, ...viewOverrides } = overrides;
+function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } = {}): FrameView {
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
@@ -58,7 +53,6 @@ function makeCtx(
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      visibleSourceMask: visibleSourceMask ?? 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
         apparentRadiusMpc: 1,
@@ -79,7 +73,7 @@ function makeCtx(
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     // Nothing here reads bodyPose.
     bodyPose: () => null,
-    ...viewOverrides,
+    ...overrides,
   } as unknown as FrameView;
 }
 
@@ -106,6 +100,7 @@ const PASS_STUB = {
 
 const SETTINGS_STUB = {
   galaxyCatalogs: {
+    items: makeGalaxyCatalogItems(),
     sizePx: 2.5,
     brightness: 1.0,
     provenance: DEFAULT_GALAXY_PROVENANCE,
@@ -248,30 +243,46 @@ describe('galaxyPointSpritesPass.draw', () => {
 });
 
 describe('galaxyPointSpritesPass.drawPick', () => {
-  it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
-    // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
-    // bit is clear (toggled off / fading out) is dropped before the picker
-    // draws it.
-    // renderer.loadedSources yields SDSS + 2MRS + GLADE; only SDSS + GLADE
-    // bits are set in the mask.
-    const loaded = [Source.SDSS, Source.TwoMRS, Source.Glade].map((source) => ({
+  it('drawPick drops a catalog switched off while its fade-out runs', () => {
+    // Picking follows intent, not pixels: SDSS is switched off and still half
+    // faded in, so `draw` keeps its bit (the fade-out tail) while `drawPick`
+    // hands the picker no SDSS source.
+    const loaded = [Source.SDSS, Source.Glade].map((source) => ({
       source,
       vertexBuffer: {} as GPUBuffer,
       count: 1,
       sourceBuffer: {} as GPUBuffer,
     }));
-    const ctx = makeCtx({
-      visibleSourceMask: (1 << Source.SDSS) | (1 << Source.Glade),
-    });
+    const sdss = galaxyCatalogIdOf(Source.SDSS);
+    const { state, runtime, drawSpy, drawPointsSpy } = makeStateWithRenderer(
+      {
+        settings: {
+          ...SETTINGS_STUB,
+          galaxyCatalogs: {
+            ...SETTINGS_STUB.galaxyCatalogs,
+            items: makeGalaxyCatalogItems((id) => (id === sdss ? { enabled: false } : {})),
+          },
+        },
+        subsystems: {
+          ...STATE_STUB.subsystems,
+          fades: {
+            opacityOf: (handle: { id?: string }) => (handle.id === sdss ? 0.5 : 1),
+            isAnyAnimating: () => true,
+          },
+        },
+      } as unknown as Partial<EngineState>,
+      loaded,
+    );
+    const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
+
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
+    const drawMask = (drawSpy.mock.calls[0]![3] as { visibleSourceMask: number }).visibleSourceMask;
+    expect((drawMask >> Source.SDSS) & 1).toBe(1);
 
     galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state);
-
-    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
-    // arg[1] is the filtered `sources` list handed to drawPoints.
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
-    expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS, Source.Glade]);
+    expect(passedSources.map((s) => s.source)).toEqual([Source.Glade]);
   });
 
   it('drops band-faded survey sources from the pick, famous exempt, but still calls drawPoints', () => {
@@ -287,7 +298,6 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       sourceBuffer: {} as GPUBuffer,
     }));
     const ctx = makeCtx({
-      visibleSourceMask: 0xffffffff,
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
     const view = slabViewOf(ctx, COSMO);

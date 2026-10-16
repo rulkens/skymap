@@ -15,6 +15,7 @@ import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
 import type { CameraState } from '../../@types/camera/CameraState';
+import type { CameraAim } from '../../@types/camera/CameraAim';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
@@ -38,6 +39,7 @@ const initialState: CameraState = {
   dragging: false,
   clip: null,
   frameTween: null,
+  aim: null,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
@@ -104,6 +106,11 @@ const cameraSlice = createSlice({
       camera.autoRotate = action.payload;
     },
 
+    // A fresh object every time: the token's identity is the re-aim.
+    aimCamera: (camera, action: PayloadAction<CameraAim>) => {
+      camera.aim = { ...action.payload };
+    },
+
     // A WHOLE new record, never a leaf write: the panel's sliders read it back
     // through a selector, and an in-place edit leaves that render stale.
     setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
@@ -124,6 +131,7 @@ export const {
   clipEnded,
   startFrameTween,
   clearFrameTween,
+  aimCamera,
 } = cameraSlice.actions;
 
 // Resolution happens at the dispatch site, not in the reducer, which is pure and

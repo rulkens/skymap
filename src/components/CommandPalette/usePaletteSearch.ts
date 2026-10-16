@@ -8,12 +8,12 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject, KeyboardEvent } from 'react';
-import { rankPaletteMatches } from './utils/rankPaletteMatches';
-import { actionForRow } from './utils/actionForRow';
+import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
+import { actionForRow } from '../../utils/palette/actionForRow';
 import { wrapIndex } from './utils/wrapIndex';
 import { gridIndexStep } from './utils/gridIndexStep';
 import { measureGridColumns } from './utils/measureGridColumns';
-import type { ScoredRow } from './paletteRowModel';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
@@ -34,7 +34,7 @@ type UsePaletteSearchInput = {
   onTabStep: (delta: 1 | -1) => void;
   open: boolean;
   onClose: () => void;
-  /** Fired with the picked row's action; the parent dispatches on `action.kind`. */
+  /** Fired with the picked row's action; the parent dispatches `actionsForPaletteAction(action)` in order. */
   onSelect: (action: PaletteAction) => void;
 };
 

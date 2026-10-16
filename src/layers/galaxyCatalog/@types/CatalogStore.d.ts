@@ -6,11 +6,7 @@ import type { CatalogDrawEntry } from './CatalogDrawEntry';
 /** The per-catalog GPU-resource store — see `catalogStore.ts`'s module header. */
 export type CatalogStore = {
   upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
-  setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void;
-  setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void;
-  spliceSchechterRatios(source: SourceType, ratios: Float32Array): void;
-  spliceAngularWeights(source: SourceType, weights: Float32Array): void;
-  clearBiasOverlays(source?: SourceType): void;
+  unload(id: GalaxyCatalogId): void;
   totalCount(): number;
   hasCatalog(id: GalaxyCatalogId): boolean;
   /** Narrow public projection consumed by the pick program. */

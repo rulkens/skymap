@@ -1,28 +1,24 @@
 // starCatalog/vertex.wesl — vertex-pull billboard stage for the survey (Gaia
 // bin) stars. Derivation-heavy file: the header carries the photometry.
 //
-// One instance = one octree record (a leaf star, or an interior node's flux-mip
-// aggregate). cut.wesl leaves a draw list per stream; an instance finds its node
+// One instance = one octree record (a row's own star, or a row's flux-mip blob,
+// the 'aggregate'). cut.wesl leaves a draw list per stream; an instance finds its node
 // from its place in that list with no search, rebuilds the node's
 // camera-relative box from the static node table, and pulls its record from the
 // per-source blob. Bindings: @group(0) u (rebased view-projection + viewport),
 // @group(1) cut* (cutIo.wesl structs and this stream's list), @group(2) records.
 //
-// ## Record unpack (the inverse of packStarRecord)
+// ## Record unpack (the inverse of packStarGpuRecords)
 //
-// The on-disk 6-byte record is two independent 24-bit halves (JS bitwise ops are
-// signed-32; see starCatalogFormat.ts). The renderer repacks each into two u32,
-// 'lo' = bytes 0..2 and 'hi' = bytes 3..5:
-//
-//   offsetX = lo bits 0..9      offsetY = lo bits 10..19
-//   offsetZ = lo bits 20..23 (low 4) | hi bits 0..5 (high 6)   <- the straddle trap
-//   absMagIdx = hi bits 6..12 (7)   colorIdx = hi bits 13..18 (6)
+// Two u32 per record, offsets a 16-bit fraction of the owning node's box:
+//   w0 = x (bits 0..15) | y (16..31)
+//   w1 = z (bits 0..15) | absMagIdx (16..22) | colorIdx (23..28)
 //
 // ## World reconstruction
 //
 // cutIo.wesl's camera split makes node-minus-camera integer-exact, so the origin
 // arrives small and the f32 math is well-conditioned:
-//   worldRelCam = originRelCamMpc + (offset / 1024) * cellScaleMpc
+//   worldRelCam = originRelCamMpc + (offset / 65536) * cellScaleMpc
 //
 // ## Flux-integrated glow
 //
@@ -34,7 +30,7 @@
 //      (mergeFluxAggregate stores -2.5*log10(sum/N)), because a summed
 //      magnitude of thousands of stars is 10+ mag past the LUT's single-star
 //      floor and would clamp (a box lattice, and a flux jump at refine).
-//      Multiplying by 'subtreeStarCount' (1.0 for a leaf) recovers the summed
+//      Multiplying by 'blobCount' (1.0 for an own record) recovers the summed
 //      light: EXPOSURE * mean * N equals the sum of the children's
 //      EXPOSURE * flux, and the cut is a covering partition, so nothing counts
 //      twice. Exact below the knee; across it the concave rolloff makes the
@@ -66,8 +62,8 @@
 // A leaf is a point source: its radius is a legibility floor. An aggregate is
 // extended: its radius grows to its box's on-screen footprint (worldLenToPx of
 // the box edge), so adjacent far glows meet edge to edge. 'isAgg' comes from the
-// node's childMask, not its octree level (a fat leaf sits at level > 0 yet is a
-// leaf); a select picks the box extent, 0 for leaves. The user's sizePx slider
+// stream (a row draws its own records and its blob in different lists); a select
+// picks the box extent, 0 for own records. The user's sizePx slider
 // scales it, a spread control that leaves total luminance alone (fact 2).
 //
 // One deliberate exception to fact 2: STAR_GLOW_MAX_PX bounds only the DRAWN
@@ -90,8 +86,8 @@ import package::starCatalog::cutIo::CutNode;
 import package::starCatalog::cutIo::CutUniforms;
 import package::starCatalog::cutIo::CutStream;
 import package::starCatalog::cutIo::nodeEdgeCells;
-import package::starCatalog::cutIo::nodeIsAggregate;
-import package::starCatalog::cutIo::nodeRecordCount;
+import package::starCatalog::cutIo::nodeOwnCount;
+import package::starCatalog::cutIo::OPACITY_CHANNELS;
 import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::leafEntryNode;
 import package::starCatalog::cutIo::leafEntryBlock;
@@ -130,8 +126,15 @@ const STAR_COLORIDX_MIN: f32 = -0.6;
 // (4.4 - (-0.6)) / 64
 const STAR_COLORIDX_STEP: f32 = 0.078125;
 
-// Reciprocal of 1024: offset 0..1023 spans one box.
-const OFFSET_SCALE: f32 = 0.0009765625;
+// Reciprocal of 65536 (OFFSET_FRACTION_LEVELS): offset 0..65535 spans one box.
+const OFFSET_SCALE: f32 = 0.0000152587890625;
+// packStarGpuRecords' word layout.
+const OFFSET_MASK: u32 = 0xffffu;
+const GPU_Y_SHIFT: u32 = 16u;
+const GPU_ABSMAG_SHIFT: u32 = 16u;
+const GPU_ABSMAG_MASK: u32 = 0x7fu;
+const GPU_COLOR_SHIFT: u32 = 23u;
+const GPU_COLOR_MASK: u32 = 0x3fu;
 
 // Pick pass only: floors the billboard radius so a sub-pixel star still covers a
 // clickable pixel at its true screen position. Geometry only; the pick fragment
@@ -166,8 +169,8 @@ const AGGREGATE_BOX_RADIUS_FACTOR: f32 = 0.5 * 0.57735;
 // sprite is long gone by framing distance.
 const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 
-// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 instances per
-// entry) and 0 for the aggregate list (one instance per entry).
+// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 own records per
+// entry) and 0 for the aggregate list (one blob per entry, local 0).
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
@@ -178,28 +181,29 @@ fn vs(
   let nodeIdx = leafEntryNode(entry);
   let bits = cutNodes[nodeIdx].bits;
   let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
-  if (local >= nodeRecordCount(bits)) {
+  let isAgg = cutStream.isBlob == 1u;
+  let ownCount = nodeOwnCount(bits);
+  if (!isAgg && local >= ownCount) {
     // A spare instance of the node's last block: outside the clip volume.
     var skip: VSOut;
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     return skip;
   }
-  let isAgg = nodeIsAggregate(bits);
   let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
   let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
-  let base = cutNodes[nodeIdx].firstRecord + local;
-  let nodeOpacity = cutOpacity[nodeIdx] * cut.opacity;
-  let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].subtreeCount), isAgg);
+  // firstRecord is pool-absolute, so 'base' is too: the pick reads it as is.
+  let base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, isAgg);
+  let nodeOpacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
+  let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].blobCount), isAgg);
 
-  // Two u32 per record in the repacked blob.
-  let lo = records[base * 2u + 0u];
-  let hi = records[base * 2u + 1u];
+  let w0 = records[base * 2u + 0u];
+  let w1 = records[base * 2u + 1u];
 
-  let ox = f32(lo & 0x3ffu);
-  let oy = f32((lo >> 10u) & 0x3ffu);
-  let oz = f32(((lo >> 20u) & 0xfu) | ((hi & 0x3fu) << 4u));
-  let absMagIdx = (hi >> 6u) & 0x7fu;
-  let colorIdx = (hi >> 13u) & 0x3fu;
+  let ox = f32(w0 & OFFSET_MASK);
+  let oy = f32(w0 >> GPU_Y_SHIFT);
+  let oz = f32(w1 & OFFSET_MASK);
+  let absMagIdx = (w1 >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
+  let colorIdx = (w1 >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
 
   let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
   let worldRelCam = originRelCamMpc + offset * cellScaleMpc;
@@ -222,7 +226,13 @@ fn vs(
   // luminance-conserving photometry wants. The absolute ceiling applies last and
   // bounds only the DRAWN radius.
   let rPxRaw = max(STAR_GLOW_MIN_PX, boxRadiusPx) * sizeScale * overlap;
-  let rPx = min(STAR_GLOW_MAX_PX, rPxRaw);
+  // An aggregate past the refine threshold is one the cut could not open (its
+  // chunk not resident, or the budget spent): it draws at the footprint it had
+  // at the threshold, the largest a refining blob ever shows. Like the absolute
+  // ceiling it under-deposits, so it never out-shines the stars that replace it.
+  let refineCapPx = sqrt(cut.refineThresholdSq) * u.cam.pxPerRad
+    * AGGREGATE_BOX_RADIUS_FACTOR * sizeScale * overlap;
+  let rPx = min(select(STAR_GLOW_MAX_PX, min(STAR_GLOW_MAX_PX, refineCapPx), isAgg), rPxRaw);
 
   // Peak from the UNCAPPED radius in reference px (toRefPx), so light is
   // conserved per unit solid angle across canvas sizes: I_peak * K_GAUSS *
@@ -243,7 +253,7 @@ fn vs(
 
   // Focus dim: stars outside a focused structure's sphere recede by the rule the
   // survey galaxies use, at this record's own position (an aggregate dims by its
-  // box record, so the half-res glow dims too). Exactly 1.0 at rest.
+  // box record, so the low-res glow dims too). Exactly 1.0 at rest.
   let focus = FocusUniforms(
     vec4<f32>(u.focusCenterRelCam, u.focusApparentRadiusMpc),
     u.focusBlend,

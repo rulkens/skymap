@@ -24,10 +24,9 @@
 // add the offset to the record index BEFORE packing -- 'packSelection(source,
 // recordIdx + 1)'. The two are equivalent for decode (the offset lands in the
 // bottom bits either way, and 'unpackPick' subtracts it back off the masked
-// localIdx), and adding it pre-pack keeps the source-code bits pristine: a
-// Gaia bin never has enough records to carry 'recordIdx + 1' past the 26-bit
-// localIdx field into the source-code bits (the same 26-bit cap the galaxy
-// catalogs already live under).
+// localIdx), and adding it pre-pack keeps the source-code bits pristine: the
+// pool's record cap keeps 'recordIdx + 1' inside the 26-bit localIdx field
+// (the same 26-bit cap the galaxy catalogs already live under).
 //
 // ## Why this fragment is a plain unit-disc dot
 //
@@ -52,7 +51,7 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
 
   // Pack '(SOURCE_GAIA_STARS << 26) | (recordIdx + 1)'. The '+ 1' keeps 0 as the
   // unambiguous 'no hit' sentinel (cleared-texture value); 'unpackPick' reverses
-  // it and hands the bin-global record index to 'resolveStarRecord'. The g/b/a
+  // it and the selection row maps the pool index to a catalog ordinal. The g/b/a
   // channels are unused -- only the r channel is read back on the JS side -- so
   // they are filled with 0 to keep the output well-defined.
   let packed = packSelection(SOURCE_GAIA_STARS, in.recordIdx + PICK_SENTINEL_OFFSET);

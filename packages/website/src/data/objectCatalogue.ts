@@ -1,6 +1,6 @@
 import famousGalaxySeed from '../../../../data/seeds/famous_galaxies.seed.json';
 import structureSeed from '../../../../data/seeds/structure_anchors.seed.json';
-import { MILKY_WAY_NAMES } from '../../../../src/components/CommandPalette/paletteRowModel';
+import { MILKY_WAY_NAMES } from '../../../../src/data/palette/milkyWayNames';
 import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
 import { BODY_SEARCH_NAMES } from '../../../../src/data/bodies/bodySearchNames';
 import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
@@ -9,11 +9,11 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
-import { exhibitRegistry } from '../../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
 import { FEATURED_TABS } from '../../../../src/data/palette/featuredTabs';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
-import { buildStaticAnchorStructures } from '../../../../src/data/structure/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../../src/layers/structure/load/buildStaticAnchorStructures';
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
@@ -241,7 +241,7 @@ const structures = buildStaticAnchorStructures().map((structure) => {
   });
 });
 
-const exhibits = Object.values(exhibitRegistry).map(
+const exhibits = Object.values(APP_EXHIBITS).map(
   (exhibit): ObjectRow => ({
     name: exhibit.label,
     kind: 'exhibit',

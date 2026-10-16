@@ -39,7 +39,6 @@ import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
-import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -49,7 +48,9 @@ import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/e
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
+import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
@@ -77,15 +78,10 @@ const LIVE_IDLE_TICK_MS = 500;
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // First statement, by contract: scene cues fired here (fade / show / hide /
-  // focus) are in the store before this frame derives masks, demand or the pose,
+  // focus) are in the store before this frame derives demand or the pose,
   // and a frameTween a cue dispatches is seen by this frame's basis.
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
-  // The masks are a per-frame projection of settings + fade opacity, never a
-  // hand-maintained mirror; demand itself reads settings directly. Sampled at
-  // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
-  // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
-  const masks = deriveSourceMasks(state, nowMs);
   reevaluateDemand(state);
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
@@ -160,14 +156,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // The camera assembly + altitude line, shared with `pickFrameContext`:
-  // `nowMs`/`visibleSourceMask`/`poseBasis`/`upBasis`/`simDays` are the only
+  // `nowMs`/`poseBasis`/`upBasis`/`simDays` are the only
   // fields the two callers vary on purpose; everything else reads off `state`
   // identically — safe to call here because `state.cameraRuntime = next` above
   // already made `state`'s view of the runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
     worldPose,
     nowMs,
-    visibleSourceMask: masks.draw,
     poseBasis,
     upBasis,
     simDays,
@@ -307,6 +302,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       surfaceTiles.setLastCut(cut);
     }
   }
+  // A pull-back keeps the tile atlases (~324 MB) for a quick re-engage; past twice
+  // the body's texture load radius its globe map unloads too, and so do they.
+  const engagedTileBody = surfaceTiles?.engagedBodyId() ?? null;
+  if (engagedTileBody !== null) {
+    const body = sceneBodyStates(state, canvas).get(engagedTileBody);
+    if (
+      body !== undefined &&
+      pastTextureReleaseRadius(engagedTileBody, canvas.drawCamPos, body.positionMpc)
+    ) {
+      surfaceTiles!.release();
+    }
+  }
 
   // Outside the gate: `isAnimating()` is true while the manifest is in flight,
   // before the layer can engage — voting only on engaged frames would sleep
@@ -316,8 +323,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
   // short-circuits.
+  const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
   const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
+  const nearStartMs = cpuSpans.on ? performance.now() : 0;
   const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
@@ -340,15 +351,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
-  const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    surfaceTilesAnimating,
-    labelsAnimating,
-    probeDue: state.cubemapCaptures.probe.due,
-    // Read AFTER `renderFrame`: every planner row — core's and every Layer's
-    // — ran inside it, so this is this frame's whole OR-fold, not a stale
-    // pre-render snapshot.
-    layersAwake: snapshot.plans.awake,
-  });
+  const keepTicking = shouldKeepTicking(
+    state,
+    rootState,
+    nowMs,
+    {
+      surfaceTilesAnimating,
+      labelsAnimating,
+      probeDue: state.cubemapCaptures.probe.due,
+      // Read AFTER `renderFrame`: every planner row — core's and every Layer's
+      // — ran inside it, so this is this frame's whole OR-fold, not a stale
+      // pre-render snapshot.
+      layersAwake: snapshot.plans.awake,
+    },
+    deps.controlSchemes.skymap.drivers,
+  );
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();

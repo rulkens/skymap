@@ -131,6 +131,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     setting: 'galaxy-catalogs',
     figure: 'guide-density-corrected',
   },
+  regalade: {
+    description:
+      'An all-sky list of 71.5 million galaxies with a distance for each, merged from twelve catalogues; parsed, not yet drawn.',
+    about:
+      'REGALADE merges twelve galaxy catalogues into one all-sky list with a recommended distance for every galaxy. Skymap reads it today but does not build a catalogue from it yet: at 71.5 million rows it waits for the streamed octree that lets the app hold only the galaxies near the camera.',
+    shows: 'Nothing yet. The parser is in place; no switch exists until a catalogue is built from it.',
+  },
   hyperleda: {
     description:
       'A database of published galaxy measurements: tilt and size for GLADE’s galaxies, some nearby distances, and names.',
@@ -583,7 +590,11 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   dss: {
     description:
-      'The picture the app asks for when SDSS has none: a cutout of the Digitized Sky Survey, served by CDS.',
+      'The picture the app asks for when SDSS has none, and the pictures of star clusters and nebulae: cutouts of the Digitized Sky Survey, served by CDS.',
+  },
+  '2mass-images': {
+    description:
+      'The picture of the star cluster Trumpler 14: a cutout of the infrared 2MASS survey, served by CDS, where the Digitized Sky Survey saturates.',
   },
   ned: {
     description:

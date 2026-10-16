@@ -2,8 +2,9 @@
  * cameraDrivers — the camera-driver table and its resolver. Among the drivers
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
- * Priorities: clip 95 > orbitDrag 80 > tween 60 > followApproach 55 >
- * autoRotate 20 > followHold 10 > resting 0 (gaps are headroom). Body focus is
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 > (an exhibit row, lifted in by
+ * `composeControlSchemes`; the mission's is 58) > followApproach 55 > autoRotate 20 >
+ * followHold 10 > resting 0 (gaps are headroom). Body focus is
  * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
  * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
@@ -37,7 +38,6 @@ import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
@@ -161,7 +161,7 @@ function followPose(
     distanceTarget = memory.saturated
       ? committed.distance
       : framingPose(focus, ctx.projection.fovYRad, from).distance;
-  } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
+  } else if (!ctx.lastWinnerRidesWheel) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {
     distanceTarget = ctx.followDistanceTarget;
@@ -220,7 +220,7 @@ function framedClipArm(
   return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }
 
-/** The seven rows. Constant data: a driver sees the frame only through its `ctx`. */
+/** Core's seven rows. Constant data: a driver sees the frame only through its `ctx`. */
 export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'clip',
@@ -230,7 +230,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
     // to a clip whose commit-on-edge bakes its own final pose would be
     // discarded at pointerup (`replayInput` swallows the steps too).
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     isActive: (s) => s.camera.clip !== null,
     // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
     // tangents encode through — a fixed reference keeps `evaluateClip`'s
@@ -260,13 +260,14 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
     // both arms.
     pivotsOnFocusedBody: true,
-    isActive: (s) => s.camera.dragging,
+    isActive: (s, activity) => s.camera.dragging && !activity.dragClaimed,
     // The AUTHORED register, pre-projection (R12b-1): producing the displayed
     // pose here re-pins its tilted angles and walks the eye every held frame.
     pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
   },
   {
     id: 'followApproach',
+    ridesWheelTarget: true,
     // 55 keeps the two relationships that matter and nothing else: ABOVE
     // autoRotate (20), or the spin outranks a body switch and the camera never
     // approaches — it holds the old body's distance, which over Saturn is
@@ -277,7 +278,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     epoch: 'follow',
     // Bakes the last follow pose into `base` on focus loss, so lower drivers
     // resume from where the camera is.
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
     pivotsOnFocusedBody: true,
     // NOT arm-gated: the approach's job — ease from where the eye is to the
@@ -289,12 +290,13 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'followHold',
+    ridesWheelTarget: true,
     // The steady follow, back under autoRotate and the drag: once the approach
     // is saturated the row only re-asserts the body's own target, which the
     // pivot pin gives those drivers anyway.
     priority: 10,
     epoch: 'follow',
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     pivotsOnFocusedBody: true,
     // Arm-gated where the approach is not (spec §7): the ARM is the hold — a
     // state that co-rotates with the body keeps it centred structurally, and a
@@ -309,7 +311,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     deliversFraming: true,
     // Bakes the final pose on deactivation; it is already in the CURRENT
     // frame, so the commit never bakes a stale pinned-frame reading.
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     isActive: (s) => s.camera.tween !== null,
     // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
     // captured through; `tweenToClip` memoises by reference so
@@ -341,7 +343,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     id: 'autoRotate',
     priority: 20,
     epoch: 'autoRotate',
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     pivotsOnFocusedBody: true,
     // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
     // thing a body-fixed arm expresses.

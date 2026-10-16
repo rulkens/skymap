@@ -4,8 +4,10 @@
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
+import type { StarChunkHost } from './StarChunkHost';
 import type { StarDrawStream } from './StarDrawStream';
 import type { StarCutInputs } from './StarCutInputs';
 import type { StarCutDraw } from './StarCutDraw';
@@ -13,12 +15,23 @@ import type { StarCutDraw } from './StarCutDraw';
 export type StarCutGpu = {
   /** `@group(1)` of `vertex.wesl`'s pipelines. */
   readonly drawBgl: GPUBindGroupLayout;
-  /** Build a source's buffers; an empty catalog releases them. */
-  upload(source: SourceType, catalog: StarCatalog): void;
-  /** One compute pass: every source in `inputs` gets this frame's cut. */
+  /**
+   * Build a source's pool-sized buffers (index rows, then `slots` chunk slots);
+   * an empty octree releases them. Throws, creating nothing, past a pool cap.
+   */
+  upload(source: SourceType, octree: StarOctree, slots: number): void;
+  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
+  uploadChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
+  /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
+  evictChunk(source: SourceType, slot: number, chunk: StarChunk, host: StarChunkHost): void;
+  /**
+   * One compute pass: every source in `inputs` gets this frame's cut, or with `recut` false
+   * only its uniforms, so the last cut's lists draw about this frame's eye.
+   */
   encode(
     encoder: GPUCommandEncoder,
     inputs: StarCutInputs,
+    recut: boolean,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void;
   /**

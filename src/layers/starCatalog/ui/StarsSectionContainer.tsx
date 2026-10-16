@@ -2,9 +2,8 @@
  * StarsSectionContainer — store boundary for the star-catalogs settings section.
  *
  * Owns all Redux reach for the star-catalogs group: reads the cluster via
- * `selectStarCatalogs` (master gate + shared size + shared brightness + refine
- * threshold + glow overlap + the three exposure-ramp anchors + per-catalog
- * items) and wraps its dispatch calls in `useCallback`. The presentational
+ * `selectStarCatalogs` (master gate + shared size + shared brightness +
+ * per-catalog items) and wraps its dispatch calls in `useCallback`. The presentational
  * `StarsSection` imports nothing from `store/` or `state/`.
  *
  * The master toggle maps to `setStarCatalogEnabled` (a real gate on
@@ -14,12 +13,7 @@
  * map to `setStarCatalogVisible`, the Advanced star-size slider to
  * `setStarCatalogSize`, and the star-brightness slider to
  * `setStarCatalogBrightness` (the twins of the Galaxies point-size + brightness
- * dispatches). The two lattice knobs unique to the octree-cut renderer map to
- * `setStarCatalogRefineThreshold` (the "Detail" slider) and
- * `setStarCatalogGlowOverlap` (the "Glow overlap" slider). The three
- * exposure-ramp anchors map to `setStarCatalogExposureNearX` /
- * `setStarCatalogExposureMidX` / `setStarCatalogExposureFarX` (the
- * "Exposure (near/mid/far)" tuning sliders).
+ * dispatches).
  * `setStarCatalogLabelEnabled` is intentionally left unwired here: star labels
  * live in the separate Labels section, mirroring how the Galaxies section
  * exposes no per-catalog label toggle.
@@ -33,7 +27,7 @@
  * seeded catalog reports no count and simply renders without a chip — the same
  * contract a not-yet-loaded survey row keeps.
  *
- * Why both handlers use `[dispatch]` only: `dispatch` from `useAppDispatch()` is
+ * Why the handlers use `[dispatch]` only: `dispatch` from `useAppDispatch()` is
  * the invariant `store.dispatch`, so a `[dispatch]`-only dep array gives each
  * handler permanent stable identity and lets the child's `memo` bail on parent
  * re-renders.
@@ -48,12 +42,6 @@ import {
   setStarCatalogEnabled,
   setStarCatalogSize,
   setStarCatalogBrightness,
-  setStarCatalogRefineThreshold,
-  setStarCatalogGlowOverlap,
-  setStarCatalogExposureNearX,
-  setStarCatalogExposureMidX,
-  setStarCatalogExposureFarX,
-  setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
 } from '../state/starCatalogs/slice';
 import { STAR_CATALOG_IDS } from '../../../data/starCatalog/starCatalogIds';
@@ -64,18 +52,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 function StarsSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
 
-  const {
-    enabled,
-    sizePx,
-    brightness,
-    refineThreshold,
-    glowOverlap,
-    exposureNearX,
-    exposureMidX,
-    exposureFarX,
-    aggregateIntensityCap,
-    items,
-  } = useAppSelector(selectStarCatalogs);
+  const { enabled, sizePx, brightness, items } = useAppSelector(selectStarCatalogs);
 
   // Per-catalog loaded counts from the engine slice, keyed by numeric
   // `SourceType`. Re-key into the string `StarCatalogId` domain the section
@@ -112,36 +89,6 @@ function StarsSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  const onRefineThresholdChange = useCallback(
-    (next: number) => dispatch(setStarCatalogRefineThreshold(next)),
-    [dispatch],
-  );
-
-  const onGlowOverlapChange = useCallback(
-    (next: number) => dispatch(setStarCatalogGlowOverlap(next)),
-    [dispatch],
-  );
-
-  const onExposureNearXChange = useCallback(
-    (next: number) => dispatch(setStarCatalogExposureNearX(next)),
-    [dispatch],
-  );
-
-  const onExposureMidXChange = useCallback(
-    (next: number) => dispatch(setStarCatalogExposureMidX(next)),
-    [dispatch],
-  );
-
-  const onExposureFarXChange = useCallback(
-    (next: number) => dispatch(setStarCatalogExposureFarX(next)),
-    [dispatch],
-  );
-
-  const onAggregateIntensityCapChange = useCallback(
-    (next: number) => dispatch(setStarCatalogAggregateIntensityCap(next)),
-    [dispatch],
-  );
-
   return (
     <StarsSection
       enabled={enabled}
@@ -149,22 +96,10 @@ function StarsSectionContainer(): React.ReactElement {
       counts={counts}
       sizePx={sizePx}
       brightness={brightness}
-      refineThreshold={refineThreshold}
-      glowOverlap={glowOverlap}
-      exposureNearX={exposureNearX}
-      exposureMidX={exposureMidX}
-      exposureFarX={exposureFarX}
-      aggregateIntensityCap={aggregateIntensityCap}
       onToggleMaster={onToggleMaster}
       onToggleCatalog={onToggleCatalog}
       onSizeChange={onSizeChange}
       onBrightnessChange={onBrightnessChange}
-      onRefineThresholdChange={onRefineThresholdChange}
-      onGlowOverlapChange={onGlowOverlapChange}
-      onExposureNearXChange={onExposureNearXChange}
-      onExposureMidXChange={onExposureMidXChange}
-      onExposureFarXChange={onExposureFarXChange}
-      onAggregateIntensityCapChange={onAggregateIntensityCapChange}
     />
   );
 }

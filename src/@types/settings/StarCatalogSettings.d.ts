@@ -39,6 +39,11 @@ export type StarCatalogSettings = {
    */
   aggregateIntensityCap: number;
   /**
+   * Debug override of the octree chunk pool's size, in slots; null = the
+   * source's per-tier `budgets[tier].slots`.
+   */
+  chunkSlotsOverride: number | null;
+  /**
    * One row per source, each gating only its own stars: `famousStar` the curated
    * map, `sun` the descent's aim point, `sStar` the Galactic-Centre cluster.
    * `gaiaStars.labelEnabled` is inert. A catalog's "loaded" status is its asset

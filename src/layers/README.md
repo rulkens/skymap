@@ -18,13 +18,13 @@ function is a root file named for it; a member that is a collection is a folder.
 | `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                            |
 | `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                          |
 | `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                   |
-| `planners?`     | `frame.ts`                                     | Per-frame content planning; joins `CORE_PLANNERS`                                                                     |
+| `planners?`     | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                            |
 | `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
 | `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
 | `sagas?`        | `sagas/`                                       | One saga per file                                                                                                     |
 | `search?`       | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                    |
 | `sourceCounts?` | `load/`                                        | Per-source counts, an async iterable, on the same terms as `search?`                                                  |
-| `slabs?`        | `layer.ts`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)          |
+| `slabs?`        | `present/`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)          |
 | `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written             |
 | `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                    |
 | `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                           |
@@ -33,6 +33,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `selection?`    | `present/`                                     |                                                                                                                       |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
+| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import              |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -41,6 +42,20 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 - **`@types/`** — the Layer's **own** contract types, one per file, filename = the
   type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
   Layer stay under `src/@types/` instead.
+
+An exhibit's notes are sections, each `section(kind, data)`. A **section kind**
+(`ExhibitSectionKind`) carries its `Component`, and optionally a `hold` (the saga that
+replaces the exhibit's default hold), `shortcuts` (walked ahead of the global table
+while the exhibit runs, handed the section's data) and a `cameraDriver`
+(`ExhibitCameraDriver`: core lifts it into the driver table, turns it on only while an
+exhibit carrying the kind runs, hands `pose` that exhibit's data, and lets it own the
+drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reaches that
+read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
+exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
+
+**`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
+
+**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
 
 ## Rules
 
@@ -69,24 +84,10 @@ Three more folders hold the Runtime's private machinery — core never sees thes
   imports — and grep afterwards, since it misses `.wesl` `package::` specifiers and
   string-literal paths.
 
-## Unsettled
-
-Two boundaries are not yet adjudicated. Follow the reference implementation for now
-and expect both to be ruled on when the Layer structure is cleaned up:
-
-1. **`subsystems/` vs `render/`.** `galaxyCatalog` has both, and the split is not
-   obviously principled — `proceduralDiskSubsystem.ts` and
-   `proceduralDiskRenderer.ts` sit in different folders. Either "stateful per-frame
-   machinery" is a real category distinct from "GPU pipeline object", or one folder
-   should absorb the other.
-2. **Where declarations live.** `assets?` sits in `load/` while `fades?`,
-   `guides?` and `selection?` sit in `present/`, though all four are the same kind
-   of thing: a plain row declaring a contribution. One of the two placements is
-   wrong.
-
 ## Status
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
-`flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles` and
-`milkyWay` and `lightTime` are formed. The other two folders (`body`, `structure`) are settings-only
-stubs from prep step (c) and are filled in one Layer at a time.
+`flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
+`milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
+settings-only Layer: its `layer.ts` declares the body clusters, while its render
+and load code stay in core.

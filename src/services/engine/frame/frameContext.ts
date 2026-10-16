@@ -24,6 +24,7 @@ import { hostOf } from '../camera/rungs/hostOf';
 import { isBodyArm } from '../camera/rungs/isBodyArm';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { refoldTo } from '../camera/rungs/refoldTo';
+import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
@@ -44,7 +45,7 @@ export function deriveFrameContext(
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
-  const { cam, arm, altitudeMpc, nowMs, simDays, visibleSourceMask } = input;
+  const { cam, arm, altitudeMpc, nowMs, simDays } = input;
 
   // This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes one
   // deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call this
@@ -57,7 +58,12 @@ export function deriveFrameContext(
   // keeps that true once something sets a non-zero roll.
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
-  const { earth, planets, meshBodies } = state.data.bodies;
+  const { earth, planets } = state.data.bodies;
+  // The ONE presence filter: an absent craft is parked on or in Earth, so every
+  // consumer (slab rows, partition, glints, picks) reads this list, never the store's.
+  const meshBodies = state.data.bodies.meshBodies.filter((body) =>
+    spacecraftPresent(body.id, simDays),
+  );
   // A mesh body whose driver hangs off something with no row of its own gets
   // one here, off the STORE roster rather than the static table, so the two
   // stay the same list.
@@ -127,7 +133,6 @@ export function deriveFrameContext(
     nowMs,
     simDays,
     altitudeMpc,
-    visibleSourceMask,
     renderTargets: state.gpu.renderTargets,
     focus: ZERO_FOCUS,
     focusBlend: 0,

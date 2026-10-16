@@ -1,11 +1,8 @@
 /**
- * TopBarContainer — store boundary for the top-center pill row.
- *
- * Owns the shared `paletteOpen || splashVisible` gate (the whole row fades
- * together) and the three inline pill dispatches (open palette, go home,
- * reopen splash), and renders the row's fixed children including the two
- * sibling pill containers (`AutoRotateToggleContainer`, `TourDebugPillContainer`),
- * so App no longer needs any of this reach.
+ * TopBarContainer — store boundary for the top-centre pill row. Owns the shared
+ * `paletteOpen || splashVisible` gate (the row fades together), the three inline
+ * pill dispatches, and the sibling pill containers. On a phone, search, home and
+ * about live in the dock; a full-screen pill joins the right-aligned cluster.
  */
 
 import { memo, useCallback } from 'react';
@@ -13,11 +10,13 @@ import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import HomeButton from '../HomeButton/HomeButton';
 import AboutPill from '../Splash/AboutPill';
 import AutoRotateToggleContainer from './AutoRotateToggleContainer';
+import FullscreenToggleContainer from './FullscreenToggleContainer';
 import TourDebugPillContainer from './TourDebugPillContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectPaletteOpen, selectSplashVisible } from '../../state/ui/selectors';
 import { setPaletteOpen, reopenSplash } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import styles from './TopBarContainer.module.css';
 
@@ -35,6 +34,7 @@ function TopBarContainer(): React.ReactElement {
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const splashVisible = useAppSelector(selectSplashVisible);
   const hidden = paletteOpen || splashVisible;
+  const isMobile = useIsMobile();
 
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
   // "Home" flies to Earth — the viewer's literal starting point, not just our
@@ -45,10 +45,11 @@ function TopBarContainer(): React.ReactElement {
 
   return (
     <div className={styles.root}>
-      <SearchTrigger onClick={openPalette} hidden={hidden} />
-      <HomeButton onClick={goHomeCb} hidden={hidden} />
+      {!isMobile && <SearchTrigger onClick={openPalette} hidden={hidden} />}
+      {!isMobile && <HomeButton onClick={goHomeCb} hidden={hidden} />}
       <AutoRotateToggleContainer hidden={hidden} />
-      <AboutPill onClick={reopenSplashScreen} hidden={hidden} />
+      <FullscreenToggleContainer hidden={hidden} />
+      {!isMobile && <AboutPill onClick={reopenSplashScreen} hidden={hidden} />}
       {TOUR_DEBUG_GATE && <TourDebugPillContainer hidden={hidden} />}
     </div>
   );

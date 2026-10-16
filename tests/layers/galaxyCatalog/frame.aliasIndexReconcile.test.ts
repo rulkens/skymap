@@ -7,6 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
+import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { Source } from '../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
@@ -14,13 +15,13 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
-const SNAPSHOT = { visibleSourceMask: 0xffffffff, nowMs: 0 } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 const STATE = {
   settings: {
     bias: { mode: 0, absMagLimit: -19 },
-    galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1 },
+    galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1, items: makeGalaxyCatalogItems() },
   },
   selectionRows: { select: null },
   subsystems: { fades: { opacityOf: () => 1 } },
@@ -37,8 +38,6 @@ function makeRuntime(opts: {
     [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
   ]);
   const runtime = {
-    biasLastApplied: 0,
-    biasCorrection: { setMode: vi.fn() },
     hiResFamous: { committed: () => null },
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
@@ -115,8 +114,6 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     };
     const publish = vi.fn();
     const runtime = {
-      biasLastApplied: 0,
-      biasCorrection: { setMode: vi.fn() },
       hiResFamous: { committed: () => null },
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
