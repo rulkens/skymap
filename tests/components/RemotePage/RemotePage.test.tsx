@@ -44,6 +44,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+const menu = {
+  tours: [{ id: 'grandTour', label: 'The Long Way Out' }],
+  exhibits: [{ id: 'cosmicWeb', label: 'Cosmic Web' }],
+  clips: [{ id: 'flyout', label: 'Fly to Horizon' }],
+};
+const sendMenu = (): void => act(() => deliver(JSON.stringify({ kind: 'menu', menu })));
 const sendStatus = (): void => act(() => deliver(JSON.stringify({ kind: 'status', status })));
 const commands = (): unknown[] =>
   sent
@@ -58,6 +64,21 @@ describe('RemotePage', () => {
     expect(screen.getByText(/beat 3 of 9, paused/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
     expect(commands()).toContainEqual({ name: 'tourTogglePause', payload: null });
+  });
+
+  it('the menu lists the tours, exhibits and clips, and a button sends its id', () => {
+    render(<RemotePage />);
+    sendStatus();
+    expect(screen.queryByRole('button', { name: 'Cosmic Web' })).toBeNull();
+    sendMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Cosmic Web' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fly to Horizon' }));
+    expect(commands()).toContainEqual({
+      name: 'goTo',
+      payload: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
+    });
+    expect(commands()).toContainEqual({ name: 'clipStart', payload: { clipId: 'flyout' } });
+    expect(screen.getByRole('button', { name: 'The Long Way Out' })).toBeTruthy();
   });
 
   it('three seconds without a status shows dome not there', () => {

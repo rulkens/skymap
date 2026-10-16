@@ -21,7 +21,7 @@ const roomFromHash = (): string | null => location.hash.slice(1) || null;
 
 function RemotePage() {
   const [room, setRoom] = useState(roomFromHash);
-  const { status, domeThere, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
+  const { status, domeThere, menu, matches, sendCommand, sendDevice, search } = useRemoteLink(room);
 
   if (!room) {
     return (
@@ -55,8 +55,8 @@ function RemotePage() {
         </button>
       </div>
       <SearchSection matches={matches} onSearch={search} onCommand={sendCommand} />
-      <TourSection tour={status?.tour ?? null} onCommand={sendCommand} />
-      <ExhibitSection onCommand={sendCommand} />
+      <TourSection tours={menu?.tours ?? []} tour={status?.tour ?? null} onCommand={sendCommand} />
+      <ExhibitSection menu={menu} onCommand={sendCommand} />
       {status && <TimeSection time={status.time} onCommand={sendCommand} />}
       {status && <ToggleSection toggles={status.toggles} onCommand={sendCommand} />}
     </main>

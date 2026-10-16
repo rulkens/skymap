@@ -414,7 +414,7 @@ export function focusNameFrom(
   `touch-action: none`, `user-select: none`, `-webkit-touch-callout: none`.
 - Sections send `command` messages: search + home (`goTo`, `home`), tours (`goTo` tour; previous / pause / next while
   one runs), exhibits and clips (`goTo` exhibit, `clipStart`, `exitTakeover`), time (pause, rate, direction, date,
-  live), toggles (`toggleSet`). Lists come from `tourRegistry`, `APP_EXHIBITS` and `clipRegistry`.
+  live), toggles (`toggleSet`). Lists come from the dome's `menu` message.
 - Status drives what is shown (running tour, paused state, toggle states); three seconds without one shows "dome not
   there". Focus shows `focusNameFrom(...) ?? 'Focused'`.
 

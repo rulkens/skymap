@@ -1,6 +1,6 @@
 /**
  * useRemoteLink — the remote page's whole conversation with the dome as plain React state: the
- * link, a `hello` every second, the latest status, and "the dome is gone" after three silent
+ * link, a `hello` every second, the latest status and menu, and "the dome is gone" after three silent
  * seconds. The id is per page load, so a reload is a new remote to the dome.
  */
 
@@ -14,6 +14,7 @@ import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { DomeStatus } from '../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../@types/remote/RemoteCommand';
 import type { RemoteLink } from '../../@types/remote/RemoteLink';
+import type { RemoteMenu } from '../../@types/remote/RemoteMenu';
 import type { RemoteMessage } from '../../@types/remote/RemoteMessage';
 import type { RemoteSearchMatch } from '../../@types/remote/RemoteSearchMatch';
 import type { RemoteSession } from '../../@types/remote/RemoteSession';
@@ -24,6 +25,7 @@ const newRemoteId = (): string => crypto.randomUUID?.() ?? newLocalRoomCode();
 
 export function useRemoteLink(room: RoomCode | null): RemoteSession {
   const [status, setStatus] = useState<DomeStatus | null>(null);
+  const [menu, setMenu] = useState<RemoteMenu | null>(null);
   const [domeThere, setDomeThere] = useState(true);
   const [matches, setMatches] = useState<readonly RemoteSearchMatch[]>([]);
   const linkRef = useRef<RemoteLink | null>(null);
@@ -50,6 +52,8 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
         setStatus(message.status);
         setDomeThere(true);
         armSilence();
+      } else if (message.kind === 'menu') {
+        setMenu(message.menu);
       } else if (message.requestId === String(requestRef.current)) {
         setMatches(message.matches);
       }
@@ -84,5 +88,5 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     [send, from],
   );
 
-  return { status, domeThere, matches, sendCommand, sendDevice, search };
+  return { status, domeThere, menu, matches, sendCommand, sendDevice, search };
 }

@@ -10,6 +10,7 @@ import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/to
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { remoteReceiverSaga } from '../../../src/state/remote/remoteReceiverSaga';
+import { REMOTE_MENU } from '../../../src/compositions/remoteMenu';
 import { selectRemote } from '../../../src/state/remote/selectors';
 import { inputGestureEnded } from '../../../src/state/input/inputSlice';
 import { setRate, pause, resume } from '../../../src/state/time/timeSlice';
@@ -206,6 +207,12 @@ describe('remoteReceiverSaga', () => {
     const before = statuses().length;
     await say({ from: 'a', kind: 'hello' });
     expect(statuses().length).toBe(before + 1);
+  });
+
+  it('a hello is answered with the menu', async () => {
+    const { link, say } = await setup();
+    await say({ from: 'a', kind: 'hello' });
+    expect(link.sent).toContainEqual({ kind: 'menu', menu: REMOTE_MENU });
   });
 
   it('the first hello pairs and hides the UI, and a later one never hides it again', async () => {

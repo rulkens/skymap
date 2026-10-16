@@ -2,8 +2,8 @@
  * remoteReceiverSaga — the dome's end of the remote link (`?remote` only, forked
  * through `runSaga`). Each remote's device events drive their own
  * `inputSourceSaga` under `remote:<id>`, commands map to actions through the
- * registry, searches rank as the palette does, and a status goes out per
- * `hello` and on store change, throttled. It only dispatches; nothing here
+ * registry, searches rank as the palette does, and a status and the menu go out per
+ * `hello`, and a status on store change, throttled. It only dispatches; nothing here
  * reaches the engine. `layerRows` must be one array for the session: it keys
  * `selectToggleRows`'s single-slot memo.
  */
@@ -31,6 +31,7 @@ import {
 } from '../engine/selectors';
 import { parseRemoteCommand } from '../../compositions/parseRemoteCommand';
 import { runRemoteCommand } from '../../compositions/runRemoteCommand';
+import { REMOTE_MENU } from '../../compositions/remoteMenu';
 import { selectDomeStatus } from '../../compositions/selectDomeStatus';
 import { selectToggleRows } from '../../compositions/selectToggleRows';
 import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
@@ -120,6 +121,7 @@ export function* remoteReceiverSaga(
             yield* put(setUiHidden(true));
           }
           sendStatus(yield* select());
+          send({ kind: 'menu', menu: REMOTE_MENU });
           break;
         }
         case 'command': {

@@ -63,6 +63,15 @@ const isMatch = (raw: unknown): boolean =>
   typeof raw.kind === 'string' &&
   isAction(raw.action);
 
+const isMenuItem = (raw: unknown): boolean =>
+  isRecord(raw) && typeof raw.id === 'string' && typeof raw.label === 'string';
+
+const isMenu = (raw: unknown): boolean =>
+  isRecord(raw) &&
+  [raw.tours, raw.exhibits, raw.clips].every(
+    (list) => Array.isArray(list) && list.every(isMenuItem),
+  );
+
 export function parseDomeMessage(text: string): DomeMessage | null {
   let raw: unknown;
   try {
@@ -73,6 +82,9 @@ export function parseDomeMessage(text: string): DomeMessage | null {
   if (!isRecord(raw)) return null;
   if (raw.kind === 'status') {
     return isStatus(raw.status) ? (raw as DomeMessage) : null;
+  }
+  if (raw.kind === 'menu') {
+    return isMenu(raw.menu) ? (raw as DomeMessage) : null;
   }
   if (raw.kind === 'searchResults') {
     const { requestId, matches } = raw;

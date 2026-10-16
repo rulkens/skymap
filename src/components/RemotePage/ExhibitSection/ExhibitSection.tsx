@@ -1,25 +1,20 @@
 /** ExhibitSection — open an exhibit or play a clip, and leave either with Exit. */
 
-import { REMOTE_CLIP_LABELS } from '../../../data/remote/remoteClipLabels';
-import { REMOTE_EXHIBIT_LABELS } from '../../../data/remote/remoteExhibitLabels';
-import type { ClipId } from '../../../@types/animation/ClipId';
-import type { ExhibitId } from '../../../@types/exhibits/ExhibitId';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
+import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
 import controls from '../remoteControls.module.css';
 
-const EXHIBITS = Object.entries(REMOTE_EXHIBIT_LABELS) as [ExhibitId, string][];
-const CLIPS = (Object.entries(REMOTE_CLIP_LABELS) as [ClipId, string | null][]).flatMap(
-  ([id, label]) => (label ? [{ id, label }] : []),
-);
+export type ExhibitSectionProps = {
+  menu: RemoteMenu | null;
+  onCommand: (command: RemoteCommand) => void;
+};
 
-export type ExhibitSectionProps = { onCommand: (command: RemoteCommand) => void };
-
-function ExhibitSection({ onCommand }: ExhibitSectionProps) {
+function ExhibitSection({ menu, onCommand }: ExhibitSectionProps) {
   return (
     <section className={controls.section}>
       <h2 className={controls.heading}>Exhibits and clips</h2>
       <div className={controls.row}>
-        {EXHIBITS.map(([exhibitId, label]) => (
+        {menu?.exhibits.map(({ id: exhibitId, label }) => (
           <button
             key={exhibitId}
             type="button"
@@ -29,7 +24,7 @@ function ExhibitSection({ onCommand }: ExhibitSectionProps) {
             {label}
           </button>
         ))}
-        {CLIPS.map((clip) => (
+        {menu?.clips.map((clip) => (
           <button
             key={clip.id}
             type="button"

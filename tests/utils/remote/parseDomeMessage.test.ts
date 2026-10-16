@@ -29,6 +29,23 @@ describe('parseDomeMessage', () => {
     ).toBeNull();
   });
 
+  it('accepts a menu', () => {
+    const menu = {
+      kind: 'menu',
+      menu: {
+        tours: [{ id: 'grandTour', label: 'The Long Way Out' }],
+        exhibits: [],
+        clips: [{ id: 'flyout', label: 'Fly to Horizon' }],
+      },
+    };
+    expect(parseDomeMessage(text(menu))).toEqual(menu);
+  });
+
+  it('drops a menu with a bad item', () => {
+    const menu = { tours: [{ id: 'grandTour' }], exhibits: [], clips: [] };
+    expect(parseDomeMessage(text({ kind: 'menu', menu }))).toBeNull();
+  });
+
   it('accepts search results', () => {
     const results: DomeMessage = {
       kind: 'searchResults',
