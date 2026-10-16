@@ -54,27 +54,27 @@ const lists = objectSubLists(section, rows);
   }
 </div>
 
-<!-- Global under the root class, not scoped: a scope attribute on each of some 1,400 elements would add 35 KB to the page. Each selector is one step more specific than DocBody’s rule for the same element. -->
+<!-- Global under the root class, not scoped: a scope attribute on each of some 1,400 elements would add 35 KB to the page. Each selector is one step more specific than DocBody’s rule for the same element (the attribute is that step). -->
 <style is:global>
-  .doc-body div.objects .count {
+  div.objects[data-objects] .count {
     margin-bottom: 0.5rem;
     color: var(--site-text-dim);
   }
 
-  .doc-body div.objects h3 {
+  div.objects[data-objects] h3 {
     margin: 1.75rem 0 0.25rem;
     font: var(--weight-small) var(--text-small) / 1.5 var(--font-body);
     letter-spacing: 0.04em;
     color: var(--site-text-dim);
   }
 
-  .doc-body div.objects ul {
+  div.objects[data-objects] ul {
     margin-bottom: 0;
     padding-left: 0;
   }
 
   /* Name and other names, the id, the link: one line where the column has room, two on a phone. */
-  .doc-body div.objects li {
+  div.objects[data-objects] li {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto 4.75rem;
     align-items: center;
@@ -87,59 +87,59 @@ const lists = objectSubLists(section, rows);
   }
 
   /* The grid above would show a row that ObjectFinder has hidden. */
-  .doc-body div.objects li[hidden] {
+  div.objects[data-objects] li[hidden] {
     display: none;
   }
 
-  .doc-body div.objects ul > li::before {
+  div.objects[data-objects] ul > li::before {
     content: none;
   }
 
   /* The row a link or the docs search landed on. */
-  .doc-body div.objects li:target {
+  div.objects[data-objects] li:target {
     border-top-color: var(--color-accent);
     box-shadow: inset 0 -1px var(--color-accent);
   }
 
-  .doc-body div.objects b {
+  div.objects[data-objects] b {
     margin-right: 0.625rem;
     font-weight: 500;
     color: var(--color-fg);
   }
 
-  .doc-body div.objects .also {
+  div.objects[data-objects] .also {
     color: var(--site-text-dim);
   }
 
   /* A parent or a note after the other names: set apart by room, not by a mark. */
-  .doc-body div.objects .also + .also {
+  div.objects[data-objects] .also + .also {
     margin-left: 0.625rem;
   }
 
-  .doc-body div.objects code {
+  div.objects[data-objects] code {
     color: var(--site-text-muted);
     overflow-wrap: anywhere;
   }
 
   /* As tall as the link it stands in for, so every row of a list has one height. */
-  .doc-body div.objects .none {
+  div.objects[data-objects] .none {
     display: flex;
     align-items: center;
     min-height: var(--tap);
     color: var(--site-text-dim);
   }
 
-  .doc-body div.objects li > .ring {
+  div.objects[data-objects] li > .ring {
     justify-self: start;
   }
 
   @media (max-width: 699px) {
-    .doc-body div.objects li {
+    div.objects[data-objects] li {
       grid-template-columns: minmax(0, 1fr) 4.75rem;
       padding-top: 0.375rem;
     }
 
-    .doc-body div.objects .name {
+    div.objects[data-objects] .name {
       grid-column: 1 / -1;
     }
   }

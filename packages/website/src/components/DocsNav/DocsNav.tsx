@@ -11,14 +11,19 @@
 import type { MarkdownHeading } from 'astro';
 import { Fragment, useEffect, useRef } from 'react';
 
-import { DOCS_TREE } from '../../data/docsTree.ts';
+import type { DocsGroup } from '../../@types/DocsGroup';
 import { sitePath } from '../../utils/sitePath.ts';
 import DocsSearch from '../DocsSearch/DocsSearch.tsx';
 import Icon from '../Icon/Icon.tsx';
 import PageSections from '../PageSections/PageSections.tsx';
 import styles from './DocsNav.module.css';
 
-type DocsNavProps = { current: string; sections: readonly MarkdownHeading[] };
+// The tree comes in as a prop: data/docsTree.ts reads ATTRIBUTIONS.md from disk, so it cannot be in an island's bundle.
+type DocsNavProps = {
+  current: string;
+  sections: readonly MarkdownHeading[];
+  groups: readonly Pick<DocsGroup, 'name' | 'pages'>[];
+};
 
 // Before the first paint, so a phone never shows the list open and then folds it; without script it stays open.
 // Wide, the list scrolls by itself: the row of the page you are on is brought to its middle, and nothing else moves.
@@ -31,7 +36,7 @@ const BEFORE_PAINT = `{
   else if (here) nav.scrollTop = here.offsetTop - nav.clientHeight / 2;
 }`;
 
-function DocsNav({ current, sections }: DocsNavProps) {
+function DocsNav({ current, sections, groups }: DocsNavProps) {
   const menu = useRef<HTMLDetailsElement>(null);
   const tree = useRef<HTMLDivElement>(null);
 
@@ -71,12 +76,12 @@ function DocsNav({ current, sections }: DocsNavProps) {
   }, []);
 
   // A page that is one of many of a kind brings its own kind into the list, under its group; the others stay out.
-  const here = DOCS_TREE.flatMap((group) => group.pages).find((page) => page.path === current);
+  const here = groups.flatMap((group) => group.pages).find((page) => page.path === current);
   const family = here?.family;
   // A kind with one page (a family of small entries that share it) needs no name over it.
-  const kin = DOCS_TREE.flatMap((group) => group.pages).filter(
-    (page) => family && page.family === family,
-  );
+  const kin = groups
+    .flatMap((group) => group.pages)
+    .filter((page) => family && page.family === family);
 
   return (
     <nav className={styles.root} aria-label="Docs">
@@ -98,7 +103,7 @@ function DocsNav({ current, sections }: DocsNavProps) {
               </nav>
             </div>
           )}
-          {DOCS_TREE.map((group) => (
+          {groups.map((group) => (
             <Fragment key={group.name}>
               <p className={styles.group} id={`docs-nav-${group.name.toLowerCase()}`}>
                 {group.name}

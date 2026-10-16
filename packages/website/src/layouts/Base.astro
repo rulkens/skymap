@@ -7,9 +7,8 @@ import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
 // The site's own card (npm run site:shots); the app keeps its own at /og-image.jpg.
 import cardUrl from '../assets/og-card.jpg?url';
 import { siteShot } from '../data/siteShot';
-import Nav from '../components/Nav/Nav.tsx';
+import BaseLayout from './BaseLayout/BaseLayout.tsx';
 import NavMenu from '../components/Nav/NavMenu.tsx';
-import Footer from '../components/Footer/Footer.tsx';
 import LightLine from '../components/Footer/LightLine.tsx';
 import { fact } from '../data/fact';
 import DevFeedback from '../dev/feedback/DevFeedback.astro';
@@ -67,16 +66,11 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
     <slot name="head" />
   </head>
   <body>
-    <a class="skip-link" href={`#${skipTo}`}>Skip to content</a>
-    <Nav path={Astro.url.pathname} hero={heroNav}>
+    <BaseLayout path={Astro.url.pathname} skipTo={skipTo} hero={heroNav}>
       <NavMenu slot="menu" path={Astro.url.pathname} client:load />
-    </Nav>
-    <main id="main">
-      <slot />
-    </main>
-    <Footer path={Astro.url.pathname}>
       <LightLine slot="light" text={fact('speed-of-light').short!} client:visible />
-    </Footer>
+      <slot />
+    </BaseLayout>
     {import.meta.env.DEV && <DevFeedback />}
     {import.meta.env.DEV && <DevReview />}
   </body>

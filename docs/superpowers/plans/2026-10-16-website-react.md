@@ -79,11 +79,12 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 ### Task 1.1: Layouts
 
-**Files:** `src/layouts/Base.astro` (becomes the document shell), `src/layouts/BaseLayout/` (new: skip link, `Nav`, `<main id="main">`, `Footer`), `src/layouts/Docs.astro` → `src/layouts/DocsLayout/` (React, takes `headings: MarkdownHeading[]`, `group`, `path`), every page's import of the layouts.
+**Files:** `src/layouts/Base.astro` (becomes the document shell), `src/layouts/BaseLayout/` (new: skip link, `Nav`, `<main id="main">`, `Footer`), `src/layouts/Docs.astro` → `src/layouts/DocsLayout/` (React, takes `headings`, `path`, `description`, `factIds`; DocBody comes with it), every page's import of the layouts.
 
-- [ ] Base.astro keeps: `<html>`, `<head>` (meta, `head` slot, JSON-LD via `set:html`, site.css import), the DEV overlay mount points, and renders `<BaseLayout>` with `path={Astro.url.pathname}` and `site={Astro.site}`.
-- [ ] `data-pagefind-body` and `data-pagefind-meta` stay on the docs article (the search index reads them).
-- [ ] `initSectionMark` becomes part of the `PageSections` island (Task 1.3).
+- [x] Base.astro keeps: `<html>`, `<head>` (meta, `head` slot, JSON-LD via `set:html`, site.css import), the DEV overlay mount points, and renders `<BaseLayout>` with `path={Astro.url.pathname}` (no `site`: nothing inside needs it) and the nav menu and the footer's light line as slotted islands. `heroNav` is now a `hero` prop down to Nav, not a class on `<body>`.
+- [x] `data-pagefind-body` and `data-pagefind-meta` stay on the docs article (the search index reads them).
+- [x] `initSectionMark` becomes part of the `PageSections` island (Task 1.3).
+- Deviation: `layouts/Docs.astro` stays, as a thin document shell like Base (Base plus the three docs islands, handed to `DocsLayout` as `nav`, `toc` and `sheet` slots), because five pages use it and only an `.astro` file can make an island. It is a second non-page `.astro` carve-out beside `Base.astro`.
 
 ### Task 1.2: Nav, Footer, DocsNav, DocsSearch, DocsMap
 

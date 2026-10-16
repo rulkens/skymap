@@ -66,7 +66,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
       ).matches;
       var touchTablet = matchMedia("(pointer: coarse)").matches && innerWidth < 1100;
       root.setAttribute("data-live", "");
-      // The top bar's ground stays clear over the stage (components/Nav.astro); initFlight brings it back.
+      // The top bar's ground stays clear over the stage (components/Nav/Nav.tsx); initFlight brings it back.
       document.documentElement.style.setProperty("--nav-ground", "0");
       if (wide && !slow && !touchTablet) root.setAttribute("data-film", "");
     })();
@@ -148,7 +148,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 <style>
   .flight {
     position: relative;
-    /* A layer of its own, under the nav's ground (components/Nav.astro), which is clear while the stage is pinned. */
+    /* A layer of its own, under the nav's ground (components/Nav/Nav.tsx), which is clear while the stage is pinned. */
     z-index: 2;
     background: #000;
   }

@@ -113,7 +113,7 @@ const searchIndex = {
       if (!index) throw new Error(`pagefind: ${errors.join('; ')}`);
       await index.addDirectory({ path: out });
       const { outputPath } = await index.writeFiles({ outputPath: join(out, 'pagefind') });
-      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch.astro).
+      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch/DocsSearch.tsx).
       for (const name of readdirSync(outputPath))
         if (/-ui\.|-highlight\./.test(name)) rmSync(join(outputPath, name));
       logger.info(`search index written to ${outputPath}`);

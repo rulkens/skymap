@@ -70,7 +70,7 @@
   --open-rise: clamp(2rem, 20svh - 7.75rem, 4rem);
 }
 
-/* The 900px breakpoint is also in components/Nav.astro (CSS variables cannot be used in media queries). */
+/* The 900px breakpoint is also in components/Nav/Nav.module.css (CSS variables cannot be used in media queries). */
 @media (max-width: 900px) {
   :root {
     /* 18px body is under the 300 floor, so the phone reads in 400. */
