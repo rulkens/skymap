@@ -1,0 +1,26 @@
+.frame {
+  position: relative;
+  margin: 0 var(--space-8);
+}
+
+/* touch-action: none keeps the browser from panning or zooming the page and cancelling the drag. */
+.pad {
+  height: 40vh;
+  min-height: 12rem;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.label {
+  position: absolute;
+  inset: auto 0 var(--space-6) 0;
+  text-align: center;
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-lg);
+  pointer-events: none;
+}

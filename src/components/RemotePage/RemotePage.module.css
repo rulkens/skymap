@@ -1,0 +1,41 @@
+/* The page scrolls; the app's global.css (overflow hidden) is not loaded here. */
+:global(html),
+:global(body) {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family-mono);
+}
+
+.root {
+  box-sizing: border-box;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  font-size: var(--font-size-input);
+}
+
+.link {
+  color: var(--color-fg-muted);
+}
+
+.linkLost {
+  color: var(--color-accent);
+}
+
+.focus {
+  color: var(--color-fg);
+}
+
+.homeRow {
+  display: flex;
+  padding: var(--space-8);
+}
