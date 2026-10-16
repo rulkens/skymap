@@ -5,7 +5,6 @@
  * under a heading whose anchor is its entry id. Nothing on these pages is
  * written here but the sentences that join the record's parts.
  */
-import CopyListener from '../../../components/CopyListener/CopyListener.tsx';
 import DataEntryRecord from '../../../components/DataEntryRecord/DataEntryRecord.tsx';
 import DocLink from '../../../components/DocLink/DocLink.tsx';
 import RecordText from '../../../components/RecordText/RecordText.tsx';
@@ -80,5 +79,4 @@ const recorded = plainText(first!.record.heading);
       </>
     )
   }
-  <CopyListener client:idle />
 </Docs>

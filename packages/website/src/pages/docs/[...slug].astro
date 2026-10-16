@@ -9,7 +9,6 @@ import { getCollection, render } from 'astro:content';
 
 import Caveat from '../../components/Caveat/Caveat.tsx';
 import CodeBlock from '../../components/CodeBlock/CodeBlock.tsx';
-import CopyListener from '../../components/CopyListener/CopyListener.tsx';
 import DocFigure from '../../components/DocFigure/DocFigure.tsx';
 import DocLink from '../../components/DocLink/DocLink.tsx';
 import DocTable from '../../components/DocTable/DocTable.tsx';
@@ -63,5 +62,4 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       Repo: RepoLink,
     }}
   />
-  <CopyListener client:idle />
 </Docs>

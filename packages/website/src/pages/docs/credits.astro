@@ -5,7 +5,6 @@
  * and `Use` term on it is the record's own, in the families of the list of
  * all sources. Only the opening and the two closing sections are written here.
  */
-import CopyListener from '../../components/CopyListener/CopyListener.tsx';
 import CreditEntry from '../../components/CreditEntry/CreditEntry.tsx';
 import DocFigure from '../../components/DocFigure/DocFigure.tsx';
 import DocLink from '../../components/DocLink/DocLink.tsx';
@@ -100,5 +99,4 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
       >open an issue in the repository</a
     >. We correct the licence record first, and this page follows it at the next build.
   </p>
-  <CopyListener client:idle />
 </Docs>

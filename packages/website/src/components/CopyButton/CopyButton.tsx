@@ -1,8 +1,8 @@
 /*
  * CopyButton — the one control that copies a text: the sheets icon a browser
  * shows at the end of its address field. It is markup only: the text rides on
- * the button (`data-copy`) and CopyListener, once on the page, copies it and
- * changes the control to a tick in place, so nothing on the page moves. A
+ * the button (`data-copy`) and copyButtons.client.ts, once on the page, copies
+ * it and changes the control to a tick in place, so nothing on the page moves. A
  * button may stand deep inside a component that is rendered at build time and
  * has no island of its own, which is why it does not hold its own state.
  * `label` says what is copied ("Copy the address") and is the control's name.
