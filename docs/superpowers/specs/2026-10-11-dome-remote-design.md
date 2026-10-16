@@ -66,7 +66,7 @@ export function selectToggleRows(
 
 The other seven touchpoints are plain additions. LAN binding needs no config change: Vite's own `--host` flag does it.
 
-Re-check 2026-10-16, after #913: one rename, riding the feature PR. `createCanvasDeviceChannel(canvas)` reads
+Re-check 2026-10-16, after #913: one rename, riding the feature PR as its first commit (ruled 2026-10-16). `createCanvasDeviceChannel(canvas)` reads
 nothing canvas-specific, so it becomes `createDeviceChannel(element: HTMLElement)` (via `npm run move-files`) and the
 remote page runs it on its trackpad.
 
@@ -118,7 +118,7 @@ export type DomeMessage =
   | { kind: 'searchResults'; requestId: string; matches: readonly RemoteSearchMatch[] };
 
 export type DomeStatus = {
-  focus: { id: string; name: string } | null;
+  focus: { id: string } | null; // the durable focus id; the remote names it if it can (see below)
   tour: { id: TourId; beatIndex: number; beatCount: number; paused: boolean } | null;
   time: { simDays: number; rateIndex: number; direction: 1 | -1; paused: boolean; mode: 'live' | 'manual' };
   toggles: readonly { id: string; label: string; enabled: boolean }[];
@@ -134,6 +134,9 @@ export type RemoteSearchMatch = { name: string; kind: string; action: PaletteAct
   encodes a focus id. The dome ranks with `rankPaletteMatches` over the same four selectors the palette container
   reads, and maps each `ScoredRow` to `actionForRow` plus `paletteRowLabel(row): { name; kind }`, a new pure
   function that `ROW_VIEW` also reads for its primary text, so the two lists never name a row differently.
+- **Focus carries no name** (ruled 2026-10-16). Names live in each kind's info card today, and a name table would
+  widen the Layer contract. The remote names a focus from what it already holds (its latest search results, the
+  tour, exhibit and clip lists) and shows "Focused" otherwise.
 - **No version field.** Remote and dome ship from one build, and unknown kinds already drop.
 
 ### Commands
