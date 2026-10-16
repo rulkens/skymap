@@ -8,8 +8,9 @@
 
 import type { BodyId } from '../../data/body/BodyId';
 import type { BodyState } from '../../scene/BodyState';
-import type { CameraDriver } from './CameraDriver';
 import type { CameraState } from '../../camera/CameraState';
+import type { ControlScheme } from './ControlScheme';
+import type { ControlSchemeId } from './ControlSchemeId';
 import type { Epoch } from './Epoch';
 import type { InputStep } from '../../camera/InputStep';
 import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
@@ -29,5 +30,7 @@ export type StepInputs = {
    *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
   readonly clipEpoch: Epoch<NonNullable<CameraState['clip']>>;
-  readonly drivers: readonly CameraDriver[];
+  /** Every scheme, not just the active one: an edge commit looks the departing
+   *  row up in the table LAST frame's winner came from. */
+  readonly schemes: Readonly<Record<ControlSchemeId, ControlScheme>>;
 };

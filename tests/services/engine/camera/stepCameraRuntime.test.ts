@@ -17,7 +17,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 
 import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCameraRuntime';
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
@@ -63,6 +63,19 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
+import type { InputStep } from '../../../../src/@types/camera/InputStep';
+import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
+import type { UnknownAction } from '@reduxjs/toolkit';
+import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
+import {
+  setControlScheme,
+  setFrictionOn,
+  toggleControlScheme,
+} from '../../../../src/state/settings/core/cameraControlsSlice';
+import { stepNavigator } from '../../../../src/utils/camera/stepNavigator';
+import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
@@ -75,6 +88,8 @@ const EARTH_ROW: SelectionRow = {
   driver: bodyDriverGeometry('earth'),
 };
 
+const CANVAS_PX = 100;
+
 /** The frame's inputs as `runFrame` would build them, off the harness's live store, draining its pending input. */
 function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs> = {}): StepInputs {
   const rootState = h.store.getState();
@@ -85,7 +100,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     nowMs,
     simDays,
     rootState,
-    canvasPx: [100, 100],
+    canvasPx: [CANVAS_PX, CANVAS_PX],
     aspect: 1,
     steps: pendingToInputSteps(pending, [100, 100]),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
@@ -93,7 +108,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     // production's own `?? 0` miss (F3a, spec §8.3).
     terrainHeightAt: () => 0,
     clipEpoch: h.state.cameraRuntime.epochs.clip,
-    drivers: CAMERA_DRIVERS,
+    schemes: composeControlSchemes([]),
     ...over,
   };
 }
@@ -414,5 +429,292 @@ describe('the wheel under a mission', () => {
     for (let i = 0; i < 250; i++) h.wheel(-100);
     // The surfaceless floor is about 309 km; Voyager's hull standoff is metres.
     expect(readFollowMemory(h.state).distanceTarget! / SCALE_UNITS.KM_TO_MPC).toBeLessThan(1);
+  });
+});
+
+describe('stepCameraRuntime — the openspace scheme', () => {
+  const GUARD = 2000;
+  const press: readonly InputStep[] = [
+    { kind: 'gestureStart' },
+    { kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] },
+  ];
+  const hold: readonly InputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
+  const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
+
+  // The hand-fed frames' wall clock, picking up where the harness's own frames stopped.
+  const clocks = new WeakMap<CameraSimHarness, number>();
+  const nextNow = (h: CameraSimHarness): number => (clocks.get(h) ?? h.nowMs()) + 16;
+
+  /** One frame with hand-fed steps, installed and dispatched as `runFrame` does. */
+  function stepWith(
+    h: CameraSimHarness,
+    steps: readonly InputStep[],
+    schemes?: StepInputs['schemes'],
+  ) {
+    const nowMs = nextNow(h);
+    clocks.set(h, nowMs);
+    const out = stepCameraRuntime(
+      h.state.cameraRuntime,
+      inputsFor(h, nowMs, schemes ? { steps, schemes } : { steps }),
+    );
+    h.state.cameraRuntime = out.next;
+    for (const action of out.actions) h.store.dispatch(action);
+    return out;
+  }
+  const commitsIn = (out: { readonly actions: readonly UnknownAction[] }): number =>
+    out.actions.filter((a) => a.type === commitCameraPose.type).length;
+  const atRest = (v: NavVelocity): boolean =>
+    v.orbit[0] === 0 && v.orbit[1] === 0 && v.look[0] === 0 && v.zoom === 0 && v.roll === 0;
+  const yawOf = (h: CameraSimHarness): number => {
+    const pose = h.state.cameraRuntime.register.pose;
+    if (!isWorldArm(pose)) throw new Error('expected the world arm');
+    return pose.pose.yaw;
+  };
+
+  /** An openspace harness with no focus (no follow row competes), held for 5 frames, not yet released. */
+  function holding(): CameraSimHarness {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.store.dispatch(setControlScheme('openspace'));
+    h.frame(2);
+    // `wireInput` dispatches it at the press, outside the loop.
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
+    stepWith(h, press);
+    for (let i = 0; i < 4; i += 1) stepWith(h, hold);
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceHeld');
+    return h;
+  }
+
+  /** Mid-coast after the hold, with the release frame's own output. */
+  function coasting(): { h: CameraSimHarness; releaseOut: ReturnType<typeof stepWith> } {
+    const h = holding();
+    const releaseOut = stepWith(h, release);
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceCoast');
+    return { h, releaseOut };
+  }
+
+  /** Steps idle frames until the coast ends, summing their commits. */
+  function coastToRest(h: CameraSimHarness): number {
+    let commits = 0;
+    let i = 0;
+    while (h.state.cameraRuntime.register.winner === 'openSpaceCoast' && i < GUARD) {
+      commits += commitsIn(stepWith(h, []));
+      i += 1;
+    }
+    expect(h.state.cameraRuntime.register.winner).toBe('resting');
+    return commits;
+  }
+
+  it('held → coast commits the register once, at the release frame', () => {
+    const { releaseOut } = coasting();
+    expect(commitsIn(releaseOut)).toBe(1);
+  });
+
+  it('coast → rest commits once more, then the camera is quiet', () => {
+    const { h } = coasting();
+    expect(coastToRest(h)).toBe(1);
+    expect(commitsIn(stepWith(h, []))).toBe(0);
+  });
+
+  it('a press, move and release in one frame commits once over the whole motion', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.store.dispatch(setControlScheme('openspace'));
+    h.frame(2);
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
+    const out = stepWith(h, [...press, ...release]);
+    expect(out.next.register.winner).toBe('openSpaceCoast');
+    expect(commitsIn(out) + coastToRest(h)).toBe(1);
+  });
+
+  it('a wheel notch mid-coast zooms the live pose, not the stale base', () => {
+    const { h } = coasting();
+    for (let i = 0; i < 15; i += 1) stepWith(h, []);
+    const live = h.state.cameraRuntime.register.pose;
+    const stale = h.store.getState().camera.base;
+    if (!isWorldArm(live) || !isWorldArm(stale)) throw new Error('expected the world arm');
+    expect(Math.abs(live.pose.yaw - stale.pose.yaw)).toBeGreaterThan(1e-3);
+    stepWith(h, [{ kind: 'zoom', factor: 1.2, duringGesture: false, cursorPx: null }]);
+    const after = h.state.cameraRuntime.register.pose;
+    if (!isWorldArm(after)) throw new Error('expected the world arm');
+    // The coast keeps turning by a frame's worth; a snap back lands on the base's yaw.
+    expect(Math.abs(after.pose.yaw - live.pose.yaw)).toBeLessThan(
+      Math.abs(stale.pose.yaw - live.pose.yaw) / 2,
+    );
+    expect(after.pose.distance).toBeGreaterThan(live.pose.distance);
+  });
+
+  it('a tween preempting a coast commits once and zeroes the navigator', () => {
+    const { h } = coasting();
+    stepWith(h, []);
+    h.store.dispatch(
+      startCameraTween({
+        from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
+        to: { target: [1, 2, 3], yaw: 2, pitch: 0.2, distance: 10 },
+        durationMs: 1000,
+        easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+
+    const edge = stepWith(h, []);
+
+    expect(edge.next.register.winner).toBe('tween');
+    expect(commitsIn(edge)).toBe(1);
+    expect(atRest(edge.next.navigator.velocity)).toBe(true);
+  });
+
+  it('a scheme toggle mid-coast commits once and zeroes the navigator', () => {
+    const { h } = coasting();
+    stepWith(h, []);
+    h.store.dispatch(toggleControlScheme());
+
+    const edge = stepWith(h, []);
+
+    expect(edge.next.scheme).toBe('skymap');
+    expect(edge.next.register.winner).toBe('resting');
+    expect(commitsIn(edge)).toBe(1);
+    expect(atRest(edge.next.navigator.velocity)).toBe(true);
+  });
+
+  it('a coasting navigator requests a render, an at-rest one does not', () => {
+    const { h } = coasting();
+    expect(stepWith(h, []).requestRender).toBe(true);
+    coastToRest(h);
+    expect(stepWith(h, []).requestRender).toBe(false);
+  });
+
+  it('skymap scheme: a navDrag step is inert', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.frame(2);
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
+    const before = h.state.cameraRuntime.register.pose;
+    stepWith(h, press);
+    for (let i = 0; i < 4; i += 1) {
+      const out = stepWith(h, hold);
+      expect(out.next.register.winner).toBe('orbitDrag');
+      expect(atRest(out.next.navigator.velocity)).toBe(true);
+    }
+    expect(h.state.cameraRuntime.register.pose).toEqual(before);
+  });
+
+  it('a coast crossing an arm boundary keeps its velocity', () => {
+    // Zoom friction off, so the coast flies in at a constant rate until the
+    // fold engages Earth's arm mid-coast; the approach is saturated first.
+    const h = makeCameraSimHarness();
+    h.store.dispatch(setControlScheme('openspace'));
+    h.store.dispatch(setFrictionOn({ group: 'zoom', on: false }));
+    h.frame(60);
+    h.state.cameraRuntime = {
+      ...h.state.cameraRuntime,
+      navigator: { ...NAV_AT_REST, velocity: { ...NAV_AT_REST.velocity, zoom: -3 } },
+    };
+    stepWith(h, []);
+    let i = 0;
+    while (h.state.cameraRuntime.register.pose.frame === 'absolute' && i < GUARD) {
+      const prev = h.state.cameraRuntime;
+      const expected = stepNavigator(
+        prev.navigator,
+        [],
+        false,
+        nextNow(h),
+        h.store.getState().settings.cameraControls,
+        prev.outputs.projection.fovYRad / CANVAS_PX,
+      ).state.velocity;
+      const out = stepWith(h, []);
+      expect(out.next.register.winner).toBe('openSpaceCoast');
+      expect(out.next.navigator.velocity).toEqual(expected);
+      i += 1;
+    }
+    expect(h.state.cameraRuntime.register.pose.frame).toEqual({ body: 'earth' });
+    expect(h.state.cameraRuntime.navigator.velocity.zoom).toBe(-3);
+  });
+
+  const worldOf = (pose: StepInputs['rootState']['camera']['base']) => {
+    if (!isWorldArm(pose)) throw new Error('expected the world arm');
+    return pose.pose;
+  };
+
+  it('a skymap drag toggled to openspace mid-drag keeps turning, and its release keeps the pose', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.frame(2);
+    const start = yawOf(h);
+    h.press('orbit', [50, 50]);
+    h.moveTo([60, 50]);
+    h.frame();
+    const dragged = yawOf(h);
+    h.store.dispatch(toggleControlScheme());
+    h.moveTo([70, 50]);
+    h.frame();
+
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceHeld');
+    const further = yawOf(h);
+    expect(Math.abs(further - start)).toBeGreaterThan(Math.abs(dragged - start) * 1.5);
+    h.release();
+    h.frame(2);
+    expect(yawOf(h)).toBeCloseTo(further, 9);
+    expect(worldOf(h.store.getState().camera.base).yaw).toBeCloseTo(further, 9);
+  });
+
+  it('an openspace pinch with no drag before it zooms, and its release commits once', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.store.dispatch(setControlScheme('openspace'));
+    h.frame(2);
+    const start = worldOf(h.state.cameraRuntime.register.pose).distance;
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+    stepWith(h, [
+      { kind: 'gestureStart' },
+      { kind: 'zoom', factor: 1.5, duringGesture: true, cursorPx: null },
+    ]);
+    const pinched = worldOf(h.state.cameraRuntime.register.pose).distance;
+
+    // The world arm's distances are Mpc, ~1e-15 here, so compare ratios.
+    expect(pinched / start).not.toBeCloseTo(1, 6);
+    const commits = commitsIn(stepWith(h, release)) + commitsIn(stepWith(h, []));
+    expect(commits).toBe(1);
+    expect(worldOf(h.store.getState().camera.base).distance / pinched).toBeCloseTo(1, 9);
+  });
+
+  it('a motionless press brings a frictionless coast to rest, committing once at the grab', () => {
+    const { h } = coasting();
+    h.store.dispatch(setFrictionOn({ group: 'rotational', on: false }));
+    stepWith(h, []);
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+
+    expect(commitsIn(stepWith(h, [{ kind: 'gestureStart' }]))).toBe(1);
+    let i = 0;
+    while (!atRest(h.state.cameraRuntime.navigator.velocity) && i < GUARD) {
+      expect(commitsIn(stepWith(h, []))).toBe(0);
+      i += 1;
+    }
+    expect(atRest(h.state.cameraRuntime.navigator.velocity)).toBe(true);
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceHeld');
+  });
+
+  it('under a claiming exhibit row a held nav drag turns the register at the same rate', () => {
+    const exhibitRow: CameraDriver = {
+      id: 'mission',
+      priority: 58,
+      ridesExhibit: true,
+      isActive: () => true,
+      pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
+    };
+    const schemes = composeControlSchemes([]);
+    const claimed = {
+      ...schemes,
+      openspace: { drivers: [...schemes.openspace.drivers, exhibitRow] },
+    };
+    const turn = (over?: StepInputs['schemes']): number => {
+      const h = makeCameraSimHarness({ focusBody: null });
+      h.store.dispatch(setControlScheme('openspace'));
+      h.frame(2);
+      h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
+      const start = yawOf(h);
+      stepWith(h, press, over);
+      for (let i = 0; i < 6; i += 1) stepWith(h, hold, over);
+      return yawOf(h) - start;
+    };
+
+    const free = turn();
+    expect(Math.abs(free)).toBeGreaterThan(1e-3);
+    expect(turn(claimed)).toBeCloseTo(free, 9);
   });
 });

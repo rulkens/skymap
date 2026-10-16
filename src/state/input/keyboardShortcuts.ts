@@ -39,6 +39,7 @@ import { selectTimeState } from '../time/selectors';
 import { pause, resume, setRate } from '../time/timeSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import type { RootState } from '../../store/types';
+import { toggleControlScheme } from '../settings/core/cameraControlsSlice';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
 
 const stepSpeed = (s: RootState, step: -1 | 1) =>
@@ -70,6 +71,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
         : pause({ nowMs: performance.now() }),
   },
   { keys: 'shift+n', run: () => goLiveNowAction() },
+  { keys: 'shift+c', run: () => toggleControlScheme() },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
   // activate a focused button and the arrow keys must stay free to scroll,

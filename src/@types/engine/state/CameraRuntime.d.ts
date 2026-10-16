@@ -6,6 +6,8 @@
  */
 
 import type { CameraEpochs } from '../camera/CameraEpochs';
+import type { ControlSchemeId } from '../camera/ControlSchemeId';
+import type { NavigatorState } from '../../camera/NavigatorState';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
@@ -31,6 +33,12 @@ export type CameraRuntime = {
   /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
   readonly gesture: RungMemory;
   readonly tilt: TiltMemory;
+  /** Stepped before the pick, so it lives here and not in a row's `own`; at rest on
+   * every frame neither navigator row (nor an exhibit's drag) authored. */
+  readonly navigator: NavigatorState;
+  /** The scheme last frame's winner was picked from: a toggled-away row exists
+   * only in its own table, which is where its edge commit must look it up. */
+  readonly scheme: ControlSchemeId;
   /** Each row's private memory, as its `pose` last returned it; core never reads or drops it. */
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
   /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */

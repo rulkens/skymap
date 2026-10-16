@@ -8,7 +8,7 @@
  */
 
 import type { EventChannel } from 'redux-saga';
-import { call, put, race, take } from 'typed-redux-saga';
+import { call, put, race, select, take } from 'typed-redux-saga';
 
 import {
   inputGestureEnded,
@@ -22,10 +22,13 @@ import {
 } from './inputSlice';
 import { focusSelected } from '../selection/focusSelected';
 import { CONTROL_BINDINGS } from '../../data/input/controlBindings';
+import { TAP_SELECTING_INTENTS } from '../../data/input/tapSelectingIntents';
+import { selectCameraControls } from '../settings/selectors';
 import { bindPress } from '../../utils/input/bindPress';
 import { initialRecognizerState } from '../../utils/input/initialRecognizerState';
 import { recognize } from '../../utils/input/recognize';
 import { nextAnimationFrame } from '../../utils/browser/nextAnimationFrame';
+import type { BindingTable } from '../../@types/input/BindingTable';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { HeldIntent } from '../../@types/input/HeldIntent';
 import type { Motion } from '../../@types/input/Motion';
@@ -33,7 +36,9 @@ import type { SourceId } from '../../@types/input/SourceId';
 import type { UnitPoint } from '../../@types/input/UnitPoint';
 
 export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceEvent>) {
-  const bindings = CONTROL_BINDINGS.skymap;
+  // Latched at each press: a `shift+c` mid-gesture must not change the running gesture's intent,
+  // nor the table its tap is judged by. The next press reads the new scheme.
+  let bindings: BindingTable = CONTROL_BINDINGS.skymap;
   let recognizer = initialRecognizerState();
   let held: HeldIntent | null = null;
   let motion: Motion[] = [];
@@ -80,6 +85,7 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
       for (const g of step.gestures) {
         switch (g.kind) {
           case 'heldStart':
+            bindings = CONTROL_BINDINGS[(yield* select(selectCameraControls)).scheme];
             held = bindPress(bindings, g.press);
             yield* flush();
             yield* put(inputGestureStarted({ source, intent: held }));
@@ -115,8 +121,8 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             break;
           case 'tap':
           case 'doubleTap':
-            // A pan-bound press (right / middle mouse) neither selects nor focuses.
-            if (bindPress(bindings, g.press) !== 'orbit') break;
+            // Only a press bound to the selecting drag picks or focuses.
+            if (!TAP_SELECTING_INTENTS.has(bindPress(bindings, g.press))) break;
             yield* flush();
             yield* put(g.kind === 'tap' ? inputTapped({ source, at: g.at }) : focusSelected());
             break;
