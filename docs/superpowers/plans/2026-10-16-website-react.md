@@ -47,10 +47,10 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Files:** `packages/website/package.json`, `packages/website/astro.config.mjs`, `packages/website/tsconfig.json`, root `package-lock.json`
 
-- [ ] Add `@astrojs/react` (version matching Astro 7.3), `react`, `react-dom`, `@types/react`, `@types/react-dom` to the website workspace at the versions the app uses (root `package.json:189-190`, React 19.2.5).
-- [ ] Register `react()` before `mdx()` in `integrations`; set `vite.css.modules.generateScopedName` to `${basename(dirname(file))}-${name}` (cite `~/Development/web/rulkens.com/astro.config.ts:8-22` for the shape and its comment).
-- [ ] `tsconfig.json`: `jsx: "react-jsx"`, `jsxImportSource: "react"`.
-- [ ] Prove it with the smallest real component: `Icon` → `src/components/Icon/Icon.tsx` (no CSS), all imports updated, build identical.
+- [x] Add `@astrojs/react` (version matching Astro 7.3), `react`, `react-dom`, `@types/react`, `@types/react-dom` to the website workspace at the versions the app uses (root `package.json:189-190`, React 19.2.5). Landed `@astrojs/react` 7.0.1: 7.1.0 is inside the repo's three-day npm release cooldown.
+- [x] Register `react()` before `mdx()` in `integrations`; set `vite.css.modules.generateScopedName` to `${basename(dirname(file))}-${name}` (cite `~/Development/web/rulkens.com/astro.config.ts:8-22` for the shape and its comment).
+- [x] `tsconfig.json`: `jsx: "react-jsx"`, `jsxImportSource: "react"`.
+- [x] Prove it with the smallest real component: `Icon` → `src/components/Icon/Icon.tsx` (no CSS), all imports updated, build identical.
 - No new test: the build and the compare gate cover it.
 
 ### Task 0.2: Dev source attributes on React elements

@@ -18,10 +18,11 @@
  * reaches the pages the same way it reaches the app.
  */
 import mdx from '@astrojs/mdx';
+import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { createIndex } from 'pagefind';
 import { readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
@@ -117,6 +118,12 @@ const searchIndex = {
   },
 };
 
+// CSS-module class names are `{folder}-{class}` with no content hash. Every component sits in a folder of
+// its own (components/Nav/Nav.module.css), so the folder is already a unique prefix and the compiled CSS
+// stays readable; the stylesheet file name still carries the hash that busts caches. Same rule as
+// ~/Development/web/rulkens.com/astro.config.ts.
+const generateScopedName = (name, file) => `${basename(dirname(file))}-${name}`;
+
 export default defineConfig({
   site,
   base: BASE,
@@ -127,6 +134,9 @@ export default defineConfig({
   server: { port: DEV_PORTS.website },
   // One accent on the page: a code block is set in the mono face and not coloured by token.
   markdown: { syntaxHighlight: false },
-  integrations: [mdx(), devRootStatics, crawlFiles, searchIndex],
-  vite: { envDir: resolve(import.meta.dirname, '../..') },
+  integrations: [react(), mdx(), devRootStatics, crawlFiles, searchIndex],
+  vite: {
+    envDir: resolve(import.meta.dirname, '../..'),
+    css: { modules: { generateScopedName } },
+  },
 });

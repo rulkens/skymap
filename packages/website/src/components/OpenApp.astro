@@ -7,7 +7,7 @@
  */
 import type { HTMLAttributes } from 'astro/types';
 
-import Icon from './Icon.astro';
+import Icon from './Icon/Icon.tsx';
 import { OPEN_APP_LABEL, appLink } from '../data/appLink';
 
 type Props = Omit<HTMLAttributes<'a'>, 'href'> & { size?: 'small' | 'default' };

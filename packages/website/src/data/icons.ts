@@ -2,7 +2,7 @@ import type { IconName } from '../@types/IconName';
 
 /**
  * One path per icon, drawn for this site on a 24 by 24 grid for a 1.5 stroke
- * with round caps and no fill (components/Icon.astro). Each is shown at 20px,
+ * with round caps and no fill (components/Icon/Icon.tsx). Each is shown at 20px,
  * so separate strokes keep about 3 units between their centre lines.
  */
 const VIEW =

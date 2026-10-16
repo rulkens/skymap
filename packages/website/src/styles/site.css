@@ -443,7 +443,7 @@ html:has(dialog[open]) {
 
 /*
  * A navigation link carries a drawing of its destination where the marker
- * would be (components/Icon.astro). The ring is still the selection: it is
+ * would be (components/Icon/Icon.tsx). The ring is still the selection: it is
  * drawn around the drawing when the link is pointed at, focused or the page
  * you are on. Padding and border are taken back by the margin, so the ring
  * costs no room and the label does not move.
