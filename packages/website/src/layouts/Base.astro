@@ -68,9 +68,12 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
   <body>
     <BaseLayout path={Astro.url.pathname} skipTo={skipTo} hero={heroNav}>
       <NavMenu slot="menu" path={Astro.url.pathname} />
-      <LightLine slot="light" text={fact('speed-of-light').short!} client:visible />
+      <LightLine slot="light" text={fact('speed-of-light').short!} />
       <slot />
     </BaseLayout>
+    <script>
+      import '../components/Footer/lightLine.client.ts';
+    </script>
     {import.meta.env.DEV && <DevFeedback />}
     {import.meta.env.DEV && <DevReview />}
   </body>

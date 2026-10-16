@@ -5,7 +5,7 @@
  * of the observable universe, of which only the top rises into the page, so
  * each page ends at the edge of the map. The picture carries its label like
  * any other on the site. The page's last sentence, which counts the light's
- * distance, is the one interactive part, passed in as `light` (LightLine, an island).
+ * distance, is passed in as `light` (LightLine, made live by its own small script).
  */
 import type { ReactNode } from 'react';
 
