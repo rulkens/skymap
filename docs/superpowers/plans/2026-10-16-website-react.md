@@ -109,22 +109,22 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Files:** `pages/docs/[...slug].astro:49-63` (map imports), folders for DocLink, CodeBlock, DocTable, DocFigure, FigureFrame, FactText, Example, View, Links, Keys, Note, Caveat, SourceLink, RepoLink, Flow, Formula, Spans; `src/utils/tableCells.ts` (replace or delete).
 
-- [ ] `CodeBlock` and `DocTable` read their children as React elements (`Children.toArray`, element props) instead of `await Astro.slots.render()` + HTML parsing (`CodeBlock.astro:21`, `DocTable.astro:24`). The output HTML must match today's: test `DocTable renders the same table as before` compares the built HTML of two docs pages with tables against the baseline build's HTML (strip class names).
+- [x] Deviation: Astro hands a Markdown block to a React component as one element holding its rendered HTML (`utils/slotHtml.ts`), not as elements, so `DocTable` still reads its cells with `tableCells` and `CodeBlock` strips its text from that HTML; the built-HTML comparison is the controller's. `CodeBlock` and `DocTable` read their children as React elements (`Children.toArray`, element props) instead of `await Astro.slots.render()` + HTML parsing (`CodeBlock.astro:21`, `DocTable.astro:24`). The output HTML must match today's: test `DocTable renders the same table as before` compares the built HTML of two docs pages with tables against the baseline build's HTML (strip class names).
 - [ ] DocBody's 25 `:global` prose rules become `.root & h2 { … }` descendant rules, keeping the `:not([data-embed] *)` guard.
-- [ ] `url-parameters.mdx:28` `export const Codes` keeps working (it is JSX inside MDX; MDX now renders it with React).
+- [x] `url-parameters.mdx:28` `export const Codes` keeps working (it is JSX inside MDX; MDX now renders it with React).
 
 ### Task 2.2: Components imported by MDX pages
 
 **Files:** OpenApp (done in 1.3), RedshiftSpace, ObjectList, ObjectFinder, WorkbenchFigure, Citation, CiteCaption, CiteRefs; delete `initObjectFinder.ts`.
 
-- [ ] ObjectFinder is an island; ObjectList stays static and the finder filters rows through the DOM hooks it uses today (`[data-object]`, `[data-objects]`, `[data-object-sub]`), or ObjectFinder owns the list (implementer's call, smallest diff, report it). ObjectList's `<style is:global>` (`ObjectList.astro:58`) becomes its module.
-- [ ] WorkbenchFigure keeps its `import.meta.glob` (`WorkbenchFigure.astro:21`) — it works in a `.tsx` under Vite.
+- [x] ObjectFinder is an island (`client:idle`, since its box is `display: contents` and would never be visible; the page hands it the section counts); ObjectList stays static and the finder filters rows through the DOM hooks it uses today (`[data-object]`, `[data-objects]`, `[data-object-sub]`), or ObjectFinder owns the list (implementer's call, smallest diff, report it). ObjectList's `<style is:global>` (`ObjectList.astro:58`) becomes its module.
+- [x] WorkbenchFigure keeps its `import.meta.glob` (`WorkbenchFigure.astro:21`) — it works in a `.tsx` under Vite.
 
 ### Task 2.3: Data, credits and cite parts
 
 **Files:** RefLine, CreditEntry, Credits, DataEntryRecord, Recorded, RecordText, Row, UseLegend, UseTerms folders.
 
-- [ ] `RecordText`'s three `set:html` (`:34,41,46`) → `dangerouslySetInnerHTML`.
+- [x] `RecordText`'s three `set:html` (`:34,41,46`) → `dangerouslySetInnerHTML`.
 
 **Wave 2 done:** gate green on all docs, data and credits pages.
 
