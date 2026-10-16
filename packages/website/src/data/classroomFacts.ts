@@ -2,7 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-06';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 
 /**
  * What the Classroom page says the app does, spread into FACTS. Each row was

@@ -25,7 +25,7 @@ export const FOOTER_GROUPS: NavGroup[] = [
     items: [
       { label: 'Science', path: '/science/', icon: 'science' },
       { label: 'Credits', path: '/docs/credits/', icon: 'credits' },
-      { label: 'Cite skymap', path: '/docs/cite/', icon: 'cite' },
+      { label: 'Cite Skymap', path: '/docs/cite/', icon: 'cite' },
     ],
   },
   {

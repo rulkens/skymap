@@ -19,7 +19,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The European Space Agency’s star catalogue: position, brightness and colour of the 16.8 million stars brighter than magnitude 14.',
     about:
-      'Nearly every star in skymap is a row of Gaia’s third data release. We read the stars brighter than magnitude 14 in Gaia’s own G band, join a distance estimate to each, and add two smaller catalogues for the stars that this cut or Gaia’s detectors miss: the nearby faint ones and the very bright ones.',
+      'Nearly every star in Skymap is a row of Gaia’s third data release. We read the stars brighter than magnitude 14 in Gaia’s own G band, join a distance estimate to each, and add two smaller catalogues for the stars that this cut or Gaia’s detectors miss: the nearby faint ones and the very bright ones.',
     facts: ['sci-star-observables', 'sci-star-distance', 'sim-star-coverage', 'sim-star-epoch'],
     shows: '“Gaia Stars” switch under Star catalogs.',
     scene: 'stars',
@@ -60,7 +60,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   'seed-famous-stars': {
     title: 'Named stars, typed by hand',
     description:
-      'The stars skymap knows by name, with the figures and the paragraph on each one’s card, typed by hand.',
+      'The stars Skymap knows by name, with the figures and the paragraph on each one’s card, typed by hand.',
     shows: '“Famous Stars” and “Sun” switches under Star catalogs.',
     scene: 'stars',
     setting: 'star-catalogs',
@@ -175,7 +175,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   'seed-famous-galaxies': {
     title: 'Named galaxies, typed by hand',
     description:
-      'The 81 galaxies skymap knows by name, with the figures and the paragraph on each one’s card.',
+      'The 81 galaxies Skymap knows by name, with the figures and the paragraph on each one’s card.',
     shows: '“Famous” switch under Galaxy catalogs.',
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
@@ -385,7 +385,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   eox: {
     description:
-      'Cloud-free Sentinel-2 imagery of Earth, in the regions where skymap goes closer than Blue Marble reaches.',
+      'Cloud-free Sentinel-2 imagery of Earth, in the regions where Skymap goes closer than Blue Marble reaches.',
     title: 'EOxCloudless (Sentinel-2)',
     about:
       'Closer to the ground than Blue Marble reaches, in regions we chose, Earth is EOxCloudless: a cloud-free mosaic of Sentinel-2 satellite imagery. We re-tile it at levels 8 to 13 and match its colour to Blue Marble, separately for land and water, so the join between the two holds.',
@@ -395,7 +395,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   geodanmark: {
     description:
-      'Aerial photography of Søndermarken, a park in Frederiksberg, at 10 centimetres per pixel: the sharpest ground in skymap.',
+      'Aerial photography of Søndermarken, a park in Frederiksberg, at 10 centimetres per pixel: the sharpest ground in Skymap.',
     shows: 'The ground of Søndermarken, a park in Frederiksberg, Copenhagen, at tile levels 14 to 19: the sharpest imagery in the app.',
     scene: 'earth-and-its-surface',
     view: { to: 'focus=body-soendermarken&t=2026-06-21T11:00:00Z', label: 'Open Søndermarken' },

@@ -181,17 +181,17 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'sondermarken-flyout',
     about: 'app',
-    text: 'The “Søndermarken to the Edge” clip opens over Søndermarken, a park in Copenhagen, about 46 metres above the sphere of 6,371 kilometres radius that skymap uses for Earth’s surface, and pulls back in one continuous move to the edge of the observable universe.',
+    text: 'The “Søndermarken to the Edge” clip opens over Søndermarken, a park in Copenhagen, about 46 metres above the sphere of 6,371 kilometres radius that Skymap uses for Earth’s surface, and pulls back in one continuous move to the edge of the observable universe.',
     source: `${REPO_BLOB}/src/data/animation/clips/sondermarkenFlyout.ts`,
-    sourceLabel: 'the clip, in the skymap repository',
+    sourceLabel: 'the clip, in the Skymap repository',
     checked: CHECKED,
   },
   {
     id: 'geodanmark-orthophoto',
     about: 'app',
-    text: 'The aerial photography of Søndermarken in skymap is a GeoDanmark orthophoto at 10 centimetres per pixel, taken in spring 2025 and published under CC BY 4.0.',
+    text: 'The aerial photography of Søndermarken in Skymap is a GeoDanmark orthophoto at 10 centimetres per pixel, taken in spring 2025 and published under CC BY 4.0.',
     source: `${REPO_BLOB}/data/raw/geodanmark/README.md`,
-    sourceLabel: 'the harvest record, in the skymap repository',
+    sourceLabel: 'the harvest record, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -238,7 +238,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The camera distance shown beside the flight is computed from the path the film was recorded on: from 19,140 kilometres from Earth’s centre to 29,500 megaparsecs in 70 seconds, eased at both ends. Earth’s radius of 6,371 kilometres is subtracted, and far out it is a distance in the map, not a light-travel time.',
     source: `${REPO_BLOB}/packages/website/src/data/flightPath.ts`,
-    sourceLabel: 'the flight’s camera path, in the skymap repository',
+    sourceLabel: 'the flight’s camera path, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -251,9 +251,9 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'lesson-link',
     about: 'app',
-    text: 'An address written by skymap names the object the camera is on (focus) and, once you have set a date or changed the clock’s speed, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
+    text: 'An address written by Skymap names the object the camera is on (focus) and, once you have set a date or changed the clock’s speed, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
-    sourceLabel: 'the address parameters, in the skymap repository',
+    sourceLabel: 'the address parameters, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -262,23 +262,23 @@ export const FACTS: readonly Fact[] = [
     text: 'An address can also carry the exact camera position (pose). The app reads it when the link opens and then takes it out of the address, and it never writes one by itself, so a link you copy from the address bar opens on the app’s standard view of the object.',
     short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose): the app reads it when the link opens, then removes it from the address, and never writes one itself.',
     source: `${REPO_BLOB}/src/state/url/watchHashWriteSaga.ts`,
-    sourceLabel: 'how the app rewrites the address, in the skymap repository',
+    sourceLabel: 'how the app rewrites the address, in the Skymap repository',
     checked: CHECKED,
   },
   {
     id: 'no-account',
     about: 'app',
-    text: 'skymap has no accounts. The one thing it keeps in your browser is a note that you have seen the welcome screen.',
+    text: 'Skymap has no accounts. The one thing it keeps in your browser is a note that you have seen the welcome screen.',
     source: `${REPO_BLOB}/src/state/persistedValues.ts`,
-    sourceLabel: 'what skymap stores in the browser, in the skymap repository',
+    sourceLabel: 'what Skymap stores in the browser, in the Skymap repository',
     checked: CHECKED,
   },
   {
     id: 'webgpu-required',
     about: 'app',
-    text: 'skymap draws with WebGPU. A browser without it is shown a short page that says so and links to a table of browsers that have it; none of the map’s data is loaded.',
+    text: 'Skymap draws with WebGPU. A browser without it is shown a short page that says so and links to a table of browsers that have it; none of the map’s data is loaded.',
     source: `${REPO_BLOB}/src/main.tsx`,
-    sourceLabel: 'the WebGPU check, in the skymap repository',
+    sourceLabel: 'the WebGPU check, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -294,7 +294,7 @@ export const FACTS: readonly Fact[] = [
     text: 'The app’s own advice to a browser that cannot run it is a recent version of Chrome or Edge on a desktop computer.',
     short: 'Where it does not run, the app itself advises a recent Chrome or Edge on a desktop computer.',
     source: `${REPO_BLOB}/src/unsupportedPage.ts`,
-    sourceLabel: 'the page shown without WebGPU, in the skymap repository',
+    sourceLabel: 'the page shown without WebGPU, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -302,7 +302,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sizes, which holds fewer stars and galaxies. A screen 768 pixels wide or wider starts with the medium one.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
-    sourceLabel: 'how the data size is chosen, in the skymap repository',
+    sourceLabel: 'how the data size is chosen, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -315,9 +315,9 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'app-start-errors',
     about: 'app',
-    text: 'When the app cannot start, it shows one of three messages over a Reload button: that WebGPU failed to initialise on this device, that the galaxy data failed to load, or that skymap was updated and the page must be reloaded to fetch matching data.',
+    text: 'When the app cannot start, it shows one of three messages over a Reload button: that WebGPU failed to initialise on this device, that the galaxy data failed to load, or that Skymap was updated and the page must be reloaded to fetch matching data.',
     source: `${REPO_BLOB}/src/components/Splash/Splash.constants.ts`,
-    sourceLabel: 'the app’s start-up messages, in the skymap repository',
+    sourceLabel: 'the app’s start-up messages, in the Skymap repository',
     checked: '2026-10-07',
   },
   {
@@ -325,7 +325,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'While the app’s data loads, the two buttons on its welcome screen cannot be pressed. If loading takes longer than 8 seconds, a “Continue anyway” link appears.',
     source: `${REPO_BLOB}/src/hooks/useSplash.ts`,
-    sourceLabel: 'the welcome screen’s waiting rule, in the skymap repository',
+    sourceLabel: 'the welcome screen’s waiting rule, in the Skymap repository',
     checked: '2026-10-07',
   },
   {
@@ -333,7 +333,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The data size can be changed with the control in the title strip of the app’s Settings panel.',
     source: `${REPO_BLOB}/src/components/SettingsPanel/TierChip.tsx`,
-    sourceLabel: 'the data size control, in the skymap repository',
+    sourceLabel: 'the data size control, in the Skymap repository',
     checked: '2026-10-07',
   },
   {
@@ -341,16 +341,16 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The app’s interface, its tour captions and its exhibit notes are written in English only.',
     source: `${REPO_BLOB}/src/components/Splash/Splash.constants.ts`,
-    sourceLabel: 'the app’s welcome text, in the skymap repository',
+    sourceLabel: 'the app’s welcome text, in the Skymap repository',
     checked: CHECKED,
   },
   {
     id: 'exhibits',
     about: 'app',
-    text: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a prepared view with its own notes and sources, and each opens from its own address.',
-    short: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
+    text: 'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a prepared view with its own notes and sources, and each opens from its own address.',
+    short: 'Skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
     source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
-    sourceLabel: 'the exhibits, in the skymap repository',
+    sourceLabel: 'the exhibits, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -358,7 +358,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The / key opens the app’s search, as Ctrl + K and Cmd + K do.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
-    sourceLabel: 'the keyboard shortcuts, in the skymap repository',
+    sourceLabel: 'the keyboard shortcuts, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -366,7 +366,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'A double-click on an object in the scene puts the camera on it. So does a double-tap on a touch screen.',
     source: `${REPO_BLOB}/src/services/engine/phases/wireInput.ts`,
-    sourceLabel: 'the pointer handling, in the skymap repository',
+    sourceLabel: 'the pointer handling, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -375,7 +375,7 @@ export const FACTS: readonly Fact[] = [
     text: 'The date field on the app’s clock is read in UTC, not in the computer’s local time.',
     short: 'The date field on the app’s clock is read in UTC, the time at Greenwich without summer time, not in the computer’s local time.',
     source: `${REPO_BLOB}/src/components/TimeBar/DateEntryPopover/DateEntryPopover.tsx`,
-    sourceLabel: 'the date field, in the skymap repository',
+    sourceLabel: 'the date field, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -383,7 +383,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'Setting a date leaves the clock paused on that instant.',
     source: `${REPO_BLOB}/src/components/containers/TimeBarContainer.tsx`,
-    sourceLabel: 'the clock’s controls, in the skymap repository',
+    sourceLabel: 'the clock’s controls, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -391,7 +391,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'With ?dome in its address the app starts in dome mode and draws a fisheye disc, the round picture a dome projector takes.',
     source: `${REPO_BLOB}/src/services/engine/engine.ts`,
-    sourceLabel: 'where the app reads the dome flag, in the skymap repository',
+    sourceLabel: 'where the app reads the dome flag, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -399,7 +399,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'In dome mode the app draws five views and joins them into one fisheye disc. Labels are not drawn and objects cannot be selected by clicking.',
     source: `${REPO_BLOB}/src/data/rendering/viewRigs.ts`,
-    sourceLabel: 'the dome view, in the skymap repository',
+    sourceLabel: 'the dome view, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -407,7 +407,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The top of the dome sits 60 degrees above the direction the camera looks. The app has no setting for the angle.',
     source: `${REPO_BLOB}/src/data/rendering/domeParams.ts`,
-    sourceLabel: 'the dome constants, in the skymap repository',
+    sourceLabel: 'the dome constants, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -415,7 +415,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The recorder plays a tour or a camera move frame by frame and encodes it as H.264 in an MP4 file. A flat film is 3,840 by 2,160 pixels at 60 frames per second unless another size is asked for, with the tour’s captions in the picture. The fulldome preset writes a fisheye disc with equal angles per pixel (equidistant), 4,096 by 4,096 pixels, at 30 frames per second, or 60.',
     source: `${REPO_BLOB}/tools/record/README.md`,
-    sourceLabel: 'the recorder’s manual, in the skymap repository',
+    sourceLabel: 'the recorder’s manual, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -423,7 +423,7 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'The recorder writes pictures only, so a film from it is silent.',
     source: `${REPO_BLOB}/tools/utils/record/buildFfmpegArgs.ts`,
-    sourceLabel: 'the recorder’s encoder settings, in the skymap repository',
+    sourceLabel: 'the recorder’s encoder settings, in the Skymap repository',
     checked: CHECKED,
   },
   {
@@ -431,14 +431,14 @@ export const FACTS: readonly Fact[] = [
     about: 'app',
     text: 'A kiosk mode with an attract loop and a reset after idle time is on the list of planned work.',
     source: `${REPO_BLOB}/docs/BACKLOG.md`,
-    sourceLabel: 'the backlog, in the skymap repository',
+    sourceLabel: 'the backlog, in the Skymap repository',
     checked: CHECKED,
   },
   {
     id: 'imagery-licences',
-    text: 'The cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0, also a non-commercial licence, and is used in skymap with EOX’s written permission. Galaxy pictures fetched from the Digitized Sky Survey are copyrighted, and commercial use needs the holders’ written permission. Paul Schenk’s maps of five moons of Uranus state no licence. These catalogues state no licence at all: 2MRS, GLADE, Milliquas, HyperLEDA, the Cosmicflows-4 distances, Hipparcos, the cluster and supercluster catalogues, and the orbits of the stars around Sagittarius A*. Most of them reach us through CDS, which says its data are free to use in a scientific context and that commercial use follows rules that depend on where the data come from.',
+    text: 'The cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0, also a non-commercial licence, and is used in Skymap with EOX’s written permission. Galaxy pictures fetched from the Digitized Sky Survey are copyrighted, and commercial use needs the holders’ written permission. Paul Schenk’s maps of five moons of Uranus state no licence. These catalogues state no licence at all: 2MRS, GLADE, Milliquas, HyperLEDA, the Cosmicflows-4 distances, Hipparcos, the cluster and supercluster catalogues, and the orbits of the stars around Sagittarius A*. Most of them reach us through CDS, which says its data are free to use in a scientific context and that commercial use follows rules that depend on where the data come from.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
-    sourceLabel: 'the attributions file, in the skymap repository',
+    sourceLabel: 'the attributions file, in the Skymap repository',
     checked: '2026-10-07',
   },
   {
@@ -447,7 +447,7 @@ export const FACTS: readonly Fact[] = [
     text: '“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back.',
     short: '“The Long Way Out” is a tour in 14 captioned steps, out to the edge of the observable universe and back.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
-    sourceLabel: 'the tour, in the skymap repository',
+    sourceLabel: 'the tour, in the Skymap repository',
     checked: CHECKED,
   },
   ...SCIENCE_FACTS,

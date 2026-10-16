@@ -5,7 +5,7 @@ import { parseCff } from '../utils/parseCff';
 const file = parseCff(cff);
 
 /**
- * How to cite skymap, read from CITATION.cff at the repository root when the
+ * How to cite Skymap, read from CITATION.cff at the repository root when the
  * site is built, so a release changes the file and nothing here. The file's
  * DOI is the concept DOI, which follows the newest release. Its `identifiers`
  * entry is the DOI of one release; it is used only while that release is the

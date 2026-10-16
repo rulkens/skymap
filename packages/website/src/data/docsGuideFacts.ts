@@ -2,7 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-07';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 
 /**
  * What the Guide pages of the docs say the app does, spread into FACTS. Each
@@ -420,7 +420,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'conjunction-in-app',
     about: 'app',
-    text: 'For 21 December 2020 at 18:00 UTC skymap puts Jupiter and Saturn 0.10 degrees apart as seen from the centre of Earth, and more than 2 degrees apart three weeks before and after.',
+    text: 'For 21 December 2020 at 18:00 UTC Skymap puts Jupiter and Saturn 0.10 degrees apart as seen from the centre of Earth, and more than 2 degrees apart three weeks before and after.',
     source: `${REPO_BLOB}/src/services/engine/frame/deriveBodyStates.ts`,
     sourceLabel: `where each body is at an instant, ${IN_REPO}`,
     checked: CHECKED,
@@ -823,7 +823,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-galaxy-picture',
     about: 'app',
-    text: 'For a named galaxy the picture on the card is a photograph kept with skymap. For any other galaxy it is a cutout of that patch of sky from a survey: the Sloan survey’s own for a galaxy from its catalogue, the Digitized Sky Survey for the rest. If nothing comes back, the card says “no image”. A click on the picture opens the same patch of sky in SkyServer’s Navigate tool or in Aladin Lite, in a new tab.',
+    text: 'For a named galaxy the picture on the card is a photograph kept with Skymap. For any other galaxy it is a cutout of that patch of sky from a survey: the Sloan survey’s own for a galaxy from its catalogue, the Digitized Sky Survey for the rest. If nothing comes back, the card says “no image”. A click on the picture opens the same patch of sky in SkyServer’s Navigate tool or in Aladin Lite, in a new tab.',
     source: `${REPO_BLOB}/src/services/engine/helpers/buildGalaxyInfo.ts`,
     sourceLabel: `how the app fills a galaxy’s card, ${IN_REPO}`,
     checked: CHECKED,
@@ -831,7 +831,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-own-pictures',
     about: 'app',
-    text: 'The pictures on the cards of planets, moons, spacecraft, named stars and the Milky Way are small pictures of the app’s own scene, the same ones the search shows, and come from skymap’s own address.',
+    text: 'The pictures on the cards of planets, moons, spacecraft, named stars and the Milky Way are small pictures of the app’s own scene, the same ones the search shows, and come from Skymap’s own address.',
     source: `${REPO_BLOB}/src/utils/palette/cardShotUrl.ts`,
     sourceLabel: `where a card’s picture is kept, ${IN_REPO}`,
     checked: CHECKED,

@@ -223,7 +223,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     // The 404 page enlarges it 1.45 times, so a wide window needs the whole shot.
     widths: [2560, 1600, 1120, 960],
-    title: 'The Boötes Void in skymap',
+    title: 'The Boötes Void in Skymap',
     drawn: 'The sphere marking it is drawn; the scarcity of galaxies inside it is measured.',
     alt: 'A thin blue ring on a dark, nearly empty field.',
   },

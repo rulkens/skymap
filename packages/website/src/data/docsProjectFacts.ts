@@ -3,7 +3,7 @@ import pkg from '../../../../package.json';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-07';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 const BACKLOG = `${REPO_BLOB}/docs/BACKLOG.md`;
 const BACKLOG_LABEL = `the list of work not yet started, ${IN_REPO}`;
 const DEPLOY = `${REPO_BLOB}/docs/DEPLOY.md`;
@@ -63,7 +63,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-not-app',
     about: 'app',
-    text: 'A workbench is a small app of its own, built apart from what a visitor to skymap downloads.',
+    text: 'A workbench is a small app of its own, built apart from what a visitor to Skymap downloads.',
     source: `${REPO_BLOB}/tools/galaxy-renderer/README.md`,
     sourceLabel: `the galaxy renderer’s manual, ${IN_REPO}`,
     checked: CHECKED,

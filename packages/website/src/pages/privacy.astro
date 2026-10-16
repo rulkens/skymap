@@ -18,7 +18,7 @@ import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'Privacy: what skymap loads, counts and keeps';
+const title = 'Privacy: what Skymap loads, counts and keeps';
 const description =
   'This website sets no cookies and counts nothing. The app counts visits without cookies and keeps one note in your browser. Each claim names its source.';
 
@@ -64,7 +64,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
       <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, the about page and this one.</p>
     </SectionHead>
     <Claims items={SITE} />
-    <Remark text="Your browser fetched every file on this page from skymap’s own addresses." live="files-fetched" />
+    <Remark text="Your browser fetched every file on this page from Skymap’s own addresses." live="files-fetched" />
   </section>
 
   <section class="wrap section" id="app">
@@ -120,7 +120,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
   <section class="wrap section" id="responsible">
     <SectionHead title="Who is responsible" narrow>
       <p>
-        {MAKER_NAME}, who makes skymap, decides what the site and the app load and keep.
+        {MAKER_NAME}, who makes Skymap, decides what the site and the app load and keep.
       </p>
     </SectionHead>
     <div class="prose tap-links">
@@ -131,7 +131,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     </div>
     <div class="link-row">
       <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
-      <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
+      <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
     </div>
   </section>
 

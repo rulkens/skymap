@@ -6,7 +6,7 @@ import { MAKER_NAME, REPO_BLOB, REPO_URL } from './siteIdentity';
 import { formatDate } from '../utils/formatDate';
 
 const CHECKED = '2026-10-06';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 
 /**
  * The About page's claims, spread into FACTS. The history row is a count from
@@ -17,7 +17,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-what-is',
     about: 'app',
-    text: 'skymap is a free, open-source web app that draws the mapped universe in three dimensions at true scale. Catalogued stars, galaxies and quasars sit where published surveys put them. You fly the camera from a park in Copenhagen to the edge of the observable universe in one continuous scene. It runs in a current browser, with no account and nothing to install. The sources are named, and the site says which parts are measured, which are derived and which are drawn.',
+    text: 'Skymap is a free, open-source web app that draws the mapped universe in three dimensions at true scale. Catalogued stars, galaxies and quasars sit where published surveys put them. You fly the camera from a park in Copenhagen to the edge of the observable universe in one continuous scene. It runs in a current browser, with no account and nothing to install. The sources are named, and the site says which parts are measured, which are derived and which are drawn.',
     source: `${REPO_BLOB}/README.md`,
     sourceLabel: `the project’s README, ${IN_REPO}`,
     checked: CHECKED,
@@ -25,7 +25,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-maker',
     about: 'app',
-    text: `skymap is made by one person, ${MAKER_NAME}.`,
+    text: `Skymap is made by one person, ${MAKER_NAME}.`,
     source: `${REPO_BLOB}/LICENSE`,
     sourceLabel: `the licence file, ${IN_REPO}`,
     checked: CHECKED,
@@ -113,7 +113,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-picture-reuse',
     about: 'app',
-    text: 'No picture made with skymap can be offered for unrestricted reuse today. Every frame with stars carries Gaia data, which is licensed for non-commercial use, and every picture below holds at least one source that states no licence at all. So ask us before you reuse one, and we will tell you whose terms apply and whom to ask.',
+    text: 'No picture made with Skymap can be offered for unrestricted reuse today. Every frame with stars carries Gaia data, which is licensed for non-commercial use, and every picture below holds at least one source that states no licence at all. So ask us before you reuse one, and we will tell you whose terms apply and whom to ask.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: '2026-10-07',

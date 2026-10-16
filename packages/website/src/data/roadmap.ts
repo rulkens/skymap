@@ -286,7 +286,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'desktop-app',
         title: 'A desktop app that runs offline',
-        text: 'skymap as a program for macOS and Windows that downloads its data once and then needs no network. A design is written.',
+        text: 'Skymap as a program for macOS and Windows that downloads its data once and then needs no network. A design is written.',
         state: 'planned',
         spec: `${SPECS}/2026-09-19-desktop-offline-app-design.md`,
       },
