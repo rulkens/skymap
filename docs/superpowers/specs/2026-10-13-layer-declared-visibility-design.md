@@ -38,7 +38,6 @@ type Common = {
 };
 export type ShowEntry = Common & {
   readonly key: string;
-  readonly field?: 'enabled';
   readonly bodies?: Readonly<Partial<Record<string, readonly SceneBody[]>>>; // per item: the scene bodies it draws (T7-1)
 };
 export type LabelEntry = Common & {

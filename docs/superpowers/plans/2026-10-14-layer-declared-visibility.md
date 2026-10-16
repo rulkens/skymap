@@ -115,7 +115,7 @@ export type VisibilityEntryCommon = {
   readonly items?: readonly string[];      // per item: settings[cluster].items[id].<field>
   readonly recession?: 'strong' | 'mild';  // omitted = does not recede
 };
-export type ShowEntry = VisibilityEntryCommon & { readonly key: string; readonly field?: 'enabled' };
+export type ShowEntry = VisibilityEntryCommon & { readonly key: string };
 export type LabelEntry = VisibilityEntryCommon & {
   readonly label: string;   // field is labelEnabled
   readonly cluster: string;
