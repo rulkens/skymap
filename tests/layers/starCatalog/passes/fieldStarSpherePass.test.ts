@@ -138,7 +138,13 @@ const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 /** A NEAR0 view whose f64 `slab.vp` differs from the f32 `vp` (the compose seam). */
 function makeNear0View(camPos: Vec3): SlabView {
   const slab: Slab = makeSlab();
-  return { slab, vp: new Float32Array(16), camPos, viewportPx: [1280, VIEWPORT_H] };
+  return {
+    slab,
+    vp: new Float32Array(16),
+    camPos,
+    viewportPx: [1280, VIEWPORT_H],
+    window: { originPx: [0, 0], sizePx: [1280, VIEWPORT_H] },
+  };
 }
 
 describe('fieldStarSpherePass.enabled', () => {

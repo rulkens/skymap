@@ -40,10 +40,10 @@ export function zoneOfAvoidancePass(
     },
 
     // No `pickEnabled`: the band's pick set equals its draw set, so the pick
-    // program falls back to `enabled` above. The pick pass renders at full
-    // canvas resolution regardless of the 'zoa' target's downsample, so the
-    // viewport here is the full `canvasSize` — not the divided one `draw` uses.
-    drawPick(pass, _view, ctx, state, fade) {
+    // program falls back to `enabled` above. The pick rays are the full
+    // canvas's (`canvasSize`, not the 'zoa' downsample `draw` uses), and the
+    // pick target covers `view.window` of that canvas.
+    drawPick(pass, view, ctx, state, fade) {
       const opacity = deriveZoneOfAvoidanceLiveness(ctx, fade);
       if (opacity === null) return;
 
@@ -51,6 +51,7 @@ export function zoneOfAvoidancePass(
         pass,
         ctx.cam,
         [ctx.canvasSize.width, ctx.canvasSize.height],
+        view.window,
         state.settings.zoneOfAvoidance,
         ZONE_OF_AVOIDANCE_SHELL,
         opacity,

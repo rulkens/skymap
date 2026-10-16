@@ -57,6 +57,7 @@ function makeView(camPos: Vec3): SlabView {
     vp: new Float32Array(16),
     camPos,
     viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
   };
 }
 

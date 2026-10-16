@@ -52,11 +52,12 @@ each consumer.
    cube, filaments, constellations, structures. Widens
    [`volume-field-vram-release`](../../backlog/2026-09-13-volume-field-vram-release.md);
    its fade-gated `release` design is the general one.
-2. **Pick targets are canvas-sized to read one texel.** Up to four r32uint + depth
-   pairs (`pickProgram.ts:162`, readback at `:428`), never released; debug pick
-   targets survive the overlay being turned off. #899 shares one target set across
-   slabs (66 → 25 MB at 1080p, 265 → 100 MB at 4K) and scissors each pass to the
-   cursor; a cropped projection would shrink what remains to a few pixels.
+2. **Pick targets read one texel.** #906 shared one target set across slabs
+   (66 → 25 MB at 1080p, 265 → 100 MB at 4K), and #908 renders every pick pass
+   through a 1×1 window at the cursor
+   ([the pick-window spec](../../superpowers/specs/completed/2026-10-14-pick-window-design.md)),
+   so `pick()`'s targets are a few bytes. Still open: the debug overlay's
+   canvas-sized pick targets survive the overlay being turned off.
 3. **Eager allocations for off or invisible features.** Flow particles (26.6 MB);
    bloom pyramid with bloom disabled; `cosmic-web-density`, `zoa`, `star-aggregates`,
    `mw-aggregate` targets with their layers hidden (no `allocateWhen`); hi-res famous

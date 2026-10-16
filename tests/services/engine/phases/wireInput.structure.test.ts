@@ -8,8 +8,8 @@
  * The click flow is hard to unit-test in isolation: it requires a real
  * galaxyPickRenderer (GPU device), real orbit controls, and a real mouse
  * device.  This is a crude source-string guard — it regresses loudly if
- * a future refactor drops the structure-click wiring or stops reading the
- * authoritative selection ref for the dblclick focus. End-to-end
+ * a future refactor drops the structure-click wiring or stops routing the
+ * dblclick through the focusSelected command. End-to-end
  * behaviour (single-click opens InfoCard, double-click tweens camera) is
  * verified by manual smoke.
  *
@@ -39,18 +39,9 @@ describe('wireInput structure wiring', () => {
     expect(src).toContain('resolvePick: deps.selection.resolvePick');
   });
 
-  it('reads the authoritative selection slot for the dblclick focus', () => {
-    // The dblclick handler reads the pinned ref from the store via the
-    // `selectSelectedRef` selector — the slot is the single source of truth
-    // (galaxy OR structure OR null).
-    expect(src).toContain('selectSelectedRef(');
-  });
-
-  it('routes double-click through an updateSelectionFocus dispatch', () => {
-    // The dblclick handler unconditionally dispatches `updateSelectionFocus(ref)`
-    // where `ref` is whatever `selectSelectedRef` returns. When the ref is null
-    // (empty-space dblclick) the reducer treats it as a focus release, lifting
-    // the cluster-focus fade — no separate empty-space branch needed.
-    expect(src).toContain('updateSelectionFocus(');
+  it('routes double-click through the focusSelected command', () => {
+    // The command's saga reads the authoritative selection slot, so the handler
+    // dispatches it without running a second pick.
+    expect(src).toContain('focusSelected()');
   });
 });

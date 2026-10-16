@@ -49,6 +49,7 @@ const VIEW: SlabView = {
   vp: VP,
   camPos: CAM_POS,
   viewportPx: VIEWPORT_PX,
+  window: { originPx: [0, 0], sizePx: VIEWPORT_PX },
 };
 
 const CTX = { drawPxPerRad: PX_PER_RAD } as unknown as FrameView;
