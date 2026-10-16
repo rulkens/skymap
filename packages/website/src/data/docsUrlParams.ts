@@ -135,6 +135,17 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     development: true,
   },
   {
+    name: 'remote',
+    part: 'query',
+    value: 'None',
+    example: '?dome&remote',
+    does: 'Shows a pairing code so a phone or laptop can drive the app from remote.html. Needs the local dev server, which relays the messages.',
+    written: NOT_WRITTEN,
+    unknown: 'There is none.',
+    skipsWelcome: false,
+    development: true,
+  },
+  {
     name: 'tour',
     part: 'query',
     value: 'None',
