@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, Ref } from 'react';
 
 import { appLink } from '../../data/appLink.ts';
-import { fact } from '../../data/fact.ts';
 import type { Place } from '../../@types/Place';
 import { cx } from '../../utils/cx.ts';
 import Icon from '../Icon/Icon.tsx';
@@ -18,6 +17,8 @@ import styles from './Places.module.css';
 
 type PlaceLinkProps = {
   place: Place;
+  /** The words under the name: how far away it is. */
+  far: string;
   film?: string;
   /** Where the disc stands, in units of the field, tall and wide, and which way its label hangs. */
   vars: CSSProperties;
@@ -32,7 +33,16 @@ type PlaceLinkProps = {
   };
 };
 
-function PlaceLink({ place, film, vars, className, playing, screenRef, handlers }: PlaceLinkProps) {
+function PlaceLink({
+  place,
+  far,
+  film,
+  vars,
+  className,
+  playing,
+  screenRef,
+  handlers,
+}: PlaceLinkProps) {
   const words = place.name.split(' ');
   const head = words.slice(0, -1).join(' ');
   const [started, setStarted] = useState(false);
@@ -101,7 +111,7 @@ function PlaceLink({ place, film, vars, className, playing, screenRef, handlers 
               <Icon name="view" />
             </span>
           </b>
-          <span className={styles.far}>{place.factId ? fact(place.factId).short : place.note}</span>
+          <span className={styles.far}>{far}</span>
         </span>
       </a>
     </li>

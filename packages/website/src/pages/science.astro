@@ -210,7 +210,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       <StatementsFigure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" />
       <Claims items={DRAWN} />
     </Group>
-    <Remark client:visible text={fact('astronomical-unit').short!} />
+    <Remark text={fact('astronomical-unit').short!} />
   </section>
 
   <FullFigure id="science-zoa" />

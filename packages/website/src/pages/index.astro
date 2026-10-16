@@ -5,11 +5,13 @@ import Closing from '../components/Closing/Closing.tsx';
 import Credits from '../components/Credits/Credits.tsx';
 import Dome from '../components/Dome/Dome.tsx';
 import Flight from '../components/Flight/Flight.tsx';
+import { flightStopViews } from '../components/Flight/flightStopViews.ts';
 import { prePaintScript } from '../components/Flight/prePaintScript.ts';
 import FullFigure from '../components/FullFigure/FullFigure.tsx';
 import Honesty from '../components/Honesty/Honesty.tsx';
 import Lead from '../components/Lead/Lead.tsx';
 import Places from '../components/Places/Places.tsx';
+import { placeLines } from '../components/Places/placeLines.ts';
 import Tour from '../components/Tour/Tour.tsx';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { homeJsonLd } from '../data/homeJsonLd';
@@ -33,8 +35,8 @@ const first = stills[0]!;
     <!-- Before first paint, so the flight's layout is decided once; the island takes over from it. -->
     <script is:inline set:html={prePaintScript()} />
   </Fragment>
-  <Flight stills={stills} videoUrl={heroVideoUrl()} client:load />
-  <Places client:visible />
+  <Flight stops={flightStopViews(stills)} videoUrl={heroVideoUrl()} client:load />
+  <Places lines={placeLines()} client:visible />
   <Lead client:visible />
   <FullFigure id="hubble" tall="hubble-portrait" />
   <Tour />

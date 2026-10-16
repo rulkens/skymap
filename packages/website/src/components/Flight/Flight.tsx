@@ -8,31 +8,30 @@
  * (prePaintScript.ts); this island takes over from that state when it hydrates.
  * Without script the same list reads top to bottom as captioned pictures.
  */
-import { createRef, useCallback, useMemo, useState } from 'react';
+import { createRef, useCallback, useState } from 'react';
 import type { CSSProperties } from 'react';
 
 import { HERO_MEDIA } from '../../../../../tools/site/heroMediaPlan';
 import type { FlightParts } from '../../@types/FlightParts';
-import type { FlightStill } from '../../@types/FlightStill';
+import type { FlightStopView } from '../../@types/FlightStopView';
 import { FLIGHT_STOPS } from '../../data/flightStops.ts';
 import { flightTimeline } from '../../utils/flightTimeline.ts';
 import Arrive from './Arrive.tsx';
 import styles from './Flight.module.css';
-import { flightStopViews } from './flightStopViews.ts';
 import Intro from './Intro.tsx';
 import Spine from './Spine.tsx';
 import Stops from './Stops.tsx';
 import { useFlight } from './useFlight.ts';
 
-type FlightProps = { stills: FlightStill[]; videoUrl: string };
+/** `stops` come from the page (flightStopViews), which reads the facts: they stay out of the island's script. */
+type FlightProps = { stops: FlightStopView[]; videoUrl: string };
 
 const TIMELINE = flightTimeline(
   FLIGHT_STOPS.map((stop) => stop.atSec),
   HERO_MEDIA.outSec - HERO_MEDIA.inSec,
 );
 
-function Flight({ stills, videoUrl }: FlightProps) {
-  const stops = useMemo(() => flightStopViews(stills), [stills]);
+function Flight({ stops, videoUrl }: FlightProps) {
   const [shown, setShown] = useState(0);
   const [near, setNear] = useState<ReadonlySet<number>>(() => new Set([0]));
   // One object for the life of the island: the scroll loop holds these elements, not a render's copy.

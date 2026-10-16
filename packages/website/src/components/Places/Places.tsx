@@ -22,7 +22,10 @@ const FILMS = PLACES.map((place) => (place.loop ? loopUrl(place.loop) : undefine
 const IDS = PLACES.map((place) => place.id);
 const tallHeight = TALL_HEIGHT.toFixed(2);
 
-function Places() {
+/** `lines`: the words under each name, from placeLines() on the page. */
+type PlacesProps = { lines: readonly string[] };
+
+function Places({ lines }: PlacesProps) {
   const field = useRef<HTMLDivElement>(null);
   usePlaceDrift(field);
   const films = usePlaceFilms(IDS);
@@ -76,6 +79,7 @@ function Places() {
               <PlaceLink
                 key={place.id}
                 place={place}
+                far={lines[i]!}
                 film={FILMS[i]}
                 className={cx(
                   styles.item,
