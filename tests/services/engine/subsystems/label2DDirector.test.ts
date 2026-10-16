@@ -170,7 +170,7 @@ describe('label2DDirector', () => {
     expect(lineStub.setLines).toHaveBeenLastCalledWith([]);
   });
 
-  // Review Focus #15–#17: recession once, in the director, keyed on identity not clickability.
+  // Recession runs once, in the director, keyed on identity, not clickability.
   it('a receding label recedes once, and the focused one not at all', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();

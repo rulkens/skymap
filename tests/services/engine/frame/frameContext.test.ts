@@ -396,7 +396,7 @@ describe('deriveFrameContext — scene-body admission', () => {
     expect(admittedIds(1)).toContain('sun');
     expect(admittedIds(0.4)).toContain('sun');
     expect(admittedIds(0)).not.toContain('sun');
-    // A raw fade of 1 under a clip at 0 hands 0: the clip hides it too (T7-4).
+    // A raw fade of 1 under a clip at 0 hands 0: the clip hides it too.
     expect(admittedIds(1, 0)).not.toContain('sun');
     // A body no entry covers is always admitted.
     expect(admittedIds(0)).toContain('mars');

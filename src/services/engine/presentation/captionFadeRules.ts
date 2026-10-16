@@ -106,9 +106,8 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * The stick-figure names. They never reach the body-caption pipeline this
    * table drives — `sceneBodyLabels` emits only the body kinds above, and
    * `constellationCaptions` appends the figure names further down with their own
-   * per-frame target (`constellationsFade`: the layer's distance band × the
-   * handed `label:constellations` value, keyed on the camera's origin distance,
-   * not on an anchor distance). The row exists so the table stays total over the
+   * per-frame target (`constellationsBand` × the handed `label:constellations`
+   * value, keyed on the camera's origin distance, not on an anchor distance). The row exists so the table stays total over the
    * kind union; leaving the kind implicit would let it silently inherit the star
    * map's parsec band.
    */

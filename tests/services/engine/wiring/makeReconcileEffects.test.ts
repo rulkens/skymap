@@ -12,8 +12,7 @@ import { makeReconcileEffects } from '../../../../src/services/engine/wiring/mak
 
 // Mock the sync so the syncFades tests don't need a fully populated settings tree.
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityTargets', () => ({
-  syncVisibilityTargets:
-    vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
+  syncVisibilityTargets: vi.fn<(state: unknown, overMs?: number) => void>(),
 }));
 
 // Mock the applySwapFormat phase so the forwarding test doesn't need a real
@@ -85,7 +84,7 @@ describe('makeReconcileEffects', () => {
     const effects = makeReconcileEffects(state, CANVAS);
     effects.syncFades();
     expect(syncVisibilityTargets).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityTargets).toHaveBeenCalledWith(state, { animate: true });
+    expect(syncVisibilityTargets).toHaveBeenCalledWith(state, undefined);
   });
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {

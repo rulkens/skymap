@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/sources';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
@@ -16,8 +16,7 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import { makeGalaxyCatalogFade } from '../../../fixtures/makeGalaxyCatalogFade';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -78,20 +77,9 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
   } as unknown as FrameView;
 }
 
-// The per-catalog value core hands the pass. The focus group is bound off
-// `state.gpu.focusUniform` — an opaque bind group is all the pass reads.
-function handed(
-  overrides: Partial<Record<GalaxyCatalogId, number>> = {},
-  rest = 1,
-): Record<GalaxyCatalogId, number> {
-  return Object.fromEntries(
-    GALAXY_CATALOG_SOURCES.map((s) => {
-      const id = galaxyCatalogIdOf(s);
-      return [id, overrides[id] ?? rest];
-    }),
-  ) as Record<GalaxyCatalogId, number>;
-}
-const FULL = handed();
+// The focus group is bound off `state.gpu.focusUniform` — an opaque bind
+// group is all the pass reads.
+const FULL = makeGalaxyCatalogFade();
 
 const STATE_STUB = {
   gpu: {
@@ -277,7 +265,7 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       view,
       ctx,
       state,
-      handed({ sdss: 0.5, glade: 0 }),
+      makeGalaxyCatalogFade({ sdss: 0.5, glade: 0 }),
     );
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
     expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS]);

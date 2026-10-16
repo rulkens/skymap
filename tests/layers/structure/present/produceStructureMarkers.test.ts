@@ -7,7 +7,6 @@ import { createStructureStore } from '../../../../src/layers/structure/load/crea
 import type { StructureStore } from '../../../../src/layers/structure/@types/StructureStore';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import {
@@ -18,24 +17,14 @@ import {
 } from '../../../../src/layers/structure/present/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { structurePickId } from '../../../../src/utils/picking/structurePickId';
-import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { makeStructureFade } from '../../../fixtures/makeStructureFade';
 
 // Builds a real structure store (so `state.store` is the production store) and
 // state.selection refs that drive the ring bump, then drives the producer. The
-// per-category fade is the handed value: `handed` builds it.
+// per-category fade is the handed value: `makeStructureFade` builds it.
 type TestState = EngineState & { store: StructureStore };
 
-/** The value core hands: every category at `rest`, with per-category overrides. */
-function handed(
-  rest = 1,
-  over: Partial<Record<StructureId, number>> = {},
-): Readonly<Record<StructureId, number>> {
-  return Object.fromEntries(STRUCTURE_IDS.map((c) => [c, over[c] ?? rest])) as Record<
-    StructureId,
-    number
-  >;
-}
-const ONE = handed();
+const ONE = makeStructureFade();
 
 function makeState(
   selectedStructureId: string | null = null,
@@ -115,7 +104,7 @@ describe('produceStructureMarkers', () => {
       state.store,
       state,
       makeCtx(),
-      handed(1, { 'galaxy-cluster': 0 }),
+      makeStructureFade(1, { 'galaxy-cluster': 0 }),
     );
     // Cluster skipped wholesale; void emits.
     expect(markers.map((m) => m.id)).toEqual(['v1']);
@@ -131,7 +120,7 @@ describe('produceStructureMarkers', () => {
       state.store,
       state,
       makeCtx(),
-      handed(1, { 'galaxy-cluster': 0.5 }),
+      makeStructureFade(1, { 'galaxy-cluster': 0.5 }),
     ).find((m) => m.id === 'c1')!;
     // Still emitted (alignment) and ring/halo alpha exactly halved.
     expect(half.ringColor[3]).toBeCloseTo(base.ringColor[3] * 0.5, 6);
@@ -182,7 +171,7 @@ describe('produceStructureMarkers', () => {
     );
   });
 
-  // Behaviour change #5: selection brightens, it no longer exempts from recession.
+  // Selection brightens a ring; it does not exempt it from recession.
   it('a selected ring that is not the focus recedes', () => {
     const state = makeState('b', 'a');
     state.store.setGroup('anchors', [
@@ -294,7 +283,7 @@ describe('produceStructureMarkers', () => {
     const at = (value: number) => {
       const state = makeState();
       state.store.setGroup('anchors', [rec('a')]);
-      return produceStructureMarkers(state.store, state, makeCtx(), handed(value))[0]!;
+      return produceStructureMarkers(state.store, state, makeCtx(), makeStructureFade(value))[0]!;
     };
     const faint = at(RING_PICK_MIN_ALPHA / 2);
     const solid = at(0.5);

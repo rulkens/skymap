@@ -1,6 +1,7 @@
 /**
  * Moves one identity's fade toward its recomputed target. A target already held is never
- * re-issued, so a recompute cannot restart a ramp in flight toward it. Never wakes the
+ * re-issued, so a recompute cannot restart a ramp in flight toward it, and recomputing
+ * every target on every settings write costs one `targetOf` lookup per unmoved target. Never wakes the
  * scheduler itself: `fadeTo` does, and a snap leaves the wake to its batch.
  */
 
@@ -14,7 +15,7 @@ export function applyVisibilityTarget(
   state: Pick<EngineState, 'settings' | 'subsystems' | 'visibilityEntries' | 'visibilityGates'>,
   entry: VisibilityEntry,
   id: FadeIdentity,
-  opts: { readonly animate: boolean; readonly durationMs?: number },
+  overMs?: number,
 ): void {
   const { fades } = state.subsystems;
   const target = visibilityTargetOf(
@@ -25,10 +26,13 @@ export function applyVisibilityTarget(
     state.visibilityGates,
   );
   if (fades.targetOf(id) === target) return;
-  if (!opts.animate) {
+  if (overMs === 0) {
     fades.setImmediate(id, target);
     return;
   }
-  const durationMs = opts.durationMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
-  void fades.fadeTo(id, target, durationMs);
+  void fades.fadeTo(
+    id,
+    target,
+    overMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS),
+  );
 }

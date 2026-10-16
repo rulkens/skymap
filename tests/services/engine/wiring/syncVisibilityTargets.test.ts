@@ -41,20 +41,20 @@ describe('syncVisibilityTargets', () => {
   it('does not re-issue a target already held', () => {
     const { state, fadeTo, targetOf } = makeState(flowOff);
     targetOf.mockReturnValue(0);
-    syncVisibilityTargets(state, { animate: true });
+    syncVisibilityTargets(state);
     expect(fadeTo.mock.calls.map(([id]) => id.address)).not.toContain('flow');
   });
 
   it('retargets an in-flight fade whose switch flipped', () => {
     const { state, fadeTo, targetOf } = makeState(flowOff);
     targetOf.mockReturnValue(1);
-    syncVisibilityTargets(state, { animate: true });
+    syncVisibilityTargets(state);
     expect(fadeTo).toHaveBeenCalledWith({ address: 'flow' }, 0, FADE_OUT_DURATION_MS);
   });
 
-  it('threads durationMs to every animated fadeTo', () => {
+  it('threads overMs to every animated fadeTo', () => {
     const { state, fadeTo } = makeState();
-    syncVisibilityTargets(state, { animate: true, durationMs: 750 });
+    syncVisibilityTargets(state, 750);
     expect(fadeTo.mock.calls.length).toBeGreaterThan(0);
     expect(fadeTo.mock.calls.filter(([, , dur]) => dur !== 750)).toEqual([]);
     expect(750).not.toBe(FADE_IN_DURATION_MS);
@@ -62,13 +62,13 @@ describe('syncVisibilityTargets', () => {
 
   it('a snap batch wakes once, an animated one never', () => {
     const snap = makeState();
-    syncVisibilityTargets(snap.state, { animate: false });
+    syncVisibilityTargets(snap.state, 0);
     expect(snap.fadeTo).not.toHaveBeenCalled();
     expect(snap.setImmediate.mock.calls.length).toBeGreaterThan(1);
     expect(snap.requestRender).toHaveBeenCalledTimes(1);
 
     const animated = makeState();
-    syncVisibilityTargets(animated.state, { animate: true });
+    syncVisibilityTargets(animated.state);
     expect(animated.requestRender).not.toHaveBeenCalled();
   });
 });

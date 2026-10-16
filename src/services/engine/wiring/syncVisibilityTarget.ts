@@ -16,12 +16,12 @@ export function syncVisibilityTarget(
   id: FadeIdentity,
 ): void {
   const entries = state.visibilityEntries;
-  applyVisibilityTarget(state, visibilityEntryOf(entries, id.address), id, { animate: true });
+  applyVisibilityTarget(state, visibilityEntryOf(entries, id.address), id);
   for (const label of ofLabelsOf(entries, id.address)) {
     const follows =
       id.item === undefined ? label.items === undefined : label.items?.includes(id.item) === true;
     if (!follows) continue;
     const labelId = { address: visibilityAddressOf(label), item: id.item };
-    applyVisibilityTarget(state, label, labelId, { animate: true });
+    applyVisibilityTarget(state, label, labelId);
   }
 }

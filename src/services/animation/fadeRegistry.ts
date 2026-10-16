@@ -26,21 +26,19 @@
  *
  * ### Why fail-safe opacityOf=1.0 for unregistered ids
  *
- * Renderers call `opacityOf` from their per-frame draw. The registry
- * is constructed BEFORE renderers, and renderers register their
- * ids at construction — but bootstrap order is subtle, and a
- * half-finished bootstrap (test fixtures, HMR reload races) can leave
- * a renderer drawing before its id is registered. Returning 0
+ * Core reads `opacityOf` every frame, and `wireSlots` seeds every
+ * identity before the first frame — but a half-finished bootstrap
+ * (test fixtures, HMR reload races) can read an id before it is
+ * seeded. Returning 0
  * would black-screen the user; returning 1.0 (the steady-state value)
  * draws normally. The visible cost is one frame of unfaded content
  * during bootstrap — far less annoying than a black screen.
  *
  * ### Why fadeTo THROWS on unregistered ids (asymmetric)
  *
- * Slots and UI handlers reach for `fadeTo` only when they expect a
- * specific layer to exist. A fadeTo on an unregistered id means
- * "the slot is trying to orchestrate a layer that was never set up" —
- * a programmer error worth surfacing. The fail-safe path is the
+ * Core's visibility sync calls `fadeTo` only for identities it seeded,
+ * so a fadeTo on an unregistered id is a programmer error worth
+ * surfacing. The fail-safe path is the
  * draw-loop read; the explicit-call paths get the strict check.
  *
  * ### The default clock is the last stamped frame time
@@ -60,7 +58,7 @@ import type { FadeController } from '../../@types/animation/FadeController';
 import type { FadeIdentity } from '../../@types/animation/FadeIdentity';
 import type { FadeRegistry } from '../../@types/animation/FadeRegistry';
 import { fadeIdentityKey } from '../../utils/visibility/fadeIdentityKey';
-import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from './fadeController';
+import { createFadeController } from './fadeController';
 
 export function createFadeRegistry(deps: { readonly requestRender: () => void }): FadeRegistry {
   const controllers = new Map<string, FadeController>();
@@ -94,14 +92,10 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
   function fadeTo(
     id: FadeIdentity,
     target: number,
-    durationMs?: number,
+    durationMs: number,
     nowMs?: number,
   ): Promise<void> {
-    const c = requireController(id);
-    const now = nowMs ?? lastTickNowMs;
-    const dur =
-      durationMs ?? (target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
-    const promise = c.fadeTo(target, dur, now);
+    const promise = requireController(id).fadeTo(target, durationMs, nowMs ?? lastTickNowMs);
     deps.requestRender();
     return promise;
   }

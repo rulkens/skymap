@@ -1,10 +1,6 @@
 /**
  * watchFadesSaga — every settings write recomputes every visibility target.
  *
- * The `targetOf` skip is what makes this affordable: a target that didn't move
- * costs one lookup, not a fade restart, so no per-action lookup is needed to
- * narrow the sync.
- *
  * The engine is reached via getContext so the store layer keeps no engine imports.
  */
 

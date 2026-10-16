@@ -3,9 +3,9 @@
  * layer's fade controller.
  *
  * Engine subsystem at `state.subsystems.fades`. Constructed eagerly at
- * engine bootstrap, BEFORE any renderer (so renderer construction can
- * call `register(...)` without a null-check). See
- * `src/services/animation/fadeRegistry.ts` for the concrete factory.
+ * engine bootstrap, before `wireSlots` seeds every identity through
+ * `register(...)`. See `src/services/animation/fadeRegistry.ts` for the
+ * concrete factory.
  *
  * Storage: `Map<string, FadeController>` keyed by `fadeIdentityKey`. Consumers don't
  * see the serialization — they always pass identities.
@@ -37,21 +37,15 @@ export type FadeRegistry = Destroyable & {
    * controller's `fadeTo`. Returns the controller's Promise. Also wakes
    * the render scheduler — callers never follow up with `requestRender`.
    *
-   * If the id is not registered, throws — slots and renderers
-   * MUST register before fading, and a quiet no-op would hide bugs
+   * If the id is not registered, throws — a quiet no-op would hide bugs
    * where an id is fadeTo'd before its registration runs.
-   *
-   * `durationMs` defaults to `FADE_IN_DURATION_MS` when target > current,
-   * `FADE_OUT_DURATION_MS` otherwise — but callers are expected to pass
-   * the duration explicitly for clarity at the call site. The default
-   * is a fallback for tests and edge cases.
    *
    * `nowMs` is passed through to the controller's `fadeTo` so tests
    * can inject deterministic timestamps. When omitted, the fade starts
    * at the last `tick(nowMs)` frame time — event-driven starts quantize
    * to the frame clock rather than sampling `performance.now()`.
    */
-  fadeTo(id: FadeIdentity, target: number, durationMs?: number, nowMs?: number): Promise<void>;
+  fadeTo(id: FadeIdentity, target: number, durationMs: number, nowMs?: number): Promise<void>;
 
   /** Forwards to the controller's `setImmediate`. Throws if unregistered. */
   setImmediate(id: FadeIdentity, value: number): void;

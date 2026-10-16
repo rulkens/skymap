@@ -11,10 +11,8 @@
  * Each method represents a distinct engine concern that a saga might need to
  * trigger in response to a dispatched action:
  *   requestRender  — wakes the render-on-demand scheduler
- *   syncFades      — recomputes every visibility target; cheap on every
- *                    settings write because a target that hasn't moved costs
- *                    one `targetOf` lookup, not a fade restart. `overMs` is a
- *                    cue's duration (`0` snaps), carried by its `setVisibility`
+ *   syncFades      — recomputes every visibility target; `overMs` is a cue's
+ *                    duration (`0` snaps), carried by its `setVisibility`
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
  *                    `l` key) and returns the rendered pose + sim instant for
  *                    the share-URL log, or null when the camera isn't ready

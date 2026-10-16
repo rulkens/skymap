@@ -3,7 +3,8 @@
  * settings. Every entry, `of` labels included, so a cue on a thing ramps its label over the
  * same duration.
  *
- * The wake is asymmetric: a snap (`animate: false`) uses `setImmediate`, which does not wake,
+ * `overMs` is a cue's duration (`0` snaps, `undefined` takes the default durations).
+ * The wake is asymmetric: a snap uses `setImmediate`, which does not wake,
  * so the whole batch issues one `requestRender`; an animated batch issues none, since every
  * `fadeTo` wakes the scheduler itself.
  */
@@ -14,10 +15,10 @@ import { applyVisibilityTarget } from './applyVisibilityTarget';
 
 export function syncVisibilityTargets(
   state: Pick<EngineState, 'settings' | 'subsystems' | 'visibilityEntries' | 'visibilityGates'>,
-  opts: { readonly animate: boolean; readonly durationMs?: number },
+  overMs?: number,
 ): void {
   for (const entry of state.visibilityEntries) {
-    for (const id of fadeIdentitiesOf(entry)) applyVisibilityTarget(state, entry, id, opts);
+    for (const id of fadeIdentitiesOf(entry)) applyVisibilityTarget(state, entry, id, overMs);
   }
-  if (!opts.animate) state.subsystems.scheduler.requestRender();
+  if (overMs === 0) state.subsystems.scheduler.requestRender();
 }

@@ -130,10 +130,7 @@ export function deriveFrameContext(
     return above;
   };
   const sceneBodies: PositionedSceneBody[] = [];
-  const seen = new Set<string>();
   const admit = (body: SceneBody): void => {
-    if (seen.has(body.id)) return;
-    seen.add(body.id);
     if (!(coverage.get(body.id)?.coveredBy ?? []).every(isAboveZero)) return;
     sceneBodies.push({ body, positionMpc: bodyStates.get(body.id)!.positionMpc });
   };

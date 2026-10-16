@@ -2,7 +2,8 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../src/layers/structure/present/produceStructureLabels';
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
-import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { STRUCTURE_ID_CODES } from '../../../../src/data/structure/structureIds';
+import { makeStructureFade } from '../../../fixtures/makeStructureFade';
 import { MARKER_RADIUS_RETUNE } from '../../../../src/data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../src/layers/structure/data/structureLabelAboveGapPx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
@@ -38,23 +39,12 @@ function makeState(
 
 type TestState = EngineState & { store: StructureStore };
 
-/** The value core hands: every category at `rest`, with per-category overrides. */
-function handed(
-  rest = 1,
-  over: Partial<Record<StructureId, number>> = {},
-): Readonly<Record<StructureId, number>> {
-  return Object.fromEntries(STRUCTURE_IDS.map((c) => [c, over[c] ?? rest])) as Record<
-    StructureId,
-    number
-  >;
-}
-
 // One frame of the producer over the fixture's own store.
 function labelsOf(
   state: TestState,
   ctx: FrameView,
   scale: StructureScale,
-  fade: Readonly<Record<StructureId, number>> = handed(),
+  fade: Readonly<Record<StructureId, number>> = makeStructureFade(),
 ) {
   return produceStructureLabels(state.store, scale)(state, ctx, fade);
 }
@@ -114,18 +104,21 @@ describe('produceStructureLabels', () => {
   it('skips a category whose handed value is 0', () => {
     const state = makeState();
     state.store.setGroup('anchors', [rec('c1', { category: 'galaxy-cluster' })]);
-    expect(labelsOf(state, makeCtx(), 'cosmic', handed(1, { 'galaxy-cluster': 0 })).labels).toEqual(
-      [],
-    );
+    expect(
+      labelsOf(state, makeCtx(), 'cosmic', makeStructureFade(1, { 'galaxy-cluster': 0 })).labels,
+    ).toEqual([]);
   });
 
   it('keeps emitting a category at a falling value (the fade-out tail)', () => {
     const state = makeState();
     state.store.setGroup('anchors', [rec('c1', { category: 'galaxy-cluster' })]);
     expect(
-      labelsOf(state, makeCtx(), 'cosmic', handed(1, { 'galaxy-cluster': 0.5 })).labels.map(
-        (l) => l.id,
-      ),
+      labelsOf(
+        state,
+        makeCtx(),
+        'cosmic',
+        makeStructureFade(1, { 'galaxy-cluster': 0.5 }),
+      ).labels.map((l) => l.id),
     ).toEqual(['c1']);
   });
 
@@ -157,8 +150,12 @@ describe('produceStructureLabels', () => {
     const state = makeState();
     state.store.setGroup('anchors', [rec('a')]);
     const atRestAlpha = labelsOf(state, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
-    const handedAlpha = labelsOf(state, makeCtx({ focusBlend: 1 }), 'cosmic', handed(0.25))
-      .labels[0]!.fadeAlpha!;
+    const handedAlpha = labelsOf(
+      state,
+      makeCtx({ focusBlend: 1 }),
+      'cosmic',
+      makeStructureFade(0.25),
+    ).labels[0]!.fadeAlpha!;
 
     expect(handedAlpha).toBeCloseTo(atRestAlpha * 0.25, 6);
   });
