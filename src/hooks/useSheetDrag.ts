@@ -4,10 +4,12 @@
  * Not CSS scroll-snap: iOS Safari cannot scroll a `pointer-events: none` scroller
  * from its `pointer-events: auto` child (WebKit bug 183870), and that pass-through
  * root is what keeps the canvas live above the sheet. So the drag only feeds a
- * `--drag` offset on the sheet; CSS owns the two rest positions.
+ * `--drag` offset on the sheet; CSS owns the two rest positions. An expanded
+ * sheet drags only from `[data-sheet-grip]` elements (the handle, the card
+ * header); MobileSheet.module.css gives them `touch-action: none`.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { SheetDrag } from '../@types/components/SheetDrag';
 
@@ -19,7 +21,6 @@ const SNAP_PX = 40;
 /** Changing `resetKey` (new content) returns the sheet to the peek, scrolled to the top. */
 export function useSheetDrag(resetKey: string): SheetDrag {
   const sheetRef = useRef<HTMLElement>(null);
-  const handleRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: number; startY: number; moved: boolean } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -33,8 +34,14 @@ export function useSheetDrag(resetKey: string): SheetDrag {
     sheetRef.current?.scrollTo({ top: 0 });
   }, [resetKey]);
 
+  // In the commit that swaps the rest class: cleared sooner, the sheet jumps to its
+  // old rest with the transition still off and animates from there (a flicker).
+  useLayoutEffect(() => {
+    if (!dragging) sheetRef.current?.style.removeProperty('--drag');
+  }, [dragging]);
+
   const onPointerDown = (e: ReactPointerEvent<HTMLElement>): void => {
-    if (expanded && !handleRef.current?.contains(e.target as Node)) return;
+    if (expanded && !(e.target as Element).closest('[data-sheet-grip]')) return;
     drag.current = { id: e.pointerId, startY: e.clientY, moved: false };
   };
 
@@ -60,7 +67,6 @@ export function useSheetDrag(resetKey: string): SheetDrag {
     if (!d.moved) return;
     const sheet = e.currentTarget;
     setDragging(false);
-    sheet.style.removeProperty('--drag');
     const dy = e.type === 'pointercancel' ? 0 : e.clientY - d.startY;
     if (dy < -SNAP_PX) setExpanded(true);
     else if (dy > SNAP_PX) {
@@ -71,7 +77,6 @@ export function useSheetDrag(resetKey: string): SheetDrag {
 
   return {
     sheetRef,
-    handleRef,
     expanded,
     dragging,
     handlers: {

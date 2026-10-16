@@ -55,6 +55,58 @@ describe('MobileSheet', () => {
     expect(sheet.className).toMatch(/peeking/);
   });
 
+  it('drags an expanded sheet down from a grip-marked header, whose buttons still click', () => {
+    const onClose = vi.fn();
+    render(
+      createElement(MobileSheet, {
+        resetKey: 'galaxy:42',
+        children: createElement(
+          'div',
+          { 'data-sheet-grip': '' },
+          createElement('button', { type: 'button', onClick: onClose }, 'close'),
+        ),
+      }),
+    );
+    const close = screen.getByText('close');
+    const sheet = sheetOf(close);
+    swipe(close, sheet, -120);
+    expect(sheet.className).not.toMatch(/peeking/);
+
+    fireEvent.pointerDown(close, { pointerId: 3, clientY: 500 });
+    fireEvent.pointerUp(close, { pointerId: 3, clientY: 501 });
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    swipe(close, sheet, 120);
+    expect(sheet.className).toMatch(/peeking/);
+  });
+
+  // Clearing the offset before the class swap lands lets the sheet jump to its old
+  // rest with the transition still off, then animate from there: the flicker.
+  it('clears the drag offset no earlier than the rest-state class swap on release', () => {
+    render(card());
+    const sheet = sheetOf(screen.getByText('card'));
+    swipe(screen.getByText('card'), sheet, -120);
+
+    fireEvent.pointerDown(sheet.querySelector('[class*="handle"]') as HTMLElement, {
+      pointerId: 1,
+      clientY: 500,
+    });
+    fireEvent.pointerMove(sheet, { pointerId: 1, clientY: 620 });
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((batch) => records.push(...batch));
+    observer.observe(sheet, { attributes: true, attributeFilter: ['class', 'style'] });
+    fireEvent.pointerUp(sheet, { pointerId: 1, clientY: 620 });
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+    const order = records.map((r) => r.attributeName);
+
+    expect(sheet.className).toMatch(/peeking/);
+    expect(sheet.style.getPropertyValue('--drag')).toBe('');
+    expect(order.indexOf('class')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('class')).toBeLessThan(order.indexOf('style'));
+  });
+
   it('springs back on a short drag and lets a tap through as a click', () => {
     render(card());
     const button = screen.getByText('card');

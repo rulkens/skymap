@@ -44,7 +44,10 @@ function CardHeader({
   const phone = layout === 'phone';
   const hasThumbnail = phone && thumbnail != null;
   return (
-    <div className={cx(phone && styles.compact, hasThumbnail && styles.withThumbnail)}>
+    <div
+      className={cx(phone && styles.compact, hasThumbnail && styles.withThumbnail)}
+      data-sheet-grip={phone || undefined}
+    >
       {hasThumbnail && <div className={styles.thumbnail}>{thumbnail}</div>}
       <div className={styles.bar}>
         <span className={styles.eyebrow}>{eyebrow}</span>

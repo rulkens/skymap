@@ -76,10 +76,14 @@
   user-select: none;
 }
 
-/* A full-width strip (the expanded sheet's drag zone) around the drawn grabber bar. */
+/* The expanded sheet's drag zones (useSheetDrag): the browser must not claim them as a pan. */
+.sheet [data-sheet-grip] {
+  touch-action: none;
+}
+
+/* A full-width strip around the drawn grabber bar. */
 .handle {
   height: var(--space-8);
-  touch-action: none;
 }
 
 .handle::before {
