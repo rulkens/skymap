@@ -8,7 +8,7 @@ import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { LayerScreenLabel } from './LayerScreenLabel';
-import type { Label3DProducer } from '../subsystems/Label3DProducer';
+import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
@@ -21,7 +21,7 @@ export type LayerInstance = {
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];
   readonly screenLabels: readonly LayerScreenLabel[];
-  readonly worldLabels: readonly Label3DProducer[];
+  readonly worldLabels: readonly LayerWorldLabel[];
   readonly orbitTrails: readonly OrbitalElements[];
   readonly selection: readonly SelectionKindRow[];
   /** Bound feeds, absent when the Layer declares no such member; `createLayers`

@@ -24,12 +24,18 @@
  */
 
 import type { VisibilityLayerKey } from './VisibilityLayerKey';
+import type { VisibilityAddress } from './VisibilityAddress';
 
 export type ClipOpacityChannel = {
   /** Drive a transient fade on one layer (the `fade()` verb), animated or snapped. */
-  fadeTo(key: VisibilityLayerKey, target: number, durationMs: number, nowMs?: number): void;
+  fadeTo(
+    key: VisibilityLayerKey | VisibilityAddress,
+    target: number,
+    durationMs: number,
+    nowMs?: number,
+  ): void;
   /** The clip-opacity factor for a layer at `now` — default 1 (untouched layers). */
-  factorOf(key: VisibilityLayerKey, nowMs?: number): number;
+  factorOf(key: VisibilityLayerKey | VisibilityAddress, nowMs?: number): number;
   /** Advance every controller's clock (called from clipPlayer.tick). */
   tick(nowMs: number): void;
   /** Whether any controller is mid-ramp (keeps the loop awake; mirrors structureFocus). */

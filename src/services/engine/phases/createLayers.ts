@@ -32,6 +32,10 @@ import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSele
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
+import { gateLabelProducer } from '../layer/gateLabelProducer';
+import { gatePassByFade } from '../layer/gatePassByFade';
+import { gatePlannerByFade } from '../layer/gatePlannerByFade';
+import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
@@ -141,10 +145,12 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // answers to it, and `checkFrameOrder` counts order lines rather than passes —
   // so a core pass left behind under a name a Layer now contributes would keep
   // drawing, silently, with the Layer's own version never reached.
+  // Every pass, planner and label row is gated here, once, so the executors never see
+  // a `fade` or `label` declaration: they call what they always called.
   state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
-  ]);
+  ]).map((pass) => gatePassByFade(pass, state));
   state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
     CORE_COMPUTES,
     ...instances.map((instance) => instance.computes),
@@ -153,7 +159,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     'createLayers: planner rows',
     (planner) => planner.name,
     instances.map((instance) => instance.planners),
-  );
+  ).map((planner) => gatePlannerByFade(planner, state));
   // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
   // first — so a duplicate would silently SHADOW the other rather than surface,
   // leaving whichever slot core still mints loading into nothing. One fold over
@@ -189,7 +195,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     visibilityAddressOf,
     deps.composition.layers.map((layer) => layer.visibility ?? []),
   );
-  state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
+  state.label3DProducers = instances.flatMap((instance) =>
+    instance.worldLabels.map(gateWorldLabelProducer),
+  );
   state.orbitTrailRows = [
     ...CORE_TRAIL_ELEMENTS,
     ...instances.flatMap((instance) => instance.orbitTrails),
@@ -216,7 +224,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       if (!director) {
         throw new Error(`createLayers: no label director for slab ${slabName(slab)}`);
       }
-      director.registerProducer(producer);
+      director.registerProducer(gateLabelProducer(producer));
     }
   }
   state.layerSlots = layerSlots;

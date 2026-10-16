@@ -302,12 +302,12 @@ gateLabelProducer(row): Label2DProducer (and the Label3DProducer twin, same rule
 
 Wrapping in `createLayers` keeps `executeFrame.ts`/`pickProgram.ts` untouched. The wrapper resolves entries from `state.visibilityEntries` at call time, so the same helper works for the core producer registered in `engine.ts:319-322` (Task 10) and the core `orbitTrailsPass` (Task 10).
 
-- [ ] Test `gateLabelProducer`: `off and faded out → not called`; `off and still fading → called with the falling value`; `on → called`; `off with raw fade > 0 and clip 0 → still called` (Review Focus #3; mutation-check by switching the skip to the resolved value); a per-item row is skipped only when no item is live.
-- [ ] Test `gatePassByFade`: a per-item pass with one non-zero item calls the inner `enabled` with the record; all items at 0 → `enabled` and `pickEnabled` are false and the inner is never called.
-- [ ] Test `resolveVisibilityOpacity`: hand-computed `0.5 × 0.15 × clip 0.5` at blend 1 for a strong entry; a non-receding entry ignores blend; `an of label carries its of entry's clip` (clip `constellations` 0.5, own clip 1 → `label:constellations` resolves to half its raw fade × recession). Mutation-check the last by dropping the `of` clip.
-- [ ] No test for `gatePlannerByFade`: it only threads an argument the compiler checks.
-- [ ] **Gate:** `npx tsc --noEmit` passes.
-- [ ] Commit.
+- [x] Test `gateLabelProducer`: `off and faded out → not called`; `off and still fading → called with the falling value`; `on → called`; `off with raw fade > 0 and clip 0 → still called` (Review Focus #3; mutation-check by switching the skip to the resolved value); a per-item row is skipped only when no item is live.
+- [x] Test `gatePassByFade`: a per-item pass with one non-zero item calls the inner `enabled` with the record; all items at 0 → `enabled` and `pickEnabled` are false and the inner is never called.
+- [x] Test `resolveVisibilityOpacity`: hand-computed `0.5 × 0.15 × clip 0.5` at blend 1 for a strong entry; a non-receding entry ignores blend; `an of label carries its of entry's clip` (clip `constellations` 0.5, own clip 1 → `label:constellations` resolves to half its raw fade × recession). Mutation-check the last by dropping the `of` clip.
+- [x] No test for `gatePlannerByFade`: it only threads an argument the compiler checks.
+- [x] **Gate:** `npx tsc --noEmit` passes.
+- [x] Commit.
 
 ---
 

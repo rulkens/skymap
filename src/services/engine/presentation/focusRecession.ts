@@ -65,6 +65,13 @@ function recessionTargetFor(h: FadeId): number | undefined {
   return h.kind === 'labelLayer' ? RECESSION_BY_LABEL_LAYER[h.layer] : RECESSION_BY_KIND[h.kind];
 }
 
+const RECESSION_BY_STRENGTH = { strong: STRONG_RECESSION, mild: MILD_RECESSION } as const;
+
+// A visibility entry's recession: the same lerp, keyed by the entry's declared strength.
+export function recessionFactor(strength: 'strong' | 'mild' | undefined, blend: number): number {
+  return strength === undefined ? 1 : lerp(1, RECESSION_BY_STRENGTH[strength], blend);
+}
+
 // `blend` is 0 = no focus, 1 = full focus; an untagged id stays at 1.0 throughout.
 export function focusRecession(h: FadeId, blend: number): number {
   return lerp(1, recessionTargetFor(h) ?? 1, blend);

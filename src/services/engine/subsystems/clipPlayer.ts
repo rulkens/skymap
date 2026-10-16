@@ -14,6 +14,7 @@ import { clipEnded } from '../../../state/camera/cameraSlice';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { AppDispatch } from '../../../store/types';
@@ -144,7 +145,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     fireEndResolver();
   }
 
-  function clipOpacityOf(layer: VisibilityLayerKey, nowMs: number): number {
+  function clipOpacityOf(layer: VisibilityLayerKey | VisibilityAddress, nowMs: number): number {
     return clipOpacity.factorOf(layer, nowMs);
   }
 
