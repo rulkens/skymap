@@ -3,7 +3,7 @@ import type { LabelEntry } from '../../@types/engine/layer/LabelEntry';
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 
 /** The label entries whose `of` names `address`: the one answer to "which labels follow this
- * thing", so a gate commit and a cue can never disagree about which labels ramp. */
+ * thing", so a gate commit ramps the same labels the resolver clips by it. */
 export function ofLabelsOf(
   entries: readonly VisibilityEntry[],
   address: VisibilityAddress,

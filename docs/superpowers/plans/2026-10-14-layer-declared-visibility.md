@@ -47,7 +47,7 @@ The likeliest failure modes CI would not see unless a test pins them:
 4. **Recession or clip applied twice.** A migrated consumer that keeps its own `focusRecession`/`clipOpacityOf` multiply on top of a handed value would recede to 0.0625 instead of 0.25. Pinned in Task 10 (`composeForegroundCaption recedes once`) and by the existing `produceStarCaptions.test.ts:126`, `produceFamousGalaxyLabels.test.ts:356`, `produceStructureLabels.test.ts:247` and `produceStructureMarkers.test.ts:193-195` assertions, which must stay.
 5. **`setVisibility` replaces an item instead of writing a field.** This is the pattern PR 1 fixed in `setBlackHoleLabelEnabled`. Pinned in Task 2 by `an item write leaves the item's other fields intact`.
 6. **`APP_VISIBILITY` drifts from the composition.** A Layer that is composed but missing from `APP_VISIBILITY` would escape `hide(['labels'])` silently, because the expansion reads `APP_VISIBILITY` while the engine reads the composition. Pinned in Task 1 by `APP_VISIBILITY lists exactly the entries the composed Layers declare`.
-7. **An `of` label misses its thing's cue.** `show(['constellations'], 3)` must ramp the names over the same 3 s as the lines. A sync narrowed to `only: ['constellations']` that skips `label:constellations` leaves the names on the reactive default. Pinned in Task 3 by `only also covers the label entries whose of names it`.
+7. **An `of` label misses its thing's cue.** `show(['constellations'], 3)` must ramp the names over the same 3 s as the lines. A settings-write sync that skips `of` labels (say, one narrowed to the entries whose cluster the action wrote) leaves the names on the reactive default. Pinned on the live path by `cueOver.integration.test.ts`'s `show over 3 s ramps an of label over the same 3 s as its thing` (real store, saga and registry).
 8. **A per-item `of` resolves against the wrong item.** Structure label `void` must follow ring `void`, not "any ring on" or the item-less entry. Pinned in Task 3 by `a per-item of label follows its own item`. A label item its `of` entry lacks fails Task 1's `every of pairing obeys the item rule`.
 9. **A star consumer keeps reading settings.** The star passes, the cut and the field-star sphere each had their own switch read; one left behind keeps popping. Pinned in Task 8 by the star tests.
 10. **The reactive sync pre-empts the cue's `over`.** Finding by reading the code: `watchFadesSaga` runs synchronously inside `dispatch`. The clip tick dispatches from the frame loop, outside any saga task, so redux-saga 1.5's `asap` runs the `takeEvery` worker at once (`@redux-saga/core` `stdChannel.put` → `asap` → `immediately(fork)`). Its `syncFades()` issues `fadeTo` with the default 600 ms / 100 ms before `applySceneEffect`'s explicit sync runs (`applySceneEffect.ts:33-47`). The explicit sync then finds the target already held (`syncVisibilityFades.ts:35`) and drops the cue's duration. If this reading is right, bare cues ignore `over` today too, and `over: 0` fades over 100 ms instead of snapping. Task 11's first test decides it; the fix for the failing case is ruled (U5) and is in that task.
@@ -251,8 +251,8 @@ visibilityTargetOf(settings, entries: readonly VisibilityEntry[], entry, item: s
   // label's own item otherwise.
 collectVisibilityGates(state): VisibilityGates   // state.assetRows' `gates` → slotFor(state, row.key)
 seedVisibilityFades(state): void                 // register every identity at its boot target
-syncVisibilityTargets(state, opts: { animate: boolean; only?: readonly VisibilityAddress[]; durationMs?: number }): void
-  // `only` covers the named addresses AND every label entry whose `of` names one of them (ofLabelsOf)
+syncVisibilityTargets(state, opts: { animate: boolean; durationMs?: number }): void
+  // every entry's identities, `of` labels included (`only` was dropped in the final fix round: no reader after Task 11)
 syncVisibilityTarget(state, id: FadeIdentity): void
   // one identity, animated, default durations; also { address: <label>, item: id.item } for each
   // ofLabelsOf(id.address) entry whose items include id.item (item-less: id.item undefined)
@@ -267,7 +267,7 @@ Gating rows: localBubble `'localBubble'`, constellations `'constellations'`, fil
 - [x] Test `a reload keeps the target`: a slot in `loading` over a committed value issues no `fadeTo`.
 - [x] Test `a gating commit retargets only its own item`: two survey items, only A's slot notifies, and B's `fadeTo` is never called.
 - [x] Test `a gating commit also retargets the label entries whose of names it`: the constellations slot commits and `label:constellations` gets its `fadeTo` in the same call.
-- [x] Test `only also covers the label entries whose of names it` (Review Focus #7): `only: ['constellations'], durationMs: 3000` issues `fadeTo(label:constellations, …, 3000)`. Mutation-check by narrowing `only` to the named addresses.
+- [x] Test `only also covers the label entries whose of names it` (Review Focus #7): `only: ['constellations'], durationMs: 3000` issues `fadeTo(label:constellations, …, 3000)`. Mutation-check by narrowing `only` to the named addresses. (The final fix round deleted `only` once Task 11 left it reader-less; the pin moved to the live path, Review Focus #7.)
 - [x] Port the load-bearing `applyIntent` tests into `syncVisibilityTargets.test.ts`: no re-issue to a held target, retarget of an in-flight fade, `only` narrows by address, `durationMs` threads to every animated `fadeTo`, and the one-wake rule. Do not port guard/`post` tests: those concepts are gone.
 - [x] Commit.
 

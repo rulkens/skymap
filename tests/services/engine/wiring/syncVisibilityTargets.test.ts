@@ -6,7 +6,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
@@ -42,31 +41,15 @@ describe('syncVisibilityTargets', () => {
   it('does not re-issue a target already held', () => {
     const { state, fadeTo, targetOf } = makeState(flowOff);
     targetOf.mockReturnValue(0);
-    syncVisibilityTargets(state, { animate: true, only: ['flow'] });
-    expect(fadeTo).not.toHaveBeenCalled();
+    syncVisibilityTargets(state, { animate: true });
+    expect(fadeTo.mock.calls.map(([id]) => id.address)).not.toContain('flow');
   });
 
   it('retargets an in-flight fade whose switch flipped', () => {
     const { state, fadeTo, targetOf } = makeState(flowOff);
     targetOf.mockReturnValue(1);
-    syncVisibilityTargets(state, { animate: true, only: ['flow'] });
-    expect(fadeTo).toHaveBeenCalledExactlyOnceWith({ address: 'flow' }, 0, FADE_OUT_DURATION_MS);
-  });
-
-  it('only narrows by address', () => {
-    const { state, fadeTo } = makeState();
-    syncVisibilityTargets(state, { animate: true, only: ['survey'] });
-    const addresses = fadeTo.mock.calls.map(([id]) => id.address);
-    expect(addresses).toEqual(GALAXY_CATALOG_IDS.map(() => 'survey'));
-  });
-
-  it('only also covers the label entries whose of names it', () => {
-    const { state, fadeTo } = makeState(
-      { cluster: 'constellations', field: 'enabled', on: true },
-      { cluster: 'constellations', field: 'labelEnabled', on: true },
-    );
-    syncVisibilityTargets(state, { animate: true, only: ['constellations'], durationMs: 3000 });
-    expect(fadeTo).toHaveBeenCalledWith({ address: 'label:constellations' }, 1, 3000);
+    syncVisibilityTargets(state, { animate: true });
+    expect(fadeTo).toHaveBeenCalledWith({ address: 'flow' }, 0, FADE_OUT_DURATION_MS);
   });
 
   it('threads durationMs to every animated fadeTo', () => {

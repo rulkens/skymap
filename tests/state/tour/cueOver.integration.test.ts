@@ -53,6 +53,17 @@ describe("a cue's over reaches the fade through the live saga", () => {
     expect(mid).toBeLessThan(0.95);
   });
 
+  it('show over 3 s ramps an of label over the same 3 s as its thing', () => {
+    const { store, state, fades } = makeLive();
+    expect(fades.opacityOf({ address: 'label:constellations' }, 0)).toBe(0);
+    applySceneEffect(show(['constellations'], 3), { state, store });
+    for (const address of ['constellations', 'label:constellations'] as const) {
+      const mid = fades.opacityOf({ address }, 1500);
+      expect(mid).toBeGreaterThan(0.05);
+      expect(mid).toBeLessThan(0.95);
+    }
+  });
+
   it('hide over 0 lands at 0 at once', () => {
     const { store, state, fades } = makeLive([
       setVisibility({ cluster: 'flow', field: 'enabled', on: true }),

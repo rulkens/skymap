@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import {
+  MILD_RECESSION,
+  STRONG_RECESSION,
+} from '../../../../src/services/engine/presentation/focusRecession';
 import { resolveVisibilityOpacity } from '../../../../src/services/engine/presentation/resolveVisibilityOpacity';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
@@ -23,6 +26,18 @@ describe('resolveVisibilityOpacity', () => {
     const state = makeState({ localBubble: 0.5 }, { localBubble: 0.5 });
     const value = resolveVisibilityOpacity(state, { nowMs: 0, focusBlend: 1 }, 'localBubble');
     expect(value).toBeCloseTo(0.5 * STRONG_RECESSION * 0.5);
+  });
+
+  it('a mild entry recedes to MILD_RECESSION at full focus', () => {
+    const state = makeState({}, {});
+    state.subsystems.fades.register({ address: 'label:blackHole', item: 'sgr-a-star' }, 1);
+    const value = resolveVisibilityOpacity(
+      state,
+      { nowMs: 0, focusBlend: 1 },
+      'label:blackHole',
+      'sgr-a-star',
+    );
+    expect(value).toBeCloseTo(MILD_RECESSION);
   });
 
   it('a non-receding entry ignores the focus blend', () => {

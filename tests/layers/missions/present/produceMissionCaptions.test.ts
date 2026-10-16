@@ -11,6 +11,8 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMeshBodyIds';
+import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 
@@ -55,7 +57,6 @@ function makeState(): EngineState {
     settings: {
       missions: { craft: null },
       bodies: { items: makeBodyItems() },
-      starCatalogs: { enabled: false, items: {} },
     },
     // The composed entries core derives the claimed bodies from.
     visibilityEntries: APP_VISIBILITY,
@@ -95,6 +96,18 @@ describe('produceMissionCaptions', () => {
     for (const id of SAMPLED_BODY_IDS) expect(core).not.toContain(`sceneBody-${id}`);
     // Earth's category id is also its body id: it is core's own item, never a claim.
     expect(core).toContain('sceneBody-earth');
+    // The claim set unions every label entry's items; none may equal an unclaimed body's id.
+    const sampled = new Set<string>(SAMPLED_BODY_IDS);
+    const unclaimedMesh = SCENE_MESH_BODIES.filter(
+      (b) =>
+        !sampled.has(b.id) &&
+        !ANCHORED_MESH_BODY_IDS.has(b.id) &&
+        spacecraftPresent(b.id, CONST_J2000),
+    );
+    expect(unclaimedMesh.length).toBeGreaterThan(0);
+    for (const body of [...SCENE_PLANETS, ...unclaimedMesh]) {
+      expect(core).toContain(`sceneBody-${body.id}`);
+    }
     expect(idsOf(produceMissionCaptions(makeState(), ctx, CRAFT_FADE))).toEqual([
       'sceneBody-voyager1',
       'sceneBody-voyager2',
