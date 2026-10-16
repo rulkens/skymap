@@ -1,0 +1,188 @@
+.open {
+  composes: ring from '../../styles/ring.module.css';
+}
+
+/* `button` as well, so the control's own colour holds over the ring's, which the module copies of the ring repeat later. */
+button.open {
+  color: var(--site-text-muted);
+}
+
+.small {
+  composes: ring-small from '../../styles/ring.module.css';
+}
+
+/* The key is of use to a keyboard only. */
+.open kbd {
+  margin-left: 0.25rem;
+}
+
+@media not ((hover: hover) and (pointer: fine)) {
+  .open kbd {
+    display: none;
+  }
+}
+
+/* A sheet let down from the top of the window over the dimmed page; a phone gives it the whole screen. */
+.sheet {
+  composes: sheet from '../../styles/sheet.module.css';
+  inset: 0 0 auto;
+  max-height: 100dvh;
+  padding: 2.5rem 0 3.5rem;
+  border-bottom: 1px solid var(--border-divider);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet::backdrop {
+  background: rgb(0 0 0 / 0.72);
+}
+
+.inside {
+  composes: wrap grid from '../../styles/layout.module.css';
+  align-items: end;
+  row-gap: 0.75rem;
+}
+
+.label {
+  composes: small from '../../styles/type.module.css';
+  display: block;
+  color: var(--site-text-dim);
+}
+
+/* The query is the sheet's heading; the rule under it is the field, and takes the accent while it is typed in. */
+.ask input {
+  width: 100%;
+  padding: 0.25rem 0 0.5rem;
+  border: 0;
+  border-bottom: 1px solid rgb(232 238 255 / 0.2);
+  border-radius: 0;
+  background: none;
+  color: var(--color-fg);
+  font: var(--weight-display) 2rem / 1.2 var(--font-family-display);
+  appearance: none;
+}
+
+.ask input:focus-visible {
+  outline: none;
+  border-bottom-color: var(--color-accent);
+  box-shadow: 0 1px 0 var(--color-accent);
+}
+
+.shut {
+  composes: ring ring-small from '../../styles/ring.module.css';
+  justify-self: end;
+}
+
+.status {
+  composes: small from '../../styles/type.module.css';
+  max-width: none;
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--site-text-dim);
+}
+
+.results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.results a {
+  --mark: 0.6875rem;
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  padding-block: 1rem;
+  border-top: 1px solid var(--border-divider);
+  color: var(--site-text-muted);
+  text-decoration: none;
+}
+
+.results a::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--mark) - 0.75rem);
+  top: 1.625rem;
+  width: var(--mark);
+  height: var(--mark);
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.results a:hover::before,
+.results a:focus-visible::before {
+  opacity: 1;
+}
+
+.results a:focus-visible {
+  outline: none;
+}
+
+.results a:focus-visible::before {
+  background: var(--color-accent);
+}
+
+/* The marker alone is easy to lose among eight results. */
+.results a:focus-visible .title {
+  color: var(--color-accent);
+}
+
+.results .title {
+  font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  color: var(--color-fg);
+}
+
+.results .where {
+  font-size: var(--text-small);
+  color: var(--site-text-dim);
+}
+
+.results .excerpt {
+  font-size: var(--text-small);
+  font-weight: var(--weight-small);
+  line-height: 1.5;
+}
+
+.results mark {
+  background: none;
+  color: var(--color-fg);
+  text-decoration: underline 1px var(--color-accent);
+  text-underline-offset: 0.25em;
+}
+
+@media (min-width: 901px) {
+  .ask,
+  .status,
+  .results {
+    grid-column: 3 / span 8;
+  }
+
+  .shut {
+    grid-column: 11 / -1;
+  }
+}
+
+/* Narrow: the whole screen, Close above the field at the thumb's corner, results indented by their marker. */
+@media (max-width: 900px) {
+  .sheet {
+    min-height: 100dvh;
+    padding-top: 0.5rem;
+  }
+
+  .shut {
+    order: -1;
+  }
+
+  .ask input {
+    font-size: 1.75rem;
+  }
+
+  .results a {
+    padding-left: calc(var(--mark) + 0.75rem);
+  }
+
+  .results a::before {
+    left: 0;
+  }
+}

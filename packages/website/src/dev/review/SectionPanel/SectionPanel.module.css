@@ -1,0 +1,67 @@
+/* Beside the article, never over it: its rows scroll to passages that must stay visible. */
+.root {
+  position: fixed;
+  z-index: 2147483001;
+  top: calc(var(--nav-height) + var(--review-bar, 2.75rem) + var(--space-8));
+  right: var(--space-8);
+  box-sizing: border-box;
+  width: min(28rem, calc(100vw - 2rem));
+  /* Leaves the feedback dock's corner free under it. */
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar, 2.75rem) - 9rem);
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--color-bg);
+  border: 1px solid var(--review-line);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.4 var(--font-body);
+}
+
+.root:focus {
+  outline: none;
+}
+
+/* On a phone the panel is a sheet over the foot of the page, above the feedback button. */
+@media (max-width: 900px) {
+  .root {
+    top: auto;
+    right: var(--space-8);
+    bottom: calc(var(--review-bar, 2.75rem) + 4rem);
+    left: var(--space-8);
+    width: auto;
+    max-height: 55svh;
+  }
+}
+
+.title {
+  display: block;
+  color: var(--color-accent);
+}
+
+.words {
+  margin-bottom: var(--space-4);
+  color: var(--site-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.action {
+  composes: button from '../ReviewControl/ReviewControl.module.css';
+}
+
+.foot,
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--review-line-dim);
+}
+
+.confirm {
+  margin-top: var(--space-4);
+  color: var(--site-text);
+}
+
+.consequence {
+  flex: 1 0 100%;
+}

@@ -7,7 +7,7 @@ import type { SiteShotSettings } from './SiteShotSettings';
  * pixels (shot at twice that), `widths` the files written, widest first being
  * no wider than the shot. `denseQuality` is the AVIF quality of every width
  * above the narrowest, for a row whose wider files are only ever drawn at 2x
- * or more, where coarser quality does not show. Its label (components/ShotCaption.astro): `title`
+ * or more, where coarser quality does not show. Its label (components/ShotCaption/ShotCaption.tsx): `title`
  * names what is shown, `caption` adds a sentence, `drawn` says what is data
  * and what is drawn, `credit` names third-party imagery; no full stop on the
  * first and the last.

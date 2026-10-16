@@ -1,13 +1,14 @@
 import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReviewMark';
 import { foldText } from './foldText';
 import { locateText } from './locateText';
+import reviewPage from './ReviewPage/ReviewPage.module.css';
 import { reviewBlockOf } from './reviewBlockOf';
 
 function tag(el: Element, mark: DocsReviewMark): void {
-  el.classList.add('review-mark', `review-${mark.state}`);
+  el.classList.add(reviewPage.mark, reviewPage[mark.state]!);
   el.setAttribute('data-review-id', mark.id);
   const rewrite = mark.state === 'rewrite';
-  if (rewrite && mark.after) el.classList.add('review-has-after');
+  if (rewrite && mark.after) el.classList.add(reviewPage.hasAfter);
   const notes = [
     mark.reason !== 'owner' && mark.reason,
     mark.why,
@@ -36,7 +37,7 @@ function tagSection(heading: Element): void {
   const level = Number(heading.localName.slice(1));
   for (let el = heading.nextElementSibling; el; el = el.nextElementSibling) {
     if (/^h[1-6]$/.test(el.localName) && Number(el.localName.slice(1)) <= level) break;
-    el.classList.add('review-cut-section');
+    el.classList.add(reviewPage.cutSection!);
   }
 }
 
@@ -47,7 +48,6 @@ export function paintMark(root: Element, mark: DocsReviewMark): boolean {
   const block = wholeBlock(portions[0]!.node, foldText(mark.text).text.trim());
   if (block) {
     tag(block, mark);
-    block.classList.add('review-block');
     if (mark.state === 'cut' && /^h[1-6]$/.test(block.localName)) tagSection(block);
     return true;
   }

@@ -1,0 +1,6 @@
+.root {
+  max-width: 34em;
+  font-size: var(--text-lead);
+  line-height: 1.5;
+  color: var(--site-text);
+}

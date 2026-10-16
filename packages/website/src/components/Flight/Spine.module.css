@@ -1,0 +1,131 @@
+/* Only on the stage: without script the stops are a list and need no line beside them. */
+.spine {
+  display: none;
+}
+
+:root[data-flight-live] .spine {
+  display: block;
+  position: absolute;
+  z-index: 5;
+  right: 1.875rem;
+  top: calc(var(--nav-height) + 2.5rem);
+  bottom: 8.5rem;
+  width: 0.9375rem;
+}
+
+.spine::before,
+.fill {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  margin-left: -0.5px;
+}
+
+.spine::before {
+  bottom: 0;
+  background: rgb(232 238 255 / 0.3);
+}
+
+.fill {
+  background: var(--color-accent);
+}
+
+.dot {
+  position: absolute;
+  left: 0;
+  width: 0.9375rem;
+  height: 0.9375rem;
+  margin-top: -0.46875rem;
+  padding: 0;
+  border: 1px solid rgb(168 208 255 / 0.8);
+  border-radius: 50%;
+  background: #000;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  /* The ring is 15px; the finger gets 44. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: calc((100% - var(--tap)) / 2);
+  }
+
+  &:hover,
+  &:focus-visible {
+    transform: scale(1.4);
+  }
+
+  &[aria-current='true'] {
+    background: var(--color-accent);
+  }
+
+  & span {
+    position: absolute;
+    right: 1.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    /* The display face is small on the body: a size up keeps the label as readable as the small text it replaced. */
+    font: var(--weight-display) 1.25rem / 1 var(--font-family-display);
+    color: var(--color-fg);
+    opacity: 0;
+    pointer-events: none;
+    text-shadow:
+      0 0 0.75rem #000,
+      0 0 0.25rem #000;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover span,
+  &:focus-visible span,
+  &[aria-current='true'] span {
+    opacity: 1;
+  }
+}
+
+/* Upright screens: the spine takes the top right, and its labels would sit over the picture. */
+@media (max-width: 760px) and (orientation: portrait) {
+  :root[data-flight-live] .spine {
+    right: 0.875rem;
+    top: calc(var(--nav-height) + 1.25rem);
+    bottom: 52%;
+    width: 0.6875rem;
+  }
+
+  .dot {
+    width: 0.6875rem;
+    height: 0.6875rem;
+    margin-top: -0.34375rem;
+
+    & span {
+      display: none;
+    }
+  }
+}
+
+/* Short screens (a phone on its side): no room for labels that would repeat the caption beside them. */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root[data-flight-live] .spine {
+    right: 1.25rem;
+    top: calc(var(--nav-height) + 0.75rem);
+    bottom: 1.5rem;
+  }
+
+  .dot span {
+    display: none;
+  }
+
+  /* Nine rings in under 300px: each keeps the full width and the height its slot allows (over the 24px minimum). */
+  .dot::after {
+    inset: -0.5rem calc((100% - var(--tap)) / 2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot,
+  .dot span {
+    transition: none;
+  }
+}

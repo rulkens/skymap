@@ -1,0 +1,41 @@
+.root {
+  margin: 0;
+
+  & > picture img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.caption {
+  margin-top: 0.5rem;
+}
+
+/* The frames meet in the middle of a gap of the page grid; their labels keep to its columns either side. */
+@media (min-width: 901px) {
+  .start,
+  .end {
+    --cols: 6;
+  }
+
+  .start {
+    padding-right: calc(var(--col-gap) / 2 - 0.125rem);
+  }
+
+  .end {
+    padding-left: calc(var(--col-gap) / 2 - 0.125rem);
+  }
+}
+
+/* The margin is the room the disc's ring stands in. */
+.ringed {
+  max-width: min(26rem, 78svh);
+  margin: var(--disc-ring) auto;
+}
+
+@media (max-width: 900px) {
+  .ringed {
+    max-width: min(85%, 78svh);
+  }
+}

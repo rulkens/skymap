@@ -1,0 +1,33 @@
+.root {
+  position: fixed;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 2px solid var(--color-accent);
+  box-shadow:
+    0 0 0 1px #000,
+    inset 0 0 0 1px #000;
+  background: rgba(168, 208, 255, 0.12);
+}
+
+.root.chosen {
+  background: rgba(168, 208, 255, 0.2);
+}
+
+.label {
+  position: absolute;
+  left: -2px;
+  bottom: 100%;
+  max-width: 24rem;
+  padding: 0.125rem 0.5rem;
+  overflow: hidden;
+  background: #000;
+  color: var(--color-accent);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.label.below {
+  bottom: auto;
+  top: 100%;
+}

@@ -1,0 +1,63 @@
+/* The key reference hangs from the bar, in the panel's corner; the two are never open together. */
+.root {
+  position: absolute;
+  top: calc(100% + var(--space-8));
+  right: var(--space-8);
+  box-sizing: border-box;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar, 2.75rem) - 9rem);
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--review-line);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.4 var(--font-body);
+}
+
+.root:focus {
+  outline: none;
+}
+
+/* On a phone the bar is at the foot: the box rises above it, clear of the feedback button like the panel. */
+@media (max-width: 900px) {
+  .root {
+    top: auto;
+    right: var(--space-8);
+    bottom: calc(100% + 4rem);
+    left: var(--space-8);
+    width: auto;
+    max-height: 55svh;
+  }
+}
+
+.root h3 {
+  margin: var(--space-6) 0 var(--space-2);
+  color: var(--site-text-dim);
+  font: 600 0.6875rem / 1.2 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.root h3:first-child {
+  margin-top: 0;
+}
+
+.root dl {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-2) var(--space-8);
+  margin: 0;
+}
+
+.root dt,
+.root dd {
+  margin: 0;
+}
+
+.root kbd {
+  padding: 0 var(--space-3);
+  border: 1px solid var(--review-line-dim);
+  border-radius: var(--space-2);
+  color: var(--color-fg);
+  font: 400 0.75rem / 1.4 var(--font-family-mono);
+}
