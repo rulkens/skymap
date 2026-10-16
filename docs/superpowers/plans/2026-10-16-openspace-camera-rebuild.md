@@ -94,7 +94,7 @@ These files do not touch either changed contract, so they come over from the #83
 - Produces `InputStep` `{ kind: 'navDrag'; axis: NavAxis; deltaPx: Vec2 }`. Task 3's conversion emits it.
 - `ControlSchemeId = 'skymap' | 'openspace'`.
 
-- [ ] Implement test-first per the #837 branch's `stepCameraRuntime.ts` and `replayInput.ts` diffs, applying rulings 5–9. Commit.
+- [x] Implement test-first per the #837 branch's `stepCameraRuntime.ts` and `replayInput.ts` diffs, applying rulings 5–9. Commit.
 
 ### Task 3: The openspace binding and the nav motion — `review: yes`
 

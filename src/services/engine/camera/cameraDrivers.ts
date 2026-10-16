@@ -371,3 +371,38 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pose: (ctx, mem) => ({ pose: ctx.state.camera.base, memory: mem }),
   },
 ];
+
+// Neither row reads a timed channel, so held <-> coast is an edge and each one
+// commits the register. Both echo it, as `orbitDrag` does: the navigator's
+// nudge already moved it this frame.
+const NAVIGATOR_ROW = {
+  pivotsOnFocusedBody: true,
+  commitsOnEdge: 'register',
+  pose: (ctx: DriverCtx, mem: FollowMemory | null) => ({ pose: ctx.register, memory: mem }),
+} as const;
+
+/**
+ * The openspace table: `CAMERA_DRIVERS` with `orbitDrag` swapped for the
+ * navigator's rows. The coast sits at 50, under tween (60) and the follow
+ * approach (55), so a focus change preempts it; the held row keeps the drag's
+ * 80. An exhibit row claims the drag in this scheme as in skymap's.
+ */
+export const OPENSPACE_DRIVERS: readonly CameraDriver[] = CAMERA_DRIVERS.flatMap((d) =>
+  d.id !== 'orbitDrag'
+    ? [d]
+    : [
+        {
+          ...NAVIGATOR_ROW,
+          id: 'openSpaceHeld',
+          priority: 80,
+          isActive: (_s: RootState, a: DriverActivity) => a.navHeld && !a.dragClaimed,
+        },
+        {
+          ...NAVIGATOR_ROW,
+          id: 'openSpaceCoast',
+          priority: 50,
+          isActive: (_s: RootState, a: DriverActivity) =>
+            !a.navHeld && a.navMoving && !a.dragClaimed,
+        },
+      ],
+);

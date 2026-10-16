@@ -84,6 +84,8 @@ function ctxOf(
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     lastWinnerRidesWheel: ridesWheelTarget(CAMERA_DRIVERS, overrides.winnerLastFrame ?? 'resting'),
     autoRotateEpoch: { ref: null, startMs: null },
+    navHeld: false,
+    navOwns: false,
   };
 }
 
@@ -707,5 +709,67 @@ describe('replayInput', () => {
     const radii = worldArmOf(next.register).distance / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
     expect(radii).toBeLessThan(1.05);
+  });
+});
+
+describe('replayInput — the navigator', () => {
+  const REGISTER = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
+  const prevOf = (store: ReturnType<typeof makeStore>) => ({
+    register: store.getState().camera.base,
+    gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+    tilt: EMPTY_TILT_MEMORY,
+    follow: null,
+  });
+  const commitsOf = (actions: readonly { type: string }[]): number =>
+    actions.filter((a) => a.type === commitCameraPose.type).length;
+
+  it('a release commits the register, unless a navigator hold is running', () => {
+    const store = makeStore();
+    store.dispatch(commitCameraPose(REGISTER));
+    const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
+
+    const plain = replayInput(prevOf(store), release, ctxOf(store));
+    const held = replayInput(prevOf(store), release, { ...ctxOf(store), navHeld: true });
+
+    expect(commitsOf(plain.actions)).toBe(1);
+    expect(commitsOf(held.actions)).toBe(0);
+    expect(held.navSteps).toEqual(release);
+  });
+
+  it('a press and release inside one drain counts as held', () => {
+    const store = makeStore();
+    store.dispatch(commitCameraPose(REGISTER));
+
+    const out = replayInput(
+      prevOf(store),
+      [
+        { kind: 'gestureStart' },
+        { kind: 'navDrag', axis: 'orbit', deltaPx: [5, 0] },
+        { kind: 'gestureEnd' },
+      ],
+      ctxOf(store),
+    );
+
+    expect(commitsOf(out.actions)).toBe(0);
+    expect(out.navSteps.map((s) => s.kind)).toEqual(['navDrag', 'gestureEnd']);
+  });
+
+  it('an at-rest notch zooms the live register while a navigator row owns the camera', () => {
+    const store = makeStore();
+    store.dispatch(commitCameraPose(REGISTER));
+    const live = absoluteArm({ target: [0, 0, 0], yaw: 0.5, pitch: 0, distance: 100 });
+    const notch: readonly InputStep[] = [atRestZoom(1.5)];
+
+    const stale = replayInput({ ...prevOf(store), register: live }, notch, ctxOf(store));
+    const owned = replayInput({ ...prevOf(store), register: live }, notch, {
+      ...ctxOf(store),
+      navOwns: true,
+    });
+
+    // Off `base` the notch lands on yaw 0 and commits; on the register it keeps the live yaw, uncommitted.
+    expect(worldArmOf(stale.register).yaw).toBe(0);
+    expect(worldArmOf(owned.register).yaw).toBe(0.5);
+    expect(worldArmOf(owned.register).distance).toBe(150);
+    expect(commitsOf(owned.actions)).toBe(0);
   });
 });

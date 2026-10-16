@@ -2,7 +2,7 @@
  * composeControlSchemes — the control-scheme registry, built once at `startLoop`: core's rows
  * plus one row per exhibit section kind that carries a camera driver. Core owns that row's
  * activity: it is on while an exhibit carrying the kind runs, and its `pose` gets that
- * exhibit's section data. A second scheme is a new key, not a branch in the frame loop.
+ * exhibit's section data. A scheme is a key, not a branch in the frame loop: openspace swaps `orbitDrag` for the navigator's rows.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
@@ -12,7 +12,7 @@ import type { ExhibitCameraDriver } from '../../../@types/engine/camera/ExhibitC
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 import type { RootState } from '../../../store/types';
 import { selectTakeoverSource } from '../../../state/takeover/selectors';
-import { CAMERA_DRIVERS } from './cameraDrivers';
+import { CAMERA_DRIVERS, OPENSPACE_DRIVERS } from './cameraDrivers';
 
 function liftExhibitDriver(
   driver: ExhibitCameraDriver<unknown>,
@@ -42,7 +42,8 @@ export function composeControlSchemes(
     }
   }
   const lifted = [...byDriver].map(([driver, dataById]) => liftExhibitDriver(driver, dataById));
-  const drivers = [...CAMERA_DRIVERS, ...lifted];
-  // `openspace` reuses the skymap drivers until its rows land (plan Task 2).
-  return { skymap: { drivers }, openspace: { drivers } };
+  return {
+    skymap: { drivers: [...CAMERA_DRIVERS, ...lifted] },
+    openspace: { drivers: [...OPENSPACE_DRIVERS, ...lifted] },
+  };
 }

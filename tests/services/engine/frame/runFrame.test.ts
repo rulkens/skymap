@@ -77,6 +77,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -228,6 +229,8 @@ function makeState(): EngineState {
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
+      navigator: NAV_AT_REST,
+      scheme: 'skymap',
       own: {},
       pivotBody: null,
       outputs: {
