@@ -41,15 +41,10 @@ describe('composeForegroundCaption pick under focus', () => {
     expect(composeForegroundCaption(ctxWith(sphereAt([1e-3, 0, 0])), caption, 1).pickId).toBe(7);
   });
 
-  it('a label not clickable under focus still names its subject', () => {
-    const out = composeForegroundCaption(ctxWith(sphereAt([0.5, 0, 0])), caption, 1);
-    expect(out.pickId).toBeUndefined();
-    expect(out.subjectId).toBe(7);
-  });
-
   it('draws the caption but strips its pick outside the focused sphere', () => {
     const out = composeForegroundCaption(ctxWith(sphereAt([0.5, 0, 0])), caption, 1);
     expect(out.pickId).toBeUndefined();
+    expect(out.subjectId).toBe(7);
     expect(out.text).toBe('x');
   });
 });

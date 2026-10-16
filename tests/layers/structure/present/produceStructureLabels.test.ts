@@ -151,19 +151,9 @@ describe('produceStructureLabels', () => {
     expect(labelsOf(state, makeCtx(), 'cosmic').labels).toEqual([]);
   });
 
-  it('bakes the handed value into fadeAlpha', () => {
-    // A cluster label handed 0.5 emits half the at-rest fadeAlpha.
-    const state = makeState();
-    state.store.setGroup('anchors', [rec('a')]);
-    const atRestAlpha = labelsOf(state, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
-    const dimmedAlpha = labelsOf(state, makeCtx(), 'cosmic', handed(0.5)).labels[0]!.fadeAlpha!;
-
-    expect(dimmedAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
-  });
-
   it('scales by the handed value exactly once', () => {
-    // At full blend: the director recedes labels, so a producer that receded or
-    // clipped on its own would land below 0.25.
+    // At full blend: the director recedes labels, so a producer that receded on its
+    // own would land below 0.25.
     const state = makeState();
     state.store.setGroup('anchors', [rec('a')]);
     const atRestAlpha = labelsOf(state, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
@@ -294,21 +284,7 @@ describe('produceStructureLabels', () => {
     expect(byId(under, 'in').pickId).toBeDefined();
     expect(byId(under, 'out').pickId).toBeUndefined();
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
-  });
-
-  it('a label not clickable under focus still names its subject', () => {
-    const state = makeState();
-    state.store.setGroup('anchors', [rec('out', { worldPos: [0, 10, CAM_Z] })]);
-    const focus = {
-      center: [10, 0, CAM_Z],
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0.5,
-      blend: 1,
-    } as const;
-    const ctx = makeCtx();
-    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
-    const label = labelsOf(state, focused, 'cosmic').labels[0]!;
-    expect(label.pickId).toBeUndefined();
-    expect(label.subjectId).toBe(structurePickId('galaxy-cluster', 0));
+    // Not clickable, still named: emphasis keys on the subject, not the pick.
+    expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1));
   });
 });

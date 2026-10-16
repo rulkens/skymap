@@ -270,24 +270,9 @@ describe('produceFamousGalaxyLabels', () => {
     expect(out.labels[0]!.worldEmMpc).toBeCloseTo(0.0125, 6);
   });
 
-  it('bakes the handed value into famous label fadeAlpha', () => {
-    // At-rest (handed 1) → full distance-fade alpha.
-    const atRest = makeState();
-    const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const atRestAlpha = produceFamousGalaxyLabels(atRestRuntime)(atRest, makeCtx(), ONE).labels[0]!
-      .fadeAlpha!;
-
-    // handed 0.5 → half the at-rest alpha for label AND its anchor line.
-    const dimmed = makeState();
-    const dimmedRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(dimmedRuntime)(dimmed, makeCtx(), handed(0.5));
-
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
-  });
-
   it('scales by the handed value exactly once', () => {
-    // At full blend: the director recedes labels, so a producer that receded or
-    // clipped on its own would land below 0.25.
+    // At full blend: the director recedes labels, so a producer that receded on its
+    // own would land below 0.25.
     const atRest = makeState();
     const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     const atRestAlpha = produceFamousGalaxyLabels(atRestRuntime)(atRest, makeCtx(), ONE).labels[0]!
@@ -396,21 +381,9 @@ describe('produceFamousGalaxyLabels', () => {
     const under = produceFamousGalaxyLabels(runtime)(state, focused, ONE).labels;
     expect(pickOf(under, 'famous-in')).toBeDefined();
     expect(pickOf(under, 'famous-out')).toBeUndefined();
-    expect(under.find((l) => l.id === 'famous-out')!.fadeAlpha).toBeGreaterThan(0);
-  });
-
-  it('a label not clickable under focus still names its subject', () => {
-    const runtime = seed([{ id: 'out', names: ['Out'] }], [5, 3, 0], [120]);
-    const focus: FocusUniformsValue = {
-      center: [5, 0, 0],
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0.5,
-      blend: 1,
-    };
-    const ctx = makeCtx();
-    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
-    const label = produceFamousGalaxyLabels(runtime)(makeState(), focused, ONE).labels[0]!;
-    expect(label.pickId).toBeUndefined();
-    expect(label.subjectId).toBe(packSelection(Source.FamousGalaxy, 0 + PICK_SENTINEL_OFFSET));
+    const out = under.find((l) => l.id === 'famous-out')!;
+    expect(out.fadeAlpha).toBeGreaterThan(0);
+    // Not clickable, still named: emphasis keys on the subject, not the pick.
+    expect(out.subjectId).toBe(packSelection(Source.FamousGalaxy, 1 + PICK_SENTINEL_OFFSET));
   });
 });
