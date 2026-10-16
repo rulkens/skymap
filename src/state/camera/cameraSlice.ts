@@ -14,6 +14,7 @@ import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
+import { inputGestureStarted } from '../input/inputSlice';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraAim } from '../../@types/camera/CameraAim';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
@@ -116,6 +117,14 @@ const cameraSlice = createSlice({
     setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
       camera.tuning = clampCameraTuning(action.payload, camera.tuning);
     },
+  },
+  extraReducers: (builder) => {
+    // One atomic action, so a double-tap's focus fly (dispatched after its second
+    // press starts) is never cancelled by that press.
+    builder.addCase(inputGestureStarted, (camera) => {
+      camera.dragging = true;
+      camera.tween = null;
+    });
   },
 });
 
