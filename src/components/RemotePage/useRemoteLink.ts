@@ -19,7 +19,7 @@ import type { RemoteSearchMatch } from '../../@types/remote/RemoteSearchMatch';
 import type { RemoteSession } from '../../@types/remote/RemoteSession';
 import type { RoomCode } from '../../@types/remote/RoomCode';
 
-// `randomUUID` exists only in secure contexts, and a phone on http://192.168.x.x is not one.
+// `randomUUID` exists only in secure contexts, and a phone on a plain-http LAN address is not one.
 const newRemoteId = (): string => crypto.randomUUID?.() ?? newLocalRoomCode();
 
 export function useRemoteLink(room: RoomCode | null): RemoteSession {
