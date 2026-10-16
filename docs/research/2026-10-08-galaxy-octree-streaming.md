@@ -254,5 +254,5 @@ Rulings:
 4. **Prep lands as one separate PR** before the feature PR.
 
 Ruled 2026-10-16 (later): **GLADE first, REGALADE next.** Both GLADE versions stay loadable, so they can be compared in
-the app and the mcpm workbench keeps working: GLADE's row keeps its tier files and gains an octree member, and a GLADE
-format setting picks which one loads. A licence ask to the REGALADE authors is drafted (outreach emails, gitignored).
+the app and the mcpm workbench keeps working: GLADE's row keeps its tier files and gains an octree member, and a galaxy
+catalog format setting (`'skmp' | 'octree'`, for every source that ships both) picks which one loads. A licence ask to the REGALADE authors is drafted (outreach emails, gitignored).

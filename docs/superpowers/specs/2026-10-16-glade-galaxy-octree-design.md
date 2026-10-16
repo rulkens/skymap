@@ -160,10 +160,15 @@ type GalaxyRecordSource = {
 ### 5.2 Load and streaming
 
 **Both GLADE versions stay loadable** (ruled 2026-10-16), so they can be compared in the app and the mcpm workbench keeps
-its input. GLADE's row keeps its `tierTargets` and gains `octree: { budgets: OctreeBudgets }`; a **GLADE format** setting
-(Octree / Flat files, persisted in the URL so a shot can pin it) picks which record source the GLADE slot builds.
-Switching releases one and loads the other, as a tier switch does today. The slot wiring is the one site that reads
-`octree`; the other four rows never set it. Index + index info fetch
+its input. The choice is a property of the galaxy catalog, not of GLADE:
+
+- `GalaxyCatalogFormat = 'skmp' | 'octree'` (the galaxy counterpart of `StarCatalogFormat`).
+- A row declares what it ships: `tierTargets` for SKMP files (as today) and an optional `octree: { budgets: OctreeBudgets }`.
+  GLADE ships both; the other four ship SKMP only; REGALADE will ship the octree only.
+- One **galaxy catalog format** setting in the galaxy catalog slice (Octree / Flat files, persisted in the URL so a shot
+  can pin it) picks the format for every source that ships both; a source that ships one format ignores it.
+- The slot wiring is the one site that reads the row's formats and the setting, and builds the matching record source.
+  Switching releases one and loads the other, as a tier switch does today. Index + index info fetch
 through the data manifest; chunks stream through the shared chunk stream (prep 3) with the galaxy path builder and
 decoder, planned by the shared CPU planner over the index each frame. Info objects are not streamed: `loadRow` fetches
 them on demand through a small LRU keyed by chunk id, separate from the render pool.
@@ -223,7 +228,7 @@ the column is treated as permanent (the user is unsure it is needed on the octre
   24-byte GPU packer against the flat interleave's slots for the same galaxy (one derivation, two layouts), `ordinalOfPick`/`pickOfOrdinal` inverse, shard lookup.
 - Prep 6 is behaviour-neutral: the flat source's `stats` equal today's per-tier values (a test pins them), and the
   existing galaxy suite stays green unchanged.
-- A/B in one build through the GLADE format setting (Flat files vs Octree, same data, same code), before/after shots at the full-survey and 3.5 Gpc poses and one close pose inside the
+- A/B in one build through the galaxy catalog format setting (Flat files vs Octree, same data, same code), before/after shots at the full-survey and 3.5 Gpc poses and one close pose inside the
   Local Volume, per bias mode (None, Volume-limited, Angular): brightness and structure must match within the eye-check;
   the zoomed-out pose must look right with no chunk loaded (blobs only); `npm run perf` before and after at the perf
   poses; a phone check of first paint on throttled 4G (`npm run loadtime`).
@@ -248,7 +253,7 @@ a re-bake.
 
 Growth in the feature (no prep): the galaxy rows of §3.1, the info objects and `SKOF`, the `u64` store, the GLADE
 emitter call, the galaxy stratify setting, the octree record source, the pooled pipeline, the pgc shards, the `octree`
-member on GLADE's row and the GLADE format setting.
+member on GLADE's row, `GalaxyCatalogFormat` and the galaxy catalog format setting.
 
 Rejected at the checkpoint: a `format: 'skmp' | 'octree'` branch at each of the 12 consumer sites (two cases at 12 sites
 for as long as both kinds exist); decoding the flat files into the pooled record now (one path, but a re-verification of
