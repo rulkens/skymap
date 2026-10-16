@@ -1,21 +1,8 @@
 /**
- * wireInput.structure — structural assertion that the wireInput phase wires
- * structure clicks through the click resolver and dispatches Redux actions
- * for select and focus on click/dblclick.
- *
- * ### Why a source-string assertion
- *
- * The click flow is hard to unit-test in isolation: it requires a real
- * galaxyPickRenderer (GPU device), real orbit controls, and a real mouse
- * device.  This is a crude source-string guard — it regresses loudly if
- * a future refactor drops the structure-click wiring or stops routing the
- * dblclick through the focusSelected command. End-to-end
- * behaviour (single-click opens InfoCard, double-click tweens camera) is
- * verified by manual smoke.
- *
- * If this ever feels too fragile, promote it to a stub-based test that
- * exercises the actual `onClick` / `onDoubleClick` callbacks against a
- * mocked `runPickAtCss`.
+ * wireInput.structure — a source-string guard that the pick driver resolves
+ * hits through the engine's one composed resolver, not a rebuilt one. The
+ * driver itself needs a GPU pick program, so its behaviour is pinned in
+ * `createPickDriver.test.ts` and by manual smoke (click selects, hover card).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -37,11 +24,5 @@ describe('wireInput structure wiring', () => {
     // threaded in from `deps.selection` (engine.ts's one instance), not
     // rebuilt here — see F1.
     expect(src).toContain('resolvePick: deps.selection.resolvePick');
-  });
-
-  it('routes double-click through the focusSelected command', () => {
-    // The command's saga reads the authoritative selection slot, so the handler
-    // dispatches it without running a second pick.
-    expect(src).toContain('focusSelected()');
   });
 });

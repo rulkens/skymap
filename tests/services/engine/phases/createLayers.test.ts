@@ -40,7 +40,6 @@ function makeDeps(
     cb: { store, setSagaContext: vi.fn() },
     composition: { layers, home: { focus: null, seedSelection: false } },
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
     phaseLocals: {

@@ -8,7 +8,7 @@
  * billboard expansion uses — so the two can't drift apart.
  */
 import { createInputAggregator } from '../../../utils/input/createInputAggregator';
-import { attachOrbitControls } from '../../../../src/services/camera/orbitControls';
+import { attachOrbitControls } from '../../../utils/input/attachOrbitControls';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';

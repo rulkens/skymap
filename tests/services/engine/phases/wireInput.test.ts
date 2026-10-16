@@ -37,11 +37,6 @@ vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
 }));
 
-const attachOrbitControlsSpy = vi.fn((..._args: unknown[]) => () => {});
-vi.mock('../../../../src/services/camera/orbitControls', () => ({
-  attachOrbitControls: (...args: unknown[]) => attachOrbitControlsSpy(...args),
-}));
-
 vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer', () => ({
   createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
@@ -77,9 +72,6 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
-import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -176,7 +168,6 @@ function makeDeps(): BootstrapDeps {
     cb,
     composition: { layers: [], home: EARTH_HOME },
     frameRef: { current: () => {} },
-    detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
     // `createPickDriver` is module-mocked above, so no test here exercises
@@ -259,47 +250,15 @@ describe('wireInput', () => {
     );
   });
 
-  it('wires the camera and the input bindings when the pick renderers are absent', async () => {
+  it('wires the camera and the resize binding when the pick renderers are absent', async () => {
     // No renderer must never mean no input and no error.
     const state = makeState();
     const deps = makeDeps();
-    attachOrbitControlsSpy.mockClear();
 
     await wireInput(state, deps);
 
     expect(state.booted).toBe(true);
     expect(state.subsystems.inputBindings).not.toBeNull();
-    expect(attachOrbitControlsSpy).toHaveBeenCalled();
-  });
-
-  it('cancels an in-flight tween on the gesture-start emission, at DOM time', async () => {
-    // B1: `cancelCameraTween` must not wait for the frame's drain. A double-tap
-    // runs pointerdown → … → dblclick → `watchFocusTweenSaga` → `startCameraTween`
-    // inside one inter-frame gap, so a deferred cancel would kill the tween the
-    // tap just requested and the camera would never fly.
-    const state = makeState();
-    const deps = makeDeps();
-    attachOrbitControlsSpy.mockClear();
-
-    await wireInput(state, deps);
-
-    const pose = { target: [0, 0, 0] as Vec3, yaw: 1, pitch: 0, distance: 5 };
-    deps.cb.store.dispatch(
-      startCameraTween({
-        from: pose,
-        to: pose,
-        durationMs: 800,
-        easing: 'linear',
-        frame: 'ecliptic',
-      }),
-    );
-
-    const emit = attachOrbitControlsSpy.mock.calls[0]?.[1] as (e: InputGestureEvent) => void;
-    emit({ kind: 'gestureStart' });
-
-    const root = deps.cb.store.getState();
-    expect(root.camera.tween).toBeNull();
-    expect(root.camera.dragging).toBe(true);
   });
 
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {

@@ -2,7 +2,7 @@
  * attachOutlineCornerControls — drag a draft corner to move it, click it to delete it (or close an
  * open ring on its first corner), press an edge to insert a corner there and drag it. The
  * capture-phase `pointerdown` swallows those presses, so `attachOrbitControls` never pans or
- * appends for them. Desktop-only: `setPointerCapture` breaks iOS touch, which orbitControls avoids.
+ * appends for them. Desktop-only: `setPointerCapture` breaks iOS touch, which attachOrbitControls avoids.
  */
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { HeldCorner } from '../../@types/HeldCorner';
@@ -19,7 +19,7 @@ import type { SceneStore } from '../store/types';
 
 const HIT_RADIUS_PX = 8; // CSS px; also the closest a new corner may land to an existing one
 const EDGE_RADIUS_PX = 6; // CSS px
-const DRAG_THRESHOLD_SQ_PX = 4 * 4; // orbitControls' click threshold
+const DRAG_THRESHOLD_SQ_PX = 4 * 4; // attachOrbitControls' click threshold
 
 export function attachOutlineCornerControls(
   canvas: HTMLCanvasElement,

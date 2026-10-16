@@ -1,17 +1,17 @@
 /**
- * Orbit controls — the DOM gesture recognizer. Recognizes what the pointer /
- * wheel stream means and emits `InputGestureEvent`s, touching no camera and no
- * engine state: `inputAggregator` folds a frame's events and `runFrame`
- * replays them. One apply per frame rather than one per event is what keeps a
- * second controller from becoming a second writer of the same register.
+ * attachOrbitControls — the dev workbenches' DOM gesture recognizer (the app
+ * reads the canvas through `createCanvasDeviceChannel` + `recognize`). Emits
+ * `InputGestureEvent`s, touching no camera: `createInputAggregator` folds a
+ * frame's events and the workbench applies them once per frame, so a second
+ * controller never becomes a second writer of the same register.
  *
  * Pointer events, not mouse events: `mousedown`/`mousemove` are never dispatched
  * for touch at all.
  */
 
-import type { InputGestureEvent } from '../../@types/camera/InputGestureEvent';
-import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
-import { PINCH_WHEEL_GAIN } from '../../data/camera/pinchWheelGain';
+import type { InputGestureEvent } from '../../@types/input/InputGestureEvent';
+import type { OrbitControlsOptions } from '../../@types/input/OrbitControlsOptions';
+import { PINCH_WHEEL_GAIN } from '../../../src/data/camera/pinchWheelGain';
 
 export function attachOrbitControls(
   canvas: HTMLCanvasElement,

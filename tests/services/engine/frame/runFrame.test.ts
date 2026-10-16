@@ -633,13 +633,13 @@ describe('runFrame — orientation-frame roll', () => {
 
   it('a switch into a near-pole-aligned view resolves to a finite pose at the clamp, not NaN', () => {
     // PITCH_LIMIT edge (spec §10). With the view direction a hair off the frame
-    // pole — pitch pinned at the orbitControls clamp `π/2 − 0.01` — forward and
+    // pole — pitch pinned at the `PITCH_LIMIT` clamp `π/2 − 0.01` — forward and
     // the lookAt up-vector stay 0.01 rad apart through the ENTIRE slerp (B(t) is a
     // rotation, so it rotates forward and up together, preserving their angle). We
     // pin that every produced pose and its view-projection are finite: at exactly
     // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
     // switch well-defined.
-    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors orbitControls.ts:91
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/data/camera/pitchLimit.ts
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);

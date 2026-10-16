@@ -1,5 +1,5 @@
 /**
- * orbitControls — the gesture recognizer's DOM contract.
+ * attachOrbitControls — the workbench gesture recognizer's DOM contract.
  *
  * iOS Safari mishandles an *explicit* `setPointerCapture()` on a touch
  * pointer: implicit capture from `pointerdown` already applies, so layering
@@ -11,9 +11,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
-import { PINCH_WHEEL_GAIN } from '../../../src/data/camera/pinchWheelGain';
-import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
+import { attachOrbitControls } from '../../../../tools/utils/input/attachOrbitControls';
+import { PINCH_WHEEL_GAIN } from '../../../../src/data/camera/pinchWheelGain';
+import type { InputGestureEvent } from '../../../../tools/@types/input/InputGestureEvent';
 
 type Listener = (e: unknown) => void;
 

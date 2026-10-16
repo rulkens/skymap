@@ -9,7 +9,7 @@
  * per-event sum and the net-delta application agree.
  */
 
-import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
+import type { InputGestureEvent } from './InputGestureEvent';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 
 export type InputAggregator = {

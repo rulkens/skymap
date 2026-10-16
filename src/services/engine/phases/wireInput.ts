@@ -1,12 +1,12 @@
 /**
  * wireInput — bootstrap phase that wires the pick renderer, the pick driver,
- * the orbit camera, and the input-bindings listener bag.
+ * the boot camera pose, and the resize wake. Pointer input reaches the engine
+ * only through the `input` slice (the canvas source saga, forked in `useEngine`).
  *
  * Runs without waiting on any galaxy catalog load: the camera framing is pure
  * constants from `cameraFraming.ts`, so the loop can come up immediately.
  */
 
-import { attachOrbitControls } from '../../camera/orbitControls';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createPickDriver } from '../interaction/createPickDriver';
@@ -15,9 +15,7 @@ import { DEFAULT_FOV_Y_RAD, NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../camera/camera
 import { homePose } from '../camera/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
-import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
-import { updateSelectionHover, clearSelection } from '../../../state/selection/selectionSlice';
-import { focusSelected } from '../../../state/selection/focusSelected';
+import { commitCameraPose } from '../../../state/camera/cameraSlice';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
@@ -103,55 +101,5 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   });
   store.dispatch(commitCameraPose(homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis)));
 
-  // Callbacks are the semantic engine actions: `inputBindings` already converts
-  // `e.clientX/Y` to CSS pixels and owns the requestRender wake for
-  // channel-uncovered events (see its module header for the contract).
-  state.subsystems.inputBindings = attachEngineInputs({
-    canvas,
-    scheduler: state.subsystems.scheduler,
-    onPointerMove: () => {},
-    onPointerLeave: () => {
-      store.dispatch(updateSelectionHover(null));
-    },
-    // Clear hover on pointerdown so the card reflects "nothing hovered"
-    // immediately instead of lagging until the drag ends.
-    onPointerDown: () => {
-      store.dispatch(updateSelectionHover(null));
-    },
-    onPointerUp: () => {},
-    // App.tsx forwards Esc through the handle's `clearSelection()` too; the
-    // reducer dedupes, so the double-fire is a no-op.
-    onEscape: () => {
-      store.dispatch(clearSelection());
-    },
-    // A no-op: `inputBindings` already wakes the loop, and the next frame's
-    // `resizeCanvasToDisplay` picks up the new dimensions.
-    onResize: () => {},
-  });
-
-  // The recognizer only emits, so waking the loop is this sink's job. The two gesture-start
-  // STORE edges fire here at DOM time, not at the drain: `onDoubleClick`
-  // dispatches focus synchronously and `watchFocusTweenSaga` reaches
-  // `put(startCameraTween)` with no intervening yield, so a `cancelCameraTween`
-  // deferred to the next frame would kill the tween double-tap-to-focus just
-  // started. `beginDrag` rides along to keep the pair atomic.
-  deps.detachControlsRef.current = attachOrbitControls(
-    canvas,
-    (event) => {
-      if (event.kind === 'gestureStart') {
-        store.dispatch(beginDrag());
-        store.dispatch(cancelCameraTween());
-      }
-      state.subsystems.scheduler.requestRender();
-    },
-    {
-      // Taps reach the pick driver through the `input` slice once a source feeds it.
-      onClick: () => {},
-      onDoubleClick: () => {
-        // Focuses the ref the preceding single-click selected rather than
-        // running a second pick — racing readbacks resolve out of order.
-        store.dispatch(focusSelected());
-      },
-    },
-  );
+  state.subsystems.inputBindings = attachEngineInputs({ scheduler: state.subsystems.scheduler });
 }

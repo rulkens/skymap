@@ -1,11 +1,11 @@
 /**
- * Engine — the imperative WebGPU core. It owns the device, the camera and the raw
- * browser input, and knows nothing about React: every observable piece of state
+ * Engine — the imperative WebGPU core. It owns the device and the camera, reads
+ * input from the `input` slice, and knows nothing about React: every observable piece of state
  * (lifecycle, scale, counts, load progress, selection) is dispatched straight to the
  * Redux store, and `EngineCallbacks` carries only the injected `store` +
  * `setSagaContext` — no event-callback clusters. Leaf helpers and cohesive
  * subsystems live in sibling modules; the async bootstrap runs as the `phases/`
- * sequence. The public handle and the `frameRef` / `detachControlsRef` / `handleRef`
+ * sequence. The public handle and the `frameRef` / `handleRef`
  * boxes stay inline because those phases write them through the `{current}` pattern.
  */
 
@@ -315,11 +315,6 @@ export function createEngine(
     produceLabels: produceSceneBodyCaptions,
   });
 
-  // Orbit-controls attachment lives outside `inputBindings` because it needs a
-  // fully-constructed OrbitCamera, absent at engine() time; boxed because
-  // `attachOrbitControls` runs in the sibling `wireInput` phase.
-  const detachControlsRef: { current: (() => void) | null } = { current: null };
-
   // One instance feeds both the dev panel and the load-progress emitter, so the
   // loading bar and the panel agree on what is in flight.
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
@@ -349,7 +344,6 @@ export function createEngine(
     cb,
     composition,
     frameRef,
-    detachControlsRef,
     handleRef,
     allSlots,
     selection,
@@ -417,8 +411,6 @@ export function createEngine(
 
     state.subsystems.inputBindings?.destroy();
     state.subsystems.inputBindings = null;
-    detachControlsRef.current?.();
-    detachControlsRef.current = null;
     // Undefined only if the GPU IIFE errored before registering the HDR-capability
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
