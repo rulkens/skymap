@@ -110,7 +110,7 @@ These files do not touch either changed contract, so they come over from the #83
   - `tests/utils/input/pendingToInputSteps.test.ts`, covering a nav motion on the canvas aspect (today's pixels) and on a 9:16 source (isotropic);
   - `tests/state/input/inputSourceSaga.test.ts`, covering a `shift+c` mid-drag that keeps the intent, an openspace left tap that selects, and a right-drag release that does not pick.
 
-- [ ] Implement test-first. Commit.
+- [x] Implement test-first. Commit.
 
 ### Task 4: Docs
 

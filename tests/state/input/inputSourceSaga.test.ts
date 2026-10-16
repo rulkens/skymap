@@ -30,6 +30,11 @@ vi.mock('../../../src/utils/browser/nextAnimationFrame', () => ({
 }));
 
 const NO_MODS = { shift: false, ctrl: false, alt: false, meta: false };
+const ALT = { ...NO_MODS, alt: true };
+const intentsOf = (): unknown[] =>
+  actions
+    .filter((a) => a.type === inputGestureStarted.type)
+    .map((a) => (a.payload as { intent: unknown }).intent);
 let t = 0;
 
 const resize = (widthPx: number, heightPx: number): DeviceEvent => ({
@@ -42,6 +47,7 @@ const pointer = (
   kind: 'down' | 'move' | 'up',
   at: UnitPoint,
   button: 0 | 1 | 2 = 0,
+  mods = NO_MODS,
 ): DeviceEvent => ({
   kind,
   t: (t += 10),
@@ -49,7 +55,7 @@ const pointer = (
   pointerType: 'mouse',
   button,
   at,
-  mods: NO_MODS,
+  mods,
 });
 const wheel = (at: UnitPoint): DeviceEvent => ({
   kind: 'wheel',
@@ -65,19 +71,24 @@ const B = { x: 0.6, y: 0.5 };
 let emit: (e: DeviceEvent) => void;
 let actions: { type: string; payload?: unknown }[];
 let task: Task;
+let scheme: 'skymap' | 'openspace';
 
 const types = () => actions.map((a) => a.type);
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
   t = 0;
+  scheme = 'skymap';
   actions = [];
   const channel = eventChannel<DeviceEvent>((e) => {
     emit = e;
     return () => {};
   }, buffers.expanding());
   task = runSaga(
-    { dispatch: (a: { type: string }) => actions.push(a), getState: () => ({}) },
+    {
+      dispatch: (a: { type: string }) => actions.push(a),
+      getState: () => ({ settings: { cameraControls: { scheme } } }),
+    },
     inputSourceSaga,
     'canvas',
     channel,
@@ -167,5 +178,50 @@ describe('inputSourceSaga', () => {
     emit(pointer('down', A));
     task.cancel();
     expect(types().slice(-2)).toEqual([inputGestureEnded.type, inputSourceDetached.type]);
+  });
+
+  describe('under the openspace scheme', () => {
+    beforeEach(() => {
+      scheme = 'openspace';
+    });
+
+    it('a left press binds navOrbit, a right press navZoom', () => {
+      emit(resize(200, 100));
+      emit(pointer('down', A));
+      emit(pointer('up', A));
+      emit(pointer('down', A, 2));
+      expect(intentsOf()).toEqual(['navOrbit', 'navZoom']);
+    });
+
+    it('a left tap selects and a double-tap focuses', () => {
+      emit(resize(200, 100));
+      emit(pointer('down', A));
+      emit(pointer('up', A));
+      expect(types()).toContain(inputTapped.type);
+      emit(pointer('down', A));
+      emit(pointer('up', A));
+      expect(types().slice(-1)).toEqual([focusSelected.type]);
+    });
+
+    it('a right-button release does not pick', () => {
+      emit(resize(200, 100));
+      emit(pointer('down', A, 2));
+      emit(pointer('up', A, 2));
+      expect(types()).not.toContain(inputTapped.type);
+      expect(types()).not.toContain(focusSelected.type);
+    });
+
+    it("a scheme toggle mid-drag keeps the running gesture's intent and tap rule", () => {
+      emit(resize(200, 100));
+      emit(pointer('down', A, 0, ALT));
+      scheme = 'skymap';
+      emit(pointer('up', A, 0, ALT));
+      // Alt + left is navZoom under openspace, which never taps; under skymap it would be an
+      // orbit and would pick. The next press reads the new scheme.
+      expect(intentsOf()).toEqual(['navZoom']);
+      expect(types()).not.toContain(inputTapped.type);
+      emit(pointer('down', A));
+      expect(intentsOf()).toEqual(['navZoom', 'orbit']);
+    });
   });
 });
