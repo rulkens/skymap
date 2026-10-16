@@ -16,6 +16,10 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades:
     vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
 }));
+vi.mock('../../../../src/services/engine/wiring/syncVisibilityTargets', () => ({
+  syncVisibilityTargets:
+    vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
+}));
 
 // Mock the applySwapFormat phase so the forwarding test doesn't need a real
 // gpu.renderTargets/uiCtx pair — see applySwapFormat.test.ts for that unit's
@@ -43,6 +47,7 @@ vi.mock('../../../../src/services/engine/helpers/liveFocusRow', () => ({
 }));
 
 import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { syncVisibilityTargets } from '../../../../src/services/engine/wiring/syncVisibilityTargets';
 import { applySwapFormat } from '../../../../src/services/engine/phases/applySwapFormat';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
@@ -87,6 +92,9 @@ describe('makeReconcileEffects', () => {
     effects.syncFades();
     expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
     expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
+    // The visibility entries' targets recompute on the same settings write.
+    expect(syncVisibilityTargets).toHaveBeenCalledTimes(1);
+    expect(syncVisibilityTargets).toHaveBeenCalledWith(state, { animate: true });
   });
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {

@@ -31,6 +31,7 @@ import {
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
+import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
@@ -182,6 +183,12 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   }
   state.slabRows = slabRows;
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
+  // Static, like `slabs`; a duplicate address would put two entries on one controller.
+  state.visibilityEntries = concatUniqueRows(
+    'createLayers: visibility entries',
+    visibilityAddressOf,
+    deps.composition.layers.map((layer) => layer.visibility ?? []),
+  );
   state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
   state.orbitTrailRows = [
     ...CORE_TRAIL_ELEMENTS,

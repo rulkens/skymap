@@ -49,6 +49,19 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(b, 1000)).toBe(0.75);
   });
 
+  // Until every Layer has migrated both bridges register: a bare address equal to a
+  // `FadeId` kind sharing a controller would let the two fight over one fade.
+  it('a FadeId and a FadeIdentity of the same name never share a controller', () => {
+    const r = makeRegistry();
+    r.register({ kind: 'flow' }, 0.25);
+    r.register({ address: 'flow' }, 0.75);
+    expect(r.opacityOf({ kind: 'flow' }, 1000)).toBe(0.25);
+    expect(r.opacityOf({ address: 'flow' }, 1000)).toBe(0.75);
+    r.register({ address: 'survey', item: 'sdss' }, 0.5);
+    expect(r.opacityOf({ address: 'survey', item: 'sdss' }, 1000)).toBe(0.5);
+    expect(r.opacityOf({ address: 'survey' }, 1000)).toBe(1.0);
+  });
+
   it('fadeTo throws when the handle is not registered and does not wake', () => {
     const requestRender = vi.fn();
     const r = createFadeRegistry({ requestRender });

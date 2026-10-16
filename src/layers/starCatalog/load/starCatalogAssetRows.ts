@@ -24,6 +24,7 @@ export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly Asse
           ctx.settings.starCatalogs.enabled &&
           ctx.settings.starCatalogs.items[id]?.enabled === true,
         priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
+        gates: { address: 'starCatalog', item: id },
       };
     },
   );

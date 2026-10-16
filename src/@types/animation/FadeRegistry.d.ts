@@ -7,11 +7,13 @@
  * call `register(...)` without a null-check). See
  * `src/services/animation/fadeRegistry.ts` for the concrete factory.
  *
- * Storage: `Map<string, FadeController>` keyed by `serializeFadeId(h)`.
+ * Storage: `Map<string, FadeController>` keyed by a string per id. A `FadeId` and a
+ * `FadeIdentity` never share a key, so the two bridges never drive one controller.
  * Consumers don't see the serialization — they always pass ids.
  */
 
 import type { FadeId } from './FadeId';
+import type { FadeIdentity } from './FadeIdentity';
 import type { Destroyable } from '../rendering/Destroyable';
 
 export type FadeRegistry = Destroyable & {
@@ -27,10 +29,10 @@ export type FadeRegistry = Destroyable & {
    * existing controller is preserved). Initial opacity defaults to 0
    * (the loading-fade-in case).
    */
-  register(id: FadeId, initialOpacity?: number): void;
+  register(id: FadeId | FadeIdentity, initialOpacity?: number): void;
 
   /** Drop an id and its controller. */
-  unregister(id: FadeId): void;
+  unregister(id: FadeId | FadeIdentity): void;
 
   /**
    * Start (or retarget) the fade for an id. Forwards to the
@@ -51,16 +53,21 @@ export type FadeRegistry = Destroyable & {
    * at the last `tick(nowMs)` frame time — event-driven starts quantize
    * to the frame clock rather than sampling `performance.now()`.
    */
-  fadeTo(id: FadeId, target: number, durationMs?: number, nowMs?: number): Promise<void>;
+  fadeTo(
+    id: FadeId | FadeIdentity,
+    target: number,
+    durationMs?: number,
+    nowMs?: number,
+  ): Promise<void>;
 
   /** Forwards to the controller's `setImmediate`. Throws if unregistered. */
-  setImmediate(id: FadeId, value: number): void;
+  setImmediate(id: FadeId | FadeIdentity, value: number): void;
 
   /**
    * The value the id's ramp is heading for (or holds). `null` for an
    * unregistered id — never a spurious match against a real 0 or 1 target.
    */
-  targetOf(id: FadeId): number | null;
+  targetOf(id: FadeId | FadeIdentity): number | null;
 
   /**
    * The opacity at the given time for the given id. Returns 1.0 for
@@ -68,7 +75,7 @@ export type FadeRegistry = Destroyable & {
    * that hasn't finished registering draws at full opacity instead of
    * disappearing. `nowMs` defaults to the last ticked frame time.
    */
-  opacityOf(id: FadeId, nowMs?: number): number;
+  opacityOf(id: FadeId | FadeIdentity, nowMs?: number): number;
 
   /**
    * True iff any registered controller is still animating at the given

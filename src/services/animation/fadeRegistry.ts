@@ -58,7 +58,9 @@
 
 import type { FadeController } from '../../@types/animation/FadeController';
 import type { FadeId } from '../../@types/animation/FadeId';
+import type { FadeIdentity } from '../../@types/animation/FadeIdentity';
 import type { FadeRegistry } from '../../@types/animation/FadeRegistry';
+import { fadeIdentityKey } from '../../utils/visibility/fadeIdentityKey';
 import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from './fadeController';
 
 function serializeFadeId(h: FadeId): string {
@@ -99,6 +101,12 @@ function serializeFadeId(h: FadeId): string {
   }
 }
 
+// Bare addresses (`flow`, `localBubble`, …) equal `FadeId` kinds, and until every Layer has
+// migrated both bridges register: the `kind/` prefix keeps them on separate controllers.
+function keyOf(id: FadeId | FadeIdentity): string {
+  return 'kind' in id ? `kind/${serializeFadeId(id)}` : fadeIdentityKey(id);
+}
+
 export function createFadeRegistry(deps: { readonly requestRender: () => void }): FadeRegistry {
   const controllers = new Map<string, FadeController>();
 
@@ -107,8 +115,8 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
   // advances only via tick — see the module-header rationale.
   let lastTickNowMs = 0;
 
-  function register(id: FadeId, initialOpacity: number = 0): void {
-    const key = serializeFadeId(id);
+  function register(id: FadeId | FadeIdentity, initialOpacity: number = 0): void {
+    const key = keyOf(id);
     if (controllers.has(key)) return; // idempotent
     // Explicit construction time 0 (not the controller's wall-clock default):
     // the stamp is inert — a fresh controller has no transition, and the first
@@ -116,19 +124,24 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     controllers.set(key, createFadeController(initialOpacity, 0));
   }
 
-  function unregister(id: FadeId): void {
-    controllers.delete(serializeFadeId(id));
+  function unregister(id: FadeId | FadeIdentity): void {
+    controllers.delete(keyOf(id));
   }
 
-  function requireController(id: FadeId): FadeController {
-    const c = controllers.get(serializeFadeId(id));
+  function requireController(id: FadeId | FadeIdentity): FadeController {
+    const c = controllers.get(keyOf(id));
     if (!c) {
-      throw new Error(`FadeRegistry: id not registered: ${serializeFadeId(id)}`);
+      throw new Error(`FadeRegistry: id not registered: ${keyOf(id)}`);
     }
     return c;
   }
 
-  function fadeTo(id: FadeId, target: number, durationMs?: number, nowMs?: number): Promise<void> {
+  function fadeTo(
+    id: FadeId | FadeIdentity,
+    target: number,
+    durationMs?: number,
+    nowMs?: number,
+  ): Promise<void> {
     const c = requireController(id);
     const now = nowMs ?? lastTickNowMs;
     const dur =
@@ -138,16 +151,16 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     return promise;
   }
 
-  function setImmediate(id: FadeId, value: number): void {
+  function setImmediate(id: FadeId | FadeIdentity, value: number): void {
     requireController(id).setImmediate(value);
   }
 
-  function targetOf(id: FadeId): number | null {
-    return controllers.get(serializeFadeId(id))?.targetOf() ?? null;
+  function targetOf(id: FadeId | FadeIdentity): number | null {
+    return controllers.get(keyOf(id))?.targetOf() ?? null;
   }
 
-  function opacityOf(id: FadeId, nowMs?: number): number {
-    const c = controllers.get(serializeFadeId(id));
+  function opacityOf(id: FadeId | FadeIdentity, nowMs?: number): number {
+    const c = controllers.get(keyOf(id));
     if (!c) return 1.0; // fail-safe — see module docblock
     // Resolve the default HERE so the controller's own wall-clock default
     // is never reached through the registry.

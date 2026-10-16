@@ -17,7 +17,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/sources';
+import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
+import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
+import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
@@ -251,6 +253,11 @@ function makeState(
   // The Layer's slots and the runtime its rows read: `createLayers` would have
   // minted both before this phase runs.
   const layerSlots = new Map<AssetKey, never>(points as never);
+  // Every point row gates its catalog's fade, so each needs a slot, as `createLayers`
+  // mints; the ones a test does not pass stay idle.
+  for (const code of GALAXY_CATALOG_SOURCES) {
+    if (!layerSlots.has(code)) layerSlots.set(code, makeFakeSlot(`points-${code}`) as never);
+  }
   for (const [key, name] of [
     ['famousGalaxiesMeta', 'famous-galaxies-meta'],
     ['pgcAlias', 'pgc-aliases'],
@@ -389,6 +396,7 @@ function makeState(
         unregister: vi.fn(),
         fadeTo: vi.fn(() => Promise.resolve()),
         setImmediate: vi.fn(),
+        targetOf: vi.fn(() => null),
         opacityOf: vi.fn(() => 1),
         isAnyAnimating: vi.fn(() => false),
         tick: vi.fn(),
@@ -437,6 +445,8 @@ function makeState(
       ...cosmicWebDensityFadeRows(densityRuntime),
       ...milkyWayFadeRows(),
     ],
+    // The entries of the Layers whose rows are composed above.
+    visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
     layerSlots,
   } as unknown as EngineState;
 }
@@ -672,6 +682,25 @@ describe('wireSlots', () => {
     await wireSlots(state, deps);
 
     expect(structureCatalogFetcher).not.toHaveBeenCalled();
+  });
+
+  // Seeded before any slot can commit, and subscribed before the first load starts: a
+  // gated identity waits at 0 and its slot's commit is what raises it.
+  it('a gated visibility identity seeds at 0 and its slot commit raises it', async () => {
+    const sdssSlot = makeFakeSlot('sdss-points');
+    const state = makeState({ points: new Map([[Source.SDSS, sdssSlot]]) });
+    const fades = state.subsystems.fades;
+
+    await wireSlots(state, makeDeps());
+
+    expect(fades.register).toHaveBeenCalledWith({ address: 'survey', item: 'sdss' }, 0);
+    sdssSlot.committed = () => readyValue(1) as never;
+    sdssSlot.fire(readyValue(1));
+    expect(fades.fadeTo).toHaveBeenCalledWith(
+      { address: 'survey', item: 'sdss' },
+      1,
+      expect.any(Number),
+    );
   });
 
   it('loadProgress emitter is constructed with a slot registry that includes every minted slot name', async () => {

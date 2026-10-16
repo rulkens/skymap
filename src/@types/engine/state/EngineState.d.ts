@@ -29,6 +29,8 @@ import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { SlabRow } from '../frame/SlabRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
+import type { VisibilityEntry } from '../layer/VisibilityEntry';
+import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
@@ -113,6 +115,11 @@ export type EngineState = {
    * `deriveFrameContext` folds the band-open ones in beside the store's own rows. */
   slabRows: readonly SlabRow[];
   fadeRows: readonly FadeLayer<unknown>[];
+  /** Every Layer's `visibility`, in composition order, composed once by `createLayers`:
+   * the entries the fade targets are seeded, recomputed and resolved from. */
+  visibilityEntries: readonly VisibilityEntry[];
+  /** The slot behind every gated fade identity, collected once by `wireSlots`. */
+  visibilityGates: VisibilityGates;
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   /** Every Layer's `worldLabels`, in composition order, composed once by
    * `createLayers`; `runLabel3DProducers` walks this. */

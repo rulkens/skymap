@@ -304,6 +304,8 @@ export function createEngine(
     assetRows: [],
     slabRows: [],
     fadeRows: [],
+    visibilityEntries: [],
+    visibilityGates: new Map(),
     label3DProducers: [],
     orbitTrailRows: [],
     layerSlots: new Map(),
