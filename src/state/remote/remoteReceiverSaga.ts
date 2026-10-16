@@ -35,6 +35,7 @@ import { REMOTE_MENU } from '../../compositions/remoteMenu';
 import { selectDomeStatus } from '../../compositions/selectDomeStatus';
 import { selectToggleRows } from '../../compositions/selectToggleRows';
 import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
+import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
 import { remoteSearchMatches } from '../../utils/remote/remoteSearchMatches';
 import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
 import { STATUS_MIN_INTERVAL_MS } from '../../data/remote/statusMinIntervalMs';
@@ -152,13 +153,14 @@ export function* remoteReceiverSaga(
         }
         case 'search': {
           const state: RootState = yield* select();
-          const inputs = {
-            entries: selectFamousGalaxiesMeta(state),
-            aliasIndex: selectAliasIndex(state),
-            structures: selectStructureSearchList(state),
-            layerRows: selectLayerSearchRows(state),
-          };
-          const matches = remoteSearchMatches(inputs, message.query);
+          const ranked = rankPaletteMatches(
+            selectFamousGalaxiesMeta(state),
+            selectAliasIndex(state),
+            selectStructureSearchList(state),
+            selectLayerSearchRows(state),
+            message.query,
+          );
+          const matches = remoteSearchMatches(ranked);
           send({ kind: 'searchResults', requestId: message.requestId, matches });
           break;
         }

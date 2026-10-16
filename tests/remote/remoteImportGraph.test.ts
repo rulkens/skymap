@@ -30,12 +30,6 @@ describe('remote entry import graph', () => {
       if (FORBIDDEN.some((f) => rel.startsWith(f))) offenders.push([...via, rel].join(' -> '));
       const source = parseOnlyProject.addSourceFileAtPath(file);
       for (const decl of [...source.getImportDeclarations(), ...source.getExportDeclarations()]) {
-        if (
-          decl.getKind() === 270 /* ImportDeclaration */ &&
-          'isTypeOnly' in decl &&
-          decl.isTypeOnly()
-        )
-          continue;
         const spec = decl.getModuleSpecifierValue();
         if (!spec?.startsWith('.')) continue;
         const next = resolveImport(file, spec);

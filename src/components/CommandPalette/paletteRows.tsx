@@ -95,17 +95,14 @@ const EARTH_CHIP = <span className={styles.source}>Earth</span>;
  * thumbnail to look up, so the two differ only in that chip.
  */
 function glyphRowView(
-  m: ScoredRow,
-  kind: string,
-  id: string,
-  names: readonly string[],
+  m: Extract<ScoredRow, { kind: 'place' | 'layer' }>,
   chip?: ReactNode,
 ): RowView {
   const primary = paletteRowLabel(m).name;
-  const aliases = names.slice(1);
+  const aliases = m.entry.names.slice(1);
   return {
-    key: `${kind}:${id}`,
-    testid: `${kind}-row-${id}`,
+    key: `${m.kind}:${m.entry.id}`,
+    testid: `${m.kind}-row-${m.entry.id}`,
     leading: (
       <span className={styles.glyph} aria-hidden="true">
         {primary[0] ?? '·'}
@@ -250,12 +247,8 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   },
   // Layer-published row — no thumbnail vocabulary to look up, and no chip: the
   // publishing Layer is not a source label the user would recognise.
-  layer: (m) =>
-    m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView(m, 'layer', m.entry.id, m.entry.names),
+  layer: (m) => (m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView(m)),
   // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
   // here is on the one body.
-  place: (m) =>
-    m.kind !== 'place'
-      ? EMPTY_ROW_VIEW
-      : glyphRowView(m, 'place', m.entry.id, m.entry.names, EARTH_CHIP),
+  place: (m) => (m.kind !== 'place' ? EMPTY_ROW_VIEW : glyphRowView(m, EARTH_CHIP)),
 };
