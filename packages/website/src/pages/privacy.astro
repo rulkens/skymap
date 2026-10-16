@@ -4,12 +4,12 @@ import Caveat from '../components/Caveat.astro';
 import Claims from '../components/Claims.astro';
 import Group from '../components/Group.astro';
 import Note from '../components/Note.astro';
-import ObjLink from '../components/ObjLink.astro';
+import ObjLink from '../components/ObjLink/ObjLink.tsx';
 import PictureBand from '../components/PictureBand.astro';
-import Remark from '../components/Remark.astro';
+import Remark from '../components/Remark/Remark.tsx';
 import SectionHead from '../components/SectionHead.astro';
-import ShotCaption from '../components/ShotCaption.astro';
-import Sources from '../components/Sources.astro';
+import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
+import Sources from '../components/Sources/Sources.tsx';
 import { OPEN_APP_LABEL } from '../data/appLink';
 import { ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
@@ -64,7 +64,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
       <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, the about page and this one.</p>
     </SectionHead>
     <Claims items={SITE} />
-    <Remark text="Your browser fetched every file on this page from Skymap’s own addresses." live="files-fetched" />
+    <Remark client:visible text="Your browser fetched every file on this page from Skymap’s own addresses." live="files-fetched" />
   </section>
 
   <section class="wrap section" id="app">

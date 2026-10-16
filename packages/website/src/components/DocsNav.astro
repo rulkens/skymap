@@ -13,7 +13,7 @@ import type { MarkdownHeading } from 'astro';
 
 import DocsSearch from './DocsSearch.astro';
 import Icon from './Icon/Icon.tsx';
-import PageSections from './PageSections.astro';
+import PageSections from './PageSections/PageSections.tsx';
 import { DOCS_TREE } from '../data/docsTree';
 import { sitePath } from '../utils/sitePath';
 
@@ -39,7 +39,7 @@ const kin = DOCS_TREE.flatMap((group) => group.pages).filter((page) => family &&
               On this page
             </p>
             <nav aria-labelledby="docs-nav-here">
-              <PageSections sections={sections} />
+              <PageSections client:visible sections={sections} />
             </nav>
           </div>
         )

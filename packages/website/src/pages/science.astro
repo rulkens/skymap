@@ -9,14 +9,14 @@ import Figure from '../components/Figure.astro';
 import FullFigure from '../components/FullFigure.astro';
 import Group from '../components/Group.astro';
 import Note from '../components/Note.astro';
-import ObjLink from '../components/ObjLink.astro';
-import OpenApp from '../components/OpenApp.astro';
+import ObjLink from '../components/ObjLink/ObjLink.tsx';
+import OpenApp from '../components/OpenApp/OpenApp.tsx';
 import PictureBand from '../components/PictureBand.astro';
-import Remark from '../components/Remark.astro';
+import Remark from '../components/Remark/Remark.tsx';
 import SectionHead from '../components/SectionHead.astro';
 import SectionNav from '../components/SectionNav.astro';
-import ShotCaption from '../components/ShotCaption.astro';
-import Sources from '../components/Sources.astro';
+import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
+import Sources from '../components/Sources/Sources.tsx';
 import SourceTable from '../components/SourceTable.astro';
 import { fact } from '../data/fact';
 import { REPO_URL } from '../data/siteIdentity';
@@ -208,7 +208,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       </div>
       <Claims items={DRAWN} />
     </Group>
-    <Remark text={fact('astronomical-unit').short!} />
+    <Remark client:visible text={fact('astronomical-unit').short!} />
   </section>
 
   <FullFigure id="science-zoa" />

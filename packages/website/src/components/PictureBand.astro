@@ -11,7 +11,7 @@
  */
 import type { GalleryView } from '../@types/GalleryView';
 import { shotSources } from '../utils/shotSources';
-import Shot from './Shot.astro';
+import Shot from './Shot/Shot.tsx';
 
 type Props = ({ id: string; tall?: string; views?: undefined } | { views: readonly GalleryView[] }) & {
   words?: 'left' | 'right';

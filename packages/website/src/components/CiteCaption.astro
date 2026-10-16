@@ -15,7 +15,7 @@ import { PRESS_PICTURES } from '../data/pressPictures';
 import { siteShot } from '../data/siteShot';
 import { asksAcknowledgement } from '../utils/asksAcknowledgement';
 import { citationText } from '../utils/citationText';
-import CopyButton from './CopyButton.astro';
+import CopyButton from './CopyButton/CopyButton.tsx';
 import DocLink from './DocLink.astro';
 import RefLine from './RefLine.astro';
 
@@ -48,7 +48,7 @@ const caption = `${siteShot(picture).title}. ${press.credit}. Made with Skymap $
       {caption.replace(`${address}.`, '')}
       <span class="address">{address}</span>.
     </p>
-    <CopyButton text={caption} label="Copy the caption" />
+    <CopyButton client:visible text={caption} label="Copy the caption" />
   </div>
   <h3>In the reference list</h3>
   <p>{citationText(CITATION)}</p>

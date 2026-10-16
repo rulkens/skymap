@@ -7,7 +7,7 @@
  * citation file. Each text has the copy control an address has.
  */
 import CodeBlock from './CodeBlock.astro';
-import CopyButton from './CopyButton.astro';
+import CopyButton from './CopyButton/CopyButton.tsx';
 import { CITATION } from '../data/citation';
 import { fact } from '../data/fact';
 import { REPO_URL } from '../data/siteIdentity';
@@ -28,7 +28,7 @@ const bibtex = citationBibtex(CITATION, REPO_URL);
     <p class="reference small">
       {text.replace(doiUrl, '')}<a href={doiUrl}>{doiUrl}</a>
     </p>
-    <CopyButton text={text} label="Copy the reference" />
+    <CopyButton client:visible text={text} label="Copy the reference" />
   </div>
   {
     full ? (

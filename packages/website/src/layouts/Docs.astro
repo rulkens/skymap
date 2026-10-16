@@ -13,10 +13,10 @@ import type { MarkdownHeading } from 'astro';
 import Base from './Base.astro';
 import DocBody from '../components/DocBody.astro';
 import DocsNav from '../components/DocsNav.astro';
-import FigureSheet from '../components/FigureSheet.astro';
-import ObjLink from '../components/ObjLink.astro';
-import PageSections from '../components/PageSections.astro';
-import Sources from '../components/Sources.astro';
+import FigureSheet from '../components/FigureSheet/FigureSheet.tsx';
+import ObjLink from '../components/ObjLink/ObjLink.tsx';
+import PageSections from '../components/PageSections/PageSections.tsx';
+import Sources from '../components/Sources/Sources.tsx';
 import { DOCS_TREE } from '../data/docsTree';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { docsPlace } from '../utils/docsPlace';
@@ -101,20 +101,13 @@ const turns = [
       sections.length > 0 && (
         <nav class="toc small" aria-labelledby="toc-label">
           <p id="toc-label">On this page</p>
-          <PageSections sections={sections} />
+          <PageSections client:visible sections={sections} />
         </nav>
       )
     }
   </div>
-  <FigureSheet />
+  <FigureSheet client:idle />
 </Base>
-
-<script>
-  import { initSectionMark } from '../scripts/initSectionMark';
-
-  const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-sections] a')];
-  if (links.length > 0) initSectionMark(links);
-</script>
 
 <style>
   /* A layer of its own under the top bar's: what stands in front of what below (the contents' bar, a wide figure over the list) stays in here. */

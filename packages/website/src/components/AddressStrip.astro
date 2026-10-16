@@ -8,7 +8,7 @@
  * before the `#`; `shown` prints a shorter address than the one copied.
  */
 import { APP_BASE, appLink } from '../data/appLink';
-import CopyButton from './CopyButton.astro';
+import CopyButton from './CopyButton/CopyButton.tsx';
 
 type Props = { hash: string; query?: string; shown?: string; plain?: boolean };
 
@@ -34,7 +34,7 @@ const params = shown.split('&').map((pair) => {
         </span>
       ))}
     </Address>
-    <CopyButton text={copy} label="Copy the address" />
+    <CopyButton client:visible text={copy} label="Copy the address" />
   </div>
 </div>
 

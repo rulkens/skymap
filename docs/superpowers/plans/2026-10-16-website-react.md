@@ -96,7 +96,7 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 **Files:** `ObjLink`, `ViewLink`, `OpenApp`, `Shot`, `ShotCaption`, `Sources`, `CopyButton`, `Remark`, `PageSections`, `FigureSheet` folders; delete `initSectionMark.ts`, `initFigureSheet.ts`.
 
-- [ ] CopyButton and Remark are islands; FigureSheet is one island per page that also handles every `a[data-enlarge]` (keep that hook: it is set by figures across waves).
+- [x] CopyButton and Remark are islands (`client:visible` at their `.astro` call sites); FigureSheet is one island per page that also handles every `a[data-enlarge]` (keep that hook: it is set by figures across waves). FigureSheet is `client:idle`, not `client:visible`: a closed dialog is never visible, so it would never hydrate.
 
 **Wave 1 done:** gate green; the note worker resumes; report island count on Home, a docs page and Features.
 

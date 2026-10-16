@@ -25,7 +25,7 @@ const OTHER_USES: Record<string, number> = {
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
-  .filter((name) => name.endsWith('.astro'))
+  .filter((name) => /\.(astro|tsx)$/.test(name))
   .map((name) => ({
     name: relative(SRC, join(SRC, name)),
     text: readFileSync(join(SRC, name), 'utf8'),
@@ -38,7 +38,7 @@ const tagAt = (text: string, index: number) =>
 describe('app links', () => {
   it('only OpenApp launches the app with no view', () => {
     const bare = files.filter((file) => /appLink\(\s*\)/.test(file.text)).map((file) => file.name);
-    expect(bare).toEqual(['components/OpenApp.astro']);
+    expect(bare).toEqual(['components/OpenApp/OpenApp.tsx']);
   });
 
   it('an address of a view goes to a ViewLink and to nothing else', () => {
@@ -56,6 +56,6 @@ describe('app links', () => {
     const marked = files
       .filter((file) => /icon="(view|launch)"/.test(file.text))
       .map((file) => file.name);
-    expect(marked).toEqual(['components/ViewLink.astro']);
+    expect(marked).toEqual(['components/ViewLink/ViewLink.tsx']);
   });
 });

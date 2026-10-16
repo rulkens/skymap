@@ -50,9 +50,20 @@ export async function shootSitePage(browser: Browser, url: string, width: number
       );
       // A picture below the fold is sometimes left unpainted in a full-page capture; passing every screen of
       // it once, as a reader scrolling would, has the browser draw each.
-      for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight) {
-        window.scrollTo(0, y);
-        await new Promise((frame) => requestAnimationFrame(frame));
+      // An island that hydrates when it comes into view starts watching only after the first pass, so it
+      // needs a second one (a remark line rewrites itself when it scrolls into view); the wait is capped,
+      // since an island out of reach of the pass stays unhydrated.
+      for (const pass of [1, 2]) {
+        for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight) {
+          window.scrollTo(0, y);
+          await new Promise((frame) => requestAnimationFrame(frame));
+        }
+        if (pass === 1) {
+          const until = Date.now() + 4000;
+          while (document.querySelector('astro-island[ssr]') && Date.now() < until) {
+            await new Promise((tick) => setTimeout(tick, 100));
+          }
+        }
       }
       // The docs list scrolls itself to the current page at parse time, from a row position that moves with
       // font loading (750 or 792 px on one page), so every scrolled box goes back to its top.

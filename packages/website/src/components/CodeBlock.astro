@@ -7,7 +7,7 @@
  * the word is wider than the block, because a hyphen at a line's end could
  * be the word's own. The copy control takes the text as written.
  */
-import CopyButton from './CopyButton.astro';
+import CopyButton from './CopyButton/CopyButton.tsx';
 
 type Props = { text?: string; label?: string };
 
@@ -26,7 +26,7 @@ const text =
 
 <div class="code-block" data-embed>
   <pre><code>{fenced ? text.split(/(\s+)/).map((run) => (/\s/.test(run) ? run : <span>{run}</span>)) : text}</code></pre>
-  <CopyButton text={text} label={label} />
+  <CopyButton client:visible text={text} label={label} />
 </div>
 
 <style>

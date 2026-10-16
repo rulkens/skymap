@@ -7,7 +7,7 @@
  * no paragraph, for a heading or a sentence. A pointer to another entry is a
  * link to that entry's page.
  */
-import CopyButton from './CopyButton.astro';
+import CopyButton from './CopyButton/CopyButton.tsx';
 import { dataEntry } from '../data/dataPages';
 import { REPO_BLOB } from '../data/siteIdentity';
 import { liftQuotes } from '../utils/liftQuotes';
@@ -40,7 +40,7 @@ const blocks = (lift ? liftQuotes(whole) : whole)
             <blockquote>
               <p set:html={recordHtml(block.text, REPO_BLOB)} />
             </blockquote>
-            {copy && <CopyButton text={plainText(block.text)} label="Copy this text" />}
+            {copy && <CopyButton client:visible text={plainText(block.text)} label="Copy this text" />}
           </div>
         ) : (
           <p set:html={recordHtml(block.text, REPO_BLOB)} />
