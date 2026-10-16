@@ -1,8 +1,9 @@
 /**
- * createCanvasDeviceChannel — the canvas as an input source: DOM pointer, wheel
- * and resize events become `DeviceEvent`s in unit space, measured against the
- * canvas's own rect (so an offset canvas, the dome's squared one, gets correct
- * rays). Recognition lives in `recognize`; this file only translates.
+ * createDeviceChannel — an element as an input source: DOM pointer, wheel and
+ * resize events become `DeviceEvent`s in unit space, measured against the
+ * element's own rect (so an offset canvas, the dome's squared one, gets correct
+ * rays; the remote's trackpad reads the same way). Recognition lives in
+ * `recognize`; this file only translates.
  *
  * Expanding buffer: no event may drop while the source saga is busy putting.
  */
@@ -22,13 +23,13 @@ const modsOf = (e: MouseEvent): Modifiers => ({
   meta: e.metaKey,
 });
 
-export function createCanvasDeviceChannel(canvas: HTMLCanvasElement): EventChannel<DeviceEvent> {
+export function createDeviceChannel(element: HTMLElement): EventChannel<DeviceEvent> {
   return eventChannel<DeviceEvent>((emit) => {
     const unitAt = (e: MouseEvent): UnitPoint => {
-      const r = canvas.getBoundingClientRect();
+      const r = element.getBoundingClientRect();
       return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
     };
-    // Pointers pressed on the canvas. A window move from any other pointer over
+    // Pointers pressed on the element. A window move from any other pointer over
     // another element (a panel above the canvas) is not this surface's hover.
     const pressed = new Set<number>();
 
@@ -36,7 +37,7 @@ export function createCanvasDeviceChannel(canvas: HTMLCanvasElement): EventChann
       (kind: 'down' | 'move' | 'up' | 'cancel') =>
       (e: PointerEvent): void => {
         if (kind === 'down') pressed.add(e.pointerId);
-        if (kind === 'move' && e.target !== canvas && !pressed.has(e.pointerId)) return;
+        if (kind === 'move' && e.target !== element && !pressed.has(e.pointerId)) return;
         if (kind === 'up' || kind === 'cancel') pressed.delete(e.pointerId);
         emit({
           kind,
@@ -71,37 +72,37 @@ export function createCanvasDeviceChannel(canvas: HTMLCanvasElement): EventChann
       emit({
         kind: 'resize',
         t: performance.now(),
-        widthPx: canvas.clientWidth,
-        heightPx: canvas.clientHeight,
+        widthPx: element.clientWidth,
+        heightPx: element.clientHeight,
       }),
     );
 
-    // `pointerdown` on the canvas (a gesture must START on the drawing surface), but
-    // move / up / cancel on `window`, so a drag that leaves the canvas keeps orbiting
+    // `pointerdown` on the element (a gesture must START on the drawing surface), but
+    // move / up / cancel on `window`, so a drag that leaves the element keeps orbiting
     // — and, load-bearing on iOS, NEVER call `setPointerCapture`: touch pointers get
     // IMPLICIT capture on pointerdown, and WebKit mishandles an explicit capture
     // layered on top, silently killing `pointermove`/`pointerup` for single-finger
     // orbit and pinch while desktop mouse stays fine.
     // https://github.com/openseadragon/openseadragon/issues/1962
-    canvas.addEventListener('pointerdown', onDown);
+    element.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onCancel);
-    canvas.addEventListener('pointerleave', onLeave);
-    // Pan uses the right/middle button. Canvas only, so right-click still works
+    element.addEventListener('pointerleave', onLeave);
+    // Pan uses the right/middle button. Element only, so right-click still works
     // everywhere else on the page.
-    canvas.addEventListener('contextmenu', onContextMenu);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    observer.observe(canvas);
+    element.addEventListener('contextmenu', onContextMenu);
+    element.addEventListener('wheel', onWheel, { passive: false });
+    observer.observe(element);
 
     return () => {
-      canvas.removeEventListener('pointerdown', onDown);
+      element.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onCancel);
-      canvas.removeEventListener('pointerleave', onLeave);
-      canvas.removeEventListener('contextmenu', onContextMenu);
-      canvas.removeEventListener('wheel', onWheel);
+      element.removeEventListener('pointerleave', onLeave);
+      element.removeEventListener('contextmenu', onContextMenu);
+      element.removeEventListener('wheel', onWheel);
       observer.disconnect();
     };
   }, buffers.expanding());

@@ -76,7 +76,6 @@
 import type { Action } from '@reduxjs/toolkit';
 
 import type { HashParamSource } from '../../@types/state/url/HashParamSource';
-import { URL_HASH_FOR } from '../../services/url/urlHashFor';
 import { requestFocus } from '../selection/requestFocus';
 import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusedFocusable, selectPendingFocusId } from '../selection/selectors';
@@ -94,6 +93,7 @@ import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
+import { focusIdOf } from '../../utils/selection/focusIdOf';
 
 /**
  * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
@@ -158,10 +158,7 @@ const focusSource: HashParamSource = {
       return null;
     }
 
-    // Table dispatch on the union tag: galaxy ids run the codec ladder (null
-    // when non-encodable), structures/bodies/stars yield their own id token. An
-    // empty id (non-encodable row) contributes no param, same as null.
-    return URL_HASH_FOR[focused.type](focused) || null;
+    return focusIdOf(focused);
   },
   read: (value) => ({ view: { kind: 'focus', id: value } }),
   readAbsent: () => [clearSelection()],

@@ -20,6 +20,7 @@
 import type { UiState } from '../../@types/ui/UiState';
 import { hasDeepLink } from '../../utils/url/hasDeepLink';
 import { isCinemaSearch } from '../../utils/url/isCinemaSearch';
+import { searchHasGate } from '../../utils/url/searchHasGate';
 import { readPersisted } from '../../utils/storage/readPersisted';
 import { SPLASH_SEEN_VERSION } from '../persistedValues';
 import { CURRENT_SPLASH_VERSION, readUrlAtMount } from './splashStorage';
@@ -28,8 +29,9 @@ import { CURRENT_SPLASH_VERSION, readUrlAtMount } from './splashStorage';
  * Compute the initial UiState.  Called once at store construction.
  *
  * Splash visibility gates (applied in order):
- *   0. Cinema mode (?cinema) → hide; the recorder screenshots the page and
- *      must find it capture-ready with zero interaction.
+ *   0. ?cinema, ?dome or ?remote → hide. The recorder screenshots the page and
+ *      must find it capture-ready; a dome is set up by a presenter for an
+ *      audience, who never sees the welcome copy.
  *   1. Deep link present (#focus= or ?tour=) → hide; user has specific intent.
  *   2. seenVersion stored and >= CURRENT_SPLASH_VERSION → hide; returning user.
  *   3. Otherwise → show; first visit or version-bumped content.
@@ -41,7 +43,7 @@ export function buildInitialUiState(): UiState {
   // Every gate reads the same readUrlAtMount() capture — no gate takes a
   // second, live look at window.location that could disagree with it.
   let splashVisible: boolean;
-  if (isCinemaSearch(search)) {
+  if (isCinemaSearch(search) || searchHasGate(search, 'dome') || searchHasGate(search, 'remote')) {
     splashVisible = false;
   } else if (hasDeepLink({ hash, search })) {
     splashVisible = false;

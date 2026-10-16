@@ -99,7 +99,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     does: 'Starts the app in dome mode, drawing a fisheye disc.',
     written: NOT_WRITTEN,
     unknown: 'There is none.',
-    skipsWelcome: false,
+    skipsWelcome: true,
   },
   {
     name: 'cinema',
@@ -132,6 +132,17 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: false,
+    development: true,
+  },
+  {
+    name: 'remote',
+    part: 'query',
+    value: 'None',
+    example: '?dome&remote',
+    does: 'Shows a pairing code so a phone or laptop can drive the app from remote.html. Needs the local dev server, which relays the messages.',
+    written: NOT_WRITTEN,
+    unknown: 'There is none.',
+    skipsWelcome: true,
     development: true,
   },
   {
