@@ -4,7 +4,8 @@
  * no `.root`; take a class with `composes: small from '../../styles/type.module.css'`.
  */
 
-.small {
+/* `:where`, so a composing component's own size, weight or line height wins wherever its rule falls in the sheet. */
+:where(.small) {
   font-size: var(--text-small);
   font-weight: var(--weight-small);
   line-height: 1.5;

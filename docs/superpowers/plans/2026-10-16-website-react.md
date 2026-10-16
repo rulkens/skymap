@@ -99,6 +99,10 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 - [x] CopyButton and Remark are islands (`client:visible` at their `.astro` call sites); FigureSheet is one island per page that also handles every `a[data-enlarge]` (keep that hook: it is set by figures across waves). FigureSheet is `client:idle`, not `client:visible`: a closed dialog is never visible, so it would never hydrate.
 
+- Cleanup deviation: CopyButton and Remark are markup, not islands. One plain script each (`CopyButton/copyButtons.client.ts`, `Remark/remarkLines.client.ts`), imported by `layouts/Base.astro` like the footer's light line, copies the text and makes the live line, so a page with no real interactivity (Privacy, Science, Domes, About, 404) loads no React. `CopyListener` is deleted.
+- Cleanup deviation: the Home islands take what they show from the page (`flightStopViews(stills)` as `stops` on Flight, `placeLines()` as `lines` on Places), so the facts library stays out of the client (Home 149 KB to 92 KB gzipped JS).
+- Cleanup deviation: the Astro dev toolbar is off (`astro.config.mjs`): it stripped `data-astro-source-*` from the page before the islands hydrated and React warned on every island.
+
 **Wave 1 done:** gate green; the note worker resumes; report island count on Home, a docs page and Features.
 
 ---
@@ -110,7 +114,7 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 **Files:** `pages/docs/[...slug].astro:49-63` (map imports), folders for DocLink, CodeBlock, DocTable, DocFigure, FigureFrame, FactText, Example, View, Links, Keys, Note, Caveat, SourceLink, RepoLink, Flow, Formula, Spans; `src/utils/tableCells.ts` (replace or delete).
 
 - [x] Deviation: Astro hands a Markdown block to a React component as one element holding its rendered HTML (`utils/slotHtml.ts`), not as elements, so `DocTable` still reads its cells with `tableCells` and `CodeBlock` strips its text from that HTML; the built-HTML comparison is the controller's. `CodeBlock` and `DocTable` read their children as React elements (`Children.toArray`, element props) instead of `await Astro.slots.render()` + HTML parsing (`CodeBlock.astro:21`, `DocTable.astro:24`). The output HTML must match today's: test `DocTable renders the same table as before` compares the built HTML of two docs pages with tables against the baseline build's HTML (strip class names).
-- [ ] DocBody's 25 `:global` prose rules become `.root & h2 { … }` descendant rules, keeping the `:not([data-embed] *)` guard.
+- [x] DocBody's 25 `:global` prose rules become `.root & h2 { … }` descendant rules, keeping the `:not([data-embed] *)` guard.
 - [x] `url-parameters.mdx:28` `export const Codes` keeps working (it is JSX inside MDX; MDX now renders it with React).
 
 ### Task 2.2: Components imported by MDX pages
@@ -170,8 +174,8 @@ The `<html>`/`<head>` document cannot be a React component (Astro injects styles
 
 - [x] Done: no page has a `<style>` block; `pageStyles.test.ts` deleted. The pages take their `wrap`/`section`/`link-row`/`small` classes from the vocabulary modules.
 
-- [ ] No `.astro` file under `src/` except pages and `layouts/Base.astro` remains; a grep in the gate checks it.
-- [ ] `site.css` holds no class selectors: each shared class left it in the wave where its last `.astro` user was rewritten (until then the vocabulary module and the global copy coexist; the vocabulary module is the one to edit).
+- [x] No `.astro` file under `src/` except pages and `layouts/Base.astro` remains; a grep in the gate checks it. Deviation: `layouts/Docs.astro` is the second carve-out (Task 1.1).
+- [x] `site.css` holds no class selectors: each shared class left it in the wave where its last `.astro` user was rewritten (until then the vocabulary module and the global copy coexist; the vocabulary module is the one to edit).
 
 **Wave 4 done:** gate green on every page.
 
