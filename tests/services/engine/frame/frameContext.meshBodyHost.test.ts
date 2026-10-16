@@ -81,7 +81,6 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
         altitudeMpc: pose.distance,
         nowMs: 0,
         simDays: CONST_J2000,
-        visibleSourceMask: 0,
       },
       { width: 1920, height: 1080 },
     );

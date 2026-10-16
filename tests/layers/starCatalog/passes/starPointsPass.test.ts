@@ -291,7 +291,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
-        missions: { trails: false },
+        missionTrails: { enabled: false },
       },
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;

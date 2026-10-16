@@ -40,6 +40,7 @@ import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/Mil
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
@@ -411,7 +412,6 @@ function makeInput(
     pointSizePx: 2.5,
     brightness: 1.0,
     selected: null as SelectionRef | null,
-    visibleSourceMask: 0xffffffff,
     provenance: {
       orientation: { highlight: true, filter: 'all' },
       size: { highlight: false, filter: 'all' },
@@ -478,7 +478,6 @@ function makeInput(
     simDays: 0,
     altitudeMpc: 0,
     focusBlend: 0,
-    visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
       apparentRadiusMpc: 1,
@@ -594,6 +593,7 @@ function makeInput(
         // production); the skip-on-toggle test passes `overrides.disabledPasses`.
         settings: {
           galaxyCatalogs: {
+            items: makeGalaxyCatalogItems(),
             sizePx: settings.pointSizePx,
             brightness: settings.brightness,
             provenance: settings.provenance,
@@ -752,7 +752,6 @@ describe('renderFrame', () => {
     expect(drawSettings.brightness).toBe(fx.settings.brightness);
     // selected null → 0xffffffff packed sentinel
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
-    expect(drawSettings.visibleSourceMask).toBe(fx.settings.visibleSourceMask);
     // camPos is a 3-tuple snapshot from cam.position (asserted against the
     // fixture camera, not a literal — the camera distance derives from the
     // Milky-Way fade knobs).

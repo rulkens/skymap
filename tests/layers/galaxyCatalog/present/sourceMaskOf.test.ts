@@ -1,5 +1,5 @@
 /**
- * deriveSourceMasks — the galaxy catalog draw/pick bitmask derivation.
+ * sourceMaskOf — the galaxy catalog draw/pick bitmask derivation.
  *
  * These tests pin the three core invariants the helper exists to enforce:
  * an enabled galaxy catalog gets both bits; a galaxy catalog toggled off but still fading
@@ -8,7 +8,7 @@
  * The all-enabled case pins that enabling every catalog lights every
  * galaxy-catalog bit, DesiDeep included.
  *
- * `deriveSourceMasks` is a PURE projection: it RETURNS `{ draw, pick }` and
+ * `sourceMaskOf` is a PURE projection: it RETURNS `{ draw, pick }` and
  * writes nothing. The fixture is therefore just its two inputs — a settings stub
  * whose `galaxyCatalogs.items` covers every `GALAXY_CATALOG_SOURCES` id (so the
  * loop never indexes undefined), and a `fades.opacityOf` stub keyed off the
@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
@@ -31,7 +31,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
  *
  * `enabledOverrides` flips specific galaxy catalog ids; `opacityById` supplies
  * each catalog's fade opacity (default 0 — fully faded). Returns the same
- * `Pick<EngineState, ...>` shape `deriveSourceMasks` accepts.
+ * `Pick<EngineState, ...>` shape `sourceMaskOf` accepts.
  */
 function makeState(opts: {
   enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
@@ -56,12 +56,12 @@ function makeState(opts: {
   };
 }
 
-describe('deriveSourceMasks', () => {
+describe('sourceMaskOf', () => {
   it('sets draw+pick bits for an enabled galaxy catalog', () => {
     // Enabled with zero opacity still gets both bits — `enabled` alone drives
     // the pick bit, and `enabled || opacity>0` drives the draw bit.
     const state = makeState({ enabledOverrides: { sdss: true } });
-    const { draw, pick } = deriveSourceMasks(state, 0);
+    const { draw, pick } = sourceMaskOf(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(true);
     expect(maskHas(pick, Source.SDSS)).toBe(true);
   });
@@ -71,7 +71,7 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0.5 },
     });
-    const { draw, pick } = deriveSourceMasks(state, 0);
+    const { draw, pick } = sourceMaskOf(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(true);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
@@ -81,7 +81,7 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0 },
     });
-    const { draw, pick } = deriveSourceMasks(state, 0);
+    const { draw, pick } = sourceMaskOf(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(false);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
@@ -111,7 +111,7 @@ describe('deriveSourceMasks', () => {
 
     // Query well past the fade's 100 ms end, at a nowMs the registry was
     // never ticked to.
-    const { draw } = deriveSourceMasks(state, 500);
+    const { draw } = sourceMaskOf(state, 500);
     expect(maskHas(draw, Source.SDSS)).toBe(false);
   });
 });

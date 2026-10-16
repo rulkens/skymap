@@ -16,9 +16,6 @@ import { fileURLToPath } from 'node:url';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));

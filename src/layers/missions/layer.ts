@@ -1,15 +1,17 @@
 /**
- * The missions Layer: the sampled craft's (Voyager's) trails, their `missions` settings cluster,
- * the track load, and the Voyager exhibit with its mission timeline kind.
+ * The missions Layer: the sampled craft's (Voyager's) trails and captions, their `missions` and
+ * `missionTrails` settings clusters, the track load, and the Voyager exhibit with its mission timeline kind.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { NEAR0 } from '../../services/engine/frame/slabs';
 import { missionsLayerSettings } from './state/slices';
 import { loadSpacecraftTracksSaga } from './sagas/loadSpacecraftTracksSaga';
 import { create } from './create';
 import { destroy } from './destroy';
 import { missionTrailsPass } from './passes/missionTrailsPass';
 import { missionTrailsFadeRows } from './present/missionTrailsFadeRows';
+import { produceMissionCaptions } from './present/produceMissionCaptions';
 import { missionTrailsSettingsRow } from './ui/missionTrailsSettingsRow';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 
@@ -22,5 +24,8 @@ export const missionsLayer = defineLayer({
   destroy,
   passes: (runtime) => [missionTrailsPass(runtime)],
   fades: missionTrailsFadeRows,
+  guides: () => ({
+    screenLabels: [{ slab: NEAR0, id: 'missionCaptions', produceLabels: produceMissionCaptions }],
+  }),
   ui: [{ slot: 'labelsAndGuides', content: missionTrailsSettingsRow }],
 });

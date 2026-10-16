@@ -1,7 +1,8 @@
 /**
  * sceneBodyLabels — name captions for the true-scale foreground bodies core
  * still owns: Earth, the planets and the mesh bodies (the seeded stars, the
- * Sun and the Galactic Centre caption through their Layers' own producers).
+ * Sun and the Galactic Centre caption through their Layers' own producers, the
+ * sampled craft through the missions Layer's `produceMissionCaptions`).
  *
  * The scene bodies render true-scale in the foreground/HDR passes, so at
  * almost every zoom level they are sub-pixel and impossible to locate by
@@ -34,19 +35,18 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { ForegroundCaption } from './foregroundCaption';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
-import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
+import { SAMPLED_BODY_IDS } from '../../../data/missions/sampledBodyIds';
 import { compressBrightness } from '../../../utils/color/compressBrightness';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
+import { meshBodyCaption } from '../../../utils/labels/meshBodyCaption';
 
 /**
  * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
@@ -61,17 +61,6 @@ const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
  * them dimmer than Venus or Enceladus, so the captions still rank by albedo.
  */
 const PLANET_TINT_GAMMA = 0.3;
-
-/**
- * Turn a seed's authored reveal distance into the caption's band: alpha 0 at
- * twice it, 1 at it. The ×2 is the ONE place the band's width lives, so a seed
- * tune stays a single number.
- */
-function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
-  if (revealM === undefined) return undefined;
-  const fullAt = revealM * SCALE_UNITS.M_TO_MPC;
-  return { fullAt, goneAt: 2 * fullAt };
-}
 
 /**
  * Build one name label per core seeded scene body, positioned relative to
@@ -105,23 +94,13 @@ export function sceneBodyLabels(
         'planet',
       ),
     ),
-    // A mesh body's baked `albedo` is a mean over the whole surface — dark
-    // skin, or (petunias) an atlas averaging in black gaps — far below a
-    // planet's, so it is scaled to full brightness first; the caption keeps
-    // the hue, just not the darkness. An anchored scan is ground, not an
-    // object on it, so it goes uncaptioned (and unpicked, see meshBodiesPass).
+    // An anchored scan is ground, not an object on it, so it goes uncaptioned
+    // (and unpicked, see meshBodiesPass).
     ...SCENE_MESH_BODIES.filter(
-      (body) => !ANCHORED_MESH_BODY_IDS.has(body.id) && spacecraftPresent(body.id, simDays),
-    ).map((body) => ({
-      ...bodyCaption(
-        body,
-        bodyFootprintRadiusM(body),
-        bodyStates.get(body.id)!.positionMpc,
-        scaleToUnitMax(body.albedo),
-        'meshBody',
-      ),
-      bodyId: body.id,
-      revealBand: captionRevealBand(body.captionRevealM),
-    })),
+      (body) =>
+        !ANCHORED_MESH_BODY_IDS.has(body.id) &&
+        !SAMPLED_BODY_IDS.includes(body.id) &&
+        spacecraftPresent(body.id, simDays),
+    ).map((body) => meshBodyCaption(body, bodyStates.get(body.id)!.positionMpc)),
   ];
 }

@@ -10,11 +10,10 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import type { CaptionComposeContext } from '../../../@types/rendering/CaptionComposeContext';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
+import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
@@ -38,17 +37,7 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
     // A tour cue addresses this caption with the near-field bodies' key, as it
     // did while Sgr A* was a body.
     const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
-    const composeCtx: CaptionComposeContext = {
-      settings: state.settings,
-      camPos: ctx.drawCamPos,
-      camOrbitDistanceMpc: ctx.cam.distance,
-      viewportShortSidePx: Math.min(ctx.canvasSize.width, ctx.canvasSize.height),
-      drawPxPerRad: ctx.drawPxPerRad,
-      fades: state.subsystems.fades,
-      nowMs: now,
-      focus: ctx.snapshot.focus,
-      occluders: sceneOccluderBodies(state, ctx),
-    };
+    const composeCtx = captionComposeContextOf(state, ctx);
     const states = sceneBodyStates(state, ctx);
 
     const labels = BLACK_HOLES.map((row, i) => {

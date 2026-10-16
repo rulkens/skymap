@@ -34,6 +34,16 @@ and the shell can be killed via `KillShell`. No PID files, no `/tmp` logs, no
    `BashOutput` so the failure is visible (WESL linker error, missing
    dependency, port range exhausted, etc.). Do not retry automatically.
 
+## `/dev website` — the marketing site
+
+`/dev website` starts the Astro site in `packages/website` instead of the app: run
+`npm run dev -w @skymap/website` with `run_in_background: true`, wait for its
+`Local    http://localhost:<port>/` line (port 5800, from `tools/utils/io/devPorts.ts`),
+and report it the same way. Everything else above holds.
+
+The dashboard reads `.claude/dev-servers.json` to name these servers and to offer
+Start: `/dev` for the app and `/dev website` for the site.
+
 ## `/dev-stop` — kill the dev server
 
 1. **If a shell ID is known**, call `KillShell` on it. Read the recorded port

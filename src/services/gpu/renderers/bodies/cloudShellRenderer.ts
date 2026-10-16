@@ -157,14 +157,14 @@ export function createCloudShellRenderer(
   // draws nothing (alpha 0) rather than a solid ball before the asset lands — the
   // branch-free "always bind a real texture" posture. `rgba8unorm-srgb` matches
   // the real map's colour format so the placeholder can't disagree with it.
-  let texture = device.createTexture({
+  const placeholder = device.createTexture({
     label: 'cloudShell-placeholder-map',
     size: [1, 1, 1],
     format: 'rgba8unorm-srgb',
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
   device.queue.writeTexture(
-    { texture },
+    { texture: placeholder },
     new Uint8Array([0, 0, 0, 0]),
     { bytesPerRow: 4, rowsPerImage: 1 },
     [1, 1, 1],
@@ -188,6 +188,8 @@ export function createCloudShellRenderer(
     ],
   });
 
+  // The real map, or null while the placeholder stands in (before commit, after release).
+  let committed: GPUTexture | null = null;
   function buildBindGroup(): GPUBindGroup {
     return device.createBindGroup({
       label: 'cloudShell-bg',
@@ -195,7 +197,7 @@ export function createCloudShellRenderer(
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: sampler },
-        { binding: 2, resource: texture.createView() },
+        { binding: 2, resource: (committed ?? placeholder).createView() },
       ],
     });
   }
@@ -273,9 +275,9 @@ export function createCloudShellRenderer(
   // ── setTexture ────────────────────────────────────────────────────────────
 
   function setTexture(bitmap: ImageBitmap): void {
-    texture.destroy();
+    committed?.destroy();
     const levels = mipLevelCount(bitmap.width, bitmap.height);
-    texture = device.createTexture({
+    const texture = device.createTexture({
       label: 'cloudShell-map-texture',
       size: [bitmap.width, bitmap.height, 1],
       format: 'rgba8unorm-srgb',
@@ -296,6 +298,14 @@ export function createCloudShellRenderer(
       1,
     ]);
     generateMipChain(device, texture);
+    committed = texture;
+    bindGroup = buildBindGroup();
+  }
+
+  function clearTexture(): void {
+    if (committed === null) return;
+    committed.destroy();
+    committed = null;
     bindGroup = buildBindGroup();
   }
 
@@ -318,12 +328,14 @@ export function createCloudShellRenderer(
     uvBuffer.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
-    texture.destroy();
+    committed?.destroy();
+    placeholder.destroy();
   }
 
   const renderer: CloudShellRenderer = {
     label: 'cloudShellRenderer',
     setTexture,
+    clearTexture,
     draw,
     destroy,
   };

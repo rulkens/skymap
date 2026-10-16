@@ -618,6 +618,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       lastCut = cut;
     },
     getLastCut: () => lastCut,
+    // `runFrame` feeds `update` only `SURFACE_TILE_REGISTRY` hosts.
+    engagedBodyId: () => (atlas?.bodyId ?? null) as SurfaceTileBodyId | null,
+    release: standDown,
     getAtlasView: () => atlas?.stream.slots.getTextureView() ?? null,
     getHeightAtlasView: () => atlas?.heightStream.slots.getTextureView() ?? null,
     isAnimating,

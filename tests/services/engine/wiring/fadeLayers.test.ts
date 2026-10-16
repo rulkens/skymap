@@ -83,7 +83,7 @@ function makeState(
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
-      missions: { trails: false },
+      missionTrails: { enabled: false },
       // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
       // labels reuse the galaxy layer), so seedFades indexes this leaf.
       galaxyCatalogs: {
@@ -150,7 +150,7 @@ function makeSettings(
     cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
-    missions: { trails: false },
+    missionTrails: { enabled: false },
   } as unknown as EngineSettingsState;
 }
 

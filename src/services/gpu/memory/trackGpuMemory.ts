@@ -9,7 +9,7 @@
  * `destroy()` is wrapped to subtract immediately and is idempotent (a second
  * call is a no-op). A `FinalizationRegistry` catches the other path — GC
  * without `destroy()` — and both subtracts the bytes AND counts it under
- * `gcReclaimed`, the leak signal (e.g. surface-tile atlases today). Swap-chain
+ * `gcReclaimed`, the leak signal. Swap-chain
  * textures (`context.getCurrentTexture()`) are never tracked — they aren't
  * created via `device.createTexture`.
  */

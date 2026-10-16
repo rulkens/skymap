@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { selectVisibleSourceMask } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../../../src/store/constants';
-import { deriveSourceMasks } from '../../../../../src/services/engine/frame/deriveSourceMasks';
+import { sourceMaskOf } from '../../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
 import type { RootState } from '../../../../../src/store/types';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -16,11 +16,11 @@ function makeRoot(patch?: Partial<EngineSettingsState>): RootState {
   return { [settingsRoute]: settings } as RootState;
 }
 
-// Drive `deriveSourceMasks` against a minimal state stub so the mask selector
+// Drive `sourceMaskOf` against a minimal state stub so the mask selector
 // can be compared against the engine's authoritative pick-mask packing. The
 // selector must reproduce the EXACT `pick` bits for any enabled-set — it's the
 // read seam that replaced the old `onMaskChange` echo (which sent the pick
-// mask). `deriveSourceMasks` is pure: it RETURNS `{ draw, pick }`, so the stub
+// mask). `sourceMaskOf` is pure: it RETURNS `{ draw, pick }`, so the stub
 // is just its two inputs (settings + a fades opacity table), no `sources` slot.
 function deriveMasks(
   settings: EngineSettingsState,
@@ -32,11 +32,11 @@ function deriveMasks(
       fades: { opacityOf: (h: { id: GalaxyCatalogId }) => opacityFor(h.id) },
     },
   };
-  return deriveSourceMasks(state as never, 0);
+  return sourceMaskOf(state as never, 0);
 }
 
 describe('selectVisibleSourceMask', () => {
-  it('packs the enabled bits to the deriveSourceMasks pick bitmask (all enabled)', () => {
+  it('packs the enabled bits to the sourceMaskOf pick bitmask (all enabled)', () => {
     const state = makeRoot(); // every galaxy catalog enabled
     const { pick } = deriveMasks(state[settingsRoute]);
 
