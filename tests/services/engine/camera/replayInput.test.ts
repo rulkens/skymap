@@ -84,7 +84,6 @@ function ctxOf(
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     lastWinnerRidesWheel: ridesWheelTarget(CAMERA_DRIVERS, overrides.winnerLastFrame ?? 'resting'),
     autoRotateEpoch: { ref: null, startMs: null },
-    navHeld: false,
     navOwns: false,
   };
 }
@@ -723,13 +722,13 @@ describe('replayInput — the navigator', () => {
   const commitsOf = (actions: readonly { type: string }[]): number =>
     actions.filter((a) => a.type === commitCameraPose.type).length;
 
-  it('a release commits the register, unless a navigator hold is running', () => {
+  it('a release commits the register, unless a navigator row owns the camera', () => {
     const store = makeStore();
     store.dispatch(commitCameraPose(REGISTER));
     const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
 
     const plain = replayInput(prevOf(store), release, ctxOf(store));
-    const held = replayInput(prevOf(store), release, { ...ctxOf(store), navHeld: true });
+    const held = replayInput(prevOf(store), release, { ...ctxOf(store), navOwns: true });
 
     expect(commitsOf(plain.actions)).toBe(1);
     expect(commitsOf(held.actions)).toBe(0);

@@ -35,7 +35,6 @@ export const NAV_FRICTION_GROUP: Readonly<Record<NavAxis, FrictionGroup>> = {
 
 export const NAV_AT_REST: NavigatorState = {
   velocity: { orbit: [0, 0], look: [0, 0], zoom: 0, roll: 0 },
-  held: null,
   lastNowMs: null,
 };
 

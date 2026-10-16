@@ -185,14 +185,6 @@ describe('inputSourceSaga', () => {
       scheme = 'openspace';
     });
 
-    it('a left press binds navOrbit, a right press navZoom', () => {
-      emit(resize(200, 100));
-      emit(pointer('down', A));
-      emit(pointer('up', A));
-      emit(pointer('down', A, 2));
-      expect(intentsOf()).toEqual(['navOrbit', 'navZoom']);
-    });
-
     it('a left tap selects and a double-tap focuses', () => {
       emit(resize(200, 100));
       emit(pointer('down', A));

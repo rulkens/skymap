@@ -157,16 +157,25 @@ export function stepCameraRuntime(
       winnerLastFrame,
       lastWinnerRidesWheel,
       autoRotateEpoch: prev.epochs.autoRotate,
-      navHeld: prev.navigator.held !== null,
       navOwns: isNavigatorDriverId(winnerLastFrame),
     },
   );
+  // The drivers must see this frame's commits (`endDrag` above all, or
+  // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
+  // memoised selector keyed on the root object keeps its cache.
+  const rootState =
+    drained.actions.length === 0
+      ? stored
+      : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
   // A table without navigator rows drops navigator input, so a stray `navDrag` cannot
   // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
   const navigates = drivers.some((d) => isNavigatorDriverId(d.id));
+  // The hold follows the gesture, not its motion: a still press eases a coast to rest.
+  const navHeld = navigates && rootState.camera.dragging;
   const nav = stepNavigator(
     prev.navigator,
     navigates ? drained.navSteps : [],
+    navHeld,
     nowMs,
     controls,
     projection.fovYRad / canvasPx[1],
@@ -180,13 +189,6 @@ export function stepCameraRuntime(
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
   const tailStart = actions.length;
-  // The drivers must see this frame's commits (`endDrag` above all, or
-  // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
-  // memoised selector keyed on the root object keeps its cache.
-  const rootState =
-    drained.actions.length === 0
-      ? stored
-      : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
 
   // The approach hands off on a frame it SATURATED, never on a clock the pick
   // reads independently: a fresh focus row starts a new approach whatever the
@@ -199,14 +201,9 @@ export function stepCameraRuntime(
   const dragClaimed = drivers.some(
     (d) =>
       d.ridesExhibit === true &&
-      d.isActive(rootState, { approachDone, dragClaimed: false, navHeld: false, navMoving: false }),
+      d.isActive(rootState, { approachDone, dragClaimed: false, navMoving: false }),
   );
-  const activity = {
-    approachDone,
-    dragClaimed,
-    navHeld: nav.state.held !== null,
-    navMoving: nav.moving,
-  };
+  const activity = { approachDone, dragClaimed, navMoving: nav.moving };
   // ONE pick per frame: the epoch advance, the commit gate and the produced pose
   // read the same driver object, so they cannot disagree on who won.
   const winner = pickWinner(drivers, rootState, activity);
@@ -352,7 +349,7 @@ export function stepCameraRuntime(
       },
     },
     actions,
-    requestRender: projected.requestRender || nav.state.held !== null || nav.moving,
+    requestRender: projected.requestRender || navHeld || nav.moving,
     world: projected.world,
     rootState,
   };

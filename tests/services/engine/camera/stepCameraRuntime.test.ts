@@ -614,6 +614,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
       const expected = stepNavigator(
         prev.navigator,
         [],
+        false,
         nextNow(h),
         h.store.getState().settings.cameraControls,
         prev.outputs.projection.fovYRad / CANVAS_PX,
@@ -625,6 +626,67 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     }
     expect(h.state.cameraRuntime.register.pose.frame).toEqual({ body: 'earth' });
     expect(h.state.cameraRuntime.navigator.velocity.zoom).toBe(-3);
+  });
+
+  const worldOf = (pose: StepInputs['rootState']['camera']['base']) => {
+    if (!isWorldArm(pose)) throw new Error('expected the world arm');
+    return pose.pose;
+  };
+
+  it('a skymap drag toggled to openspace mid-drag keeps turning, and its release keeps the pose', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.frame(2);
+    const start = yawOf(h);
+    h.press('orbit', [50, 50]);
+    h.moveTo([60, 50]);
+    h.frame();
+    const dragged = yawOf(h);
+    h.store.dispatch(toggleControlScheme());
+    h.moveTo([70, 50]);
+    h.frame();
+
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceHeld');
+    const further = yawOf(h);
+    expect(Math.abs(further - start)).toBeGreaterThan(Math.abs(dragged - start) * 1.5);
+    h.release();
+    h.frame(2);
+    expect(yawOf(h)).toBeCloseTo(further, 9);
+    expect(worldOf(h.store.getState().camera.base).yaw).toBeCloseTo(further, 9);
+  });
+
+  it('an openspace pinch with no drag before it zooms, and its release commits once', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.store.dispatch(setControlScheme('openspace'));
+    h.frame(2);
+    const start = worldOf(h.state.cameraRuntime.register.pose).distance;
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+    stepWith(h, [
+      { kind: 'gestureStart' },
+      { kind: 'zoom', factor: 1.5, duringGesture: true, cursorPx: null },
+    ]);
+    const pinched = worldOf(h.state.cameraRuntime.register.pose).distance;
+
+    // The world arm's distances are Mpc, ~1e-15 here, so compare ratios.
+    expect(pinched / start).not.toBeCloseTo(1, 6);
+    const commits = commitsIn(stepWith(h, release)) + commitsIn(stepWith(h, []));
+    expect(commits).toBe(1);
+    expect(worldOf(h.store.getState().camera.base).distance / pinched).toBeCloseTo(1, 9);
+  });
+
+  it('a motionless press brings a frictionless coast to rest, committing once at the grab', () => {
+    const { h } = coasting();
+    h.store.dispatch(setFrictionOn({ group: 'rotational', on: false }));
+    stepWith(h, []);
+    h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+
+    expect(commitsIn(stepWith(h, [{ kind: 'gestureStart' }]))).toBe(1);
+    let i = 0;
+    while (!atRest(h.state.cameraRuntime.navigator.velocity) && i < GUARD) {
+      expect(commitsIn(stepWith(h, []))).toBe(0);
+      i += 1;
+    }
+    expect(atRest(h.state.cameraRuntime.navigator.velocity)).toBe(true);
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceHeld');
   });
 
   it('under a claiming exhibit row a held nav drag turns the register at the same rate', () => {

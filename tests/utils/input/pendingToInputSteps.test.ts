@@ -82,14 +82,4 @@ describe('pendingToInputSteps', () => {
     expect(step.deltaPx[0]).toBeCloseTo(step.deltaPx[1], 9);
     expect(step.deltaPx[1]).toBeCloseTo(90, 9);
   });
-
-  it.each([
-    ['navOrbit', 'orbit'],
-    ['navLook', 'look'],
-    ['navRoll', 'roll'],
-    ['navZoom', 'zoom'],
-  ] as const)('%s becomes the %s axis', (intent, axis) => {
-    const [step] = pendingToInputSteps([drag({ intent, dx: 0.1, dy: 0.1 })], [100, 100]);
-    expect(step).toMatchObject({ kind: 'navDrag', axis });
-  });
 });

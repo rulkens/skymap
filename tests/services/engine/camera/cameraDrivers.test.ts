@@ -72,7 +72,6 @@ function makeStore() {
 const APPROACHING: DriverActivity = {
   approachDone: false,
   dragClaimed: false,
-  navHeld: false,
   navMoving: false,
 };
 const APPROACH_DONE: DriverActivity = { ...APPROACHING, approachDone: true };
@@ -882,21 +881,19 @@ describe('the openspace table', () => {
     ]);
   });
 
-  it('the held row beats the coast, and both yield to a claimed drag', () => {
-    const s = makeStore().getState() as unknown as RootState;
-    const pick = (a: Partial<DriverActivity>) =>
+  it('the held row takes any open gesture over the coast, and both yield to a claimed drag', () => {
+    const store = makeStore();
+    const idle = store.getState() as unknown as RootState;
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+    const pressed = store.getState() as unknown as RootState;
+    const pick = (s: RootState, a: Partial<DriverActivity>) =>
       pickWinner(rest.openspace.drivers, s, { ...APPROACHING, ...a }).id;
 
-    expect(pick({ navHeld: true, navMoving: true })).toBe('openSpaceHeld');
-    expect(pick({ navMoving: true })).toBe('openSpaceCoast');
-    expect(pick({})).toBe('resting');
-    expect(pick({ navHeld: true, dragClaimed: true })).toBe('resting');
-    expect(pick({ navMoving: true, dragClaimed: true })).toBe('resting');
-  });
-
-  it('both rows bake the register on exit, with no shared epoch to hand off on', () => {
-    const rows = rest.openspace.drivers.filter((d) => d.id.startsWith('openSpace'));
-    expect(rows.map((d) => d.commitsOnEdge)).toEqual(['register', 'register']);
-    expect(rows.map((d) => d.epoch)).toEqual([undefined, undefined]);
+    expect(pick(pressed, {})).toBe('openSpaceHeld');
+    expect(pick(pressed, { navMoving: true })).toBe('openSpaceHeld');
+    expect(pick(idle, { navMoving: true })).toBe('openSpaceCoast');
+    expect(pick(idle, {})).toBe('resting');
+    expect(pick(pressed, { dragClaimed: true })).toBe('resting');
+    expect(pick(idle, { navMoving: true, dragClaimed: true })).toBe('resting');
   });
 });

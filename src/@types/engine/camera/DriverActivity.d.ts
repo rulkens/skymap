@@ -8,7 +8,6 @@ export type DriverActivity = {
   readonly approachDone: boolean;
   // An exhibit row is active, so it reads the drag itself; `orbitDrag` would orbit a frozen point.
   readonly dragClaimed: boolean;
-  // The navigator's state after this frame's input; only the openspace rows read them.
-  readonly navHeld: boolean;
+  // The navigator still has velocity after this frame's input; only the openspace coast reads it.
   readonly navMoving: boolean;
 };

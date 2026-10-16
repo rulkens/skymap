@@ -1,10 +1,11 @@
 /**
  * One frame of the OpenSpace navigator: OpenSpace v0.22.0's `DampenedVelocity`
- * law on four axes, with `k = min(dt / friction, 1)`. A held axis eases toward
- * the pointer's velocity (`set`, never gated by the friction toggles, so a
- * motionless held mouse stops); a released axis decays by `1 − k` (`decelerate`)
- * only while its group's toggle is on. Velocities are ArmDelta units per second;
- * the returned delta is one frame's worth, zero axes omitted because an
+ * law on four axes, with `k = min(dt / friction, 1)`. While a gesture is open
+ * every axis eases toward the pointer's velocity on it, zero on an axis it did
+ * not move (`set`, never gated by the friction toggles, so a motionless press
+ * stops a coast); once released an axis decays by `1 − k` (`decelerate`) only
+ * while its group's toggle is on. Velocities are ArmDelta units per second; the
+ * returned delta is one frame's worth, zero axes omitted because an
  * `orbit: [0, 0]` is not identity on the world arm.
  */
 import type { ArmDelta } from '../../@types/camera/ArmDelta';
@@ -25,6 +26,7 @@ import {
 export function stepNavigator(
   prev: NavigatorState,
   steps: readonly NavStep[],
+  held: boolean,
   nowMs: number,
   settings: NavSettings,
   radPerPx: number,
@@ -42,10 +44,8 @@ export function stepNavigator(
     zoom: prev.velocity.zoom,
     roll: prev.velocity.roll,
   };
-  const updated = new Set<NavAxis>();
+  let heldThisFrame = false;
   const hold = (axis: NavAxis, px: Vec2): void => {
-    updated.add(axis);
-    if (dtS === 0) return;
     if (axis === 'zoom') {
       v.zoom += ((px[1] * NAV_ZOOM_LN_PER_PX) / rawDtS - v.zoom) * k;
     } else if (axis === 'roll') {
@@ -58,23 +58,32 @@ export function stepNavigator(
     }
   };
 
-  let held = prev.held;
-  let acc: Vec2 = [0, 0];
+  const noPixels = (): Record<NavAxis, Vec2> => ({
+    orbit: [0, 0],
+    look: [0, 0],
+    zoom: [0, 0],
+    roll: [0, 0],
+  });
+  const holdAll = (px: Record<NavAxis, Vec2>): void => {
+    heldThisFrame = true;
+    if (dtS === 0) return;
+    for (const axis of ['orbit', 'look', 'zoom', 'roll'] as const) hold(axis, px[axis]);
+  };
+  // Each gesture this frame holds once over its pixels; a `gestureEnd` closes one.
+  let acc = noPixels();
   for (const step of steps) {
     if (step.kind === 'navDrag') {
-      if (step.axis !== held) acc = [0, 0];
-      held = step.axis;
-      acc = [acc[0] + step.deltaPx[0], acc[1] + step.deltaPx[1]];
+      const a = acc[step.axis];
+      acc[step.axis] = [a[0] + step.deltaPx[0], a[1] + step.deltaPx[1]];
     } else {
-      if (held !== null) hold(held, acc);
-      held = null;
-      acc = [0, 0];
+      holdAll(acc);
+      acc = noPixels();
     }
   }
-  if (held !== null) hold(held, acc);
+  if (held) holdAll(acc);
 
   const decays = (axis: NavAxis): boolean =>
-    !updated.has(axis) && settings.frictionOn[NAV_FRICTION_GROUP[axis]];
+    !heldThisFrame && settings.frictionOn[NAV_FRICTION_GROUP[axis]];
   for (const axis of ['orbit', 'look'] as const) {
     const s = decays(axis) ? 1 - k : 1;
     v[axis] =
@@ -100,5 +109,5 @@ export function stepNavigator(
           ...(v.zoom !== 0 && { zoom: v.zoom * dtS }),
           ...(v.roll !== 0 && { roll: v.roll * dtS }),
         };
-  return { state: { velocity: v, held, lastNowMs: nowMs }, delta, moving };
+  return { state: { velocity: v, lastNowMs: nowMs }, delta, moving };
 }

@@ -18,7 +18,6 @@ const ALL_OFF: NavSettings = {
 
 const coasting = (lastNowMs = 1000): NavigatorState => ({
   velocity: { orbit: [1, -2], look: [0.5, 0.25], zoom: 3, roll: -1 },
-  held: null,
   lastNowMs,
 });
 const drag = (axis: 'orbit' | 'look' | 'zoom' | 'roll', x: number, y: number): NavStep => ({
@@ -29,7 +28,7 @@ const drag = (axis: 'orbit' | 'look' | 'zoom' | 'roll', x: number, y: number): N
 
 describe('stepNavigator', () => {
   it.each([8, 16, 50])('release decays by 1 − min(dt/friction, 1) at %i ms', (dtMs) => {
-    const { state } = stepNavigator(coasting(), [], 1000 + dtMs, ALL_ON, RAD_PER_PX);
+    const { state } = stepNavigator(coasting(), [], false, 1000 + dtMs, ALL_ON, RAD_PER_PX);
     const s = 1 - dtMs / 1000 / (0.5 + 1e-7);
     expect(state.velocity.orbit[0]).toBeCloseTo(1 * s, 12);
     expect(state.velocity.orbit[1]).toBeCloseTo(-2 * s, 12);
@@ -40,7 +39,7 @@ describe('stepNavigator', () => {
 
   it('friction 0 stops a released axis in one frame', () => {
     const settings = { ...ALL_ON, friction: 0 };
-    const { state, moving } = stepNavigator(coasting(), [], 1016, settings, RAD_PER_PX);
+    const { state, moving } = stepNavigator(coasting(), [], false, 1016, settings, RAD_PER_PX);
     expect(state.velocity).toEqual(NAV_AT_REST.velocity);
     expect(moving).toBe(false);
   });
@@ -49,7 +48,7 @@ describe('stepNavigator', () => {
     const settings = { ...ALL_ON, frictionOn: { ...ALL_ON.frictionOn, zoom: false } };
     let state = coasting(0);
     for (let i = 1; i <= 100; i++) {
-      state = stepNavigator(state, [], i * 16, settings, RAD_PER_PX).state;
+      state = stepNavigator(state, [], false, i * 16, settings, RAD_PER_PX).state;
     }
     expect(state.velocity.zoom).toBe(3);
     expect(Math.abs(state.velocity.orbit[0])).toBeLessThan(0.1);
@@ -58,20 +57,20 @@ describe('stepNavigator', () => {
 
   it('look decays under the roll toggle, not the rotational one', () => {
     const rollOff = { ...ALL_ON, frictionOn: { ...ALL_ON.frictionOn, roll: false } };
-    const a = stepNavigator(coasting(), [], 1016, rollOff, RAD_PER_PX).state.velocity;
+    const a = stepNavigator(coasting(), [], false, 1016, rollOff, RAD_PER_PX).state.velocity;
     expect(a.look).toEqual([0.5, 0.25]);
     expect(a.roll).toBe(-1);
     expect(Math.abs(a.orbit[0])).toBeLessThan(1);
 
     const rotOff = { ...ALL_ON, frictionOn: { ...ALL_ON.frictionOn, rotational: false } };
-    const b = stepNavigator(coasting(), [], 1016, rotOff, RAD_PER_PX).state.velocity;
+    const b = stepNavigator(coasting(), [], false, 1016, rotOff, RAD_PER_PX).state.velocity;
     expect(b.orbit).toEqual([1, -2]);
     expect(Math.abs(b.look[0])).toBeLessThan(0.5);
   });
 
   it('dt is capped at 100 ms', () => {
-    const gap = stepNavigator(coasting(), [], 3000, ALL_ON, RAD_PER_PX);
-    const capped = stepNavigator(coasting(), [], 1100, ALL_ON, RAD_PER_PX);
+    const gap = stepNavigator(coasting(), [], false, 3000, ALL_ON, RAD_PER_PX);
+    const capped = stepNavigator(coasting(), [], false, 1100, ALL_ON, RAD_PER_PX);
     expect(gap.state.velocity).toEqual(capped.state.velocity);
     expect(gap.delta).toEqual(capped.delta);
   });
@@ -79,41 +78,41 @@ describe('stepNavigator', () => {
   it('a stalled frame holds at the pixels over the real gap, not the capped dt', () => {
     // Friction small enough that k = 1 at the capped dt, so velocity IS the target.
     const snappy: NavSettings = { ...ALL_ON, friction: 0.01 };
-    const start: NavigatorState = { ...NAV_AT_REST, held: 'orbit', lastNowMs: 0 };
-    const { state } = stepNavigator(start, [drag('orbit', 200, 0)], 2000, snappy, RAD_PER_PX);
+    const start: NavigatorState = { ...NAV_AT_REST, lastNowMs: 0 };
+    const { state } = stepNavigator(start, [drag('orbit', 200, 0)], true, 2000, snappy, RAD_PER_PX);
     expect(state.velocity.orbit[0]).toBeCloseTo((200 * RAD_PER_PX) / 2);
   });
 
   it('the first frame moves nothing', () => {
     const first = { ...coasting(), lastNowMs: null };
-    const { delta } = stepNavigator(first, [drag('orbit', 10, 0)], 5000, ALL_ON, RAD_PER_PX);
+    const { delta } = stepNavigator(first, [drag('orbit', 10, 0)], true, 5000, ALL_ON, RAD_PER_PX);
     expect(delta).toEqual({});
   });
 
   it('a held motionless mouse comes to rest even with friction off', () => {
-    let state = stepNavigator(NAV_AT_REST, [], 0, ALL_OFF, RAD_PER_PX).state;
-    state = stepNavigator(state, [drag('orbit', 10, 5)], 16, ALL_OFF, RAD_PER_PX).state;
+    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_OFF, RAD_PER_PX).state;
+    state = stepNavigator(state, [drag('orbit', 10, 5)], true, 16, ALL_OFF, RAD_PER_PX).state;
     expect(state.velocity.orbit[0]).toBeGreaterThan(0);
     let moving = true;
     for (let i = 2; i < 2000 && moving; i++) {
-      ({ state, moving } = stepNavigator(
-        state,
-        [drag('orbit', 0, 0)],
-        i * 16,
-        ALL_OFF,
-        RAD_PER_PX,
-      ));
+      ({ state, moving } = stepNavigator(state, [], true, i * 16, ALL_OFF, RAD_PER_PX));
     }
     expect(moving).toBe(false);
     expect(state.velocity.orbit).toEqual([0, 0]);
-    expect(state.held).toBe('orbit');
   });
 
   const steadyHold = (axis: 'zoom' | 'roll', x: number, y: number) => {
-    let state = stepNavigator(NAV_AT_REST, [], 0, ALL_ON, RAD_PER_PX).state;
+    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_ON, RAD_PER_PX).state;
     let delta = {};
     for (let i = 1; i <= 600; i++) {
-      ({ state, delta } = stepNavigator(state, [drag(axis, x, y)], i * 16, ALL_ON, RAD_PER_PX));
+      ({ state, delta } = stepNavigator(
+        state,
+        [drag(axis, x, y)],
+        true,
+        i * 16,
+        ALL_ON,
+        RAD_PER_PX,
+      ));
     }
     return delta;
   };
@@ -129,12 +128,13 @@ describe('stepNavigator', () => {
   });
 
   it('steady hold moves at the drag rate', () => {
-    let state = stepNavigator(NAV_AT_REST, [], 0, ALL_ON, RAD_PER_PX).state;
+    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_ON, RAD_PER_PX).state;
     let delta = {};
     for (let i = 1; i <= 600; i++) {
       ({ state, delta } = stepNavigator(
         state,
         [drag('orbit', 10, -4)],
+        true,
         i * 16,
         ALL_ON,
         RAD_PER_PX,
@@ -149,7 +149,7 @@ describe('stepNavigator', () => {
     let state = coasting(0);
     const trace: boolean[] = [];
     for (let i = 1; i <= 1000; i++) {
-      const r = stepNavigator(state, [], i * 16, ALL_ON, RAD_PER_PX);
+      const r = stepNavigator(state, [], false, i * 16, ALL_ON, RAD_PER_PX);
       state = r.state;
       trace.push(r.moving);
     }
@@ -159,25 +159,32 @@ describe('stepNavigator', () => {
   });
 
   it('zero axes are omitted', () => {
-    let state = stepNavigator(NAV_AT_REST, [], 0, ALL_ON, RAD_PER_PX).state;
+    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_ON, RAD_PER_PX).state;
     let delta = {};
     for (let i = 1; i <= 5; i++) {
-      ({ state, delta } = stepNavigator(state, [drag('orbit', 3, 2)], i * 16, ALL_ON, RAD_PER_PX));
+      ({ state, delta } = stepNavigator(
+        state,
+        [drag('orbit', 3, 2)],
+        true,
+        i * 16,
+        ALL_ON,
+        RAD_PER_PX,
+      ));
     }
     expect(Object.keys(delta)).toEqual(['orbit']);
   });
 
   it('a gestureEnd in the same frame applies the final delta before releasing', () => {
-    const start: NavigatorState = { ...NAV_AT_REST, held: 'orbit', lastNowMs: 0 };
-    const stillHeld = stepNavigator(start, [drag('orbit', 10, 0)], 16, ALL_ON, RAD_PER_PX);
+    const start: NavigatorState = { ...NAV_AT_REST, lastNowMs: 0 };
+    const stillHeld = stepNavigator(start, [drag('orbit', 10, 0)], true, 16, ALL_ON, RAD_PER_PX);
     const released = stepNavigator(
       start,
       [drag('orbit', 10, 0), { kind: 'gestureEnd' }],
+      false,
       16,
       ALL_ON,
       RAD_PER_PX,
     );
-    expect(released.state.held).toBeNull();
     expect(released.state.velocity.orbit[0]).toBeGreaterThan(0);
     expect(released.state.velocity).toEqual(stillHeld.state.velocity);
   });

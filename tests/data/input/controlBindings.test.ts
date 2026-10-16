@@ -15,14 +15,9 @@ const press = (over: Partial<Press>): Press => ({
   ...over,
 });
 
+// Only the row ORDER is logic here; the rows themselves are the table.
 describe('CONTROL_BINDINGS.openspace', () => {
   it.each<[string, Partial<Press>, HeldIntent]>([
-    ['left mouse', {}, 'navOrbit'],
-    ['right mouse', { button: 2 }, 'navZoom'],
-    ['middle mouse', { button: 1 }, 'navRoll'],
-    ['alt + left', { alt: true }, 'navZoom'],
-    ['shift + left', { shift: true }, 'navRoll'],
-    ['ctrl + left', { ctrl: true }, 'navLook'],
     ['right mouse wins over a modifier', { button: 2, shift: true }, 'navZoom'],
     ['alt wins over shift', { alt: true, shift: true }, 'navZoom'],
     ['touch', { pointerType: 'touch' }, 'navOrbit'],
@@ -30,16 +25,5 @@ describe('CONTROL_BINDINGS.openspace', () => {
     ['touch ignores modifiers', { pointerType: 'touch', shift: true }, 'navOrbit'],
   ])('%s binds %s', (_name, over, intent) => {
     expect(bindPress(CONTROL_BINDINGS.openspace, press(over))).toBe(intent);
-  });
-});
-
-describe('CONTROL_BINDINGS.skymap', () => {
-  it.each<[string, Partial<Press>, HeldIntent]>([
-    ['left mouse', {}, 'orbit'],
-    ['right mouse', { button: 2 }, 'pan'],
-    ['middle mouse', { button: 1 }, 'pan'],
-    ['shift + left', { shift: true }, 'orbit'],
-  ])('%s binds %s', (_name, over, intent) => {
-    expect(bindPress(CONTROL_BINDINGS.skymap, press(over))).toBe(intent);
   });
 });

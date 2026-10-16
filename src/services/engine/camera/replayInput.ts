@@ -55,7 +55,6 @@ export function replayInput(
     /** That row's `ridesWheelTarget`. */
     readonly lastWinnerRidesWheel: boolean;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
-    readonly navHeld: boolean;
     /** Last frame's winner was a navigator row: its register, not `base`, is the live pose. */
     readonly navOwns: boolean;
   },
@@ -89,8 +88,9 @@ export function replayInput(
   let camera = rootState.camera;
   const actions: UnknownAction[] = [];
   const navSteps: NavStep[] = [];
-  // Folded as `stepNavigator` folds `held`, so a press, move and release in one drain counts.
-  let navHeld = args.navHeld;
+  // A navigator row bakes the release on its own edge: last frame's winner, or the
+  // nav drag earlier in this drain whose coast starts this frame.
+  let navAuthors = args.navOwns;
   const emit = (action: UnknownAction): void => {
     actions.push(action);
     camera = cameraReducer(camera, action);
@@ -195,12 +195,12 @@ export function replayInput(
         // ONE commit site for both arms: bake the register into `base` before
         // `endDrag`. Skipped while a clip owns the camera and across an arm
         // mismatch — the fold owns regime edges; a commit here must never flip one.
-        // Skipped under a held navigator: the release starts its coast, and the
-        // navigator rows' edge commit bakes the nudged register, once.
-        if (camera.clip === null && !navHeld && sameFrame(register.frame, camera.base.frame)) {
+        // Skipped while a navigator row authors the release: its edge commit bakes
+        // the nudged register, once.
+        if (camera.clip === null && !navAuthors && sameFrame(register.frame, camera.base.frame)) {
           emit(commitCameraPose(register));
         }
-        navHeld = false;
+        navAuthors = false;
         navSteps.push(step);
         stepRegister(step);
         emit(endDrag());
@@ -212,7 +212,7 @@ export function replayInput(
         break;
 
       case 'navDrag':
-        navHeld = true;
+        navAuthors = true;
         navSteps.push(step);
         break;
 

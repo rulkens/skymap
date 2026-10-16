@@ -410,7 +410,6 @@ describe('commitOnEdge — clip deactivation', () => {
       pickWinner(drivers, store.getState(), {
         approachDone: false,
         dragClaimed: false,
-        navHeld: false,
         navMoving: false,
       }).id,
     ).toBe('orbitDrag');
@@ -425,7 +424,6 @@ describe('commitOnEdge — clip deactivation', () => {
       pickWinner(drivers, store.getState(), {
         approachDone: false,
         dragClaimed: false,
-        navHeld: false,
         navMoving: false,
       }).id,
     ).toBe('clip');

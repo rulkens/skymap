@@ -2,7 +2,7 @@
  * composeControlSchemes — the control-scheme registry, built once at `startLoop`: core's rows
  * plus one row per exhibit section kind that carries a camera driver. Core owns that row's
  * activity: it is on while an exhibit carrying the kind runs, and its `pose` gets that
- * exhibit's section data. A scheme is a key, not a branch in the frame loop: openspace swaps `orbitDrag` for the navigator's rows.
+ * exhibit's section data. A scheme is a key, not a branch in the frame loop.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';

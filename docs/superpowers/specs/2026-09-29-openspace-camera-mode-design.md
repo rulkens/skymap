@@ -53,7 +53,7 @@ type CameraControlsSettings = {                               // own cluster, no
 };
 type InputStep = … | { kind: 'navDrag'; axis: NavAxis; deltaPx: Vec2 };   // new kind, not a DragMode variant
 type ArmDelta = { orbit?: Vec2; look?: Vec2; zoom?: number; roll?: number };  // rad, rad, ln-factor, rad
-type NavigatorState = { velocity: NavVelocity; held: NavAxis | null; lastNowMs: number | null };
+type NavigatorState = { velocity: NavVelocity; lastNowMs: number | null };
                                                               // CameraRuntime.navigator (+ CameraRuntime.scheme, last frame's)
 type NavIntent = 'navOrbit' | 'navLook' | 'navRoll' | 'navZoom';   // HeldIntent members; NAV_INTENT_AXIS maps them to a NavAxis
 CONTROL_BINDINGS.openspace: ordered press rows, first match wins   // the press binding; no per-scheme function
@@ -98,7 +98,7 @@ It placed velocity in module state; this spec keeps it in `CameraRuntime`, becau
   - **site:** orbit maps to heading/elevation and zoom to range. Look and roll return the pose by reference.
 
   Each arm's orbit **proximity scaling** (the world arm's altitude damping at `applyInputToCamera.ts:73`, and its body and site equivalents) moves inside the arm, so pixel `step` and `nudge` share it and `ArmDelta` stays arm-agnostic. Tests: each cell against the pixel path at the equivalent angle.
-- **P2: driver activity bag.** Replace `isActive(s, approachDone?)` with `isActive(s, activity: DriverActivity)`, where `DriverActivity = { approachDone: boolean }` and `stepCameraRuntime` builds it once per frame. PR 2 adds `navHeld` and `navMoving`.
+- **P2: driver activity bag.** Replace `isActive(s, approachDone?)` with `isActive(s, activity: DriverActivity)`, where `DriverActivity = { approachDone: boolean }` and `stepCameraRuntime` builds it once per frame. PR 2 adds `navMoving`.
 - **P3: scheme-selected driver table.** Add `CONTROL_SCHEMES: Record<ControlSchemeId, ControlScheme>`, where `ControlScheme = { drivers: readonly CameraDriver[] }`. `skymap` is today's `CAMERA_DRIVERS`. The loop picks the table from the scheme each frame (`startLoop.ts:47` injection becomes a registry lookup; a fixture override still works). Only `skymap` exists in PR 1, and the id type is the one-member union `'skymap'`.
 - **P4: persisted-value table.** A `PersistedValue<T>` row is `{ key, select, parse, serialize }`; `PERSISTED_VALUES` (`src/state/persistedValues.ts`) lists them, `persistValues(store, rows)` is one subscribe-diff writer with try/catch around storage, and `readPersisted(row)` is the boot read each consumer calls. The splash version migrates onto it as the `SPLASH_SEEN_VERSION` row, and `persistSplashVersion.ts` is deleted; `splashStorage.ts` stays for `CURRENT_SPLASH_VERSION` and `readUrlAtMount`.
 - **P5: `CameraPose.lookOffset?: Vec2`.** Thread it through every reader of `roll`, about 20 files:
@@ -141,7 +141,7 @@ It placed velocity in module state; this spec keeps it in `CameraRuntime`, becau
 `CameraRuntime.navigator: NavigatorState`, advanced inside `stepCameraRuntime`, whose single writer is `runFrame`:
 
 1. `dt = clamp(nowMs − lastNowMs, 0, 100 ms)`. On the first frame (`lastNowMs === null`) `dt` is 0.
-2. **Held axis:** `v += (deltaPx · gain[axis] / dt − v) · k`, with `k = min(dt / friction, 1)` (OpenSpace's `DampenedVelocity::set`, verified against the source). It is never gated by the friction toggles, so a held but motionless mouse comes to rest. The target divides by the real, uncapped frame gap, since a stall's pixels were gathered over all of it; `k` and `ArmDelta` use the capped `dt`.
+2. **Held axes:** while a gesture is open (`camera.dragging`), every axis runs `v += (deltaPx · gain[axis] / dt − v) · k`, with `k = min(dt / friction, 1)` (OpenSpace's `DampenedVelocity::set`, verified against the source) and `deltaPx` zero on an axis the frame's nav drags did not move. It is never gated by the friction toggles, so a press with no motion brings a coast to rest. The target divides by the real, uncapped frame gap, since a stall's pixels were gathered over all of it; `k` and `ArmDelta` use the capped `dt`.
 3. **Released axes:** `v *= 1 − min(dt / friction, 1)` when `frictionOn[group(axis)]` is on; unchanged otherwise. Anything below `NAV_REST_EPS` snaps to 0.
 4. `ArmDelta = v · dt`, per axis. The zoom axis uses only the vertical delta, and its sign matches OpenSpace (verified in the plan).
 
@@ -153,8 +153,8 @@ Friction groups follow the source: OpenSpace's `rotational` toggle gates only or
 
 | Row | Priority | Active when | Flags |
 |---|---|---|---|
-| `openSpaceHeld` | 80 | `activity.navHeld` | `pivotsOnFocusedBody`, `commitsOnEdge: 'register'` |
-| `openSpaceCoast` | 50 | `!activity.navHeld && activity.navMoving` | `pivotsOnFocusedBody`, `commitsOnEdge: 'register'` |
+| `openSpaceHeld` | 80 | `camera.dragging && !activity.dragClaimed` | `pivotsOnFocusedBody`, `commitsOnEdge: 'register'` |
+| `openSpaceCoast` | 50 | `!camera.dragging && activity.navMoving && !activity.dragClaimed` | `pivotsOnFocusedBody`, `commitsOnEdge: 'register'` |
 
 - Both rows sit only in `CONTROL_SCHEMES.openspace.drivers`, which is `skymap`'s table with `orbitDrag` replaced. Their `pose` is the register after `nudge(ArmDelta)` has been applied, and the navigator writes it before `pickWinner`.
 - Priority 50 puts a coast **below** `followApproach` (55) and tween (60) and above `autoRotate` (20), so any focus, home or fly-to preempts it (R10).
@@ -165,7 +165,8 @@ Friction groups follow the source: OpenSpace's `rotational` toggle gates only or
   - **scheme toggle:** the table swaps and the row vanishes. This one is not free: the departing row must be looked up in the table it was picked from, so `stepCameraRuntime` resolves the scheme itself (`StepInputs.schemes`) and records last frame's in `CameraRuntime.scheme`.
 - **One reset rule.** The navigator returns to rest on any frame whose winner is neither navigator row (`isNavigatorDriverId`) and no exhibit claims the drag. That covers handoff, scheme toggle and a clip or tween preempting a held drag.
 - `stepCameraRuntime` drops navigator input when the active table has no navigator row, which a scheme toggle mid-press reaches.
-- **Accepted:** a scheme toggle during a held press can double-commit, or freeze the view until release.
+- The held row renders any open gesture's register, as `orbitDrag` does, so a pinch with no nav drag, or a skymap drag toggled to openspace mid-press, keeps moving and commits on release.
+- **Accepted:** an openspace → skymap toggle during a held press freezes the view until release.
 - **R11:** there is no other commit.
 
 ## 8. `lookOffset` (world arm)
@@ -179,7 +180,7 @@ Friction groups follow the source: OpenSpace's `rotational` toggle gates only or
 
 ## 9. Wake
 
-`stepCameraRuntime` already returns `requestRender`. PR 2 ORs in `navigator.held !== null || navMoving`, so a coast keeps frames ticking and an at-rest navigator lets the loop sleep.
+`stepCameraRuntime` already returns `requestRender`. PR 2 ORs in `navMoving`, and `camera.dragging` under a navigating table, so a coast keeps frames ticking and an at-rest navigator lets the loop sleep.
 
 ## 10. Testing
 

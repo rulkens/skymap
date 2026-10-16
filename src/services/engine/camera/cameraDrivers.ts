@@ -395,14 +395,16 @@ export const OPENSPACE_DRIVERS: readonly CameraDriver[] = CAMERA_DRIVERS.flatMap
           ...NAVIGATOR_ROW,
           id: 'openSpaceHeld',
           priority: 80,
-          isActive: (_s: RootState, a: DriverActivity) => a.navHeld && !a.dragClaimed,
+          // Any open gesture, as `orbitDrag`: a pinch, or a drag latched under skymap
+          // before a toggle, moves the register with no navigator input at all.
+          isActive: (s: RootState, a: DriverActivity) => s.camera.dragging && !a.dragClaimed,
         },
         {
           ...NAVIGATOR_ROW,
           id: 'openSpaceCoast',
           priority: 50,
-          isActive: (_s: RootState, a: DriverActivity) =>
-            !a.navHeld && a.navMoving && !a.dragClaimed,
+          isActive: (s: RootState, a: DriverActivity) =>
+            !s.camera.dragging && a.navMoving && !a.dragClaimed,
         },
       ],
 );
