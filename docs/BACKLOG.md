@@ -30,6 +30,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 | [0001 — Fade ownership](adrs/0001-fade-ownership.md)                                   | Accepted 2026-05-27 · **shipped** — fade is a subsystem; the visibility-seam plans (A/B/C, #309) landed and are in `*/completed/`.                                                                          |
 | [0007 — Intent-centric state + effects](adrs/0007-intent-centric-state-and-effects.md) | Accepted 2026-06-17 · folding incrementally — selection (#350), settings→RTK (#345), camera (#357), engine slice (#380) shipped; effects vehicle decided in [ADR 0008](adrs/0008-effects-layer-vehicle.md). |
 | [0008 — Effects-layer vehicle](adrs/0008-effects-layer-vehicle.md)                     | Accepted 2026-06-30 · records the shipped vehicle for ADR 0007's effects layer — `typed-redux-saga` over `redux-saga`.                                                                                      |
+| [0012 — Layers declare visibility](adrs/0012-layers-declare-visibility.md) | Accepted 2026-10-16 · **shipped** (#903, #912) — Layers declare show/label entries; core hands fade × clip; `emphasisOf` is the only reader of recession. Extends 0001. |
 
 ---
 
