@@ -214,11 +214,11 @@ The section rule lives in `visibilitySwitchOf` and nowhere else: no consumer AND
 
 The `settings/` action type prefix is what makes `watchFadesSaga` (`watchFadesSaga.ts:17-18`) react to it; do not rename it. Every item record is complete (PR 1 completed `blackHoles.items`), so `setVisibility` never creates an item.
 
-- [ ] Test `setVisibility writes a scalar switch` (e.g. `{ cluster: 'flow', field: 'enabled', on: false }` → `settings.flow.enabled === false`, sibling fields unchanged).
-- [ ] Test `an item write leaves the item's other fields intact`: write `galaxyCatalogs.items.sdss.enabled = false` and assert `labelEnabled` keeps its prior value. Mutation-check by making the writer replace the item.
-- [ ] Test `a per-item show switch is off when its section switch is off`: `starCatalogs.enabled = false` with `items.famousStar.enabled = true` → `false` (same for `cosmicWebDensity`); a cluster without a section switch (`galaxyCatalogs`) resolves on the item alone. Mutation-check by dropping the section half.
-- [ ] Test `every entry's switch resolves in the initial settings`: for each `APP_VISIBILITY` entry and item, `typeof visibilitySwitchOf(initialSettings, entry, item) === 'boolean'`. This catches a wrong `cluster` or item list.
-- [ ] Commit.
+- [x] Test `setVisibility writes a scalar switch` (e.g. `{ cluster: 'flow', field: 'enabled', on: false }` → `settings.flow.enabled === false`, sibling fields unchanged).
+- [x] Test `an item write leaves the item's other fields intact`: write `galaxyCatalogs.items.sdss.enabled = false` and assert `labelEnabled` keeps its prior value. Mutation-check by making the writer replace the item.
+- [x] Test `a per-item show switch is off when its section switch is off`: `starCatalogs.enabled = false` with `items.famousStar.enabled = true` → `false` (same for `cosmicWebDensity`); a cluster without a section switch (`galaxyCatalogs`) resolves on the item alone. Mutation-check by dropping the section half.
+- [x] Test `every entry's switch resolves in the initial settings`: for each `APP_VISIBILITY` entry and item, `typeof visibilitySwitchOf(initialSettings, entry, item) === 'boolean'`. This catches a wrong `cluster` or item list.
+- [x] Commit.
 
 ### Task 3: The target, gating, per-item `of`, seed and recompute
 
