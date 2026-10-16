@@ -6,13 +6,15 @@
  */
 import type { IconName } from '../../@types/IconName';
 import { ICONS } from '../../data/icons.ts';
+import ring from '../../styles/ring.module.css';
 
 type IconProps = { name: IconName };
 
+/* Both names: the global `glyph` while an .astro ring still uses site.css, the module's for a React ring. */
 function Icon({ name }: IconProps) {
   return (
     <svg
-      className="glyph"
+      className={`glyph ${ring.glyph}`}
       data-icon={name}
       viewBox="0 0 24 24"
       aria-hidden="true"

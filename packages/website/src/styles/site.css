@@ -6,6 +6,7 @@
  * global.css).
  * Type floors: Jost 300 only at 20px and above, 400 below; the display face
  * never below 20px, so small controls keep the ring and take a Jost label.
+ * The shared classes below are copied into the vocabulary modules beside this file (*.module.css), which are the source; these global copies leave when their last .astro user goes.
  */
 @import '../../../../src/styles/tokens.css';
 

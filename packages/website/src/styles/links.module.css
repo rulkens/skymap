@@ -1,0 +1,30 @@
+/*
+ * links.module.css — how links sit in running text and in the rows that close a section.
+ * A vocabulary, not a component: no `.root`; take a class with
+ * `composes: link-row from '../../styles/links.module.css'`. `.onward` is composed together
+ * with `.link-row` (it only changes that row's alignment and top margin).
+ */
+
+/*
+ * A link inside a sentence, where a component asks for it: 44px tall to the thumb, and the margin takes the
+ * padding back so the lines around it stay where they were.
+ */
+.tap-links a {
+  display: inline-block;
+  padding-block: 0.625rem;
+  margin-block: -0.625rem;
+}
+
+/* Ring links side by side under the text they follow; `onward` is the row that closes a section, launch button included. */
+.link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.5rem;
+  margin-top: 1.5rem;
+}
+
+.link-row.onward {
+  align-items: center;
+  row-gap: 0.75rem;
+  margin-top: 2.5rem;
+}
