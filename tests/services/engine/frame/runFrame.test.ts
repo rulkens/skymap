@@ -86,7 +86,6 @@ import {
   setAutoRotate,
   commitCameraPose,
   startFrameTween,
-  beginDrag,
 } from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import {
@@ -324,9 +323,6 @@ describe('runFrame — the input drain runs before the produce step', () => {
       ...state.cameraRuntime,
       register: { ...state.cameraRuntime.register, pose: absoluteArm(BASE) },
     };
-    // The emit sink's DOM-time edge, so `orbitDrag` (priority 80) is the winner.
-    store.dispatch(beginDrag());
-
     // px (100, 100) → (150, 100) on the 100 × 100 canvas, in source units.
     store.dispatch(inputSourceAttached({ source: 'canvas', aspect: 1 }));
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
@@ -1157,7 +1153,6 @@ describe('runFrame — effective intent', () => {
     // dispatch after them. Recorded the way the fixture records.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
     h.frame(4);
-    h.store.dispatch(beginDrag());
     h.press('orbit', [50, 50]);
     h.moveTo([56, 50]);
     h.frame();
@@ -1183,7 +1178,6 @@ describe('runFrame — effective intent', () => {
     // frame stale — and the drag flag clears in the same frame.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
-    h.store.dispatch(beginDrag());
     h.press('orbit', [100, 100]);
     h.moveTo([150, 100]);
     h.release();

@@ -101,5 +101,5 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   });
   store.dispatch(commitCameraPose(homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis)));
 
-  state.subsystems.inputBindings = attachEngineInputs({ scheduler: state.subsystems.scheduler });
+  state.subsystems.inputBindings = attachEngineInputs(state.subsystems.scheduler);
 }

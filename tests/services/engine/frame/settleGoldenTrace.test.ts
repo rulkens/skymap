@@ -25,7 +25,7 @@ import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
 import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag, setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -121,7 +121,6 @@ function runScript(northUp: boolean): Trace {
     label: string,
     expectMode: string,
   ) => {
-    store.dispatch(beginDrag());
     press(mode, from);
     moves.forEach(([x, y], i) => {
       moveTo([x, y]);

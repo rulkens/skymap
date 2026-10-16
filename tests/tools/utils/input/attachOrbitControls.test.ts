@@ -186,7 +186,7 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
 
 describe('attachOrbitControls — gesture boundaries', () => {
   it('emits gestureStart on the first contact only, not on pinch promotion', () => {
-    // The drain turns gestureStart into seed + beginDrag + cancelCameraTween;
+    // A workbench applies gestureStart once per gesture;
     // a second finger changes the mode but does not start a new gesture.
     const { canvas, rec } = makeCanvas();
     const sink = makeSink();

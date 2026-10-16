@@ -162,6 +162,16 @@ describe('createPickDriver', () => {
     },
   );
 
+  it('a pick settling after destroy dispatches nothing', async () => {
+    const driver = makeDriver();
+    store.dispatch(inputTapped({ source: 'canvas', at: { x: 0.5, y: 0.5 } }));
+    driver.destroy();
+    picks[0]!.resolve(hitAt(5));
+    await settle();
+    expect(selection().select).toBeNull();
+    expect(selectPickRequests(store.getState()).select).not.toBeNull();
+  });
+
   it('destroy unsubscribes', () => {
     makeDriver().destroy();
     store.dispatch(inputHovered({ source: 'canvas', at: { x: 0.5, y: 0.5 } }));

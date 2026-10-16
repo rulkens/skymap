@@ -75,6 +75,7 @@ export function createPickDriver(deps: PickDriverDeps): Destroyable {
     deps.pickProgram
       .pick(x, y)
       .then((hit) => {
+        if (!live) return;
         const ref = deps.resolvePick(hit);
         store.dispatch(which === 'hover' ? updateSelectionHover(ref) : updateSelectionSelect(ref));
       })

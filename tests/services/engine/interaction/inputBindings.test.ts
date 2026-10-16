@@ -46,13 +46,13 @@ afterEach(() => {
 
 describe('attachEngineInputs', () => {
   it('a window resize wakes the loop', () => {
-    attachEngineInputs({ scheduler });
+    attachEngineInputs(scheduler);
     fire('resize');
     expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
   it('destroy() removes the resize listener', () => {
-    attachEngineInputs({ scheduler }).destroy();
+    attachEngineInputs(scheduler).destroy();
     expect(listeners).toHaveLength(0);
     fire('resize');
     expect(scheduler.requestRender).not.toHaveBeenCalled();

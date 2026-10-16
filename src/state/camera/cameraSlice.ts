@@ -48,9 +48,6 @@ const cameraSlice = createSlice({
   name: 'camera',
   initialState,
   reducers: {
-    beginDrag: (camera) => {
-      camera.dragging = true;
-    },
     endDrag: (camera) => {
       camera.dragging = false;
     },
@@ -129,7 +126,6 @@ const cameraSlice = createSlice({
 });
 
 export const {
-  beginDrag,
   endDrag,
   commitCameraPose,
   startCameraTween,

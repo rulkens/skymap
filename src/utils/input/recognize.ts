@@ -1,7 +1,7 @@
 /**
- * recognize — the pure device-event → gesture step. Replaces the recognizing half
- * of `attachOrbitControls`: same rules, but positions arrive as unit points and
- * the clock is the event's own `t`, so a remote source can be replayed in a test.
+ * recognize — the pure device-event → gesture step. Positions arrive as unit
+ * points and the clock is the event's own `t`, so a remote source can be
+ * replayed in a test.
  *
  * Pixels appear only for the two compares that need an isotropic metric (tap slop,
  * pinch span); the surface size comes from `resize` events.

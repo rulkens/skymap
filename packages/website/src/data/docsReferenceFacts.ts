@@ -147,8 +147,8 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-esc-always',
     about: 'app',
     text: 'Esc unpins the card and lets go of the focus wherever the keyboard is, whatever else it closes. With the search open it closes the search and leaves a running tour or an open exhibit as it is: a second Esc leaves that.',
-    source: `${REPO_BLOB}/src/services/engine/interaction/inputBindings.ts`,
-    sourceLabel: `the scene’s own Esc, ${IN_REPO}`,
+    source: SHORTCUTS,
+    sourceLabel: SHORTCUTS_LABEL,
     checked: CHECKED,
   },
   {

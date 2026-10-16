@@ -89,11 +89,11 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import {
-  beginDrag,
   endDrag,
   commitCameraPose,
   startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -425,7 +425,6 @@ describe('runFrame — the regime fold', () => {
     // The approach must be saturated before the pan: a live ease writes the
     // eye every frame and the quiet frame would have no baseline of its own.
     h.frame(40);
-    h.store.dispatch(beginDrag());
     h.press('pan', [50, 50]);
     h.moveTo([52, 50]);
     h.frame(1);
@@ -778,7 +777,7 @@ describe('runFrame — the regime fold', () => {
     const { store, state, deps } = makeHarness();
     const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1);
     seedPose(store, state, ENGAGING);
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
 
     runFrame(state, deps, 0);
 

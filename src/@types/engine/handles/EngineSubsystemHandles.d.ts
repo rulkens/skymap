@@ -23,7 +23,6 @@ import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
-import type { InputBindings } from '../../input/InputBindings';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { FadeRegistry } from '../../animation/FadeRegistry';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
@@ -40,7 +39,7 @@ export type EngineSubsystemHandles = {
   surfaceTiles: SurfaceTileSubsystem | null;
   /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
   pickDriver: Destroyable | null;
-  inputBindings: InputBindings | null;
+  inputBindings: Destroyable | null;
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered

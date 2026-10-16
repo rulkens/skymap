@@ -9,18 +9,14 @@
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { AttachEngineInputsOptions } from '../../../@types/input/AttachEngineInputsOptions';
-import type { InputBindings } from '../../../@types/input/InputBindings';
+import type { RenderScheduler } from '../../../@types/engine/subsystems/RenderScheduler';
 
-export function attachEngineInputs({ scheduler }: AttachEngineInputsOptions): InputBindings {
+export function attachEngineInputs(scheduler: RenderScheduler): Destroyable {
   const onResize = (): void => scheduler.requestRender();
   window.addEventListener('resize', onResize);
-
-  const bindings: InputBindings = {
+  return {
     destroy(): void {
       window.removeEventListener('resize', onResize);
     },
   };
-  bindings satisfies Destroyable;
-  return bindings;
 }

@@ -25,11 +25,7 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import {
-  beginDrag,
-  setAutoRotate,
-  startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate, startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -118,7 +114,6 @@ describe('the register loop during an active drag (R12b-1)', () => {
     // Storing the PROJECTED pose and re-pinning/re-projecting it each frame
     // would walk the eye 8,519 km per frame with tilt and h/R constant
     // (nothing on screen moves except the ground underneath).
-    h.store.dispatch(beginDrag());
     h.press('orbit', [50, 50]);
     h.frame();
 
@@ -135,7 +130,6 @@ describe('the register loop during an active drag (R12b-1)', () => {
     const h = makeCameraSimHarness();
     toMidWindow(h);
 
-    h.store.dispatch(beginDrag());
     h.press('orbit', [50, 50]);
     h.moveTo([52, 50]);
     h.frame();
@@ -161,7 +155,6 @@ describe('the register loop during an active drag (R12b-1)', () => {
     const walkKm = projectedWalkKm(h.state);
 
     // A real 6-px drag across three frames, then release.
-    h.store.dispatch(beginDrag());
     h.press('orbit', [50, 50]);
     for (const x of [52, 54, 56]) {
       h.moveTo([x, 50]);

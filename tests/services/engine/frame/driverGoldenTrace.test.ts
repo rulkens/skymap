@@ -31,7 +31,6 @@ import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorld
 import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { spin } from '../../../../src/services/engine/animation/effectHelpers';
 import {
-  beginDrag,
   clipStarted,
   resolveClipStart,
   setAutoRotate,
@@ -156,7 +155,6 @@ function runScript(): Trace {
 
   expect(steps(4, 'boot').winner).toBe('resting');
 
-  store.dispatch(beginDrag());
   harness.press('orbit', [50, 50]);
   for (let i = 0; i < 4; i += 1) {
     harness.moveTo([50 + 6 * i, 50]);
@@ -229,7 +227,6 @@ function runScript(): Trace {
   // focus row, so no reset): the pin re-centres off the body from then on.
   harness.focus('earth');
   expect(steps(4, 'refocus').winner).toBe('followApproach');
-  store.dispatch(beginDrag());
   harness.press('pan', [50, 50]);
   for (let i = 0; i < 3; i += 1) {
     harness.moveTo([55 + 5 * i, 53 + 3 * i]);
