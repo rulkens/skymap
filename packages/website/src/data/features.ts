@@ -211,7 +211,7 @@ export const FEATURE_GROUPS: readonly FeatureGroup[] = [
   {
     id: 'cards',
     title: 'Info cards',
-    line: 'A card says what the selected object is and gives its figures.',
+    line: 'Contextual cards with short information on the object you have selected.',
     shot: 'features-card',
     tall: 'features-card-phone',
     items: [
