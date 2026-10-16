@@ -40,6 +40,7 @@ import {
   timeRoute,
   arrivalRoute,
   inputRoute,
+  remoteRoute,
 } from './constants';
 import settingsReducer from '../state/settings/settingsReducer';
 import uiReducer from '../state/ui/uiSlice';
@@ -53,6 +54,7 @@ import engineReducer from '../state/engine/engineSlice';
 import timeReducer from '../state/time/timeSlice';
 import arrivalReducer from '../state/arrival/arrivalSlice';
 import inputReducer from '../state/input/inputSlice';
+import remoteReducer from '../state/remote/remoteSlice';
 
 export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
@@ -67,4 +69,5 @@ export const rootReducer = combineReducers({
   [timeRoute]: timeReducer,
   [arrivalRoute]: arrivalReducer,
   [inputRoute]: inputReducer,
+  [remoteRoute]: remoteReducer,
 });
