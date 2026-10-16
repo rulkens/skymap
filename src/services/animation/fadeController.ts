@@ -112,8 +112,8 @@ export function createFadeController(
   ): Promise<void> {
     // Already there: resolve without touching the ramp, so a re-sync of an
     // unchanged intent can't restart an in-flight fade or mint a new pending
-    // entry (`syncVisibilityFades`' `applyIntent` relies on this being safe
-    // to call unconditionally).
+    // entry (the visibility sync relies on this being safe to call
+    // unconditionally).
     if (target === targetOpacity) return Promise.resolve();
 
     // Capture the current opacity BEFORE updating the source, so mid-

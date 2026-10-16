@@ -132,7 +132,6 @@ import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
-import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
 import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
@@ -269,8 +268,7 @@ function makeState(
     hiResFamous: layerSlots.get('hiResFamous'),
     pointRenderer: { hasCatalog: () => true },
   } as unknown as GalaxyCatalogRuntime;
-  // The density Layer's real slots over a stub renderer; `listIds` is the
-  // arrival-fade guard `installFadeOnArrival` reads.
+  // The density Layer's real slots over a stub renderer.
   const densityRenderer = { upload: vi.fn(), listIds: () => [] } as never;
   const densityRuntime = {
     renderer: densityRenderer,
@@ -335,12 +333,9 @@ function makeState(
       bias: { mode: 'off', absMagLimit: -18 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true, labelEnabled: true },
-      // seedFades registers the zone-of-avoidance band handle too; pulled
-      // from `INITIAL_SETTINGS` like flow/constellations below.
+      // Pulled from `INITIAL_SETTINGS` like flow/constellations below.
       zoneOfAvoidance: INITIAL_SETTINGS.zoneOfAvoidance,
       cosmicWebFilaments: { enabled: false, intensity: 1.0 },
-      // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
-      // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
       missionTrails: { enabled: false },
       cosmicWebDensity: {
@@ -351,7 +346,6 @@ function makeState(
           'mcpm-workbench': { enabled: false },
         },
       },
-      // seedFades registers a caption handle per body row, so these must exist.
       bodies: {
         items: Object.fromEntries(
           BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
@@ -385,9 +379,7 @@ function makeState(
       // rather than calling `slot.load()` directly.
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
       loadProgress: null,
-      // wireSlots calls fades.register on filament
-      // + overlay + label-layer handles after the slot mints — stub so it
-      // doesn't crash.
+      // wireSlots seeds every visibility identity — stub so it doesn't crash.
       fades: {
         register: vi.fn(),
         unregister: vi.fn(),
@@ -436,7 +428,6 @@ function makeState(
       ...cosmicWebDensityAssetRows(densityRuntime),
       ...structureAssetRows(structureRuntime),
     ]),
-    fadeRows: [...FADE_LAYERS],
     // The entries of the Layers whose rows are composed above.
     visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
     layerSlots,

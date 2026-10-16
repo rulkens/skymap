@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import type { FadeId } from '../../../src/@types/animation/FadeId';
+import type { FadeIdentity } from '../../../src/@types/animation/FadeIdentity';
 
 // No-op wake stub for tests that don't care about the wake.
 function makeRegistry() {
@@ -10,13 +10,13 @@ function makeRegistry() {
 describe('createFadeRegistry', () => {
   it('opacityOf returns 1.0 for unregistered handles (fail-safe)', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
+    const h: FadeIdentity = { address: 'survey', item: 'sdss' };
     expect(r.opacityOf(h, 1000)).toBe(1.0);
   });
 
   it('register is idempotent', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0.5);
     r.register(h, 0.0); // second call is a no-op; the existing controller is preserved.
     expect(r.opacityOf(h, 1000)).toBe(0.5);
@@ -24,7 +24,7 @@ describe('createFadeRegistry', () => {
 
   it('unregister drops the controller; opacityOf reverts to fail-safe 1.0', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
     r.unregister(h);
     expect(r.opacityOf(h, 1000)).toBe(1.0);
@@ -32,8 +32,8 @@ describe('createFadeRegistry', () => {
 
   it('serialization is stable across handle equality', () => {
     const r = makeRegistry();
-    const h1: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    const h2: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
+    const h1: FadeIdentity = { address: 'survey', item: 'sdss' };
+    const h2: FadeIdentity = { address: 'survey', item: 'sdss' };
     r.register(h1, 0.5);
     // Two structurally-equal handles map to the same controller.
     expect(r.opacityOf(h2, 1000)).toBe(0.5);
@@ -41,22 +41,17 @@ describe('createFadeRegistry', () => {
 
   it('different discriminator values produce different keys', () => {
     const r = makeRegistry();
-    const a: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    const b: FadeId = { kind: 'galaxyCatalog', id: 'glade' };
+    const a: FadeIdentity = { address: 'survey', item: 'sdss' };
+    const b: FadeIdentity = { address: 'survey', item: 'glade' };
     r.register(a, 0.25);
     r.register(b, 0.75);
     expect(r.opacityOf(a, 1000)).toBe(0.25);
     expect(r.opacityOf(b, 1000)).toBe(0.75);
   });
 
-  // Until every Layer has migrated both bridges register: a bare address equal to a
-  // `FadeId` kind sharing a controller would let the two fight over one fade.
-  it('a FadeId and a FadeIdentity of the same name never share a controller', () => {
+  // A per-item identity must not land on its entry's item-less key.
+  it('an item identity and its bare address never share a controller', () => {
     const r = makeRegistry();
-    r.register({ kind: 'flow' }, 0.25);
-    r.register({ address: 'flow' }, 0.75);
-    expect(r.opacityOf({ kind: 'flow' }, 1000)).toBe(0.25);
-    expect(r.opacityOf({ address: 'flow' }, 1000)).toBe(0.75);
     r.register({ address: 'survey', item: 'sdss' }, 0.5);
     expect(r.opacityOf({ address: 'survey', item: 'sdss' }, 1000)).toBe(0.5);
     expect(r.opacityOf({ address: 'survey' }, 1000)).toBe(1.0);
@@ -65,14 +60,14 @@ describe('createFadeRegistry', () => {
   it('fadeTo throws when the handle is not registered and does not wake', () => {
     const requestRender = vi.fn();
     const r = createFadeRegistry({ requestRender });
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     expect(() => r.fadeTo(h, 1, 600)).toThrow();
     expect(requestRender).not.toHaveBeenCalled();
   });
 
   it('fadeTo ramps opacity and resolves via tick', async () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
     let done = false;
     r.fadeTo(h, 1, 600, 0).then(() => {
@@ -88,7 +83,7 @@ describe('createFadeRegistry', () => {
 
   it('fadeTo without nowMs starts at the last ticked frame time', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
     r.tick(1000);
     // No nowMs argument — the fade must anchor at the last tick (t=1000),
@@ -101,13 +96,13 @@ describe('createFadeRegistry', () => {
 
   it('targetOf is null for an unregistered id', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     expect(r.targetOf(h)).toBeNull();
   });
 
   it('targetOf follows fadeTo and setImmediate', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
     expect(r.targetOf(h)).toBe(0);
     r.fadeTo(h, 1, 600, 0);
@@ -118,8 +113,8 @@ describe('createFadeRegistry', () => {
 
   it('isAnyAnimating aggregates across multiple controllers', () => {
     const r = makeRegistry();
-    const a: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    const b: FadeId = { kind: 'cosmicWebFilaments' };
+    const a: FadeIdentity = { address: 'survey', item: 'sdss' };
+    const b: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(a, 0);
     r.register(b, 1);
     expect(r.isAnyAnimating(0)).toBe(false);
@@ -132,7 +127,7 @@ describe('createFadeRegistry', () => {
 
   it('destroy clears every controller', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0.5);
     r.destroy();
     expect(r.opacityOf(h, 0)).toBe(1.0);
@@ -142,7 +137,7 @@ describe('createFadeRegistry', () => {
   it('fadeTo wakes the scheduler', () => {
     const requestRender = vi.fn();
     const r = createFadeRegistry({ requestRender });
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
     r.fadeTo(h, 1, 600, 0);
     expect(requestRender).toHaveBeenCalledTimes(1);
@@ -151,7 +146,7 @@ describe('createFadeRegistry', () => {
   it('register, unregister, setImmediate, tick and opacityOf do not wake', () => {
     const requestRender = vi.fn();
     const r = createFadeRegistry({ requestRender });
-    const h: FadeId = { kind: 'cosmicWebFilaments' };
+    const h: FadeIdentity = { address: 'cosmicWebFilaments' };
     r.register(h, 0);
     r.setImmediate(h, 0.5);
     r.tick(100);

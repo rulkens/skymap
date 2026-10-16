@@ -329,10 +329,9 @@ export function createVolumeFieldRenderer<Id extends string>(
       const entry = fields.get(id);
       if (!entry) return;
       // The renderer is FadeRegistry-agnostic: it neither registers nor
-      // unregisters fade handles. The fade-ownership manifest (`seedFades`)
-      // owns the whole volume-field handle set at construction, so a field's
-      // handle stays registered across upload/unload — `unload` just releases
-      // this field's GPU resources.
+      // unregisters fade identities. Core seeds every visibility identity at
+      // boot, so a field's identity stays registered across upload/unload —
+      // `unload` just releases this field's GPU resources.
       entry.volumeTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();

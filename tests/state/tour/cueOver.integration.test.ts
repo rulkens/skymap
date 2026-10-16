@@ -36,7 +36,6 @@ function makeLive(boot: readonly Action[] = []) {
     subsystems: { fades, scheduler: { requestRender: vi.fn<() => void>() } },
     visibilityEntries: [...APP_VISIBILITY],
     visibilityGates: new Map(),
-    fadeRows: [],
   } as unknown as EngineState;
   seedVisibilityFades(state);
   sagaMiddleware.setContext({ reconcile: makeReconcileEffects(state, {} as HTMLCanvasElement) });

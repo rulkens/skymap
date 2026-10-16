@@ -89,8 +89,8 @@ export type FlowFieldRenderer = {
    * `phase`, `mode`, and the pre-blend `intensity` from `flow`) and draws
    * `2*TRAIL` vertices × `flow.count` instances. No-op until a field is set.
    *
-   * `opacity` is the layer fade in [0, 1] (from `fades.opacityOf({kind:'flow'})`
-   * at the call site); it's multiplied into the pre-blend intensity so the
+   * `opacity` is the layer fade in [0, 1] (the `flow` value core hands the pass);
+   * it's multiplied into the pre-blend intensity so the
    * whole overlay fades in/out with the enable/disable toggle.
    */
   draw(

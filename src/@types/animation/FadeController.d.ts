@@ -6,7 +6,7 @@
  * transitionDurationMs) tuple. `currentOpacity(now)` returns a
  * smoothstep between source and target, clamped after start + duration.
  * No GPU resources; the controller is a pure value the registry holds
- * one of per FadeId.
+ * one of per FadeIdentity.
  *
  * The factory + concrete implementation live in
  * `src/services/animation/fadeController.ts`.

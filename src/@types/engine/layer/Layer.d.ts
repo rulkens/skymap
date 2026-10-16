@@ -13,7 +13,6 @@ import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
-import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
@@ -88,9 +87,6 @@ export type Layer<
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
    * the slots behind them. */
   assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];
-  /** Rows join `FADE_LAYERS` in `createLayers`. Declares only: core owns the arrival
-   * edge (`installFadeOnArrival`), so never drive a fade from `create`. */
-  fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
   /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join

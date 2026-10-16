@@ -2,7 +2,7 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`,
+ * `.computes` / `.assetRows` / `.visibilityEntries` / `.layerSlots` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
  * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
@@ -42,7 +42,6 @@ import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHea
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
-import { FADE_LAYERS } from '../wiring/fadeLayers';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -189,7 +188,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     );
   }
   state.slabRows = slabRows;
-  state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
   // Static, like `slabs`; a duplicate address would put two entries on one controller.
   state.visibilityEntries = concatUniqueRows(
     'createLayers: visibility entries',

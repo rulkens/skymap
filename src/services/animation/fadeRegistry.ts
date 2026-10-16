@@ -1,8 +1,8 @@
 /**
  * fadeRegistry — engine subsystem at `state.subsystems.fades`.
  *
- * Owns a `Map<string, FadeController>` keyed by a stable serialization
- * of every registered FadeId. Renderers and slot commit steps drive
+ * Owns a `Map<string, FadeController>` keyed by `fadeIdentityKey` of
+ * every registered identity. Core's visibility sync drives
  * the registry; renderers read `opacityOf(id, now)` per frame and
  * write the value into their per-id GPU fade buffer.
  *
@@ -14,10 +14,10 @@
  * `setImmediate` run from already-awake settings paths or pre-frame
  * seeding, and `opacityOf` / `tick` are frame-internal reads.
  *
- * ### Why a string-keyed map (not WeakMap<FadeId, …>)
+ * ### Why a string-keyed map (not WeakMap<FadeIdentity, …>)
  *
- * Ids are value-typed records (`{ kind: 'galaxyCatalog', id: 'sdss' }`),
- * not reference identities. Two `{ kind: 'galaxyCatalog', id: 'sdss' }`
+ * Ids are value-typed records (`{ address: 'survey', item: 'sdss' }`),
+ * not reference identities. Two `{ address: 'survey', item: 'sdss' }`
  * literals constructed in different files must address the SAME
  * controller. A WeakMap keys on reference identity — that would mint
  * a new controller every time a caller built a fresh id literal.
@@ -57,55 +57,10 @@
  */
 
 import type { FadeController } from '../../@types/animation/FadeController';
-import type { FadeId } from '../../@types/animation/FadeId';
 import type { FadeIdentity } from '../../@types/animation/FadeIdentity';
 import type { FadeRegistry } from '../../@types/animation/FadeRegistry';
 import { fadeIdentityKey } from '../../utils/visibility/fadeIdentityKey';
 import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from './fadeController';
-
-function serializeFadeId(h: FadeId): string {
-  switch (h.kind) {
-    case 'galaxyCatalog':
-      return `galaxyCatalog:${h.id}`;
-    case 'structure':
-      return `structure:${h.id}`;
-    case 'cosmicWebDensityField':
-      return `cosmicWebDensityField:${h.id}`;
-    case 'milkyWay':
-      return 'milkyWay';
-    case 'cosmicWebFilaments':
-      return 'cosmicWebFilaments';
-    case 'localBubble':
-      return 'localBubble';
-    case 'flow':
-      return 'flow';
-    case 'constellations':
-      return 'constellations';
-    case 'orbitTrails':
-      return 'orbitTrails';
-    case 'missionTrails':
-      return 'missionTrails';
-    case 'zoneOfAvoidance':
-      return 'zoneOfAvoidance';
-    case 'lightTime':
-      return 'lightTime';
-    // An item-less layer handle and a per-item one must not collide, and an
-    // item-less key (e.g. `labelLayer:milkyWay`) must stay distinct from a
-    // per-item one — so the item suffix is appended only when present.
-    case 'labelLayer':
-      return `labelLayer:${h.layer}${h.item ? ':' + h.item : ''}`;
-    case 'overlay':
-      return `overlay:${h.id}`;
-    case 'cosmicWebDensity':
-      return 'cosmicWebDensity';
-  }
-}
-
-// Bare addresses (`flow`, `localBubble`, …) equal `FadeId` kinds, and until every Layer has
-// migrated both bridges register: the `kind/` prefix keeps them on separate controllers.
-function keyOf(id: FadeId | FadeIdentity): string {
-  return 'kind' in id ? `kind/${serializeFadeId(id)}` : fadeIdentityKey(id);
-}
 
 export function createFadeRegistry(deps: { readonly requestRender: () => void }): FadeRegistry {
   const controllers = new Map<string, FadeController>();
@@ -115,8 +70,8 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
   // advances only via tick — see the module-header rationale.
   let lastTickNowMs = 0;
 
-  function register(id: FadeId | FadeIdentity, initialOpacity: number = 0): void {
-    const key = keyOf(id);
+  function register(id: FadeIdentity, initialOpacity: number = 0): void {
+    const key = fadeIdentityKey(id);
     if (controllers.has(key)) return; // idempotent
     // Explicit construction time 0 (not the controller's wall-clock default):
     // the stamp is inert — a fresh controller has no transition, and the first
@@ -124,20 +79,20 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     controllers.set(key, createFadeController(initialOpacity, 0));
   }
 
-  function unregister(id: FadeId | FadeIdentity): void {
-    controllers.delete(keyOf(id));
+  function unregister(id: FadeIdentity): void {
+    controllers.delete(fadeIdentityKey(id));
   }
 
-  function requireController(id: FadeId | FadeIdentity): FadeController {
-    const c = controllers.get(keyOf(id));
+  function requireController(id: FadeIdentity): FadeController {
+    const c = controllers.get(fadeIdentityKey(id));
     if (!c) {
-      throw new Error(`FadeRegistry: id not registered: ${keyOf(id)}`);
+      throw new Error(`FadeRegistry: id not registered: ${fadeIdentityKey(id)}`);
     }
     return c;
   }
 
   function fadeTo(
-    id: FadeId | FadeIdentity,
+    id: FadeIdentity,
     target: number,
     durationMs?: number,
     nowMs?: number,
@@ -151,16 +106,16 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     return promise;
   }
 
-  function setImmediate(id: FadeId | FadeIdentity, value: number): void {
+  function setImmediate(id: FadeIdentity, value: number): void {
     requireController(id).setImmediate(value);
   }
 
-  function targetOf(id: FadeId | FadeIdentity): number | null {
-    return controllers.get(keyOf(id))?.targetOf() ?? null;
+  function targetOf(id: FadeIdentity): number | null {
+    return controllers.get(fadeIdentityKey(id))?.targetOf() ?? null;
   }
 
-  function opacityOf(id: FadeId | FadeIdentity, nowMs?: number): number {
-    const c = controllers.get(keyOf(id));
+  function opacityOf(id: FadeIdentity, nowMs?: number): number {
+    const c = controllers.get(fadeIdentityKey(id));
     if (!c) return 1.0; // fail-safe — see module docblock
     // Resolve the default HERE so the controller's own wall-clock default
     // is never reached through the registry.

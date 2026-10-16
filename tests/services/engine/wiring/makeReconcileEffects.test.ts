@@ -2,20 +2,15 @@
  * makeReconcileEffects — unit tests for the ReconcileEffects factory.
  *
  * Strategy: build a minimal fake EngineState with typed spy subsystems that
- * cover only the slices the closures touch. vi.mock syncVisibilityFades so each
- * closure test stays focused on the factory wiring, not the deeper bridge walk.
+ * cover only the slices the closures touch. vi.mock syncVisibilityTargets so each
+ * closure test stays focused on the factory wiring, not the deeper sync walk.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { makeReconcileEffects } from '../../../../src/services/engine/wiring/makeReconcileEffects';
 
-// Mock the syncVisibilityFades module so the syncFades tests don't need a real
-// FADE_LAYERS walk or a fully populated settings tree.
-vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
-  syncVisibilityFades:
-    vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
-}));
+// Mock the sync so the syncFades tests don't need a fully populated settings tree.
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityTargets', () => ({
   syncVisibilityTargets:
     vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
@@ -46,7 +41,6 @@ vi.mock('../../../../src/services/engine/helpers/liveFocusRow', () => ({
   liveFocusRow: vi.fn(() => 'LIVE_FOCUS_ROW'),
 }));
 
-import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { syncVisibilityTargets } from '../../../../src/services/engine/wiring/syncVisibilityTargets';
 import { applySwapFormat } from '../../../../src/services/engine/phases/applySwapFormat';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
@@ -59,7 +53,7 @@ const CANVAS = {} as HTMLCanvasElement;
 //
 // Only the slices the closures touch are populated. Everything else is
 // absent; `as unknown as EngineState` bridges the gap (matching the pattern
-// used in syncVisibilityFades.test.ts and other wiring tests).
+// used in the other wiring tests).
 
 function makeState(): {
   state: EngineState;
@@ -86,13 +80,10 @@ describe('makeReconcileEffects', () => {
     vi.clearAllMocks();
   });
 
-  it('syncFades() runs a full pass over every row', () => {
+  it('syncFades() recomputes every visibility target', () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);
     effects.syncFades();
-    expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
-    // The visibility entries' targets recompute on the same settings write.
     expect(syncVisibilityTargets).toHaveBeenCalledTimes(1);
     expect(syncVisibilityTargets).toHaveBeenCalledWith(state, { animate: true });
   });

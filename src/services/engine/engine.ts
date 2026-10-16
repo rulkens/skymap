@@ -305,7 +305,6 @@ export function createEngine(
     planners: [],
     assetRows: [],
     slabRows: [],
-    fadeRows: [],
     visibilityEntries: [],
     visibilityGates: new Map(),
     label3DProducers: [],

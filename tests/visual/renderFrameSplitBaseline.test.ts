@@ -419,7 +419,7 @@ describe('renderFrame visual baseline', () => {
         isReady: true as const,
         plans: createFramePlannerResultStore(),
         nowMs: 0,
-        // resolveLayerOpacity's recession factor lerps on this; production
+        // The handed value's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
         focusBlend: 0,
         // No body rows in this scene: the two slabs above are cosmological.

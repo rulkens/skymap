@@ -6,7 +6,6 @@ import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
-import type { FadeLayer } from '../../animation/FadeLayer';
 import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
@@ -19,7 +18,6 @@ export type LayerInstance = {
   readonly planners: readonly FrameContentPlanner<unknown>[];
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
-  readonly fades: readonly FadeLayer<unknown>[];
   readonly screenLabels: readonly LayerScreenLabel[];
   readonly worldLabels: readonly LayerWorldLabel[];
   readonly orbitTrails: readonly OrbitalElements[];
