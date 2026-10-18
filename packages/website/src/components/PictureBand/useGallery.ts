@@ -10,6 +10,7 @@ import type { RefObject } from 'react';
 
 import type { GalleryState } from '../../@types/GalleryState';
 import type { GalleryView } from '../../@types/GalleryView';
+import { lessWanted } from '../../utils/lessWanted.ts';
 import { wrapIndex } from '../../utils/wrapIndex.ts';
 
 // Long enough to read a label through before its picture goes.
@@ -70,9 +71,8 @@ export function useGallery(views: readonly GalleryView[]): Gallery {
 
   useEffect(() => {
     setLive(true);
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } })
-      .connection;
-    saving.current = connection?.saveData === true;
+    const less = lessWanted();
+    saving.current = less.data;
     const band = root.current!;
 
     band.addEventListener('pointerenter', warmNext, { once: true });
@@ -91,7 +91,7 @@ export function useGallery(views: readonly GalleryView[]): Gallery {
         ...(layers.current[wrapIndex(current.current + 1, count)]?.querySelectorAll('img') ?? []),
       ].every((img) => img.complete && img.naturalWidth > 0);
     // Counted in seconds of rest, so the wait starts again whenever the reader leaves the band alone.
-    const clock = matchMedia('(prefers-reduced-motion: reduce)').matches
+    const clock = less.motion
       ? undefined
       : setInterval(() => {
           rested.current = waiting() ? 0 : rested.current + 1;

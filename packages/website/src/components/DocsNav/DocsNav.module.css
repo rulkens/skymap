@@ -46,10 +46,8 @@
   display: none;
 }
 
-.tree ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.bare {
+  composes: bare from '../../styles/layout.module.css';
 }
 
 .link,

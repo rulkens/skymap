@@ -25,12 +25,10 @@
   /* A tablet held upright keeps the phone's composition at a phone's size. */
   max-width: 30rem;
   aspect-ratio: 100 / var(--tall-height);
+}
 
-  & ol {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
+.bare {
+  composes: bare from '../../styles/layout.module.css';
 }
 
 .thread {
@@ -92,41 +90,8 @@
 
 /* The ground colour behind the picture hides the line where it passes under a disc. */
 .disc {
-  position: relative;
-  display: block;
-  aspect-ratio: 1;
   padding: 6%;
-  border: 1px solid var(--hairline);
-  border-radius: 50%;
   background: var(--color-bg);
-}
-
-.screen {
-  position: relative;
-  display: block;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 50%;
-
-  & img,
-  & video {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  /* The film lies over its own first frame and appears once it is playing. */
-  & video {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
-}
-
-.shown .screen video {
-  opacity: 1;
 }
 
 /*
@@ -184,7 +149,7 @@
   }
 }
 
-.playing.shown .mark {
+.playing .disc[data-shown] .mark {
   opacity: 1;
 }
 

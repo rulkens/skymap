@@ -163,7 +163,10 @@ a:hover {
 }
 
 img {
+  display: block;
+  width: 100%;
   max-width: 100%;
+  height: auto;
 }
 
 /* A key of the keyboard, drawn as a key: the one outlined thing in running text. */

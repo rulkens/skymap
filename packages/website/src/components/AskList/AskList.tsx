@@ -15,7 +15,7 @@ function AskList() {
         Four also ask for a set text. For SDSS and DESI we print only the opening: take the full,
         current wording from the linked page.
       </p>
-      <ul>
+      <ul className={styles.bare}>
         {asks.map((row) => (
           <li key={row.id}>
             <b>{row.id === '2mass-xsc' ? 'Catalogues read through VizieR' : row.name}</b>

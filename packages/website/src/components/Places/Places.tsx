@@ -70,7 +70,7 @@ function Places({ lines }: PlacesProps) {
             pathLength="1"
           />
         </svg>
-        <ol>
+        <ol className={styles.bare}>
           {PLACES.map((place, i) => {
             const tall = TALL[i]!;
             const wide = WIDE[i]!;
@@ -104,16 +104,8 @@ function Places({ lines }: PlacesProps) {
                   if (el) films.screens.current.set(place.id, el);
                   else films.screens.current.delete(place.id);
                 }}
-                handlers={
-                  hover
-                    ? {
-                        onPointerEnter: () => films.play(place.id),
-                        onPointerLeave: () => films.stop(place.id),
-                        onFocus: (focusVisible) => focusVisible && films.play(place.id),
-                        onBlur: () => films.stop(place.id),
-                      }
-                    : {}
-                }
+                onPlay={hover ? () => films.play(place.id) : undefined}
+                onStop={hover ? () => films.stop(place.id) : undefined}
               />
             );
           })}

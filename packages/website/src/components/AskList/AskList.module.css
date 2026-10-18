@@ -6,12 +6,6 @@
     max-width: 60ch;
   }
 
-  & ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
   & li {
     padding-block: 1rem;
     border-top: 1px solid var(--border-divider);
@@ -29,4 +23,8 @@
     color: var(--site-text-muted);
     overflow-wrap: anywhere;
   }
+}
+
+.bare {
+  composes: bare from '../../styles/layout.module.css';
 }

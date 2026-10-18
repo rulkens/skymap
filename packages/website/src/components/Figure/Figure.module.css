@@ -1,11 +1,5 @@
 .root {
   margin: 0;
-
-  & > picture img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
 }
 
 .caption {

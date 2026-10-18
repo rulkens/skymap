@@ -11,12 +11,6 @@
   margin: 0;
   --cols: 7;
 
-  & img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
   & figcaption {
     margin-top: 0.875rem;
   }

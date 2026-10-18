@@ -57,7 +57,7 @@ function Footer({ path, light }: FooterProps) {
             {groups.map((group) => (
               <div key={group.heading}>
                 <p className={styles.heading}>{group.heading}</p>
-                <ul>
+                <ul className={styles.bare}>
                   {group.links.map((link) => (
                     <li key={link.href}>
                       <ObjLink

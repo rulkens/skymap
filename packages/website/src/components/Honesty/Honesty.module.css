@@ -48,12 +48,6 @@
 .figure {
   margin: 0 0 1rem;
 
-  & img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
   & figcaption {
     min-height: 6em;
     margin-top: 0.5rem;

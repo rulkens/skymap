@@ -65,7 +65,7 @@ function FeatureStage() {
       style={{ '--rows': ROWS } as CSSProperties}
     >
       <nav className={styles.index} aria-label="Groups on this page">
-        <ul ref={row}>
+        <ul ref={row} className={styles.bare}>
           {FEATURE_GROUPS.map((group, i) => (
             <li key={group.id}>
               <a

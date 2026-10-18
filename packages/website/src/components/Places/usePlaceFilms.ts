@@ -8,6 +8,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
+import { lessWanted } from '../../utils/lessWanted.ts';
+
 const DWELL_MS = 350;
 
 type Mode = 'off' | 'hover' | 'band';
@@ -32,9 +34,8 @@ export function usePlaceFilms(ids: readonly string[]): PlaceFilms {
   const stop = useCallback((id: string) => setCurrent((now) => (now === id ? null : now)), []);
 
   useEffect(() => {
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } })
-      .connection;
-    if (connection?.saveData || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const less = lessWanted();
+    if (less.data || less.motion) return;
     setMode(matchMedia('(hover: hover)').matches ? 'hover' : 'band');
   }, []);
 

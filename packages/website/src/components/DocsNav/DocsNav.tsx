@@ -108,7 +108,7 @@ function DocsNav({ current, sections, groups }: DocsNavProps) {
               <p className={styles.group} id={`docs-nav-${group.name.toLowerCase()}`}>
                 {group.name}
               </p>
-              <ul aria-labelledby={`docs-nav-${group.name.toLowerCase()}`}>
+              <ul className={styles.bare} aria-labelledby={`docs-nav-${group.name.toLowerCase()}`}>
                 {group.pages
                   .filter((page) => !page.family)
                   .map((page) => (
@@ -137,7 +137,7 @@ function DocsNav({ current, sections, groups }: DocsNavProps) {
                       {family}
                     </p>
                   )}
-                  <ul aria-label={family}>
+                  <ul className={styles.bare} aria-label={family}>
                     {kin.map((page) => (
                       <li key={page.path}>
                         <a

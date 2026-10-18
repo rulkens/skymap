@@ -10,7 +10,6 @@
 import type { ReactNode } from 'react';
 
 import type { FigureFrameSheet } from '../../@types/FigureFrameSheet';
-import { cx } from '../../utils/cx.ts';
 import ObjLink from '../ObjLink/ObjLink.tsx';
 import styles from './FigureFrame.module.css';
 
@@ -23,7 +22,7 @@ type FigureFrameProps = {
 
 function FigureFrame({ sheet, picture, wide = false, children }: FigureFrameProps) {
   return (
-    <figure className={cx(styles.root, wide && styles.wide)} data-embed>
+    <figure className={wide ? styles.wide : undefined} data-embed>
       {/* Out of the keyboard's path: "Enlarge" below is the same link with words a reader can see. */}
       <a className={styles.picture} tabIndex={-1} {...sheet}>
         {picture}

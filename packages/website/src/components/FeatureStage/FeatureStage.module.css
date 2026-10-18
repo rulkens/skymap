@@ -4,10 +4,8 @@
   padding-block: 5rem var(--section-space);
 }
 
-.index ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.bare {
+  composes: bare from '../../styles/layout.module.css';
 }
 
 /* The current group's marker is filled and its name is bright; the rest are dim. */

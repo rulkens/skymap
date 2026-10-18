@@ -3,9 +3,7 @@
  * then lie on the stage; without it they are a list of captioned pictures.
  */
 .stops {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  composes: bare from '../../styles/layout.module.css';
 }
 
 .stop img {

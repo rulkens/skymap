@@ -31,7 +31,7 @@ function Spans({ label, min, max, ticks, spans, children }: SpansProps) {
   const open = spans.some((span) => span.to === undefined);
   return (
     <figure className={styles.root} data-embed role="group" aria-label={label}>
-      <ol>
+      <ol className={styles.bare}>
         {spans.map((span) => (
           <li key={span.name}>
             <div className={styles.axis} aria-hidden="true">

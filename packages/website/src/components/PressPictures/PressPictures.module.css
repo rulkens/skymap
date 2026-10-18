@@ -11,12 +11,6 @@
     grid-template-rows: subgrid;
   }
 
-  & picture img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
   & h3 {
     margin: 1rem 0 0.75rem;
   }

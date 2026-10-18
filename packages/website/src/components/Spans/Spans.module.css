@@ -1,12 +1,6 @@
 .root {
   margin: 2rem 0 2.5rem;
 
-  & ol {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
   & li {
     display: grid;
     padding-bottom: 1.25rem;
@@ -125,4 +119,8 @@
   .ticks span:not(:first-child, :last-child, .middle) {
     display: none;
   }
+}
+
+.bare {
+  composes: bare from '../../styles/layout.module.css';
 }

@@ -108,10 +108,8 @@
   color: var(--color-fg);
 }
 
-.root ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.bare {
+  composes: bare from '../../styles/layout.module.css';
 }
 
 /* The ring is drawn outside the icon's box; the inset keeps it off the gutter. */
