@@ -5,7 +5,7 @@
 ## Problem
 
 `refineThreshold` (Debug panel "Detail", 0.01 to 0.3) bounds the proxy `edge^2 / distanceToBox^2` in
-`src/services/gpu/shaders/starCatalog/cut.wesl`. That is an angle, so the same value draws boxes of different
+`src/services/gpu/shaders/octree/cut.wesl`. That is an angle, so the same value draws boxes of different
 pixel size at different fields of view: a narrow field of view makes a box covering the same angle look coarser.
 
 Where the slider looked dead, the likely cause is a limit hit first: `drawBudget` (1.5 M on every tier) or the
