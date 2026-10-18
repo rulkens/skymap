@@ -139,21 +139,28 @@ type GalaxyRecordSource = {
   /** Pick instance → ordinal and back; null when the record's object is not resident. */
   ordinalOfPick(pickIndex: number): number | null;
   pickOfOrdinal(ordinal: number): number | null;
-  /** Every resident record, for the disk planners and structure membership. */
-  forEachResident(visit: (ordinal: number, x: number, y: number, z: number, diameterKpc: number) => void): void;
-  /** The three lookups that may need data first; each names its own fetch, none hides one in a getter. */
-  loadRow(ordinal: number): Promise<GalaxyRow | null>;
-  resolveDurableId(id: string): Promise<number | null>; // `pgc-…`, `sdss-…` → ordinal
-  resolvePosition(positionMpc: Vec3): Promise<number | null>;
+  /** Resident records as column blocks: flat yields its catalog once, the octree one block per resident chunk. */
+  forEachResidentBlock(visit: (block: GalaxyColumnBlock, ordinalBase: number) => void): void;
+  /** Synchronous membership, for the palette's name join. */
+  hasDurableId(id: string): boolean;
+  /** Lookups that may need data first: a plain value when at hand, a promise when not. */
+  loadRow(ordinal: number): GalaxyRow | null | Promise<GalaxyRow | null>;
+  resolveDurableId(id: string): number | null | Promise<number | null>; // `pgc-…`, `sdss-…` → ordinal
+  resolvePosition(raDeg: number, decDeg: number, distMpc: number | null): number | null | Promise<number | null>;
 };
 ```
 
-- The flat implementation wraps today's `GalaxyCatalog`: ordinal = row index, everything resident, every promise
-  already settled (`resolveDurableId` is today's `resolvePgc`/`resolveSdss` scan, `resolvePosition` today's
-  `resolvePos`). The octree implementation is §5.2–5.5.
-- **The bridge to the synchronous selection row** stays inside the galaxy Layer: `extractRow` and `focusId.decode`
-  memoise the promise per ref, return null (defer) while it is pending, and on settle emit the source-count pulse the
-  deferring saga already retries on (`resolveFocusRefDeferringSaga.ts:16-21`). The saga itself does not change.
+- The flat implementation wraps today's `GalaxyCatalog`: ordinal = row index, everything resident, every lookup a
+  plain value (`resolveDurableId` is today's `resolvePgc`/`resolveSdss` scan, `resolvePosition` today's `resolvePos`).
+  The octree implementation is §5.2–5.5.
+- **The bridge to the synchronous selection row** stays inside the galaxy Layer: a plain value passes straight through;
+  a promise is memoised per ref, the call returns null (defer) while it is pending, and on settle the bridge emits the
+  source-count pulse the deferring saga already retries on (`resolveFocusRefDeferringSaga.ts:16-21`). The saga does not
+  change. (Ruled 2026-10-18: a settled promise cannot be read synchronously, so always-promise lookups would defer every
+  flat selection by a pulse.)
+- **`pos@` ids carry the distance** (ruled 2026-10-18): `pos@<ra>,<dec>,<dMpc>`. A legacy two-part id decodes with a
+  `null` distance and is answered by direction, as today, by the sources that can; the octree answers only ids with a
+  distance.
 - The interleave builder takes `stats` from the source instead of recomputing them per tier; for flat sources the values
   are what it computes today, so their render is unchanged.
 
@@ -187,17 +194,18 @@ The pick draw writes the pool-absolute index; `ordinalOfPick` maps it through th
   (24 B; one shard ≈ 1.5 MB). The shard directory (first pgc per shard) is its own index-header key, `pgcShards`.
 - The octree `resolveDurableId('pgc-…')` fetches the shard and returns the ordinal; the focus flies to the entry's
   position, the planner loads the chunks there, and `loadRow` resolves once the chunk and its info object are resident.
-- **Names resolve to a durable id for every source**: the palette's name search maps names to pgc through
-  `pgc_aliases.json` and asks each source's `resolveDurableId`. The join over GLADE's and 2MRS's `objIDs` in
-  `buildAliasIndex` goes, and so does the hardcoded `[Glade, TwoMRS]` list (`frame.ts:52`).
-- The octree `resolvePosition` descends the index to the cell holding the position, requests that chunk, and settles once
-  it is resident.
+- **Names keep their join, through the contract** (ruled 2026-10-18): the palette lists a name when a source's
+  `hasDurableId('pgc-<n>')` confirms it, over every source with a `pgc` claim instead of the hardcoded
+  `[Glade, TwoMRS]` list (`frame.ts:52`). The octree answers `hasDurableId` from a baked set of the pgcs that have a
+  name in `pgc_aliases.json`, small enough to ride in the index header.
+- The octree `resolvePosition` (with a distance) descends the index to the cell holding the position, requests that
+  chunk, and settles once it is resident; without a distance it returns null.
 
 ### 5.5 Planners, structures, stats
 
-- Disk planners walk `forEachResident`; sticky maps key by ordinal, which is stable for the bake and survives eviction.
+- Disk planners walk `forEachResidentBlock`, the stride window per block; sticky maps key by ordinal, which is stable for the bake and survives eviction.
 - Structure membership and its member count keep today's meaning, **the rendered members**
-  (`structureMemberCount.ts:1-16`), for every source: both walk `forEachResident`. For GLADE that is the resident set,
+  (`structureMemberCount.ts:1-16`), for every source: both walk `forEachResidentBlock`. For GLADE that is the resident set,
   which is what is on screen; nothing is baked for structures.
 - `medianAbsMag`, `magOffset` and the provenance counts are header stats; the decode-time passes go for GLADE. The flat
   sources keep computing them per tier file (prep 6 is behaviour-neutral); making them catalog-wide everywhere is a
