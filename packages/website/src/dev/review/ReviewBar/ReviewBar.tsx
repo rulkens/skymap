@@ -1,5 +1,5 @@
 /*
- * ReviewBar — the review's bar: the page's job line, its word count and mark counts, the Keys box
+ * ReviewBar — the review's bar: the Notes/Marks switch, the page's job line, its word count and mark counts, the Keys box
  * (its child), the Apply page confirm, the apply state and the show-result switch. It keeps
  * --review-bar equal to its height, so the page is pushed down by what it measures and not a guess.
  */
@@ -9,6 +9,7 @@ import type { DocsReviewApplied } from '../../../../../../tools/site/@types/Docs
 import type { DocsReviewApply } from '../../../../../../tools/site/@types/DocsReviewApply';
 import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
 import type { ReviewCounts } from '../@types/ReviewCounts';
+import ModeSwitch from '../ModeSwitch/ModeSwitch.tsx';
 import styles from './ReviewBar.module.css';
 
 type ReviewBarProps = {
@@ -99,6 +100,7 @@ function ReviewBar({
   return (
     <div ref={bar} className={styles.root} data-overlay-ui="" data-review-bar="">
       <strong className={styles.name}>Review</strong>
+      <ModeSwitch />
       <input
         className={styles.job}
         value={draft}

@@ -6,8 +6,3 @@
   user-select: none;
   -webkit-user-select: none;
 }
-
-/* Shift: the pointer reaches the page, so its text can be selected for a mark. */
-.root.through {
-  pointer-events: none;
-}

@@ -38,16 +38,29 @@ function KeysHelp({ focus }: KeysHelpProps) {
         </dt>
         <dd>Cancels</dd>
       </dl>
-      <h3>Notes</h3>
+      <h3>Modes</h3>
+      <dl>
+        <dt>
+          <kbd>Tab</kbd>
+        </dt>
+        <dd>Switches between Notes and Marks</dd>
+        <dt>
+          <kbd>N</kbd>
+        </dt>
+        <dd>Notes mode</dd>
+        <dt>
+          <kbd>T</kbd>
+        </dt>
+        <dd>Marks mode</dd>
+      </dl>
+      <h3>Notes mode</h3>
       <dl>
         <dt>Click or drag</dt>
         <dd>Leaves a note on the page</dd>
       </dl>
-      <h3>Marks</h3>
+      <h3>Marks mode</h3>
       <dl>
-        <dt>
-          <kbd>Shift</kbd> + drag
-        </dt>
+        <dt>Drag</dt>
         <dd>Selects text</dd>
         <dt>
           <kbd>C</kbd>
@@ -61,12 +74,15 @@ function KeysHelp({ focus }: KeysHelpProps) {
           <kbd>G</kbd>
         </dt>
         <dd>Marks the selected text good</dd>
+        <dt>Click a mark</dt>
+        <dd>Cycles cut, keep, rewrite, good</dd>
+      </dl>
+      <h3>Both modes</h3>
+      <dl>
         <dt>
           <kbd>M</kbd>
         </dt>
         <dd>Shows the marks in the text</dd>
-        <dt>Click a mark</dt>
-        <dd>Cycles cut, keep, rewrite, good</dd>
         <dt>
           <kbd>H</kbd>
         </dt>

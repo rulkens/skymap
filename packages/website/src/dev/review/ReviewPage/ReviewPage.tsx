@@ -1,6 +1,6 @@
 /*
- * ReviewPage — the review of one page while the overlay is on. Select text and press c, w or g to
- * add a mark; m shows the marks in the text (click one to cycle its state); h flips between the
+ * ReviewPage — the review of one page while the overlay is on. In Marks mode, select text and press
+ * c, w or g to add a mark; m shows the marks in the text (click one to cycle its state); h flips between the
  * original and the result. Each reviewed heading carries an icon that opens its section's panel. The
  * keys are listed in a box the bar's Keys button (or ?) opens. What the marks do to the page's own text
  * is in usePaintedPage; its look is ReviewPage.module.css.
@@ -13,6 +13,7 @@ import { pageNotes } from '../../overlay/pageNotes';
 import { recall } from '../../overlay/recall';
 import { remember } from '../../overlay/remember';
 import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
+import { useDevOverlayMode } from '../../overlay/useDevOverlayMode';
 import { useDevOverlayOn } from '../../overlay/useDevOverlayOn';
 import { useDevOverlayPress } from '../../overlay/useDevOverlayPress';
 import { useListener } from '../../overlay/useListener';
@@ -50,6 +51,7 @@ type ReviewPageProps = { article: Element; url: string; first: DocsReview };
 
 function ReviewPage({ article, url, first }: ReviewPageProps) {
   const active = useDevOverlayOn();
+  const marking = useDevOverlayMode() === 'marks';
   const { review, change, adopt, saveFlag } = useReviewFile(url, first);
   const [hiding, setHiding] = useState(() => recall(HIDE_KEY) === '1');
   const [marksShown, setMarksShown] = useState(false);
@@ -125,6 +127,13 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
       setMade(null);
     } else if (claimKeysIntro()) setHelp({ focus: false });
   }, [active]);
+
+  // Leaving Marks mode drops the selection and the chip's confirmation: the keys that mark are off.
+  useEffect(() => {
+    if (marking) return;
+    getSelection()?.removeAllRanges();
+    setMade(null);
+  }, [marking]);
 
   // The section can go away under an open panel (its last mark deleted).
   useEffect(() => {
@@ -232,7 +241,7 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
     true,
   );
 
-  // Marks are clicked with Shift held, which lets the pointer through the capture layer.
+  // Only Marks mode lets a click reach the page's text.
   useListener(article, 'click', (e) => {
     const target = e.target as Element;
     if (!marksShown || !getSelection()?.isCollapsed || target.closest('[data-review-icon]')) return;
@@ -253,6 +262,7 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
     if (key === '?') toggleHelp();
     else if (key === 'h') toggleHiding();
     else if (key === 'm') setMarksShown(!marksShown);
+    else if (!marking) return;
     else if (key === 'c') markSelection('cut');
     else if (key === 'w') markSelection('rewrite');
     else if (key === 'g') markSelection('good');
@@ -304,7 +314,9 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
       >
         {help && <KeysHelp focus={help.focus} />}
       </ReviewBar>
-      <SelectionChip article={article} made={made} save={saveFlag} onDone={() => setMade(null)} />
+      {marking && (
+        <SelectionChip article={article} made={made} save={saveFlag} onDone={() => setMade(null)} />
+      )}
       {open && section && sectionWords && (
         <SectionPanel
           key={open.serial}

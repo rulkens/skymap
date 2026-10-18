@@ -1,5 +1,5 @@
 /*
- * FeedbackCapture — the layer over the page while feedback is on: a click chooses the element under
+ * FeedbackCapture — the layer over the page in Notes mode (Marks mode has none, so the page's text selects): a click chooses the element under
  * the pointer, a mouse or pen drag draws an area. It is never scrollable and sets no touch-action, so
  * wheel and touch scrolling pass through; a finger drag is the page scrolling, not a rectangle.
  */
@@ -7,9 +7,7 @@ import { useMemo, useRef, useState, type PointerEvent } from 'react';
 
 import type { FeedbackRect } from '../../../../../../tools/site/@types/FeedbackRect';
 import { devOverlay } from '../../overlay/devOverlay';
-import { useShiftHeld } from '../../overlay/useShiftHeld';
 import { useViewport } from '../../overlay/useViewport';
-import { cx } from '../../../utils/cx.ts';
 import type { FeedbackPoint } from '../@types/FeedbackPoint';
 import type { FeedbackPress } from '../@types/FeedbackPress';
 import type { FeedbackSelection } from '../@types/FeedbackSelection';
@@ -32,7 +30,6 @@ type FeedbackCaptureProps = {
 
 function FeedbackCapture({ locked, onChoose, onPressWhileLocked }: FeedbackCaptureProps) {
   const viewport = useViewport();
-  const letThrough = useShiftHeld();
   const [pointer, setPointer] = useState<FeedbackPoint | null>(null);
   const [drawn, setDrawn] = useState<FeedbackRect | null>(null);
   const press = useRef<FeedbackPress | null>(null);
@@ -85,7 +82,7 @@ function FeedbackCapture({ locked, onChoose, onPressWhileLocked }: FeedbackCaptu
   return (
     <>
       <div
-        className={cx(styles.root, letThrough && styles.through)}
+        className={styles.root}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

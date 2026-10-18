@@ -11,6 +11,7 @@ import { FEEDBACK_ROUTE } from '../../overlay/feedbackRoute';
 import { pageNotes } from '../../overlay/pageNotes';
 import { remember } from '../../overlay/remember';
 import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
+import { useDevOverlayMode } from '../../overlay/useDevOverlayMode';
 import { useDevOverlayOn } from '../../overlay/useDevOverlayOn';
 import type { FeedbackPin } from '../@types/FeedbackPin';
 import type { FeedbackSelection } from '../@types/FeedbackSelection';
@@ -28,6 +29,7 @@ import styles from './Feedback.module.css';
 
 function Feedback() {
   const on = useDevOverlayOn();
+  const mode = useDevOverlayMode();
   const [pins, setPins] = useFeedbackPins();
   const [selection, setSelection] = useState<FeedbackSelection | null>(null);
   const [text, setText] = useState('');
@@ -113,7 +115,7 @@ function Feedback() {
   return (
     <>
       <div className={styles.root} data-overlay-ui="">
-        {on && (
+        {on && mode === 'notes' && (
           <FeedbackCapture
             locked={!!selection}
             onChoose={choose}

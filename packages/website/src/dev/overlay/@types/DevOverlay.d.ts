@@ -1,8 +1,13 @@
+import type { OverlayMode } from './OverlayMode';
+
 /** The one switch for the whole dev overlay (feedback and review), and the keys only it handles. */
 export type DevOverlay = {
   isOn: () => boolean;
   setOn: (next: boolean) => void;
-  /** Returns the way to stop listening. */
+  /** What the pointer does while the overlay is on; kept across reloads. */
+  mode: () => OverlayMode;
+  setMode: (next: OverlayMode) => void;
+  /** Returns the way to stop listening (to a change of on or mode). */
   subscribe: (listener: () => void) => () => void;
   /** Escape goes to these newest first; the first to return true has used it. */
   onEscape: (handler: (e: KeyboardEvent) => boolean) => () => void;
