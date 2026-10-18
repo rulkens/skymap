@@ -73,7 +73,7 @@ describe('produceConstellationCaptions', () => {
     (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + SCALE_FADE_BANDS.constellations.goneAt) / 2;
 
   it('reads the handed label value, not a band-only `1`, for constellation demand', () => {
-    // A prior version of this gate passed `constellationLayerOpacity` the
+    // A prior version of this gate passed the band lookup
     // constant `1` (the band-only cull) and never the toggle opacity, so a
     // constellations-layer switch-off couldn't drop the row on its own. With
     // the handed value at 0 the product is 0 despite

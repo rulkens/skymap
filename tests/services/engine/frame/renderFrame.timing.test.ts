@@ -327,7 +327,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     pointSizePx: 2.5,
     brightness: 1.0,
     selected: null as { source: SourceType; localIdx: number } | null,
-    visibleSourceMask: 0xffffffff,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,

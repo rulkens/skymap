@@ -243,7 +243,7 @@ Judged by `docs/superpowers/conventions/testing.md`. Each new test is mutation-c
 
 The visibility work is itself ground preparation for the heliosphere shell Layer. The one Layer that broke the uniform "no data = nothing committed" rule, the galaxy catalog, was aligned in its own PR (#892, merged `7d93f2da6`).
 
-Its own prep is a separate PR that lands first (SPLIT), every item behaviour-neutral, gated by a pixel-identical before/after: `docs/superpowers/plans/2026-10-15-layer-visibility-ground.md`. Each item reads today's switches and fades; none introduces a visibility type.
+Its own prep is a separate PR that lands first (SPLIT), every item behaviour-neutral, gated by a pixel-identical before/after: `docs/superpowers/plans/completed/2026-10-15-layer-visibility-ground.md`. Each item reads today's switches and fades; none introduces a visibility type.
 
 - Delete the unread `SourceEntryBase.labelLayer` (adjacent ruling).
 - Complete `blackHoles.items`: derived `initialState`, a field-writing reducer.

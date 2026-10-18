@@ -11,7 +11,7 @@
  * ### Why this source set
  *
  * The count sums `sourceCounts` over `GALAXY_CATALOG_SOURCES`, gated by
- * `visibleSourceMask` — the same filter the renderer draws with, so the
+ * `sourceMask` — the same filter the renderer draws with, so the
  * member count tracks the on-screen points: a galaxy catalog toggled off
  * drops straight out of the total.
  *
@@ -42,13 +42,13 @@ import type { StructureInfo } from '../../../@types/data/structure/StructureInfo
 export function structureMemberCount(
   structure: StructureInfo,
   getCloud: (source: SourceType) => GalaxyCatalog | undefined,
-  visibleSourceMask: number,
+  sourceMask: number,
 ): number | null {
   const radiusMpc = structure.apparentRadiusMpc ?? structure.physicalRadiusMpc;
 
   const catalogs: CatalogWithSource[] = [];
   for (const source of GALAXY_CATALOG_SOURCES) {
-    if (!maskHas(visibleSourceMask, source)) continue;
+    if (!maskHas(sourceMask, source)) continue;
     const catalog = getCloud(source);
     if (catalog === undefined) continue;
     catalogs.push({ source, catalog });

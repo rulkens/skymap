@@ -117,7 +117,7 @@ function makeInput(
   return {
     cam: makeCam(camDist),
     catalogs,
-    visibleSourceMask: mask,
+    sourceMask: mask,
     pxPerRad: PX_PER_RAD,
     famousGalaxiesMeta,
   };
