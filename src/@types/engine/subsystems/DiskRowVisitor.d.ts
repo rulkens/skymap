@@ -9,13 +9,14 @@
  * walk owns the loop, so each planner has to surrender its loop body while
  * keeping its own sticky map, output accumulator, sort, and per-body extras.
  * The visitor is that surrendered body: the walk calls the lifecycle hooks in
- * a fixed order (`beginSource` → `onRow`* → `endSource` per source, then one
- * `endFrame`), and the visitor closes over the state the walk must not know
- * about.
+ * a fixed order (per source: `beginSource` → `onRow`* once per resident block,
+ * then one `endSource`; then one `endFrame`), and the visitor closes over the
+ * state the walk must not know about. Sticky maps key by record ordinal, which
+ * survives a block's eviction where a block-local row index would not.
  *
  * ### Why scalar `onRow` args
  *
- * `onRow` takes the row geometry as loose scalars plus the catalog reference —
+ * `onRow` takes the row geometry as loose scalars plus the block reference —
  * never a per-row object — because it is the innermost hot call (~300k
  * invocations/frame across both bodies) and must not allocate. The walk calls
  * `procedural.onRow(...)` and `textured.onRow(...)` at two fixed, separate
@@ -23,18 +24,26 @@
  * the call site megamorphic across the two hidden classes).
  */
 
-import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyColumnBlock } from '../../data/galaxyCatalog/GalaxyColumnBlock';
 import type { SourceType } from '../../data/SourceType';
 
 export type DiskRowVisitor = {
   /** Source bit is clear this frame → clear this body's sticky map for it. */
   onSourceHidden(source: SourceType): void;
-  /** Before the row loop → purgeStrideWindow(stickyMap, safeStart, end). */
-  beginSource(source: SourceType, safeStart: number, end: number): void;
-  /** One surviving row; geometry (camDist, px) already computed by the walk. */
+  /**
+   * Before a block's row loop → purgeStrideWindow(stickyMap, windowStart, windowEnd),
+   * both ordinals; a row's ordinal is `ordinalBase + i`.
+   */
+  beginSource(
+    source: SourceType,
+    windowStart: number,
+    windowEnd: number,
+    ordinalBase: number,
+  ): void;
+  /** One surviving row `i` of `block`; geometry (camDist, px) already computed by the walk. */
   onRow(
     source: SourceType,
-    catalog: GalaxyCatalog,
+    block: GalaxyColumnBlock,
     i: number,
     x: number,
     y: number,
@@ -42,7 +51,7 @@ export type DiskRowVisitor = {
     camDist: number,
     px: number,
   ): void;
-  /** After the row loop → push this body's sticky values into its output accumulator. */
+  /** After the source's last block → push this body's sticky values into its output accumulator. */
   endSource(source: SourceType): void;
   /** After all sources → sort back-to-front, stash on the subsystem's lastOutput. */
   endFrame(): void;

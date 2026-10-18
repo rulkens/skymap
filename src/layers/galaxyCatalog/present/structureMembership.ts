@@ -1,9 +1,9 @@
 /**
- * structureMembership — pure cone-search over loaded galaxy catalogs.
+ * structureMembership — pure cone-search over the resident galaxy records.
  *
- * Given a set of in-memory catalogs, a 3D center, and a radius in Mpc,
- * returns the packed (sourceCode << 26 | localIdx) identities of every
- * galaxy strictly inside the sphere — i.e. `distance(g, center) < radius`.
+ * Given a set of record sources, a 3D center, and a radius in Mpc,
+ * returns the packed (sourceCode << 26 | pickIndex) identities of every
+ * resident galaxy strictly inside the sphere — i.e. `distance(g, center) < radius`.
  *
  * ### Why a pure function (no caching here)?
  *
@@ -35,12 +35,12 @@
 
 import { packSelection } from '../../../data/selectionEncoding';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { CatalogWithSource } from '../@types/CatalogWithSource';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { StructureMembershipResult } from '../@types/StructureMembershipResult';
 
 /**
  * Compute the packed identities of every galaxy strictly within
- * `radiusMpc` of `centerMpc` across the supplied catalogs.
+ * `radiusMpc` of `centerMpc` across the supplied record sources.
  *
  * Time complexity: O(total galaxy count). For the typical loaded
  * footprint (~2.5M galaxies across SDSS + 2MRS + GLADE), one call
@@ -53,7 +53,7 @@ import type { StructureMembershipResult } from '../@types/StructureMembershipRes
  * freeze it here to keep the hot path allocation-free.
  */
 export function structureMembership(
-  catalogs: readonly CatalogWithSource[],
+  records: readonly GalaxyRecordSource[],
   centerMpc: Vec3,
   radiusMpc: number,
 ): StructureMembershipResult {
@@ -64,25 +64,28 @@ export function structureMembership(
   const r2 = radiusMpc * radiusMpc;
 
   const packedIds: number[] = [];
-  for (const { source, catalog } of catalogs) {
-    const { positions, count } = catalog;
-    // We could inline `(source << 26) | i` here to skip the
-    // packSelection call on each member, but the call only fires for
-    // galaxies INSIDE the sphere (typically a few hundred per cluster
-    // out of millions scanned), so the call overhead is in the noise
-    // compared to the inner-loop subtract/dot. Calling packSelection
-    // keeps the encoding centralised — if the (shift, mask, offset)
-    // layout ever changes, this hot loop doesn't need a parallel update.
-    for (let i = 0; i < count; i++) {
-      const base = i * 3;
-      const dx = positions[base + 0]! - cx;
-      const dy = positions[base + 1]! - cy;
-      const dz = positions[base + 2]! - cz;
-      const d2 = dx * dx + dy * dy + dz * dz;
-      if (d2 < r2) {
-        packedIds.push(packSelection(source, i));
+  for (const record of records) {
+    const source = record.source;
+    record.forEachResidentBlock(({ positions, count }, ordinalBase) => {
+      // We could inline `(source << 26) | pick` here to skip the
+      // packSelection call on each member, but the call only fires for
+      // galaxies INSIDE the sphere (typically a few hundred per cluster
+      // out of millions scanned), so the call overhead is in the noise
+      // compared to the inner-loop subtract/dot. Calling packSelection
+      // keeps the encoding centralised — if the (shift, mask, offset)
+      // layout ever changes, this hot loop doesn't need a parallel update.
+      for (let i = 0; i < count; i++) {
+        const base = i * 3;
+        const dx = positions[base + 0]! - cx;
+        const dy = positions[base + 1]! - cy;
+        const dz = positions[base + 2]! - cz;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < r2) {
+          const pick = record.pickOfOrdinal(ordinalBase + i);
+          if (pick !== null) packedIds.push(packSelection(source, pick));
+        }
       }
-    }
+    });
   }
   return { count: packedIds.length, packedIds };
 }

@@ -27,6 +27,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 /**
  * Camera fixed at the origin so a row at (d, 0, 0) sits exactly d Mpc away —
@@ -75,7 +76,7 @@ const PX_PER_RAD = 600;
 function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
   return {
     cam: makeCam(),
-    catalogs,
+    records: galaxyRecordsOver(catalogs),
     sourceMask: mask,
     pxPerRad: PX_PER_RAD,
     sourceOpacity: () => 1,

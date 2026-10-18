@@ -8,18 +8,21 @@
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { ProvenanceCounts } from '../../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
 import type { GalaxyCatalogFacts } from '../@types/GalaxyCatalogFacts';
 
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
-import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { galaxyCatalogFetcher } from './galaxyCatalogFetcher';
+import { flatGalaxyRecordSource } from './flatGalaxyRecordSource';
 
 export function wireGalaxyCatalogSourceSlot(
   entry: GalaxyCatalogRegistryEntry,
@@ -27,6 +30,8 @@ export function wireGalaxyCatalogSourceSlot(
   galaxy: {
     readonly pointRenderer: GalaxyPointRenderer;
     readonly catalogs: Map<SourceType, GalaxyCatalog>;
+    readonly records: Map<GalaxyCatalogSourceType, GalaxyRecordSource>;
+    readonly famousMeta: () => readonly FamousGalaxyMetaEntry[];
     readonly provenanceCounts: Map<SourceType, ProvenanceCounts>;
     readonly bumpCatalogsVersion: () => void;
   },
@@ -40,9 +45,12 @@ export function wireGalaxyCatalogSourceSlot(
     commit: async (cloud) => {
       const t0 = performance.now();
       console.log(`[engine] upload start ${id} count=${cloud.count}`);
+      // Built first: the bake reads the source's stats instead of recomputing them.
+      const record = flatGalaxyRecordSource(entry, cloud, galaxy.famousMeta);
       // GalaxyPointRenderer keys its catalogs by the string id, not the source code.
-      await galaxy.pointRenderer.upload(id, cloud);
+      await galaxy.pointRenderer.upload(id, cloud, record.stats);
       galaxy.catalogs.set(source, cloud);
+      galaxy.records.set(source, record);
       // Every commit replaces (or seeds) this source's array, so a built alias
       // index's row set goes stale (aliases for galaxies the new array lacks,
       // none for ones it gained) — bump so `frame` rebuilds it.
@@ -58,22 +66,22 @@ export function wireGalaxyCatalogSourceSlot(
         `[engine] upload done  ${id} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
     },
-    // Search and picking read `catalogs`, so a released
+    // Search and picking read `records`, so a released
     // catalog must leave it with the GPU buffers or they would find galaxies
     // that are no longer drawn.
     onRelease: () => {
       galaxy.pointRenderer.unload(id);
       galaxy.catalogs.delete(source);
+      galaxy.records.delete(source);
       galaxy.bumpCatalogsVersion();
     },
   });
 
   slot.subscribe((s) => {
     if (s.kind !== 'ready' && s.kind !== 'idle') return;
-    if (s.kind === 'ready') {
-      // One O(rows) pass paid here per commit rather than lazily in React, so the
-      // debug panel never reaches into the raw cloud.
-      galaxy.provenanceCounts.set(source, countEstimatedProvenance(s.value));
+    const record = galaxy.records.get(source);
+    if (s.kind === 'ready' && record !== undefined) {
+      galaxy.provenanceCounts.set(source, record.stats.provenance);
     } else {
       galaxy.provenanceCounts.delete(source);
     }

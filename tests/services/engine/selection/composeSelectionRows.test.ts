@@ -466,7 +466,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
   });
 
-  it('GLADE ref (objId 0n) → pos@ra,dec → same ref', () => {
+  it('GLADE ref (objId 0n) → pos@ra,dec,dMpc → same ref; the legacy two-part id still decodes', () => {
     // objId 0 is the "no durable id" sentinel, so the encoder falls back to
     // the positional form — only GLADE is loaded, and with that objId.
     const posDeps = selectionResolverOver(structures, {
@@ -475,8 +475,11 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     } as GalaxyRowFixture);
     const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
     const id = posDeps.focusIdOf(ref);
-    expect(id).toBe('pos@0.0000,0.0000');
+    expect(id).toBe('pos@0.0000,0.0000,1.00');
     expect(posDeps.resolveFocusId(id!)).toEqual(ref);
+    expect(posDeps.resolveFocusId('pos@0.0000,0.0000')).toEqual(ref);
+    // A distance names a shell: the same direction 2 Mpc further holds nothing.
+    expect(posDeps.resolveFocusId('pos@0.0000,0.0000,3.00')).toBeNull();
   });
 
   it('FamousGalaxy ref → famous seed id → same ref', () => {

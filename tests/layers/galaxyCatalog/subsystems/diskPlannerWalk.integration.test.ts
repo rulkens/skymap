@@ -37,6 +37,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 // ── Fixtures (same idioms as the two subsystem suites) ──────────────────────
 
@@ -123,7 +124,7 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
   const cam = makeCam();
   return {
     cam,
-    catalogs,
+    records: galaxyRecordsOver(catalogs),
     sourceMask: mask,
     pxPerRad: pxPerRadFor(cam),
     // Live surface-brightness sliders — arbitrary plausible defaults; this

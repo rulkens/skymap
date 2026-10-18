@@ -18,6 +18,7 @@ import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/
 import { bodySelectionRow } from '../../../../src/services/engine/selection/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
@@ -59,7 +60,9 @@ describe('SelectionKindRow.encodePick', () => {
       ),
     ).toEqual(star);
     const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12345 } as const;
-    const row = galaxyCatalogSelectionRow({ catalogs: new Map(), famousMeta: [] });
+    const row = galaxyCatalogSelectionRow(
+      galaxyRowRuntime({ catalogs: new Map(), famousMeta: [] }),
+    );
     expect(roundTrip(row, galaxy)).toEqual(galaxy);
   });
 

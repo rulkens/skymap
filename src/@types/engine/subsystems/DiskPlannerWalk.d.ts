@@ -26,7 +26,7 @@ import type { DiskRowVisitor } from './DiskRowVisitor';
 
 export type DiskPlannerWalk = Destroyable & {
   /**
-   * Walk each visible catalog once under the shared stride cursor, computing
+   * Walk each visible source's resident blocks once, each under its stride cursor, computing
    * every surviving row's geometry a single time and driving `procedural`
    * then `textured` at two fixed statements per row. Applies NO `px` gate —
    * only the looser 8-px squared-distance early-out; each body re-applies its

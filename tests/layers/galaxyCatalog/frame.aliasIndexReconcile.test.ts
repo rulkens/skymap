@@ -15,6 +15,8 @@ import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@ty
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
@@ -36,7 +38,7 @@ function makeRuntime(opts: {
 }) {
   const publish = vi.fn();
   const catalogs = new Map<number, GalaxyCatalog>([
-    [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
+    [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
   ]);
   const runtime = {
     hiResFamous: { committed: () => null },
@@ -48,6 +50,9 @@ function makeRuntime(opts: {
       hasFadingContent: () => false,
     },
     catalogs,
+    get records() {
+      return galaxyRecordsOver(catalogs);
+    },
     famousMeta: [],
     get catalogsVersion() {
       return opts.catalogsVersion();
@@ -105,7 +110,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
   it('rebuilds and republishes on a second catalogsVersion bump with the sidecar already committed', () => {
     let catalogsVersion = 1;
     const catalogs = new Map<number, GalaxyCatalog>([
-      [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
+      [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
     ]);
     const committed = {
       value: new Map<bigint, readonly string[]>([
@@ -124,6 +129,9 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
         hasFadingContent: () => false,
       },
       catalogs,
+      get records() {
+        return galaxyRecordsOver(catalogs);
+      },
       famousMeta: [],
       get catalogsVersion() {
         return catalogsVersion;
@@ -143,7 +151,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     // 200n gained — the wireGalaxyCatalogSourceSlot commit path), and the
     // commit's `bumpCatalogsVersion()` fires again.
     catalogs.clear();
-    catalogs.set(Source.Glade, { objIDs: new BigUint64Array([200n]) } as unknown as GalaxyCatalog);
+    catalogs.set(Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([200n]) }));
     catalogsVersion = 2;
     tick.plan(SNAPSHOT, VIEWS, STATE, FADE);
 

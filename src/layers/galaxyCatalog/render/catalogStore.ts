@@ -50,6 +50,7 @@ import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyC
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
+import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { CatalogDrawEntry } from '../@types/CatalogDrawEntry';
@@ -192,7 +193,11 @@ export function createCatalogStore(init: {
    * destroys the earlier one's buffers. The asset slot serializes commits
    * anyway, so the case needs a caller outside it.
    */
-  async function upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void> {
+  async function upload(
+    id: GalaxyCatalogId,
+    galaxyCatalog: GalaxyCatalog,
+    stats: GalaxyPointStats,
+  ): Promise<void> {
     // The store only handles galaxy catalog sources; the registry
     // entry for this id carries the numeric source code, per-source
     // sbBoost + falloffHalfMpc, and the discriminant we narrow on.
@@ -209,7 +214,7 @@ export function createCatalogStore(init: {
 
     // `buildRunner` is either the worker spawner (production) or an
     // inline pure-function (Node tests, via the factory's `buildRunner`).
-    const result = await buildRunner({ cloud: galaxyCatalog, source });
+    const result = await buildRunner({ cloud: galaxyCatalog, source, stats });
     const { interleaved } = result;
 
     // GPU buffers are fixed-size — destroy and reallocate on replace.

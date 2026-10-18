@@ -10,8 +10,9 @@
  *
  * ### Why a stateful factory, not a pure utils/ helper
  *
- * The walk owns the SINGLE shared per-source stride cursor — genuine
- * cross-frame state with exactly one home. A factory closes over it; a pure
+ * The walk owns the SINGLE shared stride cursors (one per source per resident
+ * block, keyed by the block's ordinal base) — genuine cross-frame state with
+ * exactly one home. A factory closes over it; a pure
  * helper would force the cursor map to be threaded through the frame call
  * site. Both bodies decimating against one cursor also means they always see
  * the identical stride window, so their sticky maps stay in phase.
@@ -59,16 +60,16 @@ export const DISK_ROW_ACCEPT_BUDGET = 2048;
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
 
-  // The single shared stride cursor: which row each source's decimated
-  // window resumes from next frame. One map for BOTH bodies.
-  const strideStartBySource = new Map<SourceType, number>();
+  // The shared stride cursors: which row each block's decimated window resumes
+  // from next frame, by source then ordinal base. One map for BOTH bodies.
+  const strideStartBySource = new Map<SourceType, Map<number, number>>();
 
   function runFrame(
     input: DiskWalkInput,
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, catalogs, sourceMask, pxPerRad } = input;
+    const { cam, records, sourceMask, pxPerRad } = input;
 
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
@@ -84,49 +85,53 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     // rotated window.
     let acceptedThisFrame = 0;
 
-    for (const [source, catalog] of catalogs.entries()) {
+    for (const [source, record] of records) {
       if (((sourceMask >> source) & 1) === 0) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;
       }
 
-      const positions = catalog.positions;
-      const count = catalog.count;
-      const { safeStart, end, nextStart } = strideWindow(
-        count,
-        decimationFactor,
-        strideStartBySource.get(source) ?? 0,
-      );
+      const cursors = strideStartBySource.get(source) ?? new Map<number, number>();
+      strideStartBySource.set(source, cursors);
 
-      procedural.beginSource(source, safeStart, end);
-      textured.beginSource(source, safeStart, end);
+      record.forEachResidentBlock((block, ordinalBase) => {
+        const positions = block.positions;
+        const { safeStart, end, nextStart } = strideWindow(
+          block.count,
+          decimationFactor,
+          cursors.get(ordinalBase) ?? 0,
+        );
 
-      if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
-        for (let i = safeStart; i < end; i++) {
-          const i3 = i * 3;
-          const x = positions[i3 + 0]!;
-          const y = positions[i3 + 1]!;
-          const z = positions[i3 + 2]!;
+        procedural.beginSource(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
+        textured.beginSource(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
 
-          const dx = cx - x;
-          const dy = cy - y;
-          const dz = cz - z;
-          const camDistSq = dx * dx + dy * dy + dz * dz;
-          if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+        if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
+          for (let i = safeStart; i < end; i++) {
+            const i3 = i * 3;
+            const x = positions[i3 + 0]!;
+            const y = positions[i3 + 1]!;
+            const z = positions[i3 + 2]!;
 
-          const camDist = Math.sqrt(camDistSq);
-          const px = apparentSizePxAtDistance(catalog.diameterKpc[i]!, camDist, pxPerRad);
+            const dx = cx - x;
+            const dy = cy - y;
+            const dz = cz - z;
+            const camDistSq = dx * dx + dy * dy + dz * dz;
+            if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-          procedural.onRow(source, catalog, i, x, y, z, camDist, px);
-          textured.onRow(source, catalog, i, x, y, z, camDist, px);
+            const camDist = Math.sqrt(camDistSq);
+            const px = apparentSizePxAtDistance(block.diameterKpc[i]!, camDist, pxPerRad);
 
-          acceptedThisFrame++;
-          if (acceptedThisFrame >= DISK_ROW_ACCEPT_BUDGET) break;
+            procedural.onRow(source, block, i, x, y, z, camDist, px);
+            textured.onRow(source, block, i, x, y, z, camDist, px);
+
+            acceptedThisFrame++;
+            if (acceptedThisFrame >= DISK_ROW_ACCEPT_BUDGET) break;
+          }
         }
-      }
 
-      strideStartBySource.set(source, nextStart);
+        cursors.set(ordinalBase, nextStart);
+      });
 
       procedural.endSource(source);
       textured.endSource(source);

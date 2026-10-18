@@ -9,7 +9,7 @@
  * walk the catalogs independently, computing every row's `camDist` + apparent
  * `px` twice. The unified walk computes that geometry ONCE, which means its
  * input can only carry what the geometry pass itself reads: the camera, the
- * visible catalogs, the source-visibility mask, and the hoisted
+ * loaded record sources, the source-visibility mask, and the hoisted
  * pixels-per-radian. Body-specific extras (the textured planner's `famousGalaxiesMeta`
  * / `nowMs`) are NOT here — each body intersects this type with its own frame
  * input so the walk never sees fields it doesn't use.
@@ -25,13 +25,13 @@
  * per-row loop scales with ~2.5M rows).
  */
 
-import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyRecordSource } from '../../data/galaxyCatalog/GalaxyRecordSource';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { SourceType } from '../../data/SourceType';
 
 export type DiskWalkInput = {
   readonly cam: OrbitCamera;
-  readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
+  readonly records: ReadonlyMap<SourceType, GalaxyRecordSource>;
   readonly sourceMask: number;
   readonly pxPerRad: number;
   readonly sourceOpacity: (source: SourceType) => number;

@@ -6,14 +6,11 @@
  */
 
 import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
-import { SDSS_TARGET_MEAN_MAG } from '../../../data/galaxyCatalog/sdssTargetMeanMag';
 import { decodeAngularWeight } from '../../../utils/galaxy/decodeAngularWeight';
 import { derivePointRecord } from '../../../utils/galaxy/derivePointRecord';
-import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { GalaxyPointFields } from '../../../@types/engine/GalaxyPointFields';
-import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { GalaxyPointDerived } from '../../../@types/engine/GalaxyPointDerived';
 
 /**
@@ -28,32 +25,13 @@ const SLOTS_PER_GALAXY_POINT = 12;
 export function buildPointInterleavedBuffer(
   input: BuildPointInterleavedBufferInput,
 ): BuildPointInterleavedBufferResult {
-  const { cloud, source } = input;
+  const { cloud, source, stats } = input;
   const arrayBuffer = new ArrayBuffer(cloud.count * SLOTS_PER_GALAXY_POINT * 4);
   const interleaved = new Float32Array(arrayBuffer);
-
-  // magG holds whichever band the parser stored (2MRS J ~4–15, GLADE B ~7–20);
-  // unshifted, 2MRS would clamp to full intensity with zero contrast.
-  let magSum = 0;
-  let magCount = 0;
-  for (let i = 0; i < cloud.count; i++) {
-    const m = cloud.magG[i]!;
-    if (Number.isFinite(m)) {
-      magSum += m;
-      magCount++;
-    }
-  }
-  const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
-  const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
-
-  // The physical median absolute magnitude `galaxySbAmp` normalises against,
-  // not magOffset's cosmetic shift; recomputed only for fixtures lacking it.
-  const medianAbsMag = cloud.medianAbsMag ?? galaxyMedianAbsMag(cloud);
 
   // Sliced so the worker can transfer it without detaching the caller's cloud.
   const isFallbackArr = cloud.orientationIsFallback.slice();
 
-  const stats: GalaxyPointStats = { magOffset, medianAbsMag };
   const fields: GalaxyPointFields = {
     x: 0,
     y: 0,

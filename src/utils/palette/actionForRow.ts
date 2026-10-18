@@ -57,7 +57,7 @@ function unreachableRow(): never {
 const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteAction> = {
   famous: (row) => ({ kind: 'focus', focusId: row.kind === 'famous' ? row.entry.id : '' }),
   // An alias row is a GLADE/2MRS galaxy keyed by PGC. famousId is null (alias
-  // rows are non-famous) and ra/dec are unused because a PGC objId (> 0) takes
+  // rows are non-famous) and ra/dec/distMpc are unused because a PGC objId (> 0) takes
   // the catalog-id rung of the ladder before the pos@ rung.
   alias: (row) => ({
     kind: 'focus',
@@ -71,6 +71,7 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
             objId: BigInt(row.entry.pgc),
             ra: 0,
             dec: 0,
+            distMpc: 0,
           })
         : '',
   }),

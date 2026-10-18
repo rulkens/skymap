@@ -537,7 +537,7 @@ ordered by their claim's `rank`, first non-null winning; famous ids still resolv
 Under R4 the alias index keeps its shape and its rebuild key (`frame.ts:47-48`); `AliasIndexEntry.localIdx` becomes
 the record ordinal, which equals the row index for every flat source.
 
-- [ ] `flatGalaxyRecordSource.test.ts`, hand-computed values:
+- [x] `flatGalaxyRecordSource.test.ts`, hand-computed values:
       `stats equal the per-tier values` (fixture `magG` [16, 17, NaN] → `magOffset` 1.5; `medianAbsMag` passes the
       catalog's −21 through; provenance counts one estimated orientation and two estimated diameters of three rows),
       `ordinalOfPick and pickOfOrdinal are the identity on [0, count) and null outside`,
@@ -546,18 +546,18 @@ the record ordinal, which equals the row index for every flat source.
       `hasDurableId agrees with resolveDurableId`,
       `resolvePosition with a distance finds the record and without one keeps today's 30 arcsec search`,
       `forEachResidentBlock yields the catalog once at ordinal base 0`.
-- [ ] `encodeGalaxyId`/decode round-trip parity test extended: a galaxy without a catalog id encodes
+- [x] `encodeGalaxyId`/decode round-trip parity test extended: a galaxy without a catalog id encodes
       `pos@<ra>,<dec>,<dMpc>` and decodes back to itself; a legacy `pos@<ra>,<dec>` still decodes to the same galaxy.
-- [ ] `galaxyRecordBridge.test.ts` over a fake source whose lookups return deferred promises:
+- [x] `galaxyRecordBridge.test.ts` over a fake source whose lookups return deferred promises:
       `returns null while a lookup is pending, then the settled value after one pulse`,
       `a released source's settled row is never served` (Review focus 4),
       `pgc decode prefers the lower rank when two sources hold the id`.
-- [ ] Implement: types and claim rows, `galaxyMagOffset`, the flat source, runtime `records`, the bridge, then each
+- [x] Implement: types and claim rows, `galaxyMagOffset`, the flat source, runtime `records`, the bridge, then each
       consumer in the table's order.
-- [ ] Rewrite `tests/support/selectionResolverOver.ts` to build `records` from the fixtures' catalogs; every galaxy
+- [x] Rewrite `tests/support/selectionResolverOver.ts` to build `records` from the fixtures' catalogs; every galaxy
       test's assertions stay as they are (only fixture construction changes), except the `pos@` encode expectations,
       which gain the distance (R2); name each changed assertion in the reply.
-- [ ] Gate: the stats test above; `npm test -- galaxyCatalog selection palette focusUrl tier arrival`; the existing
+- [x] Gate: the stats test above; `npm test -- galaxyCatalog selection palette focusUrl tier arrival`; the existing
       `pgc-<objId> → GLADE first, then 2MRS` case (`composeSelectionRows.test.ts:343`) passes unchanged; Task 7's four
       shots unchanged (the interleave now reads `stats`).
 

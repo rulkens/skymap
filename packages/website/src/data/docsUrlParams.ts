@@ -215,11 +215,11 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
     names: 'A galaxy of the SDSS catalogue, by its 19-digit SDSS object number.',
   },
   {
-    form: 'pos@<right ascension>,<declination>',
+    form: 'pos@<right ascension>,<declination>,<distance>',
     prefix: 'pos@',
     example: 'pos@0.0070,47.2745',
     names:
-      'The catalogue galaxy nearest that place on the sky, if one lies within 30 arcseconds of it. Both numbers are in degrees.',
+      'The catalogue galaxy nearest that place on the sky, if one lies within 30 arcseconds of it. The angles are in degrees. The distance, in megaparsecs, is optional: with it, only a galaxy within 0.05 Mpc of that distance matches.',
   },
   {
     form: 'milkyWay',

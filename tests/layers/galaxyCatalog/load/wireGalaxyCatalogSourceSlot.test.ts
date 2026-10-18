@@ -27,10 +27,13 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { ProvenanceCounts } from '../../../../src/@types/engine/ProvenanceCounts';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
+import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
-/** Only `count` is read by the subscriber and the upload log line. */
+/** A zero-filled catalog: the commit builds its record source over every column. */
 function fakeCloud(count: number): GalaxyCatalog {
-  return { count } as unknown as GalaxyCatalog;
+  return makeGalaxyCatalog(count);
 }
 
 function harness() {
@@ -43,12 +46,24 @@ function harness() {
     totalCount: () => 0,
   } as never;
   const catalogs = new Map<SourceType, GalaxyCatalog>();
+  const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
+  const famousMeta = () => [];
   const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
   const bumpCatalogsVersion = vi.fn();
   const deps = {
     publish: vi.fn(),
   } as unknown as LayerCoreDeps<GalaxyCatalogFacts>;
-  return { upload, unload, pointRenderer, catalogs, provenanceCounts, bumpCatalogsVersion, deps };
+  return {
+    upload,
+    unload,
+    pointRenderer,
+    catalogs,
+    records,
+    famousMeta,
+    provenanceCounts,
+    bumpCatalogsVersion,
+    deps,
+  };
 }
 
 describe('wireGalaxyCatalogSourceSlot', () => {
@@ -89,7 +104,11 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(h.upload).toHaveBeenCalledOnce();
-    expect(h.upload).toHaveBeenCalledWith(SOURCE_REGISTRY[Source.Glade].id, cloud);
+    expect(h.upload).toHaveBeenCalledWith(
+      SOURCE_REGISTRY[Source.Glade].id,
+      cloud,
+      h.records.get(Source.Glade)!.stats,
+    );
     expect(h.catalogs.get(Source.Glade)).toBe(cloud);
     // A stale alias row set would otherwise linger past this commit — the
     // alias index reconcile keys on this bump to know its build is out of date.

@@ -35,4 +35,5 @@ export const SDSS_ENTRY = {
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
   priority: 60,
+  durableId: { prefix: 'sdss', rank: 0 },
 } as const satisfies GalaxyCatalogSourceEntry;

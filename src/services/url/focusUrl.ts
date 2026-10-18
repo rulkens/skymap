@@ -28,5 +28,6 @@ export function selectionToFocusId(info: GalaxyInfo): string {
     objId: info.objID,
     ra: info.ra,
     dec: info.dec,
+    distMpc: info.distanceMpc,
   });
 }

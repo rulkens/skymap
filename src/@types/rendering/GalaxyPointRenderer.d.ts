@@ -14,6 +14,7 @@ import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyPointDrawSettings } from './GalaxyPointDrawSettings';
+import type { GalaxyPointStats } from '../engine/GalaxyPointStats';
 import type { Vec2 } from '../math/Vec2';
 
 export type GalaxyPointRenderer = {
@@ -25,10 +26,11 @@ export type GalaxyPointRenderer = {
   /**
    * Pack a `GalaxyCatalog` into an interleaved GPU vertex buffer for the
    * given catalog id (mirroring `volumeFieldRenderer.upload`, which keys
-   * by field id).  Replaces any previous buffer for that catalog.  See
+   * by field id), with the record source's `stats`.  Replaces any previous
+   * buffer for that catalog.  See
    * the factory body for the off-thread bake / race-condition rationale.
    */
-  upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
+  upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog, stats: GalaxyPointStats): Promise<void>;
   /** Destroy the catalog's buffers and drop its entry. */
   unload(id: GalaxyCatalogId): void;
   /** Total number of points across every loaded source. */

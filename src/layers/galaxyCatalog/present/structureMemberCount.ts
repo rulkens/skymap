@@ -32,29 +32,28 @@
  */
 
 import { structureMembership } from './structureMembership';
-import type { CatalogWithSource } from '../@types/CatalogWithSource';
 import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import { maskHas } from '../../../utils/maskHas';
-import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 
 export function structureMemberCount(
   structure: StructureInfo,
-  getCloud: (source: SourceType) => GalaxyCatalog | undefined,
+  records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>,
   sourceMask: number,
 ): number | null {
   const radiusMpc = structure.apparentRadiusMpc ?? structure.physicalRadiusMpc;
 
-  const catalogs: CatalogWithSource[] = [];
+  const visible: GalaxyRecordSource[] = [];
   for (const source of GALAXY_CATALOG_SOURCES) {
     if (!maskHas(sourceMask, source)) continue;
-    const catalog = getCloud(source);
-    if (catalog === undefined) continue;
-    catalogs.push({ source, catalog });
+    const record = records.get(source);
+    if (record === undefined) continue;
+    visible.push(record);
   }
   // Nothing loaded/visible to search — "not computable yet", not zero.
-  if (catalogs.length === 0) return null;
+  if (visible.length === 0) return null;
 
-  return structureMembership(catalogs, structure.worldPos, radiusMpc).count;
+  return structureMembership(visible, structure.worldPos, radiusMpc).count;
 }

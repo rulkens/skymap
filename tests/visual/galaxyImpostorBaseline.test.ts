@@ -27,6 +27,7 @@ import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/subsystems
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import { makeGalaxyCatalog } from '../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../support/galaxyRecordsOver';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -62,6 +63,8 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(50),
+    // The decoder always sets it; the disks read it from the record source's stats.
+    medianAbsMag: -20.5,
   });
 }
 
@@ -131,7 +134,7 @@ describe('galaxy-impostor visual baseline', () => {
       const driveFrame = (nowMs: number): void => {
         const sharedInput = {
           cam,
-          catalogs,
+          records: galaxyRecordsOver(catalogs),
           sourceMask: 0xffffffff,
           pxPerRad,
           // Live surface-brightness sliders — arbitrary plausible defaults;
