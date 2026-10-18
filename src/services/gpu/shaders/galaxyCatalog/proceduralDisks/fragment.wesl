@@ -19,7 +19,7 @@
 // The profile's output is scaled by 'in.sbAmp', the physical
 // surface-brightness amplitude computed once per row in
 // 'proceduralDiskSubsystem.ts' via the SAME 'galaxySbAmp' helper the
-// point-sprite bake uses (see 'buildPointInterleavedBuffer.ts'). Sharing
+// point-sprite bake uses (see 'derivePointRecord.ts'). Sharing
 // the helper and the per-catalog 'medianAbsMag' zero-point means an
 // intrinsically bright or compact galaxy pushes this pass's HDR core
 // above the bloom threshold exactly the way its companion point sprite

@@ -6,13 +6,15 @@
  */
 
 import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
-import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
-import { absoluteFromApparent } from '../../../utils/math/absoluteFromApparent';
+import { SDSS_TARGET_MEAN_MAG } from '../../../data/galaxyCatalog/sdssTargetMeanMag';
 import { decodeAngularWeight } from '../../../utils/galaxy/decodeAngularWeight';
-import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
+import { derivePointRecord } from '../../../utils/galaxy/derivePointRecord';
 import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
+import type { GalaxyPointFields } from '../../../@types/engine/GalaxyPointFields';
+import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
+import type { GalaxyPointDerived } from '../../../@types/engine/GalaxyPointDerived';
 
 /**
  * f32 slots per point, duplicated from `galaxyPointVertexLayout.ts` so the
@@ -22,9 +24,6 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * 9 angularWeight · 10 absMag · 11 sbAmp
  */
 const SLOTS_PER_GALAXY_POINT = 12;
-
-/** Post-shift mean magnitude: the shader's `clamp((22 - mag) / 8, …)` is tuned for SDSS-g (~14–22). */
-const SDSS_TARGET_MEAN_MAG = 18;
 
 export function buildPointInterleavedBuffer(
   input: BuildPointInterleavedBufferInput,
@@ -54,20 +53,45 @@ export function buildPointInterleavedBuffer(
   // Sliced so the worker can transfer it without detaching the caller's cloud.
   const isFallbackArr = cloud.orientationIsFallback.slice();
 
+  const stats: GalaxyPointStats = { magOffset, medianAbsMag };
+  const fields: GalaxyPointFields = {
+    x: 0,
+    y: 0,
+    z: 0,
+    magnitude: 0,
+    axisRatio: 0,
+    positionAngleDeg: 0,
+    diameterKpc: 0,
+    orientationIsFallback: false,
+    diameterIsFallback: false,
+  };
+  const d: GalaxyPointDerived = {
+    magnitude: 0,
+    axisRatio: 0,
+    paCos: 0,
+    paSin: 0,
+    radiusMpc: 0,
+    absMag: 0,
+    sbAmp: 0,
+  };
+
   for (let i = 0; i < cloud.count; i++) {
     const o = i * SLOTS_PER_GALAXY_POINT;
-    interleaved[o + 0] = cloud.positions[i * 3 + 0]!;
-    interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
-    interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
+    fields.x = cloud.positions[i * 3 + 0]!;
+    fields.y = cloud.positions[i * 3 + 1]!;
+    fields.z = cloud.positions[i * 3 + 2]!;
+    fields.magnitude = cloud.magG[i]!;
+    fields.axisRatio = cloud.axisRatio[i]!;
+    fields.positionAngleDeg = cloud.positionAngleDeg[i]!;
+    fields.diameterKpc = cloud.diameterKpc[i]!;
+    fields.orientationIsFallback = isFallbackArr[i] === 1;
+    fields.diameterIsFallback = cloud.diameterIsFallback[i] === 1;
+    derivePointRecord(fields, stats, d);
 
-    const g = cloud.magG[i]!;
-    const dx = cloud.positions[i * 3 + 0]!;
-    const dy = cloud.positions[i * 3 + 1]!;
-    const dz = cloud.positions[i * 3 + 2]!;
-    const dMpc = Math.hypot(dx, dy, dz);
-
-    // NaN g snaps to the target mean so the row draws at average intensity.
-    interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
+    interleaved[o + 0] = fields.x;
+    interleaved[o + 1] = fields.y;
+    interleaved[o + 2] = fields.z;
+    interleaved[o + 3] = d.magnitude;
     interleaved[o + 4] = pickColourIndex(
       source,
       cloud.magU[i]!,
@@ -75,34 +99,16 @@ export function buildPointInterleavedBuffer(
       cloud.magR[i]!,
       cloud.magI[i]!,
       cloud.magZ[i]!,
-      dMpc,
+      Math.hypot(fields.x, fields.y, fields.z),
     );
-
-    // Sign bit = fallback-orientation flag; a NaN b/a stays NaN → round mask, no flag.
-    const ab = cloud.axisRatio[i]!;
-    interleaved[o + 5] = isFallbackArr[i] === 1 ? -Math.abs(ab) : ab;
-
-    // Negated: PA runs east-of-north (CCW on sky), UV y points down, and
-    // rotating the UV is the inverse of rotating the ellipse.
-    const paRad = (-cloud.positionAngleDeg[i]! * Math.PI) / 180;
-    interleaved[o + 6] = Math.cos(paRad);
-    interleaved[o + 7] = Math.sin(paRad);
-
-    // Shared helper so disk and thumbnail match this footprint; sign bit = fallback-diameter flag.
-    const padded = paddedRadiusMpc(cloud.diameterKpc[i]!);
-    interleaved[o + 8] = cloud.diameterIsFallback[i] === 1 ? -padded : padded;
-
+    interleaved[o + 5] = d.axisRatio;
+    interleaved[o + 6] = d.paCos;
+    interleaved[o + 7] = d.paSin;
+    interleaved[o + 8] = d.radiusMpc;
     // Raw 0 (never baked) decodes to 1.
     interleaved[o + 9] = decodeAngularWeight(cloud.angularWeight[i]!);
-
-    // From the offset slot-3 magnitude, not raw g: the mode-1 gate's thresholds
-    // live on that shifted scale and would otherwise move by magOffset.
-    interleaved[o + 10] = interleaved[o + 3]! - 5 * Math.log10(dMpc) - 25;
-
-    // Raw physical absMag, not slot 3/10; `proceduralDiskSubsystem.ts` computes
-    // the same `galaxySbAmp` so the point↔disk crossfade holds brightness.
-    const absMag = absoluteFromApparent(g, dMpc);
-    interleaved[o + 11] = galaxySbAmp(absMag, medianAbsMag, cloud.diameterKpc[i]!);
+    interleaved[o + 10] = d.absMag;
+    interleaved[o + 11] = d.sbAmp;
   }
 
   return { interleaved, isFallbackArr };

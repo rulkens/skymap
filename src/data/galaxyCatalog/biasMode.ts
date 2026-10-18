@@ -6,7 +6,7 @@
  *   - `AngularReweight` (2): multiply by the build-time HEALPix angular weight
  *     (the tier build's `bakeBiasWeights`), which flattens GLADE's pencil-beam jets.
  *
- * The values are a GPU contract: `points/vertex.wesl` compares `u.biasMode`
+ * The values are a GPU contract: `points/vertexBody.wesl` compares `u.biasMode`
  * against literal `1u` / `2u`, and the type mirror lives in `BiasMode.d.ts`.
  */
 export const BiasMode = {

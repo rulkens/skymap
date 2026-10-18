@@ -5,7 +5,7 @@
  * visible extent instead (no ring scale; `milkyWay/pick/vertex.wesl`), so
  * the clickable area lands on the glow the user sees, not the larger ring.
  *
- * Mirrors points/vertex.wesl's apparent-size billboard:
+ * Mirrors points/vertexBody.wesl's apparent-size billboard:
  *
  *   apparentPxRadius = (radiusMpc / max(camDistMpc, 0.001)) * pxPerRad
  *   sizePx           = max(pointSizePx, apparentPxRadius * 0.5)

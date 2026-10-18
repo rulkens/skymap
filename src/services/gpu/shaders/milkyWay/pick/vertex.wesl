@@ -5,7 +5,7 @@
 // IN-SHADER from the shared camera uniforms: the world radius
 // 'mw.radiusMpc' (the rendered star/dust cloud's physical radius, not
 // the larger selection ring) is projected to apparent pixels with the
-// SAME derivation points/vertex.wesl applies per galaxy —
+// SAME derivation points/vertexBody.wesl applies per galaxy —
 //
 //   apparentPxRadius = (radiusMpc / distance(camPosWorld, centre)) * pxPerRad
 //   halfExtentPx     = max(mw.minSizePx, apparentPxRadius)
@@ -21,7 +21,7 @@
 // galaxy size slider.
 //
 // The packed pick identity is composed in the vertex stage (mirroring
-// points/vertex.wesl's 'packSelection(source.sourceCode, ii)') and
+// points/vertexBody.wesl's 'packSelection(source.sourceCode, pickIndex)') and
 // forwarded flat-interpolated to the fragment, which writes it verbatim.
 // The MW carries no per-record localIdx, so it is always 0; the vertex
 // adds PICK_SENTINEL_OFFSET here so the cleared-to-zero pick texture
@@ -55,7 +55,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   // Apparent on-screen radius of the disc — same formula as the points
   // shader's apparent-size billboard.  Guard the distance against 0 so
   // a camera parked exactly on the centre doesn't divide by zero (same
-  // 0.001 floor points/vertex.wesl uses).
+  // 0.001 floor points/vertexBody.wesl uses).
   let toCenter = mw.centerWorld - u.camPosWorld;
   let safeDist = max(length(toCenter), 0.001);
   let apparentPxRadius = (mw.radiusMpc / safeDist) * u.pxPerRad;

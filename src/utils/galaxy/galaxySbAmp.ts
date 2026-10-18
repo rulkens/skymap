@@ -19,7 +19,7 @@
  * reference diameter works as long as the point bake (Stage 1) and this
  * disk-pass mirror use the SAME one, which is why it's duplicated as a
  * literal here rather than threaded through as a parameter — the value
- * has to match `buildPointInterleavedBuffer.ts`'s bake exactly for the
+ * has to match `derivePointRecord.ts`'s point bake exactly for the
  * point↔disk crossfade to hold constant brightness.
  *
  * `SB_AMP_MAX` is a float-safety clamp only — it exists to keep a

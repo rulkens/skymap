@@ -79,14 +79,14 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   /**
    * Per-source multiplier on the physical surface-brightness intensity
    * (1.0 = no boost). Plumbed through `SourceUniforms` to
-   * `points/vertex.wesl`. Raise it to lift intrinsically-faint catalogs
+   * `points/vertexBody.wesl`. Raise it to lift intrinsically-faint catalogs
    * (e.g. Milliquas quasars) that the physical model renders dim.
    */
   readonly sbBoost: number;
   /**
    * Per-source half-distance (Mpc) of the depth-fade curve
    * `1 / (1 + (d / falloffHalfMpc)²)`. Plumbed through `SourceUniforms`
-   * to `points/vertex.wesl`. Replaces a prior hardcoded 1000 Mpc.
+   * to `points/vertexBody.wesl`. Replaces a prior hardcoded 1000 Mpc.
    * Sparse far-field catalogs (Milliquas reaches d ~ 8000 Mpc) set a
    * very large value to effectively disable the fade; bulk galaxy
    * catalogs keep the original ~1000 Mpc tuning.

@@ -14,7 +14,7 @@
  * means an entry here, a settings default, a uniform slot, and a shader
  * branch — not a new copy of the UI.
  *
- * `highlightColor` mirrors a constant in `points/vertex.wesl`: the shader
+ * `highlightColor` mirrors a constant in `points/vertexBody.wesl`: the shader
  * cannot read TypeScript, so the swatch the user sees in the panel and the
  * colour the vertex stage writes are two spellings of the same decision.
  * They must be edited together.
@@ -33,7 +33,7 @@ export const PROVENANCE_AXES = [
     id: 'orientation',
     label: 'Orientation',
     hint: 'Disk b/a and position angle. When the source catalog has none, it is hashed from sky position.',
-    /** Magenta — matches the `orientHighlight` branch in points/vertex.wesl. */
+    /** Magenta — matches the `orientHighlight` branch in points/vertexBody.wesl. */
     highlightColor: '#ff1ae6',
     flagsOf: (cloud: GalaxyCatalog): Uint8Array => cloud.orientationIsFallback,
   },
@@ -41,7 +41,7 @@ export const PROVENANCE_AXES = [
     id: 'size',
     label: 'Size',
     hint: 'Galaxy diameter. When the source catalog has none, it falls back to a flat 30 kpc.',
-    /** Green — matches the `sizeHighlight` branch in points/vertex.wesl. */
+    /** Green — matches the `sizeHighlight` branch in points/vertexBody.wesl. */
     highlightColor: '#26ff40',
     flagsOf: (cloud: GalaxyCatalog): Uint8Array => cloud.diameterIsFallback,
   },
