@@ -15,7 +15,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { starExposureRamp } from '../../../../utils/star/starExposureRamp';
 import { starSourcesInBand } from './starSourcesInBand';
-import { FLOATS_PER_VIEW } from '../starCutLayout';
+import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout';
 
 /**
  * This frame's GPU cut inputs, or `null` when no source is on and in band.

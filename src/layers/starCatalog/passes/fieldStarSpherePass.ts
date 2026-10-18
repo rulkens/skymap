@@ -111,7 +111,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../@types/octree/Octree';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -125,8 +125,9 @@ import { STAR_RESOLVE_PX } from '../../../services/engine/frame/partitionStarsBy
 import { starTintFromBpRp } from '../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';
-import { starResidency } from '../load/starResidency';
+import { octreeResidency } from '../../../services/octree/octreeResidency';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
 type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };
@@ -144,12 +145,12 @@ const OFF_FRACTION = 0.8;
  * fresh catalog object — starts empty and the old entry is GC'd with the WeakMap. Holds the currently
  * shown star, or `null` once nothing is present (both read as "not present").
  */
-const presentByCatalog = new WeakMap<StarOctree, PresentStar | null>();
+const presentByCatalog = new WeakMap<Octree<StarColumns>, PresentStar | null>();
 
 /** The sole loaded star catalog (first committed Gaia catalog), or null. */
 function currentCatalog(
   runtime: Pick<StarCatalogRuntime, 'renderer'>,
-): { source: SourceType; octree: StarOctree } | null {
+): { source: SourceType; octree: Octree<StarColumns> } | null {
   for (const loaded of runtime.renderer.loadedCatalogs()) return loaded;
   return null;
 }
@@ -224,7 +225,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass {
       const current = presentByCatalog.get(catalog) ?? null;
       const nearest = nearestResolvableStar(
         catalog,
-        starResidency(runtime, loaded.source),
+        octreeResidency(runtime.chunkStreams, loaded.source),
         ctx.drawCamPos,
         offMpc,
       );

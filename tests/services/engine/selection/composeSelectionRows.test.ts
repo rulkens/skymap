@@ -41,10 +41,11 @@ import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
@@ -101,7 +102,7 @@ const structures: StructureRowFixture = {
 };
 
 /** The starCatalog Layer's slice of the composed resolver — its own live read. */
-function starsFixture(catalog: StarOctree | null): StarRowFixture {
+function starsFixture(catalog: Octree<StarColumns> | null): StarRowFixture {
   return {
     renderer: {
       loadedCatalogs: () =>
@@ -311,7 +312,7 @@ describe('extractRow, composed', () => {
   });
 });
 
-async function makeStarCatalog(): Promise<StarOctree> {
+async function makeStarCatalog(): Promise<Octree<StarColumns>> {
   const octree = buildStarOctree(
     [
       { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },

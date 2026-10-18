@@ -162,19 +162,19 @@ export type OctreeCutInputs = { readonly cut: OctreeCutSpec; readonly nowMs: num
 octreeResidency<C>(chunkStreams: ReadonlyMap<SourceType, OctreeChunkStream<C>>, source: SourceType): OctreeResidency<C>
 ```
 
-- [ ] Write the rename manifest (one entry per row above, `["<file>#<Symbol>", "<NewName>"]`) and run
+- [x] Write the rename manifest (one entry per row above, `["<file>#<Symbol>", "<NewName>"]`) and run
       `npm run refactor -- rename --manifest <renames.json> --dry`; read the blast radius, then run it.
-- [ ] Write the move manifest (`[{ "from": …, "to": … }]`) and run `npm run move-files -- --manifest <moves.json> --dry`,
+- [x] Write the move manifest (`[{ "from": …, "to": … }]`) and run `npm run move-files -- --manifest <moves.json> --dry`,
       then for real. Commit (mechanical only: "rename the star octree runtime to Octree and move it to a neutral home").
-- [ ] Fix by hand: the `package::starCatalog::cutIo` imports in `shaders/octree/cut.wesl` and
+- [x] Fix by hand: the `package::starCatalog::cutIo` imports in `shaders/octree/cut.wesl` and
       `shaders/starCatalog/vertex.wesl:85-93` become `package::octree::cutIo`; the `cut.wesl?static` specifier in
       `octreeCutGpu.ts`. Grep `src tests tools docs` for every old symbol, basename and `starCatalog/cut`.
-- [ ] Content commit: the generic parameter `<C>` on the five types, `starCount` → `recordCount`, `OctreeCutInputs`,
+- [x] Content commit: the generic parameter `<C>` on the five types, `starCount` → `recordCount`, `OctreeCutInputs`,
       `octreeResidency`'s narrowed parameter, and the record-blind modules' remaining `star`-named locals and comments
       (the `Pc` names wait for Task 2). `grep -rn "layers/" src/services/octree src/services/gpu/octree src/utils/octree`
       prints nothing.
-- [ ] `docs/RENDERER.md:39,42,71,72`: the new paths and names.
-- [ ] Gate: `npm run typecheck:fast`, `npm test -- octree star`, `npm run build`. No new test (a rename).
+- [x] `docs/RENDERER.md:39,42,71,72`: the new paths and names.
+- [x] Gate: `npm run typecheck:fast`, `npm test -- octree star`, `npm run build`. No new test (a rename).
 
 ### Task 2: the octree family table (prep 2)
 

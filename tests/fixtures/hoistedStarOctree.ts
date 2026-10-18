@@ -1,5 +1,5 @@
 /**
- * hoistedStarOctree — a hand-built v2 `StarOctree` (1 pc cells, origin 0) with one chunk:
+ * hoistedStarOctree — a hand-built v2 `Octree` (1 pc cells, origin 0) with one chunk:
  *
  *   index row 0  level 2 [0,4)³  chunk root of chunk 0; its blob is record 0
  *   index row 1  level 3 [0,8)³  the root; one hoisted star at (6,6,6) pc (record 1), blob record 2
@@ -7,9 +7,9 @@
  *
  * Ordinals: 0 blob, 1 hoisted star, 2 blob, 3 and 4 the chunk's stars.
  */
-import type { StarChunk } from '../../src/@types/data/starCatalog/StarChunk';
+import type { OctreeChunk } from '../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../src/@types/data/starCatalog/StarColumns';
-import type { StarOctree } from '../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../src/@types/octree/Octree';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import {
   NO_CHUNK_REF,
@@ -43,11 +43,11 @@ function table(rows: readonly (readonly number[])[]): OctreeNodeTable {
   };
 }
 
-export function hoistedStarOctree(): { octree: StarOctree; chunk: StarChunk } {
+export function hoistedStarOctree(): { octree: Octree<StarColumns>; chunk: OctreeChunk<StarColumns> } {
   const chunkNodes = table([[1, 0, 0, 0, 2, 0, NO_CHUNK_REF]]);
-  const octree: StarOctree = {
+  const octree: Octree<StarColumns> = {
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
-    starCount: 3,
+    recordCount: 3,
     columns: STAR_COLUMN_SCHEMA,
     // level, morton, childMask, firstRecord, ownCount, blobCount, chunkRef
     nodes: table([
@@ -62,7 +62,7 @@ export function hoistedStarOctree(): { octree: StarOctree; chunk: StarChunk } {
     chunkNodeCap: 1,
     chunkCount: 1,
   };
-  const chunk: StarChunk = {
+  const chunk: OctreeChunk<StarColumns> = {
     ref: octree.chunks[0]!,
     parent: null,
     nodes: chunkNodes,

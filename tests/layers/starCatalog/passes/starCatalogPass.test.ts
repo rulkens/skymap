@@ -21,12 +21,13 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
 import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 
@@ -68,7 +69,7 @@ function makeFrame(originMpc: Vec3): StarCutInputs {
 
 function makeRuntime(frame: StarCutInputs | null) {
   const drawCut = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogCutDrawArgs) => void>();
-  const catalog = { starCount: 1 } as unknown as StarOctree;
+  const catalog = { starCount: 1 } as unknown as Octree<StarColumns>;
   const renderer = {
     loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }][Symbol.iterator](),
     getFrameCut: () => frame,

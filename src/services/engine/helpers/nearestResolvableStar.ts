@@ -4,19 +4,19 @@
  * retired, so this picks which star gets the close-range sphere. The descent enters every node
  * whose box, grown by the radius on each axis, contains the camera: the nearest star can sit
  * across a leaf face from the camera's own leaf. Records are placed through
- * `starNodeOriginRelCamMpc`, the formula `resolveStarRecord` and the renderer use, so the
+ * `octreeNodeOriginRelCamMpc`, the formula `resolveStarRecord` and the renderer use, so the
  * sphere lands where the sprite drew.
  */
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
-import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
+import type { Octree } from '../../../@types/octree/Octree';
+import type { OctreeResidency } from '../../../@types/octree/OctreeResidency';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { NO_CHUNK_REF, OCTANTS, OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
+import { octreeIndex } from '../../../utils/octree/octreeIndex';
 import { lowerBoundNodeRow } from '../../../utils/octree/lowerBoundNodeRow';
-import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
+import { octreeNodeOriginRelCamMpc } from '../../../utils/octree/octreeNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
@@ -30,8 +30,8 @@ const SUN: Vec3 = [0, 0, 0];
  * it is resident: an absent chunk's stars are not drawn either.
  */
 export function nearestResolvableStar(
-  octree: StarOctree,
-  resident: StarResidency,
+  octree: Octree<StarColumns>,
+  resident: OctreeResidency<StarColumns>,
   camPosMpc: Readonly<Vec3>,
   searchRadiusMpc: number,
 ): { ordinal: number; positionMpc: Vec3; bpRp: number; distanceMpc: number } | null {
@@ -61,7 +61,7 @@ export function nearestResolvableStar(
     to: number,
     ordinalBase: number,
   ): void {
-    const { childIndex, boxOriginPc, boxEdgePc } = starOctreeIndex(nodes, octree.grid);
+    const { childIndex, boxOriginPc, boxEdgePc } = octreeIndex(nodes, octree.grid);
     const stack: number[] = [];
     for (let k = from; k < to; k++) stack.push(k);
     while (stack.length > 0) {
@@ -110,7 +110,7 @@ export function nearestResolvableStar(
       // Own records ARE real stars (hoisted ones included), reconstructed as resolveStarRecord does.
       const count = nodes.ownCount[i]!;
       if (count === 0) continue;
-      const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
+      const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
         octree.grid,
         nodes.morton[i]!,
         nodes.level[i]!,

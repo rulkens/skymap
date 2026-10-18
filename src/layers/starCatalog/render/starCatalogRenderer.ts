@@ -3,7 +3,7 @@
  * the depthless HDR accumulation. Its own pipeline: records are two u32 each
  * (`packStarGpuRecords`), vertex-pulled and rebuilt against their node's box.
  * `upload` commits a catalog once; the per-frame cut is taken on the GPU
- * (`starCutGpu`) from the inputs `setFrameCut` holds, and each stream draws with
+ * (`octreeCutGpu`) from the inputs `setFrameCut` holds, and each stream draws with
  * one `drawIndirect`. Leaves go to full-res HDR (`fs`), aggregates LINEAR to the
  * low-res `star-aggregates` offscreen (`fsLinear`); both are rgba16float.
  */
@@ -11,14 +11,14 @@
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
+import type { Octree } from '../../../@types/octree/Octree';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
-import type { StarDrawStream } from '../@types/StarDrawStream';
-import type { StarChunkHost } from '../@types/StarChunkHost';
+import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
+import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
@@ -35,19 +35,20 @@ import {
   PX_PER_RAD_FLOAT_INDEX,
   writeStarFocus,
 } from './starCatalogLayout';
-import { createStarCutGpu } from './starCutGpu';
-import { WORD_BYTES } from './starCutLayout';
+import { createOctreeCutGpu } from '../../../services/gpu/octree/octreeCutGpu';
+import { WORD_BYTES } from '../../../services/gpu/octree/octreeCutLayout';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 
 /** One committed catalog's GPU records + the octree kept for the layer. */
 type LoadedStarSource = {
-  octree: StarOctree;
+  octree: Octree<StarColumns>;
   slots: number;
   /** The chunk each slot holds: the pick's pool index ↔ ordinal map, and a host slot's rows. */
-  slotChunks: (StarChunk | null)[];
+  slotChunks: (OctreeChunk<StarColumns> | null)[];
   /** `slotChunks` at the last pick draw: a readback names what was drawn, not what landed since. */
-  pickSlotChunks: (StarChunk | null)[];
+  pickSlotChunks: (OctreeChunk<StarColumns> | null)[];
   /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
@@ -61,7 +62,7 @@ export function createStarCatalogRenderer(
   // ONE fact for the whole frame, so plain closure state, not a map keyed per ctx.
   let frameCut: StarCutInputs | null = null;
   let frameRecut = true;
-  const cut = createStarCutGpu(device);
+  const cut = createOctreeCutGpu(device);
 
   const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
 
@@ -75,7 +76,7 @@ export function createStarCatalogRenderer(
   // would hand every draw the LAST write (docs/RENDERER.md landmine #1).
   // And one ring per stream: in the real view the aggregate stream rasterises
   // a low-res target, so its viewport and pxPerRad differ from the leaf's.
-  const makeCameraRing = (stream: StarDrawStream) =>
+  const makeCameraRing = (stream: OctreeDrawStream) =>
     createViewSlotUniformRing({
       device,
       label: `star-catalog-camera-uniform-${stream}`,
@@ -120,7 +121,7 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  function upload(source: SourceType, octree: StarOctree, slots: number): number {
+  function upload(source: SourceType, octree: Octree<StarColumns>, slots: number): number {
     const poolSlots = Math.min(slots, octree.chunkCount);
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, poolSlots);
@@ -146,8 +147,8 @@ export function createStarCatalogRenderer(
     sources.set(source, {
       octree,
       slots: poolSlots,
-      slotChunks: new Array<StarChunk | null>(poolSlots).fill(null),
-      pickSlotChunks: new Array<StarChunk | null>(poolSlots).fill(null),
+      slotChunks: new Array<OctreeChunk<StarColumns> | null>(poolSlots).fill(null),
+      pickSlotChunks: new Array<OctreeChunk<StarColumns> | null>(poolSlots).fill(null),
       recordsBuffer,
       recordsBindGroup,
     });
@@ -157,7 +158,7 @@ export function createStarCatalogRenderer(
   function hostOf(
     { octree, slotChunks }: LoadedStarSource,
     hostSlot: number | null,
-  ): StarChunkHost {
+  ): OctreeChunkHost {
     if (hostSlot === null) return { nodes: octree.nodes, nodeBase: 0 };
     return {
       nodes: slotChunks[hostSlot]!.nodes,
@@ -168,7 +169,7 @@ export function createStarCatalogRenderer(
   function uploadChunk(
     source: SourceType,
     slot: number,
-    chunk: StarChunk,
+    chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
   ): void {
     const entry = sources.get(source);
@@ -229,7 +230,10 @@ export function createStarCatalogRenderer(
     return octree.records.count + slot * octree.chunkCapacity + local;
   }
 
-  function* loadedCatalogs(): IterableIterator<{ source: SourceType; octree: StarOctree }> {
+  function* loadedCatalogs(): IterableIterator<{
+    source: SourceType;
+    octree: Octree<StarColumns>;
+  }> {
     for (const [source, entry] of sources) {
       yield { source, octree: entry.octree };
     }

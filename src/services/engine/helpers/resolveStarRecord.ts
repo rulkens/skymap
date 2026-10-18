@@ -6,14 +6,15 @@
  * is the largest at or below it: owners rise strictly in both formats (SKST's
  * aggregate region breaks that over ALL rows), so a binary search finds it.
  * A blob falls past its owner's own range and resolves to null. Positions go
- * through `starNodeOriginRelCamMpc`, the formula the renderer draws with.
+ * through `octreeNodeOriginRelCamMpc`, the formula the renderer draws with.
  */
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
-import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
+import type { Octree } from '../../../@types/octree/Octree';
+import type { OctreeResidency } from '../../../@types/octree/OctreeResidency';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
-import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
+import { octreeNodeOriginRelCamMpc } from '../../../utils/octree/octreeNodeOriginRelCamMpc';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
@@ -32,8 +33,8 @@ function ownerRows(nodes: OctreeNodeTable): Uint32Array {
 }
 
 export function resolveStarRecord(
-  octree: StarOctree,
-  resident: StarResidency,
+  octree: Octree<StarColumns>,
+  resident: OctreeResidency<StarColumns>,
   ordinal: number,
 ): { positionMpc: Vec3; absMag: number; bpRp: number } | null {
   if (!Number.isInteger(ordinal) || ordinal < 0) return null;
@@ -62,7 +63,7 @@ export function resolveStarRecord(
   const row = owners[found]!;
   if (recordIndex >= nodes.firstRecord[row]! + nodes.ownCount[row]!) return null;
 
-  const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
+  const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
     octree.grid,
     nodes.morton[row]!,
     nodes.level[row]!,

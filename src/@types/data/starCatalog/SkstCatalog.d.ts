@@ -1,5 +1,5 @@
 /**
- * SkstCatalog — a decoded SKST v1 star catalog; `starOctreeFromSkst` adapts it to `StarOctree`.
+ * SkstCatalog — a decoded SKST v1 star catalog; `starOctreeFromSkst` adapts it to `Octree`.
  *
  * Where `GalaxyCatalog` is a flat struct-of-arrays of absolute-cartesian
  * floats, a star catalog is an *octree over cell-quantized 6-byte

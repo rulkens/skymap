@@ -6,8 +6,8 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
+import type { Octree } from '../../../@types/octree/Octree';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCutInputs } from './StarCutInputs';
 import type { StarCatalogCutDrawArgs } from './StarCatalogCutDrawArgs';
@@ -19,12 +19,12 @@ export type StarCatalogRenderer = Renderer & {
    * upload; `min(slots, octree.chunkCount)` chunk slots follow the index, and that pool
    * size is returned for the chunk stream to match.
    */
-  upload(source: SourceType, octree: StarOctree, slots: number): number;
+  upload(source: SourceType, octree: Octree, slots: number): number;
   /**
    * Land a chunk in a slot: its records and rows, then every root's resident bit, written in
    * the rows of `hostSlot` (its parent's slot; null when the index holds its roots).
    */
-  uploadChunk(source: SourceType, slot: number, chunk: StarChunk, hostSlot: number | null): void;
+  uploadChunk(source: SourceType, slot: number, chunk: OctreeChunk, hostSlot: number | null): void;
   /** Free a slot: every root of its chunk stops refining, then the slot's row count is cleared. */
   evictChunk(source: SourceType, slot: number, hostSlot: number | null): void;
   /**
@@ -43,7 +43,7 @@ export type StarCatalogRenderer = Renderer & {
   /** The inverse: null when the ordinal's chunk is not resident. */
   poolRecordIndex(source: SourceType, ordinal: number): number | null;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
-  loadedCatalogs(): Iterable<{ source: SourceType; octree: StarOctree }>;
+  loadedCatalogs(): Iterable<{ source: SourceType; octree: Octree }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */
   pickResources(): StarCatalogPickResources;
   /**

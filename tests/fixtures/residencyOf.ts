@@ -1,8 +1,9 @@
-import type { StarChunk } from '../../src/@types/data/starCatalog/StarChunk';
-import type { StarResidency } from '../../src/@types/data/starCatalog/StarResidency';
+import type { OctreeChunk } from '../../src/@types/octree/OctreeChunk';
+import type { OctreeResidency } from '../../src/@types/octree/OctreeResidency';
+import type { StarColumns } from '../../src/@types/data/starCatalog/StarColumns';
 
 /** A residency holding exactly `chunks`, looked up as the chunk stream does; none: a v1 catalog. */
-export function residencyOf(...chunks: readonly StarChunk[]): StarResidency {
+export function residencyOf(...chunks: readonly OctreeChunk<StarColumns>[]): OctreeResidency<StarColumns> {
   return {
     chunk: (id) => chunks.find((c) => c.ref.id === id) ?? null,
     chunkOfRecord: (ordinal) =>

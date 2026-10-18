@@ -15,12 +15,12 @@ import {
   NODE_RESIDENT_BIT,
   OPACITY_CHANNELS,
   WORD_BYTES,
-} from '../../../../src/layers/starCatalog/render/starCutLayout';
+} from '../../../../src/services/gpu/octree/octreeCutLayout';
 import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/octreeFormat';
 import { Source } from '../../../../src/data/sources';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
-import type { StarChunk } from '../../../../src/@types/data/starCatalog/StarChunk';
+import type { Octree } from '../../../../src/@types/octree/Octree';
+import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
@@ -94,7 +94,7 @@ function columns(count: number): StarColumns {
  */
 function octreeOf(
   over: { chunks?: number; chunkCapacity?: number; chunkNodeCap?: number } = {},
-): StarOctree {
+): Octree<StarColumns> {
   const chunkCount = over.chunks ?? 3;
   const level = Uint8Array.of(...new Array(9).fill(1), 3);
   const morton = Uint32Array.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 0);
@@ -102,7 +102,7 @@ function octreeOf(
   const firstRecord = Uint32Array.from({ length: 10 }, (_, i) => i * 6);
   return {
     grid: { bits: 4, origin: [0, 0, 0], cellEdge: 1 },
-    starCount: 0,
+    recordCount: 0,
     columns: STAR_COLUMN_SCHEMA,
     nodes: {
       count: 10,
@@ -133,7 +133,7 @@ function octreeOf(
 }
 
 /** Chunk 1 (root: level 1, Morton 1, index row 1): one level-0 row with 3 own records. */
-const CHUNK: StarChunk = {
+const CHUNK: OctreeChunk<StarColumns> = {
   ref: octreeOf().chunks[1]!,
   parent: null,
   nodes: {
@@ -246,7 +246,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     const base = octreeOf({ chunks: 2 });
     // Chunk 1 holds the roots at index rows 1 and 2 (level 1, Morton 1 and 2).
-    const octree: StarOctree = {
+    const octree: Octree<StarColumns> = {
       ...base,
       nodes: {
         ...base.nodes,
@@ -256,7 +256,7 @@ describe('starCatalogRenderer chunk pool', () => {
       },
       chunks: [base.chunks[0]!, { ...base.chunks[1]!, roots: [1, 2], nodes: 2, records: 5 }],
     };
-    const chunk: StarChunk = {
+    const chunk: OctreeChunk<StarColumns> = {
       ref: octree.chunks[1]!,
       parent: null,
       nodes: {
@@ -406,7 +406,7 @@ describe('starCatalogRenderer chunk pool', () => {
       bytes: 0,
       nodes: 1,
     });
-    const octree: StarOctree = {
+    const octree: Octree<StarColumns> = {
       ...octreeOf(),
       nodes: {
         count: 2,
@@ -422,14 +422,14 @@ describe('starCatalogRenderer chunk pool', () => {
       chunks: [ref(0, 2, 1)],
       chunkCount: 2,
     };
-    const parent: StarChunk = {
+    const parent: OctreeChunk<StarColumns> = {
       ref: ref(0, 2, 1),
       parent: null,
       nodes: row(1, 1, 0, 1),
       records: columns(1),
       chunks: [ref(1, 3, 3)],
     };
-    const child: StarChunk = {
+    const child: OctreeChunk<StarColumns> = {
       ref: ref(1, 3, 3),
       parent: 0,
       nodes: row(0, 0, 3, NO_CHUNK_REF),

@@ -5,7 +5,7 @@
  * fraction of the box. One SKST object is the whole catalog, so there are no chunks.
  */
 import type { SkstCatalog } from '../../@types/data/starCatalog/SkstCatalog';
-import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../@types/octree/Octree';
 import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
 import { NO_CHUNK_REF, OCTANTS, STAR_COLUMN_SCHEMA } from '../../data/octree/octreeFormat';
 import {
@@ -14,12 +14,13 @@ import {
   RECORD_BYTES,
   unpackStarRecord,
 } from '../../data/starCatalog/starCatalogFormat';
-import { starOctreeIndex } from './starOctreeIndex';
+import { octreeIndex } from '../octree/octreeIndex';
+import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 
 /** 10-bit v1 offset → 16-bit fraction of the box. */
 const OFFSET_WIDEN_SHIFT = 6;
 
-export function starOctreeFromSkst(cat: SkstCatalog): StarOctree {
+export function starOctreeFromSkst(cat: SkstCatalog): Octree<StarColumns> {
   const grid = { bits: cat.mortonBitsPerAxis, origin: cat.gridOrigin, cellEdge: cat.cellEdgePc };
   const n = cat.nodes.length;
   const nodes: OctreeNodeTable = {
@@ -42,7 +43,7 @@ export function starOctreeFromSkst(cat: SkstCatalog): StarOctree {
   }
 
   // Rows sort (level, morton), so a forward scan sums every child before its parent.
-  const { childIndex } = starOctreeIndex(nodes, grid);
+  const { childIndex } = octreeIndex(nodes, grid);
   const subtree = new Uint32Array(n);
   for (let i = 0; i < n; i++) {
     if (nodes.childMask[i] === 0) {
@@ -73,7 +74,7 @@ export function starOctreeFromSkst(cat: SkstCatalog): StarOctree {
 
   return {
     grid,
-    starCount: cat.starCount,
+    recordCount: cat.starCount,
     columns: STAR_COLUMN_SCHEMA,
     nodes,
     records: { count, offset, absMag, colourIndex },

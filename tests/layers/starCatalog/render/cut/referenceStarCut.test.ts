@@ -26,24 +26,25 @@ import {
   NODE_FOLDED_BIT,
   OWN_COUNT_SHIFT,
   chunkRootRefineDeltas,
-  packStarChunkNodes,
-  packStarCutNodes,
-  writeStarCutUniforms,
-} from '../../../../../src/layers/starCatalog/render/starCutLayout';
+  packOctreeChunkNodes,
+  packOctreeCutNodes,
+  writeOctreeCutUniforms,
+} from '../../../../../src/services/gpu/octree/octreeCutLayout';
 import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../../../../src/data/octree/octreeFormat';
 import { stratifyOctree } from '../../../../../tools/octree/stratifyOctree';
 import {
   makeOctreeBuildInput,
   randomOctreeRecords,
 } from '../../../../fixtures/makeOctreeBuildInput';
-import type { StarOctree } from '../../../../../src/@types/data/starCatalog/StarOctree';
-import type { StarChunk } from '../../../../../src/@types/data/starCatalog/StarChunk';
+import type { Octree } from '../../../../../src/@types/octree/Octree';
+import type { OctreeChunk } from '../../../../../src/@types/octree/OctreeChunk';
 import type { OctreeGrid } from '../../../../../src/@types/octree/OctreeGrid';
 import type { OctreeNodeTable } from '../../../../../src/@types/octree/OctreeNodeTable';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { starOctreeFromSkst } from '../../../../../src/utils/star/starOctreeFromSkst';
+import type { StarColumns } from '../../../../../src/@types/data/starCatalog/StarColumns';
 
 const ROOT = 6;
 const NODE_MASK = 0x3fffff;
@@ -65,7 +66,7 @@ const CATALOG: SkstCatalog = {
   records: new Uint8Array(24 * 6),
 };
 const OCTREE = starOctreeFromSkst(CATALOG);
-const NODES = packStarCutNodes(OCTREE, 0);
+const NODES = packOctreeCutNodes(OCTREE, 0);
 const LEAVES = [0, 1, 2, 3];
 
 type Over = {
@@ -81,7 +82,7 @@ type Over = {
 function run(camCells: Vec3, over: Over = {}) {
   const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
   const camMpc = camCells.map((c) => c * SCALE_UNITS.PC_TO_MPC) as unknown as Vec3;
-  writeStarCutUniforms(buf, OCTREE, { slots: 0 }, camMpc, {
+  writeOctreeCutUniforms(buf, OCTREE, { slots: 0 }, camMpc, {
     refineThreshold: over.threshold ?? 2,
     fadeStep: over.fadeStep ?? 1,
     drawBudget: over.budget ?? 1_000_000,
@@ -246,11 +247,15 @@ function table(rows: readonly Row[]): OctreeNodeTable {
   return t;
 }
 
-function octreeOf(nodes: OctreeNodeTable, grid: OctreeGrid, chunk?: StarChunk): StarOctree {
+function octreeOf(
+  nodes: OctreeNodeTable,
+  grid: OctreeGrid,
+  chunk?: OctreeChunk<StarColumns>,
+): Octree<StarColumns> {
   const count = nodes.count === 0 ? 0 : nodes.firstRecord[nodes.count - 1]! + 8192;
   return {
     grid,
-    starCount: 0,
+    recordCount: 0,
     columns: STAR_COLUMN_SCHEMA,
     nodes,
     records: {
@@ -281,7 +286,7 @@ function octreeOf(nodes: OctreeNodeTable, grid: OctreeGrid, chunk?: StarChunk): 
 }
 
 function cutOver(
-  octree: StarOctree,
+  octree: Octree<StarColumns>,
   slots: number,
   pool: Uint32Array,
   camCells: Vec3,
@@ -291,7 +296,7 @@ function cutOver(
   const camMpc = camCells.map(
     (c) => c * octree.grid.cellEdge * SCALE_UNITS.PC_TO_MPC,
   ) as unknown as Vec3;
-  writeStarCutUniforms(buf, octree, { slots }, camMpc, {
+  writeOctreeCutUniforms(buf, octree, { slots }, camMpc, {
     refineThreshold: over.threshold ?? 2,
     fadeStep: over.fadeStep ?? 1,
     drawBudget: over.budget ?? 1_000_000,
@@ -319,7 +324,7 @@ describe('referenceStarCut over own records and blobs', () => {
       makeOctreeBuildInput(randomOctreeRecords(200, 7, 640, [-6, 14]), grid),
     );
     const octree = octreeOf(tree.nodes, grid);
-    const pool = packStarCutNodes(octree, 0);
+    const pool = packOctreeCutNodes(octree, 0);
     const n = tree.nodes.count;
     const root = n - 1;
     const parent = (i: number) => pool[i * CUT_NODE_WORDS + NODE_PARENT_WORD]!;
@@ -357,7 +362,7 @@ describe('referenceStarCut over own records and blobs', () => {
       makeOctreeBuildInput(randomOctreeRecords(stars, 11, 640, [-6, 14]), grid),
     );
     const octree = octreeOf(tree.nodes, grid);
-    const pool = packStarCutNodes(octree);
+    const pool = packOctreeCutNodes(octree);
     const word = (i: number, w: number) => pool[i * CUT_NODE_WORDS + w]!;
     const folded = (i: number) => (word(i, NODE_BITS_WORD) & NODE_FOLDED_BIT) !== 0;
     const rows = tree.nodes.count;
@@ -393,7 +398,7 @@ describe('referenceStarCut over own records and blobs', () => {
   // Index: one chunk root (L1, x 0..2) holding 2 own records and a blob over 3 stars.
   // Its chunk: two L0 rows, 1 and 2 own records, in the pool's one slot (rows 1, 2).
   const grid: OctreeGrid = { bits: 1, origin: [0, 0, 0], cellEdge: 1 };
-  const chunk: StarChunk = {
+  const chunk: OctreeChunk<StarColumns> = {
     ref: {
       id: 0,
       recordBase: 0,
@@ -424,10 +429,10 @@ describe('referenceStarCut over own records and blobs', () => {
     chunk,
   );
   const root = { level: 1, morton: 0, rootRow: 0 };
-  const chunkRows = packStarChunkNodes(chunk, [root], { nodeBase: 1, recordBase: 3 }, 2, 0);
+  const chunkRows = packOctreeChunkNodes(chunk, [root], { nodeBase: 1, recordBase: 3 }, 2, 0);
   const poolOf = (resident: boolean) => {
     const pool = new Uint32Array(3 * CUT_NODE_WORDS);
-    pool.set(packStarCutNodes(octree, 0));
+    pool.set(packOctreeCutNodes(octree, 0));
     pool.set(chunkRows, CUT_NODE_WORDS);
     if (resident) {
       pool[NODE_BITS_WORD] = pool[NODE_BITS_WORD]! | NODE_RESIDENT_BIT;

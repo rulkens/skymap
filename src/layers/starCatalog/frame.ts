@@ -13,34 +13,35 @@ import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContent
 import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
-import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
-import type { StarCutSpec } from './@types/StarCutSpec';
+import type { Octree } from '../../@types/octree/Octree';
+import type { OctreeCutSpec } from '../../@types/octree/OctreeCutSpec';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
-import type { StarChunkStream } from './@types/StarChunkStream';
-import { NODE_FADE_MS } from '../../data/starNodeFade';
+import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
+import { NODE_FADE_MS } from '../../data/octree/octreeNodeFade';
 import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
 import { starCutInputs } from './render/cut/starCutInputs';
-import { sameStarCut } from './render/cut/sameStarCut';
+import { sameOctreeCut } from '../../utils/octree/sameOctreeCut';
 import { resizeStarPools } from './load/resizeStarPools';
-import { planStarChunks } from '../../utils/star/planStarChunks';
+import { planOctreeChunks } from '../../utils/octree/planOctreeChunks';
+import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 
 export function starCatalogPlanner(
   runtime: StarCatalogRuntime,
 ): Extract<FrameContentPlanner<void>, { scope: 'once' }> {
-  let anchor: StarCutSpec | null = null;
+  let anchor: OctreeCutSpec | null = null;
   let changedAtMs = -Infinity;
   // The pool's LRU clock; any strictly increasing count serves.
   let frameIndex = 0;
-  // A landing chunk changes the cut without changing `sameStarCut`'s inputs.
-  const seenEpoch = new WeakMap<StarChunkStream, number>();
+  // A landing chunk changes the cut without changing `sameOctreeCut`'s inputs.
+  const seenEpoch = new WeakMap<OctreeChunkStream<StarColumns>, number>();
   // The cut and frame of the last chunk plan, and whether it left chunks wanted.
-  let plannedCut: StarCutSpec | null = null;
+  let plannedCut: OctreeCutSpec | null = null;
   let plannedFrame = 0;
   let wantedChunks = false;
   let recutLast = true;
   // The debug chunk-pool size last applied; a change re-installs the pools from the loaded octrees.
   let appliedSlots: number | null = null;
-  const observeEpoch = (stream: StarChunkStream): boolean => {
+  const observeEpoch = (stream: OctreeChunkStream<StarColumns>): boolean => {
     const epoch = stream.epoch();
     if (seenEpoch.get(stream) === epoch) return false;
     seenEpoch.set(stream, epoch);
@@ -65,7 +66,8 @@ export function starCatalogPlanner(
       let residencyChanged = false;
       if (inputs === null) plannedCut = null;
       else {
-        const streams: { stream: StarChunkStream; octree: StarOctree }[] = [];
+        const streams: { stream: OctreeChunkStream<StarColumns>; octree: Octree<StarColumns> }[] =
+          [];
         for (const { source, octree } of runtime.renderer.loadedCatalogs()) {
           const stream = runtime.chunkStreams.get(source);
           if (stream === undefined || !inputs.cut.sources.some((s) => s.source === source)) {
@@ -82,13 +84,13 @@ export function starCatalogPlanner(
           plannedCut === null ||
           residencyChanged ||
           (frameIndex - plannedFrame >= STAR_PLAN_INTERVAL_FRAMES &&
-            (wantedChunks || inFlight > 0 || !sameStarCut(inputs.cut, plannedCut)));
+            (wantedChunks || inFlight > 0 || !sameOctreeCut(inputs.cut, plannedCut)));
         if (due) {
           plannedCut = inputs.cut;
           plannedFrame = frameIndex;
           wantedChunks = false;
           for (const { stream, octree } of streams) {
-            const { touched, requests } = planStarChunks(
+            const { touched, requests } = planOctreeChunks(
               octree,
               inputs.cut,
               stream.resident,
@@ -111,7 +113,7 @@ export function starCatalogPlanner(
       // eye, and a skipped frame's fade time rides the next cut's step. A landing re-cuts at once.
       let moving = false;
       if (inputs === null) anchor = null;
-      else if (residencyChanged || anchor === null || !sameStarCut(inputs.cut, anchor)) {
+      else if (residencyChanged || anchor === null || !sameOctreeCut(inputs.cut, anchor)) {
         moving = anchor !== null && !residencyChanged;
         anchor = inputs.cut;
         changedAtMs = nowMs;

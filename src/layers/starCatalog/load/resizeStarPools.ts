@@ -4,7 +4,7 @@
  * first failure's message (a pool past its cap names the largest count that
  * fits) or null; a failed source keeps its old pool.
  */
-import { installStarPool } from './installStarPool';
+import { installOctreePool } from '../../../services/octree/installOctreePool';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 
 export function resizeStarPools(
@@ -17,7 +17,7 @@ export function resizeStarPools(
     const req = slot.lastRequest();
     if (octree === null || req === null) continue;
     try {
-      installStarPool(runtime.poolHost, source, octree, req.tier, slotsOverride);
+      installOctreePool(runtime.poolHost, source, octree, req.tier, slotsOverride);
     } catch (err) {
       error ??= (err as Error).message;
     }

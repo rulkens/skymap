@@ -1,6 +1,6 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
 import type { StarCatalogFormat } from './StarCatalogFormat';
-import type { StarSourceBudgets } from './StarSourceBudgets';
+import type { OctreeBudgets } from '../../octree/OctreeBudgets';
 
 /**
  * A star catalog streamed from disk — the survey-wide Gaia bin today.
@@ -22,7 +22,7 @@ export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   /** Filename stem the fetcher builds the format's path from. */
   readonly binBaseName: string;
   /** Per-tier limits: the cut's draw budget and the octree pool's slots. */
-  readonly budgets: StarSourceBudgets;
+  readonly budgets: OctreeBudgets;
   /** Camera-distance crossfade band to the procedural MW cloud, parsecs. */
   readonly crossfadePc: { readonly inner: number; readonly outer: number };
 };
