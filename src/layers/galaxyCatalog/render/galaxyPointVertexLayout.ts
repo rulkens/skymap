@@ -76,7 +76,7 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 36;
  */
 const ABS_MAG_BYTE_OFFSET = 40;
 
-/** Slot 11: physical surface-brightness amplitude (see buildPointInterleavedBuffer slot 11). */
+/** Slot 11: physical surface-brightness amplitude (see `derivePointRecord`'s `sbAmp`). */
 const SB_AMP_BYTE_OFFSET = 44;
 
 /**

@@ -63,6 +63,19 @@ describe('buildPointInterleavedBuffer', () => {
     expect(interleaved[2 * SLOTS + 9]).toBe(1);
   });
 
+  it('routes each fallback flag to its own slot sign and echoes the orientation flags', () => {
+    const cloud = makeCloud(3);
+    cloud.orientationIsFallback.set([0, 1, 0]);
+    cloud.diameterIsFallback.set([0, 0, 1]);
+    const { interleaved, isFallbackArr } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    expect([0, 1, 2].map((r) => Math.sign(interleaved[r * SLOTS + 5]!))).toEqual([1, -1, 1]);
+    expect([0, 1, 2].map((r) => Math.sign(interleaved[r * SLOTS + 8]!))).toEqual([1, 1, -1]);
+    expect([...isFallbackArr]).toEqual([0, 1, 0]);
+  });
+
   it('shifts the per-galaxy-catalog magG mean toward the SDSS target (≈18)', () => {
     // Build a cloud whose mean magG is far from 18 — verify the bake's
     // output mean (slot 3 across all rows) lands close to 18.

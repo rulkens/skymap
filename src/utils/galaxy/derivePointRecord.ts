@@ -38,8 +38,8 @@ export function derivePointRecord(
   out.radiusMpc = f.diameterIsFallback ? -padded : padded;
 
   // From the offset magnitude, not raw g: the mode-1 gate's thresholds live on
-  // that shifted scale. Rounded to f32 first because the interleave always
-  // derived it from the stored slot-3 float; skipping it moves slot 10 by an ulp.
+  // that shifted scale. Rounded to f32 to match slot 3's stored value; unrounded,
+  // slot 10 drifts an ulp.
   out.absMag = Math.fround(out.magnitude) - 5 * Math.log10(dMpc) - 25;
 
   // Raw physical absMag, not the offset one; `proceduralDiskSubsystem.ts` computes
