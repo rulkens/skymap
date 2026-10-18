@@ -1,34 +1,15 @@
 /**
- * applySceneEffect + VISIBILITY_ACTION_ROW.
- *
- * The simple arms run against a spy `dispatch`; the show/hide arms need a real
- * store, so both the visibility actions and `syncVisibilityFades` exercise a real
- * state shape without deep mocking.
- *
- * The total-record block is the guard against a missing key silently no-oping:
- * gate-backed layers must return at least one action, registration-only rows [].
+ * applySceneEffect — every arm runs against a spy `dispatch`: the arms only dispatch, and
+ * the show/hide writes read settings only for the section rule.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Action } from '@reduxjs/toolkit';
 
-// Module mock must be declared before the import it replaces. Vitest hoists
-// vi.mock calls to the top of the file so the factory runs before any import
-// is evaluated — only importOriginal() is safe to call inside the factory.
-vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import('../../../src/services/engine/wiring/syncVisibilityFades')
-    >();
-  return { ...actual, syncVisibilityFades: vi.fn() };
-});
-
 import { applySceneEffect } from '../../../src/services/animation/applySceneEffect';
-import { frameTo } from '../../../src/services/engine/animation/effectHelpers';
-import settingsReducer from '../../../src/state/settings/settingsReducer';
+import { frameTo, hide, show } from '../../../src/services/engine/animation/effectHelpers';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
-import { VISIBILITY_ACTION_ROW } from '../../../src/services/animation/visibilityActionRow';
-import { syncVisibilityFades } from '../../../src/services/engine/wiring/syncVisibilityFades';
+import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { startFrameTween } from '../../../src/state/camera/cameraSlice';
 import { matrixToQuaternion } from '../../../src/utils/math/matrixToQuaternion';
@@ -36,89 +17,16 @@ import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
-import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
-import {
-  setGalaxyCatalogVisible,
-  setGalaxyCatalogLabelEnabled,
-} from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
-import {
-  setStructureItemEnabled,
-  setStructureLabelEnabled,
-} from '../../../src/layers/structure/state/structures/slice';
-import { writeCosmicWebDensityField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
-import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/layers/galaxyCatalog/state/defaults';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 /**
- * Minimal EngineSettingsState covering every VISIBILITY_ACTION_ROW factory's
- * leaf reads: galaxyCatalogs.items, structures.items, cosmicWebDensity.items,
- * plus the scalar enable fields the gate-backed factories don't read (but are
- * present for type completeness).
+ * A fake EngineState: the arms read only the live settings (and frameTo the camera).
  */
-function makeSettings(opts?: {
-  galaxyCatalogIds?: readonly string[];
-  structureIds?: readonly string[];
-  volumeFieldIds?: readonly string[];
-}): EngineSettingsState {
-  const galaxyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const id of opts?.galaxyCatalogIds ?? GALAXY_CATALOG_IDS) {
-    galaxyItems[id] = { enabled: true, labelEnabled: true };
-  }
-
-  const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const id of opts?.structureIds ?? STRUCTURE_IDS) {
-    structureItems[id] = { enabled: true, labelEnabled: true };
-  }
-
-  const volumeItems: Record<string, { enabled: boolean }> = {};
-  for (const id of opts?.volumeFieldIds ?? []) {
-    volumeItems[id] = { enabled: true };
-  }
-
-  return {
-    galaxyCatalogs: {
-      items: galaxyItems,
-      enabled: true,
-      sizePx: 2,
-      brightness: 1,
-      depthFade: false,
-      provenance: DEFAULT_GALAXY_PROVENANCE,
-    },
-    structures: { enabled: true, items: structureItems },
-    milkyWay: { enabled: true, labelEnabled: true },
-    cosmicWebFilaments: { enabled: true, intensity: 1 },
-    cosmicWebDensity: { enabled: true, items: volumeItems },
-    flow: { enabled: true } as EngineSettingsState['flow'],
-    tonemap: { exposure: 1, curve: 0 } as EngineSettingsState['tonemap'],
-    bias: { mode: 0, absMagLimit: -20 } as EngineSettingsState['bias'],
-    thumbnails: { enabled: true },
-    debug: {
-      overlays: { 'pick-buffer': false },
-      disabledPasses: {},
-      renderStrategy: 'auto',
-    },
-  } as unknown as EngineSettingsState;
-}
-
-/**
- * Build a minimal fake EngineState for the simple arms (scene / focus).
- * The show/hide tests use a real store instead.
- */
-function makeEngineState(settings?: EngineSettingsState): EngineState {
-  return {
-    settings: settings ?? makeSettings(),
-    subsystems: {
-      fades: { fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()), setImmediate: vi.fn() },
-      scheduler: { requestRender: vi.fn() },
-    },
-    assetSlots: {},
-  } as unknown as EngineState;
+function makeEngineState(settings: EngineSettingsState = INITIAL_SETTINGS): EngineState {
+  return { settings } as unknown as EngineState;
 }
 
 /**
@@ -126,14 +34,14 @@ function makeEngineState(settings?: EngineSettingsState): EngineState {
  * and `getState` returns a minimal state. Suitable for arms that don't need
  * real state reads.
  */
-function makeSpyStore(settings?: EngineSettingsState): {
+function makeSpyStore(): {
   store: AppStore;
   dispatch: ReturnType<typeof vi.fn<(a: Action) => Action>>;
 } {
   const dispatch = vi.fn<(a: Action) => Action>((a) => a);
   const store = {
     dispatch,
-    getState: () => ({ settings: settings ?? makeSettings() }),
+    getState: () => ({ settings: INITIAL_SETTINGS }),
     subscribe: vi.fn(),
   } as unknown as AppStore;
   return { store, dispatch };
@@ -204,164 +112,35 @@ describe('applySceneEffect — frameTo', () => {
 
 // ── show / hide ───────────────────────────────────────────────────────────────
 //
-// These tests use a real createAppStore so that the dispatched visibility actions
-// actually reach the settings reducer and state.settings is the live store state.
-// syncVisibilityFades is replaced by the vi.mock at the top of this file; each
-// describe block clears the mock in beforeEach and asserts via vi.mocked().
+// The duration rides every write: the reactive fade sync each write wakes is the only sync,
+// so a cue that dropped or misconverted `overMs` would fade over the defaults.
 
-describe('applySceneEffect — show', () => {
-  beforeEach(() => {
-    vi.mocked(syncVisibilityFades).mockClear();
+describe('applySceneEffect — show / hide', () => {
+  function run(effect: Parameters<typeof applySceneEffect>[0]) {
+    const { store, dispatch } = makeSpyStore();
+    applySceneEffect(effect, { state: makeEngineState(INITIAL_SETTINGS), store });
+    return dispatch.mock.calls.map(([a]) => a);
+  }
+
+  it('writes each arg through setVisibility, scoped args to their one item', () => {
+    expect(run(show(['flow', 'survey:milliquas']))).toEqual([
+      setVisibility({ cluster: 'flow', field: 'enabled', on: true }),
+      setVisibility({ cluster: 'galaxyCatalogs', item: 'milliquas', field: 'enabled', on: true }),
+    ]);
   });
 
-  it('dispatches visibility-on for a gate-backed layer (cosmicWebFilaments)', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings;
-    const state = makeEngineState(settings as unknown as EngineSettingsState);
-
-    applySceneEffect({ kind: 'show', layers: ['cosmicWebFilaments'] }, { state, store });
-
-    expect(store.getState().settings.cosmicWebFilaments.enabled).toBe(true);
-    // The action is the settings action the UI dispatches.
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledTimes(1);
+  it('converts `over` seconds to `overMs` on every write', () => {
+    // Forwarding seconds unconverted once made a 9-second reveal a 9-millisecond pop.
+    const actions = run(hide(['survey'], 9)) as ReturnType<typeof setVisibility>[];
+    expect(actions.length).toBeGreaterThan(1);
+    for (const a of actions) expect(a.payload).toMatchObject({ on: false, overMs: 9000 });
   });
 
-  it('dispatches one setGalaxyCatalogVisible per catalog id for the survey layer', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-    const dispatch = vi.spyOn(store, 'dispatch');
-
-    applySceneEffect({ kind: 'show', layers: ['survey'] }, { state, store });
-
-    // Every catalog id must have received a visibility-on action.
-    const catalogActions = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setGalaxyCatalogVisible>)
-      .filter((a) => a.type === setGalaxyCatalogVisible.type);
-
-    expect(catalogActions.length).toBe(GALAXY_CATALOG_IDS.length);
-    for (const id of GALAXY_CATALOG_IDS) {
-      expect(catalogActions.some((a) => a.payload.id === id && a.payload.enabled === true)).toBe(
-        true,
-      );
-    }
-  });
-
-  it('converts a positive `over` (clip seconds) to durationMs for the fade bridge', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-
-    // `over` is authored in SECONDS (like every clip-land duration); the fade
-    // bridge consumes milliseconds. Forwarding it unconverted made a 9-second
-    // volume reveal run as a 9-millisecond pop.
-    applySceneEffect({ kind: 'show', layers: ['cosmicWebFilaments'], over: 9 }, { state, store });
-
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ animate: true, durationMs: 9000 }),
-    );
-  });
-
-  it('dispatches a targeted action for a scoped entry, not the whole-row fan-out', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-    const dispatch = vi.spyOn(store, 'dispatch');
-
-    applySceneEffect({ kind: 'show', layers: [], scoped: ['survey:milliquas'] }, { state, store });
-
-    // Exactly ONE catalog-visibility action — the scoped item, no fan-out.
-    const catalogActions = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setGalaxyCatalogVisible>)
-      .filter((a) => a.type === setGalaxyCatalogVisible.type);
-    expect(catalogActions).toEqual([setGalaxyCatalogVisible({ id: 'milliquas', enabled: true })]);
-    // The explicit fade sync covers atomic layers only (empty here) — the
-    // scoped item's fade rides the reactive settings→fade bridge.
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ only: [] }),
-    );
-  });
-});
-
-describe('applySceneEffect — hide', () => {
-  beforeEach(() => {
-    vi.mocked(syncVisibilityFades).mockClear();
-  });
-
-  it('dispatches visibility-off for a gate-backed layer (cosmicWebFilaments)', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-    const dispatch = vi.spyOn(store, 'dispatch');
-
-    applySceneEffect({ kind: 'hide', layers: ['cosmicWebFilaments'] }, { state, store });
-
-    const filamentAction = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setCosmicWebFilamentsEnabled>)
-      .find((a) => a.type === setCosmicWebFilamentsEnabled.type);
-
-    expect(filamentAction).toBeDefined();
-    expect(filamentAction!.payload).toBe(false);
-  });
-
-  it('dispatches visibility-off for every structure id when hiding structureRing', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-    const dispatch = vi.spyOn(store, 'dispatch');
-
-    applySceneEffect({ kind: 'hide', layers: ['structureRing'] }, { state, store });
-
-    const structureActions = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setStructureItemEnabled>)
-      .filter((a) => a.type === setStructureItemEnabled.type);
-
-    expect(structureActions.length).toBe(STRUCTURE_IDS.length);
-    for (const id of STRUCTURE_IDS) {
-      expect(structureActions.some((a) => a.payload.id === id && a.payload.enabled === false)).toBe(
-        true,
-      );
-    }
-  });
-
-  it('calls syncVisibilityFades with only + animate:true when over is undefined', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-
-    applySceneEffect({ kind: 'hide', layers: ['milkyWayDisk'] }, { state, store });
-
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        animate: true,
-        only: ['milkyWayDisk'],
-        durationMs: undefined,
-      }),
-    );
-  });
-});
-
-// ── over === 0 → snap path (animate:false) ────────────────────────────────────
-
-describe('applySceneEffect — over === 0 routes through animate:false', () => {
-  beforeEach(() => {
-    vi.mocked(syncVisibilityFades).mockClear();
-  });
-
-  it('show with over:0 calls bridge with animate:false', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-
-    applySceneEffect({ kind: 'show', layers: ['cosmicWebFilaments'], over: 0 }, { state, store });
-
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ animate: false }),
-    );
+  it('carries over: 0 as a snap and omits overMs when over is absent', () => {
+    const [snap] = run(show(['flow'], 0)) as ReturnType<typeof setVisibility>[];
+    expect(snap!.payload.overMs).toBe(0);
+    const [plain] = run(show(['flow'])) as ReturnType<typeof setVisibility>[];
+    expect('overMs' in plain!.payload).toBe(false);
   });
 });
 
@@ -374,55 +153,9 @@ describe('applySceneEffect — fade', () => {
 
     expect(() =>
       applySceneEffect(
-        { kind: 'fade', layers: ['cosmicWebFilaments'], to: 0, over: 500 },
+        { kind: 'fade', args: ['cosmicWebFilaments'], to: 0, over: 500 },
         { state, store },
       ),
     ).toThrow();
-  });
-});
-
-// ── VISIBILITY_ACTION_ROW — total record ──────────────────────────────────────
-//
-// Every VisibilityLayerKey must resolve to a factory. Gate-backed layers return
-// length ≥ 1; registration-only layers return []. This guards against a new key
-// being added to VisibilityLayerKey without a matching VISIBILITY_ACTION_ROW entry
-// (which would be a TypeScript compile error, but tested here for belt-and-suspenders).
-
-describe('VISIBILITY_ACTION_ROW — total record', () => {
-  const settings = makeSettings({ galaxyCatalogIds: ['sdss'], structureIds: ['supercluster'] });
-
-  it('surveyLabel factory emits one setGalaxyCatalogLabelEnabled per catalog id', () => {
-    const actions = VISIBILITY_ACTION_ROW['surveyLabel'].actions(false, settings) as ReturnType<
-      typeof setGalaxyCatalogLabelEnabled
-    >[];
-    expect(actions).toHaveLength(1);
-    expect(actions[0]!.payload).toEqual({ id: 'sdss', enabled: false });
-  });
-
-  it('structureLabel factory emits one setStructureLabelEnabled per structure id', () => {
-    const actions = VISIBILITY_ACTION_ROW['structureLabel'].actions(true, settings) as ReturnType<
-      typeof setStructureLabelEnabled
-    >[];
-    expect(actions).toHaveLength(1);
-    expect(actions[0]!.payload).toEqual({ id: 'supercluster', enabled: true });
-  });
-
-  it('cosmicWebDensityField factory emits one writeCosmicWebDensityField({ id, patch:{enabled} }) per volume item', () => {
-    const settingsWithVolume = makeSettings({ volumeFieldIds: ['mcpm'] });
-    const actions = VISIBILITY_ACTION_ROW['cosmicWebDensityField'].actions(
-      true,
-      settingsWithVolume,
-    ) as ReturnType<typeof writeCosmicWebDensityField>[];
-    expect(actions).toHaveLength(1);
-    expect(actions[0]!.payload).toEqual({ id: 'mcpm', patch: { enabled: true } });
-  });
-
-  it('a bodyLabel hide cue also turns the Galactic Centre caption off', () => {
-    // The caption is full at R0, so a `hideLabels` beat that skipped it would
-    // leave the one name on an otherwise bare galaxy view.
-    const hidden = VISIBILITY_ACTION_ROW['bodyLabel']
-      .actions(false, INITIAL_SETTINGS)
-      .reduce(settingsReducer, INITIAL_SETTINGS);
-    expect(hidden.blackHoles.items['sgr-a-star'].labelEnabled).toBe(false);
   });
 });

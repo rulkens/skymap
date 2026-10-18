@@ -56,9 +56,13 @@ import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+// The handed value is full: this fixture is about the ill-conditioned-projection regression, not the fade channels.
+const STAR_FADE = { sun: 1, famousStar: 1 };
 
 function makeLabelStub(): LabelRenderer {
   return {
@@ -90,6 +94,7 @@ function makeState(): EngineState {
         earth: SCENE_EARTH,
         planets: SCENE_PLANETS,
         meshBodies: SCENE_MESH_BODIES,
+        sceneBodies: SCENE_BODIES,
       },
     },
     settings: {
@@ -103,15 +108,6 @@ function makeState(): EngineState {
           sStar: { enabled: true, labelEnabled: false },
         },
       },
-    },
-    // Fail-safe pass-throughs (the real registry's unregistered-id default,
-    // the real clip player's no-clip-playing default): every row here is
-    // already `labelEnabled: true`, so these leave `produceStarCaptions`'s
-    // composition unchanged from its pre-fade-wire value — this fixture is
-    // about the ill-conditioned-projection regression, not the fade channels.
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
     },
   } as unknown as EngineState;
 }
@@ -152,12 +148,19 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
 const FIXTURE_FRUSTUM = symmetricFrustum(1, 1280 / 720);
 const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDown);
 
+// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
+const SCENE_BODIES = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+  deriveBodyStates(CONST_J2000),
+);
+
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
     snapshot: {
       nowMs: 0,
       simDays: CONST_J2000,
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: SCENE_BODIES,
       focusBlend: 0,
       focus: ZERO_FOCUS,
     },
@@ -215,7 +218,10 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub, () => null);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+    });
     const state = makeState();
 
     dir.runFrame(state, makeCtx(eyeA, makeRealNear0Slab(eyeA, star.worldPos)));
@@ -255,7 +261,10 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub, () => null);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+    });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
     const cap = emittedCaption(labelStub, star.id);
@@ -297,7 +306,10 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub, () => null);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
+    dir.registerProducer({
+      id: 'starCaptions',
+      produceLabels: (state, ctx) => produceStarCaptions()(state, ctx, STAR_FADE),
+    });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;
     expect(cap).toBeDefined();

@@ -1,12 +1,10 @@
 /**
  * applySceneEffect — the verb→side-effect table for non-fade scene cues, called
- * from clipPlayer's tick with NO saga running: direct store dispatches plus the
- * synchronous intent→fade bridge.
+ * from clipPlayer's tick with NO saga running: direct store dispatches only.
  *
  * `effect.over` is authored in SECONDS (like every clip-land duration) and the
- * fade bridge consumes milliseconds, so this boundary owns the conversion.
- * `over: 0` takes the snap path, which ignores the duration; `undefined` leaves
- * the default FADE_IN/OUT constants in force.
+ * fade sync consumes milliseconds, so this boundary owns the conversion.
+ * `over: 0` snaps; `undefined` leaves the default FADE_IN/OUT constants in force.
  */
 
 import type { SceneEffect } from '../../@types/animation/SceneEffect';
@@ -16,9 +14,7 @@ import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { setOrientation } from '../../state/settings/core/orientationSlice';
 import { startFrameTween } from '../../state/camera/cameraSlice';
 import { liveUpBasisQuat } from '../engine/camera/liveUpBasisQuat';
-import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';
-import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
-import { scopedVisibilityActions } from './scopedVisibilityActions';
+import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 
 export function applySceneEffect(
   effect: SceneEffect,
@@ -27,43 +23,17 @@ export function applySceneEffect(
   const { state, store } = deps;
 
   switch (effect.kind) {
-    case 'show': {
-      // Scoped entries ('survey:milliquas') are animated by the reactive
-      // settings→fade bridge, so they take no part in the explicit sync below.
-      for (const layer of effect.layers) {
-        for (const action of VISIBILITY_ACTION_ROW[layer].actions(true, state.settings)) {
-          store.dispatch(action);
-        }
-      }
-      for (const scopedArg of effect.scoped ?? []) {
-        for (const action of scopedVisibilityActions(scopedArg, true, state.settings)) {
-          store.dispatch(action);
-        }
-      }
-      syncVisibilityFades(state, {
-        animate: effect.over !== 0,
-        only: effect.layers,
-        durationMs: effect.over !== undefined ? effect.over * 1000 : undefined,
-      });
-      return;
-    }
-
+    case 'show':
     case 'hide': {
-      for (const layer of effect.layers) {
-        for (const action of VISIBILITY_ACTION_ROW[layer].actions(false, state.settings)) {
+      // The duration rides the writes: the reactive sync each one wakes is the only sync, and
+      // it runs inside `dispatch`, before any explicit sync here could.
+      const on = effect.kind === 'show';
+      const overMs = effect.over === undefined ? undefined : effect.over * 1000;
+      for (const arg of effect.args) {
+        for (const action of setVisibilityActionsFor(state.settings, arg, on, overMs)) {
           store.dispatch(action);
         }
       }
-      for (const scopedArg of effect.scoped ?? []) {
-        for (const action of scopedVisibilityActions(scopedArg, false, state.settings)) {
-          store.dispatch(action);
-        }
-      }
-      syncVisibilityFades(state, {
-        animate: effect.over !== 0,
-        only: effect.layers,
-        durationMs: effect.over !== undefined ? effect.over * 1000 : undefined,
-      });
       return;
     }
 
@@ -107,7 +77,7 @@ export function applySceneEffect(
       // clipPlayer writes the clipOpacity channel directly, so reaching here is a
       // caller bug — throw rather than silently no-op.
       throw new Error(
-        `applySceneEffect: 'fade' cues are owned by clipPlayer and must not be routed here (layer: ${String(effect.layers)})`,
+        `applySceneEffect: 'fade' cues are owned by clipPlayer and must not be routed here (args: ${String(effect.args)})`,
       );
     }
   }

@@ -11,9 +11,8 @@
  * Each method represents a distinct engine concern that a saga might need to
  * trigger in response to a dispatched action:
  *   requestRender  — wakes the render-on-demand scheduler
- *   syncFades      — re-syncs every intent→fade row; cheap on every settings
- *                    write because a row whose target hasn't moved costs
- *                    `applyIntent` one `targetOf` lookup, not a fade restart
+ *   syncFades      — recomputes every visibility target; `overMs` is a cue's
+ *                    duration (`0` snaps), carried by its `setVisibility`
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
  *                    `l` key) and returns the rendered pose + sim instant for
  *                    the share-URL log, or null when the camera isn't ready
@@ -33,7 +32,7 @@ import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 export type ReconcileEffects = {
   requestRender: () => void;
-  syncFades: () => void;
+  syncFades: (opts?: { readonly overMs?: number }) => void;
   logCameraState: () => { readonly framed: FramedCameraPose; readonly simDays: number } | null;
   applySwapFormat: (desired: GPUTextureFormat) => void;
 };

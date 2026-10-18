@@ -1,16 +1,13 @@
 /**
- * filamentsPass — focus-recession routing of the overlay opacity, pinned at both
- * ends of the blend on the 6th argument of `filamentRenderer.draw`, plus the
- * SlabView threading and the either-or `enabled` gate: recession ∈
- * [STRONG_RECESSION, 1] can never zero a layer, so the gate must keep reading
- * the pure toggle alone, while a fade-out tail keeps drawing after it flips off.
+ * filamentsPass — the handed value reaches `filamentRenderer.draw` as its opacity, and
+ * the SlabView (not ctx.vp/ctx.canvasSize) is what the draw is threaded with.
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { filamentsPass } from '../../../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { STRONG_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -25,6 +22,7 @@ function makeCtx(focusBlend: number): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend,
+      focusPickId: null,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
         apparentRadiusMpc: 1,
@@ -48,26 +46,9 @@ function makeCtx(focusBlend: number): FrameView {
   } as unknown as FrameView;
 }
 
-/**
- * Build a state whose filament fade reports `opacity` and whose
- * `settings.cosmicWebFilaments` matches the supplied overrides.  `opacityOf`
- * is a single stub returning the same value regardless of handle/now — the
- * filaments layer only ever asks for the `{kind:'cosmicWebFilaments'}` handle, so a
- * constant stub faithfully models "the filament layer is at `opacity`".
- */
-function makeState(
-  opacity: number,
-  filamentsOverrides: Partial<{ enabled: boolean; intensity: number }> = {},
-): EngineState {
+function makeState(filamentsOverrides: Partial<{ intensity: number }> = {}): EngineState {
   return {
-    subsystems: { fades: { opacityOf: () => opacity }, clipPlayer: { clipOpacityOf: () => 1 } },
-    settings: {
-      cosmicWebFilaments: {
-        enabled: true,
-        intensity: 1,
-        ...filamentsOverrides,
-      },
-    },
+    settings: { cosmicWebFilaments: { enabled: true, intensity: 1, ...filamentsOverrides } },
   } as unknown as EngineState;
 }
 
@@ -77,22 +58,32 @@ function makeRuntime(draw: (...args: unknown[]) => void): CosmicWebFilamentsRunt
 
 const PASS_STUB = {} as GPURenderPassEncoder;
 
-describe('filamentsPass draw focus recession', () => {
-  it('passes plain opacityOf at blend 0', () => {
+describe('filamentsPass draw', () => {
+  it('draws at the handed value', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(0);
-    filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
-    expect(drawSpy).toHaveBeenCalledTimes(1);
+    filamentsPass(makeRuntime(drawSpy)).draw(
+      PASS_STUB,
+      slabViewOf(ctx, COSMO),
+      ctx,
+      makeState(),
+      0.4,
+    );
     // Args: (pass, vp, viewport, pxPerRad, halfwidth, intensity, opacity).
-    expect(drawSpy.mock.calls[0]![6]).toBe(1);
+    expect(drawSpy.mock.calls[0]![6]).toBe(0.4);
   });
 
-  it('passes opacityOf × STRONG_RECESSION at blend 1', () => {
+  it('draws at the handed value times its recession', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(1);
-    filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
-    expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls[0]![6]).toBeCloseTo(STRONG_RECESSION, 6);
+    filamentsPass(makeRuntime(drawSpy)).draw(
+      PASS_STUB,
+      slabViewOf(ctx, COSMO),
+      ctx,
+      makeState(),
+      1,
+    );
+    expect(drawSpy.mock.calls[0]![6]).toBeCloseTo(STRONG_RECESSION);
   });
 
   it('threads the SlabView vp/viewport rather than ctx.vp/ctx.canvasSize', () => {
@@ -103,7 +94,8 @@ describe('filamentsPass draw focus recession', () => {
       PASS_STUB,
       view,
       ctx,
-      makeState(1, { intensity: 0.7 }),
+      makeState({ intensity: 0.7 }),
+      1,
     );
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -112,26 +104,5 @@ describe('filamentsPass draw focus recession', () => {
     expect(args[3]).toBe(ctx.drawPxPerRad);
     expect(args[4]).toBe(1.5); // line halfwidth (FILAMENT_LINE_HALFWIDTH_PX)
     expect(args[5]).toBe(0.7);
-  });
-});
-
-describe('filamentsPass enabled', () => {
-  it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
-    const state = makeState(0, { enabled: false });
-    const ctx0 = makeCtx(0);
-    const ctx1 = makeCtx(1);
-    const pass = filamentsPass(makeRuntime(vi.fn()));
-    expect(pass.enabled(state, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
-    expect(pass.enabled(state, ctx1, slabViewOf(ctx1, COSMO))).toBe(false);
-  });
-
-  it('returns true when the toggle is off BUT fade opacity > 0 (fade-out tail still drawing)', () => {
-    // The gate keeps the layer alive so the user sees the smooth ramp out
-    // instead of an instant pop on the frame the toggle flips.
-    const state = makeState(1, { enabled: false });
-    const ctx = makeCtx(0);
-    expect(filamentsPass(makeRuntime(vi.fn())).enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(
-      true,
-    );
   });
 });

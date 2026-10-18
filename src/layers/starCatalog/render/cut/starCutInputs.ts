@@ -1,6 +1,7 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { StarCatalogSettings } from '../../../../@types/settings/StarCatalogSettings';
+import type { StarCatalogId } from '../../../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../../@types/StarCutInputs';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
@@ -18,7 +19,8 @@ import { starSourcesInBand } from './starSourcesInBand';
 import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout';
 
 /**
- * This frame's GPU cut inputs, or `null` when no source is on and in band.
+ * This frame's GPU cut inputs, or `null` when no source has a value above 0 in band.
+ * `settings` supplies the appearance knobs only; `fade` is the star entry's handed value.
  * `views[0]` is the anchor — its eye is the cut's origin; every view's NEAR0
  * frustum is rebased about that origin in f64 (the cancellation discipline
  * `cutIo.wesl` keeps for node boxes) and the cut keeps a node any of them
@@ -27,12 +29,13 @@ import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout
 export function starCutInputs(
   runtime: Pick<StarCatalogRuntime, 'renderer' | 'catalogs'>,
   settings: StarCatalogSettings,
+  fade: Readonly<Record<StarCatalogId, number>>,
   views: readonly FrameView[],
 ): StarCutInputs | null {
   const view = views[0]!;
   const originMpc: Vec3 = [view.drawCamPos[0], view.drawCamPos[1], view.drawCamPos[2]];
   const camDistMpc = Math.hypot(originMpc[0], originMpc[1], originMpc[2]);
-  const inBand = starSourcesInBand(runtime, settings, camDistMpc * SCALE_UNITS.MPC_TO_PC);
+  const inBand = starSourcesInBand(runtime, fade, camDistMpc * SCALE_UNITS.MPC_TO_PC);
   if (inBand.length === 0) return null;
 
   const planes = new Float32Array(views.length * FLOATS_PER_VIEW);

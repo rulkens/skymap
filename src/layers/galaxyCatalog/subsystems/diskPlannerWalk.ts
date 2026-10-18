@@ -68,7 +68,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, catalogs, visibleSourceMask, pxPerRad } = input;
+    const { cam, catalogs, sourceMask, pxPerRad } = input;
 
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
@@ -85,7 +85,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     let acceptedThisFrame = 0;
 
     for (const [source, catalog] of catalogs.entries()) {
-      if (((visibleSourceMask >> source) & 1) === 0) {
+      if (((sourceMask >> source) & 1) === 0) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;

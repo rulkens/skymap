@@ -1,22 +1,21 @@
 /**
  * The zoneOfAvoidance Layer: the galactic-plane dust-band guide — one
  * renderer, its additive upsample, both passes, the `zoa` render target, the
- * fade row, the world-space lettering, the selection row, the source entry,
+ * show and label entries, the world-space lettering, the selection row, the source entry,
  * its settings and its two DebugPanel/Labels-and-guides UI slots.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { zoneOfAvoidanceLayerSettings } from './state/slices';
+import { zoneOfAvoidanceVisibility } from './visibility';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from './sources/zoneOfAvoidanceSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { zoneOfAvoidancePass } from './passes/zoneOfAvoidancePass';
 import { zoneOfAvoidanceUpsamplePass } from './passes/zoneOfAvoidanceUpsamplePass';
-import { zoneOfAvoidanceFadeRows } from './present/zoneOfAvoidanceFadeRows';
 import { produceZoneOfAvoidanceLettering } from './present/produceZoneOfAvoidanceLettering';
 import { zoneOfAvoidanceSelectionRow } from './present/zoneOfAvoidanceSelectionRow';
-import { zoneOfAvoidanceSettingsRow } from './ui/zoneOfAvoidanceSettingsRow';
 import ZoneOfAvoidanceTuningSectionContainer from './ui/ZoneOfAvoidanceTuningSectionContainer';
 import ZoneOfAvoidanceDetailCard from './ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';
 import CompactZoneOfAvoidanceCard from './ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
@@ -24,6 +23,7 @@ import CompactZoneOfAvoidanceCard from './ui/CompactZoneOfAvoidanceCard/CompactZ
 export const zoneOfAvoidanceLayer = defineLayer({
   name: 'zoneOfAvoidance',
   settings: zoneOfAvoidanceLayerSettings,
+  visibility: zoneOfAvoidanceVisibility,
   sources: ZONE_OF_AVOIDANCE_SOURCE_ROWS,
   targets: [
     {
@@ -39,15 +39,18 @@ export const zoneOfAvoidanceLayer = defineLayer({
   create,
   destroy,
   passes: (runtime) => [zoneOfAvoidancePass(runtime), zoneOfAvoidanceUpsamplePass(runtime)],
-  fades: zoneOfAvoidanceFadeRows,
   guides: () => ({
     worldLabels: [
-      { id: 'zoneOfAvoidanceLettering', produceLabels3D: produceZoneOfAvoidanceLettering },
+      {
+        id: 'zoneOfAvoidanceLettering',
+        label: 'zoneOfAvoidance',
+        produceLabels3D: produceZoneOfAvoidanceLettering,
+      },
     ],
   }),
   selection: () => [zoneOfAvoidanceSelectionRow()],
   ui: [
-    { slot: 'labelsAndGuides', content: zoneOfAvoidanceSettingsRow },
+    { slot: 'labelsAndGuides', content: { toggle: 'zoneOfAvoidance', label: 'Zone of Avoidance' } },
     { slot: 'debug', content: ZoneOfAvoidanceTuningSectionContainer },
     {
       slot: 'detailCard',

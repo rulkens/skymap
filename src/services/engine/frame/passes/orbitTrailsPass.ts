@@ -24,26 +24,18 @@ import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 // Reused across frames so the hot path allocates nothing. The roster is composed
 // at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
 // grown on the first frame that needs more room rather than sized once here.
 let staging = new Float32Array(0);
 
-export const orbitTrailsPass: ContentPass = {
+export const orbitTrailsPass: ContentPass<'orbitTrails'> = {
   name: 'orbit-trails',
+  fade: 'orbitTrails',
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
-    // Toggle off AND the fade fully receded means truly hidden, so the whole
-    // (hdr, NEAR0) pass drops — opacity 0 ⇒ no render.
-    if (
-      !state.settings.orbitTrails.enabled &&
-      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.snapshot.nowMs) <= 0
-    ) {
-      return false;
-    }
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Whole-layer sub-pixel cull: the per-orbit CULL_PX test in `draw`, bounded
     // once per region at the camera's NEAREST possible distance to any of that
@@ -67,7 +59,7 @@ export const orbitTrailsPass: ContentPass = {
     return false;
   },
 
-  draw(pass, view, ctx, state) {
+  draw(pass, view, ctx, state, fade) {
     const renderer = state.gpu.orbitTrailRenderer;
     if (renderer === null) return;
     // Reading the shared snapshot — never re-deriving — is what welds each trail
@@ -79,10 +71,6 @@ export const orbitTrailsPass: ContentPass = {
       staging = new Float32Array(limit * INSTANCE_FLOATS);
     }
     const camPos = ctx.drawCamPos;
-
-    // Multiplied into every orbit's apparent-size alpha below, so a hide dissolves
-    // the layer rather than popping it.
-    const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
 
     // One 46-float record per VISIBLE conic; byte offsets must mirror the
     // renderer's INSTANCE_ATTRIBUTES:
@@ -123,7 +111,7 @@ export const orbitTrailsPass: ContentPass = {
         pxPerRad: ctx.drawPxPerRad,
       });
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
-      const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
+      const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * fade;
 
       const { ginv, clipBasis, arc } = composeOrbitConic(
         view.slab.vp,

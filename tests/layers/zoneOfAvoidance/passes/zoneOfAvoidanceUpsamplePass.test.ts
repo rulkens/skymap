@@ -71,10 +71,6 @@ function makeState(
           : over.label3D,
     },
     settings: { zoneOfAvoidance: { labelColor: [1, 1, 1], intensity: 1 } },
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
   } as unknown as EngineState;
 }
 
@@ -86,7 +82,7 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     const state = makeState({ labelDraw });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    pass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state, 1);
 
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(upsampleDraw.mock.calls[0]![0]).toBe(PASS_STUB);
@@ -107,7 +103,7 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     const state = makeState({ label3D: null });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    expect(() => pass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
+    expect(() => pass.draw(PASS_STUB, view, ctx, state, 1)).not.toThrow();
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
   });
 
@@ -118,7 +114,7 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     const state = makeState({ labelDraw, glyphCount: 0 });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    pass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state, 1);
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(labelDraw).not.toHaveBeenCalled();
   });

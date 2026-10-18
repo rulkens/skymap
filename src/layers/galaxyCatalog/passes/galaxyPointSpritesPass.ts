@@ -1,10 +1,10 @@
 /**
  * galaxyPointSpritesPass — every loaded galaxy from every visible source as an
  * instanced additive billboard in the HDR target; the headline content layer.
- * Always on: per-source visibility is the shader-side `visibleSourceMask` (the
- * draw half of `sourceMaskOf`), so hiding SDSS is a 4-byte write. The
+ * Core skips the pass when every catalog's handed value is 0; within it, the
  * renderer's own loop skips a source at exactly 0 opacity, which is what keeps
- * a completed deep-zoom fade from rasterizing millions of alpha-0 instances.
+ * a hidden catalog or a completed deep-zoom fade from rasterizing millions of
+ * alpha-0 instances.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -13,25 +13,22 @@ import { Source } from '../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
-import { sourceMaskOf } from '../present/sourceMaskOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../data/galaxyLodBands';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
-export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass {
+export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   return {
     name: 'point-sprites',
+    fade: 'survey',
 
     // No handle gate: the renderer lives as long as the Layer does.
-    enabled() {
-      return true;
-    },
+    enabled: () => true,
 
-    draw(pass, view, ctx, state) {
+    draw(pass, view, ctx, state, fade) {
       const { drawPxPerRad } = ctx;
 
       // Deep-zoom survey fade, keyed on distance from the heliocentric render
@@ -53,7 +50,6 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         pointSizePx: state.settings.galaxyCatalogs.sizePx,
         brightness: state.settings.galaxyCatalogs.brightness,
         selectedPacked,
-        visibleSourceMask: sourceMaskOf(state, ctx.snapshot.nowMs).draw,
         camPosWorld: view.camPos,
         pxPerRad: drawPxPerRad,
         provenance: state.settings.galaxyCatalogs.provenance,
@@ -70,37 +66,24 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         // @group(3): the engine owns one focus buffer, written once per frame in
         // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
         focusBindGroup: state.gpu.focusUniform!.bindGroup,
-        // The registry answers 1.0 for an unregistered handle, so a source that has
-        // not registered yet draws at full opacity rather than disappearing. The
-        // famous catalog is exempt from the survey fade on purpose: its ~20 curated
+        // The famous catalog is exempt from the survey fade on purpose: its ~20 curated
         // galaxies stay as landmarks at deep zoom while the survey points yield.
         fadeOpacityOf: (source) =>
-          resolveLayerOpacity(state, ctx, {
-            kind: 'galaxyCatalog',
-            id: galaxyCatalogIdOf(source),
-          }) * (source === Source.FamousGalaxy ? 1 : surveyFade),
+          fade[galaxyCatalogIdOf(source)] * (source === Source.FamousGalaxy ? 1 : surveyFade),
       });
     },
 
-    // The PICK mask, not the draw one: picking follows intent, not pixels
-    // (`sourceMaskOf`, #18 D8), so a catalog switched off stops taking clicks
-    // while its fade-out still draws. The opacity filter extends the mask on the
-    // INTENT fade only, so a clip `fade()` dims these points without revoking
-    // their click target.
-    drawPick(pass, view, ctx, state) {
+    // Pick takes exactly the sources the draw takes: the same handed value, so a
+    // catalog that is invisible, faded or clipped to 0 is not clickable either.
+    drawPick(pass, view, ctx, state, fade) {
       const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
       const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
-      const fades = state.subsystems.fades;
-      const pickMask = sourceMaskOf(state, ctx.snapshot.nowMs).pick;
-      const sources = Array.from(runtime.pointRenderer.loadedSources()).filter((s) => {
-        if (((pickMask >> s.source) & 1) === 0) return false;
-        const opacity =
-          fades.opacityOf(
-            { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) },
-            ctx.snapshot.nowMs,
-          ) * (s.source === Source.FamousGalaxy ? 1 : surveyFade);
-        return opacity !== 0;
-      });
+      const sources = Array.from(runtime.pointRenderer.loadedSources()).filter(
+        (s) =>
+          fade[galaxyCatalogIdOf(s.source)] *
+            (s.source === Source.FamousGalaxy ? 1 : surveyFade) !==
+          0,
+      );
       runtime.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
     },
   };

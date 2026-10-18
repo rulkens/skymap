@@ -1,170 +1,89 @@
 /**
- * partitionBodiesByPresentation — unit tests for the body presentation split.
- *
- * The partition is the ONE branch point deciding which layer draws each seeded
- * body this frame: an additive glint (`bodyGlintsPass`), a flat-lit albedo
- * sphere (`planetsPass`), or a textured sphere (`texturedBodiesPass`). All
- * three layers consume opposite branches of one result, so a body lands in
- * EXACTLY one bucket by construction — the same disjoint-and-covering invariant
- * `partitionStarsByResolution` guarantees for the point↔sphere handoff.
- *
- * These pin the behaviours the layers lean on: a sub-3px body is a glint; a
- * resolved registry body is textured iff its texture is resident, else flat; a
- * body outside `BODY_TEXTURE_REGISTRY` (Titan, an irregular moon) is flat even
- * when the residency predicate would say yes. Fixtures are hand-placed so the
- * apparent-size regime of each body is unambiguous rather than a round number a
- * unit bug could accidentally satisfy.
+ * partitionBodiesByPresentation — the one apparent-size sort over every scene body.
+ * Each body is judged against its OWN `resolvePx`, so a planet (3 px) and a star
+ * (4 px) at the same apparent size can land in different branches; the four-way
+ * routing of core's own bodies is `sceneBodyPartition`'s (its presence test).
  */
 
 import { describe, it, expect } from 'vitest';
 
 import { partitionBodiesByPresentation } from '../../../../src/services/engine/frame/partitionBodiesByPresentation';
+import { bodyApparentDiameterPx } from '../../../../src/utils/scene/bodyApparentDiameterPx';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// A test fixture pairing the identity record with the J2000 state the snapshot
-// carries — position + orientation were lifted off the record onto the derive,
-// so the fixture supplies them here for the split to read (keyed by id).
-type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-type SeededMesh = MeshBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-
-const VIEWPORT_HEIGHT_PX = 720;
-const FOV_Y_RAD = Math.PI / 3;
-const PX_PER_RAD = VIEWPORT_HEIGHT_PX / (2 * Math.tan(FOV_Y_RAD / 2));
+const PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 6));
 const CAM: Vec3 = [0, 0, 0];
+const DISTANCE_MPC = 1e6 * 1e3 * SCALE_UNITS.M_TO_MPC; // 10⁶ km down +x
 
-/**
- * A body of the given radius sitting `distanceM` down +x from the camera at the
- * origin. `distanceM = 5·radiusM` subtends ~0.4 rad (hundreds of px, firmly
- * resolved); `distanceM = 1 AU` subtends ~0.01 px (deep sub-pixel glint).
- */
-function bodyAt(id: string, radiusM: number, distanceM: number): SeededPlanet {
-  return {
-    id,
-    label: id,
-    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
-    surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
-    albedo: [0.5, 0.5, 0.5],
-    orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-  };
-}
-
-const CLOSE = (radiusM: number) => radiusM * 5; // resolved (~hundreds of px)
-const AU_M = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.M_TO_MPC; // 1 AU in m → deep sub-pixel
-
-// A MeshBody counterpart to `bodyAt`, same distance-subtends-angle fixture
-// shape, carrying the mesh-only fields (`meshKey`, `standoffRadii`).
-function meshAt(id: string, radiusM: number, distanceM: number): SeededMesh {
-  return {
-    id,
-    label: id,
-    positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
-    boundingRadiusM: radiusM,
-    albedo: [0.5, 0.5, 0.5],
-    meshKey: `${id}-mesh`,
-    standoffRadii: 2,
-    orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-  };
-}
-
-function partition(
-  bodies: readonly (SeededPlanet | SeededMesh)[],
-  resident: (id: string) => boolean,
-) {
-  // The apparent-size test reads each body's position from the per-frame snapshot
-  // (keyed by id), not a baked record field — build it from the fixture bodies'
-  // own positions so the split sees the same values it always has.
-  const bodyStates = new Map<string, BodyState>(
-    bodies.map((b) => [
-      b.id,
-      { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 },
-    ]),
-  );
-  return partitionBodiesByPresentation({
-    bodies,
-    bodyStates,
+/** The radius that subtends `px` at `DISTANCE_MPC` (apparent size is linear in it here). */
+function radiusForPx(px: number): number {
+  const at1m = bodyApparentDiameterPx({
+    positionMpc: [DISTANCE_MPC, 0, 0],
+    radiusM: 1,
     camPosMpc: CAM,
     pxPerRad: PX_PER_RAD,
-    isTextureResident: resident,
   });
+  return px / at1m;
 }
 
-describe('partitionBodiesByPresentation', () => {
-  it('is disjoint and covering — every body lands in exactly one bucket', () => {
-    const bodies = [
-      bodyAt('mars', 3390000, CLOSE(3390000)), // resolved, registry
-      bodyAt('titan', 2575000, CLOSE(2575000)), // resolved, not registry
-      bodyAt('jupiter', 69911000, AU_M), // sub-pixel glint
-      bodyAt('io', 1822000, CLOSE(1822000)), // resolved, registry
-    ];
-    const { glints, flat, textured } = partition(bodies, () => true);
+function planet(id: string, px: number): PositionedSceneBody {
+  const body: PlanetBody = {
+    id,
+    label: id,
+    surface: { datumRadiusM: radiusForPx(px), reliefM: [0, 0] },
+    albedo: [0.5, 0.5, 0.5],
+    resolvePx: 3,
+  };
+  return { body, positionMpc: [DISTANCE_MPC, 0, 0] };
+}
 
-    const all = [...glints, ...flat, ...textured];
+function star(id: string, px: number): PositionedSceneBody {
+  const body: StarBody = {
+    id,
+    label: id,
+    absMag: 4.8,
+    color: [1, 1, 1],
+    surface: { datumRadiusM: radiusForPx(px), reliefM: [0, 0] },
+    resolvePx: 4,
+  };
+  return { body, positionMpc: [DISTANCE_MPC, 0, 0] };
+}
+
+const sort = (bodies: readonly PositionedSceneBody[]) =>
+  partitionBodiesByPresentation({ bodies, camPosMpc: CAM, pxPerRad: PX_PER_RAD });
+
+describe('partitionBodiesByPresentation', () => {
+  it('each body resolves at its own size', () => {
+    const at35 = [planet('planet', 3.5), star('star', 3.5)];
+    const mid = sort(at35);
+    expect(mid.resolved).toEqual([at35[0]]);
+    expect(mid.unresolved).toEqual([at35[1]]);
+
+    const at45 = [planet('planet', 4.5), star('star', 4.5)];
+    expect(sort(at45).resolved).toEqual(at45);
+    expect(sort(at45).unresolved).toEqual([]);
+  });
+
+  it('is disjoint and covering — every body lands in exactly one branch', () => {
+    const bodies = [
+      planet('resolved-planet', 50),
+      planet('glint', 0.5),
+      star('sphere', 50),
+      star('point', 1),
+      star('handoff', 3.5),
+    ];
+    const { resolved, unresolved } = sort(bodies);
+    const all = [...resolved, ...unresolved];
     expect(all).toHaveLength(bodies.length);
     expect(new Set(all)).toEqual(new Set(bodies));
-    // Pairwise disjoint: no body appears in two branches.
-    expect(new Set(all).size).toBe(bodies.length);
   });
 
-  it('routes a resolved registry body to textured iff its texture is resident', () => {
-    const mars = bodyAt('mars', 3390000, CLOSE(3390000));
-
-    const resident = partition([mars], (id) => id === 'mars');
-    expect(resident.textured).toEqual([mars]);
-    expect(resident.flat).toEqual([]);
-
-    const notResident = partition([mars], () => false);
-    expect(notResident.flat).toEqual([mars]);
-    expect(notResident.textured).toEqual([]);
-  });
-
-  it('keeps a resolved non-registry body (Titan, an irregular moon) flat even when residency says yes', () => {
-    const titan = bodyAt('titan', 2575000, CLOSE(2575000));
-    const phobos = bodyAt('phobos', 11000, CLOSE(11000));
-    // isTextureResident returns true for everything — membership in the registry,
-    // not residency, is what keeps these flat.
-    const { flat, textured, glints } = partition([titan, phobos], () => true);
-    expect(new Set(flat)).toEqual(new Set([titan, phobos]));
-    expect(textured).toEqual([]);
-    expect(glints).toEqual([]);
-  });
-
-  it('routes a sub-3px body to glints regardless of registry membership', () => {
-    const jupiter = bodyAt('jupiter', 69911000, AU_M);
-    const { glints, flat, textured } = partition([jupiter], () => true);
-    expect(glints).toEqual([jupiter]);
-    expect(flat).toEqual([]);
-    expect(textured).toEqual([]);
-  });
-
-  it('treats a body the camera sits inside (distance 0) as resolved, not a glint', () => {
-    // apparentSizePx returns 0 at distance 0 (divide-by-zero guard); a bare size
-    // test would misread that as sub-pixel and glint the body the camera is
-    // inside. The partition resolves distance 0 unconditionally, mirroring
-    // planetsPass's planetResolvesPx.
-    const mars = bodyAt('mars', 3390000, 0);
-    const { glints, textured } = partition([mars], () => true);
-    expect(glints).toEqual([]);
-    expect(textured).toEqual([mars]);
-  });
-
-  it('routes a sub-pixel MeshBody to glints', () => {
-    const moon = meshAt('moon', 1737000, AU_M);
-    const { glints, flat, textured } = partition([moon], () => true);
-    expect(glints).toEqual([moon]);
-    expect(flat).toEqual([]);
-    expect(textured).toEqual([]);
-  });
-
-  it('routes a resolved MeshBody to meshes, never textured or flat', () => {
-    const moon = meshAt('moon', 1737000, CLOSE(1737000));
-    const { meshes, flat, textured, glints } = partition([moon], () => true);
-    expect(meshes).toEqual([moon]);
-    expect(flat).toEqual([]);
-    expect(textured).toEqual([]);
-    expect(glints).toEqual([]);
+  it('treats a body the camera sits inside (distance 0) as resolved', () => {
+    const inside: PositionedSceneBody = { body: star('sun', 0.01).body, positionMpc: CAM };
+    expect(sort([inside]).resolved).toEqual([inside]);
   });
 });

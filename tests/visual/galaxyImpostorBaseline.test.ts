@@ -132,7 +132,7 @@ describe('galaxy-impostor visual baseline', () => {
         const sharedInput = {
           cam,
           catalogs,
-          visibleSourceMask: 0xffffffff,
+          sourceMask: 0xffffffff,
           pxPerRad,
           // Live surface-brightness sliders — arbitrary plausible defaults;
           // this baseline is about emission/crossfade geometry, not brightness.

@@ -9,6 +9,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { deriveFrameContext } from '../frame/frameContext';
 import { deriveView } from '../frame/deriveView';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { frameContextInputOf } from '../frame/frameContextInputOf';
 import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
@@ -40,6 +41,10 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
   // that frame dimmed, and producing a new value would tick the focus fade.
   snapshot.focus = state.subsystems.structureFocus.lastFocusUniforms();
   snapshot.focusBlend = snapshot.focus.blend;
+  snapshot.focusPickId = encodeSelectionPick(
+    state.selectionKindRows,
+    state.subsystems.structureFocus.lastFocusRef(),
+  );
   return deriveView(
     snapshot,
     cam,

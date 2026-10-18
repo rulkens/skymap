@@ -1,13 +1,12 @@
 /**
- * `starSourcesInBand` — the one home of the two-part source gate
- * (`starCutInputs`/`starCatalogVisible` both delegate to it): a loaded survey catalog draws only when the master toggle is on AND
- * its crossfade at the camera's heliocentric distance is > 0.
+ * `starSourcesInBand` — the one home of the source gate (`starCutInputs`/`starCatalogVisible`
+ * both delegate to it): a loaded survey catalog draws only while its handed value times its
+ * crossfade at the camera's heliocentric distance is > 0.
  */
 import { describe, it, expect, vi } from 'vitest';
 
 import { starSourcesInBand } from '../../../../../src/layers/starCatalog/render/cut/starSourcesInBand';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
 import type { Octree } from '../../../../../src/@types/octree/Octree';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
@@ -30,19 +29,14 @@ function makeRuntime(catalog: Octree<StarColumns>): Runtime {
   } as unknown as Runtime;
 }
 
-function makeSettings(enabled: boolean): StarCatalogSettings {
-  return {
-    enabled,
-    items: { gaiaStars: { enabled: true, labelEnabled: false } },
-  } as unknown as StarCatalogSettings;
-}
+const fadeOf = (gaiaStars: number) => ({ famousStar: 1, gaiaStars, sStar: 1, sun: 1 });
 
 describe('starSourcesInBand', () => {
   it('holds a loaded catalog whose crossfade at camDistPc is > 0', () => {
     const catalog = makeCatalog();
     const result = starSourcesInBand(
       makeRuntime(catalog),
-      makeSettings(true),
+      fadeOf(1),
       GAIA_STARS_ENTRY.crossfadePc.inner,
     );
     expect(result).toHaveLength(1);
@@ -53,16 +47,16 @@ describe('starSourcesInBand', () => {
   it('excludes a loaded catalog outside its crossfade band', () => {
     const result = starSourcesInBand(
       makeRuntime(makeCatalog()),
-      makeSettings(true),
+      fadeOf(1),
       GAIA_STARS_ENTRY.crossfadePc.outer + 1,
     );
     expect(result).toEqual([]);
   });
 
-  it('is empty when the master toggle is off, whatever the distance', () => {
+  it("is empty while the catalog's handed value is 0, whatever the distance", () => {
     const result = starSourcesInBand(
       makeRuntime(makeCatalog()),
-      makeSettings(false),
+      fadeOf(0),
       GAIA_STARS_ENTRY.crossfadePc.inner,
     );
     expect(result).toEqual([]);

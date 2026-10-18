@@ -13,13 +13,12 @@ import type { MilkyWayRuntime } from '../@types/MilkyWayRuntime';
 import { createUpsamplePass } from '../../../services/engine/frame/passes/createUpsamplePass';
 import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
 
-export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass {
-  return createUpsamplePass({
+export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
+  return createUpsamplePass<'milkyWayDisk'>({
     name: 'milky-way-upsample',
     sourceTargetId: 'mw-aggregate',
+    fade: 'milkyWayDisk',
     handleOf: () => runtime.aggregateUpsample,
-    enabled(state, ctx) {
-      return deriveMilkyWayCloudAlpha(state, ctx) !== null;
-    },
+    enabled: (state, ctx, fade) => deriveMilkyWayCloudAlpha(state, ctx, fade) !== null,
   });
 }

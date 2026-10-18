@@ -27,7 +27,7 @@ import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 
 export function starCatalogPlanner(
   runtime: StarCatalogRuntime,
-): Extract<FrameContentPlanner<void>, { scope: 'once' }> {
+): Extract<FrameContentPlanner<void, 'starCatalog'>, { scope: 'once' }> {
   let anchor: OctreeCutSpec | null = null;
   let changedAtMs = -Infinity;
   // The pool's LRU clock; any strictly increasing count serves.
@@ -50,14 +50,15 @@ export function starCatalogPlanner(
   return {
     name: 'star-catalog',
     scope: 'once',
-    plan(_snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState) {
+    fade: 'starCatalog',
+    plan(_snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState, fade) {
       const slotsOverride = state.settings.starCatalogs.chunkSlotsOverride;
       if (slotsOverride !== appliedSlots) {
         appliedSlots = slotsOverride;
         runtime.publish({ chunkSlotsError: resizeStarPools(runtime, slotsOverride) });
         plannedCut = null; // the new streams know nothing of the last plan
       }
-      const inputs = starCutInputs(runtime, state.settings.starCatalogs, views);
+      const inputs = starCutInputs(runtime, state.settings.starCatalogs, fade, views);
       const nowMs = views[0]!.snapshot.nowMs;
       if (nowMs < changedAtMs) changedAtMs = nowMs;
       frameIndex++;

@@ -1,6 +1,7 @@
 import type { StructureInfo } from '../../data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
+import type { SelectionRef } from '../SelectionRef';
 
 /**
  * StructureFocusSubsystem — owns structure "focus mode": when any structure is
@@ -53,6 +54,12 @@ export type StructureFocusSubsystem = {
    * frame that was drawn.
    */
   lastFocusUniforms(): FocusUniformsValue;
+
+  /**
+   * The structure that value is about: latched through the fade-out, null once the
+   * blend settles at 0. Not `selection.focus`, which clears at the start of the fade-out.
+   */
+  lastFocusRef(): SelectionRef | null;
 
   /** True only while the fade is animating (drives render-on-demand). */
   isAwake(nowMs: number): boolean;

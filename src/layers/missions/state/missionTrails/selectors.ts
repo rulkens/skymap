@@ -8,8 +8,3 @@ export const selectRoute = createSelector(
   [selectSettings],
   (settings): MissionTrailsSettings => settings.missionTrails,
 );
-
-export const selectMissionTrailsEnabled = createSelector(
-  [selectRoute],
-  (route: MissionTrailsSettings): boolean => route.enabled,
-);

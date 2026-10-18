@@ -16,18 +16,19 @@ import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
 import { milkyWayCamPosModel } from '../../../services/engine/galaxyGenerator/v1/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../../../services/engine/galaxyGenerator/v1/milkyWayModelCached';
 
-export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass {
+export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
   return {
     name: 'milky-way-aggregate',
+    fade: 'milkyWayDisk',
 
     // Shared with the upsample consumer and the dust row — see
     // `milkyWayCloudLiveness` on why all three must answer identically.
-    enabled(state, ctx, _view) {
-      return deriveMilkyWayCloudAlpha(state, ctx) !== null;
+    enabled(state, ctx, _view, fade) {
+      return deriveMilkyWayCloudAlpha(state, ctx, fade) !== null;
     },
 
-    draw(pass, view, ctx, state) {
-      const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);
+    draw(pass, view, ctx, state, fade) {
+      const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx, fade);
       if (fadeAlpha === null) return;
 
       // Load-bearing size, not cosmetic — see the module header.

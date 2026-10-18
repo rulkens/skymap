@@ -23,6 +23,9 @@ import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/data/starPlanIntervalFra
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
 
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
+
 vi.mock('../../../src/utils/octree/planOctreeChunks', async (original) => {
   const { planOctreeChunks: real } =
     await original<typeof import('../../../src/utils/octree/planOctreeChunks')>();
@@ -79,14 +82,12 @@ function makeRuntime(loaded: boolean, stream?: OctreeChunkStream<StarColumns>): 
 const STATE = {
   settings: {
     starCatalogs: {
-      enabled: true,
       sizePx: 2.5,
       brightness: 1,
       refineThreshold: 0.05,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
       chunkSlotsOverride: null,
-      items: { gaiaStars: { enabled: true, labelEnabled: false } },
     },
   },
 } as unknown as PassState;
@@ -96,7 +97,7 @@ describe('starCatalogPlanner', () => {
   it('sets one cut per call, and clears it when no source is in band', () => {
     const runtime = makeRuntime(true);
     const planner = starCatalogPlanner(runtime);
-    planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), 0)], STATE);
+    planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), 0)], STATE, ALL_ON);
     expect(runtime.renderer.getFrameCut()?.cut.sources).toHaveLength(1);
 
     const empty = makeRuntime(false);
@@ -104,6 +105,7 @@ describe('starCatalogPlanner', () => {
       SNAPSHOT,
       [makeView(camAtPc(MID_BAND_PC), 0)],
       STATE,
+      ALL_ON,
     );
     expect(empty.renderer.getFrameCut()).toBeNull();
     expect(vote.awake).toBe(false);
@@ -111,7 +113,8 @@ describe('starCatalogPlanner', () => {
 
   it('stays awake for NODE_FADE_MS after the cut inputs last moved, then sleeps', () => {
     const planner = starCatalogPlanner(makeRuntime(true));
-    const plan = (x: number, t: number) => planner.plan(SNAPSHOT, [makeView(camAtPc(x), t)], STATE);
+    const plan = (x: number, t: number) =>
+      planner.plan(SNAPSHOT, [makeView(camAtPc(x), t)], STATE, ALL_ON);
 
     plan(MID_BAND_PC, 0);
     plan(MID_BAND_PC + 10, 1000); // moved
@@ -131,7 +134,7 @@ describe('starCatalogPlanner', () => {
     const runtime = makeRuntime(true, stream);
     const planner = starCatalogPlanner(runtime);
     const recut = (x: number, t: number) => {
-      planner.plan(SNAPSHOT, [makeView(camAtPc(x), t)], STATE);
+      planner.plan(SNAPSHOT, [makeView(camAtPc(x), t)], STATE, ALL_ON);
       return vi.mocked(runtime.renderer.setFrameCut).mock.calls.at(-1)![1];
     };
 
@@ -165,7 +168,7 @@ describe('starCatalogPlanner', () => {
       const { stream, counters } = stubStream();
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const plan = (t: number) =>
-        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE).awake;
+        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE, ALL_ON).awake;
 
       counters.inFlight = 1;
       plan(0);
@@ -178,7 +181,7 @@ describe('starCatalogPlanner', () => {
       const { stream, counters } = stubStream();
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const frame = (t: number) =>
-        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE);
+        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE, ALL_ON);
       const walks = vi.mocked(planOctreeChunks);
       walks.mockClear();
 
@@ -200,7 +203,7 @@ describe('starCatalogPlanner', () => {
       frame(100);
       walks.mockClear();
       const at = (xPc: number, t: number) =>
-        planner.plan(SNAPSHOT, [makeView(camAtPc(xPc), t)], STATE);
+        planner.plan(SNAPSHOT, [makeView(camAtPc(xPc), t)], STATE, ALL_ON);
       for (let i = 0; i < 2 * STAR_PLAN_INTERVAL_FRAMES; i++) at(MID_BAND_PC + 10 * i, 101 + i);
       expect(walks).toHaveBeenCalledTimes(2); // moving: on the first move, then one interval on
       const restPc = MID_BAND_PC + 10 * (2 * STAR_PLAN_INTERVAL_FRAMES - 1);
@@ -212,7 +215,7 @@ describe('starCatalogPlanner', () => {
       const { stream, counters } = stubStream();
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const plan = (t: number) =>
-        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE).awake;
+        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE, ALL_ON).awake;
 
       plan(0);
       expect(plan(1000)).toBe(false);
@@ -240,7 +243,7 @@ describe('starCatalogPlanner', () => {
       const planner = starCatalogPlanner(makeRuntime(true));
       return Array.from({ length: frames }, (_, i) => {
         const { xPc, yaw } = pose(i);
-        return planner.plan(SNAPSHOT, [pruningView(xPc, yaw, i * FRAME_MS)], STATE).awake;
+        return planner.plan(SNAPSHOT, [pruningView(xPc, yaw, i * FRAME_MS)], STATE, ALL_ON).awake;
       });
     }
     const afterFade = (v: boolean[]) => v.filter((_, i) => i * FRAME_MS > NODE_FADE_MS);
@@ -291,9 +294,14 @@ describe('starCatalogPlanner', () => {
     Object.assign(runtime.renderer, { upload });
     const planner = starCatalogPlanner(runtime);
     const plan = (chunkSlotsOverride: number | null) =>
-      planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), 0)], {
-        settings: { starCatalogs: { ...STATE.settings.starCatalogs, chunkSlotsOverride } },
-      } as unknown as PassState);
+      planner.plan(
+        SNAPSHOT,
+        [makeView(camAtPc(MID_BAND_PC), 0)],
+        {
+          settings: { starCatalogs: { ...STATE.settings.starCatalogs, chunkSlotsOverride } },
+        } as unknown as PassState,
+        ALL_ON,
+      );
 
     plan(null);
     expect(publish).not.toHaveBeenCalled();

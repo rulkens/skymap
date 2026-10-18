@@ -24,11 +24,15 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { Source } from '../../../../src/data/sources';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
+import type { SlabHostId } from '../../../../src/@types/engine/frame/SlabHostId';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
@@ -40,6 +44,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
 
 // Roll and a rotated orientation basis keep every lookAt element off ±0, so the
 // pin below compares real values rather than the sign of a zero.
@@ -66,9 +71,9 @@ function makeState(): EngineState {
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
+    visibilityEntries: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
-      starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: {} },
     },
     picking: { pickInFlight: false, cursorTexPx: null },
@@ -363,11 +368,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       subsystems: { texturedDisks },
       settings: {
         orientation: 'equatorial',
-        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: {} },
       },
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
+      visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
@@ -689,32 +694,19 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   });
 });
 
-describe('deriveView — NEAR0 range from the star spheres', () => {
-  const SUN_MPC = deriveBodyStates(CONST_J2000).get('sun')!.positionMpc;
+describe('deriveView — NEAR0 range from the spheres it draws', () => {
+  const STATES = deriveBodyStates(CONST_J2000);
+  const SUN_MPC = STATES.get('sun')!.positionMpc;
   const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
+  const MERCURY = findByIdOrThrow(SCENE_PLANETS, 'mercury', 'test');
 
-  it('spans a resolved Sun, sized at each view’s own camera', () => {
-    // 1e6 km out the Sun spans ~1000 px; a view whose eye sits 1e4 AU off sees it sub-pixel.
-    const pose: CameraPose = {
-      target: [...SUN_MPC],
-      yaw: 0,
-      pitch: 0,
-      distance: 1e6 * SCALE_UNITS.KM_TO_MPC,
-    };
+  /** A ready frame at `pose` with Mercury in core's roster and `sceneBodies` as given. */
+  function frameAt(pose: CameraPose, bodies: readonly SceneBody[]) {
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
+    const base = makeState();
     const state = {
-      ...makeState(),
-      settings: {
-        bodies: { items: {} },
-        starCatalogs: {
-          enabled: true,
-          items: {
-            famousStar: { enabled: false },
-            sun: { enabled: true },
-            sStar: { enabled: false },
-          },
-        },
-      },
+      ...base,
+      data: { bodies: { earth: null, planets: [MERCURY], meshBodies: [] } },
     } as unknown as EngineState;
     const snapshot = deriveFrameContext(state, {
       cam,
@@ -724,17 +716,34 @@ describe('deriveView — NEAR0 range from the star spheres', () => {
       simDays: CONST_J2000,
     });
     if (!snapshot.isReady) throw new Error('fixture not ready');
+    return { cam, snapshot: { ...snapshot, sceneBodies: positionedBodiesOf(bodies, STATES) } };
+  }
 
-    const near = deriveView(snapshot, cam, spec());
+  const sunRangeOf = (view: FrameView): readonly [number, number] => {
     const dM =
       Math.hypot(
-        SUN_MPC[0] - near.drawCamPos[0],
-        SUN_MPC[1] - near.drawCamPos[1],
-        SUN_MPC[2] - near.drawCamPos[2],
+        SUN_MPC[0] - view.drawCamPos[0],
+        SUN_MPC[1] - view.drawCamPos[1],
+        SUN_MPC[2] - view.drawCamPos[2],
       ) * SCALE_UNITS.MPC_TO_M;
+    return [dM - SUN_OUTER_M, dM + SUN_OUTER_M];
+  };
+
+  // 1e6 km out the Sun spans ~1000 px; a view whose eye sits 1e4 AU off sees it sub-pixel.
+  const NEAR_SUN: CameraPose = {
+    target: [...SUN_MPC],
+    yaw: 0,
+    pitch: 0,
+    distance: 1e6 * SCALE_UNITS.KM_TO_MPC,
+  };
+
+  it('spans a resolved Sun, sized at each view’s own camera', () => {
+    const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
+    const near = deriveView(snapshot, cam, spec());
     const range = near.slabs[NEAR0]!.distanceRangeM!;
-    expect(range[0]).toBeCloseTo(dM - SUN_OUTER_M, -3);
-    expect(range[1]).toBeCloseTo(dM + SUN_OUTER_M, -3);
+    const [nearM, farM] = sunRangeOf(near);
+    expect(range[0]).toBeCloseTo(nearM, -3);
+    expect(range[1]).toBeCloseTo(farM, -3);
 
     const far = deriveView(
       snapshot,
@@ -742,5 +751,47 @@ describe('deriveView — NEAR0 range from the star spheres', () => {
       spec({ eyeOffsetMpc: [1e4 * SCALE_UNITS.AU_TO_MPC, 0, 0] }),
     );
     expect(far.slabs[NEAR0]!.distanceRangeM).toBeNull();
+  });
+
+  it('a star faded to 0 neither sizes NEAR0 nor occludes', () => {
+    // Core leaves a star whose handed value is 0 out of `sceneBodies`.
+    const { cam, snapshot } = frameAt(NEAR_SUN, []);
+    expect(deriveView(snapshot, cam, spec()).slabs[NEAR0]!.distanceRangeM).toBeNull();
+  });
+
+  it('NEAR0 never spans a planet', () => {
+    // 1e5 km off Mercury both it (~30 px) and the Sun (~15 px) resolve; Mercury
+    // draws in its own body slab, so NEAR0's range is the Sun's alone.
+    const mercuryMpc = STATES.get('mercury')!.positionMpc;
+    const pose: CameraPose = {
+      target: [...mercuryMpc],
+      yaw: 0,
+      pitch: 0,
+      distance: 1e5 * SCALE_UNITS.KM_TO_MPC,
+    };
+    const withPlanet = frameAt(pose, [...SCENE_SUN, MERCURY]);
+    const sunAlone = frameAt(pose, SCENE_SUN);
+    const range = deriveView(withPlanet.snapshot, withPlanet.cam, spec()).slabs[NEAR0]!
+      .distanceRangeM!;
+    expect(range).toEqual(
+      deriveView(sunAlone.snapshot, sunAlone.cam, spec()).slabs[NEAR0]!.distanceRangeM,
+    );
+    expect(range).not.toBeNull();
+  });
+
+  it('a Layer slab row anchored on a body leaves NEAR0 spanning it', () => {
+    // A Layer's own slab row anchored on a star must not pull that star out of NEAR0. The
+    // cast is the one every body anchor takes (`bodySlabRowOf`).
+    const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
+    const layerRow: SlabRow = {
+      anchorId: 'sun' as SlabHostId,
+      drawRadiusM: () => SUN_OUTER_M,
+      footprintRadiusM: SUN_OUTER_M,
+      source: 'foreground',
+    };
+    const withRow = { ...snapshot, slabBodyCandidates: [...snapshot.slabBodyCandidates, layerRow] };
+    expect(deriveView(withRow, cam, spec()).slabs[NEAR0]!.distanceRangeM).toEqual(
+      deriveView(snapshot, cam, spec()).slabs[NEAR0]!.distanceRangeM,
+    );
   });
 });

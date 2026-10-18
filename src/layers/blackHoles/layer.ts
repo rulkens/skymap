@@ -11,6 +11,7 @@
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { blackHolesLayerSettings } from './state/slices';
+import { blackHolesVisibility } from './visibility';
 import { BLACK_HOLE_SOURCE_ROWS } from './sources/blackHoleSourceRows';
 import { BLACK_HOLES } from './data/blackHoles';
 import { create } from './create';
@@ -20,7 +21,6 @@ import { blackHoleMarkerPass } from './passes/blackHoleMarkerPass';
 import { blackHoleSlabRow } from './present/blackHoleSlabRow';
 import { blackHoleSelectionRow } from './present/blackHoleSelectionRow';
 import { blackHoleSearch } from './present/blackHoleSearch';
-import { blackHoleFadeRows } from './present/blackHoleFadeRows';
 import { produceBlackHoleCaptions } from './present/produceBlackHoleCaptions';
 import { SKY_CUBEMAP_TARGET } from './render/skyCubemapTarget';
 import BlackHoleLensingTuningSectionContainer from './ui/BlackHoleLensingTuningSectionContainer';
@@ -30,16 +30,21 @@ import CompactBlackHoleCard from './ui/CompactBlackHoleCard/CompactBlackHoleCard
 export const blackHolesLayer = defineLayer({
   name: 'blackHoles',
   settings: blackHolesLayerSettings,
+  visibility: blackHolesVisibility,
   sources: BLACK_HOLE_SOURCE_ROWS,
   targets: [SKY_CUBEMAP_TARGET],
   slabs: BLACK_HOLES.map(blackHoleSlabRow),
   create,
   destroy,
   passes: (runtime) => [blackHoleLensingPass(runtime), blackHoleMarkerPass(runtime)],
-  fades: blackHoleFadeRows,
   guides: () => ({
     screenLabels: [
-      { slab: NEAR0, id: 'blackHoleCaptions', produceLabels: produceBlackHoleCaptions() },
+      {
+        slab: NEAR0,
+        id: 'blackHoleCaptions',
+        label: 'blackHole',
+        produceLabels: produceBlackHoleCaptions(),
+      },
     ],
   }),
   selection: () => [blackHoleSelectionRow()],

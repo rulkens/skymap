@@ -1,17 +1,10 @@
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { describe, expect, it, vi } from 'vitest';
-import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
+import { describe, expect, it } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../src/layers/structure/present/produceStructureMarkers';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/data/mildRecession';
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
 import type { StructureStore } from '../../../../src/layers/structure/@types/StructureStore';
-import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
-import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
-
-function makeRegistry(): FadeRegistry {
-  return createFadeRegistry({ requestRender: () => {} });
-}
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -23,25 +16,15 @@ import {
   RING_PICK_MIN_ALPHA,
 } from '../../../../src/layers/structure/present/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { structurePickId } from '../../../../src/utils/picking/structurePickId';
+import { makeStructureFade } from '../../../fixtures/makeStructureFade';
 
-// Builds a real structure store (so `state.store` is the production
-// store) + a real FadeRegistry (so per-category marker opacity comes from the
-// production fail-safe path: unregistered markerLayer handles read 1.0) +
-// state.selection refs that drive the ring bump + recession +
-// a settings.structures.items bag (the authoritative per-category gate, all
-// enabled by default), then drives the producer. The registry is returned on
-// the state so a test can register/seed a structure handle to exercise the
-// toggle path.
-type TestState = EngineState & { subsystems: { fades: FadeRegistry }; store: StructureStore };
+// Builds a real structure store (so `state.store` is the production store) and
+// state.selection refs that drive the ring bump, then drives the producer. The
+// per-category fade is the handed value: `makeStructureFade` builds it.
+type TestState = EngineState & { store: StructureStore };
 
-// All-enabled structure items bag — the authoritative ring/label gate the
-// producer reads. Tests flip an entry to false to drive the disabled path.
-function makeStructureItems(): EngineState['settings']['structures']['items'] {
-  return Object.fromEntries(
-    STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
-  ) as EngineState['settings']['structures']['items'];
-}
+const ONE = makeStructureFade();
 
 function makeState(
   selectedStructureId: string | null = null,
@@ -49,22 +32,10 @@ function makeState(
 ): TestState {
   return {
     store: createStructureStore(),
-    settings: { structures: { enabled: true, items: makeStructureItems() } },
     selection: {
       select: selectedStructureId !== null ? { type: 'structure', id: selectedStructureId } : null,
       focus: focusedStructureId !== null ? { type: 'structure', id: focusedStructureId } : null,
       hover: null,
-    },
-    subsystems: {
-      fades: makeRegistry(),
-      // clipPlayer is non-nullable; return factor 1 so the clip channel is
-      // behaviour-neutral and existing assertions are unaffected.
-      clipPlayer: {
-        tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
-        stop: vi.fn<() => void>(),
-        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
-        destroy: vi.fn<() => void>(),
-      },
     },
   } as unknown as TestState;
 }
@@ -73,9 +44,13 @@ function makeState(
 // the structures sit ~10 Mpc away to within 0.01%.
 const FULL_BAND_CAM_Z = SCALE_FADE_BANDS.surveyDeepZoom.fullAt * 1.01;
 
-function makeCtx(focusBlend = 0, camDistMpc = FULL_BAND_CAM_Z): FrameView {
+function makeCtx(
+  focusBlend = 0,
+  camDistMpc = FULL_BAND_CAM_Z,
+  focusPickId: number | null = null,
+): FrameView {
   return {
-    snapshot: { focusBlend, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: { focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -103,7 +78,7 @@ describe('produceStructureMarkers', () => {
     const state = makeState();
     state.store.setGroup('bulk', [rec('b1'), rec('b2')]);
     state.store.setGroup('anchors', [rec('a1')]);
-    const markers = produceStructureMarkers(state.store, state, makeCtx());
+    const markers = produceStructureMarkers(state.store, state, makeCtx(), ONE);
     expect(markers.map((m) => m.id)).toEqual(['a1', 'b1', 'b2']);
   });
 
@@ -115,51 +90,38 @@ describe('produceStructureMarkers', () => {
       rec('near'),
       rec('far', 'galaxy-cluster', { worldPos: [10000, 0, 0] }),
     ]);
-    const markers = produceStructureMarkers(state.store, state, makeCtx());
+    const markers = produceStructureMarkers(state.store, state, makeCtx(), ONE);
     expect(markers.map((m) => m.id)).toEqual(['near', 'far']);
     const far = markers.find((m) => m.id === 'far')!;
     expect(far.ringColor[3]).toBe(0);
     expect(far.haloColor[3]).toBe(0);
   });
 
-  it('skips a category that is disabled AND fully faded (opacity 0)', () => {
+  it('skips a category whose handed value is 0', () => {
     const state = makeState();
     state.store.setGroup('bulk', [rec('c1', 'galaxy-cluster'), rec('v1', 'void')]);
-    // Both halves of the all-or-nothing skip: the authoritative `enabled`
-    // boolean is false AND the structure fade has reached 0.
-    state.settings.structures.items['galaxy-cluster'].enabled = false;
-    state.subsystems.fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
-    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0);
-    const markers = produceStructureMarkers(state.store, state, makeCtx());
-    // Cluster skipped wholesale; void (enabled, unregistered → fail-safe 1.0) emits.
+    const markers = produceStructureMarkers(
+      state.store,
+      state,
+      makeCtx(),
+      makeStructureFade(1, { 'galaxy-cluster': 0 }),
+    );
+    // Cluster skipped wholesale; void emits.
     expect(markers.map((m) => m.id)).toEqual(['v1']);
-  });
-
-  it('draws a disabled category whose structure opacity is still > 0 (fade-out tail)', () => {
-    const state = makeState();
-    state.store.setGroup('bulk', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-    // Authoritative gate is OFF but the fade hasn't reached 0 yet: the fade-out
-    // tail must still emit alpha-scaled descriptors, NOT skip.
-    state.settings.structures.items['galaxy-cluster'].enabled = false;
-    state.subsystems.fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
-    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0.5);
-    const markers = produceStructureMarkers(state.store, state, makeCtx());
-    const c1 = markers.find((m) => m.id === 'c1')!;
-    // Emitted, with alpha scaled by the 0.5 fade opacity (× sigWeight 0.25).
-    expect(c1.ringColor[3]).toBeCloseTo(1 * 0.25 * 0.5, 6);
   });
 
   it('a mid-fade category emits alpha-scaled descriptors (not skipped)', () => {
     const state = makeState();
     state.store.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-    // No-focus baseline alpha first (cluster handle unregistered → 1.0).
-    const baseMarkers = produceStructureMarkers(state.store, state, makeCtx());
-    const base = baseMarkers.find((m) => m.id === 'c1')!;
-    // Now half-fade the cluster category.
-    state.subsystems.fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
-    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0.5);
-    const markers = produceStructureMarkers(state.store, state, makeCtx());
-    const half = markers.find((m) => m.id === 'c1')!;
+    const base = produceStructureMarkers(state.store, state, makeCtx(), ONE).find(
+      (m) => m.id === 'c1',
+    )!;
+    const half = produceStructureMarkers(
+      state.store,
+      state,
+      makeCtx(),
+      makeStructureFade(1, { 'galaxy-cluster': 0.5 }),
+    ).find((m) => m.id === 'c1')!;
     // Still emitted (alignment) and ring/halo alpha exactly halved.
     expect(half.ringColor[3]).toBeCloseTo(base.ringColor[3] * 0.5, 6);
     expect(half.haloColor[3]).toBeCloseTo(base.haloColor[3] * 0.5, 6);
@@ -173,7 +135,7 @@ describe('produceStructureMarkers', () => {
       rec('a', 'galaxy-cluster', { significance: 0 }),
       rec('b', 'galaxy-cluster', { significance: 0 }),
     ]);
-    const markers = produceStructureMarkers(sel.store, sel, makeCtx());
+    const markers = produceStructureMarkers(sel.store, sel, makeCtx(), ONE);
     const a = markers.find((m) => m.id === 'a')!;
     const b = markers.find((m) => m.id === 'b')!;
     // alpha = ringColor.a(1) × fade(1) × sigWeight(0.25), selected or not
@@ -183,28 +145,52 @@ describe('produceStructureMarkers', () => {
     expect(a.ringColor[2]).toBeCloseTo(b.ringColor[2] * SELECTED_RING_BRIGHTEN, 6);
   });
 
-  it('non-focused marker ring AND halo alpha scale by focusRecession at blend > 0', () => {
-    const state = makeState('a', 'a'); // 'a' focused
-    state.store.setGroup('anchors', [rec('a', 'galaxy-cluster'), rec('b', 'galaxy-cluster')]);
-    const rest = produceStructureMarkers(state.store, state, makeCtx(0));
-    const focused = produceStructureMarkers(state.store, state, makeCtx(1));
-    const bRest = rest.find((m) => m.id === 'b')!;
-    const bFoc = focused.find((m) => m.id === 'b')!;
-    // Non-focused 'b' recedes to MILD_RECESSION of its at-rest alpha at blend 1.
-    expect(bFoc.ringColor[3]).toBeCloseTo(bRest.ringColor[3] * MILD_RECESSION, 6);
-    expect(bFoc.haloColor[3]).toBeCloseTo(bRest.haloColor[3] * MILD_RECESSION, 6);
+  it('a ring recedes once unless it is the focus', () => {
+    const state = makeState();
+    state.store.setGroup('anchors', [
+      rec('a'),
+      rec('b', 'galaxy-cluster', { worldPos: [0, 10, 0] }),
+    ]);
+    const focusWord = structurePickId(
+      'galaxy-cluster',
+      state.store.categoryIndexOf('galaxy-cluster', 'a'),
+    );
+    const byId = (ctx: FrameView) =>
+      new Map(produceStructureMarkers(state.store, state, ctx, ONE).map((m) => [m.id, m]));
+    const rest = byId(makeCtx());
+    const focused = byId(makeCtx(1, FULL_BAND_CAM_Z, focusWord));
+    expect(focused.get('a')!.ringColor[3]).toBeCloseTo(rest.get('a')!.ringColor[3], 6);
+    expect(focused.get('a')!.haloColor[3]).toBeCloseTo(rest.get('a')!.haloColor[3], 6);
+    expect(focused.get('b')!.ringColor[3]).toBeCloseTo(
+      rest.get('b')!.ringColor[3] * MILD_RECESSION,
+      6,
+    );
+    expect(focused.get('b')!.haloColor[3]).toBeCloseTo(
+      rest.get('b')!.haloColor[3] * MILD_RECESSION,
+      6,
+    );
   });
 
-  it('focused marker is exempt from recession', () => {
-    const state = makeState('a', 'a'); // 'a' focused
-    state.store.setGroup('anchors', [rec('a', 'galaxy-cluster'), rec('b', 'galaxy-cluster')]);
-    const rest = produceStructureMarkers(state.store, state, makeCtx(0));
-    const focused = produceStructureMarkers(state.store, state, makeCtx(1));
-    const aRest = rest.find((m) => m.id === 'a')!;
-    const aFoc = focused.find((m) => m.id === 'a')!;
-    // The focused structure's ring/halo are unchanged across the blend.
-    expect(aFoc.ringColor[3]).toBeCloseTo(aRest.ringColor[3], 6);
-    expect(aFoc.haloColor[3]).toBeCloseTo(aRest.haloColor[3], 6);
+  // Selection brightens a ring; it does not exempt it from recession.
+  it('a selected ring that is not the focus recedes', () => {
+    const state = makeState('b', 'a');
+    state.store.setGroup('anchors', [
+      rec('a', 'galaxy-cluster', { significance: 0 }),
+      rec('b', 'galaxy-cluster', { significance: 0, worldPos: [0, 10, 0] }),
+    ]);
+    const focusWord = structurePickId(
+      'galaxy-cluster',
+      state.store.categoryIndexOf('galaxy-cluster', 'a'),
+    );
+    const b = (ctx: FrameView) =>
+      produceStructureMarkers(state.store, state, ctx, ONE).find((m) => m.id === 'b')!;
+    const rest = b(makeCtx());
+    const focused = b(makeCtx(1, FULL_BAND_CAM_Z, focusWord));
+    expect(focused.ringColor[3]).toBeCloseTo(rest.ringColor[3] * MILD_RECESSION, 6);
+    expect(focused.ringColor[0]).toBeCloseTo(rest.ringColor[0], 6);
+    expect(rest.ringColor[0]).toBeGreaterThan(
+      STRUCTURE_MARKER_STYLES['galaxy-cluster'].ringColor[0],
+    );
   });
 
   it('marker alpha at a camera distance equals the band value times the unbanded alpha', () => {
@@ -212,12 +198,12 @@ describe('produceStructureMarkers', () => {
     const unbanded = (() => {
       const state = makeState();
       state.store.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-      return produceStructureMarkers(state.store, state, makeCtx(0, band.fullAt * 1.01))[0]!;
+      return produceStructureMarkers(state.store, state, makeCtx(0, band.fullAt * 1.01), ONE)[0]!;
     })();
     for (const dist of [band.fullAt * 1.01, (band.fullAt + band.goneAt) / 2, band.goneAt * 0.5]) {
       const state = makeState();
       state.store.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-      const m = produceStructureMarkers(state.store, state, makeCtx(0, dist))[0]!;
+      const m = produceStructureMarkers(state.store, state, makeCtx(0, dist), ONE)[0]!;
       const expected = fadeBand(band, dist);
       expect(m.ringColor[3]).toBeCloseTo(unbanded.ringColor[3] * expected, 5);
       expect(m.haloColor[3]).toBeCloseTo(unbanded.haloColor[3] * expected, 5);
@@ -236,7 +222,7 @@ describe('produceStructureMarkers', () => {
         significance: 1,
       }),
     ]);
-    const [m] = produceStructureMarkers(state.store, state, makeCtx(0, camZ));
+    const [m] = produceStructureMarkers(state.store, state, makeCtx(0, camZ), ONE);
     expect(m!.ringColor[3]).toBeGreaterThan(0);
   });
 
@@ -253,7 +239,7 @@ describe('produceStructureMarkers', () => {
       }),
     ]);
     const ctx = { ...makeCtx(0, camZ), drawPxPerRad: 900 } as FrameView;
-    const [m] = produceStructureMarkers(state.store, state, ctx);
+    const [m] = produceStructureMarkers(state.store, state, ctx, ONE);
     const style = STRUCTURE_MARKER_STYLES['galaxy-cluster'];
     const t = Math.min(
       1,
@@ -280,12 +266,12 @@ describe('produceStructureMarkers', () => {
     const ctx = makeCtx();
     const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
 
-    expect(produceStructureMarkers(state.store, state, ctx).map((m) => m.pickable)).toEqual([
+    expect(produceStructureMarkers(state.store, state, ctx, ONE).map((m) => m.pickable)).toEqual([
       true,
       true,
     ]);
 
-    const under = produceStructureMarkers(state.store, state, focused);
+    const under = produceStructureMarkers(state.store, state, focused, ONE);
     // Both descriptors stay, in order: the pick decodes by per-category index.
     expect(under.map((m) => [m.id, m.pickable])).toEqual([
       ['in', true],
@@ -294,11 +280,10 @@ describe('produceStructureMarkers', () => {
   });
 
   it('a ring drawn below RING_PICK_MIN_ALPHA stays emitted but is not pickable', () => {
-    const at = (clipFactor: number) => {
+    const at = (value: number) => {
       const state = makeState();
-      state.subsystems.clipPlayer.clipOpacityOf = () => clipFactor;
       state.store.setGroup('anchors', [rec('a')]);
-      return produceStructureMarkers(state.store, state, makeCtx())[0]!;
+      return produceStructureMarkers(state.store, state, makeCtx(), makeStructureFade(value))[0]!;
     };
     const faint = at(RING_PICK_MIN_ALPHA / 2);
     const solid = at(0.5);
@@ -319,7 +304,7 @@ describe('produceStructureMarkers', () => {
         rec('a', 'galaxy-cluster', { significance: 0 }),
         rec('b', 'galaxy-cluster', { significance: 0 }),
       ]);
-      return produceStructureMarkers(state.store, state, makeCtx());
+      return produceStructureMarkers(state.store, state, makeCtx(), ONE);
     };
     const plain = build(makeState()).find((m) => m.id === 'a')!;
 
