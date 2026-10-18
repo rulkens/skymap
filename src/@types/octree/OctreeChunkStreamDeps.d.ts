@@ -1,10 +1,11 @@
 import type { OctreeChunk } from './OctreeChunk';
 import type { Octree } from './Octree';
+import type { OctreeStreamFormat } from './OctreeStreamFormat';
 
-/** What `createOctreeChunkStream` closes over: the index, pool size and the renderer's two writes. */
+/** What `createOctreeChunkStream` closes over: the index, its format, pool size and the renderer's two writes. */
 export type OctreeChunkStreamDeps<C extends { readonly count: number }> = {
   readonly octree: Octree<C>;
-  readonly binBaseName: string;
+  readonly format: OctreeStreamFormat<C>;
   readonly slots: number;
   readonly requestRender: () => void;
   /** `renderer.uploadChunk`; `hostSlot` is the parent's slot, null for the index. */

@@ -17,7 +17,8 @@ import {
 import { octreeIndexPath } from '../../../utils/octree/octreeIndexPath';
 import { decodeOctreeIndex } from '../../../data/octree/decodeOctreeIndex';
 import { starOctreeFromSkst } from '../../../utils/star/starOctreeFromSkst';
-import { starOctreeFromIndex } from '../../../utils/star/starOctreeFromIndex';
+import { octreeFromIndex } from '../../../utils/octree/octreeFromIndex';
+import { starColumnsOf } from '../../../utils/star/starColumnsOf';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
@@ -36,7 +37,7 @@ export const starCatalogFetcher: Fetcher<Octree<StarColumns>, StarCatalogReq> = 
       signal,
       onProgress,
     );
-    return starOctreeFromIndex(decodeOctreeIndex(buf));
+    return octreeFromIndex(decodeOctreeIndex(buf), starColumnsOf);
   }
   const name = `${entry.binBaseName}-${req.tier}.bin`;
   const buf = await fetchWithProgress(

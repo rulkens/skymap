@@ -12,6 +12,7 @@ import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCutInputs } from './StarCutInputs';
 import type { StarCatalogCutDrawArgs } from './StarCatalogCutDrawArgs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 export type StarCatalogRenderer = Renderer & {
   /**
@@ -19,12 +20,17 @@ export type StarCatalogRenderer = Renderer & {
    * upload; `min(slots, octree.chunkCount)` chunk slots follow the index, and that pool
    * size is returned for the chunk stream to match.
    */
-  upload(source: SourceType, octree: Octree, slots: number): number;
+  upload(source: SourceType, octree: Octree<StarColumns>, slots: number): number;
   /**
    * Land a chunk in a slot: its records and rows, then every root's resident bit, written in
    * the rows of `hostSlot` (its parent's slot; null when the index holds its roots).
    */
-  uploadChunk(source: SourceType, slot: number, chunk: OctreeChunk, hostSlot: number | null): void;
+  uploadChunk(
+    source: SourceType,
+    slot: number,
+    chunk: OctreeChunk<StarColumns>,
+    hostSlot: number | null,
+  ): void;
   /** Free a slot: every root of its chunk stops refining, then the slot's row count is cleared. */
   evictChunk(source: SourceType, slot: number, hostSlot: number | null): void;
   /**
@@ -43,7 +49,7 @@ export type StarCatalogRenderer = Renderer & {
   /** The inverse: null when the ordinal's chunk is not resident. */
   poolRecordIndex(source: SourceType, ordinal: number): number | null;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
-  loadedCatalogs(): Iterable<{ source: SourceType; octree: Octree }>;
+  loadedCatalogs(): Iterable<{ source: SourceType; octree: Octree<StarColumns> }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */
   pickResources(): StarCatalogPickResources;
   /**

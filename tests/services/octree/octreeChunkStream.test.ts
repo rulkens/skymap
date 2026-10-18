@@ -9,6 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createOctreeChunkStream } from '../../../src/services/octree/octreeChunkStream';
 import { NO_CHUNK_REF } from '../../../src/data/octree/octreeFormat';
 import { octreeChunkPath } from '../../../src/utils/octree/octreeChunkPath';
+import { starColumnsOf } from '../../../src/utils/star/starColumnsOf';
 import { encodeOctreeObject } from '../../../tools/octree/encodeOctreeObject';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
@@ -81,7 +82,10 @@ function harness(slots: number) {
   const evict = vi.fn();
   const stream = createOctreeChunkStream({
     octree: OCTREE,
-    binBaseName: 'stars',
+    format: {
+      chunkPath: (ref) => octreeChunkPath('star', 'stars', ref),
+      decodeRecords: starColumnsOf,
+    },
     slots,
     requestRender: () => {},
     upload,

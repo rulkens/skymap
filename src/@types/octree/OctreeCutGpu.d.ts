@@ -21,9 +21,19 @@ export type OctreeCutGpu = {
    */
   upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void;
   /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
-  uploadChunk(source: SourceType, slot: number, chunk: OctreeChunk<{ readonly count: number }>, host: OctreeChunkHost): void;
+  uploadChunk(
+    source: SourceType,
+    slot: number,
+    chunk: OctreeChunk<{ readonly count: number }>,
+    host: OctreeChunkHost,
+  ): void;
   /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
-  evictChunk(source: SourceType, slot: number, chunk: OctreeChunk<{ readonly count: number }>, host: OctreeChunkHost): void;
+  evictChunk(
+    source: SourceType,
+    slot: number,
+    chunk: OctreeChunk<{ readonly count: number }>,
+    host: OctreeChunkHost,
+  ): void;
   /**
    * One compute pass: every source in `inputs` gets this frame's cut, or with `recut` false
    * only its uniforms, so the last cut's lists draw about this frame's eye.

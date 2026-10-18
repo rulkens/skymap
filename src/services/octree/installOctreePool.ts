@@ -5,36 +5,30 @@
  * `upload` runs first and throws past the pool caps, so a failure leaves the
  * previous stream drawing.
  */
-import { SOURCE_REGISTRY } from '../../data/sources';
 import { createOctreeChunkStream } from './octreeChunkStream';
 import type { Octree } from '../../@types/octree/Octree';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { Tier } from '../../@types/data/Tier';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
+import type { OctreeStreamFormat } from '../../@types/octree/OctreeStreamFormat';
 
-export function installOctreePool(
-  host: OctreePoolHost<StarColumns>,
+export function installOctreePool<C extends { readonly count: number }>(
+  host: OctreePoolHost<C>,
   source: SourceType,
-  octree: Octree<StarColumns>,
-  tier: Tier,
-  slotsOverride: number | null,
+  octree: Octree<C>,
+  slots: number,
+  format: OctreeStreamFormat<C>,
 ): void {
-  const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
-    throw new Error(`installOctreePool: source ${source} is not a streamed star catalog`);
-  }
   const { renderer, chunkStreams, requestRender } = host;
-  const slots = renderer.upload(source, octree, slotsOverride ?? entry.budgets[tier].slots);
+  const poolSlots = renderer.upload(source, octree, slots);
   chunkStreams.get(source)?.destroy();
   chunkStreams.delete(source);
-  if (slots === 0) return;
+  if (poolSlots === 0) return;
   chunkStreams.set(
     source,
     createOctreeChunkStream({
       octree,
-      binBaseName: entry.binBaseName,
-      slots,
+      format,
+      slots: poolSlots,
       requestRender,
       upload: (s, chunk, h) => renderer.uploadChunk(source, s, chunk, h),
       evict: (s, h) => renderer.evictChunk(source, s, h),

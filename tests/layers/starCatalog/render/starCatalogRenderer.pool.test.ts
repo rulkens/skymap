@@ -305,25 +305,6 @@ describe('starCatalogRenderer chunk pool', () => {
     ]);
   });
 
-  it("recordOrdinal and poolRecordIndex map a resident chunk's records both ways, and nothing once evicted", () => {
-    const { device } = recordingDevice();
-    const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
-    renderer.snapshotPickSlots();
-    // Chunk 1's third record: pool 100 + 1·50 + 2, ordinal 103 + 2.
-    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBe(152);
-    expect(renderer.recordOrdinal(Source.GaiaStars, 42)).toBe(42);
-    expect(renderer.recordOrdinal(Source.GaiaStars, 153)).toBeNull(); // past the chunk's records
-    expect(renderer.recordOrdinal(Source.GaiaStars, 100)).toBeNull(); // slot 0 is empty
-
-    renderer.evictChunk(Source.GaiaStars, 1, null);
-    renderer.snapshotPickSlots();
-    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBeNull();
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
-  });
-
   it('a slot evicted and refilled between the pick draw and its readback resolves to the star that was drawn', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
@@ -344,6 +325,9 @@ describe('starCatalogRenderer chunk pool', () => {
     );
     // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
+    // The inverse reads the live table: chunk 1 has left it, chunk 2 holds slot 1.
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 108)).toBe(152);
   });
 
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {
@@ -383,7 +367,7 @@ describe('starCatalogRenderer chunk pool', () => {
     ]);
     for (const w of zeroed) expect([...(w.data as Float32Array)].every((v) => v === 0)).toBe(true);
   });
-  it("a nested chunk's roots are written in its parent's slot rows, and its records pick through its record base", () => {
+  it("a nested chunk's roots are written in its parent's slot rows", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     // Index: level-2 row 0 roots chunk 0; the level-3 root. Chunk 0's level-1 row roots chunk 1.
@@ -450,11 +434,6 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(word(writes.at(-1)!)).toBe(3 - 1);
     const childRows = writes.find((w) => w.label === NODES && w.offset === 2 * ROW_BYTES)!;
     expect((childRows.data as Uint32Array)[NODE_PARENT_WORD]).toBe(parentRow);
-
-    // The child's third record: pool 2 + 0·50 + 2, ordinal 3 + 2.
-    renderer.snapshotPickSlots();
-    expect(renderer.recordOrdinal(Source.GaiaStars, 4)).toBe(5);
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 5)).toBe(4);
 
     writes.length = 0;
     renderer.evictChunk(Source.GaiaStars, 0, 1);

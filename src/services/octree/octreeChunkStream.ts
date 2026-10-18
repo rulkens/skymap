@@ -10,7 +10,6 @@
  */
 
 import type { OctreeChunkRef } from '../../@types/octree/OctreeChunkRef';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 import type { OctreeChunk } from '../../@types/octree/OctreeChunk';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import type { OctreeChunkStreamDeps } from '../../@types/octree/OctreeChunkStreamDeps';
@@ -19,9 +18,7 @@ import { SlotPool } from '../../utils/cache/slotPool';
 import { createTileStreamSubsystem } from '../engine/subsystems/tileStreamSubsystem';
 import { dataUrl } from '../loading/fetchWithProgress';
 import { OCTREE_CHUNK_CONCURRENCY } from '../../data/octree/octreeChunkConcurrency';
-import { octreeChunkPath } from '../../utils/octree/octreeChunkPath';
 import { decodeOctreeChunk } from '../../data/octree/decodeOctreeChunk';
-import { starColumnsOf } from '../../utils/star/starColumnsOf';
 
 async function fetchChunkBytes(path: string): Promise<ArrayBuffer | null> {
   try {
@@ -32,11 +29,11 @@ async function fetchChunkBytes(path: string): Promise<ArrayBuffer | null> {
   }
 }
 
-export function createOctreeChunkStream(
-  deps: OctreeChunkStreamDeps<StarColumns>,
-): OctreeChunkStream<StarColumns> {
-  const { octree, binBaseName, fetchChunk = fetchChunkBytes } = deps;
-  const residents = new Map<number, { slot: number; chunk: OctreeChunk<StarColumns> }>();
+export function createOctreeChunkStream<C extends { readonly count: number }>(
+  deps: OctreeChunkStreamDeps<C>,
+): OctreeChunkStream<C> {
+  const { octree, format, fetchChunk = fetchChunkBytes } = deps;
+  const residents = new Map<number, { slot: number; chunk: OctreeChunk<C> }>();
   const failed = new Set<number>();
   // Every ref a decoded object has named, by id: immutable bake facts, so kept past eviction.
   const refs = new Array<OctreeChunkRef | undefined>(octree.chunkCount);
@@ -49,12 +46,12 @@ export function createOctreeChunkStream(
   };
   learn(octree.chunks, null);
   // A child lands after and leaves before its parent, so the parent is resident at both.
-  const hostSlotOf = ({ parent }: OctreeChunk<StarColumns>) =>
+  const hostSlotOf = ({ parent }: OctreeChunk<C>) =>
     parent === null ? null : residents.get(parent)!.slot;
   let epoch = 0;
 
   const pool = new SlotPool(deps.slots);
-  const stream = createTileStreamSubsystem<OctreeChunk<StarColumns>, SlotPool>({
+  const stream = createTileStreamSubsystem<OctreeChunk<C>, SlotPool>({
     slots: pool,
     concurrency: OCTREE_CHUNK_CONCURRENCY,
     requestRender: deps.requestRender,
@@ -80,9 +77,9 @@ export function createOctreeChunkStream(
     epoch++;
   });
 
-  async function load(id: number): Promise<OctreeChunk<StarColumns> | null> {
+  async function load(id: number): Promise<OctreeChunk<C> | null> {
     const ref = refs[id]!;
-    const buf = await fetchChunk(octreeChunkPath(octree.family, binBaseName, ref));
+    const buf = await fetchChunk(format.chunkPath(ref));
     if (buf === null) return null;
     const { header, nodes, columns } = decodeOctreeChunk(buf, octree);
     learn(header.chunks, id);
@@ -90,12 +87,12 @@ export function createOctreeChunkStream(
       ref,
       parent: parentOf[id] ?? null,
       nodes,
-      records: starColumnsOf(columns, header.records),
+      records: format.decodeRecords(columns, header.records),
       chunks: header.chunks,
     };
   }
 
-  function residentOfRecord(ordinal: number): OctreeChunk<StarColumns> | null {
+  function residentOfRecord(ordinal: number): OctreeChunk<C> | null {
     for (const { chunk } of residents.values()) {
       const { recordBase, records } = chunk.ref;
       if (ordinal >= recordBase && ordinal < recordBase + records) return chunk;

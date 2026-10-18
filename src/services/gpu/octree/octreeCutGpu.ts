@@ -57,7 +57,7 @@ function poolRows(octree: Octree<{ readonly count: number }>, slots: number): nu
 export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   const STORAGE = GPUBufferUsage.STORAGE;
 
-  const module = createShaderModuleWithDevLog(device, cutCode, 'starCatalog.cut');
+  const module = createShaderModuleWithDevLog(device, cutCode, 'octree.cut');
 
   const bufferEntry = (
     binding: number,

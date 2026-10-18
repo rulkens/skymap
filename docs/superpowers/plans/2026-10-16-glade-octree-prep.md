@@ -273,17 +273,17 @@ which resolve the registry row once and pass `slots` (`entry.budgets[tier].slots
 keeps its byte stride (`GPU_RECORD_BYTES`) and calls the two helpers with its own slot tables: `recordOrdinal` with
 `pickSlotChunks` (the pick snapshot), `poolRecordIndex` with `slotChunks`, as today.
 
-- [ ] Add `recordOrdinal.test.ts`: `maps an index record to itself and a resident chunk record to its record base + local`,
+- [x] Add `recordOrdinal.test.ts`: `maps an index record to itself and a resident chunk record to its record base + local`,
       `returns null past a chunk's own record count and for an empty slot`, and
       `poolRecordIndex inverts recordOrdinal for every resident record` (a property over a two-slot layout with hand
       record bases). Move the renderer cases at `starCatalogRenderer.pool.test.ts:306-323` and the record-base half of
       `:384` here; keep `:325` (the pick-snapshot race) in the renderer test.
-- [ ] Add `installOctreePool.test.ts`: `a zero-chunk index installs no stream and replaces the previous one`
+- [x] Add `installOctreePool.test.ts`: `a zero-chunk index installs no stream and replaces the previous one`
       (Review focus 2) and `a renderer that throws leaves the previous stream installed` (the comment at
       `installStarPool.ts:5-6` is the only statement of this today).
-- [ ] Implement; the stream reads `format`, never `starChunkPath`, `starColumnsOf` or the registry.
-- [ ] `docs/RENDERER.md:73`: the helpers' new home.
-- [ ] Gate: the existing stream, pool and fetcher tests pass with only their construction changed;
+- [x] Implement; the stream reads `format`, never `starChunkPath`, `starColumnsOf` or the registry.
+- [x] `docs/RENDERER.md:73`: the helpers' new home.
+- [x] Gate: the existing stream, pool and fetcher tests pass with only their construction changed;
       `grep -rn "starCatalog\|Star" src/services/octree src/utils/octree src/services/gpu/octree` prints nothing but
       comments that name the star layer as an example.
 

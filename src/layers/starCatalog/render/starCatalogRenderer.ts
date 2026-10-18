@@ -19,6 +19,9 @@ import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
+import type { OctreePoolLayout } from '../../../@types/octree/OctreePoolLayout';
+import { recordOrdinal } from '../../../utils/octree/recordOrdinal';
+import { poolRecordIndex } from '../../../utils/octree/poolRecordIndex';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
@@ -203,31 +206,24 @@ export function createStarCatalogRenderer(
     }
   }
 
-  function recordOrdinal(source: SourceType, poolIndex: number): number | null {
+  const refsOf = (chunks: readonly (OctreeChunk<StarColumns> | null)[]) =>
+    chunks.map((chunk) => chunk?.ref ?? null);
+  const layoutOf = ({ octree, slots }: LoadedStarSource): OctreePoolLayout => ({
+    indexRecords: octree.records.count,
+    chunkCapacity: octree.chunkCapacity,
+    slots,
+  });
+
+  function recordOrdinalOf(source: SourceType, poolIndex: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
-    const { octree } = entry;
-    const indexRecords = octree.records.count;
-    if (poolIndex < indexRecords) return poolIndex;
-    const slot = Math.floor((poolIndex - indexRecords) / octree.chunkCapacity);
-    const chunk = slot < entry.slots ? entry.pickSlotChunks[slot]! : null;
-    if (chunk === null) return null;
-    const local = poolIndex - indexRecords - slot * octree.chunkCapacity;
-    return local < chunk.ref.records ? chunk.ref.recordBase + local : null;
+    return recordOrdinal(layoutOf(entry), refsOf(entry.pickSlotChunks), poolIndex);
   }
 
-  function poolRecordIndex(source: SourceType, ordinal: number): number | null {
+  function poolRecordIndexOf(source: SourceType, ordinal: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
-    const { octree } = entry;
-    if (ordinal < octree.records.count) return ordinal;
-    const slot = entry.slotChunks.findIndex(
-      (c) =>
-        c !== null && ordinal >= c.ref.recordBase && ordinal < c.ref.recordBase + c.ref.records,
-    );
-    if (slot < 0) return null;
-    const local = ordinal - entry.slotChunks[slot]!.ref.recordBase;
-    return octree.records.count + slot * octree.chunkCapacity + local;
+    return poolRecordIndex(layoutOf(entry), refsOf(entry.slotChunks), ordinal);
   }
 
   function* loadedCatalogs(): IterableIterator<{
@@ -305,8 +301,8 @@ export function createStarCatalogRenderer(
     uploadChunk,
     evictChunk,
     snapshotPickSlots,
-    recordOrdinal,
-    poolRecordIndex,
+    recordOrdinal: recordOrdinalOf,
+    poolRecordIndex: poolRecordIndexOf,
     loadedCatalogs,
     drawCut,
     encodeCut,
