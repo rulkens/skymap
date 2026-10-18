@@ -357,8 +357,8 @@ today's arithmetic in today's order (`fluxCentroid`: `(sum/subFlux − box)/edge
 `aggregateMeanAbsMag` over `fluxFromAbsMag` sums; `fluxWeightedMean`: `sum/subFlux`), since an f64 reordering moves
 quantised bytes.
 
-- [ ] Implement against Task 2's golden test.
-- [ ] Gate: `a seeded star bake keeps its pinned index digest` unchanged, and the three `stratifyOctree` tests
+- [x] Implement against Task 2's golden test.
+- [x] Gate: `a seeded star bake keeps its pinned index digest` unchanged, and the three `stratifyOctree` tests
       (flux conservation among them) pass unchanged. No new test: the golden digest pins the output. Optional, if raw
       Gaia is present: `npm run build-stars -- --out-dir <scratch>/after` against a before run, `cmp` the two
       `stars.bin`.
