@@ -1,12 +1,29 @@
 import type { DevOverlay } from './@types/DevOverlay';
+import type { OverlayMode } from './@types/OverlayMode';
 import { recall } from './recall';
-import { recallMode } from './recallMode';
-import { register } from './register';
 import { remember } from './remember';
-import { rememberMode } from './rememberMode';
 
-// Whether the overlay is on, kept per tab; the mode is kept per browser (modeKey.ts).
+// Whether the overlay is on, kept per tab; the mode is kept per browser, in localStorage, so it outlives the tab.
 const ON_KEY = 'skymap-feedback-on';
+const MODE_KEY = 'skymap-overlay-mode';
+
+/** Puts `item` first in `list`, so the newest registration is asked first; returns the way to take it out again. */
+function register<T>(list: T[], item: T): () => void {
+  list.unshift(item);
+  return () => {
+    const at = list.indexOf(item);
+    if (at >= 0) list.splice(at, 1);
+  };
+}
+
+/** The mode last used in this browser, Notes when none was stored. */
+function recallMode(): OverlayMode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'marks' ? 'marks' : 'notes';
+  } catch {
+    return 'notes';
+  }
+}
 
 let on = recall(ON_KEY) !== null;
 let mode = recallMode();
@@ -26,7 +43,11 @@ export const devOverlay: DevOverlay = {
   setMode(next) {
     if (next === mode) return;
     mode = next;
-    rememberMode(mode);
+    try {
+      localStorage.setItem(MODE_KEY, mode);
+    } catch {
+      /* blocked storage: the mode lasts until reload */
+    }
     for (const listener of listeners) listener();
   },
   subscribe(listener) {

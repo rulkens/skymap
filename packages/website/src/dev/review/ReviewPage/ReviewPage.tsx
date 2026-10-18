@@ -21,7 +21,6 @@ import type { ChipMade } from '../@types/ChipMade';
 import type { ReviewOpen } from '../@types/ReviewOpen';
 import type { ReviewReveal } from '../@types/ReviewReveal';
 import type { ReviewSection } from '../@types/ReviewSection';
-import { claimKeysIntro } from '../claimKeysIntro';
 import { describeApply } from '../describeApply';
 import { flashMark } from '../flashMark';
 import { itemKey } from '../itemKey';
@@ -42,7 +41,19 @@ import SectionPanel from '../SectionPanel/SectionPanel.tsx';
 import reviewPage from './ReviewPage.module.css';
 
 const HIDE_KEY = 'skymap-review-hide-cut';
+const KEYS_SEEN_KEY = 'skymap-review-keys-seen';
 const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'good', good: 'cut' } as const;
+
+/** True the first time in this browser, so the Keys box opens by itself once and is closed after that until asked for. */
+function claimKeysIntro(): boolean {
+  try {
+    if (localStorage.getItem(KEYS_SEEN_KEY)) return false;
+    localStorage.setItem(KEYS_SEEN_KEY, '1');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const marksOf = (section: ReviewSection): DocsReviewMark[] =>
   section.items.flatMap((item) => (item.kind === 'mark' ? [item.mark] : []));
@@ -324,20 +335,14 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
           title={section.title}
           items={section.items}
           words={sectionWords}
-          consequence={describeApply(marksOf(section), sectionWords.before)}
-          onApply={() => requestApply(section.title)}
+          apply={{
+            consequence: describeApply(marksOf(section), sectionWords.before),
+            onApply: () => requestApply(section.title),
+          }}
         />
       )}
       {open?.target === 'applied' && (
-        <SectionPanel
-          key={open.serial}
-          {...panelProps}
-          title="Applied"
-          items={history}
-          history
-          consequence={{ text: '', nothing: true }}
-          onApply={() => {}}
-        />
+        <SectionPanel key={open.serial} {...panelProps} title="Applied" items={history} />
       )}
     </>
   );

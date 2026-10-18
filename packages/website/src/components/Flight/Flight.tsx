@@ -68,7 +68,7 @@ function Flight({ stops, videoUrl }: FlightProps) {
   return (
     <section
       className={styles.root}
-      // What a feedback note reads to say where in the film it was (dev/feedback/flightState.ts).
+      // What a feedback note reads to say where in the film it was (flightState in dev/feedback/Feedback).
       data-flight
       data-timeline={JSON.stringify(TIMELINE)}
       style={{ '--units': TIMELINE.units.toFixed(3) } as CSSProperties}

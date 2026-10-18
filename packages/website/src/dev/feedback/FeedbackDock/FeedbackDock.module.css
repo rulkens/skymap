@@ -42,10 +42,8 @@
   color: var(--color-fg);
 }
 
-.list ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.bare {
+  composes: bare from '../../../styles/layout.module.css';
 }
 
 .list li {

@@ -2,9 +2,47 @@
  * KeysHelp — the key reference: a box that hangs from the review bar it is a child of. Keys are
  * <kbd>; mouse actions are plain words. It opens on a click of the bar's Keys button or on `?`.
  */
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 
 import styles from './KeysHelp.module.css';
+
+const GROUPS = [
+  [
+    'Overlay',
+    [
+      { key: 'F', does: 'Turns the overlay on and off' },
+      { key: 'Esc', does: 'Cancels' },
+    ],
+  ],
+  [
+    'Modes',
+    [
+      { key: 'Tab', does: 'Switches between Notes and Marks' },
+      { key: 'N', does: 'Notes mode' },
+      { key: 'T', does: 'Marks mode' },
+    ],
+  ],
+  ['Notes mode', [{ word: 'Click or drag', does: 'Leaves a note on the page' }]],
+  [
+    'Marks mode',
+    [
+      { word: 'Drag', does: 'Selects text' },
+      { key: 'C', does: 'Cuts the selected text' },
+      { key: 'W', does: 'Rewrites the selected text' },
+      { key: 'G', does: 'Marks the selected text good' },
+      { word: 'Click a mark', does: 'Cycles cut, keep, rewrite, good' },
+    ],
+  ],
+  [
+    'Both modes',
+    [
+      { key: 'M', does: 'Shows the marks in the text' },
+      { key: 'H', does: 'Shows the result' },
+      { word: 'Section icon', does: "Opens that section's review" },
+    ],
+  ],
+  ['Help', [{ key: '?', does: 'Opens and closes this box' }]],
+] as const;
 
 type KeysHelpProps = {
   /** Put the cursor in the box as it opens, so the keyboard reaches it. */
@@ -27,76 +65,19 @@ function KeysHelp({ focus }: KeysHelpProps) {
       aria-label="Keys"
       data-review-keys=""
     >
-      <h3>Overlay</h3>
-      <dl>
-        <dt>
-          <kbd>F</kbd>
-        </dt>
-        <dd>Turns the overlay on and off</dd>
-        <dt>
-          <kbd>Esc</kbd>
-        </dt>
-        <dd>Cancels</dd>
-      </dl>
-      <h3>Modes</h3>
-      <dl>
-        <dt>
-          <kbd>Tab</kbd>
-        </dt>
-        <dd>Switches between Notes and Marks</dd>
-        <dt>
-          <kbd>N</kbd>
-        </dt>
-        <dd>Notes mode</dd>
-        <dt>
-          <kbd>T</kbd>
-        </dt>
-        <dd>Marks mode</dd>
-      </dl>
-      <h3>Notes mode</h3>
-      <dl>
-        <dt>Click or drag</dt>
-        <dd>Leaves a note on the page</dd>
-      </dl>
-      <h3>Marks mode</h3>
-      <dl>
-        <dt>Drag</dt>
-        <dd>Selects text</dd>
-        <dt>
-          <kbd>C</kbd>
-        </dt>
-        <dd>Cuts the selected text</dd>
-        <dt>
-          <kbd>W</kbd>
-        </dt>
-        <dd>Rewrites the selected text</dd>
-        <dt>
-          <kbd>G</kbd>
-        </dt>
-        <dd>Marks the selected text good</dd>
-        <dt>Click a mark</dt>
-        <dd>Cycles cut, keep, rewrite, good</dd>
-      </dl>
-      <h3>Both modes</h3>
-      <dl>
-        <dt>
-          <kbd>M</kbd>
-        </dt>
-        <dd>Shows the marks in the text</dd>
-        <dt>
-          <kbd>H</kbd>
-        </dt>
-        <dd>Shows the result</dd>
-        <dt>Section icon</dt>
-        <dd>Opens that section&apos;s review</dd>
-      </dl>
-      <h3>Help</h3>
-      <dl>
-        <dt>
-          <kbd>?</kbd>
-        </dt>
-        <dd>Opens and closes this box</dd>
-      </dl>
+      {GROUPS.map(([title, rows]) => (
+        <Fragment key={title}>
+          <h3>{title}</h3>
+          <dl>
+            {rows.map((row) => (
+              <Fragment key={row.does}>
+                <dt>{'key' in row ? <kbd className={styles.key}>{row.key}</kbd> : row.word}</dt>
+                <dd>{row.does}</dd>
+              </Fragment>
+            ))}
+          </dl>
+        </Fragment>
+      ))}
     </div>
   );
 }

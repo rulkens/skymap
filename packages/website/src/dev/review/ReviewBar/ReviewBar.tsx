@@ -7,8 +7,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { DocsReviewApplied } from '../../../../../../tools/site/@types/DocsReviewApplied';
 import type { DocsReviewApply } from '../../../../../../tools/site/@types/DocsReviewApply';
-import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
 import type { ReviewCounts } from '../@types/ReviewCounts';
+import ApplyConfirm from '../ApplyConfirm/ApplyConfirm.tsx';
 import ModeSwitch from '../ModeSwitch/ModeSwitch.tsx';
 import styles from './ReviewBar.module.css';
 
@@ -58,8 +58,6 @@ function ReviewBar({
 }: ReviewBarProps) {
   const bar = useRef<HTMLDivElement>(null);
   const applyButton = useRef<HTMLButtonElement>(null);
-  const confirmYes = useRef<HTMLButtonElement>(null);
-  const confirmNo = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState(job);
   const [confirming, setConfirming] = useState(false);
 
@@ -79,21 +77,6 @@ function ReviewBar({
       html.style.removeProperty('--review-bar');
     };
   }, []);
-
-  useEffect(() => {
-    if (confirming) (consequence.nothing ? confirmNo : confirmYes).current?.focus();
-  }, [confirming, consequence.nothing]);
-
-  const closeConfirm = () => {
-    setConfirming(false);
-    applyButton.current?.focus();
-  };
-
-  useDevOverlayEscape(() => {
-    if (!confirming) return false;
-    closeConfirm();
-    return true;
-  });
 
   const applyingScope = apply?.scope === 'page' ? 'the page' : `“${apply?.scope}”`;
 
@@ -129,25 +112,13 @@ function ReviewBar({
       </button>
       {children}
       {confirming && (
-        <span className={styles.confirm}>
-          <span role="status">{consequence.text}</span>
-          {!consequence.nothing && (
-            <button
-              ref={confirmYes}
-              className={styles.button}
-              type="button"
-              onClick={() => {
-                closeConfirm();
-                onApply();
-              }}
-            >
-              Confirm
-            </button>
-          )}
-          <button ref={confirmNo} className={styles.button} type="button" onClick={closeConfirm}>
-            Cancel
-          </button>
-        </span>
+        <ApplyConfirm
+          className={styles.confirm}
+          consequence={consequence}
+          returnTo={applyButton}
+          onApply={onApply}
+          onClose={() => setConfirming(false)}
+        />
       )}
       {missing.length > 0 && (
         <span className={styles.missing}>{missing.map((id) => `not found: ${id}`).join(', ')}</span>

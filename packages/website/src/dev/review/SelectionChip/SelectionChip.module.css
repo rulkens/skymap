@@ -34,15 +34,11 @@
 }
 
 .dim {
-  color: var(--site-text-dim);
+  composes: dim from '../ReviewControl/ReviewControl.module.css';
 }
 
-.root kbd {
-  padding: 0 var(--space-3);
-  border: 1px solid var(--review-line-dim);
-  border-radius: var(--space-2);
-  color: var(--color-fg);
-  font: 400 0.75rem / 1.4 var(--font-family-mono);
+.key {
+  composes: key from '../ReviewControl/ReviewControl.module.css';
 }
 
 @media (prefers-reduced-motion: reduce) {

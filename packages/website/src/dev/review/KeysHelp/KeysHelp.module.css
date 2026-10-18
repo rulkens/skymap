@@ -1,32 +1,16 @@
 /* The key reference hangs from the bar, in the panel's corner; the two are never open together. */
 .root {
+  composes: panel from '../ReviewControl/ReviewControl.module.css';
   position: absolute;
   top: calc(100% + var(--space-8));
-  right: var(--space-8);
-  box-sizing: border-box;
   width: min(22rem, calc(100vw - 2rem));
-  max-height: calc(100vh - var(--nav-height) - var(--review-bar, 2.75rem) - 9rem);
-  overflow-y: auto;
   padding: var(--space-6) var(--space-8);
-  background: var(--color-bg);
-  border: 1px solid var(--review-line);
-  color: var(--site-text);
-  font: 400 0.8125rem / 1.4 var(--font-body);
-}
-
-.root:focus {
-  outline: none;
 }
 
 /* On a phone the bar is at the foot: the box rises above it, clear of the feedback button like the panel. */
 @media (max-width: 900px) {
   .root {
-    top: auto;
-    right: var(--space-8);
     bottom: calc(100% + 4rem);
-    left: var(--space-8);
-    width: auto;
-    max-height: 55svh;
   }
 }
 
@@ -54,10 +38,6 @@
   margin: 0;
 }
 
-.root kbd {
-  padding: 0 var(--space-3);
-  border: 1px solid var(--review-line-dim);
-  border-radius: var(--space-2);
-  color: var(--color-fg);
-  font: 400 0.75rem / 1.4 var(--font-family-mono);
+.key {
+  composes: key from '../ReviewControl/ReviewControl.module.css';
 }

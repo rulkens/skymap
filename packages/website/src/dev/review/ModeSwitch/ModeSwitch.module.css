@@ -14,19 +14,20 @@
   margin-left: calc(-1 * var(--space-4) - 1px);
 }
 
-.button kbd,
-.dim kbd {
-  padding: 0 var(--space-3);
-  border: 1px solid currentColor;
-  border-radius: var(--space-2);
-  color: inherit;
-  font: 400 0.75rem / 1.4 var(--font-family-mono);
-}
-
-.button kbd {
+.button .key {
   margin-left: var(--space-2);
 }
 
+/* Cap and text share the button's colour, so the pressed button's cap reads on its fill. */
+.key {
+  composes: key from '../ReviewControl/ReviewControl.module.css';
+}
+
+.root .key {
+  border-color: currentColor;
+  color: inherit;
+}
+
 .dim {
-  color: var(--site-text-dim);
+  composes: dim from '../ReviewControl/ReviewControl.module.css';
 }

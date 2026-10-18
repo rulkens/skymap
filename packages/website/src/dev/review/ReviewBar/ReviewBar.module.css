@@ -54,7 +54,7 @@
 }
 
 .dim {
-  color: var(--site-text-dim);
+  composes: dim from '../ReviewControl/ReviewControl.module.css';
 }
 
 .error,
@@ -74,9 +74,4 @@
 .confirm {
   flex: 3 1 10rem;
   min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4);
-  color: var(--site-text);
 }

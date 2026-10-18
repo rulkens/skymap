@@ -18,9 +18,9 @@ function FeedbackDock({ on, pins, onToggle, onDelete, toggleRef }: FeedbackDockP
     <div className={styles.root}>
       {on && pins.length > 0 && (
         <section className={styles.list} aria-label="Feedback notes on this page">
-          <ol>
+          <ol className={styles.bare}>
             {pins.map((pin) => (
-              <li key={pin.id}>
+              <li key={pin.n}>
                 <FeedbackBadge n={pin.n} />
                 <span className={styles.text}>{pin.text.split('\n')[0]}</span>
                 <button

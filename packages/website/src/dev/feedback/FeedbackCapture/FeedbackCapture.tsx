@@ -11,15 +11,29 @@ import { useViewport } from '../../overlay/useViewport';
 import type { FeedbackPoint } from '../@types/FeedbackPoint';
 import type { FeedbackPress } from '../@types/FeedbackPress';
 import type { FeedbackSelection } from '../@types/FeedbackSelection';
-import { describeHover } from '../describeHover';
 import { pageRect } from '../pageRect';
 import { pickElement } from '../pickElement';
-import { spanRect } from '../spanRect';
 import FeedbackOutline from '../FeedbackOutline/FeedbackOutline.tsx';
 import styles from './FeedbackCapture.module.css';
 
 // Pixels the pointer must travel before a press becomes a drawn rectangle, not a click.
 const DRAG_PX = 6;
+
+/** The rectangle with `a` and `b` for opposite corners. */
+const spanRect = (a: FeedbackPoint, b: FeedbackPoint): FeedbackRect => ({
+  x: Math.min(a.x, b.x),
+  y: Math.min(a.y, b.y),
+  width: Math.abs(b.x - a.x),
+  height: Math.abs(b.y - a.y),
+});
+
+/** The element a press at `point` would choose, as its box in the viewport and a tag-and-classes label. */
+const describeHover = ({ x, y }: FeedbackPoint) => {
+  const el = pickElement(x, y);
+  const { left, top, width, height } = el.getBoundingClientRect();
+  const classes = [...el.classList].slice(0, 2).map((c) => `.${c}`);
+  return { rect: { x: left, y: top, width, height }, label: `${el.localName}${classes.join('')}` };
+};
 
 type FeedbackCaptureProps = {
   /** An area is already chosen: presses are handed back, and nothing is outlined. */

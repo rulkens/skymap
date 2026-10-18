@@ -10,16 +10,45 @@ import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
 import { useLatest } from '../../overlay/useLatest';
 import { useListener } from '../../overlay/useListener';
 import { useViewport } from '../../overlay/useViewport';
+import { pageRect } from '../../feedback/pageRect';
 import { viewRect } from '../../feedback/viewRect';
 import type { ChipAnchor } from '../@types/ChipAnchor';
 import type { ChipMade } from '../@types/ChipMade';
 import { placeChip } from '../placeChip';
-import { readFreeBand } from '../readFreeBand';
-import { readSelection } from '../readSelection';
+import { wordsIn } from '../wordsIn';
 import styles from './SelectionChip.module.css';
 
 const SHOW_MS = 2000;
 const FADE_MS = 300;
+
+/** The window's width and the vertical band the site's top bar, the review bar (top or foot) and a panel sheet at the foot leave free. */
+function readFreeBand(): { width: number; top: number; bottom: number } {
+  const html = document.documentElement;
+  const nav = document.querySelector('header')?.getBoundingClientRect();
+  const bar = document.querySelector('[data-review-bar]')?.getBoundingClientRect();
+  const panel = document.querySelector('[data-review-panel]')?.getBoundingClientRect();
+  let top = Math.max(0, nav?.bottom ?? 0);
+  let bottom = html.clientHeight;
+  if (bar) {
+    if (bar.top > bottom / 2) bottom = bar.top;
+    else top = Math.max(top, bar.bottom);
+  }
+  // A panel as wide as the window is the sheet a phone gets, up from the foot.
+  if (panel && panel.width > html.clientWidth / 2) bottom = Math.min(bottom, panel.top);
+  return { width: html.clientWidth, top, bottom };
+}
+
+/** The selection inside `article`: its word count and where its first and last lines are; null when there is none. */
+function readSelection(article: Element): { words: number; anchor: ChipAnchor } | null {
+  const selection = getSelection();
+  if (!selection || selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  if (!article.contains(range.commonAncestorContainer)) return null;
+  const lines = [...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0);
+  const words = wordsIn(selection.toString());
+  if (!words || lines.length === 0) return null;
+  return { words, anchor: { first: pageRect(lines[0]!), last: pageRect(lines.at(-1)!) } };
+}
 
 const words = (n: number) => `${n} ${n === 1 ? 'word' : 'words'}`;
 
@@ -107,7 +136,7 @@ function SelectionChip({ article, made, save, onDone }: SelectionChipProps) {
           <span>Not saved</span>
           <span>{label}</span>
           <span className={styles.dim}>
-            <kbd>Esc</kbd> closes
+            <kbd className={styles.key}>Esc</kbd> closes
           </span>
         </>
       ) : made ? (
@@ -119,13 +148,13 @@ function SelectionChip({ article, made, save, onDone }: SelectionChipProps) {
         <>
           <span>{words(picked!.words)}</span>
           <span className={styles.dim}>
-            <kbd>C</kbd> cut
+            <kbd className={styles.key}>C</kbd> cut
           </span>
           <span className={styles.dim}>
-            <kbd>W</kbd> rewrite
+            <kbd className={styles.key}>W</kbd> rewrite
           </span>
           <span className={styles.dim}>
-            <kbd>G</kbd> good
+            <kbd className={styles.key}>G</kbd> good
           </span>
         </>
       )}

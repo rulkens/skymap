@@ -15,7 +15,7 @@ function FeedbackPins({ pins }: FeedbackPinsProps) {
   return createPortal(
     <div className={styles.root} data-overlay-ui="">
       {pins.map((pin) => (
-        <div key={pin.id} className={styles.pin} style={boxStyle(pin.rect)}>
+        <div key={pin.n} className={styles.pin} style={boxStyle(pin.rect)}>
           <FeedbackBadge className={styles.dot} n={pin.n} title={pin.text} />
         </div>
       ))}

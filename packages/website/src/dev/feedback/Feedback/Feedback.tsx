@@ -6,19 +6,26 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
+import type { FeedbackFlight } from '../../../../../../tools/site/@types/FeedbackFlight';
+import type { FeedbackNote } from '../../../../../../tools/site/@types/FeedbackNote';
+import type { FlightTimeline } from '../../../@types/FlightTimeline';
+import { clamp } from '../../../utils/clamp';
+import { flightAt } from '../../../utils/flightAt';
+
 import { devOverlay } from '../../overlay/devOverlay';
 import { FEEDBACK_ROUTE } from '../../overlay/feedbackRoute';
 import { pageNotes } from '../../overlay/pageNotes';
+import { recall } from '../../overlay/recall';
 import { remember } from '../../overlay/remember';
 import { useDevOverlayEscape } from '../../overlay/useDevOverlayEscape';
 import { useDevOverlayMode } from '../../overlay/useDevOverlayMode';
 import { useDevOverlayOn } from '../../overlay/useDevOverlayOn';
+import type { FeedbackDraft } from '../@types/FeedbackDraft';
 import type { FeedbackPin } from '../@types/FeedbackPin';
 import type { FeedbackSelection } from '../@types/FeedbackSelection';
-import { buildFeedbackNote } from '../buildFeedbackNote';
+import { describeElement } from '../describeElement';
 import { DRAFT_KEY } from '../draftKey';
 import { pickElement } from '../pickElement';
-import { readDraft } from '../readDraft';
 import { useFeedbackPins } from '../useFeedbackPins';
 import { viewRect } from '../viewRect';
 import FeedbackCapture from '../FeedbackCapture/FeedbackCapture.tsx';
@@ -26,6 +33,50 @@ import FeedbackDock from '../FeedbackDock/FeedbackDock.tsx';
 import FeedbackPanel from '../FeedbackPanel/FeedbackPanel.tsx';
 import FeedbackPins from '../FeedbackPins/FeedbackPins.tsx';
 import styles from './Feedback.module.css';
+
+// The tall track the flight scrolls through (`Flight-track`, the module's class).
+const FLIGHT_TRACK = '[class*="Flight-track"]';
+
+/** The flight's progress, read the way the flight reads it, so a note says where in the film it was. */
+function flightState(): FeedbackFlight | null {
+  const flight = document.querySelector<HTMLElement>('[data-flight]');
+  const track = flight?.querySelector<HTMLElement>(FLIGHT_TRACK);
+  if (!flight?.dataset.timeline || !track) return null;
+  const timeline = JSON.parse(flight.dataset.timeline) as FlightTimeline;
+  const progress = clamp(
+    -track.getBoundingClientRect().top / (track.offsetHeight - innerHeight),
+    0,
+    1,
+  );
+  return {
+    progress: Number(progress.toFixed(4)),
+    filmSec: Number(flightAt(timeline, progress).sec.toFixed(3)),
+  };
+}
+
+/** The note as the endpoint stores it: the words, the area, and enough of the page to find it again. */
+function buildFeedbackNote({ kind, rect, element }: FeedbackSelection, text: string): FeedbackNote {
+  return {
+    text: text.trim(),
+    timestamp: new Date().toISOString(),
+    page: { url: location.href, path: location.pathname, title: document.title },
+    viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
+    scroll: { x: Math.round(scrollX), y: Math.round(scrollY) },
+    flight: flightState(),
+    selection: kind,
+    rect: { page: rect, viewport: viewRect(rect, window) },
+    element: describeElement(element),
+    userAgent: navigator.userAgent,
+  };
+}
+
+/** The draft kept for this page, or null: another page's draft is not this one's to restore. */
+function readDraft(): FeedbackDraft | null {
+  const stored = recall(DRAFT_KEY);
+  if (!stored) return null;
+  const draft = JSON.parse(stored) as FeedbackDraft;
+  return draft.path === location.pathname ? draft : null;
+}
 
 function Feedback() {
   const on = useDevOverlayOn();

@@ -17,7 +17,7 @@ function ModeSwitch() {
         title="Click or drag the page to leave a note (N)"
         onClick={() => devOverlay.setMode('notes')}
       >
-        Notes <kbd>N</kbd>
+        Notes <kbd className={styles.key}>N</kbd>
       </button>
       <button
         className={styles.button}
@@ -26,10 +26,10 @@ function ModeSwitch() {
         title="Select text to mark it (T)"
         onClick={() => devOverlay.setMode('marks')}
       >
-        Marks <kbd>T</kbd>
+        Marks <kbd className={styles.key}>T</kbd>
       </button>
       <span className={styles.dim}>
-        <kbd>Tab</kbd> switches
+        <kbd className={styles.key}>Tab</kbd> switches
       </span>
     </span>
   );

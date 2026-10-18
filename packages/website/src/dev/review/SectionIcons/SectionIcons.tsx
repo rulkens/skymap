@@ -9,10 +9,20 @@ import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cx } from '../../../utils/cx.ts';
+import type { ReviewCounts } from '../@types/ReviewCounts';
+import type { ReviewItem } from '../@types/ReviewItem';
 import type { ReviewSection } from '../@types/ReviewSection';
-import { countItems } from '../countItems';
 import reviewPage from '../ReviewPage/ReviewPage.module.css';
 import styles from './SectionIcons.module.css';
+
+const countItems = (items: ReviewItem[]): ReviewCounts => {
+  const counts = { cut: 0, keep: 0, rewrite: 0, good: 0, notes: 0 };
+  for (const item of items) {
+    if (item.kind === 'mark') counts[item.mark.state]++;
+    else counts.notes++;
+  }
+  return counts;
+};
 
 const STATES = ['rewrite', 'cut', 'good', 'keep'] as const;
 
