@@ -14,6 +14,7 @@ import { octreeChunkFileName, STAR_COLUMN_SCHEMA } from '../../../src/data/octre
 import { chunkOctree } from '../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../tools/octree/stratifyOctree';
 import { writeOctreeCatalog } from '../../../tools/octree/writeOctreeCatalog';
+import { contentHash8 } from '../../../tools/utils/data/contentHash8';
 import {
   makeOctreeBuildInput,
   randomOctreeRecords,
@@ -124,5 +125,13 @@ describe('buildOctreeCatalog → writeOctreeCatalog', () => {
       }
     };
     check(header.chunks, paths.length - 1);
+  });
+
+  // Tasks 2 and 5 reshape the family code around this bake; no baked byte may move. The index
+  // header names every chunk's content hash, so one digest pins every object.
+  it('a seeded star bake keeps its pinned index digest', () => {
+    const dir = tempDir();
+    writeOctreeCatalog(nestedObjects(3), meta(), dir, 'stars');
+    expect(contentHash8(fs.readFileSync(join(dir, 'stars.bin')))).toBe('2a8af3b2');
   });
 });
