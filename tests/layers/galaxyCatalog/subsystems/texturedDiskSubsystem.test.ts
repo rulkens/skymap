@@ -101,7 +101,7 @@ function makeInput(
   return {
     cam,
     catalogs,
-    visibleSourceMask: mask,
+    sourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousGalaxiesMeta,
     nowMs,

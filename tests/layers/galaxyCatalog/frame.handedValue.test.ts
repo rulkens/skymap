@@ -46,8 +46,8 @@ function walkInputFor(fade: ReturnType<typeof makeGalaxyCatalogFade>): DiskWalkI
 describe('galaxyCatalogPlanner — handed value', () => {
   it('the planner walk hides a catalog whose handed value is 0', () => {
     const input = walkInputFor(makeGalaxyCatalogFade({ sdss: 0 }));
-    expect(maskHas(input.visibleSourceMask, Source.SDSS)).toBe(false);
-    expect(maskHas(input.visibleSourceMask, Source.TwoMRS)).toBe(true);
+    expect(maskHas(input.sourceMask, Source.SDSS)).toBe(false);
+    expect(maskHas(input.sourceMask, Source.TwoMRS)).toBe(true);
   });
 
   it('the LOD disks take the planner handed value', () => {

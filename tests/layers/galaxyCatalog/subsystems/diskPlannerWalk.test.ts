@@ -76,7 +76,7 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
   return {
     cam: makeCam(),
     catalogs,
-    visibleSourceMask: mask,
+    sourceMask: mask,
     pxPerRad: PX_PER_RAD,
     sourceOpacity: () => 1,
   };

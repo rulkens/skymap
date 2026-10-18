@@ -6,7 +6,7 @@ import type { SourceType } from '../../../data/SourceType';
 export type HiResFamousFrameInput = {
   readonly cam: OrbitCamera;
   readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
-  readonly visibleSourceMask: number;
+  readonly sourceMask: number;
   readonly pxPerRad: number;
   readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
 };

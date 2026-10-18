@@ -168,7 +168,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
   function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      snapshot: { nowMs, focusBlend: 0, visibleSourceMask: 0xffffffff },
+      snapshot: { nowMs, focusBlend: 0 },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
