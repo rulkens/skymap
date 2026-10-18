@@ -16,13 +16,14 @@ import {
   OPACITY_CHANNELS,
   WORD_BYTES,
 } from '../../../../src/services/gpu/octree/octreeCutLayout';
-import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/octreeFormat';
+import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import { Source } from '../../../../src/data/sources';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
+import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 
 type Write = { label: string; offset: number; bytes: number; data: ArrayBufferView | ArrayBuffer };
 
@@ -102,6 +103,7 @@ function octreeOf(
   const firstRecord = Uint32Array.from({ length: 10 }, (_, i) => i * 6);
   return {
     grid: { bits: 4, origin: [0, 0, 0], cellEdge: 1 },
+    family: 'star',
     recordCount: 0,
     columns: STAR_COLUMN_SCHEMA,
     nodes: {

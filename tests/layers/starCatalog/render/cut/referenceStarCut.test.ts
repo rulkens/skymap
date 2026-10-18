@@ -30,7 +30,7 @@ import {
   packOctreeCutNodes,
   writeOctreeCutUniforms,
 } from '../../../../../src/services/gpu/octree/octreeCutLayout';
-import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../../../../src/data/octree/octreeFormat';
+import { NO_CHUNK_REF } from '../../../../../src/data/octree/octreeFormat';
 import { stratifyOctree } from '../../../../../tools/octree/stratifyOctree';
 import {
   makeOctreeBuildInput,
@@ -45,6 +45,7 @@ import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/Sks
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { starOctreeFromSkst } from '../../../../../src/utils/star/starOctreeFromSkst';
 import type { StarColumns } from '../../../../../src/@types/data/starCatalog/StarColumns';
+import { STAR_COLUMN_SCHEMA } from '../../../../../src/data/octree/starOctreeFamily';
 
 const ROOT = 6;
 const NODE_MASK = 0x3fffff;
@@ -255,6 +256,7 @@ function octreeOf(
   const count = nodes.count === 0 ? 0 : nodes.firstRecord[nodes.count - 1]! + 8192;
   return {
     grid,
+    family: 'star',
     recordCount: 0,
     columns: STAR_COLUMN_SCHEMA,
     nodes,

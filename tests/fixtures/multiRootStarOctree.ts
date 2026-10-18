@@ -15,9 +15,9 @@ import type { Octree } from '../../src/@types/octree/Octree';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import {
   NO_CHUNK_REF,
-  OFFSET_FRACTION_LEVELS,
-  STAR_COLUMN_SCHEMA,
+  OFFSET_FRACTION_LEVELS
 } from '../../src/data/octree/octreeFormat';
+import { STAR_COLUMN_SCHEMA } from "../../src/data/octree/starOctreeFamily";
 
 function columns(offsets: readonly number[]): StarColumns {
   const count = offsets.length / 3;
@@ -47,6 +47,7 @@ function table(rows: readonly (readonly number[])[]): OctreeNodeTable {
 export function multiRootStarOctree(): { octree: Octree<StarColumns>; chunk: OctreeChunk<StarColumns> } {
   const octree: Octree<StarColumns> = {
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
+    family: 'star',
     recordCount: 2,
     columns: STAR_COLUMN_SCHEMA,
     nodes: table([

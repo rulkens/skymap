@@ -221,18 +221,18 @@ names on that path (`boxOriginPc`, `boxEdgePc`, `edgePc`, `minDistSqPc`) become 
 in `starCutInputs.ts:35` and `starCatalogVisible.ts:19` compare against the star row's `crossfadePc` band, not the grid,
 and stay.
 
-- [ ] Golden test first, on the unchanged code: add
+- [x] Golden test first, on the unchanged code: add
       `it('a seeded star bake keeps its pinned index digest')` to `buildOctreeCatalog.test.ts`, writing
       `nestedObjects(<seed>)` through `writeOctreeCatalog` and asserting `contentHash8` of the index file's bytes
       equals a literal captured from this run. The index header names every chunk's content hash, so this one digest
       pins every object's bytes. Its comment names what it guards (Tasks 2 and 5 must not move a baked byte). Commit it
       alone.
-- [ ] Add the row type, the star family file, the table and the two path helpers; move `STAR_COLUMN_SCHEMA` into
+- [x] Add the row type, the star family file, the table and the two path helpers; move `STAR_COLUMN_SCHEMA` into
       `starOctreeFamily.ts` with `npm run refactor -- extract src/data/octree/octreeFormat.ts#STAR_COLUMN_SCHEMA src/data/octree/starOctreeFamily.ts`;
       delete `STAR_OCTREE_DATA_PREFIX`, `starChunkPath`, `starIndexPath` once every caller reads the table or helpers.
-- [ ] `Octree.family`, the eight unit sites and the renames. `octreeFormat.ts` no longer imports `starCatalogFormat`.
-- [ ] `docs/DATA.md:29`: one sentence, a family is a row of prefix, render schema, count stat and grid unit.
-- [ ] Gate: the golden digest unchanged; `npm test -- octree star deploy fetch`; typecheck. No other new test (constant
+- [x] `Octree.family`, the eight unit sites and the renames. `octreeFormat.ts` no longer imports `starCatalogFormat`.
+- [x] `docs/DATA.md:29`: one sentence, a family is a row of prefix, render schema, count stat and grid unit.
+- [x] Gate: the golden digest unchanged; `npm test -- octree star deploy fetch`; typecheck. No other new test (constant
       plumbing; the existing planner, cut-layout and node-origin tests pin the unit maths).
 
 ### Task 3: injected stream and pool, extracted ordinal maps (prep 3)

@@ -19,7 +19,7 @@ import { SlotPool } from '../../utils/cache/slotPool';
 import { createTileStreamSubsystem } from '../engine/subsystems/tileStreamSubsystem';
 import { dataUrl } from '../loading/fetchWithProgress';
 import { OCTREE_CHUNK_CONCURRENCY } from '../../data/octree/octreeChunkConcurrency';
-import { starChunkPath } from '../../data/octree/octreeFormat';
+import { octreeChunkPath } from '../../utils/octree/octreeChunkPath';
 import { decodeOctreeChunk } from '../../data/octree/decodeOctreeChunk';
 import { starColumnsOf } from '../../utils/star/starColumnsOf';
 
@@ -32,7 +32,9 @@ async function fetchChunkBytes(path: string): Promise<ArrayBuffer | null> {
   }
 }
 
-export function createOctreeChunkStream(deps: OctreeChunkStreamDeps<StarColumns>): OctreeChunkStream<StarColumns> {
+export function createOctreeChunkStream(
+  deps: OctreeChunkStreamDeps<StarColumns>,
+): OctreeChunkStream<StarColumns> {
   const { octree, binBaseName, fetchChunk = fetchChunkBytes } = deps;
   const residents = new Map<number, { slot: number; chunk: OctreeChunk<StarColumns> }>();
   const failed = new Set<number>();
@@ -80,7 +82,7 @@ export function createOctreeChunkStream(deps: OctreeChunkStreamDeps<StarColumns>
 
   async function load(id: number): Promise<OctreeChunk<StarColumns> | null> {
     const ref = refs[id]!;
-    const buf = await fetchChunk(starChunkPath(binBaseName, ref));
+    const buf = await fetchChunk(octreeChunkPath(octree.family, binBaseName, ref));
     if (buf === null) return null;
     const { header, nodes, columns } = decodeOctreeChunk(buf, octree);
     learn(header.chunks, id);

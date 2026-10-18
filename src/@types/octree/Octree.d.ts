@@ -1,5 +1,6 @@
 import type { ColumnSchema } from './ColumnSchema';
 import type { OctreeChunkRef } from './OctreeChunkRef';
+import type { OctreeFamily } from './OctreeFamily';
 import type { OctreeGrid } from './OctreeGrid';
 import type { OctreeNodeTable } from './OctreeNodeTable';
 
@@ -9,6 +10,8 @@ import type { OctreeNodeTable } from './OctreeNodeTable';
  * with every row and no chunks (`starOctreeFromSkst`).
  */
 export type Octree<C extends { readonly count: number }> = {
+  /** The index header's family ('star' for SKST). */
+  readonly family: OctreeFamily;
   /** Grid unit is the family's (parsecs for stars). */
   readonly grid: OctreeGrid;
   /** Real (non-blob) records across the whole catalog, chunks included. */

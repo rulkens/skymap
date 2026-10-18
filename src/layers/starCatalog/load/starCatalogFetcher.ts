@@ -14,7 +14,7 @@ import {
   decodeSkstCatalog,
   STAR_CATALOG_DATA_PREFIX,
 } from '../../../data/starCatalog/starCatalogFormat';
-import { starIndexPath } from '../../../data/octree/octreeFormat';
+import { octreeIndexPath } from '../../../utils/octree/octreeIndexPath';
 import { decodeOctreeIndex } from '../../../data/octree/decodeOctreeIndex';
 import { starOctreeFromSkst } from '../../../utils/star/starOctreeFromSkst';
 import { starOctreeFromIndex } from '../../../utils/star/starOctreeFromIndex';
@@ -32,7 +32,7 @@ export const starCatalogFetcher: Fetcher<Octree<StarColumns>, StarCatalogReq> = 
   }
   if (entry.format === 'octree') {
     const buf = await fetchWithProgress(
-      dataUrl(starIndexPath(entry.binBaseName)),
+      dataUrl(octreeIndexPath('star', entry.binBaseName)),
       signal,
       onProgress,
     );

@@ -36,9 +36,9 @@ import {
   OCTREE_HEADER_BYTES_OFFSET,
   OCTREE_INDEX_MAGIC,
   OCTREE_JSON_OFFSET,
-  STAR_OCTREE_DATA_PREFIX,
-  starChunkPath,
 } from '../../src/data/octree/octreeFormat';
+import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
+import { octreeChunkPath } from '../../src/utils/octree/octreeChunkPath';
 import { readOctreeHeader } from '../../src/data/octree/readOctreeHeader';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { readOctreeFileHeader } from '../utils/io/readOctreeFileHeader';
@@ -108,7 +108,7 @@ export async function starChunkPaths(
   const paths: string[] = [];
   const walk = async (refs: readonly OctreeChunkRef[]) => {
     for (const ref of refs) {
-      const path = starChunkPath(binBaseName, ref);
+      const path = octreeChunkPath('star', binBaseName, ref);
       paths.push(path);
       await walk(
         (await octreeHeader<OctreeChunkHeader>(host, dataDir, path, OCTREE_CHUNK_MAGIC)).chunks,
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     hashedPath: manifest[logicalPath]!,
   }));
   for (const logicalPath of selected) {
-    if (posix.dirname(logicalPath) !== STAR_OCTREE_DATA_PREFIX) continue;
+    if (posix.dirname(logicalPath) !== OCTREE_FAMILIES.star.dataPrefix) continue;
     for (const chunkPath of await starChunkPaths(
       host,
       DATA_DIR,

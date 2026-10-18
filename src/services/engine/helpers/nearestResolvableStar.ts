@@ -61,7 +61,7 @@ export function nearestResolvableStar(
     to: number,
     ordinalBase: number,
   ): void {
-    const { childIndex, boxOriginPc, boxEdgePc } = octreeIndex(nodes, octree.grid);
+    const { childIndex, boxOrigin, boxEdge } = octreeIndex(nodes, octree.grid);
     const stack: number[] = [];
     for (let k = from; k < to; k++) stack.push(k);
     while (stack.length > 0) {
@@ -70,15 +70,15 @@ export function nearestResolvableStar(
       // Reject a node whose box, grown by the search radius on every axis, does not
       // contain the camera — no record inside it can be within range.
       const o3 = i * 3;
-      const edge = boxEdgePc[i]!;
-      const loX = boxOriginPc[o3]! - radiusPc;
-      const hiX = boxOriginPc[o3]! + edge + radiusPc;
+      const edge = boxEdge[i]!;
+      const loX = boxOrigin[o3]! - radiusPc;
+      const hiX = boxOrigin[o3]! + edge + radiusPc;
       if (camXPc < loX || camXPc > hiX) continue;
-      const loY = boxOriginPc[o3 + 1]! - radiusPc;
-      const hiY = boxOriginPc[o3 + 1]! + edge + radiusPc;
+      const loY = boxOrigin[o3 + 1]! - radiusPc;
+      const hiY = boxOrigin[o3 + 1]! + edge + radiusPc;
       if (camYPc < loY || camYPc > hiY) continue;
-      const loZ = boxOriginPc[o3 + 2]! - radiusPc;
-      const hiZ = boxOriginPc[o3 + 2]! + edge + radiusPc;
+      const loZ = boxOrigin[o3 + 2]! - radiusPc;
+      const hiZ = boxOrigin[o3 + 2]! + edge + radiusPc;
       if (camZPc < loZ || camZPc > hiZ) continue;
 
       // Childful: descend into every present child (a blob is a flux mip, never
@@ -112,6 +112,7 @@ export function nearestResolvableStar(
       if (count === 0) continue;
       const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
         octree.grid,
+        octree.family,
         nodes.morton[i]!,
         nodes.level[i]!,
         SUN,

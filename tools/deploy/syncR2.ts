@@ -28,13 +28,13 @@ import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv'
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
 import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
-import { STAR_OCTREE_DATA_PREFIX } from '../../src/data/octree/octreeFormat';
+import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 
 const DATA_DIR = 'public/data';
 const HIRES_DIR = 'public/data/images/famous-hires';
 const TEXTURES_DIR = 'public/data/images/textures';
 const IMAGES_DIR = 'public/data/images';
-const STAR_OCTREE_DIR = `public/data/${STAR_OCTREE_DATA_PREFIX}`;
+const STAR_OCTREE_DIR = `public/data/${OCTREE_FAMILIES.star.dataPrefix}`;
 
 const BUCKET = 'skymap-data';
 /**
@@ -126,7 +126,7 @@ function buildGroups(): R2SyncGroup[] {
       transport: {
         kind: 'bulk',
         localRoot: STAR_OCTREE_DIR,
-        keyRoot: `data/${STAR_OCTREE_DATA_PREFIX}`,
+        keyRoot: `data/${OCTREE_FAMILIES.star.dataPrefix}`,
       },
       cacheControl: IMMUTABLE,
       purge: false,

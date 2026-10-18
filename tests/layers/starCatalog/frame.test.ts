@@ -50,6 +50,7 @@ function makeRuntime(loaded: boolean, stream?: OctreeChunkStream<StarColumns>): 
   // An empty index: the chunk planner walks nothing, so a stubbed stream's counters drive the vote.
   const catalog = {
     starCount: 0,
+    family: 'star',
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
     nodes: { count: 0 },
     chunks: [],

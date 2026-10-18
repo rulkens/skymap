@@ -20,8 +20,8 @@ export function octreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): OctreeInd
 
   const n = nodes.count;
   const childIndex = new Int32Array(n * OCTANTS).fill(-1);
-  const boxOriginPc = new Float64Array(n * 3);
-  const boxEdgePc = new Float64Array(n);
+  const boxOrigin = new Float64Array(n * 3);
+  const boxEdge = new Float64Array(n);
   const holdsChunkRoot = new Uint8Array(n);
 
   const rowByKey = new Map<number, number>();
@@ -32,12 +32,12 @@ export function octreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): OctreeInd
   for (let i = 0; i < n; i++) {
     const level = nodes.level[i]!;
     const morton = nodes.morton[i]!;
-    const edgePc = grid.cellEdge * 2 ** level;
-    boxEdgePc[i] = edgePc;
+    const edge = grid.cellEdge * 2 ** level;
+    boxEdge[i] = edge;
     const [cx, cy, cz] = mortonDecode3(morton);
-    boxOriginPc[i * 3] = gx + cx * edgePc;
-    boxOriginPc[i * 3 + 1] = gy + cy * edgePc;
-    boxOriginPc[i * 3 + 2] = gz + cz * edgePc;
+    boxOrigin[i * 3] = gx + cx * edge;
+    boxOrigin[i * 3 + 1] = gy + cy * edge;
+    boxOrigin[i * 3 + 2] = gz + cz * edge;
 
     if (nodes.chunkRef[i] !== NO_CHUNK_REF) holdsChunkRoot[i] = 1;
     const mask = nodes.childMask[i]!;
@@ -54,8 +54,8 @@ export function octreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): OctreeInd
 
   const index: OctreeIndex = {
     childIndex,
-    boxOriginPc,
-    boxEdgePc,
+    boxOrigin,
+    boxEdge,
     holdsChunkRoot,
   };
   cache.set(nodes, index);

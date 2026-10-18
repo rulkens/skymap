@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/octreeFormat';
+import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 import { starChunkPaths } from '../../../tools/fetch/fetchPrebuiltData';
 import { chunkOctree } from '../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../tools/octree/stratifyOctree';

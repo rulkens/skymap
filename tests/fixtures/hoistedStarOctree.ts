@@ -13,9 +13,9 @@ import type { Octree } from '../../src/@types/octree/Octree';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import {
   NO_CHUNK_REF,
-  OFFSET_FRACTION_LEVELS,
-  STAR_COLUMN_SCHEMA,
+  OFFSET_FRACTION_LEVELS
 } from '../../src/data/octree/octreeFormat';
+import { STAR_COLUMN_SCHEMA } from "../../src/data/octree/starOctreeFamily";
 
 /** A box fraction as the `u16x3` raw value. */
 const frac = (f: number) => f * OFFSET_FRACTION_LEVELS;
@@ -47,6 +47,7 @@ export function hoistedStarOctree(): { octree: Octree<StarColumns>; chunk: Octre
   const chunkNodes = table([[1, 0, 0, 0, 2, 0, NO_CHUNK_REF]]);
   const octree: Octree<StarColumns> = {
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
+    family: 'star',
     recordCount: 3,
     columns: STAR_COLUMN_SCHEMA,
     // level, morton, childMask, firstRecord, ownCount, blobCount, chunkRef

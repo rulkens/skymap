@@ -10,7 +10,7 @@ import type { OctreeCatalogMeta } from '../../../tools/@types/octree/OctreeCatal
 import type { OctreeObjects } from '../../../tools/@types/octree/OctreeObjects';
 import { decodeOctreeChunk } from '../../../src/data/octree/decodeOctreeChunk';
 import { decodeOctreeIndex } from '../../../src/data/octree/decodeOctreeIndex';
-import { octreeChunkFileName, STAR_COLUMN_SCHEMA } from '../../../src/data/octree/octreeFormat';
+import { octreeChunkFileName } from '../../../src/data/octree/octreeFormat';
 import { chunkOctree } from '../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../tools/octree/stratifyOctree';
 import { writeOctreeCatalog } from '../../../tools/octree/writeOctreeCatalog';
@@ -20,6 +20,7 @@ import {
   randomOctreeRecords,
   TEST_STRATIFY,
 } from '../../fixtures/makeOctreeBuildInput';
+import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 
 const GRID = { bits: 6, origin: [0, 0, 0] as [number, number, number], cellEdge: 10 };
 const CAPACITY = 300;

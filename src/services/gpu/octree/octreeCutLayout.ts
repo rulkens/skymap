@@ -9,7 +9,7 @@ import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeChunkRoot } from '../../../@types/octree/OctreeChunkRoot';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { OCTREE_FAMILIES } from '../../../data/octree/octreeFamilies';
 import {
   LEVEL_KEY_STRIDE,
   MAX_GRID_BITS,
@@ -231,7 +231,10 @@ function checkGrid(bits: number): void {
  * The index's rows; a chunk root starts unresident (`refineDelta 0`) until its chunk lands.
  * `foldRecords` 0 disables the fold, for tests that pin the unfolded cut on tiny trees.
  */
-export function packOctreeCutNodes(octree: Octree<{ readonly count: number }>, foldRecords = CUT_FOLD_RECORDS): Uint32Array {
+export function packOctreeCutNodes(
+  octree: Octree<{ readonly count: number }>,
+  foldRecords = CUT_FOLD_RECORDS,
+): Uint32Array {
   checkGrid(octree.grid.bits);
   const out = new Uint32Array(octree.nodes.count * CUT_NODE_WORDS);
   packRows(octree.nodes, out, { node: 0, record: 0 }, (i) => i, foldRecords);
@@ -264,7 +267,9 @@ export function packOctreeChunkNodes(
     (i) => {
       const rootRow = rootRowByKey.get(parentKey(level[i]!, morton[i]!));
       if (rootRow === undefined) {
-        throw new Error(`octreeCut: chunk row ${i} has no parent in the chunk and is not a top row`);
+        throw new Error(
+          `octreeCut: chunk row ${i} has no parent in the chunk and is not a top row`,
+        );
       }
       return rootRow;
     },
@@ -298,7 +303,10 @@ function parentKey(level: number, morton: number): number {
 }
 
 /** Throws, naming the largest slot count that fits, when `slots` would overflow a pool cap; never clamps. */
-export function checkOctreePoolCaps(octree: Octree<{ readonly count: number }>, slots: number): void {
+export function checkOctreePoolCaps(
+  octree: Octree<{ readonly count: number }>,
+  slots: number,
+): void {
   const fit = (index: number, stride: number, limit: number) =>
     stride === 0 ? Infinity : Math.floor((limit - 1 - index) / stride);
   const fits = Math.min(
@@ -315,7 +323,10 @@ export function checkOctreePoolCaps(octree: Octree<{ readonly count: number }>, 
 }
 
 /** Leaf-list entries the pool can ever hold: every own block of the index, and of every slot at worst. */
-export function leafListCapacity(octree: Octree<{ readonly count: number }>, slots: number): number {
+export function leafListCapacity(
+  octree: Octree<{ readonly count: number }>,
+  slots: number,
+): number {
   let blocks = 0;
   for (let i = 0; i < octree.nodes.count; i++) {
     blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
@@ -348,14 +359,15 @@ export function writeOctreeCutUniforms(
   const i32 = new Int32Array(out);
   const u32 = new Uint32Array(out);
   const f32 = new Float32Array(out);
+  const { unitMpc } = OCTREE_FAMILIES[octree.family];
+  const mpcToUnit = 1 / unitMpc;
   for (let a = 0; a < 3; a++) {
-    const cells =
-      (camPosMpc[a]! * SCALE_UNITS.MPC_TO_PC - octree.grid.origin[a]!) / octree.grid.cellEdge;
+    const cells = (camPosMpc[a]! * mpcToUnit - octree.grid.origin[a]!) / octree.grid.cellEdge;
     const whole = Math.max(-CAM_CELL_LIMIT, Math.min(CAM_CELL_LIMIT, Math.floor(cells)));
     i32[CAM_CELL_INT_INDEX + a] = whole;
     f32[CAM_FRAC_FLOAT_INDEX + a] = cells - whole;
   }
-  f32[CELL_EDGE_MPC_FLOAT_INDEX] = octree.grid.cellEdge * SCALE_UNITS.PC_TO_MPC;
+  f32[CELL_EDGE_MPC_FLOAT_INDEX] = octree.grid.cellEdge * unitMpc;
   f32[REFINE_THRESHOLD_SQ_FLOAT_INDEX] = cut.refineThreshold * cut.refineThreshold;
   f32[FADE_STEP_FLOAT_INDEX] = cut.fadeStep;
   u32[DRAW_BUDGET_U32_INDEX] = cut.drawBudget;

@@ -29,6 +29,7 @@ describe('octreeNodeOriginRelCamMpc', () => {
     //   cellScaleMpc = 78 · 1 · 1e-6 = 7.8e-5 Mpc
     const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
       GRID,
+      'star',
       MORTON_1_2_3,
       0,
       camPosMpc,
@@ -42,8 +43,8 @@ describe('octreeNodeOriginRelCamMpc', () => {
 
   it('scales an aggregate box by 2^level', () => {
     // Aggregate at level 2 → box spans 2^2 = 4 leaf cells per axis.
-    //   boxEdgePc = 78 · 4 = 312 pc
-    //   boxOriginPc = [1000 + 1·312, 2000 + 2·312, 3000 + 3·312]
+    //   boxEdge = 78 · 4 = 312 pc
+    //   boxOrigin = [1000 + 1·312, 2000 + 2·312, 3000 + 3·312]
     //               = [1312, 2624, 3936] pc
     //   boxOriginMpc = [1.312e-3, 2.624e-3, 3.936e-3] Mpc
     const camPosMpc: Vec3 = [1.0e-3, 2.0e-3, 3.0e-3];
@@ -52,6 +53,7 @@ describe('octreeNodeOriginRelCamMpc', () => {
     //   cellScaleMpc = 78 · 4 · 1e-6 = 3.12e-4 Mpc (4× the leaf's 7.8e-5)
     const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
       GRID,
+      'star',
       MORTON_1_2_3,
       2,
       camPosMpc,
@@ -76,6 +78,7 @@ describe('octreeNodeOriginRelCamMpc', () => {
 
     const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
       GRID,
+      'star',
       MORTON_1_2_3,
       0,
       camPosMpc,

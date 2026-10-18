@@ -170,6 +170,7 @@ describe('struct CutUniforms', () => {
 
   it('writeOctreeCutUniforms lands each value where the struct says', () => {
     const catalog = {
+      family: 'star',
       grid: { bits: 9, cellEdge: 2, origin: [0, 0, 0] },
       nodes: { count: 5 },
       chunkNodeCap: 4,

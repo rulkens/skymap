@@ -9,25 +9,27 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { OctreeGrid } from '../../@types/octree/OctreeGrid';
 import { mortonDecode3 } from '../math/mortonDecode3';
-import { SCALE_UNITS } from '../../data/scaleUnits';
+import type { OctreeFamily } from '../../@types/octree/OctreeFamily';
+import { OCTREE_FAMILIES } from '../../data/octree/octreeFamilies';
 
 export function octreeNodeOriginRelCamMpc(
   grid: OctreeGrid,
+  family: OctreeFamily,
   morton: number,
   level: number,
   camPosMpc: Readonly<Vec3>,
 ): { originRelCamMpc: Vec3; cellScaleMpc: number } {
-  const boxEdgePc = grid.cellEdge * 2 ** level;
+  const boxEdge = grid.cellEdge * 2 ** level;
 
   const [gx, gy, gz] = grid.origin;
   const [cx, cy, cz] = mortonDecode3(morton);
 
-  const pcToMpc = SCALE_UNITS.PC_TO_MPC;
+  const unitMpc = OCTREE_FAMILIES[family].unitMpc;
   const originRelCamMpc: Vec3 = [
-    (gx + cx * boxEdgePc) * pcToMpc - camPosMpc[0],
-    (gy + cy * boxEdgePc) * pcToMpc - camPosMpc[1],
-    (gz + cz * boxEdgePc) * pcToMpc - camPosMpc[2],
+    (gx + cx * boxEdge) * unitMpc - camPosMpc[0],
+    (gy + cy * boxEdge) * unitMpc - camPosMpc[1],
+    (gz + cz * boxEdge) * unitMpc - camPosMpc[2],
   ];
 
-  return { originRelCamMpc, cellScaleMpc: boxEdgePc * pcToMpc };
+  return { originRelCamMpc, cellScaleMpc: boxEdge * unitMpc };
 }

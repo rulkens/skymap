@@ -47,11 +47,12 @@ import {
   STAR_COLORIDX_STEP,
   STAR_COLORIDX_LEVELS,
 } from '../../src/data/starCatalog/starCatalogFormat';
-import { STAR_COLUMN_SCHEMA, STAR_OCTREE_DATA_PREFIX } from '../../src/data/octree/octreeFormat';
+import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 import { initialState } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { buildOctreeCatalog } from '../octree/buildOctreeCatalog';
 import { writeOctreeCatalog } from '../octree/writeOctreeCatalog';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { STAR_COLUMN_SCHEMA } from '../../src/data/octree/starOctreeFamily';
 
 /** Hipparcos-2 bright-star cut: Gaia saturates on stars brighter than this. */
 const HP_BRIGHT_CUT = 4.0;
@@ -552,7 +553,7 @@ async function runCli(): Promise<void> {
       `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
   );
 
-  const starOutDir = join(outDir, STAR_OCTREE_DATA_PREFIX);
+  const starOutDir = join(outDir, OCTREE_FAMILIES.star.dataPrefix);
   const header = writeOctreeCatalog(objects, meta, starOutDir, 'stars');
   const t2 = performance.now();
   process.stderr.write(

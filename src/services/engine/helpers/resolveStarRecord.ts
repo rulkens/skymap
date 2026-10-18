@@ -65,6 +65,7 @@ export function resolveStarRecord(
 
   const { originRelCamMpc, cellScaleMpc } = octreeNodeOriginRelCamMpc(
     octree.grid,
+    octree.family,
     nodes.morton[row]!,
     nodes.level[row]!,
     SUN,

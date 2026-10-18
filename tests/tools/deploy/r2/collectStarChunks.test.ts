@@ -9,7 +9,7 @@ import { join, relative } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/octreeFormat';
+import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 import { collectStarChunks } from '../../../../tools/deploy/r2/collectStarChunks';
 import { chunkOctree } from '../../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../../tools/octree/stratifyOctree';

@@ -7,7 +7,7 @@
 import type { SkstCatalog } from '../../@types/data/starCatalog/SkstCatalog';
 import type { Octree } from '../../@types/octree/Octree';
 import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
-import { NO_CHUNK_REF, OCTANTS, STAR_COLUMN_SCHEMA } from '../../data/octree/octreeFormat';
+import { NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import {
   colorIdxToBpRp,
   lutIndexToAbsMag,
@@ -16,6 +16,7 @@ import {
 } from '../../data/starCatalog/starCatalogFormat';
 import { octreeIndex } from '../octree/octreeIndex';
 import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
+import { STAR_COLUMN_SCHEMA } from '../../data/octree/starOctreeFamily';
 
 /** 10-bit v1 offset → 16-bit fraction of the box. */
 const OFFSET_WIDEN_SHIFT = 6;
@@ -74,6 +75,7 @@ export function starOctreeFromSkst(cat: SkstCatalog): Octree<StarColumns> {
 
   return {
     grid,
+    family: 'star',
     recordCount: cat.starCount,
     columns: STAR_COLUMN_SCHEMA,
     nodes,

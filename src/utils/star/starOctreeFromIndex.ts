@@ -13,6 +13,7 @@ export function starOctreeFromIndex(
   if (starCount === undefined) throw new Error('star octree index lacks the starCount stat');
   if (chunkCount === undefined) throw new Error('star octree index lacks the chunkCount stat');
   return {
+    family: header.family,
     grid: header.grid,
     recordCount: starCount,
     columns: header.columns,

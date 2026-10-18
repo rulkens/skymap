@@ -7,17 +7,15 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createOctreeChunkStream } from '../../../src/services/octree/octreeChunkStream';
-import {
-  NO_CHUNK_REF,
-  STAR_COLUMN_SCHEMA,
-  starChunkPath,
-} from '../../../src/data/octree/octreeFormat';
+import { NO_CHUNK_REF } from '../../../src/data/octree/octreeFormat';
+import { octreeChunkPath } from '../../../src/utils/octree/octreeChunkPath';
 import { encodeOctreeObject } from '../../../tools/octree/encodeOctreeObject';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
 import type { ColumnId } from '../../../src/@types/octree/ColumnId';
 import type { OctreeRawColumn } from '../../../tools/@types/octree/OctreeRawColumn';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 
 /** Chunks 0–2 are rooted in the index; 3 in chunk 0's row, 4 in chunk 3's. Two records each. */
 const REFS: readonly OctreeChunkRef[] = [0, 1, 2, 3, 4].map((id) => ({
@@ -36,8 +34,9 @@ const CHILDREN: Readonly<Record<number, readonly OctreeChunkRef[]>> = {
   3: [REFS[4]!],
 };
 
-// The stream reads only the index's refs, the chunk count and the schema a chunk decodes against.
+// The stream reads only the index's family, refs, chunk count and the schema a chunk decodes against.
 const OCTREE = {
+  family: 'star',
   chunks: REFS.slice(0, 3),
   chunkCount: REFS.length,
   columns: STAR_COLUMN_SCHEMA,
@@ -69,7 +68,7 @@ function chunkBytes(id: number): ArrayBuffer {
   return bytes.slice().buffer;
 }
 
-const pathOf = (id: number) => starChunkPath('stars', REFS[id]!);
+const pathOf = (id: number) => octreeChunkPath('star', 'stars', REFS[id]!);
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /** A stream whose fetches wait until the test resolves them by chunk ref. */

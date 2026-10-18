@@ -15,7 +15,7 @@ import type { Octree } from '../../@types/octree/Octree';
 import type { OctreeCutSpec } from '../../@types/octree/OctreeCutSpec';
 import type { OctreeChunkPlan } from '../../@types/octree/OctreeChunkPlan';
 import type { OctreeChunkRequest } from '../../@types/octree/OctreeChunkRequest';
-import { SCALE_UNITS } from '../../data/scaleUnits';
+import { OCTREE_FAMILIES } from '../../data/octree/octreeFamilies';
 import { MAX_GRID_BITS, NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import {
   CUT_MAX_VIEWS,
@@ -63,20 +63,22 @@ export function planOctreeChunks(
   written.length = 0;
 
   // Scalars hoisted out of the loop, which runs every frame the eye moves.
-  const cx = cut.originMpc[0] * SCALE_UNITS.MPC_TO_PC;
-  const cy = cut.originMpc[1] * SCALE_UNITS.MPC_TO_PC;
-  const cz = cut.originMpc[2] * SCALE_UNITS.MPC_TO_PC;
+  const { unitMpc } = OCTREE_FAMILIES[octree.family];
+  const mpcToUnit = 1 / unitMpc;
+  const cx = cut.originMpc[0] * mpcToUnit;
+  const cy = cut.originMpc[1] * mpcToUnit;
+  const cz = cut.originMpc[2] * mpcToUnit;
   const thrSq = cut.refineThreshold * cut.refineThreshold;
-  // `MIN_DIST_SQ` is in leaf cells²; the plan measures in parsecs.
-  const minDistSqPc = MIN_DIST_SQ * octree.grid.cellEdge * octree.grid.cellEdge;
+  // `MIN_DIST_SQ` is in leaf cells²; the plan measures in grid units.
+  const minDistSq = MIN_DIST_SQ * octree.grid.cellEdge * octree.grid.cellEdge;
   const { planes } = cut;
   const planeFloats = planes.length <= CUT_MAX_VIEWS * FLOATS_PER_VIEW ? planes.length : 0;
-  const radiusPerEdgeMpc = SCALE_UNITS.PC_TO_MPC * HALF_DIAGONAL * cut.worldSpread;
-  const toMpc = SCALE_UNITS.PC_TO_MPC;
+  const radiusPerEdgeMpc = unitMpc * HALF_DIAGONAL * cut.worldSpread;
+  const toMpc = unitMpc;
   // The object being walked; depth-first, it switches about twice per chunk walked into.
   let object = INDEX;
   let nodes = octree.nodes;
-  let { boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } = octreeIndex(nodes, octree.grid);
+  let { boxOrigin, boxEdge, childIndex, holdsChunkRoot } = octreeIndex(nodes, octree.grid);
 
   const touched: number[] = [];
   const wanted: number[] = [];
@@ -88,33 +90,30 @@ export function planOctreeChunks(
     if (stackObject[top] !== object) {
       object = stackObject[top]!;
       nodes = object === INDEX ? octree.nodes : resident(object)!.nodes;
-      ({ boxOriginPc, boxEdgePc, childIndex, holdsChunkRoot } = octreeIndex(
-        nodes,
-        octree.grid,
-      ));
+      ({ boxOrigin, boxEdge, childIndex, holdsChunkRoot } = octreeIndex(nodes, octree.grid));
     }
     const ref = nodes.chunkRef[i]!;
     const isChunkRoot = ref !== NO_CHUNK_REF;
     const seen = isChunkRoot ? best[ref]! : 0;
     if (seen === FAILED) continue;
-    const edgePc = boxEdgePc[i]!;
-    const lx = boxOriginPc[i * AXES]! - cx;
-    const ly = boxOriginPc[i * AXES + 1]! - cy;
-    const lz = boxOriginPc[i * AXES + 2]! - cz;
-    const dx = Math.max(lx, -(lx + edgePc), 0);
-    const dy = Math.max(ly, -(ly + edgePc), 0);
-    const dz = Math.max(lz, -(lz + edgePc), 0);
-    const proxy = (edgePc * edgePc) / Math.max(dx * dx + dy * dy + dz * dz, minDistSqPc);
+    const edge = boxEdge[i]!;
+    const lx = boxOrigin[i * AXES]! - cx;
+    const ly = boxOrigin[i * AXES + 1]! - cy;
+    const lz = boxOrigin[i * AXES + 2]! - cz;
+    const dx = Math.max(lx, -(lx + edge), 0);
+    const dy = Math.max(ly, -(ly + edge), 0);
+    const dz = Math.max(lz, -(lz + edge), 0);
+    const proxy = (edge * edge) / Math.max(dx * dx + dy * dy + dz * dz, minDistSq);
     // Below threshold, nothing under it refines; a weaker root of an already-wanted chunk
     // changes nothing.
     if (proxy < thrSq || proxy <= seen) continue;
 
     // Planes are camera-relative Mpc; the box centre is rebased the same way.
-    const half = edgePc / 2;
+    const half = edge / 2;
     const x = (lx + half) * toMpc;
     const y = (ly + half) * toMpc;
     const z = (lz + half) * toMpc;
-    const negRadius = -edgePc * radiusPerEdgeMpc;
+    const negRadius = -edge * radiusPerEdgeMpc;
     for (let v = 0; v < planeFloats; v += FLOATS_PER_VIEW) {
       let p = v;
       while (p < v + FLOATS_PER_VIEW) {

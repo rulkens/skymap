@@ -23,6 +23,7 @@ const E = 3;
 const D = 4;
 
 const OCTREE = {
+  family: 'star',
   grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
   nodes: {
     count: 6,
