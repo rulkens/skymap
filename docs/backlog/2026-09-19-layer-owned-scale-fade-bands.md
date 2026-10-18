@@ -14,7 +14,7 @@ a single Layer:
 | ------------------------------------------ | ------------------------------------------------------------------- |
 | `localBubble`, `localBubbleRecede`         | `src/layers/localBubble/present/localBubbleOpacity.ts`              |
 | `zoneOfAvoidance`, `zoneOfAvoidanceRecede` | `src/layers/zoneOfAvoidance/present/deriveZoneOfAvoidanceLiveness.ts` |
-| `constellations`                           | `src/layers/constellations/present/constellationLayerOpacity.ts`    |
+| `constellations`                           | `src/layers/constellations/present/constellationsBand.ts`    |
 
 So tuning or reading a Layer means visiting a second, central place.
 

@@ -21,7 +21,8 @@ import { describe, it, expect } from 'vitest';
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { constellationLayerOpacity } from '../../../../src/layers/constellations/present/constellationLayerOpacity';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
@@ -297,7 +298,9 @@ describe('produceSceneBodyCaptions', () => {
 
     const out = produceConstellationCaptions(runtime)({} as EngineState, ctx, layerFade);
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(constellationLayerOpacity(camDistMpc, layerFade));
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(
+      fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc) * layerFade,
+    );
   });
 });
 
