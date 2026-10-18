@@ -23,8 +23,8 @@ listed in §2; the rest of the document assumes them.
 
 | Question | Ruling |
 | --- | --- |
-| Picture | **Map**: the ship-frame layout at ship-simultaneous instants. Lorentz contraction, not aberration. "What the eye receives" (aberration, headlight) is a later Window picture |
-| Colour | Doppler by direction from the ship, as a hue shift only. The headlight brightening is Window's, not Map's |
+| Picture | **Map**: the ship-frame layout at ship-simultaneous instants. Lorentz contraction, not aberration. Aberration is a later Window picture |
+| Colour | Doppler by direction from the ship as a hue shift, plus the headlight brightening behind a dial: `pow(D, k)` under a soft ceiling, `k` default 1 (physics is 4). Off/on in the overlay, `k` in the debug tuning section |
 | Clock | The sim clock stays Earth time. Ship state is a pure function of (destination, sim instant − launch); the exhibit scrubs and plays in ship time and converts |
 | Where contraction lands | One fold per slab: each slab's `vp` becomes `proj · view · C`, with `C` expressed in that slab's frame. No shader learns about contraction for position |
 | Galaxy billboard size | From the contracted distance, so M31 grows as it closes. Disk and thumbnail promotion (CPU gates) unchanged |
@@ -109,6 +109,7 @@ export type FrameBoost = {
   readonly gamma: number;
   readonly contraction: boolean;
   readonly doppler: boolean;
+  readonly headlight: number; // the exponent k; 0 is off
 };
 
 // Layer.d.ts — growth
@@ -145,10 +146,11 @@ in one place, including the CPU-side label and marker projection.
 
 ```wgsl
 // src/services/gpu/shaders/lib/boost.wesl
-struct BoostUniforms { dir: vec3<f32>, beta: f32, gamma: f32, doppler: f32, contraction: f32, _pad: f32 } // two vec4
+struct BoostUniforms { dir: vec3<f32>, beta: f32, gamma: f32, doppler: f32, contraction: f32, headlight: f32 } // two vec4
 fn dopplerFactor(toSource: vec3<f32>, b: BoostUniforms) -> f32;         // 1.0 when b.doppler == 0
 fn contractAbout(p: vec3<f32>, ship: vec3<f32>, b: BoostUniforms) -> vec3<f32>; // identity when b.contraction == 0
 fn boostedBpRp(bpRp: f32, d: f32) -> f32;                                 // blackbody at D·T, via a BP−RP ↔ T fit
+fn headlightGain(d: f32, b: BoostUniforms) -> f32;                         // soft-ceilinged pow(d, k); 1.0 when k == 0
 ```
 
 Three renderers append `BoostUniforms` to their own uniform tail and write it from `ctx.snapshot.boost`:
@@ -161,6 +163,11 @@ Three renderers append `BoostUniforms` to their own uniform tail and write it fr
   (`points/vertex.wesl:159`).
 - **Milky Way splats** (`milkyWayCloudRenderer.ts:185`, the field splat shaders): emission tinted by `D` of the
   splat's direction from the camera.
+
+All three multiply their radiance by `headlightGain(D)`: `pow(D, k)` folded through `h / (1 + h / HEADLIGHT_CEIL)`,
+`HEADLIGHT_CEIL` a constant in `src/data/voyage/` (start at 64; the forward Doppler factor passes a million, so
+without a ceiling the tone-map sees a white wall by ship-year three). The dial `k` is a `SliderField` row in the
+debug tuning section, `[0, 4]`, as the black-hole `dopplerStrength` is; the overlay only switches it on and off.
 
 `boostedBpRp` has a TS twin and a test: identity at `D = 1`, monotone, and an M star at `D = 2` lands in the K–G
 range. The galaxy shift is a visualisation constant, not photometry, and the copy says so.
@@ -190,6 +197,7 @@ export type VoyageSettings = {
   readonly launchDays: number | null; // sim JD the trip starts at; set when the exhibit opens
   readonly contraction: boolean;
   readonly doppler: boolean;
+  readonly headlight: number; // exponent k; the overlay toggle sets 0 or the last non-zero value
   readonly speed: number; // MISSION_SPEEDS factor, as the missions transport
 };
 // selectors.ts
@@ -240,7 +248,8 @@ marked; transport; and the readouts, re-derived on the 4 Hz interval the mission
 | γ | plain |
 | Ahead | the destination's remaining distance, Earth frame and ship frame side by side |
 
-Two toggles (`ExhibitToggle` rows): contraction and Doppler shift, each dispatching the cluster's setter.
+Three toggles (`ExhibitToggle` rows): contraction, Doppler shift and headlight, each dispatching the cluster's
+setter.
 
 Copy, three prose sections: why the ship clock runs slow and the Earth clock runs away; the 1.94 light-year
 invariant; Map versus Window (what a photograph would show instead). Written per `docs/tour/writing-style.md`.
@@ -253,8 +262,7 @@ not representable anyway).
 
 ## 5. Out of scope
 
-- The Window picture: aberration, the headlight brightening, the starbow. The `lib/boost.wesl` helpers are the
-  seam it plugs into.
+- The Window picture: aberration and the starbow. The `lib/boost.wesl` helpers are the seam it plugs into.
 - A third-person ship (a GLB via `add-mission`) and the camera orbiting it. The fold is centred on `shipMpc`, not
   the eye, so this needs no change to §4.3.
 - A ship-time hash param for sharing a mid-trip view.
@@ -275,7 +283,8 @@ not representable anyway).
 - **Boost composition:** two Layers answering `boost` fail at `instantiateLayer`; none answering yields `null`.
 - **Profile:** `buildVoyageProfile` is monotone in both columns, starts at `fromDays` and ends at arrival, and
   halves its wall length at speed 2.
-- **Shaders:** `boostedBpRp` identity and monotonicity through the TS twin; a shader-module compile test for the
+- **Shaders:** `boostedBpRp` identity and monotonicity, and `headlightGain` at `k = 0` identity and bounded by the
+  ceiling, through their TS twins; a shader-module compile test for the
   three renderers with the new tail (the existing pattern for the point shader).
 - **Settings:** the exhibit's exit restores `voyage.destination` to `null` and the boost to `null`.
 - **By eye:** `npm run shot` on `#exhibit=voyage-m31` scrubbed to τ = 0, 3, 7.4 and 14.3 years: the Milky Way
@@ -290,7 +299,8 @@ One feature PR, five groups:
 2. The fold: `Layer.boost`, the frame context field, `deriveSlabs`; a debug slider pair (γ, direction) in the
    debug panel proves every layer squashes before any exhibit exists.
 3. The `voyage` Layer: slice, destinations, exhibits, hold, profile, camera row, overlay, readouts, toggles.
-4. Doppler: `lib/boost.wesl`, the three renderers' uniform tails, the galaxy billboard size.
+4. Doppler and headlight: `lib/boost.wesl`, the three renderers' uniform tails, the galaxy billboard size, the
+   tuning slider.
 5. Copy, shots, `/feature-done` with the deletion audit.
 
 Verify at plan time, as plan tasks: the Milky Way presents sample no world position (else they take the inverse
