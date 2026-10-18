@@ -2,12 +2,10 @@
  * SourceTable — every data source, twice in the page and once on screen. Wide,
  * it is a table to read across, its rows laid on the page grid so its columns
  * are the page's; the ARIA roles keep it a table to a screen reader, since CSS
- * has taken the table display away. Narrow, the table is gone and the same
- * rows are a list of closed disclosures, a source's name and what it gives
- * showing: two dozen stacked tables were eleven phone screens. No script. The
- * children are notes on how to read it, set under a rule at its foot. A
- * source's name leads to its data page, which has its terms in full and the
- * link to the source itself.
+ * has taken the table display away. Narrow, the same rows are a list of closed
+ * disclosures, a source's name and what it gives showing: two dozen stacked
+ * tables were eleven phone screens. No script. The children are notes on how
+ * to read it, under a rule at its foot. A source's name leads to its data page.
  */
 import type { ReactNode } from 'react';
 

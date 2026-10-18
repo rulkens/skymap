@@ -3,7 +3,14 @@
  * A vocabulary, not a component: it has no `.root`. A component takes a class with
  * `composes: wrap from '../../styles/layout.module.css'`. `.halves`, `.thirds` and
  * `.quarters` are composed together with `.grid` (they only set the children's spans).
+ * `.bare` is a list with its bullets, margin and padding taken off.
  */
+
+.bare {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
 .wrap {
   max-width: var(--wrap-max);

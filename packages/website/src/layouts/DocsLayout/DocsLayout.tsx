@@ -5,9 +5,9 @@
  * has four or more. Narrow, the contents are a bar that stays under the top
  * bar, with those headings at the head of its list. The page's place comes
  * from its row in data/docsTree.ts: the group over its title, previous and
- * next within the group, and the landing page it links back up to. The three
- * interactive parts (the contents, the list of the page's headings and the
- * figure sheet) are islands the page passes in as `nav`, `toc` and `sheet`.
+ * next within the group, and the landing page it links back up to. The
+ * contents, the page's headings and the figure sheet are islands the page
+ * passes in as `nav`, `toc` and `sheet`.
  */
 import type { MarkdownHeading } from 'astro';
 import type { ReactNode } from 'react';

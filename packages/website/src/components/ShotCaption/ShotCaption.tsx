@@ -5,7 +5,7 @@
  * address the picture was taken at. Every picture being an address is the
  * site's honesty device. It is set quietly, as a caption: nothing in it is
  * brighter than the page's body text. It lays itself out by the room it is
- * given: stacked under a narrow picture, in two columns along the foot of a wide one.
+ * given: stacked under a narrow picture, in two columns under a wide one.
  * `label` gives the words for a picture that is not in the manifest and is
  * not a view of the app: it has no address to open.
  */

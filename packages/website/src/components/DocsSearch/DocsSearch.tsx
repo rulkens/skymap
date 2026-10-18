@@ -3,12 +3,11 @@
  * set in the display face, as the title of a page of results, over the pages
  * that match. The index is Pagefind's, cut from the built pages by the site's
  * build (astro.config.mjs) and fetched when the sheet first opens, never with
- * the page. The development server has no index (it is cut from a build), and
- * the sheet says so. A result opens its page, or the term, row or heading on
- * it that names what was asked for (utils/searchLanding.ts). Arrow keys walk
- * from the field through the results and back; Enter in the field opens the
- * first result. The `/` key opens it from anywhere on the page. `big` is the
- * control at a page's own size, for the docs index.
+ * the page. The development server has no index, and the sheet says so. A
+ * result opens its page, or the term, row or heading on it that names what was
+ * asked for (utils/searchLanding.ts). Arrow keys walk from the field through
+ * the results and back; Enter opens the first. `/` opens it from anywhere.
+ * `big` is the control at a page's own size, for the docs index.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 

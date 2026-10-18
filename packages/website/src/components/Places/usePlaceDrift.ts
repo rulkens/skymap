@@ -10,7 +10,7 @@
 import { useEffect } from 'react';
 import type { RefObject } from 'react';
 
-const clamp = (value: number): number => Math.min(1, Math.max(0, value));
+import { clamp } from '../../utils/clamp.ts';
 
 export function usePlaceDrift(field: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -27,8 +27,8 @@ export function usePlaceDrift(field: RefObject<HTMLElement | null>): void {
       const tall = rect.height > screen;
       const drawn =
         (screen * (tall ? 0.65 : 0.95) - rect.top) / (tall ? rect.height : screen * 0.45);
-      box.style.setProperty('--drawn', clamp(drawn).toFixed(4));
-      const through = clamp((screen - rect.top) / (screen + rect.height));
+      box.style.setProperty('--drawn', clamp(drawn, 0, 1).toFixed(4));
+      const through = clamp((screen - rect.top) / (screen + rect.height), 0, 1);
       box.style.setProperty('--drift', (through * 2 - 1).toFixed(4));
     };
     const queue = (): void => {

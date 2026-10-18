@@ -5,9 +5,9 @@
  * drew it shows it at the app's size, starting at its middle, and scrolls;
  * a touch screen may pinch. One per page, filled from the picture clicked:
  * a picture on the page is a link to its largest file (DocFigure), so before
- * this island runs the browser shows that file. One listener on the page
- * serves every `a[data-enlarge]`; the dialog itself gives Esc, the focus trap
- * and the return of focus. It is the search sheet's kind of dialog (DocsSearch).
+ * this island runs the browser shows that file. One listener serves every
+ * `a[data-enlarge]`; the dialog gives Esc, the focus trap and the return of
+ * focus, as the search sheet's does (DocsSearch).
  */
 import { useEffect, useRef } from 'react';
 

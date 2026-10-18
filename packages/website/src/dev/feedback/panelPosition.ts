@@ -1,5 +1,5 @@
 import type { FeedbackRect } from '../../../../../tools/site/@types/FeedbackRect';
-import { clamp } from '../overlay/clamp';
+import { clamp } from '../../utils/clamp';
 import type { FeedbackPoint } from './@types/FeedbackPoint';
 
 const GAP = 12;

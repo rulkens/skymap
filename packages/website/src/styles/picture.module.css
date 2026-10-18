@@ -5,10 +5,9 @@
  */
 
 /*
- * A picture's label (ShotCaption, CaptionGallery) along the foot of a full-width picture: the host (PictureBand,
- * Tour, the 404 page) sets `--caption-foot: ''` and a top padding of `--caption-rise` (4rem unless it sets one),
- * and the picture then ends at the label, black from the rule down across the whole window. The host clips the
- * overflow and keeps 2rem under the label.
+ * A picture's label along the foot of a full-width picture: the host sets `--caption-foot: ''` and a top
+ * padding of `--caption-rise` (4rem unless it sets one); the picture then ends at the label, black from the
+ * rule down across the window. The host clips the overflow and keeps 2rem under the label.
  */
 .caption::before {
   content: var(--caption-foot, none);

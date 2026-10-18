@@ -1,4 +1,4 @@
-import { clamp } from '../overlay/clamp';
+import { clamp } from '../../utils/clamp';
 import type { FeedbackPoint } from '../feedback/@types/FeedbackPoint';
 import type { ChipAnchor } from './@types/ChipAnchor';
 

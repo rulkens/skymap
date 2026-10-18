@@ -39,7 +39,7 @@ function NoteField({
 
   return (
     <div className={styles.root}>
-      {label && <div className={styles.label}>{label}</div>}
+      {label && <div>{label}</div>}
       <textarea
         className={styles.area}
         rows={1}

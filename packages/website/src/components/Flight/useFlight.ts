@@ -10,6 +10,7 @@ import { useCallback, useEffect } from 'react';
 
 import type { FlightParts } from '../../@types/FlightParts';
 import type { FlightTimeline } from '../../@types/FlightTimeline';
+import { clamp } from '../../utils/clamp.ts';
 import { flightAt } from '../../utils/flightAt.ts';
 import { flightDistanceKm } from '../../utils/flightDistanceKm.ts';
 import { flightStillWeights } from '../../utils/flightStillWeights.ts';
@@ -32,7 +33,6 @@ const GROUND_RETURN_PX = 160;
 const FOLLOW_RATE = 14;
 // The path is measured from Earth's centre; the readout says "from Earth", so it counts from the surface.
 const EARTH_RADIUS_KM = 6371;
-const unit = (v: number): number => Math.max(0, Math.min(1, v));
 
 type FlightOptions = {
   timeline: FlightTimeline;
@@ -101,10 +101,10 @@ export function useFlight({
 
       const leaving = snap
         ? Math.round(pose.travel)
-        : unit((pose.travel - CAPTION_LEAVES) / CAPTION_FADE);
+        : clamp((pose.travel - CAPTION_LEAVES) / CAPTION_FADE, 0, 1);
       const arriving = snap
         ? Math.round(pose.travel)
-        : unit((pose.travel - CAPTION_ARRIVES) / CAPTION_FADE);
+        : clamp((pose.travel - CAPTION_ARRIVES) / CAPTION_FADE, 0, 1);
       words.forEach((el, k) => {
         const opacity = k === pose.index ? 1 - leaving : k === pose.index + 1 ? arriving : 0;
         el.style.opacity = String(opacity);
@@ -147,7 +147,7 @@ export function useFlight({
     // From the page's own position, not the eased one: the ground must be back when the stage moves.
     function showGround(): void {
       const left = range() + track.getBoundingClientRect().top;
-      const next = Math.round(unit(1 - left / GROUND_RETURN_PX) * 100) / 100;
+      const next = Math.round(clamp(1 - left / GROUND_RETURN_PX, 0, 1) * 100) / 100;
       if (next === ground) return;
       ground = next;
       document.documentElement.style.setProperty('--nav-ground', String(next));
@@ -159,7 +159,7 @@ export function useFlight({
         running = false;
         return;
       }
-      const p = unit(-track.getBoundingClientRect().top / range());
+      const p = clamp(-track.getBoundingClientRect().top / range(), 0, 1);
       if (eased < 0 || still.matches) {
         eased = p;
         speed = 0;
@@ -167,7 +167,7 @@ export function useFlight({
         // A wheel moves the page in steps and a film seek takes a frame or two: the picture
         // follows with its own momentum, so neither shows as a stutter.
         const next = followDamped(eased, speed, p, FOLLOW_RATE, (now - last) / 1000);
-        eased = unit(next.value);
+        eased = clamp(next.value, 0, 1);
         speed = next.velocity;
       }
       last = now;

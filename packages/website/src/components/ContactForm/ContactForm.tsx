@@ -3,11 +3,10 @@
  * Turnstile token as JSON to `endpoint`, and only reports what the server
  * answered, so "sent" is never shown for a message that was not accepted. The
  * page places it only when an endpoint and site key are configured
- * (data/contact.ts, build-time values the island cannot read, so they arrive as
- * props); otherwise it places ContactClosed. The Turnstile script, a
- * third-party request, loads when the island hydrates, which is when the form
- * scrolls into view. The spam check needs script, so without it the form says
- * so and points to GitHub.
+ * (data/contact.ts, build-time values that arrive as props); otherwise it
+ * places ContactClosed. The Turnstile script, a third-party request, loads when
+ * the island hydrates, as the form scrolls into view. The spam check needs
+ * script, so without it the form says so and points to GitHub.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { SubmitEvent } from 'react';
