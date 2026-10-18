@@ -1,10 +1,12 @@
 # Layer visibility, ground preparation: implementation plan
 
-**Goal:** prepare the ground for Layer-declared visibility (`docs/superpowers/plans/2026-10-14-layer-declared-visibility.md`, PR 2) with behaviour-neutral moves only. Every Layer-owned concern that core still holds by name leaves core, except the star scene set (PR 2 folds the stars into core's one scene-body partition), and the seams PR 2 builds on exist, all while reading today's fades. The gate is a pixel-identical before/after: nothing a person sees or operates changes.
+**Shipped in #903.** Its checkboxes were not ticked at merge (no /feature-done ran); they stand as they were.
+
+**Goal:** prepare the ground for Layer-declared visibility (`docs/superpowers/plans/completed/2026-10-14-layer-declared-visibility.md`, PR 2) with behaviour-neutral moves only. Every Layer-owned concern that core still holds by name leaves core, except the star scene set (PR 2 folds the stars into core's one scene-body partition), and the seams PR 2 builds on exist, all while reading today's fades. The gate is a pixel-identical before/after: nothing a person sees or operates changes.
 
 **Architecture:** seven independent refactors, one commit each (two for the pure moves); an eighth (Task 6, V2) was built and reverted. The body Layer gets its `layer.ts` and the `orbitTrails` cluster. The missions Layer gets its own `missionTrails` cluster (M1) and its own Voyager caption producer (M2). Core keeps its star scene-set helpers (`visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution`, `PositionedStar`, `ReadyFrameContext.positionedStars`) through this PR. The galaxy catalog Layer takes the source bitmask (V3). The star sphere pipeline learns an opacity, held at 1 (V1). No visibility type (`VisibilityEntry`, `ShowKey`, `FadeIdentity`, `visibilityLiveOf`) exists in this PR: every consumer keeps today's switch and fade reads. PR 2 then swaps those reads for handed values.
 
-**Spec:** `docs/superpowers/specs/2026-10-13-layer-declared-visibility-design.md`, section "Ground preparation". Rulings: `.superpowers/grill/2026-10-13-layer-declared-fades-rulings.md` (SPLIT, M1, M2, V1, V3, the adjacent `labelLayer` ruling; M3 and M4 land in PR 2; V2 reverted, 2026-10-15 REVERT ruling: no Layer contract member is added or widened without the user's explicit consent).
+**Spec:** `docs/superpowers/specs/completed/2026-10-13-layer-declared-visibility-design.md`, section "Ground preparation". Rulings: `.superpowers/grill/2026-10-13-layer-declared-fades-rulings.md` (SPLIT, M1, M2, V1, V3, the adjacent `labelLayer` ruling; M3 and M4 land in PR 2; V2 reverted, 2026-10-15 REVERT ruling: no Layer contract member is added or widened without the user's explicit consent).
 
 ## Global Constraints
 
@@ -176,7 +178,7 @@ produceMissionCaptions(state: EngineState, ctx: FrameView): Label2DProducerOutpu
 
 **Reverted** (ruled 2026-10-15, REVERT): the member extended the Layer contract without the user's consent, and it duplicated core's scene-body partition, since the seeded stars already are scene bodies (`SCENE_BODIES` spreads `SCENE_STARS`; the frame's `bodyStates` positions every star). Core keeps `visibleStars`, `positionedVisibleStars`, `partitionStarsByResolution` (with `STAR_RESOLVE_PX`), `PositionedStar` and `ReadyFrameContext.positionedStars` through this PR, exactly as on `main`.
 
-**Moved to:** PR 2, Task 7 (`docs/superpowers/plans/2026-10-14-layer-declared-visibility.md`): stars join core's one scene-body partition, with the resolve threshold carried on each body row and admission through the generic liveness predicate. No Layer contract change.
+**Moved to:** PR 2, Task 7 (`docs/superpowers/plans/completed/2026-10-14-layer-declared-visibility.md`): stars join core's one scene-body partition, with the resolve threshold carried on each body row and admission through the generic liveness predicate. No Layer contract change.
 
 - [ ] Revert commits for `28547dbd8`, `da69d2f70` and Task 6's parts of `7e5f02988`; the `frameFilePurity.test.ts` rows for `'frame/visibleStars'` and `'frame/partitionStarsByResolution'` come back with them.
 
@@ -289,4 +291,4 @@ StarRenderer.draw(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3, op
 - [ ] At `#exhibit=voyager-missions`, the Mission trails checkbox fades the trails out and back in; the Mesh bodies label checkbox still hides the Voyager captions with the other mesh-body names; switching craft on a paused clock moves the emphasis.
 - [ ] The Orbit trails checkbox still toggles the planets' trails and, at `#focus=blackhole-sgr-a-star`, the S-star trails.
 
-**Deferral boundary:** no visibility type, entry, address or `setVisibility` exists in this PR; every fade, switch and clip read stays as today, including the Voyager captions' `bodyLabel` clip and `mesh-body` fade rule, core's star scene-set helpers with their switch reads (PR 2 Task 7 folds the stars into core's scene-body partition) and the galaxy pick split. `sceneBodyLabels.ts` keeps excluding the craft by `SAMPLED_BODY_IDS` (PR 2's claimed-body rule replaces it, M4). The hand-authored Orbit trails row stays. All of that is PR 2 (`docs/superpowers/plans/2026-10-14-layer-declared-visibility.md`). No deletion audit runs on this PR.
+**Deferral boundary:** no visibility type, entry, address or `setVisibility` exists in this PR; every fade, switch and clip read stays as today, including the Voyager captions' `bodyLabel` clip and `mesh-body` fade rule, core's star scene-set helpers with their switch reads (PR 2 Task 7 folds the stars into core's scene-body partition) and the galaxy pick split. `sceneBodyLabels.ts` keeps excluding the craft by `SAMPLED_BODY_IDS` (PR 2's claimed-body rule replaces it, M4). The hand-authored Orbit trails row stays. All of that is PR 2 (`docs/superpowers/plans/completed/2026-10-14-layer-declared-visibility.md`). No deletion audit runs on this PR.
