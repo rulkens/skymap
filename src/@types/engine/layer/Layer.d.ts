@@ -17,6 +17,8 @@ import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
+import type { FrameBoost } from '../frame/FrameBoost';
+import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerGuides } from './LayerGuides';
 import type { LayerSearchEntry } from './LayerSearchEntry';
@@ -54,6 +56,10 @@ export type Layer<
    * `anchorId`s are globally unique and the composed total must fit
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];
+  /** The observer's frame this frame (`composeLayerBoost`); at most one Layer in a composition
+   * declares it — a second throws at boot. Reads settings, not `RootState`: the pick path
+   * derives its frame from `EngineState.settings` alone. */
+  readonly boost?: (settings: EngineSettingsState, simDays: number) => FrameBoost | null;
   /** Exhibit rows, folded after core's into `APP_EXHIBITS` by import (`appExhibits`); the
    * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
   readonly exhibits?: readonly Exhibit[];

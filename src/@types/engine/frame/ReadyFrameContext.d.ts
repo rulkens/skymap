@@ -18,6 +18,7 @@ import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
 import type { SlabRow } from './SlabRow';
+import type { FrameBoost } from './FrameBoost';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -81,6 +82,8 @@ export type ReadyFrameContext = {
    * A paused clock holds it steady; live/manual playback advances it each frame.
    */
   simDays: number;
+  /** The observer's frame at `simDays` (`FrameContextInput.boost`); `null` is the rest frame. */
+  boost: FrameBoost | null;
   /** Eye→pivot-surface range NEAR0's bracket is sized from — `FrameContextInput.altitudeMpc`. */
   altitudeMpc: number;
   /**

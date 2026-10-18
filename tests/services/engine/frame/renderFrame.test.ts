@@ -484,6 +484,7 @@ function makeInput(
     cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
+    boost: null,
     altitudeMpc: 0,
     focusBlend: 0,
     focusPickId: null,

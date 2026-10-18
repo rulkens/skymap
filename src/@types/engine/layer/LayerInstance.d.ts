@@ -9,6 +9,7 @@ import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { Layer } from './Layer';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
 export type LayerInstance = {
@@ -26,5 +27,7 @@ export type LayerInstance = {
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
   readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
+  /** The Layer's own `boost`, carried through unbound: it closes over settings, not the runtime. */
+  readonly boost?: Layer<string, unknown>['boost'];
   destroy(): void;
 };

@@ -203,6 +203,22 @@ describe('createLayers composition', () => {
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-anchor/);
   });
 
+  it('two Layers declaring boost fail at boot naming both', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const boosting = (name: string): Layer<string, unknown> => ({
+      name,
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      boost: () => null,
+    });
+
+    await expect(
+      createLayers(state, makeDeps([boosting('alpha'), boosting('beta')], store)),
+    ).rejects.toThrow(/alpha, beta/);
+  });
+
   it('throws at boot when two Layers mint the same slot key', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());

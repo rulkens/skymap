@@ -13,6 +13,7 @@ import type { AssembledOrbitCamera } from '../../../@types/camera/AssembledOrbit
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
+import { composeLayerBoost } from '../../../utils/engine/composeLayerBoost';
 
 export function frameContextInputOf(
   state: EngineState,
@@ -48,8 +49,10 @@ export function frameContextInputOf(
   );
   // Eye→pivot-surface range NEAR0's bracket is sized from.
   const altitudeMpc = pivotSurfaceRangeMpc(arm, worldPose.distance, state.selectionRows.focus);
+  // At the same instant as the bodies, so pick re-derives the frame it drew.
+  const boost = composeLayerBoost(state.layers, state.settings, simDays);
   return {
-    input: { cam, arm, altitudeMpc, nowMs, simDays },
+    input: { cam, arm, altitudeMpc, nowMs, simDays, boost },
     cam,
   };
 }

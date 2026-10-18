@@ -206,6 +206,7 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     booted: false,
+    layers: [],
     // runFrame looks up VIEW_RIGS[viewRig].views(canvas, state) once, ready-gated.
     viewRig: 'mono',
     assetSlots: {

@@ -60,6 +60,8 @@ export function cubemapCaptureFrame(input: {
     altitudeMpc: nearMpc,
     nowMs,
     simDays: state.cameraRuntime.outputs.simDays,
+    // A capture bakes the rest frame: its re-bake key does not follow a moving observer.
+    boost: null,
   });
   if (!snapshot.isReady) return { isReady: false };
   return { isReady: true, snapshot, cam };

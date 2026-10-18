@@ -86,6 +86,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
     },
     booted: true,
+    layers: [],
     cameraRuntime: seedCameraRuntime({
       state: store.getState(),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },

@@ -85,6 +85,13 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // and `state.layerSagaTasks = layerSagaTasks` assign together below — see `RunSaga`'s
   // doc comment for why `destroy()` needs these.
   const layerSagaTasks: Task[] = [];
+  // Static, so checked before anything is created: one observer frame per composition.
+  const boosting = deps.composition.layers.filter((layer) => layer.boost !== undefined);
+  if (boosting.length > 1) {
+    throw new Error(
+      `createLayers: more than one Layer declares boost — ${boosting.map((l) => l.name).join(', ')}`,
+    );
+  }
   const instances = deps.composition.layers.map((layer) => {
     const common = {
       ctx: {

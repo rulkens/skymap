@@ -89,6 +89,7 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
+    boost: null,
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -714,6 +715,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
       altitudeMpc: pose.distance,
       nowMs: 0,
       simDays: CONST_J2000,
+      boost: null,
     });
     if (!snapshot.isReady) throw new Error('fixture not ready');
     return { cam, snapshot: { ...snapshot, sceneBodies: positionedBodiesOf(bodies, STATES) } };

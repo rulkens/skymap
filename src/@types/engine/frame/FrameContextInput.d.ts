@@ -8,6 +8,7 @@
 
 import type { AssembledOrbitCamera } from '../../camera/AssembledOrbitCamera';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { FrameBoost } from './FrameBoost';
 
 export type FrameContextInput = {
   /** The frame's one camera, pose-true — see `assembleOrbitCamera` for the
@@ -30,4 +31,6 @@ export type FrameContextInput = {
    *  see `ReadyFrameContext.nowMs`/`.simDays` for how each is read. */
   readonly nowMs: number;
   readonly simDays: number;
+  /** The observer's frame at `simDays`; `null` is the rest frame. */
+  readonly boost: FrameBoost | null;
 };

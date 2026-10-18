@@ -84,6 +84,7 @@ function makeState(
     // No seeded bodies/stars — see frameContext.test.ts's makeState for why
     // `deriveFrameContext` needs this now.
     slabRows: [],
+    layers: [],
     visibilityEntries: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     cameraRuntime: {
@@ -141,6 +142,7 @@ describe('pickFrameContext', () => {
         // simDays does not affect the view-projection this test compares; any
         // valid epoch reproduces the same vp.
         simDays: 0,
+        boost: null,
       },
       { width: canvas.width, height: canvas.height },
     );

@@ -34,6 +34,7 @@ export function instantiateLayer<
     selection: layer.selection?.(runtime) ?? [],
     search: layer.search?.(runtime),
     sourceCounts: layer.sourceCounts?.(runtime),
+    boost: layer.boost,
     destroy: () => layer.destroy(runtime),
   };
 }
