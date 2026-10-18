@@ -33,6 +33,8 @@ listed in §2; the rest of the document assumes them.
 | Doppler plumbing | Each recolouring renderer grows its own uniform tail by two `vec4`; a shared `lib/boost.wesl` holds the maths. `CameraUniforms` does not grow (renderers pack behind it by literal offsets) |
 | Intent home | A `voyage` Layer with one settings cluster, inside `SettingsSnapshot`, so the takeover bracket restores it (destination `null` ⇒ no boost) |
 | Launch point | The Sun, `[0, 0, 0]`. Copy says Earth; 1 au is nothing at these scales |
+| Arrival | Each destination has a standoff: the ship comes to rest `standoffLy` short of the catalogue position along the line of flight. 1 ly for Sgr A\* (outside the S-star cluster; coming to rest at a black hole is where general relativity would start to matter), 0.01 ly for Proxima, 0 for the galaxies (you arrive inside a 40 kpc object) |
+| Earth clock | Earth's own elapsed time, `t(τ)`. The ship-judged Earth time (which stays under 0.97 years for the whole accelerating half) is a sentence in the copy, not a readout |
 | Destinations | Four fixed rows: Proxima Centauri, Sagittarius A\*, Andromeda (M31), M87 (Virgo). One exhibit id per destination |
 | Deep link | The exhibit id only; it opens at launch. A ship-time hash param is a follow-up |
 | Ground preparation | None needed (§3). One adjacent finding backlogged |
@@ -191,6 +193,7 @@ export type VoyageDestination = {
   readonly label: string;
   readonly positionMpc: Vec3; // src/data/voyage/voyageDestinations.ts; a test pins m31/m87 to the famous seed
   readonly focusId: string | null; // the famous id, for the arrival framing; null for Proxima and Sgr A*
+  readonly standoffLy: number; // the trip is `|positionMpc| − standoffLy` long; the ship rests that far short
 };
 export type VoyageSettings = {
   readonly destination: VoyageDestinationId | null; // null ⇒ no boost, the rest frame
@@ -243,7 +246,7 @@ marked; transport; and the readouts, re-derived on the 4 Hz interval the mission
 | Readout | Source |
 | --- | --- |
 | Ship clock | `τ`, years and days |
-| Earth clock | `t`, formatted from years since launch, never through `Date` (a `Date` ends at year 275,760) |
+| Earth clock | Earth's own elapsed time `t`, labelled so, formatted from years since launch, never through `Date` (a `Date` ends at year 275,760) |
 | Speed | `1 − β` once β > 0.999, else β |
 | γ | plain |
 | Ahead | the destination's remaining distance, Earth frame and ship frame side by side |
@@ -251,14 +254,17 @@ marked; transport; and the readouts, re-derived on the 4 Hz interval the mission
 Three toggles (`ExhibitToggle` rows): contraction, Doppler shift and headlight, each dispatching the cluster's
 setter.
 
-Copy, three prose sections: why the ship clock runs slow and the Earth clock runs away; the 1.94 light-year
-invariant; Map versus Window (what a photograph would show instead). Written per `docs/tour/writing-style.md`.
+Copy, three prose sections: why the ship clock runs slow and the Earth clock runs away, with the one sentence
+on simultaneity (in the ship's own "now", Earth's clock stays under 0.97 years for the whole accelerating half,
+then leaps: the Rindler horizon, nothing from more than 0.97 light-years behind can catch an accelerating ship);
+the 1.94 light-year invariant; Map versus Window (what a photograph would show instead). Written per `docs/tour/writing-style.md`.
 
 ### 4.7 Deep link
 
-`#exhibit=voyage-m31` opens the exhibit at launch, through the existing `takeoverSource('exhibit')` row. `t=` is
-written as today; on a reload it is ignored by the hold, which re-launches (an ISO instant past year 275,760 is
-not representable anyway).
+`#exhibit=voyage-m31` opens the exhibit at launch, through the existing `takeoverSource('exhibit')` row. On a
+reload the hold ignores `t=` and re-launches. The `t=` writer (`hashParamSources.ts:202`) calls `toISOString()`
+on the sim instant, which throws past year 275,760; it writes `null` outside the `Date` range instead. The
+voyage's own readouts never go through `Date`.
 
 ## 5. Out of scope
 
