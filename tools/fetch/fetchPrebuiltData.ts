@@ -9,8 +9,8 @@
  * never touch it, and fonts ship git-tracked under `public/fonts/` — so
  * nothing here has to special-case excluding them. A download lands at
  * `<dest>.part`, renamed into place only on success, so a same-named file
- * on disk is always trustworthy as "already fetched". Star octree chunks are
- * never in the manifest: each manifested v2 index names its own, and each chunk
+ * on disk is always trustworthy as "already fetched". Octree chunks are
+ * never in the manifest: each manifested index of an `OCTREE_CATALOGS` catalog names its own, and each chunk
  * the next depth's, so they are listed by reading headers down the tree (off
  * disk, else by a ranged GET of the header alone) and fetched with the rest.
  */
@@ -22,11 +22,13 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, dirname, join, posix } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
+import type { OctreeCatalog } from '../deploy/@types/OctreeCatalog';
+import { OCTREE_CATALOGS } from '../deploy/r2/octreeCatalogs';
 import type { DataManifest } from '../../src/@types/data/DataManifest';
 import type { OctreeChunkHeader } from '../../src/@types/octree/OctreeChunkHeader';
 import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
@@ -97,18 +99,17 @@ async function octreeHeader<H extends OctreeIndexHeader | OctreeChunkHeader>(
   return readOctreeHeader<H>(buf, magic).header;
 }
 
-/** Every chunk path one star index names, at every depth, read off headers only. */
-export async function starChunkPaths(
+/** Every chunk path one octree catalog's index names, at every depth, read off headers only. */
+export async function octreeChunkPaths(
   host: string,
   dataDir: string,
-  logicalPath: string,
+  catalog: OctreeCatalog,
   hashedPath: string,
 ): Promise<string[]> {
-  const binBaseName = basename(logicalPath, '.bin');
   const paths: string[] = [];
   const walk = async (refs: readonly OctreeChunkRef[]) => {
     for (const ref of refs) {
-      const path = octreeChunkPath('star', binBaseName, ref);
+      const path = octreeChunkPath(catalog.family, catalog.name, ref);
       paths.push(path);
       await walk(
         (await octreeHeader<OctreeChunkHeader>(host, dataDir, path, OCTREE_CHUNK_MAGIC)).chunks,
@@ -134,20 +135,17 @@ async function main(): Promise<void> {
     logicalPath,
     hashedPath: manifest[logicalPath]!,
   }));
-  for (const logicalPath of selected) {
-    if (posix.dirname(logicalPath) !== OCTREE_FAMILIES.star.dataPrefix) continue;
-    for (const chunkPath of await starChunkPaths(
-      host,
-      DATA_DIR,
-      logicalPath,
-      manifest[logicalPath]!,
-    )) {
+  for (const catalog of OCTREE_CATALOGS) {
+    const logicalPath = `${OCTREE_FAMILIES[catalog.family].dataPrefix}/${catalog.name}.bin`;
+    const hashedPath = manifest[logicalPath];
+    if (hashedPath === undefined) continue;
+    for (const chunkPath of await octreeChunkPaths(host, DATA_DIR, catalog, hashedPath)) {
       files.push({ logicalPath: chunkPath, hashedPath: chunkPath });
     }
   }
 
   process.stderr.write(
-    `  ${selected.length} manifest entries selected, ${files.length - selected.length} star chunks\n`,
+    `  ${selected.length} manifest entries selected, ${files.length - selected.length} octree chunks\n`,
   );
 
   let presentBytes = 0;

@@ -5,6 +5,8 @@
  * invisible to every other check — R2 would hold bytes labelled wrongly.
  */
 import { describe, expect, it } from 'vitest';
+import { OCTREE_CATALOGS } from '../../../../tools/deploy/r2/octreeCatalogs';
+import { OCTREE_FAMILIES } from '../../../../src/data/octree/octreeFamilies';
 import { dataFamilyOf } from '../../../../tools/deploy/r2/dataFamilyOf';
 
 const GALAXY = { label: 'galaxy-catalog', transport: 'wrangler', gzipOnWire: true };

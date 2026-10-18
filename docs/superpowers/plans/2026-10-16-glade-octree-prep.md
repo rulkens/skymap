@@ -315,11 +315,11 @@ The generated rows equal today's: labels `star-catalog-v2-index` / `star-catalog
 manifest entry that names an `OCTREE_CATALOGS` index; `buildStars` writes under the star family's prefix with the star
 catalog's name.
 
-- [ ] Add `it('dataFamilyOf claims every OCTREE_CATALOGS index and its chunks')` to `dataFamilyOf.test.ts` (a structural
+- [x] Add `it('dataFamilyOf claims every OCTREE_CATALOGS index and its chunks')` to `dataFamilyOf.test.ts` (a structural
       invariant over the generated rows: fails if a row is mis-formed, never on a new catalog).
-- [ ] Implement; delete the two hand rows at `dataFamilies.ts:32-47`.
-- [ ] `docs/DEPLOY.md:47`: the chunk group and collector are per octree catalog.
-- [ ] Gate: `npx tsx tools/deploy/syncR2.ts --dry-run` lists the same files with the same transport, cache-control and
+- [x] Implement; delete the two hand rows at `dataFamilies.ts:32-47`.
+- [x] `docs/DEPLOY.md:47`: the chunk group and collector are per octree catalog.
+- [x] Gate: `npx tsx tools/deploy/syncR2.ts --dry-run` lists the same files with the same transport, cache-control and
       gzip before and after (needs a baked or linked `public/data`; `/link-data` does it), and `npm test -- deploy fetch`.
 
 ### Task 5: the aggregate rule table (prep 5)

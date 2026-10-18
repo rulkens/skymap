@@ -10,7 +10,7 @@ import { join, relative } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
-import { collectStarChunks } from '../../../../tools/deploy/r2/collectStarChunks';
+import { collectOctreeChunks } from '../../../../tools/deploy/r2/collectOctreeChunks';
 import { chunkOctree } from '../../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../../tools/octree/stratifyOctree';
 import { writeOctreeCatalog } from '../../../../tools/octree/writeOctreeCatalog';
@@ -25,7 +25,9 @@ const GRID = { bits: 6, origin: [0, 0, 0] as [number, number, number], cellEdge:
 const CAPACITY = 300;
 const N = 2000;
 
-describe('collectStarChunks', () => {
+const STARS = { family: 'star', name: 'stars' } as const;
+
+describe('collectOctreeChunks', () => {
   const dirs: string[] = [];
   const tempDataDir = () => {
     const d = fs.mkdtempSync(join(tmpdir(), 'star-chunks-'));
@@ -65,7 +67,7 @@ describe('collectStarChunks', () => {
       JSON.stringify({ 'star-catalog/v2/stars.bin': `star-catalog/v2/${hashed}` }),
     );
 
-    const uploads = collectStarChunks(dataDir);
+    const uploads = collectOctreeChunks(dataDir, STARS);
 
     expect(header.stats.chunkCount).toBeGreaterThan(header.chunks.length);
     expect(uploads.map((u) => u.r2Key).sort()).toEqual(
@@ -79,11 +81,11 @@ describe('collectStarChunks', () => {
 
   it('returns [] without an index', () => {
     const dataDir = tempDataDir();
-    expect(collectStarChunks(dataDir)).toEqual([]);
+    expect(collectOctreeChunks(dataDir, STARS)).toEqual([]);
     fs.writeFileSync(
       join(dataDir, 'manifest.json'),
       JSON.stringify({ 'galaxy-catalog/v9/2mrs.bin': 'galaxy-catalog/v9/2mrs.a3f19c2e.bin' }),
     );
-    expect(collectStarChunks(dataDir)).toEqual([]);
+    expect(collectOctreeChunks(dataDir, STARS)).toEqual([]);
   });
 });

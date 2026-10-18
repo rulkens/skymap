@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
-import { starChunkPaths } from '../../../tools/fetch/fetchPrebuiltData';
+import { octreeChunkPaths } from '../../../tools/fetch/fetchPrebuiltData';
 import { chunkOctree } from '../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../tools/octree/stratifyOctree';
 import { writeOctreeCatalog } from '../../../tools/octree/writeOctreeCatalog';
@@ -24,7 +24,7 @@ const CAPACITY = 300;
 const N = 2000;
 const HOST = 'https://data.test';
 
-describe('starChunkPaths', () => {
+describe('octreeChunkPaths', () => {
   const dirs: string[] = [];
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -66,10 +66,10 @@ describe('starChunkPaths', () => {
       }),
     );
 
-    const paths = await starChunkPaths(
+    const paths = await octreeChunkPaths(
       HOST,
       local,
-      'star-catalog/v2/stars.bin',
+      { family: 'star', name: 'stars' },
       'star-catalog/v2/stars.bin',
     );
 
