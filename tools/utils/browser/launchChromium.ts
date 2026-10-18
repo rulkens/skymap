@@ -8,9 +8,18 @@
  */
 import { chromium, type Browser } from '@playwright/test';
 
+// `SKYMAP_CHROMIUM_ARGS` (space-separated) reaches the channel launch: a GPU-less
+// container gets a WebGPU adapter only with
+// '--enable-unsafe-webgpu --ignore-gpu-blocklist' (SwiftShader), flags a desktop
+// must not carry by default.
+const extraArgs = (process.env.SKYMAP_CHROMIUM_ARGS ?? '').split(' ').filter(Boolean);
+
 export async function launchChromium(): Promise<Browser> {
   try {
-    return await chromium.launch({ channel: 'chromium', args: ['--enable-precise-memory-info'] });
+    return await chromium.launch({
+      channel: 'chromium',
+      args: ['--enable-precise-memory-info', ...extraArgs],
+    });
   } catch (err) {
     console.warn(
       `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
