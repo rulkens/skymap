@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
 import { setGalaxyCatalogSize } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
-import { beginDrag, setAutoRotate } from '../../../src/state/camera/cameraSlice';
+import { endDrag, setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import { setTier } from '../../../src/state/tier/tierSlice';
 import { pause, resume } from '../../../src/state/time/timeSlice';
 
@@ -35,8 +35,8 @@ describe('watchWakeSaga', () => {
 
   // ── camera writes wake the loop ─────────────────────────────────────────────
 
-  it('a camera slice write (beginDrag) wakes the loop', () => {
-    store.dispatch(beginDrag());
+  it('a camera slice write (endDrag) wakes the loop', () => {
+    store.dispatch(endDrag());
 
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });

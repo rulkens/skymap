@@ -21,6 +21,8 @@
  * null handle. The roster is `state.orbitTrailRows`, composed at boot.
  */
 
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
+import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 import { mat4d } from 'wgpu-matrix';
 
@@ -127,6 +129,13 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as FrameView;
 
+// Every scene body the frame admits with every catalog on: the planets and the seeded stars.
+const sceneBodiesAt = (simDays: number) =>
+  positionedBodiesOf(
+    [...SCENE_PLANETS, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+    deriveBodyStates(simDays),
+  );
+
 // 720-px viewport, 45° fovY, tangent-exact — every ctx fixture below reads
 // this instead of restating (canvasSize, fovYRad).
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
@@ -138,7 +147,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
 // `distance` argument alone drives the foreground-gate assertions.
 function makeCtx(distance: number): FrameView {
   return {
-    snapshot: { nowMs: 0, meshBodies: [] },
+    snapshot: { nowMs: 0, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -159,6 +168,7 @@ function makeDrawCtx(): FrameView {
   return {
     snapshot: {
       meshBodies: [],
+      sceneBodies: sceneBodiesAt(CONST_J2000),
       simDays: CONST_J2000,
       focusBlend: 0,
       nowMs: 0,
@@ -227,6 +237,7 @@ function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
   return {
     snapshot: {
       meshBodies: [],
+      sceneBodies: sceneBodiesAt(simDays),
       simDays,
       focusBlend: 0,
       nowMs: 0,
@@ -245,45 +256,22 @@ function makeRendererSpy() {
   };
 }
 
-// The layer reads settings.orbitTrails.enabled + the fade controller's opacity
-// (the hide/show visibility layer) and the clip-opacity channel. Defaults: the
-// toggle on and both fade factors at 1, so the pass behaves exactly as before the
-// layer became hideable. `orbitTrailsEnabled` / `layerOpacity` drive the gating +
-// fade-multiply assertions.
-function makeState(
-  orbitTrailRenderer: unknown,
-  opts: {
-    orbitTrailsEnabled?: boolean;
-    layerOpacity?: number;
-    impostorOn?: boolean;
-  } = {},
-): EngineState {
-  const layerOpacity = opts.layerOpacity ?? 1;
+// The pass draws at the value core hands it (default 1, so it behaves exactly as before the
+// layer became hideable); `impostorOn` drives the debug overlay. Tests pass a different handed
+// value as the pass's last argument.
+function makeState(orbitTrailRenderer: unknown, opts: { impostorOn?: boolean } = {}): EngineState {
   return {
     gpu: { orbitTrailRenderer, texturedBodyRenderer: null },
-    // The seeded body bag + the registry gates `sceneOccluderSpheres` reads
-    // through `sceneBodyPartition` / `visibleStars` — everything on, so the
-    // occluder set is decided by apparent size alone.
+    // The seeded body bag `sceneOccluderSpheres` reads beside the frame's
+    // scene bodies (every catalog admitted, `sceneBodiesAt`), so the occluder
+    // set is decided by apparent size alone.
     data: {
       bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: [] },
     },
     settings: {
-      orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
-      starCatalogs: {
-        enabled: true,
-        items: {
-          famousStar: { enabled: true },
-          sun: { enabled: true },
-          sStar: { enabled: true },
-        },
-      },
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
       },
-    },
-    subsystems: {
-      fades: { opacityOf: () => layerOpacity },
-      clipPlayer: { clipOpacityOf: () => 1 },
     },
     orbitTrailRows: CORE_TRAIL_ELEMENTS,
   } as unknown as EngineState;
@@ -295,50 +283,20 @@ describe('orbitTrailsPass.enabled', () => {
     const view = makeNear0View();
     // Null handle (pre-bootstrap): the handle check short-circuits before the
     // ctx.cam read, so a bare ctx is safe.
-    expect(orbitTrailsPass.enabled(makeState(null), CTX_STUB, view)).toBe(false);
+    expect(orbitTrailsPass.enabled(makeState(null), CTX_STUB, view, 1)).toBe(false);
     // Handle present, camera inside the shared foreground gate.
-    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), view)).toBe(
+    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), view, 1)).toBe(
       true,
     );
     // Beyond the gate the AU-to-lunar-scale trails are deep sub-pixel: off, so
     // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom. Gate edge +
     // a decade beyond, both derived so a farther seed growing the gate carries.
-    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), view)).toBe(false);
-    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), view)).toBe(
+    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), view, 1)).toBe(
       false,
     );
-  });
-
-  it('gates on the orbitTrails visibility intent (opacity-0 ⇒ no render)', () => {
-    // Camera at the origin, inside the foreground gate — the sub-pixel cull is
-    // skipped, so the intent gate alone drives the result here.
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
-    const view = makeNear0View();
-    const renderer = makeRendererSpy();
-    // Toggled off AND the fade fully receded → the whole (hdr, NEAR0) pass drops.
-    expect(
-      orbitTrailsPass.enabled(
-        makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0 }),
-        ctx,
-        view,
-      ),
-    ).toBe(false);
-    // Toggled off but a fade-out tail is still > 0 → keep drawing until it hits 0.
-    expect(
-      orbitTrailsPass.enabled(
-        makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.3 }),
-        ctx,
-        view,
-      ),
-    ).toBe(true);
-    // Toggled on → visible regardless of the (idle) fade value.
-    expect(
-      orbitTrailsPass.enabled(
-        makeState(renderer, { orbitTrailsEnabled: true, layerOpacity: 0 }),
-        ctx,
-        view,
-      ),
-    ).toBe(true);
+    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), view, 1)).toBe(
+      false,
+    );
   });
 
   it('disables when even the largest orbit is sub-CULL_PX (whole-layer cull)', () => {
@@ -349,12 +307,12 @@ describe('orbitTrailsPass.enabled', () => {
     // pass plan instead of packing zero records.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000, meshBodies: [] },
+      snapshot: { simDays: CONST_J2000, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
       cam: { distance: 1e-6 },
       drawCamPos: [1e-6, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
     } as unknown as FrameView;
-    expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
+    expect(orbitTrailsPass.enabled(state, ctx, makeNear0View(), 1)).toBe(false);
   });
 
   it('the whole-layer cull still drops solar-system trails at galactic distance', () => {
@@ -363,13 +321,13 @@ describe('orbitTrailsPass.enabled', () => {
     // region cull can drop the layer; the AU-to-lunar trails are ~1e-5 px there.
     const state = makeState(makeRendererSpy());
     const ctx = {
-      snapshot: { simDays: CONST_J2000, meshBodies: [] },
+      snapshot: { simDays: CONST_J2000, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
       cam: { distance: 8.178e-3 },
       drawCamPos: [8.178e-3, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
     } as unknown as FrameView;
     expect(ctx.cam.distance).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
-    expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
+    expect(orbitTrailsPass.enabled(state, ctx, makeNear0View(), 1)).toBe(false);
   });
 });
 
@@ -379,7 +337,7 @@ describe('orbitTrailsPass.draw', () => {
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
-    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer), 1);
 
     const n = composeMock.mock.calls.length;
     expect(n).toBeGreaterThan(0);
@@ -443,7 +401,7 @@ describe('orbitTrailsPass.draw', () => {
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
-    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer), 1);
 
     const [, { instances: staging }] = renderer.draw.mock.calls[0]!;
     expect(staging[18]).toBe(view.viewportPx[0]);
@@ -464,7 +422,7 @@ describe('orbitTrailsPass.draw', () => {
     // km and radius its own. A wrong frame or unit fails one of these.
     const renderer = makeRendererSpy();
     const ctx = makeDrawCtx();
-    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, makeState(renderer), 1);
     const [, { instances: staging, occluders }] = renderer.draw.mock.calls[0]!;
     const first = MERCURY_CONIC;
     const cam = ctx.drawCamPos;
@@ -487,7 +445,7 @@ describe('orbitTrailsPass.draw', () => {
     // reconstructed scene distance in the same km the trail points already use.
     const renderer = makeRendererSpy();
     const view = makeNear0View();
-    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer), 1);
 
     const [, { depth }] = renderer.draw.mock.calls[0]!;
     const { frame: depthFrame, view: depthView } = depth;
@@ -514,28 +472,29 @@ describe('orbitTrailsPass.draw', () => {
     // 'derives the depth frame from the sampled row...'.
     const renderer = makeRendererSpy();
 
-    orbitTrailsPass.draw(PASS_STUB, makeNear0View(null), makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(null), makeDrawCtx(), makeState(renderer), 1);
     expect(renderer.draw.mock.calls[0]![1].depth.frame).toBeNull();
     expect(renderer.draw.mock.calls[0]![1].depth.view).toBe(FAR_DEPTH_VIEW_STUB);
 
     renderer.draw.mockClear();
-    orbitTrailsPass.draw(PASS_STUB, makeNear0View(makeSlab()), makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(
+      PASS_STUB,
+      makeNear0View(makeSlab()),
+      makeDrawCtx(),
+      makeState(renderer),
+      1,
+    );
     expect(renderer.draw.mock.calls[0]![1].depth.frame).toBeNull();
     expect(renderer.draw.mock.calls[0]![1].depth.view).toBe(FAR_DEPTH_VIEW_STUB);
   });
 
-  it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
-    // A mid-fade hide (layer opacity 0.5) scales every packed per-orbit alpha:
+  it('multiplies the handed value into each per-orbit alpha', () => {
+    // A mid-fade hide (handed value 0.5) scales every packed per-orbit alpha:
     // Mercury's apparent-size alpha saturates at 1 from the Sun, so its packed
     // alpha must land at exactly 0.5 — the hide/show fade composed with the
     // apparent-size fade rather than replacing it.
     const renderer = makeRendererSpy();
-    orbitTrailsPass.draw(
-      PASS_STUB,
-      makeNear0View(),
-      makeDrawCtx(),
-      makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.5 }),
-    );
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), makeDrawCtx(), makeState(renderer), 0.5);
     const [, { instances: staging }] = renderer.draw.mock.calls[0]!;
     expect(staging[17]).toBeCloseTo(0.5);
   });
@@ -558,6 +517,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = {
       snapshot: {
         meshBodies: [],
+        sceneBodies: sceneBodiesAt(simDays),
         simDays,
         focusBlend: 0,
         nowMs: 0,
@@ -569,7 +529,7 @@ describe('orbitTrailsPass.draw', () => {
       cam: { distance: 1e-13 },
     } as unknown as FrameView;
 
-    orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer), 1);
 
     // Expected Moon centre = Earth's SNAPSHOT position + the Moon's focus-relative
     // offset at t. The parent position is READ from the snapshot (Task 7), NOT
@@ -638,10 +598,16 @@ describe('orbitTrailsPass.draw', () => {
       const eye: Vec3 = [stubbed[0] + 100 * SCALE_UNITS.KM_TO_MPC, stubbed[1], stubbed[2]];
       const ctx = makeEyeCtx(simDays, eye);
       const renderer = makeRendererSpy();
-      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
-        ...makeState(renderer),
-        orbitTrailRows: [moonEl],
-      } as unknown as EngineState);
+      orbitTrailsPass.draw(
+        PASS_STUB,
+        makeNear0View(),
+        ctx,
+        {
+          ...makeState(renderer),
+          orbitTrailRows: [moonEl],
+        } as unknown as EngineState,
+        1,
+      );
 
       const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
       expect(count).toBe(1);
@@ -696,10 +662,16 @@ describe('orbitTrailsPass.draw', () => {
       ];
       const ctx = makeEyeCtx(simDays, eye);
       const renderer = makeRendererSpy();
-      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
-        ...makeState(renderer),
-        orbitTrailRows: [moonEl],
-      } as unknown as EngineState);
+      orbitTrailsPass.draw(
+        PASS_STUB,
+        makeNear0View(),
+        ctx,
+        {
+          ...makeState(renderer),
+          orbitTrailRows: [moonEl],
+        } as unknown as EngineState,
+        1,
+      );
 
       const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
       expect(count).toBe(1);
@@ -731,10 +703,16 @@ describe('orbitTrailsPass.draw', () => {
       const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
       const ctx = makeEyeCtx(simDays, eye);
       const renderer = makeRendererSpy();
-      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
-        ...makeState(renderer),
-        orbitTrailRows: [el],
-      } as unknown as EngineState);
+      orbitTrailsPass.draw(
+        PASS_STUB,
+        makeNear0View(),
+        ctx,
+        {
+          ...makeState(renderer),
+          orbitTrailRows: [el],
+        } as unknown as EngineState,
+        1,
+      );
 
       const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
       expect(count).toBe(1);
@@ -771,6 +749,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = {
       snapshot: {
         meshBodies: [],
+        sceneBodies: sceneBodiesAt(simDays),
         simDays,
         focusBlend: 0,
         nowMs: 0,
@@ -782,7 +761,7 @@ describe('orbitTrailsPass.draw', () => {
       cam: { distance: 1e-13 },
     } as unknown as FrameView;
 
-    orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer), 1);
 
     const moonEl = ORBITAL_ELEMENTS.find((e) => e.id === 'moon')!;
     const moonOffset = keplerianEllipse(propagateElements(moonEl, simDays)).centerOffsetMpc;
@@ -806,7 +785,7 @@ describe('orbitTrailsPass.draw', () => {
     // S-stars' envelope and kept them in the batch from every near-Sun pose.
     composeMock.mockClear();
     const renderer = makeRendererSpy();
-    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), makeDrawCtx(), makeState(renderer), 1);
 
     // Every S-star conic centres within its own a·e of Sgr A* (1.4e-7 Mpc at the
     // widest), so a 1e-4 Mpc window around the anchor catches all 39 and no
@@ -828,12 +807,18 @@ describe('orbitTrailsPass.draw', () => {
     // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
     // apparent-size cull threshold, so nothing is packed and no draw is issued.
     const farCtx = {
-      snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0, meshBodies: [] },
+      snapshot: {
+        simDays: CONST_J2000,
+        focusBlend: 0,
+        nowMs: 0,
+        meshBodies: [],
+        sceneBodies: sceneBodiesAt(CONST_J2000),
+      },
       drawCamPos: [1, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1 },
     } as unknown as FrameView;
-    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer), 1);
     expect(renderer.draw).not.toHaveBeenCalled();
     expect(composeMock).not.toHaveBeenCalled(); // culled before composing Ginv
   });
@@ -847,7 +832,7 @@ describe('orbitTrailsPass.draw', () => {
     composeMock.mockClear();
     renderer.draw.mockClear();
 
-    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer), 1);
     const baselineCount = renderer.draw.mock.calls[0]![1].count;
     expect(baselineCount).toBeGreaterThan(1); // need a second composed orbit to single out below
 
@@ -862,7 +847,7 @@ describe('orbitTrailsPass.draw', () => {
     });
     renderer.draw.mockClear();
 
-    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer), 1);
     expect(renderer.draw.mock.calls[0]![1].count).toBe(baselineCount - 1);
 
     composeMock.mockImplementation(defaultImpl); // restore the default for later tests
@@ -875,7 +860,13 @@ describe('orbitTrailsPass.draw', () => {
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
-    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer, { impostorOn: true }));
+    orbitTrailsPass.draw(
+      PASS_STUB,
+      view,
+      makeDrawCtx(),
+      makeState(renderer, { impostorOn: true }),
+      1,
+    );
     expect(renderer.draw.mock.calls[0]![1].showImpostor).toBe(true);
 
     renderer.draw.mockClear();
@@ -884,6 +875,7 @@ describe('orbitTrailsPass.draw', () => {
       view,
       makeDrawCtx(),
       makeState(renderer, { impostorOn: false }),
+      1,
     );
     expect(renderer.draw.mock.calls[0]![1].showImpostor).toBe(false);
   });

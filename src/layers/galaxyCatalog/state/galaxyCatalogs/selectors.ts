@@ -5,7 +5,6 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/source
 import { maskWith } from '../../../../utils/maskWith';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
 import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
@@ -50,17 +49,11 @@ export const selectGalaxyFalloffStrength = createSelector(
   (route: GalaxyCatalogSettings): number => route.falloffStrength,
 );
 
-export const selectGalaxyCatalogItems = createSelector(
-  [selectRoute],
-  (route: GalaxyCatalogSettings): Record<GalaxyCatalogId, GalaxyCatalogItemSettings> => route.items,
-);
-
 /**
  * selectVisibleSourceMask — projects the per-galaxy-catalog `enabled` bits into
  * the 32-bit galaxy-catalog-visibility bitmask the SettingsPanel checkboxes
- * read. NOT authoritative state — it reproduces `sourceMaskOf`'s `pick`
- * mask (intent only, no fade-out tail) by iterating `GALAXY_CATALOG_SOURCES`
- * in the same order with the same `maskWith`.
+ * read. The panel's intent mask (no fade-out tail), not an engine mask: the
+ * engine derives its own from the values core hands, in `sourceMaskOf`.
  */
 export const selectVisibleSourceMask = createSelector([selectRoute], (route) => {
   let mask = 0;

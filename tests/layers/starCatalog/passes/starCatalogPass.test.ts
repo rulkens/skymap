@@ -2,7 +2,7 @@
  * starCatalogPass — the survey (Gaia bin) star LEAF content row. The cut is
  * taken on the GPU; here we pin the layer's own behaviour:
  *
- *   1. `enabled` delegates to `starCatalogVisible` — the toggles AND the
+ *   1. `enabled` delegates to `starCatalogVisible` — the handed value AND the
  *      crossfade band that IS the far gate.
  *   2. `draw` records the LEAF stream of the frame cut for every source,
  *      handing the IDENTICAL cut-origin-rebased matrix to each `drawCut`
@@ -25,8 +25,10 @@ import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOct
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
 import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
-import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
 const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 
@@ -80,16 +82,7 @@ function makeRuntime(frame: StarCutInputs | null) {
   return { runtime, drawCut, pickDraw };
 }
 
-function makeSettings(master = true, item = true): StarCatalogSettings {
-  return {
-    enabled: master,
-    items: { gaiaStars: { enabled: item, labelEnabled: false } },
-  } as unknown as StarCatalogSettings;
-}
-
-function makePassState(settings: StarCatalogSettings): PassState {
-  return { settings: { starCatalogs: settings } } as unknown as PassState;
-}
+const STATE = {} as PassState;
 
 // Distinct f64 slab vp and f32 vp, so identity reveals which one is rebased.
 function makeNear0View(camPos: Vec3): SlabView {
@@ -106,17 +99,14 @@ const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
 describe('starCatalogPass.enabled', () => {
-  it('follows the master gate, the per-item toggle, and the crossfade band', () => {
+  it("follows its catalog's handed value and the crossfade band", () => {
     const pass = starCatalogPass(makeRuntime(null).runtime);
     const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));
-    expect(pass.enabled(makePassState(makeSettings()), insideCtx, VIEW_STUB)).toBe(true);
+    expect(pass.enabled(STATE, insideCtx, VIEW_STUB, ALL_ON)).toBe(true);
 
     const beyondCtx = makeCtx(camAtPc(outer + 1000));
-    expect(pass.enabled(makePassState(makeSettings()), beyondCtx, VIEW_STUB)).toBe(false);
-    expect(pass.enabled(makePassState(makeSettings(false)), insideCtx, VIEW_STUB)).toBe(false);
-    expect(pass.enabled(makePassState(makeSettings(true, false)), insideCtx, VIEW_STUB)).toBe(
-      false,
-    );
+    expect(pass.enabled(STATE, beyondCtx, VIEW_STUB, ALL_ON)).toBe(false);
+    expect(pass.enabled(STATE, insideCtx, VIEW_STUB, { ...ALL_ON, gaiaStars: 0 })).toBe(false);
   });
 });
 
@@ -127,7 +117,7 @@ describe('starCatalogPass.draw', () => {
     const { runtime, drawCut } = makeRuntime(frame);
     const view = makeNear0View(camPos);
 
-    starCatalogPass(runtime).draw!(PASS_STUB, view, makeCtx(camPos), makePassState(makeSettings()));
+    starCatalogPass(runtime).draw!(PASS_STUB, view, makeCtx(camPos), STATE, ALL_ON);
 
     expect(drawCut).toHaveBeenCalledTimes(2);
     const [a, b] = drawCut.mock.calls.map((c) => c[1]);
@@ -149,8 +139,8 @@ describe('starCatalogPass.draw', () => {
     const view = makeNear0View(camPos);
     const pass = starCatalogPass(runtime);
 
-    pass.draw!(PASS_STUB, view, focused, makePassState(makeSettings()));
-    pass.drawPick!(PASS_STUB, view, focused, makePassState(makeSettings()));
+    pass.draw!(PASS_STUB, view, focused, STATE, ALL_ON);
+    pass.drawPick!(PASS_STUB, view, focused, STATE, ALL_ON);
 
     for (const sphere of [drawCut.mock.calls[0]![1].focus, pickDraw.mock.calls[0]![1].focus]) {
       expect(sphere.centerRelCamMpc).toEqual([3, 4, 5]);
@@ -165,7 +155,8 @@ describe('starCatalogPass.draw', () => {
       PASS_STUB,
       makeNear0View(camPos),
       makeCtx(camPos),
-      makePassState(makeSettings()),
+      STATE,
+      ALL_ON,
     );
     expect(drawCut).not.toHaveBeenCalled();
   });

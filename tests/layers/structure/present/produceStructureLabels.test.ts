@@ -1,65 +1,38 @@
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { describe, expect, it, vi } from 'vitest';
-import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
+import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../src/layers/structure/present/produceStructureLabels';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
-import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
-import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { STRUCTURE_ID_CODES } from '../../../../src/data/structure/structureIds';
+import { makeStructureFade } from '../../../fixtures/makeStructureFade';
 import { MARKER_RADIUS_RETUNE } from '../../../../src/data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../src/layers/structure/data/structureLabelAboveGapPx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
-import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
+import { structurePickId } from '../../../../src/utils/picking/structurePickId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { StructureStore } from '../../../../src/layers/structure/@types/StructureStore';
+import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 import type { StructureScale } from '../../../../src/@types/data/structure/StructureScale';
 
-// Convenience factory used wherever the test doesn't care about wake behavior.
-function makeRegistry(): FadeRegistry {
-  return createFadeRegistry({ requestRender: () => {} });
-}
-
 // produceStructureLabels reads its `store` argument for the records,
-// `state.settings.structures.items` for the authoritative per-category gate,
-// `state.subsystems.fades` for the per-category opacity (read-only), and
-// `state.selection.focus` for the focused-exempt recession.
-// The fixture supplies all four; `focusedStructureId` selects which structure
-// (if any) occupies the focus slot. The items bag defaults all-enabled; tests
-// flip an entry to drive the disabled path.
+// `state.selection.focus` for focusedOnly mode and `state.settings.labels`; the
+// category's fade arrives as the handed value, so no fade registry rides along.
 function makeState(
   opts: {
     focusedStructureId?: string | null;
-    fades?: FadeRegistry;
     focusedOnly?: boolean;
   } = {},
 ): TestState {
-  const fades = opts.fades ?? makeRegistry();
-  registerAllCategories(fades);
   const focusedStructureId = opts.focusedStructureId ?? null;
   return {
     store: createStructureStore(),
-    settings: {
-      structures: { enabled: true, items: makeStructureItems() },
-      labels: { focusedOnly: opts.focusedOnly ?? false },
-    },
+    settings: { labels: { focusedOnly: opts.focusedOnly ?? false } },
     selection: {
       focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       select: null,
       hover: null,
-    },
-    subsystems: {
-      fades,
-      // clipPlayer is non-nullable; return factor 1 so the clip channel is
-      // behaviour-neutral and existing assertions are unaffected.
-      clipPlayer: {
-        tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
-        stop: vi.fn<() => void>(),
-        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
-        destroy: vi.fn<() => void>(),
-      },
     },
   } as unknown as TestState;
 }
@@ -67,29 +40,13 @@ function makeState(
 type TestState = EngineState & { store: StructureStore };
 
 // One frame of the producer over the fixture's own store.
-function labelsOf(state: TestState, ctx: FrameView, scale: StructureScale) {
-  return produceStructureLabels(state.store, scale)(state, ctx);
-}
-
-// All-enabled structure items bag — the authoritative ring/label gate the
-// producer reads alongside the fade opacity.
-function makeStructureItems(): EngineState['settings']['structures']['items'] {
-  return Object.fromEntries(
-    STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
-  ) as EngineState['settings']['structures']['items'];
-}
-
-// Register every per-category structure label AND ring marker handle at full opacity.
-// The label handle backs the producer's `opacityOf` read (which THROWS on an
-// unregistered handle); the marker handle backs the anchor gate, which reads
-// `opacityOf({structure, id})` so a label fades in lock-step with its
-// ring instead of popping. Individual tests override a handle to 0 (or a
-// mid-fade value) where they need a disabled / fading category.
-function registerAllCategories(fades: FadeRegistry): void {
-  for (const category of STRUCTURE_IDS) {
-    fades.register({ kind: 'labelLayer', layer: 'structure', item: category }, 1);
-    fades.register({ kind: 'structure', id: category }, 1);
-  }
+function labelsOf(
+  state: TestState,
+  ctx: FrameView,
+  scale: StructureScale,
+  fade: Readonly<Record<StructureId, number>> = makeStructureFade(),
+) {
+  return produceStructureLabels(state.store, scale)(state, ctx, fade);
 }
 
 // The fixture camera sits 5 Mpc from the heliocentric origin — NOT at the
@@ -144,56 +101,25 @@ describe('produceStructureLabels', () => {
     expect(texts).toEqual(['Laniakea\nSupercluster', 'Virgo Cluster']);
   });
 
-  it('skips a label category that is disabled AND fully faded', () => {
-    // Both halves of the all-or-nothing skip: the authoritative `labelEnabled`
-    // boolean is false AND the labelLayer fade reached 0.
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 0);
-    const state = makeState({ fades });
-    state.settings.structures.items['galaxy-cluster'].labelEnabled = false;
+  it('skips a category whose handed value is 0', () => {
+    const state = makeState();
     state.store.setGroup('anchors', [rec('c1', { category: 'galaxy-cluster' })]);
-    expect(labelsOf(state, makeCtx(), 'cosmic').labels).toEqual([]);
+    expect(
+      labelsOf(state, makeCtx(), 'cosmic', makeStructureFade(1, { 'galaxy-cluster': 0 })).labels,
+    ).toEqual([]);
   });
 
-  it('emits a label whose labelEnabled is false but whose labelLayer opacity is still > 0 (fade-out tail)', () => {
-    // Authoritative gate OFF, but the fade hasn't reached 0: the fade-out tail
-    // must still emit so the label ramps down to invisible instead of popping.
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 1);
-    fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 0.5);
-    const state = makeState({ fades });
-    state.settings.structures.items['galaxy-cluster'].labelEnabled = false;
+  it('keeps emitting a category at a falling value (the fade-out tail)', () => {
+    const state = makeState();
     state.store.setGroup('anchors', [rec('c1', { category: 'galaxy-cluster' })]);
-    expect(labelsOf(state, makeCtx(), 'cosmic').labels.map((l) => l.id)).toEqual(['c1']);
-  });
-
-  it('hides a structure label when its marker (ring anchor) is disabled and fully hidden', () => {
-    // The anchor gate skips only when the ring is BOTH disabled (`enabled`
-    // false) AND its markerLayer opacity is exactly 0.
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 1);
-    fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
-    fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0);
-    const state = makeState({ fades });
-    state.settings.structures.items['galaxy-cluster'].enabled = false;
-    state.store.setGroup('anchors', [rec('c1', { category: 'galaxy-cluster' })]);
-    expect(labelsOf(state, makeCtx(), 'cosmic').labels).toEqual([]);
-  });
-
-  it('a structure label survives while its ring fades out (anchor gate reads opacityOf, not an instant flag)', () => {
-    // Mid-fade ring (opacity 0.5) must still carry its label — the old instant
-    // markerVisible flag flipped to false the moment the category toggled off,
-    // popping the label while the ring was still visibly fading. Reading the
-    // fade handle keeps them in lock-step.
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 1);
-    fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
-    fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0.5);
-    const state = makeState({ fades });
-    state.store.setGroup('anchors', [rec('c1', { category: 'galaxy-cluster' })]);
-    expect(labelsOf(state, makeCtx(), 'cosmic').labels.map((l) => l.id)).toEqual(['c1']);
+    expect(
+      labelsOf(
+        state,
+        makeCtx(),
+        'cosmic',
+        makeStructureFade(1, { 'galaxy-cluster': 0.5 }),
+      ).labels.map((l) => l.id),
+    ).toEqual(['c1']);
   });
 
   it('sets prominencePx to the ring apparent radius and never declutters', () => {
@@ -218,49 +144,20 @@ describe('produceStructureLabels', () => {
     expect(labelsOf(state, makeCtx(), 'cosmic').labels).toEqual([]);
   });
 
-  it('bakes per-category opacityOf into fadeAlpha', () => {
-    // A cluster label at 0.5 category opacity emits half the at-rest fadeAlpha.
-    const atRest = makeState();
-    atRest.store.setGroup('anchors', [rec('a')]);
-    const atRestAlpha = labelsOf(atRest, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
+  it('scales by the handed value exactly once', () => {
+    // At full blend: the director recedes labels, so a producer that receded on its
+    // own would land below 0.25.
+    const state = makeState();
+    state.store.setGroup('anchors', [rec('a')]);
+    const atRestAlpha = labelsOf(state, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
+    const handedAlpha = labelsOf(
+      state,
+      makeCtx({ focusBlend: 1 }),
+      'cosmic',
+      makeStructureFade(0.25),
+    ).labels[0]!.fadeAlpha!;
 
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', item: 'galaxy-cluster' }, 0.5);
-    const dimmed = makeState({ fades });
-    dimmed.store.setGroup('anchors', [rec('a')]);
-    const dimmedAlpha = labelsOf(dimmed, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
-
-    expect(dimmedAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
-  });
-
-  it('non-focused label recedes at blend > 0', () => {
-    // No focus, full blend → the label's fadeAlpha is scaled by MILD_RECESSION.
-    const atRest = makeState();
-    atRest.store.setGroup('anchors', [rec('a')]);
-    const atRestAlpha = labelsOf(atRest, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
-
-    const focused = makeState();
-    focused.store.setGroup('anchors', [rec('a')]);
-    const recededAlpha = labelsOf(focused, makeCtx({ focusBlend: 1 }), 'cosmic').labels[0]!
-      .fadeAlpha!;
-
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
-  });
-
-  it('focused structure label is exempt from recession', () => {
-    // The focused structure's own label stays at its blend-0 value even at
-    // full blend — a faded ring never carries a bright label.
-    const blend0 = makeState({ focusedStructureId: 'a' });
-    blend0.store.setGroup('anchors', [rec('a')]);
-    const blend0Alpha = labelsOf(blend0, makeCtx({ focusBlend: 0 }), 'cosmic').labels[0]!
-      .fadeAlpha!;
-
-    const blend1 = makeState({ focusedStructureId: 'a' });
-    blend1.store.setGroup('anchors', [rec('a')]);
-    const blend1Alpha = labelsOf(blend1, makeCtx({ focusBlend: 1 }), 'cosmic').labels[0]!
-      .fadeAlpha!;
-
-    expect(blend1Alpha).toBeCloseTo(blend0Alpha, 6);
+    expect(handedAlpha).toBeCloseTo(atRestAlpha * 0.25, 6);
   });
 
   it('focusedOnly mode: emits only the focused structure label', () => {
@@ -384,5 +281,7 @@ describe('produceStructureLabels', () => {
     expect(byId(under, 'in').pickId).toBeDefined();
     expect(byId(under, 'out').pickId).toBeUndefined();
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
+    // Not clickable, still named: emphasis keys on the subject, not the pick.
+    expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1));
   });
 });

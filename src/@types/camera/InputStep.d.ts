@@ -1,10 +1,10 @@
 /**
- * InputStep — one frame's worth of input, collapsed by `inputAggregator`.
+ * InputStep — one frame's worth of input, converted from the `input` slice's
+ * pending steps by `pendingToInputSteps`.
  *
  * A `drag` run carries absolute CSS pixels, not a delta, because the body arm
  * casts a ray through each pixel: `startPx` is where the pointer stood at the
- * END of the previous frame (or the press point). Not
- * readonly — the aggregator extends a run in place. `duringGesture` splits the
+ * END of the previous frame (or the press point). `duringGesture` splits the
  * two zoom owners: pointer down ⇒ the gesture register renders, at rest ⇒ the
  * store `base` does. `cursorPx` is where the wheel fired, in the same absolute
  * pixels; `null` for a pinch, which has two contacts and no single cursor.

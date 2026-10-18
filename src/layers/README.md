@@ -28,7 +28,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written             |
 | `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                    |
 | `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                           |
-| `fades?`        | `present/`                                     |                                                                                                                       |
+| `visibility?`   | `visibility.ts`                                | Static show and label entries, data only; `APP_VISIBILITY` imports the tuple, so it never imports `layer.ts`          |
 | `guides?`       | `present/`                                     |                                                                                                                       |
 | `selection?`    | `present/`                                     |                                                                                                                       |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
@@ -55,7 +55,7 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 **`subsystems/` vs `render/`.** Both stay. `render/` holds GPU pipeline objects and what feeds them directly: renderers, pick renderers, stores that own GPU buffers, vertex layouts, uniform packers. `subsystems/` holds stateful per-frame machinery that decides _what_ to draw before any pipeline runs: LOD planners, sticky maps, bake state machines, their workers. A pair that spans the two keeps one name (`proceduralDiskSubsystem` / `proceduralDiskRenderer`). A Layer with no per-frame decision state has no `subsystems/` folder.
 
-**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `fades`, `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
+**Where declaration rows live.** A row's folder names the concern it describes, not the fact that it is a row. `load/` holds `assets` and `sourceCounts`; `present/` holds `guides`, `selection`, `search`, `slabs`; `passes/` and `computes/` already work this way. Every formed Layer follows both rules.
 
 ## Rules
 
@@ -76,9 +76,10 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 - **Shaders do not move into a Layer.** WGSL stays at
   `src/services/gpu/shaders/<family>/`. The `?static` specifiers are invisible to
   `tsc` — only `npm run build` catches a dangling one.
-- **A Layer never drives a fade at construction.** It only _declares_ fade rows;
-  core owns the arrival edge (`installFadeOnArrival`). `LayerCoreDeps` has no
-  `fades` member by design.
+- **A Layer never drives a fade.** It declares `visibility` entries, `fade:` on its
+  passes, planners and computes, `label:` on its label rows and `gates` on its asset
+  rows; core seeds, retargets and resolves every fade from them. `LayerCoreDeps` has
+  no fade registry by design.
 - **Tests mirror the tree** under `tests/layers/<name>/`.
 - **Moving a file uses `npm run move-files`**, never `git mv` plus hand-edited
   imports — and grep afterwards, since it misses `.wesl` `package::` specifiers and

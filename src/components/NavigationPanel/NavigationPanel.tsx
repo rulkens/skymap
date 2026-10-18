@@ -1,7 +1,8 @@
 /**
  * NavigationPanel — keyboard / mouse cheatsheet, static markup in a Panel.
  *
- * Hand-kept in step with `inputBindings.ts`: a shared shortcut registry costs
+ * Hand-kept in step with `KEYBOARD_SHORTCUTS` (`src/state/input/keyboardShortcuts.ts`)
+ * and `CONTROL_BINDINGS` (`src/data/input/controlBindings.ts`): a shared shortcut registry costs
  * more than editing ~6 rows by hand. Re-evaluate at ~10.
  */
 

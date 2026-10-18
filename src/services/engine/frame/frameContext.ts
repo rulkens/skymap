@@ -13,6 +13,8 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
+import type { FadeIdentity } from '../../../@types/animation/FadeIdentity';
+import type { PositionedSceneBody } from '../../../@types/engine/frame/PositionedSceneBody';
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { slabRowActive } from '../../../utils/frame/slabRowActive';
@@ -31,7 +33,9 @@ import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
-import { visibleStars } from './visibleStars';
+import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
+import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
+import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -110,17 +114,33 @@ export function deriveFrameContext(
     return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
   };
 
-  // NEAR0's distanceRangeM (spec §7.1) is sized from the star spheres actually
-  // drawn; which star is a sphere is a per-view question, so this resolves the
-  // positions once and `deriveView` partitions them.
-  const positionedStars = visibleStars(state.settings.starCatalogs).map((star) => ({
-    ...star,
-    positionMpc: bodyStates.get(star.id)!.positionMpc,
-  }));
+  // Every admitted scene body, positioned once; which is resolved is a per-view
+  // question, so each view sorts these. A body some show entry covers is admitted
+  // while every covering item hands a value above 0 — the value its passes read, so a
+  // star faded or clipped to 0 neither occludes nor sizes NEAR0.
+  const coverage = sceneBodyCoverageOf(state.visibilityEntries);
+  const handedAboveZero = new Map<string, boolean>();
+  const isAboveZero = (id: FadeIdentity): boolean => {
+    const key = fadeIdentityKey(id);
+    let above = handedAboveZero.get(key);
+    if (above === undefined) {
+      above = resolveVisibilityOpacity(state, { nowMs }, id.address, id.item) > 0;
+      handedAboveZero.set(key, above);
+    }
+    return above;
+  };
+  const sceneBodies: PositionedSceneBody[] = [];
+  const admit = (body: SceneBody): void => {
+    if (!(coverage.get(body.id)?.coveredBy ?? []).every(isAboveZero)) return;
+    sceneBodies.push({ body, positionMpc: bodyStates.get(body.id)!.positionMpc });
+  };
+  for (const body of planets) admit(body);
+  for (const body of meshBodies) admit(body);
+  for (const { body } of coverage.values()) admit(body);
 
-  // `focusBlend` and `focus` are at-rest placeholders that `runFrame` overwrites
-  // the moment the ready gate passes, before any consumer reads them: deriving
-  // them here would tick the structureFocus fade controller, a once-per-frame
+  // `focus`, `focusBlend` and `focusPickId` are at-rest placeholders that `runFrame`
+  // overwrites the moment the ready gate passes, before any consumer reads them:
+  // deriving them here would tick the structureFocus fade controller, a once-per-frame
   // side effect this (speculatively callable) function must not have.
   return {
     isReady: true,
@@ -129,13 +149,14 @@ export function deriveFrameContext(
     bodyPose,
     slabBodyCandidates,
     meshBodies,
-    positionedStars,
+    sceneBodies,
     nowMs,
     simDays,
     altitudeMpc,
     renderTargets: state.gpu.renderTargets,
     focus: ZERO_FOCUS,
     focusBlend: 0,
+    focusPickId: null,
     // Fresh and empty: `runPlanSteps` fills it in as each section's plan rows
     // run, ahead of every GPU step and every other planner reader this frame.
     plans: createFramePlannerResultStore(),

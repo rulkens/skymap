@@ -34,7 +34,7 @@
 //
 // A scene star bright enough to fill more than a few pixels has RESOLVED into a
 // sphere and is picked through the 'drawSphere' path instead — the point
-// partition is by construction the sub-pixel stars ('partitionStarsByResolution').
+// partition is by construction the sub-pixel stars ('partitionBodiesByPresentation').
 // So a fixed clickable floor IS the whole footprint here; there is no larger
 // visual dot to match, unlike the survey star pick which clamps 'max(visual,
 // floor)'.

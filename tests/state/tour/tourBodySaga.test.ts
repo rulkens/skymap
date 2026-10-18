@@ -34,7 +34,6 @@ import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { advanceTour, prevBeat } from '../../../src/state/tour/tourActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
-import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
@@ -50,6 +49,7 @@ import type { BeatRange } from '../../../src/@types/animation/tour/BeatRange';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import { inputGestureStarted } from '../../../src/state/input/inputSlice';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -376,7 +376,7 @@ describe('tourBodySaga', () => {
     const { store, sagaMiddleware } = buildStore({ playClip: stub });
     runTour(sagaMiddleware, makeTour(beats), { from: 1, to: 1 });
 
-    // The fold's mergeSnapshot lands synchronously, but the visibility bridge
+    // The fold's mergeSnapshot lands synchronously, but the visibility sync
     // and label-fade envelope animate that diff — the beat's fly must wait
     // out FOLD_SETTLE_MS so the film opens on a settled scene.
     expect(stub).not.toHaveBeenCalled();
@@ -515,7 +515,7 @@ describe('tourBodySaga', () => {
     await flush();
 
     // Dispatch a camera-input action — must have NO effect on tour lifecycle.
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     await flush();
 
     // The tour is still running: not restored (volumes still off), still active.

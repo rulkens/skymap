@@ -11,16 +11,14 @@
  *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
  *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
  *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
- *   4. `createSurfaceTileSubsystem` / `seedFades` — Earth's surface virtual
- *      texture and the whole fade-ownership manifest (every composed fade
- *      handle, seeded).
+ *   4. `createSurfaceTileSubsystem` / `seedVisibilityFades` — Earth's surface
+ *      virtual texture, and every visibility identity at its boot target
+ *      (`installVisibilityGates` later subscribes its gating slots, so a
+ *      commit or release retargets that identity's fade).
  *   5. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over core's slots and every Layer's.
  *   6. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
- *      `installFadeOnArrival` shares that mouth for the arrival fade: a fade
- *      row's `guard` opening on a slot's `ready` is what fades a demand-loaded
- *      layer in, so no slot factory drives one itself.
  *      `installFormatVersionAlert` shares the same window and shape: the first
  *      time any slot's error is a `FormatVersionError`, it dispatches a
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
@@ -58,12 +56,13 @@ import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
-import { installFadeOnArrival } from '../wiring/installFadeOnArrival';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
-import { seedFades } from '../wiring/fadeLayers';
+import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
+import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
+import { installVisibilityGates } from '../wiring/installVisibilityGates';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { loadDataManifest } from '../../loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
@@ -98,11 +97,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
 
-  // Register and seed EVERY fade handle from the manifest — the
-  // overlay/volume-master/label/structure rows PLUS the demand-loaded
-  // galaxy/filament/flow/volume sets — so frame 1 is coherent and the
-  // demand-loaded layers seed at 0 ready to fade in on first load.
-  seedFades(state);
+  // Every visibility identity seeds at its target, which reads its gating slot's commit,
+  // so frame 1 is coherent and a demand-loaded thing waits at 0 to fade in on arrival.
+  state.visibilityGates = collectVisibilityGates(state);
+  seedVisibilityFades(state);
 
   // Build the flat `allSlots` registry + load-progress emitter over every
   // installed slot (core and Layer-owned).
@@ -112,9 +110,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
 
-  // The same channel mouth for the arrival fade. After `seedFades`, so the guard
-  // snapshot it takes reflects seeded reality.
-  installFadeOnArrival(state, deps.allSlots);
+  // Before `reevaluateDemand`, so no gating slot can commit unheard.
+  installVisibilityGates(state);
 
   // Same window: a stale-.bin version mismatch turns into a splash-visible
   // error rather than a silent empty sky.

@@ -5,7 +5,7 @@
  * ### Why a saga and why only exitTakeover aborts
  *
  * `exitTakeover` is the only abort signal because the tour's clip@95 camera
- * driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
+ * driver swallows drag input: a stray `inputGestureStarted` or `commitCameraPose`
  * should NOT stop the show — the user must dispatch `exitTakeover` explicitly.
  *
  * ### Scene preparation is the first beat's job
@@ -60,11 +60,11 @@ import type { BeatRange } from '../../@types/animation/tour/BeatRange';
  * externally rejected has no equivalent guarantee: the caller must set up a
  * separate teardown path. Here the finally handles both paths with one clause.
  *
- * Only exitTakeover stops the tour. Camera-input actions (`beginDrag`,
+ * Only exitTakeover stops the tour. Camera-input actions (`inputGestureStarted`,
  * `commitCameraPose`, …) must NOT abort the run — the clip@95 driver owns
  * the camera during playback and input actions arrive but have no effect on
  * tour progression. Adding a camera-input `take` here would incorrectly end
- * the tour on any background orbit-controls event.
+ * the tour on any background `inputGestureStarted`.
  */
 export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
   // Reset the tour's own bookkeeping (beat position). The takeover source,
@@ -119,10 +119,10 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
 
           // A windowed take opening mid-tour (from > 0) has just re-created
           // the past in one dispatch — but the store change is not what the
-          // viewer sees: the visibility bridge animates source fades (~600 ms)
+          // viewer sees: the visibility sync animates source fades (~600 ms)
           // and the label-fade envelope (~300 ms) plays the folded diff as a
           // dissolve. On film the reconstruction must read as "already
-          // happened", so the window's opening beat waits for those bridges
+          // happened", so the window's opening beat waits for those ramps
           // to finish before its clip starts. Only the FIRST entry needs it:
           // every later fold reproduces cues that just played (a visual
           // no-op), a Prev back to `from` is a live in-tour transition, and a

@@ -16,7 +16,7 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { makeGalaxyCatalogFade } from '../../../fixtures/makeGalaxyCatalogFade';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -77,15 +77,11 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
   } as unknown as FrameView;
 }
 
-// The pass reads `state.subsystems.fades.opacityOf` for per-source fade
-// opacity; a stub returning full opacity lets it run without a live
-// FadeRegistry. The focus group is bound off `state.gpu.focusUniform` — an
-// opaque bind group is all the pass reads.
+// The focus group is bound off `state.gpu.focusUniform` — an opaque bind
+// group is all the pass reads.
+const FULL = makeGalaxyCatalogFade();
+
 const STATE_STUB = {
-  subsystems: {
-    fades: { opacityOf: () => 1, isAnyAnimating: () => false },
-    clipPlayer: { clipOpacityOf: () => 1 },
-  },
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
   },
@@ -151,7 +147,7 @@ describe('galaxyPointSpritesPass.draw', () => {
         focus: null,
       } as unknown as EngineState['selection'],
     });
-    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state, FULL);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
     // record).
@@ -164,17 +160,17 @@ describe('galaxyPointSpritesPass.draw', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
     const { state, runtime, drawSpy } = makeStateWithRenderer();
-    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state, FULL);
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
 
   it('multiplies the deep-zoom survey fade into fadeOpacityOf', () => {
     // The whole point cloud recedes on descent into the solar system: the
-    // per-source registry opacity (stubbed to 1) is multiplied by the
+    // handed per-source value (1) is multiplied by the
     // surveyDeepZoom band, keyed on the camera's distance from the
     // heliocentric origin. The default fixture camera sits 5 Mpc out — far
-    // outside the band — so the callback must return the registry value
+    // outside the band — so the callback must return the handed value
     // unchanged; a camera mid-band must scale it to a strict fraction.
     const far = makeStateWithRenderer();
     const farCtx = makeCtx();
@@ -183,6 +179,7 @@ describe('galaxyPointSpritesPass.draw', () => {
       slabViewOf(farCtx, COSMO),
       farCtx,
       far.state,
+      FULL,
     );
     const farSettings = far.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
@@ -201,6 +198,7 @@ describe('galaxyPointSpritesPass.draw', () => {
       slabViewOf(midCtx, COSMO),
       midCtx,
       mid.state,
+      FULL,
     );
     const midSettings = mid.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
@@ -212,18 +210,24 @@ describe('galaxyPointSpritesPass.draw', () => {
   it('exempts the famous catalog from the survey fade at deep zoom', () => {
     // Inside the band's goneAt edge the survey sources resolve to 0 (the
     // renderer's per-source loop then skips them), but the famous catalog
-    // keeps its raw registry opacity — its curated galaxies stay visible
+    // keeps its handed value — its curated galaxies stay visible
     // inside the Milky Way and near Earth as reference points. The pass
     // still calls renderer.draw: famous may be loaded.
     const { state, runtime, drawSpy } = makeStateWithRenderer();
     const deepCtx = makeCtx({
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
-    galaxyPointSpritesPass(runtime).draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
+    galaxyPointSpritesPass(runtime).draw(
+      PASS_STUB,
+      slabViewOf(deepCtx, COSMO),
+      deepCtx,
+      state,
+      FULL,
+    );
     const deepSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
     expect(deepFadeOf(Source.SDSS)).toBe(0);
-    // Registry stub returns 1 — famous must pass it through untouched.
+    // The handed value is 1 — famous must pass it through untouched.
     expect(deepFadeOf(Source.FamousGalaxy)).toBe(1);
   });
 
@@ -232,7 +236,7 @@ describe('galaxyPointSpritesPass.draw', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
     const { state, runtime, drawSpy } = makeStateWithRenderer();
-    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state, FULL);
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
     expect(call[1]).toBe(view.vp);
@@ -243,46 +247,28 @@ describe('galaxyPointSpritesPass.draw', () => {
 });
 
 describe('galaxyPointSpritesPass.drawPick', () => {
-  it('drawPick drops a catalog switched off while its fade-out runs', () => {
-    // Picking follows intent, not pixels: SDSS is switched off and still half
-    // faded in, so `draw` keeps its bit (the fade-out tail) while `drawPick`
-    // hands the picker no SDSS source.
+  it('drawPick picks exactly the catalogs whose handed value is above 0', () => {
+    // Pick follows the same value the draw does: SDSS is handed 0.5 and Glade 0,
+    // whatever the switches say, so the picker gets SDSS and not Glade.
     const loaded = [Source.SDSS, Source.Glade].map((source) => ({
       source,
       vertexBuffer: {} as GPUBuffer,
       count: 1,
       sourceBuffer: {} as GPUBuffer,
     }));
-    const sdss = galaxyCatalogIdOf(Source.SDSS);
-    const { state, runtime, drawSpy, drawPointsSpy } = makeStateWithRenderer(
-      {
-        settings: {
-          ...SETTINGS_STUB,
-          galaxyCatalogs: {
-            ...SETTINGS_STUB.galaxyCatalogs,
-            items: makeGalaxyCatalogItems((id) => (id === sdss ? { enabled: false } : {})),
-          },
-        },
-        subsystems: {
-          ...STATE_STUB.subsystems,
-          fades: {
-            opacityOf: (handle: { id?: string }) => (handle.id === sdss ? 0.5 : 1),
-            isAnyAnimating: () => true,
-          },
-        },
-      } as unknown as Partial<EngineState>,
-      loaded,
-    );
+    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
 
-    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
-    const drawMask = (drawSpy.mock.calls[0]![3] as { visibleSourceMask: number }).visibleSourceMask;
-    expect((drawMask >> Source.SDSS) & 1).toBe(1);
-
-    galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).drawPick!(
+      PASS_STUB,
+      view,
+      ctx,
+      state,
+      makeGalaxyCatalogFade({ sdss: 0.5, glade: 0 }),
+    );
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
-    expect(passedSources.map((s) => s.source)).toEqual([Source.Glade]);
+    expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS]);
   });
 
   it('drops band-faded survey sources from the pick, famous exempt, but still calls drawPoints', () => {
@@ -303,7 +289,7 @@ describe('galaxyPointSpritesPass.drawPick', () => {
     const view = slabViewOf(ctx, COSMO);
     const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
 
-    galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state, FULL);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;

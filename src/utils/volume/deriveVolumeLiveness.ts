@@ -4,7 +4,7 @@
  * scale-fade bands into its fade opacity, and asks the renderer whether
  * anything survives. No state, settings or fade read happens here — the
  * caller (a Layer's `present/deriveXLiveness.ts`) supplies the raw rows and
- * a fade opacity already resolved to "field fade × recessed master", so
+ * each field's value (switches, fade, clip and its emphasis folded in), so
  * this stays a projection of its four arguments only.
  */
 

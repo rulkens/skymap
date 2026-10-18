@@ -12,6 +12,8 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -21,6 +23,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 
 const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 const STATES = deriveBodyStates(CONST_J2000);
@@ -31,16 +34,6 @@ function makeState(meshBodies: readonly MeshBody[]): EngineState {
     data: {
       bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies },
     },
-    settings: {
-      starCatalogs: {
-        enabled: true,
-        items: {
-          famousStar: { enabled: true },
-          sun: { enabled: true },
-          sStar: { enabled: true },
-        },
-      },
-    },
   } as unknown as EngineState;
 }
 
@@ -49,12 +42,23 @@ const STATE = makeState([]);
 // 720-px viewport, 45° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
 
+// Every admitted scene body: the planets, the craft and the seeded stars.
+const EVERY_BODY = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...SCENE_SUN, ...SCENE_STARS],
+  STATES,
+);
+const NO_SUN = EVERY_BODY.filter(({ body }) => body.id !== 'sun');
+
 /** Eye `offsetKm` along +x from `bodyId`, on a 1280×720 viewport at fovY 45°. */
-function makeCtx(bodyId: string, offsetKm: number): FrameView {
+function makeCtx(
+  bodyId: string,
+  offsetKm: number,
+  sceneBodies: readonly PositionedSceneBody[] = EVERY_BODY,
+): FrameView {
   const p = STATES.get(bodyId)!.positionMpc;
   const drawCamPos: Vec3 = [p[0] + offsetKm * KM_TO_MPC, p[1], p[2]];
   return {
-    snapshot: { simDays: CONST_J2000, meshBodies: SCENE_MESH_BODIES },
+    snapshot: { simDays: CONST_J2000, meshBodies: SCENE_MESH_BODIES, sceneBodies },
     drawCamPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
@@ -108,6 +112,13 @@ describe('sceneOccluderSpheres', () => {
     // 1e6 km out the Sun spans ~1200 px.
     const radii = occluderRadiiKm(makeCtx('sun', 1e6));
     expect(radii.filter((r) => Math.abs(r - sunRadiusKm) < 1)).toHaveLength(1);
+  });
+
+  it('a star faded to 0 neither sizes NEAR0 nor occludes', () => {
+    // Core leaves a star whose handed value is 0 out of `sceneBodies`; that, not
+    // a star table, is what the occluder set reads.
+    const radii = occluderRadiiKm(makeCtx('sun', 1e6, NO_SUN));
+    expect(radii.some((r) => Math.abs(r - sunRadiusKm) < 1)).toBe(false);
   });
 
   it('drops the Sun once it demotes to a point at Jupiter-range', () => {

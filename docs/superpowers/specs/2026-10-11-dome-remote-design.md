@@ -59,7 +59,7 @@ export type ToggleRow = {
 // in src/compositions/: it reads five Layers' label selectors, and state/ imports no Layer
 export function selectToggleRows(
   state: RootState,
-  layerRows: readonly LayerSettingsRow[],
+  layerRows: readonly LayerToggleRow[],
 ): readonly ToggleRow[];
 ```
 

@@ -15,11 +15,11 @@ import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectToggleRows } from '../../compositions/selectToggleRows';
 import type { SectionRow } from '../../@types/components/SectionRow';
-import type { LayerSettingsRow } from '../../@types/engine/layer/LayerSettingsRow';
+import type { LayerToggleRow } from '../../@types/engine/layer/LayerToggleRow';
 
 type LabelsAndGuidesSectionContainerProps = {
   /** Every composed Layer's `labelsAndGuides` `ui` entry, in composition order. */
-  readonly layerRows: readonly LayerSettingsRow[];
+  readonly layerRows: readonly LayerToggleRow[];
 };
 
 function LabelsAndGuidesSectionContainer({

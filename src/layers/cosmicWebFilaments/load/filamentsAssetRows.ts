@@ -15,6 +15,7 @@ export function filamentsAssetRows(runtime: CosmicWebFilamentsRuntime): readonly
       req: (tier) => ({ small: tier === 'small' }),
       demand: (ctx) => ctx.settings.cosmicWebFilaments.enabled,
       priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
+      gates: 'cosmicWebFilaments',
     },
   ];
 }

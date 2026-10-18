@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 
 import { orientStepRad } from '../../../src/utils/camera/orientStepRad';
 
-/** `inputAggregator`'s deltaY-100 notch: factor e^(100 · 0.001), so u = 0.1. */
+/** A deltaY-100 wheel notch: factor e^(100 · 0.001), so u = 0.1. */
 const NOTCH = 0.1;
 
 /** Spend `n` notches of `u` each on a residual, returning what is left of it. */

@@ -8,7 +8,6 @@ export type CatalogStore = {
   upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
   unload(id: GalaxyCatalogId): void;
   totalCount(): number;
-  hasCatalog(id: GalaxyCatalogId): boolean;
   /** Narrow public projection consumed by the pick program. */
   loadedSources(): IterableIterator<{
     source: SourceType;

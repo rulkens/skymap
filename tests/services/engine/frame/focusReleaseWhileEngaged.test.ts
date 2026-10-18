@@ -401,7 +401,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
     expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
 
-    h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 70, yPx: 30 });
+    h.notch(240, [70, 30]);
     h.frame(60); // past FOCUS_TWEEN_MS — the approach saturates at its target
 
     // The notch lands whole on the target the approach then flies to: e^0.24

@@ -26,7 +26,7 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { beginDrag, setAutoRotate } from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
@@ -102,9 +102,8 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     // accumulating per cycle.
     const eyes: Vec3[] = [];
     for (let cycle = 0; cycle < 4; cycle += 1) {
-      h.store.dispatch(beginDrag());
-      h.push({ kind: 'gestureStart' });
-      h.push({ kind: 'gestureEnd' });
+      h.press('orbit', [50, 50]);
+      h.release();
       h.frame(60);
       eyes.push(display(h.state).eye);
     }
@@ -130,11 +129,9 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     toMidWindow(h);
     const before = display(h.state);
 
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 52, yPx: 50 });
-    h.push({ kind: 'gestureEnd' });
+    h.press('orbit', [50, 50]);
+    h.moveTo([52, 50]);
+    h.release();
     h.frame();
 
     // The committed base is centre-looking — the projection stayed render-side.

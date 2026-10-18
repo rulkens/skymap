@@ -28,7 +28,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
    *
    * `shell` bounds the visible radii and the longitude-dependent
    * latitude-limit curve; `fadeAlpha` is the caller's per-frame opacity
-   * (`zoneOfAvoidanceLayerOpacity` composed with the fade registry) — the
+   * (`deriveZoneOfAvoidanceLiveness`: its distance bands × the handed value) — the
    * fragment shader multiplies it into the additive contribution alongside
    * `tuning.intensity`.
    */

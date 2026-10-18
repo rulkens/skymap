@@ -15,14 +15,13 @@ or a silently-ignored focus request (if the throw is softened but
 
 The root cause is that `SelectionRow` has no type-level way to say "carries
 no `x`/`y`/`z`" — every consumer that needs to know re-derives the answer by
-hand. At least seven do: `ROW_FOCUSABLE`, `focusFraming`, `focusIdOf`
+hand. At least six do: `ROW_FOCUSABLE`, `focusFraming`, `focusIdOf`
 (`src/services/url/focusIdOf.ts`), `urlHashFor`
 (`src/services/url/urlHashFor.ts`), `selectionHaloTable`
 (`src/services/engine/frame/passes/selectionRingPass.ts` and
-`near0SelectionRingPass.ts`), `detailCardTable`'s omitted `onFocus` arm, and
-`focusRecession` (`src/services/engine/presentation/focusRecession.ts`).
+`near0SelectionRingPass.ts`) and `detailCardTable`'s omitted `onFocus` arm.
 
-Severity is bounded: every one of the seven sites is an exhaustive `Record`
+Severity is bounded: every one of the six sites is an exhaustive `Record`
 or exhaustive `switch`, so the compiler forces a visit on every new
 `SelectionRow` variant — you can answer the "is this focusable" question
 inconsistently across sites, but you cannot forget to answer it anywhere.
@@ -43,4 +42,4 @@ structure | milkyWay | body | star`), so a function that only accepts
   positioned rows can say so in its parameter type instead of re-checking at
   runtime. Larger change; would let `ROW_FOCUSABLE` disappear entirely for
   callers that can be typed against the narrower union, at the cost of
-  threading a second row type through the seven consumer sites.
+  threading a second row type through the six consumer sites.

@@ -5,7 +5,7 @@
  * ### What it draws — the sub-pixel bodies
  *
  * The `glints` branch of `sceneBodyPartition` — every seeded body whose apparent
- * diameter stays below `BODY_GLINT_MAX_PX`. Its siblings `planetsPass` /
+ * diameter stays below its `resolvePx` (`BODY_GLINT_MAX_PX`). Its siblings `planetsPass` /
  * `texturedBodiesPass` draw the `flat` / `textured` branches of the SAME
  * partition, so a body is a glint XOR a mesh by construction — the interim gap
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew

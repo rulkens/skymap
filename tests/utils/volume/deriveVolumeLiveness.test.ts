@@ -44,7 +44,6 @@ function stubRenderer(
     upload: () => {},
     unload: () => {},
     hasActiveFields,
-    listIds: () => [FIELD_ID],
     draw: () => {},
     destroy: () => {},
   };

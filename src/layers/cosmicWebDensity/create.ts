@@ -1,8 +1,8 @@
 /**
  * create — the density family's construction in dependency order: the one
  * renderer holding every cube, its upsample, then one slot per source row
- * committing into the renderer. No fade is driven here; core owns the arrival
- * edge (`installFadeOnArrival`), and each commit's `upload` opens the guard.
+ * committing into the renderer. No fade is driven here: each asset row's
+ * `gates` lets core fade a cube in on its slot's commit.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

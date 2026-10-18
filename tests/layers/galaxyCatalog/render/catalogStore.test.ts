@@ -134,7 +134,7 @@ describe('catalogStore.unload', () => {
     store.unload(idOf(Source.SDSS));
 
     expect(destroyed.length).toBe(minted);
-    expect(store.hasCatalog(idOf(Source.SDSS))).toBe(false);
+    expect(store.totalCount()).toBe(0);
   });
 
   it('leaves the store able to take a fresh upload afterwards (tier down, then up)', async () => {

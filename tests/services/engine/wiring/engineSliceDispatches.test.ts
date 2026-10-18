@@ -94,7 +94,6 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
       cb: { store } as unknown as BootstrapDeps['cb'],
       composition: STUB_COMPOSITION,
       frameRef: { current: () => {} },
-      detachControlsRef: { current: null },
       handleRef: { current: null },
       allSlots: new Map(),
       // installLoadProgress never reads a resolver — a resolver that always

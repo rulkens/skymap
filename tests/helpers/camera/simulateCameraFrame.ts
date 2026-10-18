@@ -19,6 +19,10 @@ import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyS
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../src/state/time/selectors';
+import { selectPendingInput } from '../../../src/state/input/selectors';
+import { inputConsumed } from '../../../src/state/input/inputSlice';
+import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 export function simulateCameraFrame(
   harness: CameraSimHarness,
@@ -28,14 +32,16 @@ export function simulateCameraFrame(
   const { state, store, deps } = harness;
   const stored = store.getState();
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
+  const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
+  const pending = selectPendingInput(stored);
 
   const { next, actions } = stepCameraRuntime(state.cameraRuntime, {
     nowMs,
     simDays,
     rootState: stored,
-    canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+    canvasPx,
     aspect: deps.canvas.width / deps.canvas.height,
-    steps: state.subsystems.inputAggregator.drain(),
+    steps: pendingToInputSteps(pending, canvasPx),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
     terrainHeightAt: () => 0,
     clipEpoch,
@@ -43,15 +49,16 @@ export function simulateCameraFrame(
   });
   state.cameraRuntime = next;
   for (const action of actions) store.dispatch(action);
+  if (pending.length > 0) store.dispatch(inputConsumed());
 
   return {
     pose: next.register.pose,
     activeId: next.register.winner,
     // `commitCameraPose` has three producers: `commitOnEdge`, the fold's regime
     // crossing, and `replayInput` (every at-rest wheel/drag fold). This reads the
-    // edge commit only while the caller neither crosses a regime nor feeds the
-    // input aggregator — true of both fixtures today; a caller that pushes input
-    // must narrow it instead.
+    // edge commit only while the caller neither crosses a regime nor feeds
+    // input — true of both fixtures today; a caller that feeds input must
+    // narrow it instead.
     committed: actions.some((action) => action.type === commitCameraPose.type),
   };
 }

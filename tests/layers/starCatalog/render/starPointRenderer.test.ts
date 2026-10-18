@@ -50,6 +50,7 @@ const SUN: PositionedStar = {
   absMag: 4.83,
   color: [1, 0.95, 0.85],
   surface: { datumRadiusM: 695700000, reliefM: [0, 0] },
+  resolvePx: 4,
   source: Source.Sun,
   seedIndex: 0,
 };
@@ -61,6 +62,7 @@ const SIRIUS: PositionedStar = {
   absMag: 1.43,
   color: [0.75, 0.85, 1],
   surface: { datumRadiusM: 1189600000, reliefM: [0, 0] },
+  resolvePx: 4,
   source: Source.FamousStar,
   seedIndex: 6,
 };

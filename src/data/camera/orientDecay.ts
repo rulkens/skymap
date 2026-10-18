@@ -5,7 +5,7 @@
  * its notch raw (`frameAlignedRoll`).
  */
 
-import { WHEEL_ZOOM_K } from '../../services/engine/subsystems/inputAggregator';
+import { WHEEL_ZOOM_K } from '../input/wheelZoomK';
 
 const NOTCH_LOG_ZOOM = 100 * WHEEL_ZOOM_K;
 
