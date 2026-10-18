@@ -111,7 +111,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
-- [ ] **Relativistic voyage exhibit (1 g to Andromeda)** `needs-design` — ship-frame view of the trip: Lorentz contraction as one matrix folded into every view-projection (stars, Milky Way, galaxies alike), per-renderer Doppler tint, ship vs Earth clock on a profiled exhibit timeline. → [details](backlog/2026-10-18-relativistic-voyage.md)
+- [ ] **`RENDER_ORIGIN_MPC` doubles as the Sun's position** `ready` — six passes pass the render origin to `sunDirLocal` as the Sun; a moving origin would move the light. → [details](backlog/2026-10-18-render-origin-doubles-as-sun.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **Lazy-allocate GPU resources for off features** `ready` — flow particles (26.6 MB, off by default), bloom with bloom disabled, hidden layers' render targets. → [details](backlog/2026-10-13-lazy-gpu-allocation.md)
