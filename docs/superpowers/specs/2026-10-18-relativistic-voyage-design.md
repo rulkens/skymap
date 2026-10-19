@@ -192,7 +192,7 @@ export type VoyageDestination = {
   readonly id: VoyageDestinationId;
   readonly label: string;
   readonly positionMpc: Vec3; // src/data/voyage/voyageDestinations.ts; a test pins m31/m87 to the famous seed
-  readonly focusId: string | null; // the famous id, for the arrival framing; null for Proxima and Sgr A*
+  readonly arrivalRadiusMpc: number | null; // half the seed's diameterKpc, for the arrival framing; null for Proxima and Sgr A*
   readonly standoffLy: number; // the trip is `|positionMpc| − standoffLy` long; the ship rests that far short
 };
 export type VoyageSettings = {
@@ -226,7 +226,7 @@ sources sections.
   (`voyage-<id>`, entry `'cut'`), a takeover swap, so title, facts and the URL follow it.
 - **cameraDriver** (`voyagePose`, priority 58, `commitsOnEdge: 'displayed'`, as the mission row): eye at the ship,
   looking along `dir`, with the visitor's drag and wheel offsets as `missionPose` carries them. Past arrival, the
-  framing of the destination's `focusId` where there is one.
+  framing of the destination's `arrivalRadiusMpc` sphere where there is one.
 - **shortcuts**: space run/pause, `−`/`+` speed, `[`/`]` as the missions transport.
 
 ```ts

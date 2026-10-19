@@ -2,7 +2,7 @@
  * voyagePose — the voyage driver's pose: the eye on the ship, looking along the line of flight
  * turned by the visitor's offsets, its target `VOYAGE_EYE_ARM_MPC` ahead so a drag turns the view
  * about the eye. Past arrival at a galaxy the view orbits it instead, at the fit of its
- * `VOYAGE_ARRIVAL_RADIUS_MPC` sphere. A view change (a re-aim, or arriving) eases from the pose
+ * destination's `arrivalRadiusMpc` sphere. A view change (a re-aim, or arriving) eases from the pose
  * last shown over `MISSION_EASE_MS` of wall time on the aim epoch, as `missionPose` does; a re-aim
  * drops the offsets. The drag's view is read off the pose's angles, never as target − eye: 100 au
  * apart at 17 Mpc, that subtraction would lose five digits.
@@ -19,7 +19,6 @@ import type { VoyageCameraMemory } from '../@types/VoyageCameraMemory';
 import type { VoyageSection } from '../@types/VoyageSection';
 import { MISSION_EASE_MS } from '../../../data/exhibits/mission/missionEaseMs';
 import { NO_MISSION_OFFSETS } from '../../../data/exhibits/mission/noMissionOffsets';
-import { VOYAGE_ARRIVAL_RADIUS_MPC } from '../../../data/voyage/voyageArrivalRadiusMpc';
 import { VOYAGE_DESTINATIONS } from '../../../data/voyage/voyageDestinations';
 import { VOYAGE_EYE_ARM_MPC } from '../../../data/voyage/voyageEyeArmMpc';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -46,8 +45,9 @@ export function voyagePose(
   const voyage = ctx.state.settings.voyage;
   const boost = voyageFrameBoost(voyage, ctx.simDays);
   if (boost === null) return { pose: ctx.state.camera.base, memory: mem };
-  const { focusId } = VOYAGE_DESTINATIONS[voyage.destination!];
-  const arrived = focusId !== null && voyageShipState(voyage, ctx.simDays)!.phase === 'arrived';
+  const { arrivalRadiusMpc } = VOYAGE_DESTINATIONS[voyage.destination!];
+  const arrived =
+    arrivalRadiusMpc !== null && voyageShipState(voyage, ctx.simDays)!.phase === 'arrived';
   const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
   const basis = ctx.poseBasis;
@@ -65,11 +65,7 @@ export function voyagePose(
     right,
     up: cross3(right, boost.dir),
     distance: arrived
-      ? sphereFitDistance(
-          VOYAGE_ARRIVAL_RADIUS_MPC[focusId],
-          ctx.projection.fovYRad,
-          ctx.projection.aspect,
-        )
+      ? sphereFitDistance(arrivalRadiusMpc, ctx.projection.fovYRad, ctx.projection.aspect)
       : VOYAGE_EYE_ARM_MPC,
     stop: null,
     cruise: !arrived,

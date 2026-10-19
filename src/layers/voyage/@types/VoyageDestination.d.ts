@@ -12,7 +12,7 @@ export type VoyageDestination = {
   readonly label: string;
   /** World Mpc, equatorial J2000, from the same catalogue numbers the scene draws it at. */
   readonly positionMpc: Readonly<Vec3>;
-  /** The famous-galaxy id the arrival framing focuses; null where there is none. */
-  readonly focusId: 'm31' | 'm87' | null;
+  /** The sphere the arrival view fits about a destination galaxy; null keeps the view on the ship. */
+  readonly arrivalRadiusMpc: number | null;
   readonly standoffLy: number;
 };

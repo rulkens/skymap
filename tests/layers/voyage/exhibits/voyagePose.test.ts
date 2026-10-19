@@ -9,7 +9,6 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { JULIAN_YEAR_DAYS } from '../../../../src/data/time/julianYearDays';
 import { MISSION_EASE_MS } from '../../../../src/data/exhibits/mission/missionEaseMs';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import { VOYAGE_ARRIVAL_RADIUS_MPC } from '../../../../src/data/voyage/voyageArrivalRadiusMpc';
 import { VOYAGE_DESTINATIONS } from '../../../../src/data/voyage/voyageDestinations';
 import { voyagePose } from '../../../../src/layers/voyage/exhibits/voyagePose';
 import { voyageFrameBoost } from '../../../../src/utils/voyage/voyageFrameBoost';
@@ -87,7 +86,11 @@ describe('voyagePose', () => {
     const { pose } = frame({ state: store.getState(), simDays }, null);
     expect(pose.target).toEqual([...VOYAGE_DESTINATIONS.m31.positionMpc]);
     expect(pose.distance).toBeCloseTo(
-      sphereFitDistance(VOYAGE_ARRIVAL_RADIUS_MPC.m31, PROJECTION.fovYRad, PROJECTION.aspect),
+      sphereFitDistance(
+        VOYAGE_DESTINATIONS.m31.arrivalRadiusMpc!,
+        PROJECTION.fovYRad,
+        PROJECTION.aspect,
+      ),
       12,
     );
     near(forwardOf(pose), voyageFrameBoost(store.getState().settings.voyage, simDays)!.dir, 1e-9);

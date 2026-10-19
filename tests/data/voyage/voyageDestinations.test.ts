@@ -3,8 +3,15 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { VOYAGE_DESTINATIONS } from '../../../src/data/voyage/voyageDestinations';
 import { raDecDistToCartesian } from '../../../src/utils/math/raDecDistToCartesian';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
-type SeedRow = { readonly id: string; readonly ra: number; readonly dec: number; readonly distanceMpc: number };
+type SeedRow = {
+  readonly id: string;
+  readonly ra: number;
+  readonly dec: number;
+  readonly distanceMpc: number;
+  readonly diameterKpc: number;
+};
 
 const SEED: readonly SeedRow[] = JSON.parse(
   readFileSync(join(process.cwd(), 'data', 'seeds', 'famous_galaxies.seed.json'), 'utf8'),
@@ -17,5 +24,9 @@ describe('VOYAGE_DESTINATIONS', () => {
     const got = VOYAGE_DESTINATIONS[id].positionMpc;
     const scale = Math.hypot(...want);
     for (let i = 0; i < 3; i += 1) expect(Math.abs(got[i]! - want[i]!) / scale).toBeLessThan(1e-6);
+    expect(VOYAGE_DESTINATIONS[id].arrivalRadiusMpc).toBeCloseTo(
+      (row.diameterKpc / 2) * SCALE_UNITS.KPC_TO_MPC,
+      12,
+    );
   });
 });
