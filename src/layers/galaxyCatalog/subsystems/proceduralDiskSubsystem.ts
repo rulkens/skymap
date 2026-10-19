@@ -39,6 +39,7 @@ import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tile
 import type { SlotStore } from '../../../@types/cache/SlotStore';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
 import type { ProceduralDiskFrameOutput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
@@ -86,6 +87,7 @@ export function createProceduralDiskSubsystem(
     let sourceOpacity = 1;
     // The source's surface-brightness zero-point and the block's ordinal base,
     // hoisted with the sticky map.
+    let record: GalaxyRecordSource | undefined;
     let medianAbsMag = 0;
     let ordinalBase = 0;
 
@@ -97,7 +99,8 @@ export function createProceduralDiskSubsystem(
       beginSource(source, windowStart, windowEnd, blockOrdinalBase) {
         stickyProcDisks = stickyFor(source);
         sourceOpacity = input.sourceOpacity(source);
-        medianAbsMag = input.records.get(source)!.stats.medianAbsMag;
+        record = input.records.get(source)!;
+        medianAbsMag = record.stats.medianAbsMag;
         ordinalBase = blockOrdinalBase;
         // Purge sticky entries inside the current stride window — the
         // row visits are authoritative for those ordinals.
@@ -143,6 +146,10 @@ export function createProceduralDiskSubsystem(
         // in here because sbAmp is the sole brightness/alpha multiplier the
         // fragment shader reads (proceduralDisks/fragment.wesl's `intensity`).
         const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness * sourceOpacity;
+        // The pick word carries where the record sits in the drawn buffer, not
+        // its ordinal; a record with no drawn point has no pick identity.
+        const pick = record?.pickOfOrdinal(ordinal) ?? null;
+        if (pick === null) return;
 
         const emitted = maybeEmitProceduralDisk(
           px,
@@ -157,7 +164,7 @@ export function createProceduralDiskSubsystem(
           PROCEDURAL_DISK_FADE_START_PX,
           PROCEDURAL_DISK_FADE_END_PX,
           source,
-          ordinal,
+          pick,
         );
         if (emitted) {
           // Famous-WebP crossfade-OUT: once a famous galaxy's curated WebP

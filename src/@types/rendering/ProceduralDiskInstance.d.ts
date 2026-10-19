@@ -74,7 +74,7 @@ export type ProceduralDiskInstance = {
    * later step packs them into a dedicated pick vertex slot.
    */
   sourceCode: SourceType;
-  /** Per-source catalog row index — the localIdx half of the packed pick id. */
+  /** The record's pick index (`pickOfOrdinal`) — the localIdx half of the packed pick id. */
   localIdx: number;
   /**
    * The EFFECTIVE per-instance surface-brightness amplitude the fragment
