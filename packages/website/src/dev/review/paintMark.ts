@@ -5,10 +5,10 @@ import reviewPage from './ReviewPage/ReviewPage.module.css';
 import { reviewBlockOf } from './reviewBlockOf';
 
 function tag(el: Element, mark: DocsReviewMark): void {
-  el.classList.add(reviewPage.mark, reviewPage[mark.state]!);
+  el.classList.add(reviewPage.mark!, reviewPage[mark.state]!);
   el.setAttribute('data-review-id', mark.id);
   const rewrite = mark.state === 'rewrite';
-  if (rewrite && mark.after) el.classList.add(reviewPage.hasAfter);
+  if (rewrite && mark.after) el.classList.add(reviewPage.hasAfter!);
   const notes = [
     mark.reason !== 'owner' && mark.reason,
     mark.why,
