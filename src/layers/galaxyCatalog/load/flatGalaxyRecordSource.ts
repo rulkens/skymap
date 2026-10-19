@@ -27,14 +27,14 @@ export function flatGalaxyRecordSource(
   const count = catalog.count;
   const claim = (entry as GalaxyCatalogSourceEntry).durableId;
   const prefix = claim === undefined ? null : `${claim.prefix}-`;
-  // Built on the first durable-id ask: most sessions never make one.
-  let lookup: ((id: bigint) => number) | null = null;
+  // Built here, at catalog commit: the first ask comes from the frame planner's
+  // alias-index rebuild, where a ~65 ms build would stall a frame.
+  const lookup = prefix === null ? null : buildObjIdLookup(catalog.objIDs);
 
   function rowOfDurableId(id: string): number {
-    if (prefix === null || !id.startsWith(prefix)) return -1;
+    if (prefix === null || lookup === null || !id.startsWith(prefix)) return -1;
     const digits = id.slice(prefix.length);
     if (!/^\d+$/.test(digits)) return -1;
-    lookup ??= buildObjIdLookup(catalog.objIDs);
     return lookup(BigInt(digits));
   }
 
