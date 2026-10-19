@@ -15,6 +15,10 @@ import { Source } from '../../../../src/data/sources';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
+import {
+  BOOST_FLOAT_INDEX,
+  STAR_UNIFORM_BYTES,
+} from '../../../../src/layers/starCatalog/render/starCatalogLayout';
 
 // The cut's own GPU resources are not under test; stub it to always have a list.
 vi.mock('../../../../src/layers/starCatalog/render/starCutGpu', () => ({
@@ -58,6 +62,7 @@ function args(viewSlot: number): StarCatalogCutDrawArgs {
   return {
     source: Source.GaiaStars,
     focus: STAR_FOCUS_AT_REST,
+    boost: null,
     stream: 'leaf',
     capture: false,
     vp: new Float32Array(16),
@@ -135,5 +140,41 @@ describe('starCatalogRenderer viewSlot isolation', () => {
       'star-catalog-linear-pipeline',
       'star-catalog-kneed-pipeline',
     ]);
+  });
+});
+
+describe('starCatalogRenderer boost tail', () => {
+  // The scratch is reused across draws, so a null boost must clear what a boosted draw left.
+  it('star uniforms with a null boost are the identity block', () => {
+    const device = mockDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      drawIndirect: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const boostLanes = () => {
+      const image = writeBuffer.mock.calls.at(-1)![2] as Float32Array;
+      expect(image.byteLength).toBe(STAR_UNIFORM_BYTES);
+      return Array.from(image.subarray(BOOST_FLOAT_INDEX, BOOST_FLOAT_INDEX + 8));
+    };
+
+    renderer.drawCut(pass, {
+      ...args(0),
+      boost: {
+        shipMpc: [0, 0, 0],
+        dir: [0, 0, 1],
+        beta: 0.6,
+        gamma: 1.25,
+        contraction: true,
+        doppler: true,
+        headlight: 2,
+      },
+    });
+    expect(boostLanes()).toEqual([0, 0, 1, Math.fround(0.6), 1.25, 1, 1, 2]);
+    renderer.drawCut(pass, args(0));
+    expect(boostLanes()).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 });

@@ -46,6 +46,8 @@
 // against the real fetched distribution.
 
 import package::lib::math::saturate;
+import package::lib::boost::boostedBpRp;
+import package::lib::boost::ANCHOR_BPRP_G;
 
 fn starTint(bpRp: f32) -> vec3<f32> {
   // Spectral-class anchors (linear RGB), authored here — see the module header.
@@ -61,4 +63,12 @@ fn starTint(bpRp: f32) -> vec3<f32> {
   c = mix(c, kc, saturate((bpRp -   0.85 ) / (1.25 -   0.85 )));
   c = mix(c, mc, saturate((bpRp -   1.25 ) / (2.20 -   1.25 )));
   return c;
+}
+
+// The Doppler tint for an emitter known only by its linear RGB (the seeded
+// stars, the Milky Way sprites): the ratio a G-anchor star's tint takes at d.
+// An approximation, since the true shift depends on the source's own
+// temperature; exactly 1 at d == 1, where boostedBpRp returns its input.
+fn dopplerTint(d: f32) -> vec3<f32> {
+  return starTint(boostedBpRp(ANCHOR_BPRP_G, d)) / starTint(ANCHOR_BPRP_G);
 }

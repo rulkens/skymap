@@ -92,6 +92,9 @@ import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::leafEntryNode;
 import package::starCatalog::cutIo::leafEntryBlock;
 import package::starCatalog::tint::starTint;
+import package::lib::boost::dopplerFactor;
+import package::lib::boost::boostedBpRp;
+import package::lib::boost::headlightGain;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
@@ -318,10 +321,13 @@ fn vs(
 
   out.uv = corner;
 
+  // The ship's Doppler factor along the line of sight: the camera is the ship.
+  // Brightness attenuation above stays Earth-frame (d2).
+  let doppler = dopplerFactor(worldRelCam, u.boost);
   let bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
-  out.color = starTint(bpRp);
+  out.color = starTint(boostedBpRp(bpRp, doppler));
   out.opacity = nodeOpacity;
-  out.intensity = intensity * focusMult;
+  out.intensity = intensity * focusMult * headlightGain(doppler, u.boost);
   out.recordIdx = base;
   return out;
 }

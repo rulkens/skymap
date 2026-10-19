@@ -221,6 +221,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
         // slab's viewport is `ctx.canvasSize`), so the view's `drawPxPerRad`
         // already is the target's — no offscreen-height rescale needed here.
         pxPerRad: ctx.drawPxPerRad,
+        boost: ctx.snapshot.boost,
         viewSlot: ctx.viewSlot,
       });
     },

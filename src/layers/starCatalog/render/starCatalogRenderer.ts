@@ -24,6 +24,7 @@ import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import { writeBoostUniforms } from '../../../services/gpu/lib/boostUniforms';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { createViewSlotUniformRing } from '../../../utils/gpu/createViewSlotUniformRing';
 import {
@@ -33,6 +34,7 @@ import {
   GLOW_OVERLAP_FLOAT_INDEX,
   AGG_INTENSITY_CAP_FLOAT_INDEX,
   PX_PER_RAD_FLOAT_INDEX,
+  BOOST_FLOAT_INDEX,
   writeStarFocus,
 } from './starCatalogLayout';
 import { createStarCutGpu } from './starCutGpu';
@@ -251,6 +253,7 @@ export function createStarCatalogRenderer(
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = args.aggregateIntensityCap;
     cameraScratch[PX_PER_RAD_FLOAT_INDEX] = args.pxPerRad;
     writeStarFocus(cameraScratch, args.focus);
+    writeBoostUniforms(cameraScratch, BOOST_FLOAT_INDEX, args.boost);
     const cameraRing = cameraRings[args.stream];
     cameraRing.writeSlot(args.viewSlot, cameraScratch);
 

@@ -7,6 +7,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarDrawStream } from './StarDrawStream';
 import type { StarFocusSphere } from './StarFocusSphere';
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 
 export type StarCatalogCutDrawArgs = {
   readonly source: SourceType;
@@ -22,5 +23,7 @@ export type StarCatalogCutDrawArgs = {
   readonly glowOverlap: number;
   readonly aggregateIntensityCap: number;
   readonly focus: StarFocusSphere;
+  /** `ctx.snapshot.boost`; null draws the rest frame. */
+  readonly boost: FrameBoost | null;
   readonly viewSlot: number;
 };

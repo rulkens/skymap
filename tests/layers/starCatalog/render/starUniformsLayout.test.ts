@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { BOOST_UNIFORM_BYTES } from '../../../../src/services/gpu/lib/boostUniforms';
 import { join } from 'node:path';
 import {
   STAR_UNIFORM_BYTES,
@@ -19,6 +20,7 @@ import {
   FOCUS_APPARENT_FLOAT_INDEX,
   FOCUS_PHYSICAL_FLOAT_INDEX,
   FOCUS_BLEND_FLOAT_INDEX,
+  BOOST_FLOAT_INDEX,
 } from '../../../../src/layers/starCatalog/render/starCatalogLayout';
 
 const WORD = 4;
@@ -27,6 +29,7 @@ const TYPES: Record<string, { align: number; size: number }> = {
   u32: { align: 4, size: 4 },
   'vec3<f32>': { align: 16, size: 12 },
   CameraUniforms: { align: 16, size: 80 },
+  BoostUniforms: { align: 16, size: BOOST_UNIFORM_BYTES },
 };
 
 const roundUp = (v: number, a: number) => Math.ceil(v / a) * a;
@@ -69,6 +72,7 @@ describe('StarUniforms CPU/WESL layout parity', () => {
     expect(FOCUS_APPARENT_FLOAT_INDEX).toBe(at('focusApparentRadiusMpc'));
     expect(FOCUS_PHYSICAL_FLOAT_INDEX).toBe(at('focusPhysicalRadiusMpc'));
     expect(FOCUS_BLEND_FLOAT_INDEX).toBe(at('focusBlend'));
+    expect(BOOST_FLOAT_INDEX).toBe(at('boost'));
   });
 
   it('the buffer size is the struct size', () => {

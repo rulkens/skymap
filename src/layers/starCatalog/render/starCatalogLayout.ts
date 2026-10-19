@@ -8,11 +8,13 @@
  *   byte 96  aggregateIntensityCap f32 · 100 pxPerRad f32 · 104..111 pad
  *   byte 112 focusCenterRelCam vec3 · 124 focusApparentRadiusMpc f32
  *   byte 128 focusPhysicalRadiusMpc f32 · 132 focusBlend f32 · 136..143 pad
+ *   byte 144 boost BoostUniforms (32 B; zero is the identity, so the pick leaves it)
  *
  * @module
  */
 
 import { CAMERA_UNIFORM_BYTES } from '../../../services/gpu/lib/cameraUniforms';
+import { BOOST_UNIFORM_BYTES } from '../../../services/gpu/lib/boostUniforms';
 import { roundUpToMultiple } from '../../../utils/math/roundUpToMultiple';
 import type { StarFocusSphere } from '../@types/StarFocusSphere';
 
@@ -27,7 +29,8 @@ const FOCUS_CENTER_BYTE_OFFSET = roundUpToMultiple(
 const FOCUS_APPARENT_BYTE_OFFSET = FOCUS_CENTER_BYTE_OFFSET + 3 * WORD_BYTES;
 const FOCUS_PHYSICAL_BYTE_OFFSET = FOCUS_APPARENT_BYTE_OFFSET + WORD_BYTES;
 const FOCUS_BLEND_BYTE_OFFSET = FOCUS_PHYSICAL_BYTE_OFFSET + WORD_BYTES;
-export const STAR_UNIFORM_BYTES = roundUpToMultiple(FOCUS_BLEND_BYTE_OFFSET + WORD_BYTES, 16);
+const BOOST_BYTE_OFFSET = roundUpToMultiple(FOCUS_BLEND_BYTE_OFFSET + WORD_BYTES, 16);
+export const STAR_UNIFORM_BYTES = BOOST_BYTE_OFFSET + BOOST_UNIFORM_BYTES;
 
 const scalarIndex = (slot: number) => (CAMERA_UNIFORM_BYTES + slot * WORD_BYTES) / WORD_BYTES;
 
@@ -49,6 +52,7 @@ export const FOCUS_CENTER_FLOAT_INDEX = FOCUS_CENTER_BYTE_OFFSET / WORD_BYTES;
 export const FOCUS_APPARENT_FLOAT_INDEX = FOCUS_APPARENT_BYTE_OFFSET / WORD_BYTES;
 export const FOCUS_PHYSICAL_FLOAT_INDEX = FOCUS_PHYSICAL_BYTE_OFFSET / WORD_BYTES;
 export const FOCUS_BLEND_FLOAT_INDEX = FOCUS_BLEND_BYTE_OFFSET / WORD_BYTES;
+export const BOOST_FLOAT_INDEX = BOOST_BYTE_OFFSET / WORD_BYTES;
 
 /**
  * Write the focus sphere into a `StarUniforms` scratch. Both star renderers

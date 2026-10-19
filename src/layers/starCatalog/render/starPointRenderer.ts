@@ -60,10 +60,12 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarPointRenderer } from '../@types/StarPointRenderer';
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 import vsCode from '../../../services/gpu/shaders/bodies/starPoints/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/bodies/starPoints/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import { BOOST_UNIFORM_BYTES, writeBoostUniforms } from '../../../services/gpu/lib/boostUniforms';
 import {
   createViewSlotUniformRing,
   VIEW_SLOT_COUNT,
@@ -82,14 +84,14 @@ const STAR_STRIDE = FLOATS_PER_STAR * 4; // 28 bytes
 /**
  * Uniform-buffer size for `StarPointUniforms` (`starPoints/io.wesl`): the shared
  * 80-byte `CameraUniforms` prefix + a `sizePx` / `brightness` / `pxPerRad` tail
- * rounded up to the 16-byte alignment the prefix's `mat4x4` demands. `sizePx`
- * lands at float index 20 (byte 80), `brightness` at 21 (byte 84), `pxPerRad`
- * at 22 (byte 88); float 23 is the alignment pad (zero-init, never written).
+ * at floats 20..22 (byte 80), float 23 the alignment pad (zero-init, never
+ * written), then the 32-byte `BoostUniforms` block at float 24 (byte 96).
  */
-const STAR_POINT_UNIFORM_BYTES = 96;
+const STAR_POINT_UNIFORM_BYTES = 96 + BOOST_UNIFORM_BYTES;
 const UNIFORM_SIZEPX_INDEX = 20;
 const UNIFORM_BRIGHTNESS_INDEX = 21;
 const UNIFORM_PX_PER_RAD_INDEX = 22;
+const UNIFORM_BOOST_INDEX = 24;
 
 export function createStarPointRenderer(
   device: GPUDevice,
@@ -99,7 +101,7 @@ export function createStarPointRenderer(
   //
   // The 80-byte CameraUniforms prefix (floats 0..15 = viewProj, 16..17 =
   // viewportPx, 18..19 = named pads, stay 0) plus the sizePx / brightness /
-  // pxPerRad tail at floats 20..22 (23 pad, stays 0). See STAR_POINT_UNIFORM_BYTES.
+  // pxPerRad tail at floats 20..22 (23 pad, stays 0) and the boost block at 24.
   const uniformScratch = new Float32Array(STAR_POINT_UNIFORM_BYTES / 4);
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
@@ -234,7 +236,13 @@ export function createStarPointRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    opts: { sizePx: number; brightness: number; pxPerRad: number; viewSlot: number },
+    opts: {
+      sizePx: number;
+      brightness: number;
+      pxPerRad: number;
+      boost: FrameBoost | null;
+      viewSlot: number;
+    },
   ): void {
     const { viewSlot } = opts;
     const instanceBuffer = instanceBuffers[viewSlot]!;
@@ -250,6 +258,7 @@ export function createStarPointRenderer(
     uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
     uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;
     uniformScratch[UNIFORM_PX_PER_RAD_INDEX] = opts.pxPerRad;
+    writeBoostUniforms(uniformScratch, UNIFORM_BOOST_INDEX, opts.boost);
     uniformRing.writeSlot(viewSlot, uniformScratch);
 
     pass.setPipeline(pipeline);

@@ -41,6 +41,7 @@ export function drawStarCut(
       glowOverlap: inputs.glowOverlap,
       aggregateIntensityCap: inputs.aggregateIntensityCap,
       focus,
+      boost: ctx.snapshot.boost,
       viewSlot: ctx.viewSlot,
     });
   }

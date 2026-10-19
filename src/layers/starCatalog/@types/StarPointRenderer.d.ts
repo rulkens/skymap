@@ -19,6 +19,7 @@
  * module header's precision note.
  */
 
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
@@ -56,6 +57,13 @@ export type StarPointRenderer = Renderer & {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    opts: { sizePx: number; brightness: number; pxPerRad: number; viewSlot: number },
+    opts: {
+      sizePx: number;
+      brightness: number;
+      pxPerRad: number;
+      /** `ctx.snapshot.boost`; null draws the rest frame. */
+      boost: FrameBoost | null;
+      viewSlot: number;
+    },
   ): void;
 };

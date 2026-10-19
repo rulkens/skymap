@@ -12,6 +12,7 @@
  * depth attachment.
  */
 
+import type { FrameBoost } from '../../../../src/@types/engine/frame/FrameBoost';
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../src/layers/starCatalog/render/starPointRenderer';
 import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
@@ -67,8 +68,18 @@ const SIRIUS: PositionedStar = {
   seedIndex: 6,
 };
 
+const BOOST: FrameBoost = {
+  shipMpc: [0, 0, 0],
+  dir: [1, 0, 0],
+  beta: 0.6,
+  gamma: 1.25,
+  contraction: true,
+  doppler: true,
+  headlight: 1,
+};
+
 describe('createStarPointRenderer', () => {
-  const DRAW_OPTS = { sizePx: 2.5, brightness: 1, pxPerRad: 935, viewSlot: 0 };
+  const DRAW_OPTS = { sizePx: 2.5, brightness: 1, pxPerRad: 935, boost: null, viewSlot: 0 };
 
   it('draw is a no-op before setStars, draws 6×N after, and clears on empty upload', () => {
     const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');
@@ -94,25 +105,27 @@ describe('createStarPointRenderer', () => {
     expect(cleared.draw).not.toHaveBeenCalled();
   });
 
-  it('writes sizePx / brightness / pxPerRad into the uniform tail at floats 20..22, buffer sized 96', () => {
+  it('writes sizePx / brightness / pxPerRad into the uniform tail at floats 20..22, buffer sized 128', () => {
     const device = mockDevice();
     const renderer = createStarPointRenderer(device, 'rgba16float');
     const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
     const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
 
-    // The StarPointUniforms buffer is the CameraUniforms prefix (80 B) plus the
-    // sizePx / brightness tail rounded to 96 B — must match starPoints/io.wesl.
-    // One physical buffer per view slot (Task 13b); slot 0's is checked here.
+    // The StarPointUniforms buffer is the CameraUniforms prefix (80 B), the
+    // sizePx / brightness / pxPerRad tail rounded to 96 B, then the 32 B boost
+    // block — must match starPoints/io.wesl. One physical buffer per view slot
+    // (Task 13b); slot 0's is checked here.
     const uniformCreate = createBuffer.mock.calls.find(
       ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-uniform-slot0',
     );
-    expect((uniformCreate![0] as GPUBufferDescriptor).size).toBe(96);
+    expect((uniformCreate![0] as GPUBufferDescriptor).size).toBe(128);
 
     renderer.setStars([SUN, SIRIUS], 0);
     renderer.draw(mockPass(), new Float32Array(16), [1920, 1080], {
       sizePx: 3.5,
       brightness: 42,
       pxPerRad: 777,
+      boost: { ...BOOST, headlight: 2 },
       viewSlot: 0,
     });
 
@@ -126,6 +139,9 @@ describe('createStarPointRenderer', () => {
     expect(scratch[21]).toBe(42);
     expect(scratch[22]).toBe(777);
     expect(scratch[23]).toBe(0);
+    // The boost block opens at float 24 (byte 96); headlight is its last lane.
+    expect(scratch[24 + 4]).toBe(BOOST.gamma);
+    expect(scratch[24 + 7]).toBe(2);
   });
 
   it('reuses the instance buffer across same-length setStars — one createBuffer, one writeBuffer per upload', () => {
@@ -168,12 +184,14 @@ describe('createStarPointRenderer', () => {
       sizePx: 2.5,
       brightness: 1,
       pxPerRad: 222,
+      boost: null,
       viewSlot: 1,
     });
     renderer.draw(mockPass(), new Float32Array(16), [256, 256], {
       sizePx: 2.5,
       brightness: 1,
       pxPerRad: 222,
+      boost: null,
       viewSlot: 2,
     });
 

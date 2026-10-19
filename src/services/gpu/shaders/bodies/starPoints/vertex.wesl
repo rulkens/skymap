@@ -68,6 +68,9 @@ import package::lib::starPhotometry::D_REF_MPC;
 import package::lib::starPhotometry::MIN_D2_MPC2;
 import package::lib::starPhotometry::starPeakIntensity;
 import package::lib::starPhotometry::toRefPx;
+import package::lib::boost::dopplerFactor;
+import package::lib::boost::headlightGain;
+import package::starCatalog::tint::dopplerTint;
 
 @group(0) @binding(0) var<uniform> u: StarPointUniforms;
 
@@ -113,8 +116,10 @@ fn vs(
   // near-plane clip of a corner behind a view's eye (see
   // 'milkyWay/sprites/stars.wesl').
 
+  // 'position' is camera-relative and the camera is the ship.
+  let doppler = dopplerFactor(position, u.boost);
   out.uv = corner;
-  out.color = color;
-  out.intensity = intensity;
+  out.color = color * dopplerTint(doppler);
+  out.intensity = intensity * headlightGain(doppler, u.boost);
   return out;
 }

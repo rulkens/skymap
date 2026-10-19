@@ -26,6 +26,7 @@
 //                    leaf obey the identical settings.
 
 import package::lib::camera::CameraUniforms;
+import package::lib::boost::BoostUniforms;
 
 // Per-frame @group(0) uniform. Byte layout (WGSL std140 uniform rules) must
 // stay byte-exact with the renderer's uniform write (starPointRenderer.ts):
@@ -34,14 +35,14 @@ import package::lib::camera::CameraUniforms;
 //   offset 80  sizePx      f32             (user base star-dot size in px)
 //   offset 84  brightness  f32             (user exposure trim; 1.0 = identity)
 //   offset 88  pxPerRad    f32             (target px per radian, toRefPx)
-//   struct size 96 (rounded up from 92 to the 16-byte alignment CameraUniforms'
-//   mat4x4 demands; the three scalars ride the rounding tail, so the padding is
-//   float32[23] in the renderer scratch).
+//   offset 96  boost       BoostUniforms   (32 B, lib/boost.wesl; float 23 pads to it)
+//   struct size 128.
 struct StarPointUniforms {
   cam: CameraUniforms,
   sizePx: f32,
   brightness: f32,
   pxPerRad: f32,
+  boost: BoostUniforms,
 };
 
 struct VSOut {

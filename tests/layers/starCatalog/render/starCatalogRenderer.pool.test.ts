@@ -358,6 +358,7 @@ describe('starCatalogRenderer chunk pool', () => {
       {
         source: Source.GaiaStars,
         focus: STAR_FOCUS_AT_REST,
+        boost: null,
         stream: 'leaf',
         capture: true,
         vp: new Float32Array(16),

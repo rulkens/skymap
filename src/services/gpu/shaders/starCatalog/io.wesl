@@ -15,14 +15,17 @@
 //   offset 124  focusApparentRadiusMpc f32  rides the vec3's 4th lane
 //   offset 128  focusPhysicalRadiusMpc f32
 //   offset 132  focusBlend             f32  0 = no focus; the multiplier is 1
-//   size 144 (rounded to the prefix's 16 B alignment; 104..111 and 136..143 pad)
+//   offset 144  boost                  BoostUniforms (32 B, lib/boost.wesl)
+//   size 176 (104..111 and 136..143 pad)
 //
 // pickPass is written only by the pick pipeline, into its OWN uniform buffer;
 // the visual draw leaves it zero-init. One flag rather than a second vertex
 // module keeps both pipelines on one vertex stage. The pick draw is leaf-only,
-// so it leaves aggregateIntensityCap and pxPerRad zero.
+// so it leaves aggregateIntensityCap and pxPerRad zero, and the boost as the
+// zero identity block.
 
 import package::lib::camera::CameraUniforms;
+import package::lib::boost::BoostUniforms;
 
 struct StarUniforms {
   cam: CameraUniforms,
@@ -37,6 +40,7 @@ struct StarUniforms {
   focusApparentRadiusMpc: f32,
   focusPhysicalRadiusMpc: f32,
   focusBlend: f32,
+  boost: BoostUniforms,
 };
 
 struct VSOut {
