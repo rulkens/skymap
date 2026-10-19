@@ -88,6 +88,7 @@ describe('Settings page', () => {
   const NOT_IN_PANEL = [
     /^debug\./,
     /^missions\.(craft|speed)$/,
+    /^voyage\./,
     /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
     /^picking\./,

@@ -21,6 +21,7 @@ import { milkyWayLayer } from '../layers/milkyWay/layer';
 import { missionsLayer } from '../layers/missions/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
 import { structureLayer } from '../layers/structure/layer';
+import { voyageLayer } from '../layers/voyage/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
 export const APP_COMPOSITION = {
@@ -39,6 +40,7 @@ export const APP_COMPOSITION = {
     milkyWayLayer,
     structureLayer,
     bodyLayer,
+    voyageLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -57,5 +59,6 @@ export const APP_COMPOSITION = {
     typeof milkyWayLayer,
     typeof structureLayer,
     typeof bodyLayer,
+    typeof voyageLayer,
   ]
 >;

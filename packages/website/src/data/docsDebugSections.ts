@@ -85,6 +85,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/starCatalog/ui/StarCatalogTuningSection.tsx',
   },
   {
+    heading: 'Voyage boost',
+    shows:
+      'Draws the scene from a ship on a voyage at 1 g: which trip, how many Earth years since it left, the headlight strength, and switches for the squash along the line of flight and the Doppler colours. A line under them gives the ship’s own clock and its γ.',
+    file: 'src/layers/voyage/ui/VoyageTuningSection.tsx',
+  },
+  {
     heading: 'Debug Overlays',
     shows:
       'Three pictures laid over the scene: the buffer a click is looked up in, the stand-in shapes of the orbit trails, and the level of detail of each ground tile.',

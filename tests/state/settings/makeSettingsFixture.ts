@@ -54,6 +54,7 @@ import { initialState as blackHolesInitialState } from '../../../src/layers/blac
 import { initialState as blackHoleLensingTuningInitialState } from '../../../src/layers/blackHoles/state/lensingTuning/initialState';
 import { initialState as missionsInitialState } from '../../../src/layers/missions/state/missions/initialState';
 import { initialState as missionTrailsInitialState } from '../../../src/layers/missions/state/missionTrails/initialState';
+import { initialState as voyageInitialState } from '../../../src/layers/voyage/state/voyage/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
@@ -124,6 +125,7 @@ export function makeSettingsFixture(
     orbitTrails: { ...orbitTrailsInitialState },
     missions: { ...missionsInitialState },
     missionTrails: { ...missionTrailsInitialState },
+    voyage: { ...voyageInitialState },
     earth: { ...earthInitialState },
     starCatalogs: {
       ...starCatalogsInitialState,

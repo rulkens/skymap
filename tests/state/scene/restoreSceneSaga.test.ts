@@ -68,6 +68,7 @@ function makeSnapshot(
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
       missions: { ...f.missions },
+      voyage: { ...f.voyage },
       missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },

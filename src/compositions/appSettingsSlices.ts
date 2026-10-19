@@ -19,6 +19,7 @@ import { cosmicWebDensityLayerSettings } from '../layers/cosmicWebDensity/state/
 import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/slices';
 import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
+import { voyageLayerSettings } from '../layers/voyage/state/slices';
 
 export const APP_SETTINGS_SLICES = [
   ...blackHolesLayerSettings,
@@ -35,4 +36,5 @@ export const APP_SETTINGS_SLICES = [
   ...zoneOfAvoidanceLayerSettings,
   ...lightTimeLayerSettings,
   ...missionsLayerSettings,
+  ...voyageLayerSettings,
 ] as const;
