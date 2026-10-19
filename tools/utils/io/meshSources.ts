@@ -27,6 +27,9 @@ export type MeshSourceEntry = {
   /** Present iff an `anchored` `SurfaceFixedSite` uses this key: the source's
    *  real-world anchor. */
   readonly georeferenced?: GeodeticAnchor;
+  /** `'source'` keeps the source frame's origin instead of recentring on the
+   *  surface centroid: a shape model's origin is the centre of mass its orbit tracks. */
+  readonly origin?: 'source';
 };
 
 /**
