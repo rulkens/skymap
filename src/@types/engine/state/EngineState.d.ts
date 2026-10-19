@@ -71,9 +71,9 @@ export type EngineState = {
    */
   cubemapCaptures: CubemapCaptureRuntimes;
   /**
-   * Bumped once per successful galaxy-catalog commit (`wireGalaxyCatalogSourceSlot`'s
-   * single writer). A scalar, not per-row: it counts catalog content changes, not
-   * settings, and is read by `scheduleSkyCaptures`' re-bake key.
+   * Bumped by `createLayers`' count consumer on ANY Layer's `sourceCounts`
+   * report (stars included). A scalar, not per-row: it counts content changes,
+   * not settings, and is read by `scheduleSkyCaptures`' re-bake key.
    */
   contentVersion: number;
   assetSlots: EngineAssetSlots;

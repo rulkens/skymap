@@ -20,7 +20,7 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Seven formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Ten formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -31,6 +31,9 @@ Seven formats, each a magic + version header followed by fixed- or variable-size
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
 | SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/data/shellMesh/shellMeshFormat.ts)               |
+| SKMH   | ASCII `SKMH` | 3       | Mesh bodies (meshopt-encoded geometry + material table), per body and tier. No epoch folder yet (`docs/backlog/2026-10-19-format-table-single-source.md`). | [`meshBinaryFormat.ts`](../src/data/mesh/meshBinaryFormat.ts) |
+| SCTK   | ASCII `SCTK` | 1       | Sampled spacecraft trajectories: a track table of ids and sample counts, then the samples. Writer and reader each carry the version literal. | [`writeSpacecraftTracks.ts`](../tools/utils/io/writeSpacecraftTracks.ts) / [`parseSpacecraftTracks.ts`](../src/layers/missions/load/parseSpacecraftTracks.ts) |
+| SHGT   | —            | 3       | Earth height tiles: u16 version header + quantised heights, under their own `earth-tiles/v<N>` prefix. | [`heightTileFormat.ts`](../src/data/scene/heightTileFormat.ts) |
 
 ## `public/data/` layout
 

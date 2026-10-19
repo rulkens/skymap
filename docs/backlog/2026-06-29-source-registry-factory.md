@@ -27,6 +27,10 @@ The `add-data-source` skill — which exists to "map the full edit surface so
 no parallel site is missed" — is itself the evidence this is still a
 multi-site manual process for these two families.
 
+## Current state (re-verified 2026-10-19, architecture audit)
+
+Slots, fetchers and asset rows are now registry-driven per family for galaxy catalogs, star catalogs and volumes. What remains hand-wired is names and paths: the builder filename literals (`buildStars.ts:556`, `buildMcpmVolume.ts:45-47`, `buildDustVolume.ts:39-41`), the `DATA_FAMILIES` regexes, `BULK_CATALOG_CATEGORIES`, and the per-source `if (source === X)` chains. See `2026-10-19-deploy-filenames-from-registry.md` and `2026-10-19-per-source-chains-to-registry-fields.md`, which split this item.
+
 ## Direction
 
 Drive fetcher + slot + UI-row creation off the registry entry so a new star

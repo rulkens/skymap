@@ -1,21 +1,17 @@
 // ─── The enum itself ────────────────────────────────────────────────────────
 
 /**
- * Stable numeric tag for every data source. Used as a `.bin` byte for
- * galaxy catalog rows, packed into the pick texture for galaxy catalog + structure hits, and
- * as a registry key for filament + volume assets.
+ * Stable numeric tag for every data source: the `SOURCE_REGISTRY` key, the
+ * 6-bit source field of a packed pick identity (galaxy catalogs + structures,
+ * `selectionEncoding.ts`), the bit position of the 32-bit galaxy visibility
+ * mask (`maskWith.ts`), and the key for filament + volume assets.
  *
- * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
- * file format AND packed into the pick texture's upper 6 bits. Treat
- * them like API version numbers — append, never renumber. Recycling a
- * code silently breaks every `.bin` ever written and every saved
- * selection URL. Code 0 is retired (the deleted synthetic cloud) and
- * stays unassigned for that reason.
- *
- * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
- * same "append, never renumber" discipline applies for consistency.
- * Codes 10 and 12-14 are likewise retired (the deleted CF-4 density volume
- * and the deleted DEV-only synthetic volume fixtures) and stay unassigned.
+ * NOT persisted: the SKMP `.bin` record carries no source byte (each source
+ * has its own file) and the URL hash uses string ids. Append-only all the same,
+ * because the pick texture and the mask are read by code that assumes a
+ * fixed code per row. The mask shifts by the raw code and wraps at 32 — ADR
+ * 0013 replaces this enum; `docs/backlog/2026-10-19-mask-width-guard.md` is
+ * the interim guard. Codes 0, 10 and 12-14 are retired and stay unassigned.
  */
 export const Source = {
   /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */

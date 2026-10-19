@@ -134,7 +134,7 @@ Walk them in the same registry row → settings cluster → fetcher/slot/wiring 
 renderer/layer order the galaxy catalogs use:
 
 - **Registry row + id domain** — a `type: 'starCatalog'` `SOURCE_REGISTRY` row
-  (`src/data/sources/gaia-stars.ts` is the template). `StarCatalogId`
+  (`src/layers/starCatalog/sources/gaia-stars.ts` is the template). `StarCatalogId`
   (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
   narrowing of the source-entry union, and `STAR_CATALOG_IDS`
   (`src/data/starCatalog/starCatalogIds.ts`) its auto-widening runtime list —
@@ -152,7 +152,7 @@ renderer/layer order the galaxy catalogs use:
   the same numeric key space (see `slotFor.ts`), so tier reloads flow through
   the shared machinery.
 - **Renderer + layer** — a dedicated per-source `starCatalog/` renderer family
-  (`src/services/gpu/renderers/starCatalog/` + `shaders/starCatalog/`):
+  (`src/layers/starCatalog/render/` + `src/services/gpu/shaders/starCatalog/`):
   vertex-pulling billboards, BP−RP tint, additive HDR, an octree draw-cut walker
   and an f64 origin seam. `starCatalogPass` (in `frame/passes/`) draws it and
   owns the crossfade to the procedural Milky-Way cloud — whose fade band lives in
