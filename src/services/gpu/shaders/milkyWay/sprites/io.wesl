@@ -43,16 +43,19 @@
 //                                       softness)
 //   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale,
 //                                       lodApparent)
-//   total: 208 bytes (MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE).
+//   offset 208 : boost: BoostUniforms (32 B, lib/boost.wesl; dir in MODEL
+//                                       space; zero = rest frame)
+//   total: 240 bytes (MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE).
 //
 // Every group is 16-byte aligned: mat4x4 and vec4 both align to 16, and the
 // embedded CameraUniforms ends at 80 (a 16-byte boundary), so 'model' lands
 // at 80 with no implicit padding. The CPU-side Float32Array must write each
 // field at the matching f32 index (viewProj 0..15, viewportPx 16..17,
 // model 20..35, camPosModel 36..39, _reserved 40..43, params0 44..47,
-// params1 48..51) or the uniforms are silently garbage.
+// params1 48..51, boost 52..59) or the uniforms are silently garbage.
 
 import package::lib::camera::CameraUniforms;
+import package::lib::boost::BoostUniforms;
 
 struct Uniforms {
   // Shared camera prefix — viewProj for clip-space projection, viewportPx
@@ -69,7 +72,7 @@ struct Uniforms {
   // 'spriteBillboardOffset'. vec4 so it occupies a clean 16-byte slot.
   camPosModel: vec4<f32>,
   // Zero. Was the second half of the CPU-precomputed view-plane basis; kept
-  // as padding so the struct stays 208 bytes and every later offset holds.
+  // as padding so every later offset holds.
   _reserved: vec4<f32>,
   // params0 = (fadeAlpha, exposure, modelScale, softness).
   //   fadeAlpha  — visibility fade in [0, 1] (apparent-size fade x toggle
@@ -103,6 +106,9 @@ struct Uniforms {
   // vertex-culled and the survivors brightened so total light holds. Dust
   // ignores all four (it uses a fixed NDC clamp instead).
   params1: vec4<f32>,
+  // The observer's boost, 'dir' rotated into model space so it dots with
+  // model-space sight lines. Stars tint and gain by it; dust reads none of it.
+  boost: BoostUniforms,
 };
 
 // The single '@group(0) @binding(0)' binding, imported by both pass modules

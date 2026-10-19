@@ -44,6 +44,7 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'mi
         camPosModel: milkyWayCamPosModel(ctx.drawCamPos),
         model: milkyWayModelCached(),
         fadeAlpha,
+        boost: ctx.snapshot.boost,
         // The live look knobs — `MilkyWaySettings` widens to `MilkyWayTuning`,
         // so the cluster passes straight through. Read here rather than in the
         // renderer so a DebugPanel slider drag lands on the next frame with no

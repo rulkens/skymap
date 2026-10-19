@@ -11,6 +11,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MilkyWayCloudBuffers } from '../../../@types/galaxy/MilkyWayCloudBuffers';
 import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 
 export type MilkyWayCloudDrawArgs = {
   /** Combined view-projection matrix (16 floats) — `ctx.vp`. */
@@ -35,6 +36,8 @@ export type MilkyWayCloudDrawArgs = {
   readonly fadeAlpha: number;
   /** Live star-cloud look knobs — `state.settings.milkyWay`. */
   readonly tuning: MilkyWayTuning;
+  /** `ctx.snapshot.boost`, its `dir` in world space; null is the rest frame. */
+  readonly boost: FrameBoost | null;
   /** The generation pass's current instance buffers + counts. */
   readonly buffers: MilkyWayCloudBuffers;
 };

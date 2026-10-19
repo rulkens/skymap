@@ -42,6 +42,9 @@ import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::fluxConservingLod;
 import package::lib::cloudSprite::starGlowAlpha;
+import package::lib::boost::dopplerFactor;
+import package::lib::boost::headlightGain;
+import package::starCatalog::tint::dopplerTint;
 
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
@@ -119,8 +122,10 @@ fn vs(@location(0) corner: vec2<f32>,
   // fragment stage never runs for it.
   if (lod.cull) { o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0); } else { o.pos = kClip; }
   o.uv = corner;
-  o.color = inColor;
-  o.bright = inSB.y * lod.boost * clampFluxScale;
+  // Model space on both sides: the eye and dir arrive rotated into it.
+  let doppler = dopplerFactor(inPos - u.camPosModel.xyz, u.boost);
+  o.color = inColor * dopplerTint(doppler);
+  o.bright = inSB.y * lod.boost * clampFluxScale * headlightGain(doppler, u.boost);
   return o;
 }
 

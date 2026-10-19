@@ -32,7 +32,9 @@ import { MILKY_WAY_MODEL_SCALE } from '../../../services/engine/galaxyGenerator/
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../@types/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../@types/MilkyWayCloudDrawArgs';
+import { mat4, vec3 } from 'wgpu-matrix';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import { writeBoostUniforms } from '../../../services/gpu/lib/boostUniforms';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../data/milkyWay/milkyWayCloudUniformBufferSize';
 
@@ -168,13 +170,14 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
   // passes read the identical struct; only the viewport differs (the star pass
   // is sized to the reduced-resolution aggregate target).
   function writeUniforms(target: GPUBuffer, args: MilkyWayCloudDrawArgs): void {
-    const { vp, viewportPx, pxPerRad, camPosModel, model, fadeAlpha, tuning } = args;
+    const { vp, viewportPx, pxPerRad, camPosModel, model, fadeAlpha, tuning, boost } = args;
     const f32 = uniformScratch;
 
     // Pack io.wesl's Uniforms (byte offsets in the io.wesl header):
     // viewProj 0..15, viewportPx 16..17, pxPerRad 18, pad 19, model 20..35,
     // camPosModel 36..39, reserved 40..43, params0 44..47,
-    // params1 48..51 (starPxMin, starPxMax, starSizeScale, lodApparent).
+    // params1 48..51 (starPxMin, starPxMax, starSizeScale, lodApparent),
+    // boost 52..59.
     writeCameraPrefix(f32, vp, viewportPx, pxPerRad);
     // Explicit pad zeroing — this scratch is reused across frames, so the
     // pad can't rely on zero-init the way a fresh Float32Array can.
@@ -203,6 +206,15 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     f32[49] = tuning.starPxMax;
     f32[50] = tuning.starSizeScale;
     f32[51] = tuning.lodApparent;
+    // The sprites dot the boost's dir with model-space sight lines. 'model' is a
+    // rotation under a uniform scale, so its transpose carries a world direction
+    // into model space up to that scale, which the normalise removes.
+    if (boost === null) {
+      writeBoostUniforms(f32, 52, null);
+    } else {
+      const d = vec3.normalize(vec3.transformMat4Upper3x3(boost.dir, mat4.transpose(model)));
+      writeBoostUniforms(f32, 52, boost, [d[0]!, d[1]!, d[2]!]);
+    }
 
     device.queue.writeBuffer(target, 0, f32);
   }

@@ -74,6 +74,7 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
         camPosModel: milkyWayCamPosModel(ctx.drawCamPos),
         model: milkyWayModelCached(),
         fadeAlpha,
+        boost: ctx.snapshot.boost,
         // The live look knobs, same as the aggregate row. The dust pass reads
         // only the model scale and fade out of the shared uniform struct, but it
         // packs the whole struct, so the values still have to be present.

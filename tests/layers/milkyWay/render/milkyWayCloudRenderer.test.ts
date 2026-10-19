@@ -104,6 +104,7 @@ function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {
     model: Float32Array.from({ length: 16 }, (_, i) => i + 100),
     fadeAlpha: 0.5,
     tuning: TUNING,
+    boost: null,
     buffers: buffers(withDust),
   };
 }
