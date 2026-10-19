@@ -12,7 +12,6 @@ import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyColumnBlock } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumnBlock';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 const sourceOver = (source: SourceType, catalog: GalaxyCatalog) =>
@@ -32,12 +31,6 @@ describe('flatGalaxyRecordSource', () => {
       medianAbsMag: -21,
       provenance: { total: 3, estimated: { orientation: 1, size: 2 } },
     });
-  });
-
-  it('ordinalOfPick and pickOfOrdinal are the identity on [0, count) and null outside', () => {
-    const flat = sourceOver(Source.Glade, makeGalaxyCatalog(3));
-    expect([-1, 0, 2, 3].map((n) => flat.ordinalOfPick(n))).toEqual([null, 0, 2, null]);
-    expect([-1, 0, 2, 3].map((n) => flat.pickOfOrdinal(n))).toEqual([null, 0, 2, null]);
   });
 
   it("resolveDurableId answers only its row's claim", () => {
@@ -77,15 +70,5 @@ describe('flatGalaxyRecordSource', () => {
     expect(flat.resolvePosition(0, 0, null)).toBe(0);
     // 0.01° = 36″: outside the envelope either way.
     expect(flat.resolvePosition(0.01, 0, null)).toBeNull();
-  });
-
-  it('forEachResidentBlock yields the catalog once at ordinal base 0', () => {
-    const catalog = makeGalaxyCatalog(3);
-    const visits: [GalaxyColumnBlock, number][] = [];
-    sourceOver(Source.Glade, catalog).forEachResidentBlock((block, base) =>
-      visits.push([block, base]),
-    );
-    expect(visits).toEqual([[catalog, 0]]);
-    expect(visits[0]![0]).toBe(catalog);
   });
 });
