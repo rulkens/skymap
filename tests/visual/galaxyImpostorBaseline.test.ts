@@ -125,7 +125,7 @@ describe('galaxy-impostor visual baseline', () => {
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
 
       const cam = makeCam();
-      const catalogs = new Map([[Source.SDSS, makeCloud(8)]]);
+      const records = galaxyRecordsOver(new Map([[Source.SDSS, makeCloud(8)]]));
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
       // One shared walk drives both bodies per frame — the same call the engine
@@ -134,7 +134,7 @@ describe('galaxy-impostor visual baseline', () => {
       const driveFrame = (nowMs: number): void => {
         const sharedInput = {
           cam,
-          records: galaxyRecordsOver(catalogs),
+          records,
           sourceMask: 0xffffffff,
           pxPerRad,
           // Live surface-brightness sliders — arbitrary plausible defaults;
