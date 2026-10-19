@@ -2,7 +2,7 @@
  * diskPlannerWalk — unit tests for the shared disk-planner catalog walk.
  *
  * Coverage focus:
- *   - visitor lifecycle ordering: beginSource → onRow per surviving row →
+ *   - visitor lifecycle ordering: beginBlock → onRow per surviving row →
  *     endSource per source, one endFrame after all sources; hidden sources
  *     get onSourceHidden and nothing else
  *   - the squared-distance early-out uses the LOOSER 8-px bound, so rows the
@@ -89,7 +89,7 @@ type WalkEvent = readonly (string | number)[];
 function recordingVisitor(events: WalkEvent[]): DiskRowVisitor {
   return {
     onSourceHidden: (source) => events.push(['onSourceHidden', source]),
-    beginSource: (source, safeStart, end) => events.push(['beginSource', source, safeStart, end]),
+    beginBlock: (source, safeStart, end) => events.push(['beginBlock', source, safeStart, end]),
     onRow: (source, _catalog, i) => events.push(['onRow', source, i]),
     endSource: (source) => events.push(['endSource', source]),
     endFrame: () => events.push(['endFrame']),
@@ -100,7 +100,7 @@ function recordingVisitor(events: WalkEvent[]): DiskRowVisitor {
 function rowCapturingVisitor(rows: { i: number; camDist: number; px: number }[]): DiskRowVisitor {
   return {
     onSourceHidden() {},
-    beginSource() {},
+    beginBlock() {},
     onRow: (_source, _catalog, i, _x, _y, _z, camDist, px) => rows.push({ i, camDist, px }),
     endSource() {},
     endFrame() {},
@@ -108,7 +108,7 @@ function rowCapturingVisitor(rows: { i: number; camDist: number; px: number }[])
 }
 
 describe('createDiskPlannerWalk', () => {
-  it('walkDiskRows drives beginSource then onRow per surviving row then endSource then endFrame in order', () => {
+  it('walkDiskRows drives beginBlock then onRow per surviving row then endSource then endFrame in order', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const rows = [
       { distMpc: 1, diameterKpc: 50 },
@@ -127,7 +127,7 @@ describe('createDiskPlannerWalk', () => {
       noopDiskRowVisitor(),
     );
     expect(events).toEqual([
-      ['beginSource', Source.SDSS, 0, 3],
+      ['beginBlock', Source.SDSS, 0, 3],
       ['onRow', Source.SDSS, 0],
       ['onRow', Source.SDSS, 1],
       ['onRow', Source.SDSS, 2],
@@ -190,7 +190,7 @@ describe('createDiskPlannerWalk', () => {
     const textured = recordingVisitor(texturedEvents);
 
     const windowsOf = (events: WalkEvent[]) =>
-      events.filter((e) => e[0] === 'beginSource').map((e) => [e[2], e[3]]);
+      events.filter((e) => e[0] === 'beginBlock').map((e) => [e[2], e[3]]);
 
     walk.runFrame(makeInput(catalogs), procedural, textured);
     walk.runFrame(makeInput(catalogs), procedural, textured);

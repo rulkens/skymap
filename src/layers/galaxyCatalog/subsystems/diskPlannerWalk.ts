@@ -80,7 +80,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     const cz = cam.position[2];
 
     // Rows admitted this frame across ALL sources — see DISK_ROW_ACCEPT_BUDGET.
-    // Once spent, later sources skip their row loop (beginSource/endSource
+    // Once spent, later sources skip their row loop (beginBlock/endSource
     // still run, so purge + cursor stay correct) and are swept on a later,
     // rotated window.
     let acceptedThisFrame = 0;
@@ -103,8 +103,8 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
           cursors.get(ordinalBase) ?? 0,
         );
 
-        procedural.beginSource(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
-        textured.beginSource(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
+        procedural.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
+        textured.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
 
         if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
           for (let i = safeStart; i < end; i++) {

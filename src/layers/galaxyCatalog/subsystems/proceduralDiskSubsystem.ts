@@ -78,8 +78,8 @@ export function createProceduralDiskSubsystem(
     const { sbScale, sbMax, brightness } = input;
     const proceduralDisks: ProceduralDiskInstance[] = [];
 
-    // Hoisted per source by beginSource so onRow does no map lookup — the
-    // walk guarantees beginSource precedes every onRow for that source.
+    // Hoisted per block by beginBlock so onRow does no map lookup — the
+    // walk guarantees beginBlock precedes every onRow of that block.
     let stickyProcDisks: Map<number, ProceduralDiskInstance> = new Map();
     // The source's live survey-fade opacity, sampled ONCE per source (mirrors
     // texturedDiskSubsystem) so a hidden catalog's procedural disks fade out
@@ -96,7 +96,7 @@ export function createProceduralDiskSubsystem(
         stickyFor(source).clear();
       },
 
-      beginSource(source, windowStart, windowEnd, blockOrdinalBase) {
+      beginBlock(source, windowStart, windowEnd, blockOrdinalBase) {
         stickyProcDisks = stickyFor(source);
         sourceOpacity = input.sourceOpacity(source);
         record = input.records.get(source)!;
@@ -142,7 +142,7 @@ export function createProceduralDiskSubsystem(
         const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
         const regEntry = SOURCE_REGISTRY[source];
         const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
-        // sourceOpacity is the survey-fade term (see beginSource above) — folded
+        // sourceOpacity is the survey-fade term (see beginBlock above) — folded
         // in here because sbAmp is the sole brightness/alpha multiplier the
         // fragment shader reads (proceduralDisks/fragment.wesl's `intensity`).
         const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness * sourceOpacity;

@@ -24,7 +24,7 @@ import type { ProceduralDiskFrameOutput } from '../../../../src/@types/engine/su
 export function noopDiskRowVisitor(): DiskRowVisitor {
   return {
     onSourceHidden() {},
-    beginSource() {},
+    beginBlock() {},
     onRow() {},
     endSource() {},
     endFrame() {},

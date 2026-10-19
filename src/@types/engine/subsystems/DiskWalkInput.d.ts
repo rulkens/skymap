@@ -21,7 +21,7 @@
  * sampled at the frame's `nowMs`) so both LOD bodies fold visibility into their
  * emitted alpha/brightness the same way the point-sprite pass does — a hidden
  * catalog's disks now fade out instead of popping once the mask bit clears.
- * Each body reads it once per source in its `beginSource` (not per row: the
+ * Each body reads it once per block in its `beginBlock` (not per row: the
  * per-row loop scales with ~2.5M rows).
  */
 

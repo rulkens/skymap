@@ -9,7 +9,7 @@
  * walk owns the loop, so each planner has to surrender its loop body while
  * keeping its own sticky map, output accumulator, sort, and per-body extras.
  * The visitor is that surrendered body: the walk calls the lifecycle hooks in
- * a fixed order (per source: `beginSource` → `onRow`* once per resident block,
+ * a fixed order (per source: `beginBlock` → `onRow`* once per resident block,
  * then one `endSource`; then one `endFrame`), and the visitor closes over the
  * state the walk must not know about. Sticky maps key by record ordinal, which
  * survives a block's eviction where a block-local row index would not.
@@ -34,12 +34,7 @@ export type DiskRowVisitor = {
    * Before a block's row loop → purgeStrideWindow(stickyMap, windowStart, windowEnd),
    * both ordinals; a row's ordinal is `ordinalBase + i`.
    */
-  beginSource(
-    source: SourceType,
-    windowStart: number,
-    windowEnd: number,
-    ordinalBase: number,
-  ): void;
+  beginBlock(source: SourceType, windowStart: number, windowEnd: number, ordinalBase: number): void;
   /** One surviving row `i` of `block`; geometry (camDist, px) already computed by the walk. */
   onRow(
     source: SourceType,

@@ -55,7 +55,7 @@ const LOAD_FADE_MS = 400;
  */
 const NOOP_ROW_VISITOR: DiskRowVisitor = {
   onSourceHidden() {},
-  beginSource() {},
+  beginBlock() {},
   onRow() {},
   endSource() {},
   endFrame() {},
@@ -123,8 +123,8 @@ export function createTexturedDiskSubsystem(
 
     const disks: DiskInstance[] = [];
 
-    // Hoisted per source by beginSource so onRow does no map lookup — the
-    // walk guarantees beginSource precedes every onRow for that source.
+    // Hoisted per block by beginBlock so onRow does no map lookup — the
+    // walk guarantees beginBlock precedes every onRow of that block.
     let stickyDisks: Map<number, DiskInstance> = new Map();
     // The source's live survey-fade opacity, sampled ONCE per source (not per
     // row — the row loop scales with ~2.5M galaxies) so a hidden catalog's
@@ -139,7 +139,7 @@ export function createTexturedDiskSubsystem(
         stickyFor(source).clear();
       },
 
-      beginSource(source, windowStart, windowEnd, blockOrdinalBase) {
+      beginBlock(source, windowStart, windowEnd, blockOrdinalBase) {
         stickyDisks = stickyFor(source);
         sourceOpacity = input.sourceOpacity(source);
         ordinalBase = blockOrdinalBase;
