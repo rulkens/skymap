@@ -146,6 +146,7 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
       100,
       FOCUS_BIND_GROUP,
       instances,
+      null,
     );
 
     // Visual instance payload is always writeBufferCalls[1] (uniforms first,
@@ -176,9 +177,16 @@ describe('proceduralDiskRenderer.pickDisks camera', () => {
     } as unknown as GPURenderPassEncoder;
 
     // draw() with camera A — uploads one instance so pickDisks has content.
-    renderer.draw(drawPass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, [
-      fakeProceduralInstance(),
-    ]);
+    renderer.draw(
+      drawPass,
+      new Float32Array(16),
+      [800, 600],
+      [0, 0, 0],
+      100,
+      FOCUS_BIND_GROUP,
+      [fakeProceduralInstance()],
+      null,
+    );
 
     // draw() emits three writeBuffer calls (uniforms, visual, pick mirror).
     // The next writeBuffer is pickDisks' own pick-uniform upload.
@@ -234,6 +242,7 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
       100,
       FOCUS_BIND_GROUP,
       instances,
+      null,
     );
 
     // draw emits three writeBuffer calls per frame: uniforms first, then
@@ -313,6 +322,7 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
         fakeProceduralInstance({ sourceCode: 2, localIdx: 99 }),
         fakeProceduralInstance({ sourceCode: 3, localIdx: 7 }),
       ],
+      null,
     );
 
     const pickPass = makeStubPass();
@@ -354,6 +364,7 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
         fakeProceduralInstance({ sourceCode: 1, localIdx: 11 }),
         fakeProceduralInstance({ sourceCode: 1, localIdx: 12 }),
       ],
+      null,
     );
     const pickPass1 = makeStubPass();
     pick(renderer, pickPass1);
@@ -368,6 +379,7 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [],
+      null,
     );
     const pickPass2 = makeStubPass();
     pick(renderer, pickPass2);

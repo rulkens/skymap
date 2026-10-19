@@ -133,6 +133,8 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
       [0, 0, 0],
       FOCUS_BIND_GROUP,
       instances,
+      0,
+      null,
     );
 
     // uniforms (1) + instance bytes (1) = 2 writeBuffer calls.
@@ -202,6 +204,7 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
       FOCUS_BIND_GROUP,
       instances,
       1,
+      null,
     );
     renderer.draw(
       pass,
@@ -212,6 +215,7 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
       FOCUS_BIND_GROUP,
       instances,
       2,
+      null,
     );
 
     // The @group(0) bind group resolves to a DIFFERENT physical bind group
@@ -249,7 +253,17 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
     const vpA = Float32Array.from({ length: 16 }, (_unused, i) => i);
     const vpB = Float32Array.from({ length: 16 }, (_unused, i) => 100 - i);
 
-    renderer.draw(pass, vpA as never, [512, 512], 1000, [0, 0, 0], FOCUS_BIND_GROUP, instances, 1);
+    renderer.draw(
+      pass,
+      vpA as never,
+      [512, 512],
+      1000,
+      [0, 0, 0],
+      FOCUS_BIND_GROUP,
+      instances,
+      1,
+      null,
+    );
     renderer.draw(
       pass,
       vpB as never,
@@ -259,6 +273,7 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
       FOCUS_BIND_GROUP,
       instances,
       2,
+      null,
     );
 
     const instanceWrites = writeBufferCalls.filter(

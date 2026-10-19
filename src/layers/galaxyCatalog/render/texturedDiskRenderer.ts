@@ -109,8 +109,8 @@ export function createTexturedDiskRenderer(
     camPos: Readonly<Vec3>,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
-    viewSlot = 0,
-    boost: FrameBoost | null = null,
+    viewSlot: number,
+    boost: FrameBoost | null,
   ): void {
     if (instances.length === 0) return;
 

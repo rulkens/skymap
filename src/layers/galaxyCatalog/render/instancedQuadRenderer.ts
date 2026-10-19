@@ -346,8 +346,8 @@ export function createInstancedQuadRenderer(
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
     pxPerRad: number;
-    /** `ctx.snapshot.boost`; absent or null draws the rest frame. */
-    boost?: FrameBoost | null;
+    /** `ctx.snapshot.boost`; null draws the rest frame. */
+    boost: FrameBoost | null;
     /** Shared structure-focus bind group (bound at @group(1)). Built once by
      *  the engine against the canonical focusBgl; the same group serves
      *  every impostor pipeline. */
@@ -390,7 +390,7 @@ export function createInstancedQuadRenderer(
     uniformScratch[21] = args.camPosWorld?.[1] ?? 0;
     uniformScratch[22] = args.camPosWorld?.[2] ?? 0;
     uniformScratch[23] = args.pxPerRad;
-    writeBoostUniforms(uniformScratch, BOOST_FLOAT_INDEX, args.boost ?? null);
+    writeBoostUniforms(uniformScratch, BOOST_FLOAT_INDEX, args.boost);
     // THIS call's own slot's buffer — a sky-cubemap capture sweep's several
     // `draw()` calls (different faces, one submit) each carry a different
     // viewProj/viewport/camPos, so a shared buffer would keep only the last

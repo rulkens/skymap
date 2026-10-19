@@ -28,8 +28,8 @@ export type ProceduralDiskRenderer = {
     pxPerRad: number,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
-    /** `ctx.snapshot.boost`; null (the default) draws the rest frame. */
-    boost?: FrameBoost | null,
+    /** `ctx.snapshot.boost`; null draws the rest frame. */
+    boost: FrameBoost | null,
   ): void;
   /**
    * Draw the retained procedural-disk instances into the active pick

@@ -49,16 +49,16 @@ export type TexturedDiskRenderer = {
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
     /**
-     * Which `@group(0)` buffer+bindGroup copy this call writes/binds.
-     * Defaults to 0 (the main view). `texturedDisksPass` is on the
+     * Which `@group(0)` buffer+bindGroup copy this call writes/binds;
+     * 0 is the main view. `texturedDisksPass` is on the
      * black-hole lens's sky-cubemap capture roster (Task 13b, Ruling 6) and
      * forwards `FrameView.viewSlot`, so a capture sweep's several
      * `draw()` calls in the same frame (different faces, one submit) each
      * land in their OWN physical buffer instead of racing on a shared one.
      */
-    viewSlot?: number,
-    /** `ctx.snapshot.boost`; null (the default) draws the rest frame. */
-    boost?: FrameBoost | null,
+    viewSlot: number,
+    /** `ctx.snapshot.boost`; null draws the rest frame. */
+    boost: FrameBoost | null,
   ): void;
   /**
    * Release every GPU buffer this renderer owns. Idempotent.

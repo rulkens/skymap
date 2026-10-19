@@ -241,7 +241,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     pxPerRad: number,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
-    boost: FrameBoost | null = null,
+    boost: FrameBoost | null,
   ): void {
     if (instances.length === 0) {
       // Zero the cached count so pickDisks() no-ops — it replays

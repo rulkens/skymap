@@ -336,6 +336,7 @@ describe('createInstancedQuadRenderer', () => {
         pxPerRad: 1000,
         instanceBytes: new Float32Array(10 * FLOATS_PER_INSTANCE),
         instanceCount: 10,
+        boost: null,
       });
       expect(calls.createBuffer).toHaveLength(2);
       expect(calls.createBuffer[1]!.size).toBe(64 * BYTES_PER_INSTANCE);
@@ -349,6 +350,7 @@ describe('createInstancedQuadRenderer', () => {
         pxPerRad: 1000,
         instanceBytes: new Float32Array(50 * FLOATS_PER_INSTANCE),
         instanceCount: 50,
+        boost: null,
       });
       expect(calls.createBuffer).toHaveLength(2);
 
@@ -362,6 +364,7 @@ describe('createInstancedQuadRenderer', () => {
         pxPerRad: 1000,
         instanceBytes: new Float32Array(200 * FLOATS_PER_INSTANCE),
         instanceCount: 200,
+        boost: null,
       });
       expect(calls.createBuffer).toHaveLength(3);
       expect(calls.createBuffer[2]!.size).toBe(200 * BYTES_PER_INSTANCE);
@@ -396,6 +399,7 @@ describe('createInstancedQuadRenderer', () => {
         pxPerRad: 1000,
         instanceBytes: new Float32Array(0),
         instanceCount: 0,
+        boost: null,
       });
 
       expect(drawSpy).not.toHaveBeenCalled();
@@ -432,6 +436,7 @@ describe('createInstancedQuadRenderer', () => {
         pxPerRad: 1000,
         instanceBytes: new Float32Array(5 * FLOATS_PER_INSTANCE),
         instanceCount: 5,
+        boost: null,
       });
 
       expect(drawSpy).not.toHaveBeenCalled();
@@ -534,6 +539,7 @@ describe('createInstancedQuadRenderer', () => {
         instanceBytes: new Float32Array(FLOATS_PER_INSTANCE),
         instanceCount: 1,
         viewSlot: 1,
+        boost: null,
       });
       r.draw({
         focusBindGroup: FOCUS_BIND_GROUP,
@@ -544,6 +550,7 @@ describe('createInstancedQuadRenderer', () => {
         instanceBytes: new Float32Array(FLOATS_PER_INSTANCE),
         instanceCount: 1,
         viewSlot: 2,
+        boost: null,
       });
 
       // The @group(0) bind group resolves to a DIFFERENT physical bind group
