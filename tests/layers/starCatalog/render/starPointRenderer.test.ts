@@ -13,6 +13,10 @@
  */
 
 import type { FrameBoost } from '../../../../src/@types/engine/frame/FrameBoost';
+import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
+import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';
+import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
+import { wgslPrimitiveLayout } from '../../../../tools/utils/wgsl/wgslPrimitiveLayout';
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../src/layers/starCatalog/render/starPointRenderer';
 import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
@@ -78,6 +82,21 @@ const BOOST: FrameBoost = {
   headlight: 1,
 };
 
+const layoutOf = (path: string, name: string): ReturnType<typeof layoutWgslStruct> =>
+  layoutWgslStruct(parseWgslStructFields(readShaderSource(path), name), (t) =>
+    t === 'CameraUniforms'
+      ? layoutOf('src/services/gpu/shaders/lib/camera.wesl', t).layout
+      : t === 'BoostUniforms'
+        ? layoutOf('src/services/gpu/shaders/lib/boost.wesl', t).layout
+        : wgslPrimitiveLayout(t)!,
+  );
+// The shader's side of the uniform contract; the writes below must land where it reads.
+const UNIFORMS = layoutOf(
+  'src/services/gpu/shaders/bodies/starPoints/io.wesl',
+  'StarPointUniforms',
+);
+const floatAt = (field: string) => UNIFORMS.offsets.get(field)! / 4;
+
 describe('createStarPointRenderer', () => {
   const DRAW_OPTS = { sizePx: 2.5, brightness: 1, pxPerRad: 935, boost: null, viewSlot: 0 };
 
@@ -105,20 +124,17 @@ describe('createStarPointRenderer', () => {
     expect(cleared.draw).not.toHaveBeenCalled();
   });
 
-  it('writes sizePx / brightness / pxPerRad into the uniform tail at floats 20..22, buffer sized 128', () => {
+  it('writes sizePx / brightness / pxPerRad and the boost where starPoints/io.wesl reads them', () => {
     const device = mockDevice();
     const renderer = createStarPointRenderer(device, 'rgba16float');
     const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
     const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
 
-    // The StarPointUniforms buffer is the CameraUniforms prefix (80 B), the
-    // sizePx / brightness / pxPerRad tail rounded to 96 B, then the 32 B boost
-    // block — must match starPoints/io.wesl. One physical buffer per view slot
-    // (Task 13b); slot 0's is checked here.
+    // One physical buffer per view slot (Task 13b); slot 0's is checked here.
     const uniformCreate = createBuffer.mock.calls.find(
       ([desc]) => (desc as GPUBufferDescriptor).label === 'star-points-uniform-slot0',
     );
-    expect((uniformCreate![0] as GPUBufferDescriptor).size).toBe(128);
+    expect((uniformCreate![0] as GPUBufferDescriptor).size).toBe(UNIFORMS.layout.size);
 
     renderer.setStars([SUN, SIRIUS], 0);
     renderer.draw(mockPass(), new Float32Array(16), [1920, 1080], {
@@ -133,15 +149,12 @@ describe('createStarPointRenderer', () => {
       ([buffer]) => (buffer as { label?: string }).label === 'star-points-uniform-slot0',
     );
     const scratch = uniformWrite![2] as Float32Array;
-    // sizePx at float 20 (byte 80), brightness at float 21 (byte 84); the pad
-    // floats 22..23 stay zero.
-    expect(scratch[20]).toBe(3.5);
-    expect(scratch[21]).toBe(42);
-    expect(scratch[22]).toBe(777);
-    expect(scratch[23]).toBe(0);
-    // The boost block opens at float 24 (byte 96); headlight is its last lane.
-    expect(scratch[24 + 4]).toBe(BOOST.gamma);
-    expect(scratch[24 + 7]).toBe(2);
+    expect(scratch[floatAt('sizePx')]).toBe(3.5);
+    expect(scratch[floatAt('brightness')]).toBe(42);
+    expect(scratch[floatAt('pxPerRad')]).toBe(777);
+    // Gamma is the boost block's fifth lane, headlight its last.
+    expect(scratch[floatAt('boost') + 4]).toBe(BOOST.gamma);
+    expect(scratch[floatAt('boost') + 7]).toBe(2);
   });
 
   it('reuses the instance buffer across same-length setStars — one createBuffer, one writeBuffer per upload', () => {
