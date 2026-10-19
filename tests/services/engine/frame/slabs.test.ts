@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { mat4, mat4d, vec3d } from 'wgpu-matrix';
+import { mat4, mat4d, vec3d, vec4d } from 'wgpu-matrix';
 import type { Mat4 } from 'wgpu-matrix';
 
 import {
@@ -47,6 +47,14 @@ import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustumPerspectiveF64';
+import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
+import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
+import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
+import { rotateByTranspose } from '../../../../src/utils/math/rotateByTranspose';
+import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
+import type { FrameBoost } from '../../../../src/@types/engine/frame/FrameBoost';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 function makeCam(distance: number): OrbitCamera {
   return createOrbitCamera({
@@ -97,6 +105,9 @@ function baseInput(
     visibleRows: [],
     viewportPx: [1920, 1080] as Vec2,
     starSphereRangeM: null,
+    boost: null,
+    eyeMpc: cam.position,
+    hostOrientationOf: () => undefined,
     ...overrides,
   };
 }
@@ -515,6 +526,165 @@ describe('deriveSlabs', () => {
     expect(ndc[0]).toBeCloseTo(0, 9);
     expect(ndc[1]).toBeCloseTo(0, 9);
   });
+});
+
+describe('deriveSlabs: the boost fold', () => {
+  const DIR: Vec3 = [1 / 3, 2 / 3, -2 / 3];
+  const PERP: Vec3 = [2 / 3, 1 / 3, 2 / 3]; // dot(PERP, DIR) = 0
+  const GAMMA = 3;
+
+  // World scene: the camera 100 Mpc out, the ship a few Mpc off the eye.
+  const WORLD_CAM = makeCam(100);
+  const WORLD_SHIP: Vec3 = [
+    WORLD_CAM.position[0] + 0.3,
+    WORLD_CAM.position[1] - 0.2,
+    WORLD_CAM.position[2] + 0.4,
+  ];
+
+  // Body scene: metre-scale about an eye at the world origin, on a host whose fixed axes are
+  // turned off the world's, so a fold that skipped the host rotation lands somewhere else.
+  const M = SCALE_UNITS.M_TO_MPC;
+  const BODY_EYE: Vec3 = [0, 0, 0];
+  const BODY_SHIP: Vec3 = [3e8 * M, -2e8 * M, 1e8 * M];
+  const HOST_ORIENTATION: Mat3 = multiply3x3(rotXMat3(0.7), rotYMat3(-1.1));
+  const HOST = makePlanet({ id: 'boost-host' });
+  const BODY_POSE: BodyPoseProvider = () =>
+    bodyRelativePose({
+      camPosMpc: BODY_EYE,
+      camBasisWorld: [1, 0, 0, 0, 1, 0, 0, 0, -1],
+      bodyState: { positionMpc: [2e9 * M, -1e9 * M, -4e9 * M], orientation: HOST_ORIENTATION },
+    });
+
+  function boost(over: Partial<FrameBoost>): FrameBoost {
+    return {
+      shipMpc: WORLD_SHIP,
+      dir: DIR,
+      beta: 0.9,
+      gamma: GAMMA,
+      contraction: true,
+      doppler: false,
+      headlight: 0,
+      ...over,
+    };
+  }
+
+  function worldSlabs(b: FrameBoost | null): readonly Slab[] {
+    return deriveSlabs(baseInput({ cam: WORLD_CAM, boost: b, eyeMpc: WORLD_CAM.position }));
+  }
+
+  function bodySlabs(b: FrameBoost | null): readonly Slab[] {
+    return deriveSlabs(
+      baseInput({
+        pose: BODY_POSE,
+        visibleRows: [HOST].map(bodySlabRowOf),
+        boost: b,
+        eyeMpc: BODY_EYE,
+        hostOrientationOf: (id) => (id === HOST.id ? HOST_ORIENTATION : undefined),
+      }),
+    );
+  }
+
+  /** A world point in each slab frame's own coordinates (`foldBoostIntoSlab`'s table). */
+  const toNear0 = (p: Readonly<Vec3>): Vec3 => [
+    p[0] - RENDER_ORIGIN_MPC[0],
+    p[1] - RENDER_ORIGIN_MPC[1],
+    p[2] - RENDER_ORIGIN_MPC[2],
+  ];
+  const toBody = (p: Readonly<Vec3>): Vec3 =>
+    rotateByTranspose(HOST_ORIENTATION, [
+      (p[0] - BODY_EYE[0]) * SCALE_UNITS.MPC_TO_M,
+      (p[1] - BODY_EYE[1]) * SCALE_UNITS.MPC_TO_M,
+      (p[2] - BODY_EYE[2]) * SCALE_UNITS.MPC_TO_M,
+    ]);
+
+  const along = (s: Readonly<Vec3>, n: Readonly<Vec3>, l: number): Vec3 => [
+    s[0] + n[0] * l,
+    s[1] + n[1] * l,
+    s[2] + n[2] * l,
+  ];
+
+  function expectSameClip(
+    folded: Slab,
+    foldedPoint: Readonly<Vec3>,
+    rest: Slab,
+    restPoint: Readonly<Vec3>,
+  ): void {
+    const a = vec4d.transformMat4([...foldedPoint, 1], folded.vp);
+    const b = vec4d.transformMat4([...restPoint, 1], rest.vp);
+    const scale = Math.hypot(b[0]!, b[1]!, b[2]!, b[3]!);
+    for (let i = 0; i < 4; i += 1) expect(Math.abs(a[i]! - b[i]!) / scale).toBeLessThan(1e-6);
+  }
+
+  type FoldCase = {
+    readonly name: string;
+    readonly folded: () => readonly Slab[];
+    readonly rest: () => readonly Slab[];
+    readonly index: number;
+    readonly toSlab: (p: Readonly<Vec3>) => Vec3;
+    readonly ship: Readonly<Vec3>;
+    readonly lengthMpc: number;
+  };
+  const CASES: readonly FoldCase[] = [
+    {
+      name: 'COSMO',
+      folded: () => worldSlabs(boost({})),
+      rest: () => worldSlabs(null),
+      index: COSMO,
+      toSlab: (p) => [p[0], p[1], p[2]],
+      ship: WORLD_SHIP,
+      lengthMpc: 2,
+    },
+    {
+      name: 'NEAR0',
+      folded: () => worldSlabs(boost({})),
+      rest: () => worldSlabs(null),
+      index: NEAR0,
+      toSlab: toNear0,
+      ship: WORLD_SHIP,
+      lengthMpc: 2,
+    },
+    {
+      name: 'a body row',
+      folded: () => bodySlabs(boost({ shipMpc: BODY_SHIP })),
+      rest: () => bodySlabs(null),
+      index: 2,
+      toSlab: toBody,
+      ship: BODY_SHIP,
+      lengthMpc: 5e9 * M,
+    },
+  ];
+
+  it('deriveSlabs with no boost is bitwise unchanged', () => {
+    const off = boost({ contraction: false });
+    const pairs = [
+      [worldSlabs(null), worldSlabs(off)],
+      [bodySlabs(null), bodySlabs({ ...off, shipMpc: BODY_SHIP })],
+    ] as const;
+    for (const [rest, unfolded] of pairs) {
+      expect(unfolded).toHaveLength(rest.length);
+      unfolded.forEach((slab, i) => expect(Array.from(slab.vp)).toEqual(Array.from(rest[i]!.vp)));
+    }
+  });
+
+  it.each(CASES)(
+    'a world point on the line of flight projects at its contracted position ($name)',
+    ({ folded, rest, index, toSlab, ship, lengthMpc }) => {
+      expectSameClip(
+        folded()[index]!,
+        toSlab(along(ship, DIR, lengthMpc)),
+        rest()[index]!,
+        toSlab(along(ship, DIR, lengthMpc / GAMMA)),
+      );
+    },
+  );
+
+  it.each(CASES)(
+    'a perpendicular point projects where it did ($name)',
+    ({ folded, rest, index, toSlab, ship, lengthMpc }) => {
+      const p = toSlab(along(ship, PERP, lengthMpc));
+      expectSameClip(folded()[index]!, p, rest()[index]!, p);
+    },
+  );
 });
 
 describe('bodySlabRow attachedBodies widening', () => {

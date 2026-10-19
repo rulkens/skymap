@@ -34,6 +34,10 @@ import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/occlusion/nearestSphereFaceM';
 import { timingSlotForView } from '../../../utils/frame/timingSlotForView';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
+import type { SlabHostId } from '../../../@types/engine/frame/SlabHostId';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import { foldBoostIntoSlab } from '../../../utils/camera/foldBoostIntoSlab';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 
@@ -260,6 +264,12 @@ export function deriveSlabs(input: {
   /** A capture view's `ViewSpec.clipYFlip`, applied to NEAR0's and every
    * body row's projection alike — see `frustumPerspectiveF64`. */
   readonly clipYFlip?: boolean;
+  /** This frame's observer frame, folded into every row (`foldBoostIntoSlab`); null is the rest frame. */
+  readonly boost: FrameBoost | null;
+  /** The view's own eye (`FrameView.drawCamPos`): a body row's origin, for the fold. */
+  readonly eyeMpc: Readonly<Vec3>;
+  /** A body row host's fixed-frame orientation, for the fold. */
+  readonly hostOrientationOf: (hostId: SlabHostId) => Readonly<Mat3> | undefined;
 }): readonly Slab[] {
   const {
     cam,
@@ -272,6 +282,9 @@ export function deriveSlabs(input: {
     viewportPx,
     attachedBodiesByHostId,
     clipYFlip,
+    boost,
+    eyeMpc,
+    hostOrientationOf,
   } = input;
   const { near, far } = foregroundFrustum(altitudeMpc);
   orbitForwardOf(cam, forwardScratch);
@@ -359,7 +372,10 @@ export function deriveSlabs(input: {
     }
   }
 
-  return [near0, cosmo, ...bodyRows];
+  // After the sort, so indices and the painter order stay the rest frame's.
+  return [near0, cosmo, ...bodyRows].map((slab) =>
+    foldBoostIntoSlab(slab, boost, eyeMpc, hostOrientationOf),
+  );
 }
 
 // NEAR0 plus every body row by `distanceRangeM[0]` descending — the same key body

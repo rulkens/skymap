@@ -471,6 +471,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       visibleRows: [],
       viewportPx: [1920, 1080],
       starSphereRangeM: null,
+      boost: null,
+      eyeMpc: cam.position,
+      hostOrientationOf: () => undefined,
     });
     for (const step of program({ bloomEnabled: true })) {
       if (step.kind === 'render') {

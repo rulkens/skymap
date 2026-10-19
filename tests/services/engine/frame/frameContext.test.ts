@@ -202,6 +202,9 @@ describe('deriveFrameContext — ready branch', () => {
       visibleRows: [],
       viewportPx: [1920, 1080],
       starSphereRangeM: null,
+      boost: null,
+      eyeMpc: cam.position,
+      hostOrientationOf: () => undefined,
     });
     expect(canvas.slabs).toHaveLength(2);
     expect(canvas.slabs[0]?.index).toBe(NEAR0);

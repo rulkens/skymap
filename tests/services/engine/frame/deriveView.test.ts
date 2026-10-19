@@ -4,7 +4,7 @@ import { vec4 } from 'wgpu-matrix';
 import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { cubemapCaptureFrame } from '../../../../src/services/engine/frame/cubemapCaptureFrame';
-import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
+import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
@@ -795,5 +795,28 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
     expect(deriveView(withRow, cam, spec()).slabs[NEAR0]!.distanceRangeM).toEqual(
       deriveView(snapshot, cam, spec()).slabs[NEAR0]!.distanceRangeM,
     );
+  });
+});
+
+describe('deriveView — the boost fold', () => {
+  it('deriveView.vp is the folded COSMO vp', () => {
+    const rest = frame();
+    const boosted: ReadyFrameContext = {
+      ...rest,
+      boost: {
+        shipMpc: CAM.position,
+        dir: normalize3([1, -2, 2]),
+        beta: 0.99,
+        gamma: 7,
+        contraction: true,
+        doppler: false,
+        headlight: 0,
+      },
+    };
+    const restView = deriveView(rest, CAM, spec());
+    const view = deriveView(boosted, CAM, spec());
+
+    expect(Array.from(view.vp)).toEqual(Array.from(Float32Array.from(view.slabs[COSMO]!.vp)));
+    expect(Array.from(view.vp)).not.toEqual(Array.from(restView.vp));
   });
 });

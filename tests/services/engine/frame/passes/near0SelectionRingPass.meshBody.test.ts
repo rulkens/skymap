@@ -100,6 +100,9 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     visibleRows: [earth].map(bodySlabRowOf),
     viewportPx: VIEWPORT,
     starSphereRangeM: null,
+    boost: null,
+    eyeMpc: cam.position,
+    hostOrientationOf: () => undefined,
     attachedBodiesByHostId: new Map([
       [
         'earth',

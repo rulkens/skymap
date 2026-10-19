@@ -147,6 +147,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
   [
+    'src/utils/camera/foldBoostIntoSlab.ts',
+    "boost-fold precedent — expresses the contraction's fixed point in a body row's eye-relative metre frame, subtracting in Mpc before scaling as bodyRelativePose does; it multiplies onto the row's vp and re-derives no pose",
+  ],
+  [
     'src/layers/blackHoles/present/blackHoleLensEnvelopeM.ts',
     'fade precedent — bridges a metre distance to Mpc only to test it against the capture band Mpc goneAt, no slab MVP involved',
   ],

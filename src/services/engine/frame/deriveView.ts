@@ -26,7 +26,7 @@ import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttach
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
 import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { viewBodyPose } from '../camera/viewBodyPose';
-import { deriveSlabs } from './slabs';
+import { COSMO, deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { near0SphereBodies } from './near0SphereBodies';
@@ -146,13 +146,17 @@ export function deriveView(
     starSphereRangeM: starRangeM,
     attachedBodiesByHostId,
     clipYFlip: spec.clipYFlip,
+    boost: snapshot.boost,
+    eyeMpc: drawCamPos,
+    hostOrientationOf: (hostId) => bodyStates.get(hostId)?.orientation,
   });
 
   return {
     id,
     snapshot,
     cam: viewCam,
-    vp,
+    // The folded COSMO vp, so the CPU label projection that reads it contracts too.
+    vp: Float32Array.from(slabs[COSMO]!.vp),
     slabs,
     bodyPose,
     canvasSize: sizePx,
