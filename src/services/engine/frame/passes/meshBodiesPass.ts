@@ -2,8 +2,8 @@
  * meshBodiesPass — the `meshes` branch of the per-frame body partition, as lit
  * triangle meshes in metres. A mesh body with a slab-owning host owns NO row of
  * its own: it rides the host's body-m row the way `ringsPass` rides Saturn's.
- * One hanging off something rowless (the Sun, or nothing) hosts itself —
- * `meshBodySlabHostId` decides, and `SLAB_ROW_CEILING` counts those.
+ * One that owns a row, or hangs off something rowless, hosts itself —
+ * `meshBodySlabHostId` decides, and `SLAB_ROW_CEILING` counts the rowless ones.
  *
  * FRAME CONTRACT (`shaders/bodies/meshBody/io.wesl`): every direction the
  * shader receives is in the HOST's fixed axes — the frame `posM`/`rotM` land
@@ -13,10 +13,8 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { Source } from '../../../../data/sources';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { sceneBodyPickId } from '../../../../utils/picking/sceneBodyPickId';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
-import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../../data/bodies/anchoredMeshBodyIds';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../../utils/camera/composeMeshMvp';
@@ -30,7 +28,6 @@ import { sunVisibleFraction } from '../../../../utils/occlusion/sunVisibleFracti
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 
 export const meshBodiesPass: ContentPass = {
   name: 'mesh-bodies',
@@ -61,9 +58,9 @@ export const meshBodiesPass: ContentPass = {
     for (const body of bodies) {
       const bodyState = bodyStates.get(body.id)!;
       const { posM, rotM } = bodyStateInHostFrame(bodyState, hostState);
-      // A hostless body is its own host, and `sunVisibleFraction` returns NaN at
-      // zero separation. Unshadowed Sun instead.
-      const hosted = host !== undefined;
+      // A self-hosted body casts no host shadow on itself, and `sunVisibleFraction`
+      // returns NaN at zero separation. Unshadowed Sun instead.
+      const umbraHost = hostId === body.id ? undefined : host;
       renderer.draw(
         pass,
         body.id,
@@ -71,13 +68,13 @@ export const meshBodiesPass: ContentPass = {
           // Narrow here, at the uniform write — the compose above is f64.
           mvp: narrowMat4(composeMeshMvp(view.slab.vp, posM, hostPose.eyeRelBodyM, rotM)),
           sunDirLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, hostState.orientation),
-          sunVisibleFraction: hosted
+          sunVisibleFraction: umbraHost
             ? sunVisibleFraction({
                 bodyPosMpc: bodyState.positionMpc,
                 sunPosMpc: RENDER_ORIGIN_MPC,
                 hostPosMpc: hostState.positionMpc,
                 sunRadiusM,
-                hostRadiusM: innerBoundRadiusM(host.surface),
+                hostRadiusM: innerBoundRadiusM(umbraHost.surface),
               })
             : 1,
           model: rotM,
@@ -101,8 +98,8 @@ export const meshBodiesPass: ContentPass = {
    * an anchored mesh is ground (a park scan), and its ~160 m proxy sphere
    * would swallow every click on the terrain around it. The proxy sphere sits
    * at the mesh body's own centre while riding the host's row — that is what
-   * the `eyeRelBodyM − posM` argument encodes. No −1 seed-index guard: `bodies`
-   * came out of `SCENE_MESH_BODIES.filter`, so every id is in that table.
+   * the `eyeRelBodyM − posM` argument encodes. `sceneBodyPickId` packs the
+   * body's OWN table, so a moon drawn as a mesh picks as a moon.
    */
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
@@ -117,7 +114,8 @@ export const meshBodiesPass: ContentPass = {
     if (hostPose === null) return;
 
     for (const body of bodies) {
-      if (ANCHORED_MESH_BODY_IDS.has(body.id)) continue;
+      const packedId = sceneBodyPickId(body.id);
+      if (ANCHORED_MESH_BODY_IDS.has(body.id) || packedId === null) continue;
       const { posM } = bodyStateInHostFrame(bodyStates.get(body.id)!, hostState);
       const { mvp, camPosLocal } = bodySlabFlooredPick(
         view.slab.vp,
@@ -132,10 +130,7 @@ export const meshBodiesPass: ContentPass = {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(
-          Source.MeshBody,
-          seedIndexOfBody(body.id, SCENE_MESH_BODIES) + PICK_SENTINEL_OFFSET,
-        ),
+        packedId,
       });
     }
   },
