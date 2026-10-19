@@ -1984,6 +1984,49 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
 - **Modified:** Yes. Posed deployed, flattened.
 - **Checked:** 2026-10-07: <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>
 
+### Phobos shape model (Gaskell M003) and Viking mosaic
+
+<!-- attribution: id=mesh-phobos; keys=meshes.phobos*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Phobos up close: Gaskell's 3.1-million-facet shape model and the
+  Viking Orbiter global mosaic on the DLR control network.
+- **By:** Shape: R. Gaskell (Planetary Science Institute), archived by NASA's
+  Planetary Data System and served by NAIF. Mosaic: USGS Astrogeology, DLR
+  control.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it; the USGS mosaic is a US government
+  work (public domain). The PDS citation names Gaskell as author.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: R. Gaskell (PSI), Phobos shape model M003,
+  NASA PDS / NAIF. Colour: Viking Orbiter mosaic, DLR control, USGS
+  Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ>,
+  <https://planetarymaps.usgs.gov/mosaic/Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif>
+- **Enters skymap:** downloaded by hand → Blender import and relief pre-bake →
+  `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic resampled, rescaled to the seed albedo and
+  shifted 4.5° east to register with the shape.
+- **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
+
+### Deimos shape model (Thomas K005)
+
+<!-- attribution: id=mesh-deimos; keys=meshes.deimos*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** The shape model drawn for Deimos up close (5,184 facets).
+- **By:** P. Thomas (Cornell), archived by NASA's Planetary Data System and
+  served by NAIF.
+- **Licence:** Openly archived in NASA's Planetary Data System, which states no
+  licence for it; the PDS citation names Thomas as author.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: P. Thomas (Cornell), Deimos shape model K005,
+  NASA PDS / NAIF".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ>
+- **Enters skymap:** downloaded by hand → Blender import and pre-bake →
+  `build-meshes`.
+- **Modified:** Yes. Painted the seed albedo; no colour map is used.
+- **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
+
 ## Fonts
 
 All three are under the SIL Open Font License 1.1, whose second condition

@@ -108,4 +108,23 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     // Already authored in the body frame (+X east, +Z up) — no remap.
     georeferenced: { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 },
   },
+  phobos: {
+    // One 150k-triangle mesh for both tiers; they differ in atlas size only. The
+    // relief atlas carries the rest of the 3.1M-facet surface.
+    tiers: { small: { raw: 'meshes.phobos' }, medium: { raw: 'meshes.phobos' } },
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: R. Gaskell (PSI), Phobos shape model M003, NASA PDS / NAIF. Colour: Viking Orbiter mosaic, DLR control, USGS Astrogeology',
+    // Shape models live in the IAU body frame; the prebake's glTF export turned
+    // Blender's +Z-up into glTF +Y-up, so body = (x, -z, y) of the source.
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
+  deimos: {
+    tiers: { small: { raw: 'meshes.deimos' } },
+    licence: 'NASA PDS (no licence stated)',
+    attribution: 'Shape: P. Thomas (Cornell), Deimos shape model K005, NASA PDS / NAIF',
+    bodyFromSource: [1, 0, 0, 0, 0, 1, 0, -1, 0],
+    origin: 'source',
+  },
 };
