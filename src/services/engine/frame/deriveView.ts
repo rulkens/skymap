@@ -15,6 +15,7 @@ import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPosePro
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
+import { contractedNearMpc } from '../../../utils/camera/contractedNearMpc';
 import { viewFromCameraEye } from '../../../utils/camera/viewFromCameraEye';
 import { turnedOrbitCamera } from '../../../utils/camera/turnedOrbitCamera';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
@@ -40,7 +41,11 @@ export function deriveView(
   const { id, rotation, eyeOffsetMpc, frustum, sizePx } = spec;
 
   const viewFromCamEye = viewFromCameraEye(rotation, eyeOffsetMpc);
-  const vp = computeViewProj(cam, frustum, viewFromCamEye, spec.clipYFlip);
+  // COSMO's near plane follows the contraction (`contractedNearMpc`); NEAR0 and
+  // the body rows bracket their own depth and need no such move.
+  const cosmoNear = contractedNearMpc(cam.near, snapshot.boost);
+  const cosmoCam = cosmoNear === cam.near ? cam : { ...cam, near: cosmoNear };
+  const vp = computeViewProj(cosmoCam, frustum, viewFromCamEye, spec.clipYFlip);
 
   const viewBasisWorld = multiply3x3(snapshot.camBasisWorld, rotation);
   const viewForward: Vec3 = [viewBasisWorld[6], viewBasisWorld[7], viewBasisWorld[8]];
@@ -139,6 +144,7 @@ export function deriveView(
     frustum,
     viewFromCamEye,
     cosmoVp: vp,
+    cosmoNearMpc: cosmoNear,
     altitudeMpc: snapshot.altitudeMpc,
     pose: bodyPose,
     visibleRows,

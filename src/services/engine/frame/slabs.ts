@@ -246,6 +246,8 @@ export function deriveSlabs(input: {
    * theirs through `pose`, already turned and offset. Omitted = the camera's view. */
   readonly viewFromCamEye?: Float64Array;
   readonly cosmoVp: Mat4;
+  /** The near plane `cosmoVp` carries (`contractedNearMpc`); the fixed default when omitted. */
+  readonly cosmoNearMpc?: number;
   /**
    * Range from the eye to the pivot's surface, or raw orbit distance when the
    * pivot is surfaceless (`pivotSurfaceRangeMpc`). NEAR0's bracket is sized
@@ -276,6 +278,7 @@ export function deriveSlabs(input: {
     frustum,
     viewFromCamEye,
     cosmoVp,
+    cosmoNearMpc,
     altitudeMpc,
     pose,
     visibleRows,
@@ -326,14 +329,16 @@ export function deriveSlabs(input: {
     precision: 'f64',
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
   };
+  // The plane `cosmoVp` was built with: `deriveView` moves it under a contracting boost.
+  const cosmoNear = cosmoNearMpc ?? COSMO_NEAR_MPC;
   const cosmo: Slab = {
     index: COSMO,
-    near: COSMO_NEAR_MPC,
+    near: cosmoNear,
     far: COSMO_FAR_MPC,
     vp: Float64Array.from(cosmoVp),
     frame: { kind: 'world-mpc', originRelative: false },
-    // COSMO never enters the painter chain, so this fixed bracket is permanent.
-    distanceRangeM: [COSMO_NEAR_MPC * SCALE_UNITS.MPC_TO_M, COSMO_FAR_MPC * SCALE_UNITS.MPC_TO_M],
+    // COSMO never enters the painter chain, so this bracket is only ever read as a range.
+    distanceRangeM: [cosmoNear * SCALE_UNITS.MPC_TO_M, COSMO_FAR_MPC * SCALE_UNITS.MPC_TO_M],
     precision: 'f32',
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
   };

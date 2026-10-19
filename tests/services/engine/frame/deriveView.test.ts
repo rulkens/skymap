@@ -29,6 +29,7 @@ import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { FrameBoost } from '../../../../src/@types/engine/frame/FrameBoost';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
@@ -80,7 +81,10 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
+function frame(
+  arm: FramedCameraPose = absoluteArm(POSE),
+  boost: FrameBoost | null = null,
+): ReadyFrameContext {
   const ctx = deriveFrameContext(makeState(), {
     cam: CAM,
     arm,
@@ -89,7 +93,7 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
-    boost: null,
+    boost,
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -215,6 +219,40 @@ describe('deriveView', () => {
       expect(clip[1]).toBeCloseTo(0, 3);
       expect(clip[3]).toBeCloseTo(0, 3);
     }
+  });
+
+  it("a contracting boost keeps the destination in front of COSMO's near plane", () => {
+    // 0.5 Mpc ahead contracts to 0.5 mpc at γ 1000: inside the fixture's 0.1 Mpc
+    // near plane at rest, in front of the plane once it has followed γ.
+    const forward = basisOf(deriveView(frame(), CAM, mainViewSpec(CAM, CANVAS)).vp).forward;
+    const boost: FrameBoost = {
+      shipMpc: CAM.position,
+      dir: forward,
+      beta: 1,
+      gamma: 1000,
+      contraction: true,
+      doppler: false,
+      headlight: 0,
+    };
+    const rest = deriveView(frame(), CAM, mainViewSpec(CAM, CANVAS));
+    const boosted = deriveView(frame(undefined, boost), CAM, mainViewSpec(CAM, CANVAS));
+    expect(boosted.slabs[COSMO]!.near).toBeCloseTo(PROJECTION.near / 1000, 12);
+    expect(rest.slabs[COSMO]!.near).toBe(PROJECTION.near);
+    const ahead = [0, 1, 2].map((i) => CAM.position[i]! + 0.5 * forward[i]!);
+    const ndcZ = (vp: ArrayLike<number>) => {
+      const c = vec4.transformMat4([ahead[0]!, ahead[1]!, ahead[2]!, 1], Float64Array.from(vp));
+      return c[2]! / c[3]!;
+    };
+    expect(ndcZ(boosted.vp)).toBeGreaterThanOrEqual(0);
+    expect(ndcZ(boosted.vp)).toBeLessThanOrEqual(1);
+    // Without the moved plane the contracted point would be clipped (z < 0 in ZO depth).
+    const vpOldNear = computeViewProj(CAM, mainViewSpec(CAM, CANVAS).frustum);
+    const contracted = [0, 1, 2].map((i) => CAM.position[i]! + (0.5 / 1000) * forward[i]!);
+    const c = vec4.transformMat4(
+      [contracted[0]!, contracted[1]!, contracted[2]!, 1],
+      Float64Array.from(vpOldNear),
+    );
+    expect(c[2]! / c[3]!).toBeLessThan(0);
   });
 
   it('a body-arm camera keeps its body-arm slab path under a rotated view', () => {
