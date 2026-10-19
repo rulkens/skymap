@@ -20,7 +20,8 @@ function tag(el: Element, mark: DocsReviewMark): void {
 
 // The outermost block whose whole text is the mark's: a list item, not just the paragraph inside it.
 function wholeBlock(node: Text, want: string): Element | null {
-  const same = (el: Element): boolean => foldText(el.textContent ?? '').text.trim() === want;
+  const same = (el: Element): boolean =>
+    foldText(el.textContent ?? '').text.replaceAll(' ', '') === want.replaceAll(' ', '');
   let block = reviewBlockOf(node);
   if (!block || !same(block)) return null;
   for (
