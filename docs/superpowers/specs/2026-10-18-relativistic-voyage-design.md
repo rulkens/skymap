@@ -86,7 +86,6 @@ Doppler factor of a source seen at angle θ from the direction of travel: `D = 1
 // src/utils/relativity/ — one function per file, each with a test against the tables above
 export function shipStateAt(distanceLy: number, earthYr: number): ShipState; // clamps past arrival
 export function tripOf(distanceLy: number): TripSummary;
-export function dopplerFactor(cosTheta: number, beta: number, gamma: number): number;
 export function contractionMat4(shipRel: Vec3, dir: Vec3, gamma: number): Float64Array; // T(s)·(I − (1 − 1/γ) n nᵀ)·T(−s)
 
 // src/@types/relativity/ShipState.ts
@@ -281,8 +280,8 @@ voyage's own readouts never go through `Date`.
 ## 6. Verification
 
 - **Physics:** `tripOf` and `shipStateAt` reproduce the §4.1 table to three figures; `τ(t)` and `x(t)` are
-  continuous through the midpoint; `shipStateAt` past arrival is `arrived` at `gamma = 1`; `dopplerFactor` is
-  `γ(1+β)` ahead and `γ(1−β)` behind.
+  continuous through the midpoint; `shipStateAt` past arrival is `arrived` at `gamma = 1`. (The TS `dopplerFactor` twin
+  was dropped in review: no production caller, and its form differed from the WGSL's.)
 - **Contraction matrix:** identity at `γ = 1`; the ship is a fixed point; a perpendicular offset is unchanged; an
   offset along `dir` scales by `1/γ`.
 - **The fold:** through `deriveSlabs`, a world point on the line of flight projects where its contracted position

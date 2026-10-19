@@ -13,7 +13,7 @@ import { VOYAGE_DESTINATIONS } from '../../../../src/data/voyage/voyageDestinati
 import { initialState as voyageInitialState } from '../../../../src/layers/voyage/state/voyage/initialState';
 import { playVoyage } from '../../../../src/layers/voyage/exhibits/playVoyage';
 import { voyageHoldSaga } from '../../../../src/layers/voyage/sagas/voyageHoldSaga';
-import { selectFrameBoost } from '../../../../src/layers/voyage/state/voyage/selectors';
+import { voyageFrameBoost } from '../../../../src/utils/voyage/voyageFrameBoost';
 import { mergeSnapshot } from '../../../../src/state/settings/mergeSnapshotAction';
 import { withSceneSnapshotSaga } from '../../../../src/state/takeover/withSceneSnapshotSaga';
 import { watchTakeoverSaga } from '../../../../src/state/takeover/watchTakeoverSaga';
@@ -131,7 +131,9 @@ describe('voyage hold loop', () => {
     const s = store.getState();
     expect(s.time.profile).toBeNull();
     expect(s.settings.voyage.destination).toBeNull();
-    expect(selectFrameBoost(s, deriveSimDays(s.time, performance.now()))).toBeNull();
+    expect(
+      voyageFrameBoost(s.settings.voyage, deriveSimDays(s.time, performance.now())),
+    ).toBeNull();
     store.dispatch(playVoyage());
     await tick();
     expect(store.getState().time.profile).toBeNull();

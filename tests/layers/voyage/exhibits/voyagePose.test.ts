@@ -12,7 +12,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { VOYAGE_ARRIVAL_RADIUS_MPC } from '../../../../src/data/voyage/voyageArrivalRadiusMpc';
 import { VOYAGE_DESTINATIONS } from '../../../../src/data/voyage/voyageDestinations';
 import { voyagePose } from '../../../../src/layers/voyage/exhibits/voyagePose';
-import { selectFrameBoost } from '../../../../src/layers/voyage/state/voyage/selectors';
+import { voyageFrameBoost } from '../../../../src/utils/voyage/voyageFrameBoost';
 import {
   setVoyageDestination,
   setVoyageLaunchDays,
@@ -75,7 +75,7 @@ describe('voyagePose', () => {
   it('voyagePose sits at the ship looking along dir', () => {
     const store = storeToM31();
     const { pose } = frame({ state: store.getState() }, null);
-    const boost = selectFrameBoost(store.getState(), AT_10_YR)!;
+    const boost = voyageFrameBoost(store.getState().settings.voyage, AT_10_YR)!;
     near(eyeMpcOf(pose, BASIS), boost.shipMpc, 1e-9);
     near(forwardOf(pose), boost.dir, 1e-6);
   });
@@ -90,7 +90,7 @@ describe('voyagePose', () => {
       sphereFitDistance(VOYAGE_ARRIVAL_RADIUS_MPC.m31, PROJECTION.fovYRad, PROJECTION.aspect),
       12,
     );
-    near(forwardOf(pose), selectFrameBoost(store.getState(), simDays)!.dir, 1e-9);
+    near(forwardOf(pose), voyageFrameBoost(store.getState().settings.voyage, simDays)!.dir, 1e-9);
   });
 
   it('voyagePose keeps a drag offset until the next re-aim', () => {
@@ -106,7 +106,11 @@ describe('voyagePose', () => {
     const held = frame({ state: store.getState(), elapsedMs: 5000 }, during.own);
     expect(held.own.offsets.yaw).not.toBeCloseTo(0, 3);
     expect(held.pose.yaw).toBeCloseTo(dragged.yaw, 9);
-    near(eyeMpcOf(held.pose, BASIS), selectFrameBoost(store.getState(), AT_10_YR)!.shipMpc, 1e-9);
+    near(
+      eyeMpcOf(held.pose, BASIS),
+      voyageFrameBoost(store.getState().settings.voyage, AT_10_YR)!.shipMpc,
+      1e-9,
+    );
 
     store.dispatch(aimCamera({ ease: true }));
     const reaimed = frame({ state: store.getState(), authoredWorld: held.pose }, held.own);
