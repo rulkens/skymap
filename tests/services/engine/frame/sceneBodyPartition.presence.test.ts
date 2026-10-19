@@ -208,7 +208,7 @@ describe('sceneBodyPartition routing', () => {
   });
 
   it('keeps a resolved non-registry body flat even when residency says yes', () => {
-    const bodies = [planetAt('titan', 2575000, CLOSE(2575000)), planetAt('phobos', 11000, 55000)];
+    const bodies = [planetAt('titan', 2575000, CLOSE(2575000)), planetAt('proteus', 210000, 1e6)];
     const { flat, textured, glints } = partition(bodies, () => true);
     expect(new Set(flat)).toEqual(new Set(bodiesOf(bodies)));
     expect(textured).toEqual([]);
@@ -227,6 +227,15 @@ describe('sceneBodyPartition routing', () => {
     const { meshes, flat, textured, glints } = partition([whale], () => true);
     expect(idsOf(meshes)).toEqual(['whale']);
     expect([...flat, ...textured, ...glints]).toEqual([]);
+  });
+
+  // A moon drawn from a shape model keeps its sphere until the mesh decodes.
+  it('routes a resolved shape-model moon to meshes once resident, flat until then', () => {
+    const phobos = planetAt('phobos', 11000, 55000);
+    expect(idsOf(partition([phobos], () => true).meshes)).toEqual(['phobos']);
+    const loading = partition([phobos], () => false);
+    expect(loading.flat).toEqual([phobos.body]);
+    expect(loading.meshes).toEqual([]);
   });
 
   // A mission mesh has no sphere to fall back to: drawing one would be a wrong shape.
