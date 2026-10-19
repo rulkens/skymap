@@ -10,4 +10,8 @@ export type ExhibitId =
   | 'cosmicFlows'
   | 'cosmicWeb'
   | 'observableUniverse'
-  | 'voyager-missions';
+  | 'voyager-missions'
+  | 'voyage-proxima'
+  | 'voyage-sgrAStar'
+  | 'voyage-m31'
+  | 'voyage-m87';

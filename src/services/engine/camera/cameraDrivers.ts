@@ -3,7 +3,7 @@
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
  * Priorities: clip 95 > orbitDrag 80 > tween 60 > (an exhibit row, lifted in by
- * `composeControlSchemes`; the mission's is 58) > followApproach 55 > autoRotate 20 >
+ * `composeControlSchemes`; the mission's is 58, the voyage's 57) > followApproach 55 > autoRotate 20 >
  * followHold 10 > resting 0 (gaps are headroom). Body focus is
  * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
  * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the

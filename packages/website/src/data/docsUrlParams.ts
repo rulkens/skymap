@@ -163,6 +163,10 @@ export const DOCS_EXHIBIT_IDS: readonly DocsNamedId[] = [
   { id: 'zoneOfAvoidance', name: 'Zone of Avoidance' },
   { id: 'observableUniverse', name: 'Observable Universe' },
   { id: 'voyager-missions', name: 'The Voyager missions' },
+  { id: 'voyage-proxima', name: 'Voyage to Proxima Centauri' },
+  { id: 'voyage-sgrAStar', name: 'Voyage to Sagittarius A*' },
+  { id: 'voyage-m31', name: 'Voyage to Andromeda' },
+  { id: 'voyage-m87', name: 'Voyage to M87' },
 ];
 
 /** The values of `tour`. The search lists the first two; `demo` opens from a link only. */

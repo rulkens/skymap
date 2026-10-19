@@ -6,6 +6,11 @@
 
 import { CORE_EXHIBITS } from '../data/exhibits/coreExhibits';
 import { missionsLayerExhibits } from '../layers/missions/exhibits/exhibits';
+import { voyageExhibits } from '../layers/voyage/exhibits/voyageExhibits';
 import { exhibitsById } from '../utils/exhibits/exhibitsById';
 
-export const APP_EXHIBITS = exhibitsById([...CORE_EXHIBITS, ...missionsLayerExhibits]);
+export const APP_EXHIBITS = exhibitsById([
+  ...CORE_EXHIBITS,
+  ...missionsLayerExhibits,
+  ...voyageExhibits,
+]);
