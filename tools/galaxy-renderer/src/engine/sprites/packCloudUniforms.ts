@@ -2,7 +2,7 @@
  * Byte-layout contract (comments.md budget exception): matches
  * `milkyWay/sprites/io.wesl`'s `Uniforms` struct byte-for-byte.
  *
- * packCloudUniforms — the 208-byte uniform packer for the star + dust
+ * packCloudUniforms — the 240-byte uniform packer for the star + dust
  * billboard passes.
  *
  * ## Why the tool packs the APP's struct
@@ -47,12 +47,13 @@
  */
 
 import { writeCameraPrefix } from '../../../../../src/services/gpu/lib/cameraUniforms';
+import { writeBoostUniforms } from '../../../../../src/services/gpu/lib/boostUniforms';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/data/milkyWay/milkyWayCloudUniformBufferSize';
 import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-/** Float count of `io.wesl`'s `Uniforms` — 208 bytes / 4. */
+/** Float count of `io.wesl`'s `Uniforms` — 240 bytes / 4. */
 export const CLOUD_UNIFORM_FLOATS = MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE / 4;
 
 /**
@@ -130,6 +131,9 @@ export function packCloudUniforms(
   out[49] = tuning.starPxMax;
   out[50] = tuning.starSizeScale;
   out[51] = tuning.lodApparent;
+
+  // boost 52..59 — the zero identity block: the tool draws the rest frame.
+  writeBoostUniforms(out, 52, null);
 
   return out;
 }

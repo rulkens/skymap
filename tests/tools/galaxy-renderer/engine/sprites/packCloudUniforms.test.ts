@@ -1,6 +1,6 @@
 /**
  * packCloudUniforms — the tool's packer for `milkyWay/sprites/io.wesl`'s
- * 208-byte `Uniforms`. The app's `milkyWayCloudRenderer` packs the same struct
+ * 240-byte `Uniforms`. The app's `milkyWayCloudRenderer` packs the same struct
  * from its own copy of the offset table, so the one thing worth pinning here
  * is that the tool's copy still agrees with io.wesl's byte layout: every field
  * at its documented float index, and the two viewports (star pass vs dust
@@ -35,9 +35,9 @@ const VIEW_PROJ = new Float32Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 const EYE: Vec3 = [100, 101, 102];
 
 describe('packCloudUniforms', () => {
-  it('output is io.wesl-sized (208 bytes) with viewProj at floats 0-15', () => {
+  it('output is io.wesl-sized (240 bytes) with viewProj at floats 0-15', () => {
     const out = packCloudUniforms(VIEW_PROJ, EYE, [800, 600], 1000, TUNING);
-    expect(out.byteLength).toBe(208);
+    expect(out.byteLength).toBe(240);
     expect(out.length).toBe(CLOUD_UNIFORM_FLOATS);
     expect(Array.from(out.slice(0, 16))).toEqual(Array.from(VIEW_PROJ));
   });

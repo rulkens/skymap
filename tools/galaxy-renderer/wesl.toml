@@ -25,6 +25,9 @@
 #   src/engine/shaders/lib/billboard.wesl     -> .../shaders/lib/billboard.wesl
 #   src/engine/shaders/lib/gaussianIntegral.wesl -> .../lib/gaussianIntegral.wesl
 #   src/engine/shaders/lib/splatSilhouette.wesl  -> .../lib/splatSilhouette.wesl
+#   src/engine/shaders/lib/boost.wesl        -> .../lib/boost.wesl  (the sprites' boost)
+#   src/engine/shaders/lib/math.wesl         -> .../lib/math.wesl   (tint.wesl's saturate)
+#   src/engine/shaders/starCatalog/tint.wesl -> .../starCatalog/tint.wesl (real dir, leaf link: dopplerTint)
 #
 # milkyWay/ is a REAL directory here holding leaf symlinks, not one symlink
 # to the runtime's milkyWay/. The include glob below descends INTO a
@@ -41,7 +44,7 @@
 # tier's passes share one io.wesl: sprites/stars.wesl and sprites/dust.wesl
 # both read the single '@group(0) @binding(0)' uniform declared in
 # sprites/io.wesl, so taking one pass without the other would mean packing the
-# app's 208-byte struct for it and a different struct for its sibling.
+# app's 240-byte struct for it and a different struct for its sibling.
 # lib/camera.wesl comes along because that struct embeds CameraUniforms, and
 # additiveUpsample because the reduced-resolution star target has to be
 # composited back into HDR the same way the app composites it.
