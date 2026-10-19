@@ -411,15 +411,15 @@ to `SDSS_TARGET_MEAN_MAG`, the PA sign flip, the two sign-bit flags, `paddedRadi
 its colour index and decodes its own weight. `out` is reused per row: no allocation per galaxy (~3.5 M rows). The
 interleave still computes `magOffset` itself in this task (Task 6 moves it to the record source).
 
-- [ ] Move the derivation cases of `buildPointInterleavedBuffer.test.ts` (`:53,70,86,114,128`, the slot 5/6-7/8/10
+- [x] Move the derivation cases of `buildPointInterleavedBuffer.test.ts` (`:53,70,86,114,128`, the slot 5/6-7/8/10
       cases) into `derivePointRecord.test.ts` retargeted at the function with the same hand values, and add
       `a NaN magnitude snaps to the SDSS target mean and still derives a finite absMag offset` (Review focus 5). The
       interleave test keeps layout, positions, angular weight, mean shift and colour fallback.
-- [ ] Extract `derivePointRecord`; the interleave loop calls it once per row.
-- [ ] Extract `galaxyPointVertex` into `vertexBody.wesl`; the pick renderer compiles the same `vertex.wesl`, so both
+- [x] Extract `derivePointRecord`; the interleave loop calls it once per row.
+- [x] Extract `galaxyPointVertex` into `vertexBody.wesl`; the pick renderer compiles the same `vertex.wesl`, so both
       pipelines take it.
-- [ ] `docs/RENDERER.md:20`: the derivation and the vertex body each have one home.
-- [ ] Gate: `npm run build`; pixel-identical before/after with `npm run shot -- '<link>' --url <wt server> --png --hide-ui --out data/shots/prep7-<pose>-<before|after>.png`
+- [x] `docs/RENDERER.md:20`: the derivation and the vertex body each have one home.
+- [x] Gate: `npm run build`; pixel-identical before/after with `npm run shot -- '<link>' --url <wt server> --png --hide-ui --out data/shots/prep7-<pose>-<before|after>.png`
       at `#pose=a,0,0,0,5.8964,0.0552,12372.364,0` (perf `full-survey`), `#pose=a,0,0,0,5.8964,0.0552,3500,0`
       (3.5 Gpc), `#pose=a,0,0,0,8.2811,0.5612,21.268361,0` (perf `local-group`) and `#focus=m81` (inside the Local
       Volume). Shoot one pose twice on the same commit first; compare decoded pixels (`sharp(file).raw().toBuffer()`
@@ -431,7 +431,7 @@ interleave still computes `magOffset` itself in this task (Task 6 moves it to th
 
 Start after PR #912 has merged: merge main into the branch first. The task follows the R1–R4 rulings above.
 
-**Files:** create `src/layers/galaxyCatalog/@types/GalaxyRecordSource.d.ts`,
+**Files:** create `src/@types/data/galaxyCatalog/GalaxyRecordSource.d.ts`,
 `src/@types/data/galaxyCatalog/GalaxyDurableIdClaim.d.ts`, `src/layers/galaxyCatalog/load/flatGalaxyRecordSource.ts`,
 `src/layers/galaxyCatalog/present/galaxyRecordBridge.ts`, `src/layers/galaxyCatalog/@types/GalaxyRecordBridge.d.ts`,
 `src/utils/galaxy/galaxyMagOffset.ts`; modify `src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime.d.ts:27-52`,
@@ -456,7 +456,7 @@ that build `catalogs`.
 **Contract (spec §5.1 with the R1–R4 rulings applied):**
 
 ```ts
-// src/layers/galaxyCatalog/@types/GalaxyRecordSource.d.ts
+// src/@types/data/galaxyCatalog/GalaxyRecordSource.d.ts
 export type GalaxyRecordSource = {
   readonly source: GalaxyCatalogSourceType;
   /** Real records the source holds in total (UI count); resident or not. */
