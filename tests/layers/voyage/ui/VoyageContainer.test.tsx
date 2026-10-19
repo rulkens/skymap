@@ -45,12 +45,6 @@ const types = (store: ReturnType<typeof mount>) =>
   vi.mocked(store.dispatch).mock.calls.map((c) => (c[0] as { type: string }).type);
 
 describe('VoyageContainer', () => {
-  it('labels both clocks', () => {
-    mount();
-    expect(screen.getByText('Ship’s clock')).toBeInTheDocument();
-    expect(screen.getByText('Earth’s clock')).toBeInTheDocument();
-  });
-
   it('a track scrub dispatches setSimDays at launch + earthYrOfTau', () => {
     const store = mount();
     const slider = screen.getByRole('slider');

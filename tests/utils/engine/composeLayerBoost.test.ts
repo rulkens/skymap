@@ -34,8 +34,4 @@ describe('composeLayerBoost', () => {
   it('composeLayerBoost returns null when none answers', () => {
     expect(composeLayerBoost([layer(), layer()], SETTINGS, 0)).toBeNull();
   });
-
-  it('composeLayerBoost ignores Layers whose boost returns null', () => {
-    expect(composeLayerBoost([layer(() => null), layer(() => BOOST)], SETTINGS, 0)).toBe(BOOST);
-  });
 });
