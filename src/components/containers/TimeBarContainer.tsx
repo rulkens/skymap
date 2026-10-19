@@ -148,7 +148,7 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
       {openPopover === 'date' && !hidden && (
         <div style={row ? ROW_POPOVER_PLACEMENT : POPOVER_PLACEMENT}>
           <DateEntryPopover
-            initial={instant}
+            initial={new Date(instant)}
             onCommit={onPopoverCommit}
             onCancel={onPopoverClose}
           />

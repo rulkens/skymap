@@ -42,7 +42,7 @@ describe('useSimInstant', () => {
     vi.useRealTimers();
   });
 
-  // The readouts show whole minutes; a fresh Date every second would re-render both at 1 Hz.
+  // The readouts show whole minutes; a fresh value every second would re-render both at 1 Hz.
   it('re-renders on a new minute, not on every one-second tick', () => {
     const { hook, renders } = renderCounted(RUNNING);
     const first = hook.result.current;
@@ -53,7 +53,7 @@ describe('useSimInstant', () => {
     expect(hook.result.current).toBe(first);
 
     advance(30_000);
-    expect(hook.result.current.getTime() - first.getTime()).toBe(60_000);
+    expect(hook.result.current - first).toBe(60_000);
     expect(renders()).toBe(before + 1);
   });
 

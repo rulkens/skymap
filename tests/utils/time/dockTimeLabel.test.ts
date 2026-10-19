@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { dockTimeLabel } from '../../../src/utils/time/dockTimeLabel';
 
-const MARCH_2031 = new Date(Date.UTC(2031, 2, 3, 23, 59));
+const MARCH_2031 = Date.UTC(2031, 2, 3, 23, 59);
 
 describe('dockTimeLabel', () => {
   it('reads just "Time" on running real time', () => {
@@ -33,5 +33,14 @@ describe('dockTimeLabel', () => {
     expect(dockTimeLabel({ mode: 'manual', paused: false }, MARCH_2031, 2031).name).toBe(
       'Time, 3 Mar 2031, running',
     );
+  });
+
+  it('reads years since J2000 past the Date range, never NaN', () => {
+    const farMs = Date.UTC(2000, 0, 1, 12) + 1_270_000 * 365.25 * 86_400_000;
+    expect(dockTimeLabel({ mode: 'manual', paused: false }, farMs, 2026)).toEqual({
+      text: '+1,270,000 yr',
+      glyph: '▶',
+      name: 'Time, +1,270,000 yr, running',
+    });
   });
 });

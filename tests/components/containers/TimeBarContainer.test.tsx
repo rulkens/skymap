@@ -96,7 +96,7 @@ describe('TimeBarContainer', () => {
     );
 
     const time = selectTimeState(store.getState());
-    const expected = formatSimClock(new Date(julianDaysToUnixMs(deriveSimDays(time, PERF_NOW))));
+    const expected = formatSimClock(julianDaysToUnixMs(deriveSimDays(time, PERF_NOW)));
 
     const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
       wrapper: makeWrapper(store),

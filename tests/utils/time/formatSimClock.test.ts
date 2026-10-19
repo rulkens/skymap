@@ -1,5 +1,5 @@
 /**
- * formatSimClock renders a wall-clock instant as a compact UTC date-time string.
+ * formatSimClock renders a sim instant as a compact UTC date-time string.
  *
  * The expected strings here are hand-written from the known UTC instant, not
  * produced by the same field-composition the implementation uses. The stability
@@ -35,11 +35,18 @@ describe('formatSimClock', () => {
 
     const date = new Date(Date.UTC(2026, 10, 3, 18, 0, 0));
     // Sentinel rendering would be '1999-01-01 07:42 UTC'; the UTC one is:
-    expect(formatSimClock(date)).toBe('2026-11-03 18:00 UTC');
+    expect(formatSimClock(date.getTime())).toBe('2026-11-03 18:00 UTC');
   });
 
   it('zero-pads single-digit month, day, hour, and minute', () => {
-    const date = new Date(Date.UTC(2026, 0, 5, 4, 9, 0));
-    expect(formatSimClock(date)).toBe('2026-01-05 04:09 UTC');
+    expect(formatSimClock(Date.UTC(2026, 0, 5, 4, 9, 0))).toBe('2026-01-05 04:09 UTC');
+  });
+
+  // A far voyage's Earth clock runs past year 275,760, where every UTC getter reads NaN.
+  it('reads signed years since J2000 past the Date range, never NaN', () => {
+    const j2000Ms = Date.UTC(2000, 0, 1, 12);
+    const yearMs = 365.25 * 86_400_000;
+    expect(formatSimClock(j2000Ms + 1_270_000 * yearMs)).toBe('+1,270,000 yr');
+    expect(formatSimClock(j2000Ms - 300_000 * yearMs)).toBe('−300,000 yr');
   });
 });
