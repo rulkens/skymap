@@ -7,9 +7,8 @@
 import type { ShipState } from '../../@types/relativity/ShipState';
 import type { VoyageDestination } from '../../layers/voyage/@types/VoyageDestination';
 import type { VoyageReadouts } from '../../layers/voyage/@types/VoyageReadouts';
-import { formatPowerOfTen } from '../format/formatPowerOfTen';
-import { formatScalar } from '../format/formatScalar';
 import { earthYrOfTau } from '../relativity/earthYrOfTau';
+import { formatGamma } from './formatGamma';
 import { formatLightYears } from './formatLightYears';
 import { formatSpeedOfLight } from './formatSpeedOfLight';
 import { formatYears } from './formatYears';
@@ -22,7 +21,7 @@ export function voyageReadouts(destination: VoyageDestination, ship: ShipState):
     shipClock: formatYears(ship.tauYr),
     earthClock: formatYears(earthYrOfTau(tripLy, ship.tauYr)),
     speed: formatSpeedOfLight(ship.beta, ship.gamma),
-    gamma: ship.gamma < 1000 ? formatScalar(ship.gamma) : formatPowerOfTen(ship.gamma, 3),
+    gamma: formatGamma(ship.gamma),
     aheadEarthLy: formatLightYears(aheadLy),
     aheadShipLy: formatLightYears(aheadLy / ship.gamma),
   };
