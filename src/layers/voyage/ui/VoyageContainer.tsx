@@ -1,7 +1,8 @@
 /**
  * VoyageContainer — store boundary for the voyage overlay: the sim instant, the clock profile and
  * the `voyage` cluster in; `setSimDays` (a ship-time scrub, converted through `earthYrOfTau`),
- * `playVoyage` / `pause`, `stepVoyageSpeed`, `setVoyageDestination` and the effect setters out.
+ * `playVoyage` / `pause`, `stepVoyageSpeed`, the effect setters and, for a destination tab, the
+ * sibling exhibit's `openExhibit` (a cut, so the camera stays put) out.
  * The ship is re-derived on a 4 Hz interval, as the mission timeline's instant is. The headlight
  * switch is honest as local memory of the last non-zero k: off writes 0, on writes that back.
  */
@@ -15,11 +16,11 @@ import { playVoyage } from '../exhibits/playVoyage';
 import { selectRoute } from '../state/voyage/selectors';
 import {
   setVoyageContraction,
-  setVoyageDestination,
   setVoyageDoppler,
   setVoyageHeadlight,
   stepVoyageSpeed,
 } from '../state/voyage/slice';
+import { openExhibit } from '../../../state/exhibits/exhibitActions';
 import { selectTimeState } from '../../../state/time/selectors';
 import { pause, setSimDays } from '../../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../../data/exhibits/mission/missionSpeeds';
@@ -108,7 +109,7 @@ function VoyageContainer({ data }: VoyageContainerProps): ReactNode {
         doppler: voyage.doppler,
         headlight: voyage.headlight > 0,
       }}
-      onSelect={(id) => dispatch(setVoyageDestination(id))}
+      onSelect={(id) => dispatch(openExhibit({ id: `voyage-${id}`, entry: 'cut' }))}
       onSeekTau={onSeekTau}
       onPlayPause={onPlayPause}
       onSlower={() => dispatch(stepVoyageSpeed({ step: -1 }))}

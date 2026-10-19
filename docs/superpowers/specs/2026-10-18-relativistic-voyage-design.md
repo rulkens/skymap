@@ -222,8 +222,9 @@ sources sections.
 `voyageKind: ExhibitSectionKind<VoyageSection>`:
 
 - **hold** (`voyageHoldSaga`): sets `launchDays` to the sim instant at opening, pauses the clock there, flies in
-  (reusing `exhibitBodySaga`'s entry), then loops on run / pause / scrub / speed / destination tab until
-  `exitTakeover`. Run starts a `ClockProfile` from `buildVoyageProfile`.
+  (reusing `exhibitBodySaga`'s entry), then loops on run / pause / scrub / speed until `exitTakeover`. Run
+  starts a `ClockProfile` from `buildVoyageProfile`. A destination tab opens the sibling exhibit
+  (`voyage-<id>`, entry `'cut'`), a takeover swap, so title, facts and the URL follow it.
 - **cameraDriver** (`voyagePose`, priority 58, `commitsOnEdge: 'displayed'`, as the mission row): eye at the ship,
   looking along `dir`, with the visitor's drag and wheel offsets as `missionPose` carries them. Past arrival, the
   framing of the destination's `focusId` where there is one.

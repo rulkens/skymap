@@ -1,9 +1,10 @@
 /**
  * voyageHoldSaga — the voyage exhibit's hold: the trip launches at the instant the exhibit opens,
  * paused there, with the camera on the ship (flown to, unless the entry is a cut, while the loop
- * already listens). Run, resume, − / + or a scrub while playing play the trip in ship time; a
- * destination tab re-launches the new trip at the current instant and re-aims. A linked `t=` is
- * ignored: the exhibit's link opens at launch (spec §4.7). The camera row is core's to turn off.
+ * already listens). Run, resume, − / + or a scrub while playing play the trip in ship time. A
+ * destination tab opens the sibling exhibit, a takeover swap, so it never reaches this loop. A
+ * linked `t=` is ignored: the exhibit's link opens at launch (spec §4.7). The camera row is core's
+ * to turn off.
  */
 import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
@@ -20,7 +21,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { voyageEntryPose } from '../../../utils/voyage/voyageEntryPose';
 import { playVoyage } from '../exhibits/playVoyage';
 import { selectRoute } from '../state/voyage/selectors';
-import { setVoyageDestination, setVoyageLaunchDays, stepVoyageSpeed } from '../state/voyage/slice';
+import { setVoyageLaunchDays, stepVoyageSpeed } from '../state/voyage/slice';
 import { voyagePlaySaga } from './voyagePlaySaga';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Transition } from '../../../@types/navigation/Transition';
@@ -61,7 +62,6 @@ export function* voyageHoldSaga(
     for (;;) {
       const next = yield* race({
         exit: take(exitTakeover),
-        tab: take(setVoyageDestination),
         play: take(playVoyage),
         resume: take(resume),
         speed: take(stepVoyageSpeed),
@@ -81,10 +81,8 @@ export function* voyageHoldSaga(
         yield* cancel(task);
         task = null;
       }
-      const flying = fly?.isRunning() ?? false;
-      if (next.tab) yield* call(launchNow);
       // A re-aim while the fly-in still owns the camera eases from where it ends up.
-      if (next.tab || flying) yield* put(aimCamera({ ease: true }));
+      if (fly?.isRunning() ?? false) yield* put(aimCamera({ ease: true }));
       const run = next.play !== undefined || next.resume !== undefined;
       if (run || playing) {
         task = yield* fork(voyagePlaySaga, speed, {

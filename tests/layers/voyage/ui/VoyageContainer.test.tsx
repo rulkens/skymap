@@ -19,6 +19,7 @@ import {
   setVoyageHeadlight,
   setVoyageLaunchDays,
 } from '../../../../src/layers/voyage/state/voyage/slice';
+import { openExhibit } from '../../../../src/state/exhibits/exhibitActions';
 import { pause, setSimDays } from '../../../../src/state/time/timeSlice';
 import { earthYrOfTau } from '../../../../src/utils/relativity/earthYrOfTau';
 import { tripOf } from '../../../../src/utils/relativity/tripOf';
@@ -68,13 +69,11 @@ describe('VoyageContainer', () => {
     expect(types(store)).toEqual([playVoyage.type]);
   });
 
-  it('a tab dispatches setVoyageDestination', () => {
+  it('a tab opens the sibling exhibit on a cut', () => {
     const store = mount();
     fireEvent.click(screen.getByRole('tab', { name: 'Proxima Centauri' }));
-    expect(store.getState().settings.voyage.destination).toBe('proxima');
-    expect(screen.getByRole('tab', { name: 'Proxima Centauri' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    expect(store.dispatch).toHaveBeenCalledWith(
+      openExhibit({ id: 'voyage-proxima', entry: 'cut' }),
     );
   });
 

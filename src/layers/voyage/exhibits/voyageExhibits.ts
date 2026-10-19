@@ -24,7 +24,6 @@ import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
 import { voyageKind } from './voyageKind';
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
-import type { ExhibitId } from '../../../@types/exhibits/ExhibitId';
 import type { VoyageDestinationId } from '../@types/VoyageDestinationId';
 
 const HORIZON_LY = (1 / A_LY_PER_YR2).toFixed(2);
@@ -75,16 +74,12 @@ const SOURCES = section(sourcesKind, {
   ],
 });
 
-function voyageExhibit(
-  id: ExhibitId,
-  destination: VoyageDestinationId,
-  label: string,
-  lede: string,
-): Exhibit {
+function voyageExhibit(destination: VoyageDestinationId, label: string, lede: string): Exhibit {
   const tripLy = voyageTripLy(VOYAGE_DESTINATIONS[destination]);
   const trip = tripOf(tripLy);
   return {
-    id,
+    // A destination tab opens `voyage-<destination>` (VoyageContainer).
+    id: `voyage-${destination}`,
     label,
     settings: {
       starCatalogs: starCatalogsInitialState,
@@ -117,25 +112,21 @@ function voyageExhibit(
 
 export const voyageExhibits: readonly Exhibit[] = [
   voyageExhibit(
-    'voyage-proxima',
     'proxima',
     'Voyage to Proxima Centauri',
     'A ship that pushes at one g, the pull of gravity at Earth’s surface, reaches the nearest star while its crew ages only a few years.',
   ),
   voyageExhibit(
-    'voyage-sgrAStar',
     'sgrAStar',
     'Voyage to Sagittarius A*',
     'At one g the whole way, a ship reaches the black hole at the centre of the Milky Way in two decades of its own time.',
   ),
   voyageExhibit(
-    'voyage-m31',
     'm31',
     'Voyage to Andromeda',
     'At one g the whole way, a ship reaches the Andromeda Galaxy within a human lifetime of its own time.',
   ),
   voyageExhibit(
-    'voyage-m87',
     'm87',
     'Voyage to M87',
     'At one g the whole way, a ship crosses to M87, the giant galaxy at the heart of the Virgo Cluster, within a human lifetime of its own time.',

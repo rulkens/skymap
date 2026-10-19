@@ -14,9 +14,10 @@ import { initialState as voyageInitialState } from '../../../../src/layers/voyag
 import { playVoyage } from '../../../../src/layers/voyage/exhibits/playVoyage';
 import { voyageHoldSaga } from '../../../../src/layers/voyage/sagas/voyageHoldSaga';
 import { selectFrameBoost } from '../../../../src/layers/voyage/state/voyage/selectors';
-import { setVoyageDestination } from '../../../../src/layers/voyage/state/voyage/slice';
 import { mergeSnapshot } from '../../../../src/state/settings/mergeSnapshotAction';
 import { withSceneSnapshotSaga } from '../../../../src/state/takeover/withSceneSnapshotSaga';
+import { watchTakeoverSaga } from '../../../../src/state/takeover/watchTakeoverSaga';
+import { openExhibit } from '../../../../src/state/exhibits/exhibitActions';
 import { exitTakeover } from '../../../../src/state/takeover/takeoverActions';
 import { resume, setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
@@ -50,6 +51,19 @@ function hold() {
   });
   const simDays = () => deriveSimDays(store.getState().time, performance.now());
   return { store, simDays, openedAt };
+}
+
+function takeovers() {
+  const sagaMiddleware = createSagaMiddleware();
+  const store = configureStore({
+    reducer: rootReducer,
+    middleware: (getDefault) =>
+      getDefault({ serializableCheck: false, immutableCheck: false }).concat(sagaMiddleware),
+  });
+  sagaMiddleware.setContext({ playClip: vi.fn().mockResolvedValue(undefined) });
+  sagaMiddleware.run(watchTakeoverSaga);
+  const simDays = () => deriveSimDays(store.getState().time, performance.now());
+  return { store, simDays };
 }
 
 describe('voyage hold loop', () => {
@@ -89,18 +103,23 @@ describe('voyage hold loop', () => {
     expect(simDays()).toBeGreaterThan(to);
   });
 
-  it('a destination tab re-launches at the current instant', async () => {
-    const { store, simDays } = hold();
-    const later = store.getState().settings.voyage.launchDays! + 3 * JULIAN_YEAR_DAYS;
-    store.dispatch(setSimDays({ simDays: later, nowMs: performance.now() }));
-    await tick();
-    store.dispatch(setVoyageDestination('proxima'));
-    await tick();
+  // A tab opens the sibling exhibit: the swap must land the new trip, not the outgoing restore.
+  it('a destination tab swaps to the sibling exhibit, launched and held there', async () => {
+    const { store, simDays } = takeovers();
+    store.dispatch(openExhibit({ id: 'voyage-m31', entry: 'cut' }));
+    await tick(1000);
+    store.dispatch(playVoyage());
+    await tick(500);
+    const pose = store.getState().camera.base;
+    store.dispatch(openExhibit({ id: 'voyage-proxima', entry: 'cut' }));
+    await tick(1000);
     const s = store.getState();
-    expect(s.settings.voyage.launchDays).toBe(later);
-    expect(simDays()).toBe(later);
+    expect(s.takeover.active).toMatchObject({ kind: 'exhibit', id: 'voyage-proxima' });
+    expect(s.settings.voyage.destination).toBe('proxima');
     expect(s.time.paused).toBe(true);
-    expect(s.camera.aim).toEqual({ ease: true });
+    expect(s.time.profile).toBeNull();
+    expect(simDays()).toBe(s.settings.voyage.launchDays);
+    expect(s.camera.base).toEqual(pose);
   });
 
   it('exit cancels the play task and restores the rest frame', async () => {
