@@ -40,7 +40,7 @@ owning the Intent (destination, launch instant, toggles, speed), four exhibit ro
   Ship-time scrubs convert through `earthYrOfTau`. `VOYAGE_WALL_MS = 60_000` for a whole trip at speed 1.
 - **Reference numbers** (three figures, the test fixtures): Proxima 3.54 / 5.87 yr, γ 3.19; Sgr A\* 19.8 yr /
   26.7 kyr, γ 1.38 × 10⁴; M31 28.6 yr / 2.54 Myr, γ 1.31 × 10⁶; M87 34.6 yr / 54.7 Myr, γ 2.83 × 10⁷. Turnaround
-  remaining distance `d / γ_max → 1.94 ly`. Doppler ahead `γ(1 + β)`, behind `γ(1 − β)`.
+  whole line `d / γ_max → 1.94 ly`, the half ahead `0.97 ly`. Doppler ahead `γ(1 + β)`, behind `γ(1 − β)`.
 - **Conventions:** one symbol per file in `utils/`, `@types/` and `data/`; `type`, never `interface`; frame files
   export only their own symbol; comments explain why, module header ≤ 10 lines; UI per
   `docs/superpowers/conventions/ui-ux.md`; copy per `docs/tour/writing-style.md`; stage explicit paths; format with
@@ -351,7 +351,7 @@ exactly. Shortcuts: `[` / `]` step speed (`missionShortcuts.ts` pattern). Follow
 no new colours.
 
 - [ ] Tests:
-  - `voyageReadouts at the M31 turnaround` — ship 14 yr, Earth 1.27 Myr, γ 1.31 × 10⁶, ahead 1.27 Mly / 1.9 ly
+  - `voyageReadouts at the M31 turnaround` — ship 14 yr, Earth 1.27 Myr, γ 1.31 × 10⁶, ahead 1.27 Mly / 0.97 ly
     (string contains);
   - `formatYears never produces NaN or Infinity` across 0, 0.5, 3.54, 2.54e6, 5.47e7;
   - `a track scrub dispatches setSimDays at launch + earthYrOfTau`; `run dispatches playVoyage`;
@@ -519,7 +519,7 @@ and the task says so in the commit.
 - Palette → "Voyage to Andromeda" opens the exhibit at launch, paused, camera at the Sun looking at M31.
 - Run plays the whole trip in about a minute at 1×; the ship clock ends at 28.6 yr and the Earth clock at
   2.54 Myr; − / + and `[` / `]` change the pace.
-- Scrubbing to the midpoint shows γ ≈ 1.3 million, "ahead 1.9 ly", the Milky Way flattened and red behind, M31
+- Scrubbing to the midpoint shows γ ≈ 1.3 million, "ahead 0.97 ly", the Milky Way flattened and red behind, M31
   flattened, blue and large ahead; each of the three toggles removes exactly its effect.
 - Proxima's trip never passes γ 3.2 and the near stars visibly shear.
 - Destination tabs re-launch at the current instant; Esc / exit restores the rest frame, the previous scene and

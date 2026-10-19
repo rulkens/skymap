@@ -16,7 +16,7 @@ listed in §2; the rest of the document assumes them.
 - **Constraints:** the warp must reach every renderer the same way, or the layers come apart (a squashed star field
   inside an unsquashed Milky Way). No per-renderer geometry work. Nothing changes outside the exhibit.
 - **Success:** at the Andromeda turnaround the readouts show 14.3 ship-years, 1.27 million Earth-years,
-  γ = 1.3 million and "Andromeda: 1.9 light-years ahead"; the Milky Way behind is a red disc, M31 ahead a blue one;
+  γ = 1.3 million and "Andromeda: 0.97 light-years ahead"; the Milky Way behind is a red disc, M31 ahead a blue one;
   `npm run shot` on the exhibit's link at four instants matches the table in §3.1.
 
 ## 2. Rulings
@@ -77,7 +77,8 @@ The deceleration half mirrors the acceleration half about the midpoint. A trip o
 | Andromeda | 2.54 Mly | 28.6 yr | 2.54 Myr | 1.31 × 10⁶ |
 | M87 | 54.7 Mly | 34.6 yr | 54.7 Myr | 2.83 × 10⁷ |
 
-At turnaround the remaining distance in the ship frame is `d / γ_max → 2 / a = 1.94 ly` for every far destination.
+At turnaround the whole Sun-to-destination line measures `d / γ_max → 2 / a = 1.94 ly` in the ship frame, for every
+far destination; the half still ahead is `1 / a = 0.97 ly`, the same length as the Rindler horizon behind.
 
 Doppler factor of a source seen at angle θ from the direction of travel: `D = 1 / (γ (1 − β cos θ))`.
 
