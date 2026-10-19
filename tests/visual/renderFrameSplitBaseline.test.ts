@@ -422,6 +422,8 @@ describe('renderFrame visual baseline', () => {
         // The handed value's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
         focusBlend: 0,
+        // The rest frame, as `frameContext` seeds it; the disk draws take it as an argument.
+        boost: null,
         // No body rows in this scene: the two slabs above are cosmological.
         slabBodyCandidates: [],
         // The executor resolves hdr/density attachments — and the density
@@ -608,11 +610,11 @@ describe('renderFrame visual baseline', () => {
           "renderer": "point-sprites",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],number,object,Array[1]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],number,object,Array[1],null",
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],object,Array[1],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],object,Array[1],undefined,null",
           "renderer": "textured-disks",
         },
         {

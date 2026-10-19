@@ -396,6 +396,7 @@ unclear, and no entry here reads them as a licence.
   And the papers: "If you have used Gaia DR3 data in your research, please
   cite both the Gaia mission paper and the Gaia DR3 release paper", which
   are Prusti et al. 2016 and Vallenari et al. 2023.
+
 - **Upstream:** <https://gea.esac.esa.int/tap-server/tap/sync> (the Gaia
   archive's TAP service).
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/gaia_page_*.csv` →
@@ -947,12 +948,12 @@ Where the per-image record (`data/seeds/famous_curated_overrides.json`, and
 the `recipe.json` shipped beside each image) differs from what the source
 states. The record is a shipped file and was not edited:
 
-| image | the record says | the source says (read 2026-10-07) |
-| --- | --- | --- |
-| `c29` NGC 5005 | `"license": "unknown"` | NOIRLab: CC BY 4.0 ("Unless specifically noted"; the page carries no note). Credit on the page: "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block" |
-| `m88` | `"Public domain"` | NOIRLab: CC BY 4.0, no note on the page. Credit: "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block" |
-| `m91` | `"Public Domain"` | NOIRLab: CC BY 4.0, no note on the page. Credit: "NOIRLab/ NSF /AURA" |
-| `m94` | `"CC 4.0"` | NOIRLab: CC BY 4.0, no note on the page. Credit: "Hillary Mathis, N.A.Sharp/NOIRLab/ NSF /AURA/" |
+| image                        | the record says                                                                                           | the source says (read 2026-10-07)                                                                                                                                                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `c29` NGC 5005               | `"license": "unknown"`                                                                                    | NOIRLab: CC BY 4.0 ("Unless specifically noted"; the page carries no note). Credit on the page: "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block"                                                                                   |
+| `m88`                        | `"Public domain"`                                                                                         | NOIRLab: CC BY 4.0, no note on the page. Credit: "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block"                                                                                                                                              |
+| `m91`                        | `"Public Domain"`                                                                                         | NOIRLab: CC BY 4.0, no note on the page. Credit: "NOIRLab/ NSF /AURA"                                                                                                                                                                      |
+| `m94`                        | `"CC 4.0"`                                                                                                | NOIRLab: CC BY 4.0, no note on the page. Credit: "Hillary Mathis, N.A.Sharp/NOIRLab/ NSF /AURA/"                                                                                                                                           |
 | `c17` NGC 147, `c18` NGC 185 | `"license": "unknown"`, author "Digital Sky Survey" / "Digitized Sky Survey 2", taken from theskylive.com | Not opened (HTTP 403). If they are DSS frames, the terms are those of the Digitized Sky Survey (see entry: dss): copyrighted, free for non-profit use, commercial use "prohibited without written permission from the copyright holder(s)" |
 
 Each of the four NOIRLab pages also says: "Crediting this image with the full
@@ -1057,7 +1058,7 @@ paying a fee."
   by above use policy, contact archive@stsci.edu." The holders are Caltech, the Anglo-Australian
   Observatory Board, the UK SERC/PPARC (now STFC) and AURA, by plate. The CDS
   tile set names `hips_license = ODbL-1.0` and `obs_copyright = Digitized Sky
-  Survey - STScI/NASA, Colored & Healpixed by CDS`.
+Survey - STScI/NASA, Colored & Healpixed by CDS`.
 - **Use:** Ask the holder
 - **Attribution:** "Investigators using these scans are requested to include
   these acknowledgments in any publications as appropriate." The text,
@@ -1767,7 +1768,7 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
   were fetched (`data/raw/hirise/*/README.md`).
 - **Use:** Free, no credit asked
 - **Attribution:** None required by CC0. Ours: "HiRISE: NASA/JPL/University of
-  Arizona; DTEEC_…, USGS Astrogeology (CC0)."
+  Arizona; DTEEC\_…, USGS Astrogeology (CC0)."
 - **Upstream:** `https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/`
 - **Enters skymap:** fetched by hand → `marsSurfaceBake.ts`.
 - **Modified:** Yes. Re-tiled; the grey orthophotos are coloured from Viking.
@@ -2123,6 +2124,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
   "License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported
   License"; the hashes, `hash12` among them, are in the tab headed by the MIT
   notice.
+
 - **Use:** Free with credit
 - **Attribution:** The licence asks that "The above copyright notice and this
   permission notice shall be included in all copies or substantial portions
@@ -2286,8 +2288,7 @@ three projects declares a Reserved Font Name in its `OFL.txt`.
   2012- Matplotlib Development Team; All Rights Reserved" are retained in
   matplotlib alone or in any derivative version". Kenneth Moreland's page
   states no licence for the colour table. skymap's `coolwarm` anchors are not
-  matplotlib's numbers: matplotlib's table runs (59, 76, 192) → (221, 221,
-  221) → (180, 4, 38), ours (20, 60, 180) → (245, 245, 240) → (180, 30, 30).
+  matplotlib's numbers: matplotlib's table runs (59, 76, 192) → (221, 221, 221) → (180, 4, 38), ours (20, 60, 180) → (245, 245, 240) → (180, 30, 30).
 - **Use:** Free with credit; No licence stated
 - **Attribution:** None required for the CC0 maps. For matplotlib's own
   material, the licence and notice quoted under Licence.
@@ -2557,8 +2558,8 @@ and where they come from".
     collections is prohibited without written permission from the copyright
     holder(s)."
   - 3D models: per model, as the entries under "3D models" state.
-  No picture that shows stars, 2MRS, GLADE or Milliquas points can therefore
-  be offered for unrestricted reuse, and the website offers none.
+    No picture that shows stars, 2MRS, GLADE or Milliquas points can therefore
+    be offered for unrestricted reuse, and the website offers none.
 - **Use:** Per item; Non-commercial only
 - **Attribution:** "skymap / Alexander Rulkens", followed by the credit of
   each source in the frame as its entry words it.
@@ -2626,20 +2627,23 @@ and where they come from".
 
 ### Links to papers, repositories and reference pages
 
-<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org -->
+<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org,global.oup.com,math.ucr.edu -->
 
 - **What:** Plain links in the app's exhibits, credits and page head: papers
   on arXiv and by DOI, repositories on GitHub, the WebGPU support table, the
-  MIT licence text. Nothing is fetched from them.
+  MIT licence text, Rindler's _Relativity_ at Oxford University Press and the
+  relativistic rocket page of the Usenet Physics FAQ (Baez, UC Riverside).
+  Nothing is fetched from them.
 - **By:** Their respective owners.
 - **Licence:** None applies to a link.
 - **Use:** Reference only
 - **Attribution:** None.
 - **Upstream:** the links themselves.
-- **Enters skymap:** `src/data/exhibits/*.ts`, `src/components/Splash/`,
-  `src/unsupportedPage.ts`, `index.html`.
+- **Enters skymap:** `src/data/exhibits/*.ts`, `src/layers/voyage/exhibits/voyageExhibits.ts`,
+  `src/components/Splash/`, `src/unsupportedPage.ts`, `index.html`.
 - **Modified:** Not applicable.
-- **Checked:** 2026-10-07: no page opened.
+- **Checked:** 2026-10-07: no page opened. 2026-10-19: the two new links
+  answer (HTTP 202 and 200); nothing else read.
 
 ### npm dependencies
 
