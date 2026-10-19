@@ -23,6 +23,7 @@ import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
+import { setSimDays } from '../../../src/state/time/timeSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -127,6 +128,13 @@ describe('t row', () => {
   it('writes a manual anchor as an ISO instant', () => {
     const actions = manualPausedAtActions(new Date(J2000_ISO));
     expect(timeSource.write(stateAfter(...actions))).toBe(J2000_ISO);
+  });
+
+  it('timeSource.write returns null past the Date range', () => {
+    const atYear3Million = CONST_J2000 + 3e6 * 365.25;
+    const state = stateAfter(setSimDays({ simDays: atYear3Million, nowMs: 0 }));
+    expect(() => timeSource.write(state)).not.toThrow();
+    expect(timeSource.write(state)).toBeNull();
   });
 
   it('writes nothing while the clock is live', () => {

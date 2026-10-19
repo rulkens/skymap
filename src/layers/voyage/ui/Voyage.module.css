@@ -1,0 +1,156 @@
+/* src/layers/voyage/ui/Voyage.module.css */
+/*
+ * The voyage overlay speaks the mission timeline's vocabulary (tabs, transport pill, scrub track)
+ * and the exhibit overlay's (figures, switches), composed from both rather than restyled. The
+ * accent is the lane colour: there is one trip, not one colour per craft.
+ */
+
+.root {
+  composes: root from '../../missions/ui/ExhibitTimeline.module.css';
+  --lane: var(--color-accent);
+}
+.heading {
+  composes: heading from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.story {
+  composes: story from '../../missions/ui/ExhibitTimeline.module.css';
+}
+
+/* ── Destination tabs ───────────────────────────────────────────────── */
+.tabs {
+  composes: tabs from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.tab {
+  composes: tab from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.tabSelected {
+  composes: tabSelected from '../../missions/ui/ExhibitTimeline.module.css';
+}
+
+/* ── Transport ──────────────────────────────────────────────────────── */
+.transport {
+  composes: transport from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.iconBtn {
+  composes: iconBtn from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.playBtn {
+  composes: playBtn from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.when {
+  composes: when from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.whenValue {
+  composes: whenDate from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.whenLabel {
+  composes: whenTime from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.rate {
+  composes: rate from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.rateBtn {
+  composes: rateBtn from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.rateLabel {
+  composes: rateLabel from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.pulse {
+  composes: pulse from '../../missions/ui/ExhibitTimeline.module.css';
+}
+
+/* ── Track: ship years, the turnaround ticked ───────────────────────── */
+.plot {
+  composes: plot from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.track {
+  composes: track from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.lane {
+  composes: lane from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.laneLine {
+  composes: laneLine from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.laneFill {
+  composes: laneFill from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.midTick {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: var(--space-1);
+  height: var(--space-4);
+  background: var(--color-fg-label);
+}
+.thumb {
+  composes: thumb from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.knob {
+  composes: knob from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.axis {
+  composes: axis from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.axisLabel {
+  composes: axisLabel from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.axisFirst {
+  composes: axisFirst from '../../missions/ui/ExhibitTimeline.module.css';
+}
+.axisLast {
+  composes: axisLast from '../../missions/ui/ExhibitTimeline.module.css';
+}
+
+/* ── Readouts ───────────────────────────────────────────────────────── */
+.readouts {
+  composes: facts from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+  margin: 0;
+}
+.readout {
+  composes: fact from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.readoutLabel {
+  composes: factLabel from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.readoutValue {
+  composes: factValue from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Effect switches ────────────────────────────────────────────────── */
+.switches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.switchRow {
+  composes: toggleRow from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.switchLabel {
+  composes: toggleLabel from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.switchState {
+  composes: toggleState from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.switchTrack {
+  composes: track from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.switchTrackOn {
+  composes: trackOn from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.switchKnob {
+  composes: knob from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+.switchKnobOn {
+  composes: knobOn from '../../../components/ExhibitOverlay/ExhibitOverlay.module.css';
+}
+
+/* Shortcut hints, dim and always there (ui-ux Interaction 6). */
+.keys {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-tertiary);
+}

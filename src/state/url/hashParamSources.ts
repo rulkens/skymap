@@ -199,7 +199,9 @@ const timeSource: HashParamSource = {
   write: (state) => {
     const time = selectTimeState(state);
     if (time.mode !== 'manual') return null;
-    return new Date(julianDaysToUnixMs(time.anchor.simDays)).toISOString();
+    const date = new Date(julianDaysToUnixMs(time.anchor.simDays));
+    // A Date ends at year 275,760, which a far voyage's Earth clock passes; `toISOString` throws.
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   },
   read: (value) => {
     const unixMs = Date.parse(value);

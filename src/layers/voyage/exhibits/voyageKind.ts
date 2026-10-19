@@ -1,6 +1,7 @@
 import VoyageContainer from '../ui/VoyageContainer';
 import { voyageHoldSaga } from '../sagas/voyageHoldSaga';
 import { voyagePose } from './voyagePose';
+import { voyageShortcuts } from '../ui/voyageShortcuts';
 import type { ExhibitSectionKind } from '../../../@types/exhibits/ExhibitSectionKind';
 import type { VoyageSection } from '../@types/VoyageSection';
 
@@ -8,6 +9,7 @@ import type { VoyageSection } from '../@types/VoyageSection';
 export const voyageKind: ExhibitSectionKind<VoyageSection> = {
   Component: VoyageContainer,
   hold: voyageHoldSaga,
+  shortcuts: voyageShortcuts,
   cameraDriver: {
     id: 'voyage',
     ridesWheelTarget: true,
