@@ -32,7 +32,6 @@ export function wireGalaxyCatalogSourceSlot(
     readonly catalogs: Map<SourceType, GalaxyCatalog>;
     readonly records: Map<GalaxyCatalogSourceType, GalaxyRecordSource>;
     readonly famousMeta: () => readonly FamousGalaxyMetaEntry[];
-    readonly provenanceCounts: Map<SourceType, ProvenanceCounts>;
     readonly bumpCatalogsVersion: () => void;
   },
 ): AssetSlot<GalaxyCatalog, GalaxyCatalogReq> {
@@ -77,18 +76,12 @@ export function wireGalaxyCatalogSourceSlot(
     },
   });
 
+  // `records` is current at both beats: commit sets it before `ready`, and
+  // `onRelease` deletes it before the slot announces `idle`.
   slot.subscribe((s) => {
     if (s.kind !== 'ready' && s.kind !== 'idle') return;
-    const record = galaxy.records.get(source);
-    if (s.kind === 'ready' && record !== undefined) {
-      galaxy.provenanceCounts.set(source, record.stats.provenance);
-    } else {
-      galaxy.provenanceCounts.delete(source);
-    }
-    // A COPY of the whole tally: immer freezes what the reducer stores, and a
-    // shared reference would freeze the runtime's own map on the next write.
     const published: Partial<Record<SourceType, ProvenanceCounts>> = {};
-    for (const [code, counts] of galaxy.provenanceCounts) published[code] = counts;
+    for (const [code, record] of galaxy.records) published[code] = record.stats.provenance;
     deps.publish({ provenanceCounts: published });
   });
 

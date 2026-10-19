@@ -24,7 +24,6 @@ import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { installSlotReadyWake } from '../../../../src/services/engine/wiring/installSlotReadyWake';
 import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCoreDeps';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { ProvenanceCounts } from '../../../../src/@types/engine/ProvenanceCounts';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
@@ -48,7 +47,6 @@ function harness() {
   const catalogs = new Map<SourceType, GalaxyCatalog>();
   const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
   const famousMeta = () => [];
-  const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
   const bumpCatalogsVersion = vi.fn();
   const deps = {
     publish: vi.fn(),
@@ -60,7 +58,6 @@ function harness() {
     catalogs,
     records,
     famousMeta,
-    provenanceCounts,
     bumpCatalogsVersion,
     deps,
   };
@@ -89,9 +86,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
       provenanceCounts: Record<number, unknown>;
     };
-    expect(patch.provenanceCounts[Source.SDSS]).toBeDefined();
-    // A COPY of the runtime's map: a shared reference would be frozen by immer.
-    expect(patch.provenanceCounts).not.toBe(h.provenanceCounts);
+    expect(patch.provenanceCounts[Source.SDSS]).toBe(h.records.get(Source.SDSS)!.stats.provenance);
   });
 
   it('commit uploads the cloud to the renderer and writes it into the runtime catalogs', async () => {

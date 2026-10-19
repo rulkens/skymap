@@ -9,7 +9,6 @@ import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalo
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
@@ -36,7 +35,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   const device = deps.ctx.device;
   const catalogs = new Map<SourceType, GalaxyCatalog>();
   const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
-  const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
   // Private cell behind the runtime's getter: the meta slot is its only writer,
   // so nothing has to hand the runtime object to a closure built before it.
   let famousMeta: readonly FamousGalaxyMetaEntry[] = [];
@@ -90,7 +88,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
         catalogs,
         records,
         famousMeta: () => famousMeta,
-        provenanceCounts,
         bumpCatalogsVersion: () => {
           catalogsVersion += 1;
         },
