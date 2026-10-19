@@ -1,0 +1,32 @@
+.root {
+  composes: grid from '../../styles/layout.module.css';
+  row-gap: 2.5rem;
+  align-items: start;
+}
+
+.picture {
+  align-items: center;
+}
+
+@media (min-width: 901px) {
+  .root > :first-child {
+    grid-column: span 5;
+    --cols: 5;
+  }
+
+  /* By position: the first block may be followed by more than the second. */
+  .root > :nth-child(2) {
+    grid-column: 7 / -1;
+    --cols: 6;
+  }
+}
+
+@media (max-width: 900px) {
+  .picture > :first-child {
+    max-width: var(--picture);
+  }
+
+  .flip > :last-child {
+    order: -1;
+  }
+}

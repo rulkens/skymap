@@ -1,25 +1,32 @@
 ---
 import Base from '../layouts/Base.astro';
-import Beside from '../components/Beside.astro';
-import Claims from '../components/Claims.astro';
-import Columns from '../components/Columns.astro';
-import Credits from '../components/Credits.astro';
-import Figure from '../components/Figure.astro';
-import Note from '../components/Note.astro';
-import ObjLink from '../components/ObjLink.astro';
-import OpenApp from '../components/OpenApp.astro';
-import PictureBand from '../components/PictureBand.astro';
-import PressPictures from '../components/PressPictures.astro';
-import SectionHead from '../components/SectionHead.astro';
-import ShotCaption from '../components/ShotCaption.astro';
-import Sources from '../components/Sources.astro';
+import Beside from '../components/Beside/Beside.tsx';
+import Claims from '../components/Claims/Claims.tsx';
+import Columns from '../components/Columns/Columns.tsx';
+import Credits from '../components/Credits/Credits.tsx';
+import Figure from '../components/Figure/Figure.tsx';
+import Note from '../components/Note/Note.tsx';
+import ObjLink from '../components/ObjLink/ObjLink.tsx';
+import OpenApp from '../components/OpenApp/OpenApp.tsx';
+import PictureBand from '../components/PictureBand/PictureBand.tsx';
+import PressPictures from '../components/PressPictures/PressPictures.tsx';
+import Quotable from '../components/Quotable/Quotable.tsx';
+import SectionHead from '../components/SectionHead/SectionHead.tsx';
+import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
+import Sources from '../components/Sources/Sources.tsx';
 import { aboutJsonLd } from '../data/aboutJsonLd';
 import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
 import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
+import layout from '../styles/layout.module.css';
+import links from '../styles/links.module.css';
+import text from '../styles/type.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
+
+const section = `${layout.wrap} ${layout.section}`;
+const linkRow = `${links['link-row']} ${links.onward}`;
 
 const title = 'About Skymap: who makes it and which pictures you may reuse';
 const description = `Skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, press pictures, and a colophon.`;
@@ -63,21 +70,21 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
 >
   <PictureBand id="about-milky-way" gap="none" eager>
     <h1>About Skymap</h1>
-    <p class="say">Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
+    <p class={text.say}>Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
     <ShotCaption id="about-milky-way" />
   </PictureBand>
 
-  <section class="wrap section" id="what">
+  <section class={section} id="what">
     <h2>What Skymap is</h2>
-    <p class="what">{whatIs}</p>
-    <div class="link-row onward">
+    <Quotable>{whatIs}</Quotable>
+    <div class={linkRow}>
       <OpenApp />
       <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
     </div>
   </section>
 
-  <section class="wrap section" id="maker">
-    <Columns count={2}>
+  <section class={section} id="maker">
+    <Columns count={2} footLast>
       <div>
         <h2>Who makes it</h2>
         <p>{fact('about-maker').text}</p>
@@ -85,10 +92,10 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
         <p>{fact('about-ai').text}</p>
         <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
       </div>
-      <div class="alive">
+      <div>
         <h3>Open source, and maintained</h3>
         <Claims items={ALIVE} narrow />
-        <div class="link-row">
+        <div class={links['link-row']}>
           <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
           <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
         </div>
@@ -96,7 +103,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
     </Columns>
   </section>
 
-  <section class="wrap section" id="dome">
+  <section class={section} id="dome">
     <Beside picture="28rem" wordsFirst>
       <Figure id="dome-saturn" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 23.75rem), 26rem" disc />
       <div>
@@ -107,7 +114,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
     </Beside>
   </section>
 
-  <section class="wrap section" id="contact">
+  <section class={section} id="contact">
     <h2>Get in touch</h2>
     <Columns count={2}>
       <div>
@@ -136,7 +143,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
     </Note>
   </section>
 
-  <section class="wrap section" id="press">
+  <section class={section} id="press">
     <SectionHead title="Pictures and their terms" narrow>
       <p>
         {fact('about-picture-licence').text} {fact('about-picture-reuse').text} Each picture below lists what is in
@@ -153,30 +160,15 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
     </Note>
   </section>
 
-  <section class="wrap section" id="colophon">
+  <section class={section} id="colophon">
     <SectionHead title="Colophon" narrow>
       <p>How this site is made, as of {formatDate(fact('about-built-with').checked)}.</p>
     </SectionHead>
     <Claims items={COLOPHON} />
   </section>
 
-  <div class="wrap section last">
+  <div class={section}>
     <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>
-
-<style>
-  /* The paragraph people quote: set large, at a measure a quote box can hold. */
-  .what {
-    max-width: 34em;
-    font-size: var(--text-lead);
-    line-height: 1.5;
-    color: var(--site-text);
-  }
-
-  /* The shorter column stands on the foot of the row, level with the maker's link. */
-  .alive {
-    align-self: end;
-  }
-</style>

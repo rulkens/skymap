@@ -2,6 +2,7 @@ import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReview
 import type { PageNote } from '../overlay/@types/PageNote';
 import type { ReviewItem } from './@types/ReviewItem';
 import type { ReviewSection } from './@types/ReviewSection';
+import reviewPage from './ReviewPage/ReviewPage.module.css';
 
 const levelOf = (heading: Element): number => Number(heading.localName.slice(1));
 const follows = (from: Element, el: Element): boolean =>
@@ -10,8 +11,7 @@ const follows = (from: Element, el: Element): boolean =>
 /**
  * The reviewed sections of a painted article: one per h2/h3 plus the intro (the h1 and
  * what precedes the first heading), each with the marks whose text starts inside it and
- * the notes whose element lies inside it, in page order. Run after painting and before
- * the icons go into the headings, so titles are clean.
+ * the notes whose element lies inside it, in page order. Run after painting.
  */
 export function sectionsOf(
   article: Element,
@@ -23,7 +23,7 @@ export function sectionsOf(
   const h1 = article.querySelector('h1');
   const footer = article.querySelector(':scope > footer');
   const first = new Map<string, Element>();
-  for (const el of article.querySelectorAll('.review-mark')) {
+  for (const el of article.querySelectorAll(`.${reviewPage.mark}`)) {
     const id = el.getAttribute('data-review-id');
     if (id && !first.has(id)) first.set(id, el);
   }

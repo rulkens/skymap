@@ -1,0 +1,15 @@
+.root {
+  composes: ring from '../../styles/ring.module.css';
+}
+
+.small {
+  composes: ring-small from '../../styles/ring.module.css';
+}
+
+.big {
+  composes: ring-big from '../../styles/ring.module.css';
+}
+
+.hang {
+  composes: ring-hang from '../../styles/ring.module.css';
+}

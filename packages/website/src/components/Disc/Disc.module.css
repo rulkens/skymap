@@ -1,0 +1,17 @@
+.root {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgb(232 238 255 / 0.5),
+    0 0 0 1.125rem #000,
+    0 0 0 var(--disc-ring) rgb(232 238 255 / 0.18);
+
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}

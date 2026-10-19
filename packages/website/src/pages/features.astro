@@ -1,7 +1,8 @@
 ---
-/* The Features page: its groups, pictures and films are in components/FeatureStage.astro. */
+/* The Features page: its groups, pictures and films are in components/FeatureStage/FeatureStage.tsx. */
 import Base from '../layouts/Base.astro';
-import FeatureStage from '../components/FeatureStage.astro';
+import FeatureLead from '../components/FeatureLead/FeatureLead.tsx';
+import FeatureStage from '../components/FeatureStage/FeatureStage.tsx';
 
 const title = 'Features | Skymap';
 const description =
@@ -9,5 +10,6 @@ const description =
 ---
 
 <Base title={title} description={description}>
-  <FeatureStage />
+  <FeatureLead />
+  <FeatureStage client:load />
 </Base>

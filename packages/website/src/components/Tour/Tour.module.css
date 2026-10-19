@@ -1,0 +1,91 @@
+/* Isolated: the words' layer is ordered inside the section, so it passes under the top bar's ground like the rest. */
+.root {
+  position: relative;
+  isolation: isolate;
+  margin-top: var(--section-space);
+  overflow-x: clip;
+  background: #000;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: 80svh;
+    object-fit: cover;
+  }
+
+  /* The frame is black where the words sit; the scrim only softens the web's lower edge behind them. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      20deg,
+      rgb(0 0 0 / 0.94) 0%,
+      rgb(0 0 0 / 0.78) 30%,
+      rgb(0 0 0 / 0) 58%
+    );
+  }
+}
+
+/* The words keep their column; the picture's label runs along its foot, as in a PictureBand. */
+.over {
+  position: absolute;
+  z-index: 2;
+  inset: auto max(var(--gutter), (100% - var(--wrap-max)) / 2 + var(--gutter)) 2rem;
+  display: flex;
+  flex-direction: column;
+
+  & > * {
+    max-width: 28rem;
+  }
+}
+
+.over .link {
+  align-self: flex-start;
+  margin-top: -0.5rem;
+}
+
+/* The foot is drawn here, under the label, so the label itself draws none. */
+.caption {
+  composes: caption from '../../styles/picture.module.css';
+  --caption-foot: '';
+  position: relative;
+  z-index: 0;
+  padding-top: 4rem;
+
+  & > * {
+    --caption-foot: none;
+  }
+}
+
+.over .caption {
+  max-width: none;
+}
+
+@media (max-width: 900px) {
+  .root {
+    &::after {
+      display: none;
+    }
+
+    & img {
+      aspect-ratio: 4 / 3;
+      object-position: 35% 50%;
+    }
+  }
+
+  .over {
+    position: static;
+    padding: 0 var(--gutter);
+  }
+
+  .over .caption {
+    --caption-foot: none;
+    order: -1;
+    margin-bottom: 2rem;
+    padding-top: 0.75rem;
+  }
+}

@@ -1,0 +1,12 @@
+/*
+ * One fixed, click-through root: the page scrolls and works as usual with the mode off; only the dock,
+ * the note panel and, in feedback mode, the capture layer take the pointer.
+ */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  font: 400 1rem / 1.4 var(--font-body);
+  color: var(--color-fg);
+}

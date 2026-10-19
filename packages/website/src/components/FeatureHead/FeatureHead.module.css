@@ -1,0 +1,13 @@
+.root {
+  & h2 {
+    margin-bottom: 0.3em;
+  }
+
+  & > p {
+    margin-bottom: 0;
+  }
+}
+
+.quiet h2 {
+  font-size: var(--text-h3);
+}

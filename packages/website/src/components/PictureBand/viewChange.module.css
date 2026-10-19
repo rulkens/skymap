@@ -1,0 +1,25 @@
+/*
+ * viewChange.module.css — how the parts of a gallery band change with its view (PictureBand, CaptionGallery,
+ * ViewWords). A vocabulary, not a component: no `.root`; a part takes `view` and, while it is not the
+ * current view, `away`. Opacity only, so nothing is laid out again; a part sets its own pace with
+ * `--view-out`, `--view-wait` and `--view-in`, words leaving before the next arrive.
+ */
+
+.view {
+  transition: opacity var(--view-in, 1s) ease var(--view-wait, 0s);
+}
+
+.away {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--view-out, 1s) ease,
+    visibility 0s linear var(--view-out, 1s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view,
+  .away {
+    transition: none;
+  }
+}

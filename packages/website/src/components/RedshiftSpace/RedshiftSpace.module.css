@@ -1,0 +1,45 @@
+.root {
+  max-width: var(--doc-measure);
+
+  & svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.rows {
+  position: relative;
+}
+
+/* At the head of its row, over the line of sight. */
+.row {
+  composes: small from '../../styles/type.module.css';
+  position: absolute;
+  left: 0;
+  color: var(--site-text-dim);
+  line-height: 1.2;
+}
+
+.sight {
+  stroke: var(--site-text-faint);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.us {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+}
+
+.dot {
+  fill: var(--color-fg);
+}
+
+.caption {
+  composes: small from '../../styles/type.module.css';
+  margin-top: 0.75rem;
+  color: var(--site-text-muted);
+}
