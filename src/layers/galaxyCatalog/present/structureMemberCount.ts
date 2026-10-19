@@ -1,34 +1,14 @@
 /**
- * structureMemberCount — how many currently-rendered galaxies fall inside
- * a cluster / supercluster / void's membership sphere.
+ * structureMemberCount — how many currently-rendered galaxies fall inside a
+ * structure's membership sphere (the InfoCard row).
  *
- * This is the InfoCard-facing consumer the `structureMembership` cone-search
- * was written for.  It assembles the catalog set the way the renderer
- * draws it — visible galaxy catalog sources only — so the
- * number agrees with both the on-screen points and the focus-mode fade
- * (which keeps exactly these galaxies bright).
+ * Sums the visible galaxy catalog sources (`sourceMask`), so the count tracks
+ * the on-screen points. The radius is `apparentRadiusMpc ?? physicalRadiusMpc`,
+ * the cone the GPU focus fade tests (`structureFocusSubsystem`), so "N galaxies"
+ * matches the set that stays lit on focus.
  *
- * ### Why this source set
- *
- * The count sums `sourceCounts` over `GALAXY_CATALOG_SOURCES`, gated by
- * `sourceMask` — the same filter the renderer draws with, so the
- * member count tracks the on-screen points: a galaxy catalog toggled off
- * drops straight out of the total.
- *
- * ### Membership radius
- *
- * Uses `apparentRadiusMpc ?? physicalRadiusMpc` — the same cone the
- * GPU focus fade tests against (see `structureFocusSubsystem`).  Counting
- * against the named/visual extent rather than the tighter core radius is
- * what makes "N galaxies" match the set the user sees stay lit on focus.
- *
- * ### Null vs zero
- *
- * Returns `null` when there is nothing to count yet — no visible catalog
- * loaded — so the caller can omit the row entirely rather than flash a
- * misleading "0" during load.  A genuine empty sphere over loaded data
- * returns `0` (truthful: e.g. a void at the small tier really may hold no
- * catalogued galaxies).
+ * Returns `null` when no visible catalog is loaded (the caller omits the row
+ * rather than flash "0" during load); a genuine empty sphere returns `0`.
  */
 
 import { structureMembership } from './structureMembership';

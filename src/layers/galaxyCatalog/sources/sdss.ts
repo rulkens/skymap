@@ -20,11 +20,9 @@ export const SDSS_ENTRY = {
   // Blanton et al. 2003, r-band LF for the spec sample.
   schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   iauPrefix: 'SDSS',
-  // small drops SDSS entirely to keep the mobile GPU budget;
-  // medium caps at ~156k brightest. large caps at the pre-2026-08 point
-  // budget: the raw CSV is now the complete DR17 pull (~970k rows — the old
-  // file was a SkyServer 500k truncation with a fake sky hole), and the cap
-  // keeps the large tier at the scale every perf number was measured at.
+  // small drops SDSS entirely to keep the mobile GPU budget; medium caps at
+  // ~156k brightest; large caps at 500k, the scale every perf number was
+  // measured at (the raw CSV is the complete ~970k-row DR17 pull).
   tierTargets: { small: 0, medium: 156_000, large: 500_000 },
   // SDSS wins crossMatch priority over GLADE, so local galaxies inside the
   // SDSS footprint land in this bucket and the M_abs cap drops nearly all of

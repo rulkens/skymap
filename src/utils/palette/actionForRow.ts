@@ -1,43 +1,11 @@
 /**
- * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the
- * container dispatches on. Seven kinds resolve to a focus id via the same
- * scheme the URL deep-link layer uses. Three do not: `exhibit` and `tour`
- * resolve to their own action kinds, since picking one is a takeover rather
- * than a focus, and `place` to a `flyTo` — an Earth place is a camera command,
- * not a focusable ref.
- *
- * The six focus kinds route through the ONE selection command, `requestFocus`,
- * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
- * — deferring on the catalog-landed count pulse until the cloud is in. The palette therefore
- * never resolves a ref itself; it only names the thing. That keeps React on the
- * "single command->ref bridge" the saga documents, instead of two of the three
- * rows (alias, Milky Way) bypassing it with a pre-built ref.
- *
- *   - famous   → the curated seed id ('m31'); the resolver's `resolveFocusId`
- *                scans the galaxy store's famous meta rows.
- *   - alias    → the shared galaxy-id ladder (`encodeGalaxyId`), which yields
- *                'pgc-<n>' for the GLADE/2MRS PGC the alias row carries. We reuse
- *                that encoder rather than re-spell the 'pgc-' grammar here so the
- *                encode↔decode round-trip keeps one home.
- *   - structure→ the record's own durable `${category}-${seedId}` id, which
- *                the resolver's `resolveFocusId` accepts and `structures.byId`
- *                resolves. No re-encoding — the store already holds the id.
- *   - milkyWay → the fixed singleton literal `MILKY_WAY_FOCUS_ID`.
- *   - body     → the seed id under the shared `BODY_FOCUS_PREFIX` (`body-earth`),
- *                which the resolver's `resolveFocusId` strips back to a body ref.
- *   - starCatalog → `star-<seedId>` via the shared encoder, which the resolver
- *                strips back to a star ref.
- *   - exhibit  → `{ kind: 'exhibit', exhibitId }`, the row's own registry id.
- *   - tour     → `{ kind: 'tour', tourId }`, the row's own registry id.
- *   - place    → the entry's own lon/lat/alt, verbatim, as a `flyTo`.
- *   - layer    → the row's own `id`, which the publishing Layer's
- *                `SelectionKindRow.focusId` claims and decodes; it carries a
- *                `ref` too, but routing through the one command→ref bridge keeps
- *                the deferral and `takeLatest`'s cancel of a stale one.
- *
- * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
- * one row here, not a new predicate branch. The fallback arms are unreachable —
- * the table is indexed by the row's own tag — but TS needs each arm to narrow.
+ * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the container
+ * dispatches. Focus kinds name the thing via the URL deep-link id scheme and go
+ * through the ONE `requestFocus` command (`watchRequestFocusSaga` resolves the
+ * ref, deferring on the catalog-landed pulse), so the palette never builds a ref.
+ * `exhibit` and `tour` are takeovers and `place` is a `flyTo`, not focuses. Alias
+ * rows reuse `encodeGalaxyId` so the 'pgc-' grammar keeps one home.
+ * Table-dispatch on `row.kind`; the fallback arms exist only so TS narrows.
  */
 
 import { encodeGalaxyId } from '../../services/url/encodeGalaxyId';

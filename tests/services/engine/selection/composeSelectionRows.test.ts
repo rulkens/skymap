@@ -1,11 +1,9 @@
 /**
  * composeSelectionRows, driven through the six core rows via
  * `selectionResolverOver` — the composed resolver's dispatch and its
- * claim-then-decode focus-id contract. Cases moved from the deleted
- * resolvePick.test.ts, resolvePickTable.test.ts, extractSelectionRow.test.ts
- * and resolveFocusId.test.ts (Task 8's `git rm`), one describe per former
- * source file's subject; new describes at the end pin the composer's own
- * dispatch behaviour that no single row's test could.
+ * claim-then-decode focus-id contract. One describe per resolver
+ * subject (pick, pick table, row extraction, focus id); the last describes pin
+ * the composer's own dispatch behaviour that no single row's test could.
  */
 
 import { describe, it, expect, vi } from 'vitest';

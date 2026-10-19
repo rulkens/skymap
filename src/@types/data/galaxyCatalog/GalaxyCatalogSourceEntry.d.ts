@@ -47,10 +47,8 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    */
   readonly schechter: SchechterTriple;
   /**
-   * Short-name prefix for IAU-style coordinate designations
-   * (`<prefix> J<RA><Dec>`), e.g. `'SDSS'`, `'2MASX'`, `'GLADE'`. Each
-   * galaxy catalog uses the upstream catalogue's own short-name convention; see
-   * `utils/math/iauName.ts` for the consumer.
+   * Short-name prefix for IAU-style designations (`<prefix> J<RA><Dec>`), e.g.
+   * `'SDSS'`, `'2MASX'`, `'GLADE'`; consumed by `utils/math/iauName.ts`.
    */
   readonly iauPrefix: string;
   /**
@@ -61,20 +59,15 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    *                  build skips writing the file; runtime gets a 404).
    *   positive N   → keep the brightest N galaxies by absolute magnitude.
    *
-   * Tier-agnostic galaxy catalogs (2MRS, Famous) carry `{}` — no caps
-   * anywhere, one file shared across tiers.
+   * Tier-agnostic catalogs (2MRS, Famous) carry `{}`.
    */
   readonly tierTargets: Partial<Record<Tier, number>>;
   /**
-   * Apparent-magnitude flux floor for the local-volume supplement, read from
-   * the `magG` slot (the galaxy catalog's selection-band apparent mag). When set, the
-   * tier build keeps every galaxy brighter than this *in addition to* the
-   * brightest-N-by-M_abs backbone, so the volume-limited cut doesn't empty the
-   * local volume. A flux floor tapers smoothly with distance, so it adds no
-   * shell; it is also z-independent, so it rescues negative-cz Local Group
-   * members the M_abs cut drops. Omit for sources that need no supplement
-   * (2MRS ships uncapped; the others have no local-volume coverage worth
-   * recovering). Only consulted on capped tiers — a no-op when uncapped.
+   * Apparent-magnitude flux floor (`magG` slot) for the local-volume
+   * supplement: the tier build keeps every galaxy brighter than this in
+   * addition to the brightest-N-by-M_abs backbone. A flux floor adds no
+   * distance shell and is z-independent, so it rescues negative-cz Local Group
+   * members the M_abs cut drops. Only consulted on capped tiers.
    */
   readonly fluxSupplementMagLimit?: number;
   /**
@@ -85,12 +78,9 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    */
   readonly sbBoost: number;
   /**
-   * Per-source half-distance (Mpc) of the depth-fade curve
-   * `1 / (1 + (d / falloffHalfMpc)²)`. Plumbed through `SourceUniforms`
-   * to `points/vertexBody.wesl`. Replaces a prior hardcoded 1000 Mpc.
-   * Sparse far-field catalogs (Milliquas reaches d ~ 8000 Mpc) set a
-   * very large value to effectively disable the fade; bulk galaxy
-   * catalogs keep the original ~1000 Mpc tuning.
+   * Half-distance (Mpc) of the depth-fade curve `1 / (1 + (d / falloffHalfMpc)²)`,
+   * via `SourceUniforms`. Sparse far-field catalogs (Milliquas, d ~ 8000 Mpc)
+   * set a very large value to disable the fade.
    */
   readonly falloffHalfMpc: number;
   /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */

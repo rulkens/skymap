@@ -1,27 +1,15 @@
 /**
  * DiskRowVisitor — the row-reducer view a disk planner exposes so the shared
- * walk can drive it without owning its per-body state.
+ * walk can drive it without owning its per-body state (sticky map, output
+ * accumulator, sort, extras).
  *
- * ### Why a visitor, not a return-an-array step
+ * Hook order: per source, `beginBlock` then `onRow`* once per resident block,
+ * then one `endSource`; then one `endFrame`. Sticky maps key by record ordinal,
+ * which survives a block's eviction where a block-local row index would not.
  *
- * A disk planner used to be a `runFrame(input): Output` that walked the
- * catalogs itself. Folding the two planners into one shared walk means the
- * walk owns the loop, so each planner has to surrender its loop body while
- * keeping its own sticky map, output accumulator, sort, and per-body extras.
- * The visitor is that surrendered body: the walk calls the lifecycle hooks in
- * a fixed order (per source: `beginBlock` → `onRow`* once per resident block,
- * then one `endSource`; then one `endFrame`), and the visitor closes over the
- * state the walk must not know about. Sticky maps key by record ordinal, which
- * survives a block's eviction where a block-local row index would not.
- *
- * ### Why scalar `onRow` args
- *
- * `onRow` takes the row geometry as loose scalars plus the block reference —
- * never a per-row object — because it is the innermost hot call (~300k
- * invocations/frame across both bodies) and must not allocate. The walk calls
- * `procedural.onRow(...)` and `textured.onRow(...)` at two fixed, separate
- * statements so each stays monomorphic (a loop over a visitor array would make
- * the call site megamorphic across the two hidden classes).
+ * `onRow` takes loose scalars, never a per-row object: it is the innermost hot
+ * call (~300k/frame) and must not allocate. The walk calls the two visitors at
+ * two separate statements so each call site stays monomorphic.
  */
 
 import type { GalaxyColumnBlock } from '../../data/galaxyCatalog/GalaxyColumnBlock';

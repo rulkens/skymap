@@ -524,10 +524,9 @@ async function runCli(): Promise<void> {
   const hipToSourceId = parseHipXmatch(readFileSync(rawDataPath('gaia.hip-xmatch'), 'utf8'));
   process.stderr.write(`  ${hipToSourceId.size.toLocaleString()} HIP→source_id pairs\n`);
 
-  // The curated seed is the single source of the Gaia-dedup fact now: subtract
-  // each entry's Gaia DR3 source_id from the bin so a nearby named star isn't
-  // drawn twice (once as a scene body, once as a Gaia point). A null gaiaDr3
-  // (the Sun; saturated bright stars with no DR3 row) drops out.
+  // The curated seed is the single source of the Gaia-dedup fact: subtract each
+  // entry's DR3 source_id so a named star isn't drawn twice (scene body and Gaia
+  // point). A null gaiaDr3 (the Sun; saturated stars with no DR3 row) drops out.
   const famousSeed = parseFamousStarsSeed(readFileSync(rawDataPath('famous-stars.seed'), 'utf8'));
   const famousGaiaIds = seedToFamousGaiaIds(famousSeed);
 

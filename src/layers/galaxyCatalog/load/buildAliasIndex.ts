@@ -2,8 +2,8 @@
  * Pure alias-index builder: joins the PGC→names alias map against every
  * pgc-claiming source's `hasDurableId`, so the palette lists a name only when a
  * loaded source holds that galaxy. One entry per (source, pgc), sources by
- * claim rank, entries in alias-file order within a source (ruled: equal-score
- * palette ties may come in that order).
+ * claim rank, entries in alias-file order within a source; equal-score
+ * palette ties may come in that order.
  */
 
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';

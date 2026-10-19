@@ -1,4 +1,4 @@
-/** Per-catalog constants `derivePointRecord` reads (per tier file today). */
+/** Per-catalog constants `derivePointRecord` reads (per tier file). */
 export type GalaxyPointStats = {
   /** Cosmetic shift moving the catalog's mean magnitude onto `SDSS_TARGET_MEAN_MAG`. */
   readonly magOffset: number;

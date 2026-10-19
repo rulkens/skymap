@@ -21,7 +21,7 @@ import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 export type StarCatalogRuntime = {
-  /** One slot per survey source (today `EngineAssetSlots.starCatalogs`). */
+  /** One slot per survey source (`EngineAssetSlots.starCatalogs`). */
   readonly catalogs: ReadonlyMap<SourceType, AssetSlot<Octree<StarColumns>, StarCatalogReq>>;
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
   readonly chunkStreams: Map<SourceType, OctreeChunkStream<StarColumns>>;

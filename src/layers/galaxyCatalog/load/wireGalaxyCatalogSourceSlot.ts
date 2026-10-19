@@ -2,8 +2,8 @@
  * wireGalaxyCatalogSourceSlot — one per-source galaxy-catalog slot, built by
  * `create`. WHEN it loads belongs to the Layer's asset rows, and the arrival
  * fade to core (the row's `gates`), not here. `subscribe` keeps the
- * provenance fact at today's beat; the catalog-landed pulse rides the Layer's
- * `sourceCounts` feed, which subscribes to this same slot.
+ * provenance fact; the catalog-landed pulse rides the Layer's `sourceCounts`
+ * feed, which subscribes to this same slot.
  */
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
@@ -50,9 +50,7 @@ export function wireGalaxyCatalogSourceSlot(
       await galaxy.pointRenderer.upload(id, cloud, record.stats);
       galaxy.catalogs.set(source, cloud);
       galaxy.records.set(source, record);
-      // Every commit replaces (or seeds) this source's array, so a built alias
-      // index's row set goes stale (aliases for galaxies the new array lacks,
-      // none for ones it gained) — bump so `frame` rebuilds it.
+      // A commit swaps this source's array, staling any built alias index.
       galaxy.bumpCatalogsVersion();
 
       const dtMs = Math.round(performance.now() - t0);
@@ -65,9 +63,8 @@ export function wireGalaxyCatalogSourceSlot(
         `[engine] upload done  ${id} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
     },
-    // Search and picking read `records`, so a released
-    // catalog must leave it with the GPU buffers or they would find galaxies
-    // that are no longer drawn.
+    // `records` must leave with the GPU buffers or search and picking find
+    // galaxies that are no longer drawn.
     onRelease: () => {
       galaxy.pointRenderer.unload(id);
       galaxy.catalogs.delete(source);

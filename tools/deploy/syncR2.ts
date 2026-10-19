@@ -104,10 +104,8 @@ function buildGroups(): R2SyncGroup[] {
       purge: false,
       gzipOnWire: false,
     },
-    // One tiles group per `SURFACE_TILE_REGISTRY` row, EVERY one of them
-    // before EVERY manifest group below — a row whose bake never ran
-    // contributes `[]` from both collectors, so a Mars-less checkout still
-    // builds this table today with exactly Earth's two groups.
+    // One tiles group per `SURFACE_TILE_REGISTRY` row, all before every manifest
+    // group below; a row whose bake never ran contributes `[]` from both collectors.
     ...Object.values(SURFACE_TILE_REGISTRY).map(
       ({ manifestKey }): R2SyncGroup => ({
         label: `Surface tiles (${manifestKey})`,

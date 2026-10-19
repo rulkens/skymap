@@ -29,9 +29,8 @@ export function createStarCatalogSlot(
   const slot = createAssetSlot<Octree<StarColumns>, StarCatalogReq>({
     name: `starCatalog:${id}`,
     fetch: starCatalogFetcher,
-    // Replaces any previous upload for this source: a tier reload re-commits at the
-    // new tier's pool size. The slot's race-check ran just before this call, so
-    // `lastRequest()` is this commit's own request.
+    // The slot's race-check ran just before this call, so `lastRequest()` is
+    // this commit's own request.
     commit: async (octree): Promise<void> =>
       installStarPool(host, source, octree, slot.lastRequest()!.tier, chunkSlotsOverride()),
     onRelease: () => {

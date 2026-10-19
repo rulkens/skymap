@@ -1,29 +1,12 @@
 /**
- * PROVENANCE_AXES — the registry of galaxy-data provenance axes.
+ * PROVENANCE_AXES — the registry of galaxy-data provenance axes: values the
+ * build fills in when the catalog has no measurement (orientation hashed from
+ * sky position, diameter a flat 30 kpc). Each is a persisted `*IsFallback` byte
+ * per record and rides into the GPU on a sign bit.
  *
- * A galaxy record carries two values the build pipeline fills in when the
- * source catalog has no measurement: its orientation (b/a + position angle,
- * hashed deterministically from sky position) and its diameter (a flat 30 kpc
- * fallback).  Both are stamped per record as a persisted `*IsFallback` byte
- * and ride into the GPU on a sign bit, so the renderer can tell measurement
- * from fallback without a second attribute.
- *
- * This table is what makes the DebugPanel's provenance section a *table*: one
- * row per entry, rendered by iteration rather than by three hand-written
- * blocks.  Adding a third axis (say "redshift is photometric, not spectro")
- * means an entry here, a settings default, a uniform slot, and a shader
- * branch — not a new copy of the UI.
- *
- * `highlightColor` mirrors a constant in `points/vertexBody.wesl`: the shader
- * cannot read TypeScript, so the swatch the user sees in the panel and the
- * colour the vertex stage writes are two spellings of the same decision.
- * They must be edited together.
- *
- * `flagsOf` points at the cloud's per-record flag array so the missing-value
- * tally (`countEstimatedProvenance`) iterates the registry instead of naming
- * each array.
- *
- * `hint` is the tooltip the DebugPanel's provenance table shows for the row.
+ * `highlightColor` mirrors a constant in `points/vertexBody.wesl` (the shader
+ * cannot read TypeScript): edit the two together. `flagsOf` lets the tally
+ * (`countEstimatedProvenance`) iterate the registry.
  */
 
 import type { GalaxyCatalog } from '../@types/data/galaxyCatalog/GalaxyCatalog';

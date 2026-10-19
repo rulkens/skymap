@@ -9,8 +9,8 @@ import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalax
 
 /**
  * The flat record sources the galaxy slots would build over these catalogs, in
- * the map's order — the one-line fixture for a test that used to hand a
- * consumer its `catalogs` map.
+ * the map's order — the one-line fixture for a test that hands a
+ * consumer a `catalogs` map.
  */
 export function galaxyRecordsOver(
   catalogs: ReadonlyMap<number, GalaxyCatalog>,

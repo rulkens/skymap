@@ -1,37 +1,22 @@
 /**
  * diskPlannerWalk — the ONE per-frame catalog walk shared by the two
- * disk-planner bodies (LOD-1 procedural, LOD-2 textured).
+ * disk-planner bodies (LOD-1 procedural, LOD-2 textured): each surviving row's
+ * geometry (camDistSq, sqrt, apparent px) is computed once and handed as scalars
+ * to two injected DiskRowVisitor bodies.
  *
- * Each planner used to walk every visible catalog itself: read the row's
- * position, compute camDistSq, take a sqrt, compute apparent px — the same
- * geometry twice per row, and the dominant share of frame CPU. This walk
- * computes each surviving row's geometry ONCE and hands the scalars to two
- * injected DiskRowVisitor bodies.
+ * A stateful factory because it owns the SINGLE shared stride cursors (per
+ * source, per resident block, keyed by ordinal base): both bodies decimate
+ * against one cursor, so their sticky maps stay in phase.
  *
- * ### Why a stateful factory, not a pure utils/ helper
+ * onRow is called at two SEPARATE statements, never a loop over the visitors: a
+ * loop would be megamorphic across their hidden classes. No per-row object is
+ * allocated anywhere in the loop.
  *
- * The walk owns the SINGLE shared stride cursors (one per source per resident
- * block, keyed by the block's ordinal base) — genuine cross-frame state with
- * exactly one home. A factory closes over it; a pure
- * helper would force the cursor map to be threaded through the frame call
- * site. Both bodies decimating against one cursor also means they always see
- * the identical stride window, so their sticky maps stay in phase.
- *
- * ### Why two fixed call sites, not a visitor array
- *
- * onRow is called at two SEPARATE statements — 'procedural.onRow(...)' then
- * 'textured.onRow(...)' — never a loop over [procedural, textured]. A looped
- * call site would be megamorphic across the two visitors' hidden classes;
- * two fixed sites each stay monomorphic. onRow takes scalar args plus the
- * catalog reference: no per-row object is allocated anywhere in the loop.
- *
- * ### Why the early-out uses the 8-px bound and no px gate
- *
- * The distance early-out must not skip a row EITHER body could use, so it
- * uses the looser bound: PROCEDURAL_DISK_FADE_START_PX (8 px). Apparent-size
- * gating is each body's own business — the procedural body drops px <= 8
- * inside onRow, the textured body applies its 24-px gate (famous rows
- * exempt). Gating here would re-braid body policy into the shared loop.
+ * The distance early-out uses the looser bound, PROCEDURAL_DISK_FADE_START_PX
+ * (8 px), so it never skips a row EITHER body could use. Apparent-size gating
+ * stays in each body's `onRow` (procedural drops px <= 8, textured applies its
+ * 24-px gate, famous rows exempt); gating here would braid body policy into the
+ * shared loop.
  */
 
 import { strideWindow } from '../../../utils/render/disk/strideWindow';

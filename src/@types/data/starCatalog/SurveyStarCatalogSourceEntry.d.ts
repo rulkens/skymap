@@ -3,7 +3,7 @@ import type { StarCatalogFormat } from './StarCatalogFormat';
 import type { OctreeBudgets } from '../../octree/OctreeBudgets';
 
 /**
- * A star catalog streamed from disk — the survey-wide Gaia bin today.
+ * A star catalog streamed from disk (the survey-wide Gaia bin).
  *
  * Its presentation defaults live in-row (like `CosmicWebDensitySourceEntry`) rather than
  * in a separate settings table, so the draw budget and the crossfade band that
