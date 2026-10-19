@@ -124,12 +124,13 @@ describe('resolvePick, composed', () => {
     expect(resolver.resolvePick(null)).toBeNull();
   });
 
-  it('maps a galaxy code to a positional ref regardless of whether the cloud is loaded', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.DesiDeep, localIdx: 3 })).toEqual({
+  it('maps a galaxy pick to its record ref, or null when its source is not loaded', () => {
+    expect(resolver.resolvePick({ sourceCode: Source.Glade, localIdx: 0 })).toEqual({
       type: 'galaxyCatalog',
-      source: Source.DesiDeep,
-      index: 3,
+      source: Source.Glade,
+      index: 0,
     });
+    expect(resolver.resolvePick({ sourceCode: Source.DesiDeep, localIdx: 3 })).toBeNull();
   });
 
   it('maps a structure code to a durable-id ref, or null with no backing record', () => {

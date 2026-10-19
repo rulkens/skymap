@@ -26,16 +26,14 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
   return {
     type: 'galaxyCatalog',
     pickSources: GALAXY_CATALOG_SOURCES,
-    // A pick never comes from an undrawn source; with no record, index and ordinal coincide.
+    // A released source has no record: its picks and refs map to nothing.
     resolvePick: (_entry, pick) => {
       const source = pick.sourceCode as GalaxyCatalogSourceType;
-      const record = runtime.records.get(source);
-      const index = record === undefined ? pick.localIdx : record.ordinalOfPick(pick.localIdx);
+      const index = runtime.records.get(source)?.ordinalOfPick(pick.localIdx) ?? null;
       return index === null ? null : { type: 'galaxyCatalog', source, index };
     },
     encodePick: (ref) => {
-      const record = runtime.records.get(ref.source);
-      const pick = record === undefined ? ref.index : record.pickOfOrdinal(ref.index);
+      const pick = runtime.records.get(ref.source)?.pickOfOrdinal(ref.index) ?? null;
       return pick === null ? null : packSelection(ref.source, pick + PICK_SENTINEL_OFFSET);
     },
     extractRow: (ref) => runtime.recordBridge.row(ref.source, ref.index),
