@@ -87,9 +87,10 @@ fn boostedColorIndex(ci: f32, d: f32) -> f32 {
   return clamp(ci - GALAXY_HUE_SLOPE * log2(d), 0.0, 2.0);
 }
 
-// pow(d, k) under a soft ceiling; k == 0 is exactly 1.
+// pow(d, k) under a soft ceiling of HEADLIGHT_CEIL + 1, normalised so D = 1
+// is exactly 1 (launch, arrival, Doppler off); k == 0 is exactly 1.
 fn headlightGain(d: f32, b: BoostUniforms) -> f32 {
   if (b.headlight == 0.0) { return 1.0; }
   let h = pow(d, b.headlight);
-  return h / (1.0 + h / HEADLIGHT_CEIL);
+  return h * (1.0 + 1.0 / HEADLIGHT_CEIL) / (1.0 + h / HEADLIGHT_CEIL);
 }

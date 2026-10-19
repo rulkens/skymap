@@ -167,7 +167,7 @@ Three renderers append `BoostUniforms` to their own uniform tail and write it fr
 - **Milky Way splats** (`milkyWayCloudRenderer.ts:185`, the field splat shaders): emission tinted by `D` of the
   splat's direction from the camera.
 
-All three multiply their radiance by `headlightGain(D)`: `pow(D, k)` folded through `h / (1 + h / HEADLIGHT_CEIL)`,
+All three multiply their radiance by `headlightGain(D)`: `pow(D, k)` folded through `h (1 + 1/HEADLIGHT_CEIL) / (1 + h / HEADLIGHT_CEIL)` (exactly 1 at D = 1, asymptote CEIL + 1),
 `HEADLIGHT_CEIL` a constant in `src/data/voyage/` (start at 64; the forward Doppler factor passes a million, so
 without a ceiling the tone-map sees a white wall by ship-year three). The dial `k` is a `SliderField` row in the
 debug tuning section, `[0, 4]`, as the black-hole `dopplerStrength` is; the overlay only switches it on and off.
