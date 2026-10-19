@@ -64,8 +64,10 @@ import type { InstancedQuadConfig } from '../../../@types/rendering/InstancedQua
 import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQuadRenderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import { BOOST_UNIFORM_BYTES, writeBoostUniforms } from '../../../services/gpu/lib/boostUniforms';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 
 /**
@@ -94,13 +96,15 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  *   bytes 76..79 : reserved pad   f32          (CameraUniforms reserved)
  *   bytes 80..91 : camPosWorld   vec3<f32>
  *   bytes 92..95 : pxPerRad      f32          (consumer-specific copy)
+ *   bytes 96..127: boost         BoostUniforms (lib/boost.wesl; zero = rest frame)
  *
  * The byte-92 'pxPerRad' slot is the consumer-specific copy —
  * TexturedQuadRenderer + ProceduralDiskRenderer read it for pixel-radius
  * computation, the TexturedDiskRenderer ignores it. It duplicates the
  * prefix's byte-72 term and is queued for the feature's deletion audit.
  */
-export const UNIFORM_BYTES = 96;
+export const UNIFORM_BYTES = 96 + BOOST_UNIFORM_BYTES;
+const BOOST_FLOAT_INDEX = 24;
 
 export function createInstancedQuadRenderer(
   // Only the device is needed from the GPU context — the colour-target format
@@ -342,6 +346,8 @@ export function createInstancedQuadRenderer(
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
     pxPerRad: number;
+    /** `ctx.snapshot.boost`; absent or null draws the rest frame. */
+    boost?: FrameBoost | null;
     /** Shared structure-focus bind group (bound at @group(1)). Built once by
      *  the engine against the canonical focusBgl; the same group serves
      *  every impostor pipeline. */
@@ -384,6 +390,7 @@ export function createInstancedQuadRenderer(
     uniformScratch[21] = args.camPosWorld?.[1] ?? 0;
     uniformScratch[22] = args.camPosWorld?.[2] ?? 0;
     uniformScratch[23] = args.pxPerRad;
+    writeBoostUniforms(uniformScratch, BOOST_FLOAT_INDEX, args.boost ?? null);
     // THIS call's own slot's buffer — a sky-cubemap capture sweep's several
     // `draw()` calls (different faces, one submit) each carry a different
     // viewProj/viewport/camPos, so a shared buffer would keep only the last

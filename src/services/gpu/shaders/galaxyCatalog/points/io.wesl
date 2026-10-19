@@ -56,6 +56,7 @@
 // the matching per-source bind-group construction.
 
 import package::lib::camera::CameraUniforms;
+import package::lib::boost::BoostUniforms;
 
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
@@ -85,11 +86,12 @@ import package::lib::camera::CameraUniforms;
 //   offset 160..171 : pxFadeStart, pxFadeEnd, pickPass
 //   offset 172..183 : galaxySbScale, galaxySbMax, galaxyFalloffStrength
 //   offset 184..191 : _padU0, _padU1 (two pad words)
-//   total: 192 bytes.
+//   offset 192..223 : boost (BoostUniforms, lib/boost.wesl)
+//   total: 224 bytes.
 //
 // 'src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts' is the CPU mirror of this table —
-// it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180 and sizes
-// the buffer at UNIFORM_BYTES = 192. Any edit here is an edit there.
+// it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180, the boost at
+// f32[48], and sizes the buffer at UNIFORM_BYTES = 224. Any edit here is an edit there.
 //
 // The full historical narrative (why fields moved during the
 // CameraUniforms-prefix adoption, why pointSizePx + brightness now sit
@@ -217,6 +219,11 @@ struct Uniforms {
   galaxyFalloffStrength: f32,
   _padU0: f32,
   _padU1: f32,
+
+  // The observer's boost: Doppler hue and headlight on the colour index and
+  // intensity, and the contracted distance the billboard is sized by. The
+  // pick image carries the same block; its clamped dot reads none of it.
+  boost: BoostUniforms,
 };
 
 // ─── per-instance vertex attributes ──────────────────────────────────

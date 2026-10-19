@@ -7,6 +7,7 @@
 
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
+import type { FrameBoost } from '../engine/frame/FrameBoost';
 
 export type InstancedQuadRenderer = {
   /**
@@ -47,6 +48,8 @@ export type InstancedQuadRenderer = {
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
     pxPerRad: number;
+    /** `ctx.snapshot.boost`; absent or null draws the rest frame. */
+    boost?: FrameBoost | null;
     /** Shared structure-focus bind group, bound at `@group(1)`. Built once by
      *  the engine against the canonical focusBgl and written once per frame;
      *  the same group serves every impostor pipeline. */

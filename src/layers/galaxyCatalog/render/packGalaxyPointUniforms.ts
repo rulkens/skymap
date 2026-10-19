@@ -1,5 +1,5 @@
 /**
- * packGalaxyPointUniforms — pure packer for the 192-byte `Uniforms` struct.
+ * packGalaxyPointUniforms — pure packer for the 224-byte `Uniforms` struct.
  *
  * Single source of truth for the visual-pass byte layout.  Both the galaxy
  * point renderer's `draw()` and (via the returned buffer) the pick renderer's
@@ -26,6 +26,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
 import { PROVENANCE_FILTER_CODE } from '../../../data/provenanceFilter';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import { BOOST_UNIFORM_BYTES, writeBoostUniforms } from '../../../services/gpu/lib/boostUniforms';
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.  The single
@@ -34,12 +35,13 @@ import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
  * `galaxyPointRenderer.ts` re-exports this so existing call-sites that already
  * import from `galaxyPointRenderer` don't need a new import path.
  *
- * 192 = (16 + 4 + 4 + 4 + 4 + 8 + 4 + 4) × 4 bytes.  See the `UNIFORM_BYTES`
- * docblock in `galaxyPointRenderer.ts` for the full slot-by-slot layout.  The final
- * 4-float block carries the galaxy surface-brightness calibration knobs
- * (galaxySbScale / galaxySbMax / galaxyFalloffStrength) + one pad word.
+ * 224 = (16 + 4 + 4 + 4 + 4 + 8 + 4 + 4) × 4 bytes + the 32-byte boost block.  See
+ * the `UNIFORM_BYTES` docblock in `galaxyPointVertexLayout.ts` for the full slot-by-slot
+ * layout.  The last 4-float block before the boost carries the galaxy surface-brightness
+ * calibration knobs (galaxySbScale / galaxySbMax / galaxyFalloffStrength) + one pad word.
  */
-export const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4 + 4 * 4; // 192 bytes
+export const UNIFORM_BYTES =
+  16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4 + 4 * 4 + BOOST_UNIFORM_BYTES; // 224 bytes
 
 /**
  * Allocate and pack a `Uniforms` buffer for the visual point-sprite pass.
@@ -79,6 +81,7 @@ export function packGalaxyPointUniforms(
     sbScale,
     sbMax,
     falloffStrength,
+    boost,
   } = settings;
 
   // Pad slots are zero-initialised by `new ArrayBuffer` and never written.
@@ -130,7 +133,8 @@ export function packGalaxyPointUniforms(
   f32[43] = sbScale; // byte 172  galaxySbScale
   f32[44] = sbMax; // byte 176  galaxySbMax
   f32[45] = falloffStrength; // byte 180  galaxyFalloffStrength
-  // f32[46..47] (bytes 184..191) stay zero pad → 192 total.
+  // f32[46..47] (bytes 184..191) stay zero pad.
+  writeBoostUniforms(f32, 48, boost); // bytes 192..223
 
   return buf;
 }

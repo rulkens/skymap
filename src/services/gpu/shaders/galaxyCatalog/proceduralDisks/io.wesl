@@ -40,35 +40,24 @@
 // 'FRAGMENT' bit is harmless paint).
 
 import package::lib::camera::CameraUniforms;
+import package::lib::boost::BoostUniforms;
 
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
-// 96-byte uniform buffer.  The first 80 bytes are the shared
+// 128-byte uniform buffer.  The first 80 bytes are the shared
 // 'CameraUniforms' prefix (viewProj + viewportPx + pxPerRad + 4B pad);
 // the renderer-specific 'camPosWorld + pxPerRad' pair sits AFTER it
-// starting at offset 80, matching the disks / quads layout.
-//
-// 'camPosWorld' + 'pxPerRad' are preserved in the layout for ABI
-// continuity with the JS upload path
-// ('proceduralDiskRenderer.ts' still writes them at offsets 80/92),
-// but the world-fixed disk math doesn't read either — orientation
-// derives from the line of sight 'normalize(pos)' (Earth → galaxy),
-// not the camera, and the procedural shader has no apparent-size
-// scaling that would consult 'pxPerRad'. Same intentional ABI-
-// preservation pattern as disks.
+// starting at offset 80, then the 32-byte boost block at 96, matching
+// the textured disks' layout.
 
 struct Uniforms {
   cam: CameraUniforms,
-  // 'camPosWorld' + 'pxPerRad' are preserved in the layout for ABI
-  // continuity with the JS upload path (proceduralDiskRenderer.ts still
-  // writes them at offsets 80/92), but the world-fixed disk math
-  // doesn't read either — orientation derives from the line of sight
-  // 'normalize(pos)' (Earth → galaxy), not the camera, and the
-  // procedural shader has no apparent-size scaling that would consult
-  // 'pxPerRad'.  Same intentional ABI-preservation pattern as
-  // texturedDisks.
+  // Orientation derives from the line of sight 'normalize(pos)' (Earth →
+  // galaxy), not the camera: 'camPosWorld' is read only for the Doppler
+  // direction, and 'pxPerRad' (an ABI-preserved copy) not at all.
   camPosWorld: vec3<f32>,
   pxPerRad: f32,
+  boost: BoostUniforms,
 };
 
 // ── per-instance attributes ────────────────────────────────────────

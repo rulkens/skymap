@@ -61,6 +61,8 @@ import package::lib::orientation::diskAxes;
 // here and forward the scalar via VsOut.focusDim.
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::boost::dopplerFactor;
+import package::lib::boost::headlightGain;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 // @group(1) structure-focus uniform — the impostor pipelines have no fade /
@@ -117,7 +119,10 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let uvLocal = vec2<f32>(cornerUv.x, cornerUv.y);
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   out.cornerUv = cornerUv;
-  out.fadeAlpha = instance.orient.z;
+  // A curated image has no colour index to shift, so the boost reaches it as
+  // the headlight alone, riding the fade: the premultiplied rgb scales with it.
+  let doppler = dopplerFactor(center - u.camPos, u.boost);
+  out.fadeAlpha = instance.orient.z * headlightGain(doppler, u.boost);
   // Hi-res LOD pass-through. The renderer packs the layer index as a
   // float in 'instance.hiRes.x'; cast to i32 so the fragment-stage
   // 'textureSampleLevel(hiResTex, ..., layerIdx)' gets the integer

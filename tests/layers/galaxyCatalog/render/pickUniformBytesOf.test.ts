@@ -52,7 +52,7 @@ const VIEW: SlabView = {
   window: { originPx: [0, 0], sizePx: VIEWPORT_PX },
 };
 
-const CTX = { drawPxPerRad: PX_PER_RAD } as unknown as FrameView;
+const CTX = { drawPxPerRad: PX_PER_RAD, snapshot: { boost: null } } as unknown as FrameView;
 
 const STATE = {
   settings: {
@@ -94,6 +94,7 @@ describe('pickUniformBytesOf', () => {
       falloffStrength: STATE.settings.galaxyCatalogs.falloffStrength,
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
+      boost: null,
     }); // pickPass defaults to 0 — the override below sets it to 1
     // The three overrides the old `drawPoints` applied after uploading, at the
     // same offsets and with the same integer/float encodings.

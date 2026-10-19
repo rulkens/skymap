@@ -8,6 +8,7 @@
  * `texturedDiskRenderer.ts` module header for the full pipeline rationale.
  */
 
+import type { FrameBoost } from '../engine/frame/FrameBoost';
 import type { Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
@@ -56,6 +57,8 @@ export type TexturedDiskRenderer = {
      * land in their OWN physical buffer instead of racing on a shared one.
      */
     viewSlot?: number,
+    /** `ctx.snapshot.boost`; null (the default) draws the rest frame. */
+    boost?: FrameBoost | null,
   ): void;
   /**
    * Release every GPU buffer this renderer owns. Idempotent.

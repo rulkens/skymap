@@ -1,7 +1,7 @@
 /**
  * pickUniformBytesOf — rebuild the point pick uniform as a value, at pick time.
  *
- * The pick pass needs the same 192-byte `Uniforms` image the visual points pass
+ * The pick pass needs the same 224-byte `Uniforms` image the visual points pass
  * uploads, minus the fields it always overrides. Building it as a side effect of
  * the visual `draw()` would braid pick-camera availability into "the points pass
  * has already drawn this frame" — a frame-ordering coupling — and mirror one
@@ -79,6 +79,7 @@ export function pickUniformBytesOf(view: SlabView, ctx: FrameView, state: PassSt
       // so points fade-out and disks fade-in bands can't drift apart).
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
+      boost: ctx.snapshot.boost,
     },
     // Pick pass: the shared vertex shader skips crossfade-out + intensity-floor
     // culls so disk-sized galaxies stay pickable.

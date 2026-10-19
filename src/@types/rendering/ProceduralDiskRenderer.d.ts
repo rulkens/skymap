@@ -4,6 +4,7 @@
  * textured disks (~24 px).
  */
 
+import type { FrameBoost } from '../engine/frame/FrameBoost';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { ProceduralDiskInstance } from './ProceduralDiskInstance';
@@ -27,6 +28,8 @@ export type ProceduralDiskRenderer = {
     pxPerRad: number,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
+    /** `ctx.snapshot.boost`; null (the default) draws the rest frame. */
+    boost?: FrameBoost | null,
   ): void;
   /**
    * Draw the retained procedural-disk instances into the active pick

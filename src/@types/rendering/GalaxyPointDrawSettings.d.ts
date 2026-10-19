@@ -11,6 +11,7 @@
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyProvenanceSettings } from '../settings/GalaxyProvenanceSettings';
+import type { FrameBoost } from '../engine/frame/FrameBoost';
 
 export type GalaxyPointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -37,6 +38,8 @@ export type GalaxyPointDrawSettings = {
   sbMax: number;
   /** Readability-falloff exponent on the resolved-fraction falloff, gated by `depthFadeEnabled` (the `galaxyFalloffStrength` uniform). */
   falloffStrength: number;
+  /** `ctx.snapshot.boost` — the Doppler hue, headlight and contracted billboard distance; null is the rest frame. */
+  boost: FrameBoost | null;
   /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */
   pxFadeStart: number;
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */

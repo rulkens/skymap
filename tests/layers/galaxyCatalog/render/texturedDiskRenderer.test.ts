@@ -220,9 +220,9 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
     // closes; docs/RENDERER.md landmine #1).
     expect(bindGroupsAt0[0]).not.toBe(bindGroupsAt0[1]);
 
-    // Two uniform writeBuffer calls (96 bytes / 24 floats each — the
+    // Two uniform writeBuffer calls (128 bytes / 32 floats each — the
     // instance-bytes writes are a separate, larger payload), one per slot.
-    const uniformWrites = writeBufferCalls.filter((c) => c.data.length === 96 / 4);
+    const uniformWrites = writeBufferCalls.filter((c) => c.data.length === 128 / 4);
     expect(uniformWrites).toHaveLength(2);
   });
 

@@ -28,24 +28,24 @@
 // authoritative module so the layout cannot drift.
 
 import package::lib::camera::CameraUniforms;
+import package::lib::boost::BoostUniforms;
 
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
-// 96-byte uniform buffer matching the CPU-side UNIFORM_BYTES in
+// 128-byte uniform buffer matching the CPU-side UNIFORM_BYTES in
 // 'instancedQuadRenderer.ts'. First 80 bytes are the shared
 // 'CameraUniforms' prefix (viewProj + viewportPx + pxPerRad + 4B pad);
 // 'camPos' sits at offset 80 followed by an f32 tail pad to round up
-// to 16 bytes.
+// to 16 bytes, then the 32-byte boost block at 96 (lib/boost.wesl).
 //
-// 'camPos' is preserved for ABI continuity with the JS upload path,
-// but the world-fixed disk math doesn't read it: a disk's orientation
-// is an intrinsic galaxy property, independent of camera position. The
-// camera contributes only via 'cam.viewProj' (consumed by 'worldToClip').
+// The disk's orientation is an intrinsic galaxy property, independent of
+// camera position; 'camPos' is read only for the Doppler direction.
 
 struct Uniforms {
   cam: CameraUniforms,
   camPos: vec3<f32>,
   _pad2: f32,
+  boost: BoostUniforms,
 };
 
 // ── per-instance attributes ────────────────────────────────────────

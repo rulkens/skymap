@@ -22,6 +22,11 @@ import type { GalaxyPointDrawSettings } from '../../../../src/@types/rendering/G
 import type { ProvenanceFilter } from '../../../../src/@types/settings/ProvenanceFilter';
 import { PROVENANCE_FILTER_CODE } from '../../../../src/data/provenanceFilter';
 import { packSelection } from '../../../../src/data/selectionEncoding';
+import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
+import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';
+import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
+import { wgslPrimitiveLayout } from '../../../../tools/utils/wgsl/wgslPrimitiveLayout';
+import type { FrameBoost } from '../../../../src/@types/engine/frame/FrameBoost';
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────
 
@@ -69,6 +74,7 @@ const SETTINGS: GalaxyPointDrawSettings = {
   sbScale: 8,
   sbMax: 30,
   falloffStrength: 0.8,
+  boost: null,
   focusBindGroup: FOCUS_BIND_GROUP,
   // packGalaxyPointUniforms does not call this; fadeOpacityOf is a per-draw-loop
   // concern owned by the renderer.  The pure packer receives the settings
@@ -82,12 +88,12 @@ const SETTINGS: GalaxyPointDrawSettings = {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('packGalaxyPointUniforms — byteLength', () => {
-  it('returns a buffer of exactly UNIFORM_BYTES (192)', () => {
+  it('returns a buffer of exactly UNIFORM_BYTES (224)', () => {
     // The size is the single source of truth (exported UNIFORM_BYTES); a
     // mismatch here means the alloc and the layout constant are out of sync.
     const buf = packGalaxyPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     expect(buf.byteLength).toBe(UNIFORM_BYTES);
-    expect(buf.byteLength).toBe(192);
+    expect(buf.byteLength).toBe(224);
   });
 });
 
@@ -343,5 +349,48 @@ describe('packGalaxyPointUniforms — galaxy SB calibration knobs (bytes 172..19
     const f32 = new Float32Array(buf);
     expect(f32[46]).toBe(0);
     expect(f32[47]).toBe(0);
+  });
+});
+
+describe('packGalaxyPointUniforms — boost block (bytes 192..223)', () => {
+  const nested = (path: string, name: string) =>
+    layoutWgslStruct(
+      parseWgslStructFields(readShaderSource(path), name),
+      (t) => wgslPrimitiveLayout(t)!,
+    ).layout;
+  const points = layoutWgslStruct(
+    parseWgslStructFields(
+      readShaderSource('src/services/gpu/shaders/galaxyCatalog/points/io.wesl'),
+      'Uniforms',
+    ),
+    (t) =>
+      t === 'CameraUniforms'
+        ? nested('src/services/gpu/shaders/lib/camera.wesl', 'CameraUniforms')
+        : t === 'BoostUniforms'
+          ? nested('src/services/gpu/shaders/lib/boost.wesl', 'BoostUniforms')
+          : wgslPrimitiveLayout(t)!,
+  );
+  const BOOST: FrameBoost = {
+    shipMpc: [0, 0, 0],
+    dir: [0, 1, 0],
+    beta: 0.75,
+    gamma: 1.5,
+    contraction: true,
+    doppler: true,
+    headlight: 1.5,
+  };
+
+  it('appends the boost at float 48 and the struct is UNIFORM_BYTES long, per points/io.wesl', () => {
+    expect(points.offsets.get('boost')).toBe(48 * 4);
+    expect(points.layout.size).toBe(UNIFORM_BYTES);
+    const f32 = new Float32Array(
+      packGalaxyPointUniforms(VIEW_PROJ, VIEWPORT_PX, { ...SETTINGS, boost: BOOST }),
+    );
+    expect(Array.from(f32.subarray(48, 56))).toEqual([0, 1, 0, 0.75, 1.5, 1, 1, 1.5]);
+  });
+
+  it('galaxy point uniforms with a null boost are the identity block', () => {
+    const f32 = new Float32Array(packGalaxyPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS, 1));
+    expect(Array.from(f32.subarray(48, 56))).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 });

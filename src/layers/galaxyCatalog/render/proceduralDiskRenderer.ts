@@ -62,6 +62,7 @@ import type { ProceduralDiskRenderer } from '../../../@types/rendering/Procedura
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import {
   FLOATS_PER_INSTANCE,
@@ -240,6 +241,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     pxPerRad: number,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
+    boost: FrameBoost | null = null,
   ): void {
     if (instances.length === 0) {
       // Zero the cached count so pickDisks() no-ops — it replays
@@ -302,6 +304,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       instanceCount: instances.length,
       camPosWorld,
       pxPerRad,
+      boost,
       focusBindGroup,
     });
 
@@ -344,7 +347,8 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     if (lastPickInstanceCount === 0 || pickInstanceBuffer === null) return;
 
     // Write the pick uniform buffer from the caller-supplied camera.
-    // Same 96-byte layout as the visual pipeline's uniformScratch:
+    // Same layout as the visual pipeline's uniformScratch; the boost block
+    // (f32[24..31]) stays zero-init, the identity, as the pick reads none of it:
     //   f32[ 0..15] viewProj  f32[16..17] viewport  f32[18] pxPerRad
     //   f32[19] reserved  f32[20..22] camPosWorld  f32[23] pxPerRad (copy)
     writeCameraPrefix(pickUniformScratch, viewProj, viewport, pxPerRad);

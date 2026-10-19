@@ -63,6 +63,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         // one source of truth: drift between them re-creates the double-bright donut.
         pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
         pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
+        boost: ctx.snapshot.boost,
         // @group(3): the engine owns one focus buffer, written once per frame in
         // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
         focusBindGroup: state.gpu.focusUniform!.bindGroup,

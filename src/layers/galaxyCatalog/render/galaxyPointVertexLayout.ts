@@ -163,10 +163,9 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 176..179: galaxySbMax           f32      (bloom-ceiling clamp on sbAmp)  } 16 bytes
  *   bytes 180..183: galaxyFalloffStrength f32      (resolved-fraction exponent)    }
  *   bytes 184..191: _padU0 / _padU1       f32×2    (written as 0)                  }
+ *   bytes 192..223: boost                 BoostUniforms (lib/boost.wesl; zero = rest frame)
  *
- * The two trailing pad words round the struct out to 192.
- *
- * Total: 192 bytes — a multiple of 16 ✓
+ * Total: 224 bytes — a multiple of 16 ✓
  *
  * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
  * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
@@ -185,7 +184,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * or reads them, and they stay only to keep `pickPass`'s byte offset
  * stable.
  *
- * The value (192) is defined in `src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts` and
+ * The value (224) is defined in `src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts` and
  * re-exported from here so callers that already import the layout don't
  * need a second import path.
  */

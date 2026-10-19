@@ -27,6 +27,7 @@ export function proceduralDisksPass(runtime: GalaxyCatalogRuntime): ContentPass 
         ctx.drawPxPerRad,
         state.gpu.focusUniform!.bindGroup,
         runtime.proceduralDisks.lastOutput.instances,
+        ctx.snapshot.boost,
       );
     },
 

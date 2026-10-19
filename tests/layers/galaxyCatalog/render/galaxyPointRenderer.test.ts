@@ -273,6 +273,7 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       falloffStrength: 0.8,
       pxFadeStart: 0,
       pxFadeEnd: 0,
+      boost: null,
       focusBindGroup: FOCUS_BIND_GROUP,
       // SDSS fully faded → skipped; GLADE at partial opacity → drawn.
       fadeOpacityOf: (source) => (source === Source.SDSS ? 0 : 0.5),
@@ -329,6 +330,7 @@ describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
       falloffStrength: 0.8,
       pxFadeStart: 0,
       pxFadeEnd: 0,
+      boost: null,
       focusBindGroup: FOCUS_BIND_GROUP,
       fadeOpacityOf: () => 1,
       viewSlot,

@@ -36,6 +36,10 @@ import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
+import package::lib::boost::dopplerFactor;
+import package::lib::boost::contractAbout;
+import package::lib::boost::boostedColorIndex;
+import package::lib::boost::headlightGain;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -156,8 +160,11 @@ fn vs(
   // 'p.radiusMpc' carries the already-padded world-space half-extent —
   // bake site applied the 4× thumbnail-footprint padding and the
   // missing-diameter floor, so the shader reads it directly.
+  // The vp carries the contraction, so the galaxy is DRAWN at its contracted
+  // place; the radius divides by that distance too, or the dot would shrink
+  // against its own projected position.
   let toGalaxy = p.position - u.camPosWorld;
-  let distanceMpc = length(toGalaxy);
+  let distanceMpc = length(contractAbout(p.position, u.camPosWorld, u.boost) - u.camPosWorld);
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
   // is parked exactly on a galaxy (test fixture path; not a real scenario).
   let safeDist = max(distanceMpc, 0.001);
@@ -243,7 +250,9 @@ fn vs(
   let fluxFalloff = select(1.0, pow(resolvedFrac, u.galaxyFalloffStrength), u.depthFadeEnabled == 1u);
   // source.sbBoost is the per-source lift, applied after the SB-scale and
   // bloom-ceiling clamp so it can brighten even a galaxy already at u.galaxySbMax.
+  let doppler = dopplerFactor(toGalaxy, u.boost);
   let intensity = sbAmpClamped * u.galaxySbScale
+    * headlightGain(doppler, u.boost)
     * source.sbBoost
     * fluxFalloff
     * u.brightness
@@ -308,7 +317,7 @@ fn vs(
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
 
   let tintRgb = select(vec3<f32>(intensity), highlightRgb * intensity * HIGHLIGHT_BOOST, highlightActive);
-  let tintW = select(p.colorIndex, -1.0, highlightActive);
+  let tintW = select(boostedColorIndex(p.colorIndex, doppler), -1.0, highlightActive);
   out.instanceTint = vec4<f32>(tintRgb, tintW);
 
   // Invisibility cull: galaxies whose folded intensity falls below this

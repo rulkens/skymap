@@ -56,6 +56,9 @@ import package::lib::orientation::diskAxes;
 // here in the vertex stage and forward the scalar via VsOut.focusDim.
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::boost::dopplerFactor;
+import package::lib::boost::boostedColorIndex;
+import package::lib::boost::headlightGain;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 // @group(1) structure-focus uniform — the impostor pipelines have no fade /
@@ -135,7 +138,8 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   var out: VsOut;
   out.clipPos = worldToClip(u.cam, worldPos);
   out.uv = corner;
-  out.colourIndex = instance.extras.x;
+  let doppler = dopplerFactor(pos - u.camPosWorld, u.boost);
+  out.colourIndex = boostedColorIndex(instance.extras.x, doppler);
   out.crossfadeAlpha = instance.extras.y;
   // Famous-WebP crossfade-OUT against the textured-disk pass. Default
   // 1.0 for ~every galaxy; the proceduralDiskSubsystem only writes a
@@ -154,6 +158,6 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // Effective surface-brightness amplitude, pre-scaled on the CPU by the
   // live sliders; forwarded unchanged so the fragment stage can multiply
   // its brightness profile by it.
-  out.sbAmp = instance.extras.w;
+  out.sbAmp = instance.extras.w * headlightGain(doppler, u.boost);
   return out;
 }

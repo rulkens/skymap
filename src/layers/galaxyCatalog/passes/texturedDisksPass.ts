@@ -35,6 +35,7 @@ export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
         // (`instancedQuadRenderer`'s ring) — the instance buffer needs no ring,
         // every call this frame re-uploads the same byte-identical `disks`.
         ctx.viewSlot,
+        ctx.snapshot.boost,
       );
     },
   };

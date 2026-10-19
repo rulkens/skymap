@@ -35,6 +35,7 @@
  * shared instancedQuadRenderer factory requires uniform stride.
  */
 
+import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
 import type { Mat4 } from 'wgpu-matrix';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
@@ -109,6 +110,7 @@ export function createTexturedDiskRenderer(
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
     viewSlot = 0,
+    boost: FrameBoost | null = null,
   ): void {
     if (instances.length === 0) return;
 
@@ -148,6 +150,7 @@ export function createTexturedDiskRenderer(
       instanceCount: instances.length,
       camPosWorld: camPos,
       pxPerRad,
+      boost,
       focusBindGroup,
       viewSlot,
     });
