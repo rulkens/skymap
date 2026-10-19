@@ -194,7 +194,8 @@ export function rankPaletteMatches(
     }))
     .filter((s) => s.score > 0);
   // One capped bucket, not two: a Layer's catalog rows and the alias index are
-  // the same class of bulk row, so they compete for the same DOM budget.
+  // the same class of bulk row, so they compete for the same DOM budget. Stable:
+  // equal-score aliases keep the alias index's order, which is alias-file order.
   const catalogScored = [...aliasScored, ...layerCatalogScored].sort((a, b) => b.score - a.score);
   const catalogCapped = catalogScored.slice(0, MAX_ALIAS_RESULTS);
 

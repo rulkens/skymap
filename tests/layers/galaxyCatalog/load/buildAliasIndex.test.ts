@@ -23,7 +23,7 @@ const fakeCatalogs = (objIdsBySource: Partial<Record<SourceType, BigUint64Array>
 };
 
 describe('buildAliasIndex', () => {
-  it('emits one entry per (source, localIdx) where the PGC has aliases', () => {
+  it('emits one entry per (source, pgc) the source holds where the PGC has aliases', () => {
     const records = fakeCatalogs({
       [Source.Glade]: new BigUint64Array([100n, 200n, 300n]),
     });
@@ -33,8 +33,8 @@ describe('buildAliasIndex', () => {
     ]);
     const out = buildAliasIndex({ records, aliasMap });
     expect(out).toEqual([
-      { pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 },
-      { pgc: 300, names: ['NGC 3'], source: Source.Glade, localIdx: 2 },
+      { pgc: 100, names: ['NGC 1'], source: Source.Glade },
+      { pgc: 300, names: ['NGC 3'], source: Source.Glade },
     ]);
   });
 
@@ -73,6 +73,6 @@ describe('buildAliasIndex', () => {
     ]);
     const out = buildAliasIndex({ records, aliasMap });
     expect(out.map((e) => e.source)).toEqual([Source.Glade, Source.TwoMRS]);
-    expect(out.map((e) => e.localIdx)).toEqual([0, 0]);
+    expect(out.map((e) => e.pgc)).toEqual([100, 200]);
   });
 });

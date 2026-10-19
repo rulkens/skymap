@@ -168,8 +168,8 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     const primary = m.entry.names[0] ?? '(unnamed)';
     const remaining = m.entry.names.slice(1);
     return {
-      key: `alias:${m.entry.source}:${m.entry.localIdx}`,
-      testid: `alias-row-${m.entry.localIdx}`,
+      key: `alias:${m.entry.source}:${m.entry.pgc}`,
+      testid: `alias-row-${m.entry.source}-${m.entry.pgc}`,
       leading: (
         <span className={styles.glyph} aria-hidden="true">
           {primary[0] ?? '·'}
