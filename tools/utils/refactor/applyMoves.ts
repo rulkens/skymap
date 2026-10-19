@@ -31,13 +31,17 @@
 
 import type { Project } from 'ts-morph';
 
+import { rememberSpecifierExtensions } from './rememberSpecifierExtensions';
+
 export type MovePair = {
   readonly from: string;
   readonly to: string;
 };
 
 export function applyMoves(project: Project, moves: ReadonlyArray<MovePair>): void {
+  const restoreExtensions = rememberSpecifierExtensions(project);
   for (const { from, to } of moves) {
     project.getSourceFileOrThrow(from).move(to);
   }
+  restoreExtensions();
 }
