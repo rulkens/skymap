@@ -60,4 +60,15 @@ describe('shareUrlFor', () => {
 
     expect(url.startsWith('https://skymap.test/?tour=x#')).toBe(true);
   });
+
+  it('drops `t` instead of throwing past the Date range (a far voyage Earth clock)', () => {
+    // A throw here would abort the `l`-key saga and, under `all([...])`, every root watcher.
+    const store = configureStore({ reducer: rootReducer });
+
+    const url = shareUrlFor(store.getState(), FRAMED, 2_451_545 + 3_000_000 * 365.25, BASE);
+
+    const params = parseHashParams(url.slice(url.indexOf('#') + 1));
+    expect(params.has('t')).toBe(false);
+    expect(params.get('pose')).toBe(encodeFramedPose(FRAMED));
+  });
 });

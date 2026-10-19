@@ -91,7 +91,7 @@ import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
-import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
+import { isoOfSimDays } from '../../utils/time/isoOfSimDays';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
 
@@ -199,9 +199,7 @@ const timeSource: HashParamSource = {
   write: (state) => {
     const time = selectTimeState(state);
     if (time.mode !== 'manual') return null;
-    const date = new Date(julianDaysToUnixMs(time.anchor.simDays));
-    // A Date ends at year 275,760, which a far voyage's Earth clock passes; `toISOString` throws.
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    return isoOfSimDays(time.anchor.simDays);
   },
   read: (value) => {
     const unixMs = Date.parse(value);
