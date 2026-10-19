@@ -155,7 +155,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     tierCeiling: 'medium',
     boundingRadiusM: 13941.339598577306,
     groundOffsetM: 9571.345703125,
-    meanAlbedo: [0.130302, 0.130276, 0.130302],
+    meanAlbedo: [0.13961, 0.135823, 0.131543],
     triangleCount: 150000,
     substituted: [],
     source: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ',

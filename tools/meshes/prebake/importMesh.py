@@ -346,10 +346,11 @@ def rock_image(directory, rock):
     (linear), capped at the 99.7th percentile so a saturated or no-data spike
     stays a spike rather than setting the scale."""
     import numpy as np
-    image = bpy.data.images.load(os.path.join(directory, rock["image"]))
-    image.scale(*ROCK_IMAGE_PX)
+    source = bpy.data.images.load(os.path.join(directory, rock["image"]))
+    source.scale(*ROCK_IMAGE_PX)
     px = np.empty(ROCK_IMAGE_PX[0] * ROCK_IMAGE_PX[1] * 4, dtype=np.float32)
-    image.pixels.foreach_get(px)
+    source.pixels.foreach_get(px)
+    bpy.data.images.remove(source)
     grey = px.reshape(-1, 4)[:, 0]
     valid = grey > 1.0 / 255
     median = np.median(grey[valid])
@@ -360,9 +361,12 @@ def rock_image(directory, rock):
         linear = np.clip(ratio * rock["mean_albedo"][c], 0.0, 1.0)
         out[:, c] = np.where(linear <= 0.0031308, 12.92 * linear,
                              1.055 * np.power(linear, 1 / 2.4) - 0.055)
-    image.pixels.foreach_set(out.ravel())
+    # A NEW image, packed from memory: edits to the file-backed one are dropped
+    # when `pack_all` re-reads it from disk, which shipped the raw mosaic once.
+    image = bpy.data.images.new("rock_albedo", *ROCK_IMAGE_PX, alpha=False)
     image.colorspace_settings.name = "sRGB"
-    image.update()
+    image.pixels.foreach_set(out.ravel())
+    image.pack()
     return image
 
 
