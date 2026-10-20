@@ -42,7 +42,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/deriveBodyStates': 2,
   'frame/executeFrame': 5,
   'frame/expandFrameOrder': 5,
-  'frame/foregroundMaxDistance': 1,
   'frame/near0LabelProjection': 1,
   'frame/pickProgram': 5,
   'frame/projectFramePose': 1,

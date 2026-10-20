@@ -52,7 +52,7 @@ import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 
 // One instance record, reused across draws — a `'body'` row draws at most one

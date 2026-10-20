@@ -8,6 +8,7 @@
 
 import { MESH_ASSETS } from './meshAssets.generated';
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
+import { LAYER_BODY_ROWS } from './layerBodyRows';
 
 // The bake decides where a mesh's origin sits relative to its wheels, so the
 // lift is READ from the generated table rather than eyeballed — a re-bake that
@@ -62,17 +63,5 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     altitudeM: groundOffsetM('mer'),
     seat: 'resting',
   },
-  // Crop-bounds centre of the 2019 leaf-on photogrammetry scan (not the
-  // source's own anchor, ~320 m east — see MESH_SOURCES.soendermarken).
-  // altitudeM lifts the anchored seat 0.8 m above the source anchor's own
-  // DVR90 height (buildSiteGroundHeights): the scan's lawn sits a hair below
-  // the drawn terrain tiles, which are no longer cut away around it.
-  {
-    id: 'soendermarken',
-    hostId: 'earth',
-    latDeg: 55.670015,
-    lonDeg: 12.524611,
-    altitudeM: 0.8,
-    seat: 'anchored',
-  },
+  ...LAYER_BODY_ROWS.map((row) => row.position.site),
 ];

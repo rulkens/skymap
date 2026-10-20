@@ -29,7 +29,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { cloudShellPass } from '../../../../../src/services/engine/frame/passes/cloudShellPass';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { bodyTextureSlotKey } from '../../../../../src/utils/bodyTextures/bodyTextureSlotKey';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';

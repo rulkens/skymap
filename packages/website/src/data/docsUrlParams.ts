@@ -3,7 +3,6 @@ import type { DocsNamedId } from '../@types/DocsNamedId';
 import type { DocsOrientation } from '../@types/DocsOrientation';
 import type { DocsUrlParam } from '../@types/DocsUrlParam';
 
-const NOT_WRITTEN = 'Never. It stays in the address as long as you leave it there.';
 const TAKEOVER_UNKNOWN =
   'The app opens on its home view of Earth and takes the parameter out of the address. A focus or a pose in the same link is not used.';
 
@@ -23,8 +22,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'The id of one object',
     example: 'focus=body-saturn',
     does: 'Selects the object, makes it the focus and opens on the app’s standard view of it.',
-    written:
-      'Yes, whenever the focus changes. Earth is the home view and is written as no parameter at all.',
     unknown: 'The app opens on its home view of Earth and takes the parameter out of the address.',
     skipsWelcome: true,
   },
@@ -34,8 +31,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'An instant: a date, or a date and a time',
     example: 't=2020-12-21T18:00:00Z',
     does: 'Sets the clock to that instant and pauses it, at the speed 1 s/s.',
-    written:
-      'Yes, once the speed has been changed or a date set. The Now button takes it away.',
     unknown: 'Ignored: the clock runs on the present. The parameter is taken out of the address.',
     skipsWelcome: true,
   },
@@ -45,7 +40,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'One of four words',
     example: 'orientation=galactic',
     does: 'Chooses which way is up.',
-    written: 'Yes, while it is not ecliptic. Ecliptic is where the app starts and is written as no parameter.',
     unknown: 'Ignored: up stays as it was. The parameter is taken out of the address.',
     skipsWelcome: false,
   },
@@ -55,7 +49,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'The name of one exhibit',
     example: 'exhibit=solarSystem',
     does: 'Opens the exhibit.',
-    written: 'Yes, while the exhibit is open.',
     unknown: TAKEOVER_UNKNOWN,
     skipsWelcome: true,
   },
@@ -65,7 +58,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'The name of one tour',
     example: 'tour=webShowcase',
     does: 'Starts the tour at its first step.',
-    written: 'Yes, while the tour plays.',
     unknown: TAKEOVER_UNKNOWN,
     skipsWelcome: true,
   },
@@ -75,7 +67,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'The name of one camera flight',
     example: 'clip=sondermarkenFlyout',
     does: 'Plays one flight of the camera, with the clock paused while it plays.',
-    written: 'Yes, while the flight plays.',
     unknown: TAKEOVER_UNKNOWN,
     skipsWelcome: true,
   },
@@ -85,8 +76,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'A letter and a list of numbers, with commas between them',
     example: 'pose=a,0,0,0,2.1,0.35,260,0',
     does: 'Puts the camera at an exact position, without a flight.',
-    written:
-      'No. The app reads it once and takes it out of the address. The L key prints a link that has it.',
     unknown:
       'Ignored, with a warning in the browser’s console. A focus in the same link still opens, on its standard view.',
     skipsWelcome: true,
@@ -97,7 +86,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'None',
     example: '?dome',
     does: 'Starts the app in dome mode, drawing a fisheye disc.',
-    written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: false,
   },
@@ -107,7 +95,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'None',
     example: '?cinema',
     does: 'Leaves out every panel and button, and the welcome screen: the scene alone, with a tour’s captions. The film recorder opens the app this way.',
-    written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: true,
     development: true,
@@ -118,7 +105,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'None',
     example: '?gpuTimings',
     does: 'Measures how long the graphics processor takes over each part of a frame, for the debug panel.',
-    written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: false,
     development: true,
@@ -129,7 +115,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'None',
     example: '?perf',
     does: 'Takes the same measurements and hands them to the perf tool.',
-    written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: false,
     development: true,
@@ -140,7 +125,6 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'None',
     example: '?tour',
     does: 'Adds a button to the top bar that starts “The Long Way Out”. To start a tour from a link, name it after the #.',
-    written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: true,
     development: true,

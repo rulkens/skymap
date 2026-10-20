@@ -1,33 +1,25 @@
 ---
-import Base from '../layouts/Base.astro';
-import Classroom from '../components/Classroom/Classroom.tsx';
-import Closing from '../components/Closing/Closing.tsx';
-import Credits from '../components/Credits/Credits.tsx';
-import Dome from '../components/Dome/Dome.tsx';
-import Flight from '../components/Flight/Flight.tsx';
+/*
+ * The home page: its text and front matter are content/pages/index.mdx. The route holds what only a
+ * route can: the head's preloads and pre-paint script, and the flight's stills, which it hands to the text as props.
+ */
+import { getEntry, render } from 'astro:content';
+
 import { flightStopViews } from '../components/Flight/flightStopViews.ts';
 import { prePaintScript } from '../components/Flight/prePaintScript.ts';
-import FullFigure from '../components/FullFigure/FullFigure.tsx';
-import Honesty from '../components/Honesty/Honesty.tsx';
-import Lead from '../components/Lead/Lead.tsx';
-import Places from '../components/Places/Places.tsx';
-import { placeLines } from '../components/Places/placeLines.ts';
-import Tour from '../components/Tour/Tour.tsx';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { homeJsonLd } from '../data/homeJsonLd';
-import layout from '../styles/layout.module.css';
+import Base from '../layouts/Base.astro';
 import { flightStills } from '../utils/flightStills';
 import { heroVideoUrl } from '../utils/heroVideoUrl';
 
-const title = 'Skymap: the mapped universe at true scale, in your browser';
-const description =
-  'Fly from a Copenhagen park to the cosmic web in one continuous scene built from star and galaxy catalogues. Free, no account, in a current browser.';
+const entry = (await getEntry('pages', 'index'))!;
+const { Content } = await render(entry);
 const stills = await flightStills(FLIGHT_STOPS.map((stop) => stop.id));
 const first = stills[0]!;
-
 ---
 
-<Base title={title} description={description} jsonLd={homeJsonLd(Astro.site!, description)} heroNav>
+<Base {...entry.data} jsonLd={homeJsonLd(Astro.site!, entry.data.description)} heroNav>
   <!-- The first still is the largest paint on a phone; the same srcsets feed the <picture>, so it is fetched once. -->
   <Fragment slot="head">
     <link rel="preload" as="image" type="image/avif" media="(orientation: portrait)" imagesrcset={first.portrait.avif} imagesizes={first.portrait.sizes} fetchpriority="high" />
@@ -35,16 +27,5 @@ const first = stills[0]!;
     <!-- Before first paint, so the flight's layout is decided once; the island takes over from it. -->
     <script is:inline set:html={prePaintScript()} />
   </Fragment>
-  <Flight stops={flightStopViews(stills)} videoUrl={heroVideoUrl()} client:load />
-  <Places lines={placeLines()} client:visible />
-  <Lead client:visible />
-  <FullFigure id="hubble" tall="hubble-portrait" />
-  <Tour />
-  <Classroom />
-  <Dome />
-  <Honesty />
-  <Closing />
-  <div class={`${layout.wrap} ${layout.section}`}>
-    <Credits />
-  </div>
+  <Content stops={flightStopViews(stills)} videoUrl={heroVideoUrl()} />
 </Base>

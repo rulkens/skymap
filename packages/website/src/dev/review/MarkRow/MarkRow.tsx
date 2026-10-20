@@ -1,9 +1,8 @@
 /*
- * MarkRow — a mark in a section panel: its state, the passage, the owner's reason and, for a rewrite, the
- * note for the rewriter and the replacement text. `readOnly` is history: what an apply carried out, as it was ruled.
+ * MarkRow — a mark in a section panel: its state, the passage, the owner's reason, and one note. A rewrite
+ * asks what should change and takes the owner's own replacement text instead of a reason.
+ * `readOnly` is history: what an apply carried out, as it was ruled.
  */
-import { useState } from 'react';
-
 import type { DocsReviewMark } from '../../../../../../tools/site/@types/DocsReviewMark';
 import { cx } from '../../../utils/cx.ts';
 import NoteField from '../NoteField/NoteField.tsx';
@@ -12,16 +11,6 @@ import styles from './MarkRow.module.css';
 
 const STATES = ['cut', 'keep', 'rewrite', 'good'] as const;
 const PASSAGE_CHARS = 90;
-// The one rewrite field edits one of these at a time; the control above it names which.
-const KINDS = [
-  {
-    key: 'how',
-    segment: 'Note for the rewriter',
-    save: 'Save note',
-    hint: 'shorter; say where the switch is',
-  },
-  { key: 'after', segment: 'Replacement text', save: 'Save replacement', hint: '' },
-] as const;
 
 type MarkRowProps = {
   mark: DocsReviewMark;
@@ -32,9 +21,7 @@ type MarkRowProps = {
 };
 
 function MarkRow({ mark, readOnly = false, onState, onNote, onGo }: MarkRowProps) {
-  const [kind, setKind] = useState<(typeof KINDS)[number]>(KINDS[0]);
-  const shown = kind.key === 'how' ? (mark.how ?? '') : (mark.after ?? mark.text);
-
+  const rewrite = mark.state === 'rewrite';
   return (
     <div className={cx(styles.root, readOnly && styles.applied)} data-row={`mark:${mark.id}`}>
       <div className={styles.head}>
@@ -60,41 +47,32 @@ function MarkRow({ mark, readOnly = false, onState, onNote, onGo }: MarkRowProps
         </button>
       </div>
       {mark.reason !== 'owner' && <div className={styles.reason}>{mark.reason}</div>}
-      <NoteField
-        label="Why? (optional)"
-        saveLabel="Save why"
-        value={mark.why ?? ''}
-        disabled={readOnly}
-        onSave={(value) => onNote(mark, 'why', value)}
-      />
-      {mark.state === 'rewrite' && (
-        <div>
-          <div className={styles.segment}>
-            {KINDS.map((k) => (
-              <button
-                key={k.key}
-                className={styles.choice}
-                type="button"
-                aria-pressed={k === kind}
-                disabled={readOnly}
-                onClick={() => setKind(k)}
-              >
-                {k.segment}
-              </button>
-            ))}
-          </div>
+      {rewrite ? (
+        <>
           <NoteField
-            ariaLabel={kind.segment}
-            placeholder={kind.hint}
-            saveLabel={kind.save}
-            value={shown}
+            label="What should change (optional)"
+            saveLabel="Save"
+            value={mark.how ?? ''}
             disabled={readOnly}
-            onSave={(value) => onNote(mark, kind.key, value)}
+            onSave={(value) => onNote(mark, 'how', value)}
           />
-          {/* What the owner has written, as labelled lines, so no value hides behind the control. */}
-          {mark.how && <div className={styles.line}>Note: {mark.how}</div>}
-          {mark.after && <div className={styles.line}>Replacement: {mark.after}</div>}
-        </div>
+          <NoteField
+            label="Your replacement text (optional)"
+            saveLabel="Save text"
+            value={mark.after ?? ''}
+            placeholder={mark.text}
+            disabled={readOnly}
+            onSave={(value) => onNote(mark, 'after', value)}
+          />
+        </>
+      ) : (
+        <NoteField
+          label="Why (optional)"
+          saveLabel="Save"
+          value={mark.why ?? ''}
+          disabled={readOnly}
+          onSave={(value) => onNote(mark, 'why', value)}
+        />
       )}
     </div>
   );

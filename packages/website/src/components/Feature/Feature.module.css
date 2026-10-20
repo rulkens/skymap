@@ -49,49 +49,6 @@
   color: var(--color-fg);
 }
 
-/* The picture across the row, then the name beside the words and the question. */
-.wide {
-  grid-template-rows: auto auto;
-  row-gap: 2rem;
-
-  & .figure {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    --cols: 12;
-  }
-
-  & .head,
-  & .words,
-  & .act {
-    grid-column: span 4;
-    grid-row: 2;
-  }
-
-  & .act {
-    margin-top: 0;
-  }
-}
-
-/* While the text column is under its full width a third holds too few words a line: the name goes above. */
-@media (max-width: 1239px) {
-  .wide {
-    & .head {
-      grid-column: 1 / -1;
-      grid-row: 2;
-
-      & h3 {
-        margin-bottom: 0;
-      }
-    }
-
-    & .words,
-    & .act {
-      grid-column: span 6;
-      grid-row: 3;
-    }
-  }
-}
-
 @media (max-width: 900px) {
   /* `article.root`: the composed `grid` sets `display` after this module's own rules, at the same weight. */
   article.root {

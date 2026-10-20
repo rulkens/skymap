@@ -13,27 +13,28 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 **The folder layout is the contract, spelled out.** A contract member that is one
 function is a root file named for it; a member that is a collection is a folder.
 
-| Contract member | Lives in                                       | Notes                                                                                                                 |
-| --------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                            |
-| `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                          |
-| `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                   |
-| `planners?`     | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                            |
-| `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
-| `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
-| `sagas?`        | `sagas/`                                       | One saga per file                                                                                                     |
-| `search?`       | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                    |
-| `sourceCounts?` | `load/`                                        | Per-source counts, an async iterable, on the same terms as `search?`                                                  |
-| `slabs?`        | `present/`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)          |
-| `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written             |
-| `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                    |
-| `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                           |
-| `visibility?`   | `visibility.ts`                                | Static show and label entries, data only; `APP_VISIBILITY` imports the tuple, so it never imports `layer.ts`          |
-| `guides?`       | `present/`                                     |                                                                                                                       |
-| `selection?`    | `present/`                                     |                                                                                                                       |
-| `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
-| `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
-| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import              |
+| Contract member | Lives in                                       | Notes                                                                                                                                                                         |
+| --------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                                                                                    |
+| `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                                                                                  |
+| `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                                                                           |
+| `planners?`     | `frame.ts`                                     | Per-frame content planning; appended to `state.planners` by `createLayers`                                                                                                    |
+| `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional                                                         |
+| `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                                                                          |
+| `sagas?`        | `sagas/`                                       | One saga per file                                                                                                                                                             |
+| `search?`       | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                                                                            |
+| `sourceCounts?` | `load/`                                        | Per-source counts, an async iterable, on the same terms as `search?`                                                                                                          |
+| `slabs?`        | `present/`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)                                                                  |
+| `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written                                                                     |
+| `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                                                                            |
+| `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                                                                                   |
+| `visibility?`   | `visibility.ts`                                | Static show and label entries, data only; `APP_VISIBILITY` imports the tuple, so it never imports `layer.ts`                                                                  |
+| `guides?`       | `present/`                                     |                                                                                                                                                                               |
+| `selection?`    | `present/`                                     |                                                                                                                                                                               |
+| `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                                                                               |
+| `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                   |
+| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                      |
+| `bodies?`       | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types and `src/data` makers only; `data/bodies/layerBodyRows.ts` folds them into the static body tables by import |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -91,4 +92,5 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
 `milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
 settings-only Layer: its `layer.ts` declares the body clusters, while its render
-and load code stay in core.
+and load code stay in core. `earthScenes` is a bodies-only Layer (its rows fold into
+the tables; core still draws them).

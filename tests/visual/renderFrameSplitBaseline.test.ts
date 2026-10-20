@@ -20,10 +20,8 @@ import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gp
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../fixtures/makeGalaxyCatalogItems';
 import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX } from '../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
@@ -426,6 +424,7 @@ describe('renderFrame visual baseline', () => {
         focusBlend: 0,
         // No body rows in this scene: the two slabs above are cosmological.
         slabBodyCandidates: [],
+        bodyStates: new Map(),
         // The executor resolves hdr/density attachments — and the density
         // upsample its source texture — via ctx.snapshot.renderTargets.viewOf(id).
         renderTargets,

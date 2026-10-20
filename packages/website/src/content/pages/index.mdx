@@ -1,0 +1,35 @@
+---
+title: 'Skymap: the mapped universe at true scale, in your browser'
+description: Fly from a Copenhagen park to the cosmic web in one continuous scene built from star and galaxy catalogues. Free, no account, in a current browser.
+job: "What is Skymap, and is it worth opening?"
+---
+
+import Classroom from '../../components/Classroom/Classroom.tsx';
+import Closing from '../../components/Closing/Closing.tsx';
+import Credits from '../../components/Credits/Credits.tsx';
+import Dome from '../../components/Dome/Dome.tsx';
+import Flight from '../../components/Flight/Flight.tsx';
+import FullFigure from '../../components/FullFigure/FullFigure.tsx';
+import Honesty from '../../components/Honesty/Honesty.tsx';
+import Lead from '../../components/Lead/Lead.tsx';
+import Places from '../../components/Places/Places.tsx';
+import { placeLines } from '../../components/Places/placeLines.ts';
+import Tour from '../../components/Tour/Tour.tsx';
+import layout from '../../styles/layout.module.css';
+
+export const section = `${layout.wrap} ${layout.section}`;
+
+{/* The flight's stops and film come from the route, which builds the stills; see pages/index.astro. */}
+
+<Flight stops={props.stops} videoUrl={props.videoUrl} client:load />
+<Places lines={placeLines()} client:visible />
+<Lead client:visible />
+<FullFigure id="hubble" tall="hubble-portrait" />
+<Tour />
+<Classroom />
+<Dome />
+<Honesty />
+<Closing />
+<div class={section}>
+  <Credits />
+</div>
