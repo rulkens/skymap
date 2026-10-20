@@ -11,6 +11,7 @@
  */
 
 import type { PickSourceDraw } from './PickSourceDraw';
+import type { PooledPickSourceDraw } from './PooledPickSourceDraw';
 
 export type GalaxyPickRenderer = {
   /**
@@ -48,6 +49,16 @@ export type GalaxyPickRenderer = {
   drawFlatPoints(
     pass: GPURenderPassEncoder,
     sources: readonly PickSourceDraw[],
+    uniformBytes: ArrayBuffer,
+  ): void;
+
+  /**
+   * The octree sources' half: each draw's live leaf list (never its blobs, which
+   * are no galaxy) through the pooled pick pipeline, over the same pick image.
+   */
+  drawPooledPoints(
+    pass: GPURenderPassEncoder,
+    draws: readonly PooledPickSourceDraw[],
     uniformBytes: ArrayBuffer,
   ): void;
 

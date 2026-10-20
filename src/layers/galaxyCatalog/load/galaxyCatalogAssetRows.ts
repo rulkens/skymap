@@ -8,6 +8,10 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyOctreeReq } from '../../../@types/loading/GalaxyOctreeReq';
+import type { DemandCtx } from '../../../@types/loading/DemandCtx';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 
 import {
   GALAXY_CATALOG_SOURCES,
@@ -37,18 +41,45 @@ function pointRow(
     demand: (ctx) =>
       ctx.settings.galaxyCatalogs.items[id]?.enabled === true &&
       !excluded(ctx.tier) &&
-      galaxyCatalogFormatOf(ctx.settings.galaxyCatalogs.formats, source) === 'skmp',
-    release: (ctx) => excluded(ctx.tier),
+      formatOf(ctx, source) === 'skmp',
+    // Switching the source to its octree drops these points, so the two never draw together.
+    release: (ctx) => excluded(ctx.tier) || formatOf(ctx, source) !== 'skmp',
     priority: entry.priority,
     gates: { address: 'survey', item: id },
   };
 }
+
+/** The octree slot of a row that ships one: demanded, and released, by the source's format. */
+function octreeRow(
+  runtime: GalaxyCatalogRuntime,
+  entry: GalaxyCatalogRegistryEntry,
+): AssetWiringRow {
+  const source = entry.code;
+  const id = entry.id;
+  return {
+    key: `galaxyOctree:${id}`,
+    factory: () => runtime.octreePoints.get(source)!,
+    req: (tier): GalaxyOctreeReq => ({ source, tier }),
+    demand: (ctx) =>
+      ctx.settings.galaxyCatalogs.items[id]?.enabled === true && formatOf(ctx, source) === 'octree',
+    release: (ctx) => formatOf(ctx, source) !== 'octree',
+    priority: entry.priority,
+    // Gates the same item as the point row: either slot's data is the source's presence.
+    gates: { address: 'survey', item: id },
+  };
+}
+
+const formatOf = (ctx: DemandCtx, source: GalaxyCatalogSourceType) =>
+  galaxyCatalogFormatOf(ctx.settings.galaxyCatalogs.formats, source);
 
 export function galaxyCatalogAssetRows(
   runtime: GalaxyCatalogRuntime,
 ): readonly (AssetWiringRow | CompanionAssetRow)[] {
   return [
     ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, SOURCE_REGISTRY[code])),
+    ...GALAXY_CATALOG_SOURCES.filter(
+      (code) => (SOURCE_REGISTRY[code] as GalaxyCatalogSourceEntry).octree !== undefined,
+    ).map((code) => octreeRow(runtime, SOURCE_REGISTRY[code])),
 
     // Loads once the Famous slot leaves `idle`, so the InfoCard text rides in
     // alongside the binary rather than racing ahead of it.

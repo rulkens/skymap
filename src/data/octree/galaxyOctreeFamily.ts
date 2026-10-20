@@ -1,3 +1,4 @@
+import type { ColumnId } from '../../@types/octree/ColumnId';
 import type { ColumnSchema } from '../../@types/octree/ColumnSchema';
 import type { OctreeFamilyRow } from '../../@types/octree/OctreeFamilyRow';
 
@@ -35,6 +36,9 @@ export const GALAXY_INFO_SCHEMA: readonly ColumnSchema[] = [
   { id: 'magI', store: 'f16', q0: 0, q1: 1 },
   { id: 'magZ', store: 'f16', q0: 0, q1: 1 },
 ];
+
+/** The info columns a reader cannot do without (spec §3.1); the rest are read when present. */
+export const GALAXY_INFO_REQUIRED_COLUMNS: readonly ColumnId[] = ['objId', 'specZ'];
 
 export const PGC_SHARD_SCHEMA: readonly ColumnSchema[] = [
   { id: 'objId', store: 'u64', q0: 0, q1: 1 },

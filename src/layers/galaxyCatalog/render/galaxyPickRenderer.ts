@@ -28,6 +28,7 @@
 // into our own GPUShaderModule — never share modules across pipelines
 // (see the `auto` bind-group-layout trap in galaxyFlatPointRenderer.ts).
 import vsCode from '../../../services/gpu/shaders/galaxyCatalog/points/vertex.wesl?static';
+import pooledVsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pooledVertex.wesl?static';
 import pickFsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
@@ -35,6 +36,8 @@ import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRen
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { GalaxyPooledPickLayouts } from '../../../@types/rendering/GalaxyPooledPickLayouts';
+import type { PooledPickSourceDraw } from '../../../@types/rendering/PooledPickSourceDraw';
 import { createDummyFadeBindGroup } from '../../../services/gpu/lib/dummyFade';
 import {
   POINT_STRIDE,
@@ -60,6 +63,9 @@ import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
  * `reversedZ` selects the COSMO slab's depth convention (single-sourced in
  * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
  * `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ *
+ * `pooled` is the pooled point pipeline's cut and records layouts: its pick
+ * pipeline (`drawPooledPoints`) binds the same `@group(1)`/`@group(2)` blocks.
  */
 export function createGalaxyPickRenderer(
   device: GPUDevice,
@@ -68,6 +74,7 @@ export function createGalaxyPickRenderer(
   focusBgl: FocusUniformsBgl,
   focusBindGroup: GPUBindGroup,
   reversedZ: boolean,
+  pooled: GalaxyPooledPickLayouts,
 ): GalaxyPickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -76,23 +83,19 @@ export function createGalaxyPickRenderer(
   // and @group(2) SourceUniforms share identity with the visual
   // pipeline — bind groups built against the canonical BGLs work for
   // either pipeline.
+  const uniformsBgl = device.createBindGroupLayout({
+    label: 'pick-bgl-group0',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
   const pipelineLayout = device.createPipelineLayout({
     label: 'pick-pipeline-layout',
-    bindGroupLayouts: [
-      device.createBindGroupLayout({
-        label: 'pick-bgl-group0',
-        entries: [
-          {
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-            buffer: { type: 'uniform' },
-          },
-        ],
-      }),
-      fadeBgl,
-      sourceBgl,
-      focusBgl,
-    ],
+    bindGroupLayouts: [uniformsBgl, fadeBgl, sourceBgl, focusBgl],
   });
 
   // The shared vertex shader's layout declares @group(1) FadeUniforms
@@ -151,6 +154,27 @@ export function createGalaxyPickRenderer(
     },
   });
 
+  // The octree sources' pick: the same pick fragment over the pooled vertex
+  // prologue, with the shared group(0) and focus and the pooled cut and records.
+  const pooledPipeline = device.createRenderPipeline({
+    label: 'pick-pooled-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'pick-pooled-pipeline-layout',
+      bindGroupLayouts: [uniformsBgl, pooled.drawBgl, pooled.recordsBgl, focusBgl],
+    }),
+    vertex: {
+      module: createShaderModuleWithDevLog(device, pooledVsCode, 'pick.pooledVertex'),
+      entryPoint: 'vs',
+    },
+    fragment: { module: fsModule, entryPoint: 'fsPick', targets: [{ format: 'r32uint' }] },
+    primitive: { topology: 'triangle-list' },
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: resolveDepthCompare('nearer', reversedZ),
+    },
+  });
+
   // The pick renderer's own uniform buffer.  `drawFlatPoints` uploads the
   // caller's `uniformBytes` (the complete, already-pick-shaped image built at
   // pick time from the slab view) here verbatim — the visual pass's GPU
@@ -169,7 +193,7 @@ export function createGalaxyPickRenderer(
   // and lets the pipeline layout's group(0) slot hold a stable object.
   const pickUniformBindGroup = device.createBindGroup({
     label: 'pick-uniform-bg',
-    layout: pipeline.getBindGroupLayout(0),
+    layout: uniformsBgl,
     entries: [{ binding: 0, resource: { buffer: pickUniformBuffer } }],
   });
 
@@ -228,6 +252,24 @@ export function createGalaxyPickRenderer(
     }
   }
 
+  /** The octree sources' leaf lists, over the same pick image `drawFlatPoints` uploads. */
+  function drawPooledPoints(
+    pass: GPURenderPassEncoder,
+    draws: readonly PooledPickSourceDraw[],
+    uniformBytes: ArrayBuffer,
+  ): void {
+    if (draws.length === 0) return;
+    device.queue.writeBuffer(pickUniformBuffer, 0, uniformBytes);
+    pass.setPipeline(pooledPipeline);
+    pass.setBindGroup(0, pickUniformBindGroup);
+    pass.setBindGroup(3, focusBindGroup);
+    for (const d of draws) {
+      pass.setBindGroup(1, d.cut.bindGroup);
+      pass.setBindGroup(2, d.recordsBindGroup);
+      pass.drawIndirect(d.cut.indirect, d.cut.indirectOffset);
+    }
+  }
+
   function destroy(): void {
     dummyFadeBuffer.destroy();
     pickUniformBuffer.destroy();
@@ -238,6 +280,7 @@ export function createGalaxyPickRenderer(
   const renderer: GalaxyPickRenderer = {
     label: 'galaxyPickRenderer',
     drawFlatPoints,
+    drawPooledPoints,
     destroy,
   };
   renderer satisfies Renderer;

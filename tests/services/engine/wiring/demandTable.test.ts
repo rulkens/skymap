@@ -246,6 +246,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
   layerSlots.set('pgcAlias', (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown>);
   layerSlots.set('hiResFamous', stubSlot() as AssetSlot<unknown, unknown>);
+  layerSlots.set('galaxyOctree:glade', stubSlot() as AssetSlot<unknown, unknown>);
   layerSlots.set(
     'structureCatalog',
     (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<unknown, unknown>,
@@ -259,6 +260,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
     pgcAlias: layerSlots.get('pgcAlias'),
     hiResFamous: layerSlots.get('hiResFamous'),
+    octreePoints: new Map([[Source.Glade, layerSlots.get('galaxyOctree:glade')]]),
   } as unknown as GalaxyCatalogRuntime;
   // The density Layer's slots, keyed by `Source` code as its rows key them.
   const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
@@ -276,7 +278,8 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // `ctx.settings.cosmicWebDensity.items[id].enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
-      galaxyCatalogs: { items: galaxyCatalogItems },
+      // GLADE pinned to its flat files: these tables are about the point rows.
+      galaxyCatalogs: { formats: { [Source.Glade]: 'skmp' }, items: galaxyCatalogItems },
       cosmicWebDensity: { items: volumeFields },
     } as unknown as EngineSettingsState,
     ui: { paletteOpen } as import('../../../../src/@types/ui/UiState').UiState,

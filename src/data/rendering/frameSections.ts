@@ -34,6 +34,9 @@ export const PRELUDE: FrameSection = {
     // The survey stars' octree cut, from the inputs the `star-catalog` plan
     // row set; any line ahead of SCENE's star draws would do.
     { kind: 'compute', name: 'star-cut' },
+    // The octree galaxy sources' cut, from the inputs the `galaxy-catalog` plan
+    // row set; ahead of the captures, whose COSMO roster draws the point sprites.
+    { kind: 'compute', name: 'galaxy-cut' },
     // The sky captures, in the compute prelude's wake and ahead of every
     // other render step so a same-frame lensing draw can sample a cubemap this
     // frame actually wrote. The frame's face list for a key is empty most

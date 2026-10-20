@@ -464,12 +464,12 @@ then without `--dry`. Grep for the old name.
 - **Pass:** draws the flat sources as today, then the pooled ones. `drawPick` does the same through `drawFlatPoints` and
   `drawPooledPoints`.
 
-- [ ] Test `the pooled renderer writes a chunk's records at the slot's pool offset and evicts them` (fake device, as
+- [x] Test `the pooled renderer writes a chunk's records at the slot's pool offset and evicts them` (fake device, as
       `starCatalogRenderer.pool.test.ts`).
-- [ ] Test `recordOrdinal reads the pick snapshot, poolRecordIndex the live slots`.
-- [ ] Test `the sprites pass draws flat and pooled sources, each faded by its own source`.
-- [ ] Test `the octree slot installs the pool at the tier's slots and releases it`.
-- [ ] `npm run build`. Commit.
+- [x] Test `recordOrdinal reads the pick snapshot, poolRecordIndex the live slots`.
+- [x] Test `the sprites pass draws flat and pooled sources, each faded by its own source`.
+- [x] Test `the octree slot installs the pool at the tier's slots and releases it`.
+- [x] `npm run build`. Commit.
 
 ### Task 11: the octree GLADE record source — `review: yes`
 

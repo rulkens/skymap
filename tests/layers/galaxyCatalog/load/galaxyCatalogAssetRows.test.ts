@@ -82,6 +82,23 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
     expect(glade.demand(makeCtx({ settings: settings({}) }))).toBe(false);
   });
 
+  it("switching GLADE's format releases the slot of the other, so the two never draw together", () => {
+    const point = rowFor(Source.Glade);
+    const octree = rowFor('galaxyOctree:glade');
+    const ctx = (format: string) =>
+      makeCtx({
+        settings: {
+          galaxyCatalogs: {
+            formats: { [Source.Glade]: format },
+            items: { glade: { enabled: true } },
+          },
+        },
+      });
+    expect([octree.demand(ctx('octree')), point.release?.(ctx('octree'))]).toEqual([true, true]);
+    expect([octree.release?.(ctx('skmp')), octree.demand(ctx('skmp'))]).toEqual([true, false]);
+    expect(point.release?.(ctx('skmp'))).toBe(false);
+  });
+
   it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {
     const famousGalaxiesMeta = rowFor('famousGalaxiesMeta');
     expect(

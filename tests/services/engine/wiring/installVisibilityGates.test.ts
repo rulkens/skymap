@@ -109,6 +109,22 @@ describe('installVisibilityGates', () => {
     expect(fadeTo.mock.calls.filter(([id]) => 'item' in id && id.item === 'glade')).toEqual([]);
   });
 
+  // A galaxy source's flat files and its octree are two slots for one item.
+  it('two rows gating one item hold it present while either slot has a value', () => {
+    const { slots, fades } = makeState({
+      flat: { address: 'survey', item: 'glade' },
+      octree: { address: 'survey', item: 'glade' },
+    });
+    const target = () => fades.targetOf({ address: 'survey', item: 'glade' });
+    slots.octree!.commit();
+    expect(target()).toBe(1);
+    slots.flat!.commit();
+    slots.octree!.release();
+    expect(target()).toBe(1);
+    slots.flat!.release();
+    expect(target()).toBe(0);
+  });
+
   it('a gating commit also retargets the label entries whose of names it', () => {
     const { slots, fadeTo } = makeState(
       { constellations: 'constellations' },

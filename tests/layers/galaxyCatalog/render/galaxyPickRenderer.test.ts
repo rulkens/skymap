@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGalaxyPickRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer';
 import { UNIFORM_BYTES } from '../../../../src/layers/galaxyCatalog/render/galaxyPointVertexLayout';
 import { Source } from '../../../../src/data/sources';
+import type { GalaxyPooledPickLayouts } from '../../../../src/@types/rendering/GalaxyPooledPickLayouts';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
 // about which buffer was targeted and at which byte offset.  `createBuffer`
@@ -66,6 +67,8 @@ function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
 
+const POOLED_LAYOUTS = { drawBgl: {}, recordsBgl: {} } as GalaxyPooledPickLayouts;
+
 // A minimal dummy uniform bytes buffer for drawFlatPoints calls.
 function makeUniformBytes(): ArrayBuffer {
   return new ArrayBuffer(UNIFORM_BYTES);
@@ -98,6 +101,7 @@ describe('createGalaxyPickRenderer', () => {
       makeStubFocusBgl(),
       {} as unknown as GPUBindGroup,
       false,
+      POOLED_LAYOUTS,
     );
 
     const ownPickBuffer = getOwnPickBuffer();
@@ -178,6 +182,7 @@ describe('createGalaxyPickRenderer', () => {
       canonicalFocusBgl,
       {} as unknown as GPUBindGroup,
       false,
+      POOLED_LAYOUTS,
     );
 
     const sourceBufA = { __source: 'A' } as unknown as GPUBuffer;

@@ -6,8 +6,10 @@
  * (procedural and textured). Once, not per view: the walk touches the whole
  * visible catalog, so it plans over the rig's views (anchor camera `views[0]`,
  * `pxPerRad` = the max over views) rather than five times per dome frame.
- * Its `awake`/`settling` votes report the textured planner's LANDED
- * thumbnail work — never its outstanding fetches; see the result at the tail.
+ * It also takes the octree sources' cut inputs and plans their chunks (the
+ * shared stream driver). Its `awake` vote adds the cut's fade timer; both votes
+ * report the textured planner's LANDED thumbnail work — never its outstanding
+ * fetches; see the result at the tail.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
@@ -17,12 +19,17 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
+import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumns';
+import type { OctreeDriverStream } from '../../@types/octree/OctreeDriverStream';
 
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { structureMemberCount } from './present/structureMemberCount';
 import { sourceMaskOf } from './present/sourceMaskOf';
+import { galaxyCutInputs } from './render/cut/galaxyCutInputs';
+import { createOctreeFrameDriver } from '../../services/octree/createOctreeFrameDriver';
+import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -37,6 +44,8 @@ export function galaxyCatalogPlanner(
   let memberCountRow: SelectionRow | null = null;
   let memberCountMask = -1;
   let memberCountVersion = -1;
+  // The star planner's cadence: a chunk fetch outlasts a few frames either way.
+  const driver = createOctreeFrameDriver<GalaxyColumns>(STAR_PLAN_INTERVAL_FRAMES);
 
   return {
     name: 'galaxy-catalog',
@@ -86,6 +95,18 @@ export function galaxyCatalogPlanner(
       // for a threshold nudge.
       const cam = views[0]!.cam;
       const pxPerRad = Math.max(...views.map((view) => view.drawPxPerRad));
+
+      const cutInputs = galaxyCutInputs(runtime, state.settings.galaxyCatalogs, fade, views);
+      const streams: OctreeDriverStream<GalaxyColumns>[] = [];
+      for (const [source, slot] of runtime.octreePoints) {
+        const stream = runtime.chunkStreams.get(source);
+        const octree = slot.committed()?.value.octree;
+        const inCut = cutInputs?.cut.sources.some((s) => s.source === source) === true;
+        if (inCut && stream !== undefined && octree !== undefined) streams.push({ stream, octree });
+      }
+      const cutStep = driver.step(snapshot.nowMs, cutInputs?.cut ?? null, streams);
+      runtime.pooledPointRenderer.setFrameCut(cutInputs, cutStep.recut);
+      if (cutStep.residencyChanged) runtime.residencyVersion += 1;
 
       // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
       // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;
@@ -138,7 +159,7 @@ export function galaxyCatalogPlanner(
       // LANDED is real motion, and it is the same content a sky capture must
       // re-bake for, so both votes read it.
       const fading = runtime.texturedDisks.hasFadingContent();
-      return { value: undefined, awake: fading, settling: fading };
+      return { value: undefined, awake: fading || cutStep.awake, settling: fading };
     },
   };
 }

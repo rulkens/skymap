@@ -1,6 +1,7 @@
 /**
  * galaxyPointSpritesPass — every loaded galaxy from every visible source as an
  * instanced additive billboard in the HDR target; the headline content layer.
+ * Flat sources draw first, then the octree sources through their frame cut.
  * Core skips the pass when every catalog's handed value is 0; within it, the
  * renderer's own loop skips a source at exactly 0 opacity, which is what keeps
  * a hidden catalog or a completed deep-zoom fade from rasterizing millions of
@@ -9,6 +10,8 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
+import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
 import { Source } from '../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
@@ -39,13 +42,14 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
 
       // The shader compares a packed `(sourceCode << 26u) | instance_index` per
       // vertex; structure targets light no galaxy halo, so they take the sentinel.
-      const selected = state.selection.select;
+      const select = state.selection.select;
+      const selected = select !== null && select.type === 'galaxyCatalog' ? select : null;
       const selectedPacked =
-        selected !== null && selected.type === 'galaxyCatalog'
+        selected !== null
           ? packSelection(selected.source, selected.index)
           : SELECTION_NONE_SENTINEL;
 
-      runtime.pointRenderer.draw(pass, view.vp, view.viewportPx, {
+      const settings: GalaxyPointDrawSettings = {
         viewSlot: ctx.viewSlot,
         pointSizePx: state.settings.galaxyCatalogs.sizePx,
         brightness: state.settings.galaxyCatalogs.brightness,
@@ -68,9 +72,28 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         focusBindGroup: state.gpu.focusUniform!.bindGroup,
         // The famous catalog is exempt from the survey fade on purpose: its ~20 curated
         // galaxies stay as landmarks at deep zoom while the survey points yield.
-        fadeOpacityOf: (source) =>
+        fadeOpacityOf: (source: SourceType) =>
           fade[galaxyCatalogIdOf(source)] * (source === Source.FamousGalaxy ? 1 : surveyFade),
-      });
+      };
+      runtime.pointRenderer.draw(pass, view.vp, view.viewportPx, settings);
+
+      // An octree source's halo names a pool row, which its ordinal maps to only while resident.
+      const pooled = runtime.pooledPointRenderer;
+      const pooledIndex =
+        selected === null ? null : pooled.poolRecordIndex(selected.source, selected.index);
+      pooled.draw(
+        pass,
+        view.vp,
+        view.viewportPx,
+        {
+          ...settings,
+          selectedPacked:
+            selected === null || pooledIndex === null
+              ? SELECTION_NONE_SENTINEL
+              : packSelection(selected.source, pooledIndex),
+        },
+        ctx.viewKind === 'capture',
+      );
     },
 
     // Pick takes exactly the sources the draw takes: the same handed value, so a
@@ -78,13 +101,19 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
     drawPick(pass, view, ctx, state, fade) {
       const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
       const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
-      const sources = Array.from(runtime.pointRenderer.loadedSources()).filter(
-        (s) =>
-          fade[galaxyCatalogIdOf(s.source)] *
-            (s.source === Source.FamousGalaxy ? 1 : surveyFade) !==
-          0,
+      const visible = (source: SourceType) =>
+        fade[galaxyCatalogIdOf(source)] * (source === Source.FamousGalaxy ? 1 : surveyFade) !== 0;
+      const sources = Array.from(runtime.pointRenderer.loadedSources()).filter((s) =>
+        visible(s.source),
       );
-      runtime.pickRenderer.drawFlatPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
+      const uniformBytes = pickUniformBytesOf(view, ctx, state);
+      runtime.pickRenderer.drawFlatPoints(pass, sources, uniformBytes);
+      runtime.pooledPointRenderer.snapshotPickSlots();
+      runtime.pickRenderer.drawPooledPoints(
+        pass,
+        runtime.pooledPointRenderer.pickDraws(visible),
+        uniformBytes,
+      );
     },
   };
 }
