@@ -2,8 +2,7 @@
  * wireGalaxyOctreeSlot — one octree galaxy source's slot, built by `create` for a row that
  * ships an octree. Commit installs the index's chunk pool at the committed tier's slots (a
  * tier change reloads the slot in place and re-installs) and sets the source's record
- * source; release drops the stream, the GPU pool and that record source. The record source
- * is a stub until the octree one lands: it knows its count and stats and answers nothing.
+ * source; release drops the stream, the GPU pool and that record source.
  */
 
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
@@ -17,9 +16,7 @@ import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { GalaxyOctreeReq } from '../../../@types/loading/GalaxyOctreeReq';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
-import type { OctreeIndexHeader } from '../../../@types/octree/OctreeIndexHeader';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
-import type { StatId } from '../../../@types/octree/StatId';
 import type { GalaxyCatalogFacts } from '../@types/GalaxyCatalogFacts';
 import type { GalaxyOctreePayload } from '../@types/GalaxyOctreePayload';
 import type { GalaxyPooledPointRenderer } from '../@types/GalaxyPooledPointRenderer';
@@ -28,7 +25,10 @@ import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { installOctreePool } from '../../../services/octree/installOctreePool';
 import { octreeChunkPath } from '../../../utils/octree/octreeChunkPath';
 import { galaxyColumnsOf } from '../../../utils/galaxy/galaxyColumnsOf';
+import { octreeResidency } from '../../../services/octree/octreeResidency';
+import { fetchDataBytes } from '../../../services/loading/fetchDataBytes';
 import { galaxyOctreeFetcher } from './galaxyOctreeFetcher';
+import { octreeGalaxyRecordSource } from './octreeGalaxyRecordSource';
 
 export function wireGalaxyOctreeSlot(
   entry: GalaxyCatalogRegistryEntry,
@@ -53,8 +53,13 @@ export function wireGalaxyOctreeSlot(
   const slot = createAssetSlot<GalaxyOctreePayload, GalaxyOctreeReq>({
     name: `${entry.id}-octree`,
     fetch: galaxyOctreeFetcher,
-    commit: async ({ octree, header }) => {
-      const record = stubRecordSource(source, octree.recordCount, header);
+    commit: async (payload) => {
+      const { octree } = payload;
+      const record = octreeGalaxyRecordSource(entry, payload, {
+        renderer,
+        residency: octreeResidency(chunkStreams, source),
+        fetchBytes: fetchDataBytes,
+      });
       // The pack reads the catalog stats, which `OctreePoolHost`'s upload does not carry.
       const host: OctreePoolHost<GalaxyColumns> = {
         renderer: {
@@ -92,35 +97,4 @@ export function wireGalaxyOctreeSlot(
   });
 
   return slot;
-}
-
-function stubRecordSource(
-  source: GalaxyCatalogSourceType,
-  recordCount: number,
-  header: OctreeIndexHeader,
-): GalaxyRecordSource {
-  const stat = (id: StatId): number => {
-    const v = header.stats[id];
-    if (v === undefined) throw new Error(`galaxy octree index lacks the ${id} stat`);
-    return v;
-  };
-  return {
-    source,
-    recordCount,
-    stats: {
-      medianAbsMag: stat('medianAbsMag'),
-      magOffset: stat('magOffset'),
-      provenance: {
-        total: recordCount,
-        estimated: { orientation: stat('orientationEstimated'), size: stat('diameterEstimated') },
-      },
-    },
-    ordinalOfPick: () => null,
-    pickOfOrdinal: () => null,
-    forEachResidentBlock: () => {},
-    hasDurableId: () => false,
-    loadRow: () => null,
-    resolveDurableId: () => null,
-    resolvePosition: () => null,
-  };
 }

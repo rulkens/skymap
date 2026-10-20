@@ -48,6 +48,9 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
   // The shared stride cursors: which row each block's decimated window resumes
   // from next frame, by source then ordinal base. One map for BOTH bodies.
   const strideStartBySource = new Map<SourceType, Map<number, number>>();
+  // This source's blocks walked this frame: a chunked source's evicted block
+  // leaves a cursor behind that only this prune removes.
+  const visited = new Set<number>();
 
   function runFrame(
     input: DiskWalkInput,
@@ -80,7 +83,9 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
       const cursors = strideStartBySource.get(source) ?? new Map<number, number>();
       strideStartBySource.set(source, cursors);
 
+      visited.clear();
       record.forEachResidentBlock((block, ordinalBase) => {
+        visited.add(ordinalBase);
         const positions = block.positions;
         const { safeStart, end, nextStart } = strideWindow(
           block.count,
@@ -102,7 +107,8 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
             const dy = cy - y;
             const dz = cz - z;
             const camDistSq = dx * dx + dy * dy + dz * dz;
-            if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+            // Negated so a NaN position (a blob, not a galaxy) fails too.
+            if (!(camDistSq > 0 && camDistSq <= maxCamDistSqUpper)) continue;
 
             const camDist = Math.sqrt(camDistSq);
             const px = apparentSizePxAtDistance(block.diameterKpc[i]!, camDist, pxPerRad);
@@ -117,6 +123,9 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
 
         cursors.set(ordinalBase, nextStart);
       });
+      if (cursors.size > visited.size) {
+        for (const base of cursors.keys()) if (!visited.has(base)) cursors.delete(base);
+      }
 
       procedural.endSource(source);
       textured.endSource(source);

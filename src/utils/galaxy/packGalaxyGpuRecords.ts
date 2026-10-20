@@ -17,9 +17,9 @@ import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { GALAXY_GPU_RECORD_WORDS } from '../../data/galaxyCatalog/galaxyGpuRecordWords';
 import { OFFSET_FRACTION_LEVELS } from '../../data/octree/octreeFormat';
-import { apparentFromAbsolute } from '../math/apparentFromAbsolute';
 import { f32ToF16Bits } from '../math/f32ToF16Bits';
 import { octreeNodeOriginRelCamMpc } from '../octree/octreeNodeOriginRelCamMpc';
+import { bandMagOfBakedAbsMag } from './bandMagOfBakedAbsMag';
 import { derivePointRecord } from './derivePointRecord';
 
 const ORIGIN: Vec3 = [0, 0, 0];
@@ -93,8 +93,7 @@ export function packGalaxyGpuRecords(
       f.y = o[1] + oy * scale;
       f.z = o[2] + oz * scale;
       const absMag = records.absMag[r]!;
-      // The emitter baked absMag from the offset magnitude; undo both steps to get the raw band.
-      f.magnitude = apparentFromAbsolute(absMag, Math.hypot(f.x, f.y, f.z)) - stats.magOffset;
+      f.magnitude = bandMagOfBakedAbsMag(absMag, Math.hypot(f.x, f.y, f.z), stats.magOffset);
       f.axisRatio = records.axisRatio[r]!;
       f.positionAngleDeg = records.pa[r]!;
       f.diameterKpc = 10 ** records.logSize[r]!;

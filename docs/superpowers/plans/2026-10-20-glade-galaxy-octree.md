@@ -519,14 +519,14 @@ then without `--dry`. Grep for the old name.
 - `frame.ts`: the member-count reconcile also keys on `runtime.residencyVersion`. Prune `diskPlannerWalk`'s stride
   cursors for blocks the last walk did not visit (the deferred #919 item).
 
-- [ ] Test `a blob ordinal loads no row and never counts as a structure member`.
-- [ ] Test `pgc of a non-resident chunk resolves through its shard, and loadRow settles to that galaxy`.
-- [ ] Test `a pending loadRow from a released octree source is not served after the flat source replaces it` (through
+- [x] Test `a blob ordinal loads no row and never counts as a structure member`.
+- [x] Test `pgc of a non-resident chunk resolves through its shard, and loadRow settles to that galaxy`.
+- [x] Test `a pending loadRow from a released octree source is not served after the flat source replaces it` (through
       the bridge).
-- [ ] Test `hasDurableId is false for objId 0 and for pgcs outside namedPgcs`.
-- [ ] Test `resolvePosition with a distance finds the record; without one it answers null`.
-- [ ] Test `the disk walk drops cursors of blocks no longer resident`.
-- [ ] The flat suite stays green with only the D8 block change. Commit.
+- [x] Test `hasDurableId is false for objId 0 and for pgcs outside namedPgcs`.
+- [x] Test `resolvePosition with a distance finds the record; without one it answers null`.
+- [x] Test `the disk walk drops cursors of blocks no longer resident`.
+- [x] The flat suite stays green with only the D8 block change. Commit.
 
 ### Task 12: bake sweep (controller, with the user)
 

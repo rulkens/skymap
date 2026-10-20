@@ -16,23 +16,14 @@ import type { OctreeChunkStreamDeps } from '../../@types/octree/OctreeChunkStrea
 import type { OctreeChunkRequest } from '../../@types/octree/OctreeChunkRequest';
 import { SlotPool } from '../../utils/cache/slotPool';
 import { createTileStreamSubsystem } from '../engine/subsystems/tileStreamSubsystem';
-import { dataUrl } from '../loading/fetchWithProgress';
+import { fetchDataBytes } from '../loading/fetchDataBytes';
 import { OCTREE_CHUNK_CONCURRENCY } from '../../data/octree/octreeChunkConcurrency';
 import { decodeOctreeChunk } from '../../data/octree/decodeOctreeChunk';
-
-async function fetchChunkBytes(path: string): Promise<ArrayBuffer | null> {
-  try {
-    const res = await fetch(dataUrl(path));
-    return res.ok ? await res.arrayBuffer() : null;
-  } catch {
-    return null;
-  }
-}
 
 export function createOctreeChunkStream<C extends { readonly count: number }>(
   deps: OctreeChunkStreamDeps<C>,
 ): OctreeChunkStream<C> {
-  const { octree, format, fetchChunk = fetchChunkBytes } = deps;
+  const { octree, format, fetchChunk = fetchDataBytes } = deps;
   const residents = new Map<number, { slot: number; chunk: OctreeChunk<C> }>();
   const failed = new Set<number>();
   // Every ref a decoded object has named, by id: immutable bake facts, so kept past eviction.

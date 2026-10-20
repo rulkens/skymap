@@ -44,6 +44,8 @@ export function galaxyCatalogPlanner(
   let memberCountRow: SelectionRow | null = null;
   let memberCountMask = -1;
   let memberCountVersion = -1;
+  // Members are the resident records, so an octree chunk landing or leaving recounts.
+  let memberCountResidency = -1;
   // The star planner's cadence: a chunk fetch outlasts a few frames either way.
   const driver = createOctreeFrameDriver<GalaxyColumns>(OCTREE_PLAN_INTERVAL_FRAMES);
 
@@ -71,11 +73,13 @@ export function galaxyCatalogPlanner(
       if (
         selectRow !== memberCountRow ||
         sourceMask !== memberCountMask ||
-        runtime.catalogsVersion !== memberCountVersion
+        runtime.catalogsVersion !== memberCountVersion ||
+        runtime.residencyVersion !== memberCountResidency
       ) {
         memberCountRow = selectRow;
         memberCountMask = sourceMask;
         memberCountVersion = runtime.catalogsVersion;
+        memberCountResidency = runtime.residencyVersion;
         runtime.publish({
           // Narrowed on the row's own tag, never a structural sniff — only a
           // `structure` arm of a cosmic category (one with galaxy members) is countable.

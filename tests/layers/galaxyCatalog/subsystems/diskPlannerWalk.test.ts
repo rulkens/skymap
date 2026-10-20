@@ -220,4 +220,55 @@ describe('createDiskPlannerWalk', () => {
     const onRowCount = events.filter((e) => e[0] === 'onRow').length;
     expect(onRowCount).toBe(DISK_ROW_ACCEPT_BUDGET);
   });
+
+  it('the disk walk drops cursors of blocks no longer resident', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 4 });
+    const rows = Array.from({ length: 8 }, (_, i) => ({ distMpc: 1 + i / 10, diameterKpc: 50 }));
+    const flat = galaxyRecordsOver(new Map([[Source.Glade, makeCatalog(rows)]])).get(Source.Glade)!;
+    // A chunk-like block at ordinal base 100 that is resident, then evicted, then back.
+    let resident = true;
+    const records = new Map([
+      [
+        Source.Glade,
+        {
+          ...flat,
+          forEachResidentBlock: (visit: Parameters<typeof flat.forEachResidentBlock>[0]) => {
+            if (resident) flat.forEachResidentBlock((block) => visit(block, 100));
+          },
+        },
+      ],
+    ]);
+    const input = { ...makeInput(new Map()), records };
+    const events: WalkEvent[] = [];
+    const frame = () => walk.runFrame(input, recordingVisitor(events), noopDiskRowVisitor());
+
+    frame();
+    resident = false;
+    frame();
+    resident = true;
+    frame();
+
+    // Back from eviction, the block starts a fresh pass rather than resuming at row 2.
+    const windows = events.filter((e) => e[0] === 'beginBlock').map((e) => [e[2], e[3]]);
+    expect(windows).toEqual([
+      [100, 102],
+      [100, 102],
+    ]);
+  });
+
+  it('a row with a NaN position (a blob) never reaches a visitor', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const catalog = makeCatalog([
+      { distMpc: 1, diameterKpc: 50 },
+      { distMpc: 1.1, diameterKpc: 50 },
+    ]);
+    catalog.positions.fill(NaN, 3, 6);
+    const events: WalkEvent[] = [];
+    walk.runFrame(
+      makeInput(new Map([[Source.Glade, catalog]])),
+      recordingVisitor(events),
+      noopDiskRowVisitor(),
+    );
+    expect(events.filter((e) => e[0] === 'onRow')).toEqual([['onRow', Source.Glade, 0]]);
+  });
 });
