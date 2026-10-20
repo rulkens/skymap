@@ -14,6 +14,8 @@ export type LoadedPooledSource = {
   pickSlotChunks: (OctreeChunk<GalaxyColumns> | null)[];
   buffers: GPUBuffer[];
   recordsBuffer: GPUBuffer;
+  /** PooledRecordUniforms: the decode constants, then the blob words each draw rewrites. */
+  pooledBuffer: GPUBuffer;
   fadeBuffers: GPUBuffer[];
   /** One `@group(2)` per view slot, each over that slot's fade buffer. */
   bindGroups: GPUBindGroup[];

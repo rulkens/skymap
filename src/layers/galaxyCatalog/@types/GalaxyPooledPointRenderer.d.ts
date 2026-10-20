@@ -9,6 +9,8 @@ import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyCol
 import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { GalaxyCatalogSettings } from '../../../@types/settings/GalaxyCatalogSettings';
+import type { GalaxyBlobTuningKey } from './GalaxyBlobTuningKey';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeCutInputs } from '../../../@types/octree/OctreeCutInputs';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
@@ -47,6 +49,7 @@ export type GalaxyPooledPointRenderer = Omit<
     viewportPx: Vec2,
     settings: GalaxyPointDrawSettings,
     capture: boolean,
+    blob: Pick<GalaxyCatalogSettings, GalaxyBlobTuningKey>,
   ): void;
   /** The live leaf draws of the frame-cut sources `include` keeps (blobs are not galaxies). */
   pickDraws(include: (source: SourceType) => boolean): PooledPickSourceDraw[];

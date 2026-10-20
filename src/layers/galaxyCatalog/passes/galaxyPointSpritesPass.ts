@@ -81,6 +81,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
               : packSelection(selected.source, pooledIndex),
         },
         ctx.viewKind === 'capture',
+        state.settings.galaxyCatalogs,
       );
     },
 

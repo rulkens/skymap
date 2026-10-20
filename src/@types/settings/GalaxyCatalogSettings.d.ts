@@ -30,6 +30,12 @@ export type GalaxyCatalogSettings = {
   formats: Partial<Record<GalaxyCatalogSourceType, GalaxyCatalogFormat>>;
   /** The galaxy octree cut's refine threshold (box edge over distance). */
   refineThreshold: number;
+  /** Debug-panel multiplier on an octree blob's total light (pooledVertex.wesl `blobGlow`). */
+  blobGain: number;
+  /** An octree blob's glow radius over half its node's projected edge. */
+  blobGlowOverlap: number;
+  /** Ceiling on an octree blob's glow peak; light above it is discarded. */
+  blobPeakCap: number;
   /** Only the famous catalog draws a label; the rest carry `labelEnabled` inertly. */
   items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
 };

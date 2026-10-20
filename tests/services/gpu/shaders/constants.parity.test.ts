@@ -399,6 +399,19 @@ describe('pooled galaxy record parity (galaxyOctreeFamily.ts ↔ points/pooledVe
   it('RECORD_WORDS equals GALAXY_GPU_RECORD_WORDS', () => {
     expect(readWeslConst(file, 'RECORD_WORDS')).toBe(GALAXY_GPU_RECORD_WORDS);
   });
+  // galaxyPooledPointRenderer rewrites the last three at f32 index 5, in this order, every draw.
+  it('PooledRecordUniforms ends in blobOverlap, blobPeakCap, blobGain after absMagQ1', () => {
+    const text = readFileSync(join(process.cwd(), file), 'utf-8');
+    const body = /struct PooledRecordUniforms \{([^}]*)\}/.exec(text)![1]!;
+    expect([...body.matchAll(/(\w+):/g)].map((m) => m[1])).toEqual([
+      'gridOriginMpc',
+      'absMagQ0',
+      'absMagQ1',
+      'blobOverlap',
+      'blobPeakCap',
+      'blobGain',
+    ]);
+  });
   it.each([
     ['COLOUR_INDEX_STEP', 'colourIndex'],
     ['AXIS_RATIO_STEP', 'axisRatio'],

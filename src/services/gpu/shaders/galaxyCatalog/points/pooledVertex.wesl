@@ -38,7 +38,7 @@ struct PooledRecordUniforms {
   absMagQ1: f32,
   blobOverlap: f32,
   blobPeakCap: f32,
-  _pad0: f32,
+  blobGain: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -72,7 +72,8 @@ const GALAXY_DOT_INTEGRAL: f32 = 0.771013;
 
 // A blob stands for 'count' members it describes by their mean (the bake's flux-mean
 // magnitude, flux-weighted size and colour), so it deposits count times the light the
-// body gave that mean member, after the body's per-galaxy sbAmp clamp, spread over a
+// body gave that mean member (times the Debug panel's gain, 1 by default), after the
+// body's per-galaxy sbAmp clamp, spread over a
 // disc of half the node's projected edge times the overlap and painted with the star
 // glow profile that K_GAUSS integrates. As in starCatalog/vertex.wesl, the peak divides
 // by the UNCAPPED radius, so a blob drawn past the ceiling or the refine footprint
@@ -87,7 +88,8 @@ fn blobGlow(member: VSOut, p: PerVertex, count: u32, edgeMpc: f32) -> VSOut {
   let rPx = min(min(STAR_GLOW_MAX_PX, refineCapPx), rPxRaw);
 
   let memberLight = memberPx * memberPx * GALAXY_DOT_INTEGRAL * member.ellipse.z;
-  let peak = member.instanceTint.rgb * (f32(count) * memberLight / (K_GAUSS * rPxRaw * rPxRaw));
+  let light = pooled.blobGain * f32(count) * memberLight;
+  let peak = member.instanceTint.rgb * (light / (K_GAUSS * rPxRaw * rPxRaw));
   let peakMax = max(peak.r, max(peak.g, peak.b));
   var out = member;
   let capped = peak * min(1.0, pooled.blobPeakCap / max(peakMax, 1e-30));

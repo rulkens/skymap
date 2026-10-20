@@ -25,6 +25,8 @@ import type { OctreePoolLayout } from '../../../@types/octree/OctreePoolLayout';
 import type { PooledPickSourceDraw } from '../../../@types/rendering/PooledPickSourceDraw';
 import type { GalaxyPooledPointRenderer } from '../@types/GalaxyPooledPointRenderer';
 import type { LoadedPooledSource } from '../@types/LoadedPooledSource';
+import type { GalaxyCatalogSettings } from '../../../@types/settings/GalaxyCatalogSettings';
+import type { GalaxyBlobTuningKey } from '../@types/GalaxyBlobTuningKey';
 import vsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pooledVertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pooledColorFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -34,8 +36,6 @@ import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { GALAXY_GPU_RECORD_WORDS } from '../../../data/galaxyCatalog/galaxyGpuRecordWords';
-import { GALAXY_BLOB_GLOW_OVERLAP } from '../../../data/galaxyCatalog/galaxyBlobGlowOverlap';
-import { GALAXY_BLOB_PEAK_CAP } from '../../../data/galaxyCatalog/galaxyBlobPeakCap';
 import {
   createViewSlotUniformRing,
   VIEW_SLOT_COUNT,
@@ -53,8 +53,9 @@ const FADE_UNIFORM_BYTES = 16;
 const POOLED_UNIFORM_BYTES = 32;
 const POOLED_ABS_MAG_Q0_INDEX = 3;
 const POOLED_ABS_MAG_Q1_INDEX = 4;
-const POOLED_BLOB_OVERLAP_INDEX = 5;
-const POOLED_BLOB_PEAK_CAP_INDEX = 6;
+// overlap, peak cap, gain: the struct's last three f32, rewritten every draw.
+const POOLED_BLOB_WORDS_INDEX = 5;
+const POOLED_BLOB_WORDS = 3;
 const FIXED_STEP_COLUMNS = ['colourIndex', 'axisRatio'] as const;
 const STREAMS: readonly OctreeDrawStream[] = ['leaf', 'aggregate'];
 
@@ -118,6 +119,7 @@ export function createGalaxyPooledPointRenderer(init: {
     layout: uniformsBgl,
   });
   const fadeScratch = new Float32Array(FADE_UNIFORM_BYTES / 4);
+  const blobScratch = new Float32Array(POOLED_BLOB_WORDS);
 
   const sources = new Map<SourceType, LoadedPooledSource>();
 
@@ -184,8 +186,6 @@ export function createGalaxyPooledPointRenderer(init: {
     );
     pooledWords[POOLED_ABS_MAG_Q0_INDEX] = absMag.q0;
     pooledWords[POOLED_ABS_MAG_Q1_INDEX] = absMag.q1;
-    pooledWords[POOLED_BLOB_OVERLAP_INDEX] = GALAXY_BLOB_GLOW_OVERLAP;
-    pooledWords[POOLED_BLOB_PEAK_CAP_INDEX] = GALAXY_BLOB_PEAK_CAP;
     device.queue.writeBuffer(pooledBuffer, 0, pooledWords);
 
     const fadeBuffers = Array.from({ length: VIEW_SLOT_COUNT }, (_, slot) =>
@@ -211,6 +211,7 @@ export function createGalaxyPooledPointRenderer(init: {
       pickSlotChunks: new Array<OctreeChunk<GalaxyColumns> | null>(poolSlots).fill(null),
       buffers: [recordsBuffer, sourceBuffer, pooledBuffer, ...fadeBuffers],
       recordsBuffer,
+      pooledBuffer,
       fadeBuffers,
       bindGroups,
     });
@@ -296,8 +297,10 @@ export function createGalaxyPooledPointRenderer(init: {
     viewportPx: Vec2,
     settings: GalaxyPointDrawSettings,
     capture: boolean,
+    blob: Pick<GalaxyCatalogSettings, GalaxyBlobTuningKey>,
   ): void {
     if (frameCut === null) return;
+    blobScratch.set([blob.blobGlowOverlap, blob.blobPeakCap, blob.blobGain]);
     if (capture) cut.submitCapture(frameCut);
     const { viewSlot } = settings;
     let bound = false;
@@ -313,6 +316,7 @@ export function createGalaxyPooledPointRenderer(init: {
       }
       fadeScratch[0] = opacity;
       device.queue.writeBuffer(entry.fadeBuffers[viewSlot]!, 0, fadeScratch);
+      device.queue.writeBuffer(entry.pooledBuffer, POOLED_BLOB_WORDS_INDEX * 4, blobScratch);
       pass.setBindGroup(2, entry.bindGroups[viewSlot]!);
       for (const stream of STREAMS) {
         const cutDraw = cut.drawOf(source, stream, capture);

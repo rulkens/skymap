@@ -19,6 +19,8 @@ import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
 import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
+import type { GalaxyPointDrawSettings } from '../../../../src/@types/rendering/GalaxyPointDrawSettings';
+import type { OctreeCutInputs } from '../../../../src/@types/octree/OctreeCutInputs';
 
 type Write = { label: string; offset: number; bytes: number; data: ArrayBufferView | ArrayBuffer };
 
@@ -176,5 +178,29 @@ describe('galaxyPooledPointRenderer chunk pool', () => {
     expect(renderer.recordOrdinal(Source.Glade, 22)).toBe(14);
     expect(renderer.poolRecordIndex(Source.Glade, 14)).toBeNull();
     expect(renderer.poolRecordIndex(Source.Glade, 19)).toBe(22);
+  });
+
+  it("draw rewrites the blob words of the source's pooled uniform from the tuning it is handed", () => {
+    const { renderer, writes } = makeRenderer();
+    const inputs = { cut: { sources: [{ source: Source.Glade }] } };
+    renderer.setFrameCut(inputs as unknown as OctreeCutInputs, true);
+    writes.length = 0;
+    const pass = { setBindGroup: vi.fn(), setPipeline: vi.fn(), drawIndirect: vi.fn() };
+    const settings = {
+      viewSlot: 0,
+      provenance: {
+        orientation: { highlight: false, filter: 'all' },
+        size: { highlight: false, filter: 'all' },
+      },
+      camPosWorld: [0, 0, 0],
+      fadeOpacityOf: () => 1,
+    } as unknown as GalaxyPointDrawSettings;
+    const blob = { blobGlowOverlap: 2.5, blobPeakCap: 0.3, blobGain: 0.4 };
+    const encoder = pass as unknown as GPURenderPassEncoder;
+    renderer.draw(encoder, new Float32Array(16), [800, 600], settings, false, blob);
+    // pooledVertex.wesl's PooledRecordUniforms: gridOriginMpc, absMagQ0, absMagQ1, then these three.
+    const words = writes.find((w) => w.label === `galaxy-pooled-uniform-${Source.Glade}`)!;
+    expect(words.offset).toBe(5 * 4);
+    expect([...(words.data as Float32Array)]).toEqual([2.5, Math.fround(0.3), Math.fround(0.4)]);
   });
 });

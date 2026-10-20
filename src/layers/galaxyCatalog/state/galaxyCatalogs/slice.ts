@@ -12,6 +12,7 @@ import type { GalaxyCatalogSourceType } from '../../../../@types/data/galaxyCata
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
+import type { GalaxyBlobTuningKey } from '../../@types/GalaxyBlobTuningKey';
 
 export const galaxyCatalogsSlice = createSlice({
   name: 'settings/galaxyCatalogs',
@@ -60,6 +61,13 @@ export const galaxyCatalogsSlice = createSlice({
     setGalaxyFalloffStrength: (galaxyCatalogs, action: PayloadAction<number>) => {
       galaxyCatalogs.falloffStrength = action.payload;
     },
+    // The Debug panel's octree blob board: one writer for its three numeric leaves.
+    setGalaxyBlobTuning: (
+      galaxyCatalogs,
+      action: PayloadAction<{ key: GalaxyBlobTuningKey; value: number }>,
+    ) => {
+      galaxyCatalogs[action.payload.key] = action.payload.value;
+    },
     setGalaxyCatalogVisible: (
       galaxyCatalogs,
       action: PayloadAction<{ id: GalaxyCatalogId; enabled: boolean }>,
@@ -90,6 +98,7 @@ export const {
   setGalaxySbScale,
   setGalaxySbMax,
   setGalaxyFalloffStrength,
+  setGalaxyBlobTuning,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
   setGalaxyCatalogFormat,

@@ -23,6 +23,7 @@ import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
+import GalaxyBlobTuningSectionContainer from './ui/GalaxyBlobTuningSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
@@ -59,5 +60,8 @@ export const galaxyCatalogLayer = defineLayer({
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
-  ui: [{ slot: 'main', content: GalaxiesSectionContainer }],
+  ui: [
+    { slot: 'main', content: GalaxiesSectionContainer },
+    { slot: 'debug', content: GalaxyBlobTuningSectionContainer },
+  ],
 });

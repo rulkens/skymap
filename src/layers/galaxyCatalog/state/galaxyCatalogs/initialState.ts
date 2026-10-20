@@ -1,5 +1,7 @@
 import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
 import { GALAXY_REFINE_THRESHOLD } from '../../../../data/galaxyCatalog/galaxyRefineThreshold';
+import { GALAXY_BLOB_GLOW_OVERLAP } from '../../../../data/galaxyCatalog/galaxyBlobGlowOverlap';
+import { GALAXY_BLOB_PEAK_CAP } from '../../../../data/galaxyCatalog/galaxyBlobPeakCap';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 
 export const initialState: GalaxyCatalogSettings = {
@@ -20,6 +22,9 @@ export const initialState: GalaxyCatalogSettings = {
   falloffStrength: 0.7,
   formats: {},
   refineThreshold: GALAXY_REFINE_THRESHOLD,
+  blobGain: 1,
+  blobGlowOverlap: GALAXY_BLOB_GLOW_OVERLAP,
+  blobPeakCap: GALAXY_BLOB_PEAK_CAP,
   items: {
     sdss: { enabled: true, labelEnabled: true },
     '2mrs': { enabled: true, labelEnabled: true },
