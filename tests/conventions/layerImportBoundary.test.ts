@@ -196,7 +196,7 @@ describe('no file under src/layers dispatches (outside ui/sagas)', () => {
 // are transitive deps of `slice.ts` (it imports them to seed itself), so they
 // reopen the same cycle and are swept too. Selectors are read by ui/, sagas/, core.
 const REVERSE_IMPORT_TARGET_RE =
-  /^src\/layers\/[^/]+\/(layer\.ts|state\/slices\.ts|state\/defaults\.ts|state\/[^/]+\/slice\.ts|state\/[^/]+\/initialState\.ts|sources\/.+)$/;
+  /^src\/layers\/[^/]+\/(layer\.ts|state\/slices\.ts|state\/defaults\.ts|state\/[^/]+\/slice\.ts|state\/[^/]+\/initialState\.ts|sources\/.+|bodies\/.+)$/;
 const SELECTORS_MODULE_RE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors$/;
 
 describe('layer.ts, slices.ts, slice.ts, initialState.ts, defaults.ts and sources/ never import a selectors module', () => {

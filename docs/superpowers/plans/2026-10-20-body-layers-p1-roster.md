@@ -49,7 +49,7 @@ tables; core still draws them).
 
 No new test. Types only; the boundary-regex change extends an existing sweep.
 
-- [ ] Types, member, README, boundary regex; `npm run typecheck:fast` green.
+- [x] Types, member, README, boundary regex; `npm run typecheck:fast` green.
 
 ## Task 2: The fold, and Søndermarken into `earthScenes`
 
