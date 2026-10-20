@@ -130,7 +130,7 @@ describe('RemotePage', () => {
       fireEvent.change(page.getByRole('searchbox'), { target: { value: 'andro' } });
     }
     act(() => void vi.advanceTimersByTime(200));
-    const fromA = messages('hello')[0]!.from;
+    const fromA = messages('search')[0]!.from;
     const requestA = messages('search').find((m) => m.from === fromA)!;
     const resultsForA = JSON.stringify({
       kind: 'searchResults',

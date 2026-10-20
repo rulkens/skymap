@@ -38,7 +38,6 @@ import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
 import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
 import { remoteSearchMatches } from '../../utils/remote/remoteSearchMatches';
 import { REMOTE_SILENCE_MS } from '../../data/remote/remoteSilenceMs';
-import { STATUS_MIN_INTERVAL_MS } from '../../data/remote/statusMinIntervalMs';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
 import type { RemoteId } from '../../@types/remote/RemoteId';
@@ -46,6 +45,9 @@ import type { RemoteLinkStatus } from '../../@types/remote/RemoteLinkStatus';
 import type { RemoteTransport } from '../../@types/remote/RemoteTransport';
 import type { LayerToggleRow } from '../../@types/engine/layer/LayerToggleRow';
 import type { RootState } from '../../store/types';
+
+/** The dome sends at most one change-driven status per this many ms (four a second); a `hello` is answered apart. */
+const STATUS_MIN_INTERVAL_MS = 250;
 
 export function* remoteReceiverSaga(
   transport: RemoteTransport,

@@ -6,11 +6,8 @@
  * the dome's own parser validates them against its registries.
  */
 
-import { isFiniteIn } from '../math/isFiniteIn';
 import { isRecord } from '../object/isRecord';
 import type { DomeMessage } from '../../@types/remote/DomeMessage';
-
-const isNumber = (raw: unknown): boolean => isFiniteIn(raw, -Infinity, Infinity);
 
 function isAction(raw: unknown): boolean {
   if (!isRecord(raw)) return false;
@@ -22,7 +19,9 @@ function isAction(raw: unknown): boolean {
     case 'tour':
       return typeof raw.tourId === 'string';
     case 'flyTo':
-      return isNumber(raw.lonDeg) && isNumber(raw.latDeg) && isNumber(raw.altKm);
+      return (
+        Number.isFinite(raw.lonDeg) && Number.isFinite(raw.latDeg) && Number.isFinite(raw.altKm)
+      );
     default:
       return false;
   }
@@ -31,14 +30,14 @@ function isAction(raw: unknown): boolean {
 const isTour = (raw: unknown): boolean =>
   isRecord(raw) &&
   typeof raw.id === 'string' &&
-  isNumber(raw.beatIndex) &&
-  isNumber(raw.beatCount) &&
+  Number.isFinite(raw.beatIndex) &&
+  Number.isFinite(raw.beatCount) &&
   typeof raw.paused === 'boolean';
 
 const isTime = (raw: unknown): boolean =>
   isRecord(raw) &&
-  isNumber(raw.simDays) &&
-  isNumber(raw.rateIndex) &&
+  Number.isFinite(raw.simDays) &&
+  Number.isFinite(raw.rateIndex) &&
   (raw.direction === 1 || raw.direction === -1) &&
   typeof raw.paused === 'boolean' &&
   (raw.mode === 'live' || raw.mode === 'manual');

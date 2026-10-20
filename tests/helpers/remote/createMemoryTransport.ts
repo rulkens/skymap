@@ -7,16 +7,15 @@ import type { DomeMessage } from '../../../src/@types/remote/DomeMessage';
 import type { RemoteLinkStatus } from '../../../src/@types/remote/RemoteLinkStatus';
 import type { RemoteTransport } from '../../../src/@types/remote/RemoteTransport';
 
-export function createMemoryTransport(origins: readonly string[] = ['http://192.168.1.2:5173']) {
+export function createMemoryTransport() {
   const textListeners = new Set<(text: string) => void>();
   const statusListeners = new Set<(status: RemoteLinkStatus) => void>();
   const sent: DomeMessage[] = [];
   let opened: string | null = null;
-  let closed = false;
 
   const transport: RemoteTransport = {
     newRoom: () => 'ROOM0000',
-    pairingOrigins: async () => origins,
+    pairingOrigins: async () => ['http://192.168.1.2:5173'],
     open: (room) => {
       opened = room;
       return {
@@ -29,9 +28,7 @@ export function createMemoryTransport(origins: readonly string[] = ['http://192.
           statusListeners.add(listener);
           return () => statusListeners.delete(listener);
         },
-        close: () => {
-          closed = true;
-        },
+        close: () => {},
       };
     },
   };
@@ -40,7 +37,6 @@ export function createMemoryTransport(origins: readonly string[] = ['http://192.
     transport,
     sent,
     opened: () => opened,
-    closed: () => closed,
     fromRemote: (text: string) => textListeners.forEach((listener) => listener(text)),
     linkStatus: (status: RemoteLinkStatus) => statusListeners.forEach((l) => l(status)),
   };

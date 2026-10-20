@@ -23,7 +23,6 @@ function openLink(room: string): RemoteLink {
     const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${scheme}//${location.host}/__remote/${room}`);
     socket = ws;
-    setStatus('connecting');
     ws.onopen = () => setStatus('open');
     ws.onmessage = (event) => {
       if (typeof event.data !== 'string') return;

@@ -1,1 +1,1 @@
-export type RemoteLinkStatus = 'connecting' | 'open' | 'closed';
+export type RemoteLinkStatus = 'open' | 'closed';

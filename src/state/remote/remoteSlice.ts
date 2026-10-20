@@ -19,7 +19,7 @@ const remoteSlice = createSlice({
     },
     // Same room, so a second phone pairs with the code already shown.
     remotePairingToggled: (remote) => {
-      if (remote.phase !== 'off') remote.phase = remote.phase === 'paired' ? 'waiting' : 'paired';
+      remote.phase = remote.phase === 'paired' ? 'waiting' : 'paired';
     },
   },
 });

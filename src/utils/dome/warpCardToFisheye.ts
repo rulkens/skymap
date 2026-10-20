@@ -6,10 +6,9 @@
  * in the plane ⟂ `d` at unit distance, so the hit is `v / (v·d)`. The card's up
  * is the zenith projected into that plane (its top faces the disc centre) and
  * its right is dome +x, matching the fisheye's image-right. Each output pixel
- * averages a grid of nearest-neighbour samples. Pixels outside the card stay transparent.
+ * averages a grid of nearest-neighbour samples. Pixels outside the card stay transparent; the card's own alpha is ignored (opaque cards only).
  */
 
-import type { PixelImage } from '../../@types/dome/PixelImage';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { cross3 } from '../math/cross3';
 import { dot3 } from '../math/dot3';
@@ -22,7 +21,7 @@ const BORDER_SAMPLES = 16;
 const SUBSAMPLES = 4;
 
 export function warpCardToFisheye(
-  card: PixelImage,
+  card: Pick<ImageData, 'width' | 'height' | 'data'>,
   size: number,
   d: Readonly<Vec3>,
   halfWidthRad: number,
@@ -65,11 +64,10 @@ export function warpCardToFisheye(
 
   for (let py = py0; py <= py1; py++) {
     for (let px = px0; px <= px1; px++) {
-      // Premultiplied sums, so samples off the card fade the edge instead of darkening it.
       let r = 0;
       let g = 0;
       let b = 0;
-      let a = 0;
+      let n = 0;
       for (let j = 0; j < SUBSAMPLES; j++) {
         for (let i = 0; i < SUBSAMPLES; i++) {
           const nx = ((px + (i + 0.5) / SUBSAMPLES) / size) * 2 - 1;
@@ -84,19 +82,18 @@ export function warpCardToFisheye(
           const sx = Math.floor(((s + 1) / 2) * card.width);
           const sy = Math.floor(((1 - t) / 2) * card.height);
           const src = (sy * card.width + sx) * 4;
-          const alpha = card.data[src + 3]!;
-          r += card.data[src]! * alpha;
-          g += card.data[src + 1]! * alpha;
-          b += card.data[src + 2]! * alpha;
-          a += alpha;
+          r += card.data[src]!;
+          g += card.data[src + 1]!;
+          b += card.data[src + 2]!;
+          n++;
         }
       }
-      if (a === 0) continue;
+      if (n === 0) continue;
       const dst = (py * size + px) * 4;
-      out[dst] = r / a;
-      out[dst + 1] = g / a;
-      out[dst + 2] = b / a;
-      out[dst + 3] = a / (SUBSAMPLES * SUBSAMPLES);
+      out[dst] = r / n;
+      out[dst + 1] = g / n;
+      out[dst + 2] = b / n;
+      out[dst + 3] = (n * 255) / (SUBSAMPLES * SUBSAMPLES);
     }
   }
   return out;

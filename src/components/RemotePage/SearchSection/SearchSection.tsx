@@ -26,7 +26,7 @@ function SearchSection({ matches, onSearch, onCommand }: SearchSectionProps) {
     <section className={controls.section}>
       <h2 className={controls.heading}>Search</h2>
       <input
-        className={styles.input}
+        className={controls.input}
         type="search"
         aria-label="Search the sky"
         placeholder="Galaxy, planet, cluster"

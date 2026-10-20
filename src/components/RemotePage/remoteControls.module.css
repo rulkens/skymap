@@ -51,6 +51,22 @@
   cursor: default;
 }
 
+.input {
+  min-height: 44px;
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-input);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .on {
   border-color: var(--color-accent);
   color: var(--color-accent);

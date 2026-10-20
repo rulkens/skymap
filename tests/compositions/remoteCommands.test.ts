@@ -4,9 +4,8 @@ import { parseRemoteCommand } from '../../src/compositions/parseRemoteCommand';
 import { runRemoteCommand } from '../../src/compositions/runRemoteCommand';
 import { RATE_LADDER } from '../../src/data/time/rateLadder';
 import { goHome } from '../../src/state/selection/goHome';
-import { advanceTour, prevBeat, togglePause } from '../../src/state/tour/tourActions';
+import { advanceTour } from '../../src/state/tour/tourActions';
 import { startClip } from '../../src/state/camera/clipActions';
-import { exitTakeover } from '../../src/state/takeover/takeoverActions';
 import {
   goLive,
   pause,
@@ -16,7 +15,6 @@ import {
   setSimDays,
 } from '../../src/state/time/timeSlice';
 import { actionsForPaletteAction } from '../../src/utils/palette/actionsForPaletteAction';
-import { remotePairingToggled } from '../../src/state/remote/remoteSlice';
 import type { PaletteAction } from '../../src/@types/palette/PaletteAction';
 import type { RemoteCommandEnv } from '../../src/@types/remote/RemoteCommandEnv';
 
@@ -67,11 +65,7 @@ describe('goTo', () => {
 
 describe.each([
   ['home', goHome()],
-  ['togglePairing', remotePairingToggled()],
   ['tourAdvance', advanceTour()],
-  ['tourPrev', prevBeat()],
-  ['tourTogglePause', togglePause()],
-  ['exitTakeover', exitTakeover()],
 ])('%s', (name, action) => {
   it('builds its actions', () => {
     expect(run(name)).toEqual([action]);

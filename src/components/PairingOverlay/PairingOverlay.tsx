@@ -17,16 +17,14 @@ export type PairingOverlayProps = {
   readonly pairingUrl: string;
 };
 
-const QUIET_ZONE_MODULES = 2;
-
 function qrPath(modules: readonly (readonly boolean[])[]): { path: string; size: number } {
   let path = '';
   modules.forEach((row, r) =>
     row.forEach((dark, c) => {
-      if (dark) path += `M${c + QUIET_ZONE_MODULES} ${r + QUIET_ZONE_MODULES}h1v1h-1z`;
+      if (dark) path += `M${c} ${r}h1v1h-1z`;
     }),
   );
-  return { path, size: modules.length + QUIET_ZONE_MODULES * 2 };
+  return { path, size: modules.length };
 }
 
 function QrSvg({

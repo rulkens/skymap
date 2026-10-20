@@ -22,16 +22,13 @@ import type { RemoteSearchMatch } from '../../@types/remote/RemoteSearchMatch';
 import type { RemoteSession } from '../../@types/remote/RemoteSession';
 import type { RoomCode } from '../../@types/remote/RoomCode';
 
-// `randomUUID` exists only in secure contexts, and a phone on a plain-http LAN address is not one.
-const newRemoteId = (): string => crypto.randomUUID?.() ?? newLocalRoomCode();
-
 export function useRemoteLink(room: RoomCode | null): RemoteSession {
   const [status, setStatus] = useState<DomeStatus | null>(null);
   const [menu, setMenu] = useState<RemoteMenu | null>(null);
   const [domeThere, setDomeThere] = useState(true);
   const [matches, setMatches] = useState<readonly RemoteSearchMatch[]>([]);
   const linkRef = useRef<RemoteLink | null>(null);
-  const [from] = useState(newRemoteId);
+  const [from] = useState(() => newLocalRoomCode());
   const requestRef = useRef(0);
   const lastResize = useRef<DeviceEvent | null>(null);
 
@@ -46,7 +43,6 @@ export function useRemoteLink(room: RoomCode | null): RemoteSession {
     };
     const hello = (): void => link.send(JSON.stringify({ from, kind: 'hello' }));
     armSilence();
-    hello();
     const beat = setInterval(hello, HELLO_INTERVAL_MS);
     const offStatus = link.onStatus((linkStatus) => {
       if (linkStatus !== 'open') return;

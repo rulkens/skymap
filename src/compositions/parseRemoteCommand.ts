@@ -1,8 +1,4 @@
-/**
- * parseRemoteCommand — `{ name, payload }` with a registry name and a payload
- * its row's `parse` accepts; null otherwise. Passed to `parseRemoteMessage` as
- * its `parseCommand`.
- */
+/** parseRemoteCommand — `{ name, payload }` with a registry name and an accepted payload; null otherwise. */
 
 import { REMOTE_COMMANDS } from './remoteCommands';
 import { isKeyOf } from '../utils/object/isKeyOf';

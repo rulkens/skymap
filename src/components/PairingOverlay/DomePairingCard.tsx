@@ -8,7 +8,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DOME_PARAMS } from '../../data/rendering/domeParams';
-import { PAIRING_CARD_HALF_WIDTH_RAD } from '../../data/remote/pairingCardHalfWidthRad';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { degToRad } from '../../utils/math/degToRad';
 import { warpCardToFisheye } from '../../utils/dome/warpCardToFisheye';
@@ -22,6 +21,8 @@ export type DomePairingCardProps = {
 
 const CARD_WIDTH_PX = 1200;
 const CARD_HEIGHT_PX = 1440;
+/** Half the card's angular width on the dome: big enough to scan a QR off the fisheye, small enough not to dominate it. */
+const PAIRING_CARD_HALF_WIDTH_RAD = (18 * Math.PI) / 180;
 const TILT_RAD = degToRad(DOME_PARAMS.tiltDeg);
 /** Dome direction of the camera forward, where Earth sits. */
 const FRONT: Vec3 = [0, Math.cos(TILT_RAD), Math.sin(TILT_RAD)];

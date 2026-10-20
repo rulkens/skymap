@@ -20,7 +20,7 @@ function JoinField({ onJoin }: JoinFieldProps) {
   const [code, setCode] = useState('');
   const submit = (event: FormEvent): void => {
     event.preventDefault();
-    if (code) onJoin(code);
+    onJoin(code);
   };
   return (
     <form className={styles.root} onSubmit={submit}>

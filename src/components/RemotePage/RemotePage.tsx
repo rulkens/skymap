@@ -45,7 +45,7 @@ function RemotePage() {
         <span role="status" className={domeThere ? styles.link : styles.linkLost}>
           {link}
         </span>
-        <span className={styles.focus}>{focus ?? 'Nothing focused'}</span>
+        <span>{focus ?? 'Nothing focused'}</span>
       </header>
       <Trackpad onEvent={sendDevice} />
       <div className={styles.homeRow}>
