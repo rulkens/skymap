@@ -118,7 +118,7 @@ describe('buildGladeOctree', () => {
       checked++;
     }
     expect(checked).toBe(N - N / 10);
-  });
+  }, 30_000); // a real stratify + chunk + write pass; CI runners take several seconds
 
   it('records without a pgc are absent from the shards and from namedPgcs', () => {
     const { header, dir } = bake(makeCloud(500), [PGC_BASE + 1, PGC_BASE + 10, 42]);
