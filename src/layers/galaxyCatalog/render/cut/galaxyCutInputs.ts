@@ -7,7 +7,8 @@ import type { OctreeCutInputs } from '../../../../@types/octree/OctreeCutInputs'
 import type { OctreeCutSourceInput } from '../../../../@types/octree/OctreeCutSourceInput';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import { COSMO } from '../../../../services/engine/frame/slabs';
-import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout';
+import { FLOATS_PER_VIEW, HALF_DIAGONAL } from '../../../../services/gpu/octree/octreeCutLayout';
+import { GALAXY_BLOB_GLOW_OVERLAP } from '../../../../data/galaxyCatalog/galaxyBlobGlowOverlap';
 import { SOURCE_REGISTRY } from '../../../../data/sources';
 import { PICK_PADDING_PX } from '../../../../data/pickPaddingPx';
 import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
@@ -57,8 +58,9 @@ export function galaxyCutInputs(
       originMpc,
       planes,
       refineThreshold: settings.refineThreshold,
-      // A blob draws as one galaxy-sized billboard: nothing spreads past its box.
-      worldSpread: 1,
+      // A blob's glow reaches half its box edge times the overlap; the cut's sphere is
+      // the half diagonal times this.
+      worldSpread: Math.max(1, (0.5 * GALAXY_BLOB_GLOW_OVERLAP) / HALF_DIAGONAL),
       // The pick footprint, the widest dot any consumer paints.
       leafMarginRad: (settings.sizePx + PICK_PADDING_PX) / pxPerRad,
       sources,

@@ -1,7 +1,7 @@
 /**
  * galaxyPooledPointRenderer — an octree galaxy source as additive point billboards in the
- * galaxy points target, blobs included (D9). Records are six u32 each
- * (`packGalaxyGpuRecords`), the index's first, then `slots × chunkCapacity`, vertex-pulled
+ * galaxy points target, its blobs as box-filling glows through their own fragment (D9).
+ * Records are six u32 each (`packGalaxyGpuRecords`), the index's first, then `slots × chunkCapacity`, vertex-pulled
  * through the shared GPU cut (`octreeCutGpu`, labelled 'galaxy-cut') into the same
  * `galaxyPointVertex` body the flat pipeline calls. `@group(2)` is per source and per view
  * slot: its fade buffer is written per view, before one submit (RENDERER.md landmine #1).
@@ -34,6 +34,8 @@ import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { GALAXY_GPU_RECORD_WORDS } from '../../../data/galaxyCatalog/galaxyGpuRecordWords';
+import { GALAXY_BLOB_GLOW_OVERLAP } from '../../../data/galaxyCatalog/galaxyBlobGlowOverlap';
+import { GALAXY_BLOB_PEAK_CAP } from '../../../data/galaxyCatalog/galaxyBlobPeakCap';
 import {
   createViewSlotUniformRing,
   VIEW_SLOT_COUNT,
@@ -51,6 +53,8 @@ const FADE_UNIFORM_BYTES = 16;
 const POOLED_UNIFORM_BYTES = 32;
 const POOLED_ABS_MAG_Q0_INDEX = 3;
 const POOLED_ABS_MAG_Q1_INDEX = 4;
+const POOLED_BLOB_OVERLAP_INDEX = 5;
+const POOLED_BLOB_PEAK_CAP_INDEX = 6;
 const FIXED_STEP_COLUMNS = ['colourIndex', 'axisRatio'] as const;
 const STREAMS: readonly OctreeDrawStream[] = ['leaf', 'aggregate'];
 
@@ -83,24 +87,30 @@ export function createGalaxyPooledPointRenderer(init: {
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ],
   });
-  const pipeline = device.createRenderPipeline({
-    label: 'galaxy-pooled-points-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'galaxy-pooled-points-pipeline-layout',
-      bindGroupLayouts: [uniformsBgl, cut.drawBgl, recordsBgl, focusBgl],
-    }),
-    // Records are vertex-pulled: no vertex buffers.
-    vertex: {
-      module: createShaderModuleWithDevLog(device, vsCode, 'points.pooledVertex'),
-      entryPoint: 'vs',
-    },
-    fragment: {
-      module: createShaderModuleWithDevLog(device, fsCode, 'points.pooledColorFragment'),
-      entryPoint: 'fs',
-      targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
-    },
-    primitive: { topology: 'triangle-list' },
+  // One layout for both streams' pipelines, so the bind groups set once survive the switch.
+  const layout = device.createPipelineLayout({
+    label: 'galaxy-pooled-points-pipeline-layout',
+    bindGroupLayouts: [uniformsBgl, cut.drawBgl, recordsBgl, focusBgl],
   });
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.pooledVertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'points.pooledColorFragment');
+  const pipelineOf = (stream: OctreeDrawStream, entryPoint: string): GPURenderPipeline =>
+    device.createRenderPipeline({
+      label: `galaxy-pooled-points-pipeline-${stream}`,
+      layout,
+      // Records are vertex-pulled: no vertex buffers.
+      vertex: { module: vsModule, entryPoint: 'vs' },
+      fragment: {
+        module: fsModule,
+        entryPoint,
+        targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
+      },
+      primitive: { topology: 'triangle-list' },
+    });
+  const pipelines: Readonly<Record<OctreeDrawStream, GPURenderPipeline>> = {
+    leaf: pipelineOf('leaf', 'fs'),
+    aggregate: pipelineOf('aggregate', 'fsBlob'),
+  };
   const uniformRing = createViewSlotUniformRing({
     device,
     label: 'galaxy-pooled-points-uniform',
@@ -174,6 +184,8 @@ export function createGalaxyPooledPointRenderer(init: {
     );
     pooledWords[POOLED_ABS_MAG_Q0_INDEX] = absMag.q0;
     pooledWords[POOLED_ABS_MAG_Q1_INDEX] = absMag.q1;
+    pooledWords[POOLED_BLOB_OVERLAP_INDEX] = GALAXY_BLOB_GLOW_OVERLAP;
+    pooledWords[POOLED_BLOB_PEAK_CAP_INDEX] = GALAXY_BLOB_PEAK_CAP;
     device.queue.writeBuffer(pooledBuffer, 0, pooledWords);
 
     const fadeBuffers = Array.from({ length: VIEW_SLOT_COUNT }, (_, slot) =>
@@ -295,7 +307,6 @@ export function createGalaxyPooledPointRenderer(init: {
       if (entry === undefined || opacity === 0) continue;
       if (!bound) {
         uniformRing.writeSlot(viewSlot, packGalaxyPointUniforms(viewProj, viewportPx, settings));
-        pass.setPipeline(pipeline);
         pass.setBindGroup(0, uniformRing.bindGroupOf(viewSlot));
         pass.setBindGroup(3, settings.focusBindGroup);
         bound = true;
@@ -306,6 +317,7 @@ export function createGalaxyPooledPointRenderer(init: {
       for (const stream of STREAMS) {
         const cutDraw = cut.drawOf(source, stream, capture);
         if (cutDraw === null) continue;
+        pass.setPipeline(pipelines[stream]);
         pass.setBindGroup(1, cutDraw.bindGroup);
         pass.drawIndirect(cutDraw.indirect, cutDraw.indirectOffset);
       }

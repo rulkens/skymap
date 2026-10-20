@@ -2,16 +2,23 @@
 // point: an instance finds its record through the cut's draw list (as
 // starCatalog/vertex.wesl does), decodes packGalaxyGpuRecords' six words into
 // the PerVertex the flat pipeline reads from its vertex buffer, and hands it to
-// 'galaxyPointVertex'. Bindings: @group(0) Uniforms, @group(1) the shared cut,
-// @group(2) records + SourceUniforms + PooledRecordUniforms (fade at binding 3
-// is fragment-only), @group(3) FocusUniforms. Position is the catalog-frame Mpc
-// value, built from the grid, not the camera, so a capture face draws it right:
+// 'galaxyPointVertex'. A blob then redraws as a box-filling glow ('blobGlow').
+// Bindings: @group(0) Uniforms, @group(1) the shared cut, @group(2) records +
+// SourceUniforms + PooledRecordUniforms (fade at binding 3 is fragment-only),
+// @group(3) FocusUniforms. Position is the catalog-frame Mpc value, built from
+// the grid, not the camera, so a capture face draws it right:
 //   gridOrigin + (nodeMinCell + offset / 65536 * nodeEdgeCells) * cellEdgeMpc
 
 import package::galaxyCatalog::points::io::Uniforms;
 import package::galaxyCatalog::points::io::PerVertex;
 import package::galaxyCatalog::points::io::VSOut;
 import package::galaxyCatalog::points::vertexBody::galaxyPointVertex;
+import package::galaxyCatalog::points::vertexBody::galaxyApparentPxRadius;
+import package::lib::camera::worldToClip;
+import package::lib::billboard::expandBillboardScreen;
+import package::lib::billboard::worldLenToPx;
+import package::lib::starPhotometry::K_GAUSS;
+import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::focusUniforms::FocusUniforms;
 import package::octree::cutIo::CutNode;
@@ -29,9 +36,9 @@ struct PooledRecordUniforms {
   gridOriginMpc: vec3<f32>,
   absMagQ0: f32,
   absMagQ1: f32,
+  blobOverlap: f32,
+  blobPeakCap: f32,
   _pad0: f32,
-  _pad1: f32,
-  _pad2: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -59,6 +66,35 @@ const WEIGHT_CODE_SPAN: f32 = 127.0;
 const FLAG_ORIENTATION_FALLBACK: u32 = 1u;
 const BYTE_MASK: u32 = 0xffu;
 const HALF_MASK: u32 = 0xffffu;
+// The galaxy dot's exp(-4 r^2) over the unit disc, (pi / 4)(1 - e^-4): a member
+// deposits peak * sizePx^2 * this * axisRatio.
+const GALAXY_DOT_INTEGRAL: f32 = 0.771013;
+
+// A blob stands for 'count' members it describes by their mean (the bake's flux-mean
+// magnitude, flux-weighted size and colour), so it deposits count times the light the
+// body gave that mean member, after the body's per-galaxy sbAmp clamp, spread over a
+// disc of half the node's projected edge times the overlap and painted with the star
+// glow profile that K_GAUSS integrates. As in starCatalog/vertex.wesl, the peak divides
+// by the UNCAPPED radius, so a blob drawn past the ceiling or the refine footprint
+// under-deposits rather than concentrating; the peak cap discards light, never moves it.
+fn blobGlow(member: VSOut, p: PerVertex, count: u32, edgeMpc: f32) -> VSOut {
+  let center = worldToClip(u.cam, p.position);
+  let memberPx = max(u.pointSizePx, galaxyApparentPxRadius(p, u));
+  let boxPx = 0.5 * worldLenToPx(u.cam, edgeMpc, center.w);
+  let rPxRaw = max(memberPx, boxPx) * pooled.blobOverlap;
+  // The footprint a refining blob has at the threshold, the largest one ever shows.
+  let refineCapPx = 0.5 * sqrt(cut.refineThresholdSq) * u.cam.pxPerRad * pooled.blobOverlap;
+  let rPx = min(min(STAR_GLOW_MAX_PX, refineCapPx), rPxRaw);
+
+  let memberLight = memberPx * memberPx * GALAXY_DOT_INTEGRAL * member.ellipse.z;
+  let peak = member.instanceTint.rgb * (f32(count) * memberLight / (K_GAUSS * rPxRaw * rPxRaw));
+  let peakMax = max(peak.r, max(peak.g, peak.b));
+  var out = member;
+  let capped = peak * min(1.0, pooled.blobPeakCap / max(peakMax, 1e-30));
+  out.instanceTint = vec4<f32>(capped, member.instanceTint.w);
+  out.clip = center + vec4<f32>(expandBillboardScreen(u.cam, center, rPx, member.uv), 0.0, 0.0);
+  return out;
+}
 
 @vertex
 fn vs(
@@ -114,10 +150,12 @@ fn vs(
   p.sbAmp = magSb.y;
 
   var out = galaxyPointVertex(vi, base, p, u, source, focus);
-  // The cut's LOD fade: a refining node's own records fade in as its blob fades out. A blob
-  // holds its members' mean, so its light is the mean times their count; applied after the
-  // body because the body clamps sbAmp to galaxySbMax, which one blob must not escape.
-  let count = select(1.0, f32(cutNodes[nodeIdx].blobCount), isBlob);
-  out.instanceTint = vec4<f32>(out.instanceTint.rgb * nodeOpacity * count, out.instanceTint.w);
+  // A zero tint is a gated mean member: the body's off-screen clip stands. A dim one is
+  // not culled, since its count can still add up to visible light.
+  if (isBlob && any(out.instanceTint.rgb > vec3<f32>(0.0))) {
+    out = blobGlow(out, p, cutNodes[nodeIdx].blobCount, nodeEdgeCells(bits) * cut.cellEdgeMpc);
+  }
+  // The cut's LOD fade: a refining node's own records fade in as its blob fades out.
+  out.instanceTint = vec4<f32>(out.instanceTint.rgb * nodeOpacity, out.instanceTint.w);
   return out;
 }

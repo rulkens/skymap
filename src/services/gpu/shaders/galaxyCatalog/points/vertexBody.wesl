@@ -19,6 +19,14 @@ import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
+// The galaxy's padded apparent radius in px; the pooled blob glow sizes its
+// members' dots by it too.
+fn galaxyApparentPxRadius(p: PerVertex, u: Uniforms) -> f32 {
+  let safeDist = max(length(p.position - u.camPosWorld), 0.001);
+  // abs(): radiusMpc's sign bit is the fallback-diameter flag.
+  return (abs(p.radiusMpc) / safeDist) * u.pxPerRad;
+}
+
 fn galaxyPointVertex(
   vi: u32,
   pickIndex: u32,
@@ -57,12 +65,7 @@ fn galaxyPointVertex(
     return earlyOut;
   }
 
-  let toGalaxy = p.position - u.camPosWorld;
-  let distanceMpc = length(toGalaxy);
-  let safeDist = max(distanceMpc, 0.001);
-  // abs(): radiusMpc's sign bit is the fallback-diameter flag.
-  let radiusMag = abs(p.radiusMpc);
-  let apparentPxRadius = (radiusMag / safeDist) * u.pxPerRad;
+  let apparentPxRadius = galaxyApparentPxRadius(p, u);
   // Resolved disks are picked by the procedural-disk pass, so the point pick
   // only claims the dot floor.
   let inPickPass = u.pickPass == 1u;
