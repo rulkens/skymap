@@ -1,8 +1,7 @@
 /*
  * FeatureFilm — a loop of the loop manifest on the Features page, in a small disc or, `wide`, a 16:9
- * frame. It plays while half of it is on screen and stops when it leaves; its button stops and starts it.
- * A visitor who asked for less motion or less data gets the still with a "Play film" button, and nothing
- * moves until they press it. Without script there is no film to stop, so no button.
+ * frame. It plays while half of it is on screen and stops when it leaves. A visitor who asked for less
+ * motion or less data gets the still only.
  */
 import { useEffect, useRef, useState } from 'react';
 
@@ -16,15 +15,13 @@ import styles from './FeatureFilm.module.css';
 type FeatureFilmProps = { film: string; sizes: string; wide?: boolean };
 
 function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
-  const [ready, setReady] = useState(false);
-  const [wanted, setWanted] = useState(true);
+  const [wanted, setWanted] = useState(false);
   const [seen, setSeen] = useState(false);
   const screen = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const less = lessWanted();
     setWanted(!(less.data || less.motion));
-    setReady(true);
     const watch = new IntersectionObserver(([entry]) => setSeen(entry!.isIntersecting), {
       threshold: 0.5,
     });
@@ -45,11 +42,6 @@ function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
         screenRef={screen}
         wide={wide}
       />
-      {ready && (
-        <button className={styles.button} type="button" onClick={() => setWanted(!wanted)}>
-          {wanted ? 'Pause film' : 'Play film'}
-        </button>
-      )}
     </div>
   );
 }
