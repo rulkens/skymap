@@ -18,6 +18,7 @@ import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepthBinding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOccluderSpheres';
+import { near0OverlayClipScale } from '../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
@@ -41,7 +42,10 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
       );
 
       renderer.beginFrame(pass, {
-        vp: near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos)),
+        vp: near0OverlayVpF32(
+          rebaseViewProj(view.slab.vp, view.camPos),
+          near0OverlayClipScale(view.slab.near),
+        ),
         camPosMpc: view.camPos,
         viewportPx: view.viewportPx,
         pxPerRad: ctx.drawPxPerRad,
