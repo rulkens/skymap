@@ -51,7 +51,7 @@ export function writeOctreeCatalog(
       quantise(c.columns, meta.schema),
     );
     const infoBytes = info && encodeOctreeInfo(info, c.sourceRows);
-    const hash = contentHash8(infoBytes ? concatBytes(bytes, infoBytes) : bytes);
+    const hash = contentHash8(infoBytes ? Buffer.concat([bytes, infoBytes]) : bytes);
     if (infoBytes)
       fs.writeFileSync(join(chunkDir, octreeChunkInfoFileName({ ...c, hash })), infoBytes);
     fs.writeFileSync(join(chunkDir, octreeChunkFileName({ ...c, hash })), bytes);
@@ -97,13 +97,6 @@ export function writeOctreeCatalog(
   }
   fs.writeFileSync(join(outDir, `${name}.bin`), index);
   return header;
-}
-
-function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
-  const out = new Uint8Array(a.length + b.length);
-  out.set(a);
-  out.set(b, a.length);
-  return out;
 }
 
 function recordCount(nodes: OctreeNodeTable): number {

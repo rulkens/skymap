@@ -44,7 +44,7 @@ Decided at plan time (each simpler than the spec text; the reviewer checks again
 - **D5. A pgc shard entry is `{ pgc u64, ordinal u32 }`** (spec: plus a position). The position comes from the record
   once its pair is fetched, so the shard need not repeat it.
 - **D6. `angularWeight` is stored as `log10 w`** and quantised affinely with `q0 = −128/127`, `q1 = 1/127`, which is
-  exactly `encodeAngularWeight`'s code. The blob aggregate is the flux-weighted mean of `log10 w`.
+  exactly `encodeAngularWeight`'s code for `w` in `[0.1, 10]`; the emitter clamps `w` to that range first (raw 0 means "never baked" and `vmax` can give `w = 0`). The blob aggregate is the flux-weighted mean of `log10 w`.
 - **D7. A blob record's row in a `GalaxyColumnBlock` has a NaN position**, and every block consumer skips it. Blobs sit
   between real records in the pool order (one after each node's own records), so a block cannot simply leave them out
   without breaking `ordinalBase + i`.
@@ -230,8 +230,9 @@ Per record, from the `GalaxyCatalog` that `recordsToCloud` builds over **all** G
 - `absMag` = `absoluteFromApparent(magG, distance)` after the catalog-wide `galaxyMagOffset`.
 - `colourIndex` = `pickColourIndex(Source.Glade, …bands, distance)`.
 - `logSize` = `log10(diameterKpc)`.
-- `angularWeight` = `log10` of `bakeBiasWeights(cloud, Source.Glade, biasWeight)` over the whole catalog (the
-  `--bias-weight` flag, default `angular`).
+- `angularWeight` = `log10(clamp(w, 0.1, 10))` of `bakeBiasWeights(cloud, Source.Glade, biasWeight)` over the whole
+  catalog (the `--bias-weight` flag, default `angular`; the clamp keeps `w = 0` from `vmax` off raw 0 and out of the
+  blob mean).
 - `flags` from the two fallback arrays.
 
 Header stats: `recordCount`, `medianAbsMag` (`galaxyMedianAbsMag`), `magOffset`, `orientationEstimated`,
@@ -251,6 +252,7 @@ Header stats: `recordCount`, `medianAbsMag` (`galaxyMedianAbsMag`), `magOffset`,
 - [ ] Test `a 5,000-record synthetic GLADE bake round-trips: every input pgc resolves through its shard to an ordinal whose info objId is that pgc`.
 - [ ] Test `records without a pgc are absent from the shards and from namedPgcs`.
 - [ ] Test `header stats equal the flat helpers over the same records`.
+- [ ] Test `w = 0 and w = 0.05 bake to angularWeight code 1, the codec's floor`.
 - [ ] Commit.
 
 ### Task 5: deploy and fetch rows for the galaxy octree
@@ -507,8 +509,10 @@ then without `--dry`. Grep for the old name.
 - `resolveDurableId('pgc-<n>')`: the shard by `pgcShards` lower bound, through `fetchPgcShard` (memoised per shard),
   then a binary search for the ordinal. A miss is `null`.
 - `resolvePosition(ra, dec, distMpc)`:
-  - with a distance: the deepest chunk in `chunkDirectory` whose root cell contains the point, then its pair through
-    the cache, then the nearest real record within 30″ (as `nearestRowByDirection`), as a promise;
+  - with a distance: descend from the index node table through each node's chunk ref toward the point's cell,
+    fetching pairs through the cache as it goes (a chunk can have several roots and a ref names only the first, so the
+    directory cannot be scanned for this), then the nearest real record within 30″ (as `nearestRowByDirection`), as a
+    promise;
   - `distMpc === null` answers `null`.
 - `frame.ts`: the member-count reconcile also keys on `runtime.residencyVersion`. Prune `diskPlannerWalk`'s stride
   cursors for blocks the last walk did not visit (the deferred #919 item).
