@@ -193,9 +193,9 @@ Suggested grouping for dispatch: **A** = Tasks 1–3 (docs and `Base`), **B** = 
 - `packages/website/src/components/DocsMap/DocsMap.tsx`
 - `packages/website/src/pages/docs/index.astro`
 
-- [ ] `DocsLayout`: replace the `path` prop with `place: DocsPlace` and drop its `DOCS_TREE` and `docsPlace` imports (`DocsLayout.tsx:18-19,47`). `Docs.astro` already computes `docsPlace(DOCS_TREE, path)` at line 28: keep the whole result and pass it in.
-- [ ] `DocsMap`: take `groups: readonly DocsGroup[]` instead of importing `DOCS_TREE` (`DocsMap.tsx:12,32`). `docs/index.astro` passes `DOCS_TREE`.
-- [ ] Update both components' header comments where they name `data/docsTree.ts` as their own source.
+- [x] `DocsLayout`: replace the `path` prop with `place: DocsPlace` and drop its `DOCS_TREE` and `docsPlace` imports (`DocsLayout.tsx:18-19,47`). `Docs.astro` already computes `docsPlace(DOCS_TREE, path)` at line 28: keep the whole result and pass it in.
+- [x] `DocsMap`: take `groups: readonly DocsGroup[]` instead of importing `DOCS_TREE` (`DocsMap.tsx:12,32`). `docs/index.astro` passes `DOCS_TREE`.
+- [x] Update both components' header comments where they name `data/docsTree.ts` as their own source.
 - No new test: this is prop plumbing, and the build plus `site:compare --only /docs/` cover it.
 
 ### Task 2: Docs titles and jobs move into front matter

@@ -25,7 +25,8 @@ type Props = {
 };
 
 const { path, description, headings, factIds } = Astro.props;
-const { title } = docsPlace(DOCS_TREE, path).page;
+const place = docsPlace(DOCS_TREE, path);
+const { title } = place.page;
 const sections = tocSections(headings);
 ---
 
@@ -40,7 +41,7 @@ const sections = tocSections(headings);
     ]),
   ]}
 >
-  <DocsLayout path={path} description={description} headings={headings} factIds={factIds}>
+  <DocsLayout place={place} description={description} headings={headings} factIds={factIds}>
     <DocsNav slot="nav" current={path} sections={sections} groups={DOCS_TREE.map(({ name, pages }) => ({ name, pages }))} client:visible />
     {sections.length > 0 && <PageSections slot="toc" sections={sections} client:visible />}
     <FigureSheet slot="sheet" client:idle />
