@@ -33,6 +33,7 @@ import { nearestBodyHR } from '../nearestBodyHR';
 import { toBodyArm, toWorldArm } from '../poseFrameConversion';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
+import { bodyGroundRadiusAtM } from '../../../../utils/scene/bodyGroundRadiusAtM';
 
 function surfaceStepCtxOf(host: HostBody, ctx: RungCtx): SurfaceStepCtx {
   return {
@@ -80,7 +81,7 @@ export const bodyRung: ClimbRow<'body'> = {
       id: frame.body,
       state,
       radiusM: body.surface.datumRadiusM,
-      groundRadiusAtM: (dir) => body.surface.datumRadiusM + ctx.terrainHeightAt(frame.body, dir),
+      groundRadiusAtM: (dir) => bodyGroundRadiusAtM(body, ctx.terrainHeightAt(frame.body, dir)),
       innerBoundRadiusM: innerBoundRadiusM(body.surface),
       outerBoundRadiusM: outerBoundRadiusM(body.surface),
       standoffRadii: bodyStandoffRadii(body),

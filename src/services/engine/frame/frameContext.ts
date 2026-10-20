@@ -71,7 +71,7 @@ export function deriveFrameContext(
   // A mesh body whose driver hangs off something with no row of its own gets
   // one here, off the STORE roster rather than the static table, so the two
   // stay the same list.
-  const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body) === body.id);
+  const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body.id) === body.id);
   const storeBodies: readonly SceneBody[] =
     earth === null
       ? [...planets, ...hostlessMeshBodies]

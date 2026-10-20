@@ -1,0 +1,192 @@
+.table {
+  composes: small from '../../styles/type.module.css';
+  font-variant-numeric: tabular-nums;
+
+  &,
+  & thead,
+  & tbody,
+  & th,
+  & td {
+    display: block;
+  }
+
+  /* Four columns of the page grid for the source, three for the release, two for the count, three for the licence. */
+  & tr {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    border-top: 1px solid var(--border-divider);
+  }
+
+  & tr > * {
+    grid-column: span 3;
+  }
+
+  & tr > :first-child {
+    grid-column: span 4;
+  }
+
+  & tr > :nth-child(3) {
+    grid-column: span 2;
+  }
+
+  & thead tr {
+    border-top: 0;
+  }
+
+  & th,
+  & td {
+    padding-block: 0.875rem;
+    text-align: left;
+    font-weight: var(--weight-small);
+    color: var(--site-text-muted);
+  }
+
+  & thead th {
+    color: var(--site-text-dim);
+  }
+
+  & th[scope='row'] a {
+    color: var(--color-fg);
+  }
+}
+
+/* A count is set from its right edge. */
+.table tr > .num {
+  display: flex;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.table tr.group {
+  border-top: 0;
+}
+
+.table .group > * {
+  grid-column: 1 / -1;
+}
+
+.table .group th,
+.list h3 {
+  padding-top: 2.5rem;
+  font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  color: var(--color-fg);
+}
+
+.table tbody:first-of-type .group th {
+  padding-top: 1rem;
+}
+
+.unseen {
+  composes: unseen from '../../styles/a11y.module.css';
+}
+
+.gives {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.evidence {
+  white-space: nowrap;
+}
+
+/* The two ways out on a line of their own under the licence, the same place in every row. */
+.ways {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 0.375rem;
+}
+
+.list {
+  composes: small from '../../styles/type.module.css';
+  display: none;
+}
+
+.summary {
+  composes: ring ring-small from '../../styles/ring.module.css';
+}
+
+.notes {
+  composes: small from '../../styles/type.module.css';
+  composes: tap-links from '../../styles/links.module.css';
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-divider);
+
+  & p {
+    max-width: 34rem;
+    margin-bottom: 0.75rem;
+    color: var(--site-text-dim);
+  }
+}
+
+/* Narrow: the list in the table's place. */
+@media (max-width: 900px) {
+  .table {
+    display: none;
+  }
+
+  .list {
+    display: block;
+    font-variant-numeric: tabular-nums;
+
+    & h3 {
+      margin: 0;
+      padding-bottom: 0.75rem;
+    }
+
+    & section:first-child h3 {
+      padding-top: 0;
+    }
+
+    & details {
+      border-top: 1px solid var(--border-divider);
+    }
+
+    & summary::-webkit-details-marker {
+      display: none;
+    }
+
+    & summary b {
+      font-weight: inherit;
+      color: var(--color-fg);
+    }
+
+    & dl {
+      margin: 0;
+      padding-left: 1.3125rem;
+    }
+
+    & dl > div {
+      padding-bottom: 0.625rem;
+    }
+
+    & dt {
+      color: var(--site-text-dim);
+    }
+
+    & dd {
+      margin: 0;
+      color: var(--site-text-muted);
+    }
+  }
+
+  /* The whole row opens it; the ring is filled while it is open. */
+  .list .summary {
+    display: flex;
+    align-items: baseline;
+    width: 100%;
+    padding-block: 0.875rem;
+    list-style: none;
+    color: var(--site-text-muted);
+  }
+
+  .list .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2rem;
+    max-width: none;
+    margin: 0 0 0.75rem;
+    padding-left: 1.3125rem;
+  }
+}

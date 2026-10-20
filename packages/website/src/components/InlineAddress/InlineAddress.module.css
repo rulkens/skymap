@@ -1,0 +1,4 @@
+.root {
+  overflow-wrap: anywhere;
+  color: var(--color-fg);
+}

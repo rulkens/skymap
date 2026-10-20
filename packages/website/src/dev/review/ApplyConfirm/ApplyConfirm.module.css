@@ -1,0 +1,15 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--site-text);
+}
+
+.stacked .consequence {
+  flex: 1 0 100%;
+}
+
+.button {
+  composes: button from '../ReviewControl/ReviewControl.module.css';
+}

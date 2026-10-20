@@ -2,14 +2,15 @@
 
 One-shot generators for the website's committed assets and its hero media. Each is run by hand when its input changes.
 
-| Script                 | Run                                        | Writes                                                                          |
-| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
-| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                    |
-| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`        | `public/apple-touch-icon.png` from `public/favicon.svg`                         |
-| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`        | the flight's stills (one pair per stop) and its scrub video, from the recording |
-| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>` | every picture in the shot manifest, AVIF and WebP, and the link-preview card    |
-| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>` | every film in the loop manifest, H.264 in MP4                                   |
-| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                    |
+| Script                 | Run                                                        | Writes                                                                             |
+| ---------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`                        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                       |
+| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/apple-touch-icon.png` from `public/favicon.svg`                            |
+| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording    |
+| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview card       |
+| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                      |
+| `compareSite.ts`       | `npm run site:compare -- --baseline <dir> --current <dir>` | `report.txt` and base/cur/diff PNGs of every page that differs, in the temp folder |
+| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`                  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                       |
 
 ## Hero media
 

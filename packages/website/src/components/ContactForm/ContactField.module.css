@@ -1,0 +1,48 @@
+.root {
+  margin-bottom: 1.5rem;
+
+  & label {
+    display: block;
+    font: var(--weight-display) var(--text-h3) / 1.2 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  /* 16px and up, so a phone does not zoom the page when a field takes focus. */
+  & :is(input, textarea) {
+    display: block;
+    width: 100%;
+    min-height: var(--tap);
+    margin-top: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgb(232 238 255 / 0.45);
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--color-fg);
+    font: var(--weight-small) 1.125rem / 1.5 var(--font-body);
+
+    &:focus-visible {
+      outline-offset: 2px;
+      border-color: var(--color-accent);
+    }
+
+    &[aria-invalid='true'] {
+      border-color: #ff9d8a;
+    }
+  }
+
+  & textarea {
+    resize: vertical;
+  }
+}
+
+.hint {
+  composes: small from '../../styles/type.module.css';
+  margin: 0.25rem 0 0;
+  color: var(--site-text-dim);
+}
+
+.error {
+  composes: small from '../../styles/type.module.css';
+  margin: 0.4rem 0 0;
+  color: #ffb4a6;
+}
