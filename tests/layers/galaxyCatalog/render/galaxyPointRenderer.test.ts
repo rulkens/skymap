@@ -29,6 +29,9 @@ import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/
 import type { Mat4 } from 'wgpu-matrix';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
+/** Stats are the record source's to compute; these suites only exercise buffers. */
+const STATS = { magOffset: 0, medianAbsMag: -20.5 };
+
 // GalaxyPointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
 // tests still reason in terms of the numeric `Source` codes, so resolve the
 // id at each upload call site through the registry.
@@ -195,10 +198,10 @@ describe('GalaxyPointRenderer.destroy', () => {
     // vertex buffer, the per-view-slot FadeUniforms ring (Task 13b), and the
     // SourceUniforms 16-byte uniform.
     const perUpload = VIEW_SLOT_COUNT + 2;
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2), STATS);
     expect(buffers).toHaveLength(VIEW_SLOT_COUNT + perUpload);
 
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3), STATS);
     expect(buffers).toHaveLength(VIEW_SLOT_COUNT + 2 * perUpload);
 
     // Sanity: every tracked buffer starts at 0 destroys.
@@ -220,8 +223,8 @@ describe('GalaxyPointRenderer.destroy', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2), STATS);
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3), STATS);
     expect(Array.from(renderer.loadedSources())).toHaveLength(2);
 
     renderer.destroy();
@@ -244,8 +247,8 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
-    await renderer.upload(idOf(Source.Glade), makeCloud(10));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10), STATS);
+    await renderer.upload(idOf(Source.Glade), makeCloud(10), STATS);
 
     const drawnCounts: number[] = [];
     const pass = {
@@ -297,7 +300,7 @@ describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2), STATS);
 
     const bindGroupsAt0: unknown[] = [];
     const bindGroupsAt1: unknown[] = [];

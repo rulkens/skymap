@@ -19,6 +19,7 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 
 /** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */
 const CLUSTER: SelectionRow = {
@@ -81,6 +82,9 @@ function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
       hasFadingContent: () => false,
     },
     catalogs,
+    get records() {
+      return galaxyRecordsOver(catalogs);
+    },
     famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
@@ -148,6 +152,9 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       },
       get catalogs() {
         return catalogs;
+      },
+      get records() {
+        return galaxyRecordsOver(catalogs);
       },
       famousMeta: [],
       get catalogsVersion() {

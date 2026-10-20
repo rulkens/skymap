@@ -6,7 +6,7 @@
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../@types/octree/Octree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { FamousStarsPayload } from './FamousStarsPayload';
@@ -16,14 +16,15 @@ import type { StarRenderer } from './StarRenderer';
 import type { StarPointRenderer } from './StarPointRenderer';
 import type { StarAggregateUpsample } from './StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
-import type { StarChunkStream } from './StarChunkStream';
-import type { StarPoolHost } from './StarPoolHost';
+import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
+import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
 export type StarCatalogRuntime = {
-  /** One slot per survey source (today `EngineAssetSlots.starCatalogs`). */
-  readonly catalogs: ReadonlyMap<SourceType, AssetSlot<StarOctree, StarCatalogReq>>;
+  /** One slot per survey source (`EngineAssetSlots.starCatalogs`). */
+  readonly catalogs: ReadonlyMap<SourceType, AssetSlot<Octree<StarColumns>, StarCatalogReq>>;
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
-  readonly chunkStreams: Map<SourceType, StarChunkStream>;
+  readonly chunkStreams: Map<SourceType, OctreeChunkStream<StarColumns>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
@@ -31,6 +32,6 @@ export type StarCatalogRuntime = {
   readonly starPointRenderer: StarPointRenderer; // starPointsPass
   readonly aggregateUpsample: StarAggregateUpsample;
   /** Read by `resizeStarPools` (via `frame.ts`) to re-install pools; the slots hold the same object. */
-  readonly poolHost: StarPoolHost;
+  readonly poolHost: OctreePoolHost<StarColumns>;
   readonly publish: (patch: Partial<StarCatalogFacts>) => void;
 };
