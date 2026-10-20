@@ -5,7 +5,7 @@
  *
  * Emits one marker descriptor per marker-bearing structure — applying
  * apparent-size fades, significance weighting, the selection brighten, the
- * per-category value core hands (toggle fade and clip) and each ring's focus
+ * per-category value core hands (toggle fade, clip and distance band) and each ring's focus
  * emphasis, keyed on its own pick word so the focused ring never recedes. Famous
  * galaxies are not on this path; they never emit markers.
  *
@@ -44,7 +44,6 @@ import {
 } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
-import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { structurePickId } from '../../../utils/picking/structurePickId';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
@@ -62,8 +61,6 @@ export function produceStructureMarkers(
   const out: StructureMarkerDescriptor[] = [];
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
-  // Distance from the render origin, which keys each category's visibility band.
-  const camDistMpc = Math.hypot(cx, cy, cz);
 
   // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked). A
   // galaxy selection leaves the matching id null, so no structure ring is bumped.
@@ -71,7 +68,7 @@ export function produceStructureMarkers(
   const hoveredStructureId = structureIdOf(state.selection.hover);
 
   for (const p of store.all()) {
-    // The category's handed value: toggle fade × clip. Skip only at
+    // The category's handed value: toggle fade × clip × distance band. Skip only at
     // exactly 0 (the all-or-nothing case, safe for within-category alignment); a
     // mid-fade value scales the descriptor alpha below.
     const catFade = fade[p.category];
@@ -80,7 +77,6 @@ export function produceStructureMarkers(
     // structures that only set physicalRadiusMpc.
     const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
     const style = STRUCTURE_MARKER_STYLES[p.category];
-    const bandFade = fadeBand(style.visibleBand, camDistMpc);
 
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;
@@ -108,7 +104,7 @@ export function produceStructureMarkers(
       style.haloColor[0],
       style.haloColor[1],
       style.haloColor[2],
-      style.haloColor[3] * weightedFade * bandFade,
+      style.haloColor[3] * weightedFade,
     ];
 
     // Ring: same fade bake plus selection/hover brighten.
@@ -120,7 +116,7 @@ export function produceStructureMarkers(
       style.ringColor[0] * ringGain,
       style.ringColor[1] * ringGain,
       style.ringColor[2] * ringGain,
-      style.ringColor[3] * weightedFade * bandFade,
+      style.ringColor[3] * weightedFade,
     ];
 
     out.push({

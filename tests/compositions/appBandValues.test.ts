@@ -4,6 +4,7 @@ import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
 import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf';
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import type { FrameView } from '../../src/@types/engine/frame/FrameView';
 
 const KPC = SCALE_UNITS.KPC_TO_MPC;
@@ -53,5 +54,14 @@ describe('declared distance bands keep their old edges', () => {
     expect(valueAt('label:milkyWay', 0.002)).toBe(0);
     expect(valueAt('label:milkyWay', 0.5)).toBe(1);
     expect(valueAt('label:milkyWay', 2)).toBe(0);
+  });
+
+  it('structure rings: cosmic yields at deep zoom, Milky Way places recede to the foreground gate', () => {
+    expect(valueAt('structureRing', 0.002, 'galaxy-cluster')).toBe(0);
+    expect(valueAt('structureRing', 0.5, 'galaxy-cluster')).toBe(1);
+    expect(valueAt('structureRing', 0.002, 'nebula')).toBe(1);
+    expect(valueAt('structureRing', MILKY_WAY_RADIUS_MPC * 2, 'nebula')).toBe(1);
+    expect(valueAt('structureRing', FOREGROUND_MAX_DISTANCE_MPC, 'nebula')).toBe(0);
+    expect(valueAt('structureRing', FOREGROUND_MAX_DISTANCE_MPC, 'galaxy-cluster')).toBe(1);
   });
 });

@@ -15,7 +15,6 @@
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureMarkerStyle } from '../@types/StructureMarkerStyle';
 import { hexToGl } from '../../../utils/color/hexToGl';
-import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 /**
  * The fields the four Milky Way rows share; each row adds its colours and
@@ -32,7 +31,6 @@ const MILKY_WAY_STYLE: Omit<
   markerMaxApparentFadeBandPx: 400,
   markerMinApparentRadiusPx: 5,
   markerMinApparentFadeBandPx: 4,
-  visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
   outlineColor: [0, 0, 0, 0.1],
   outlineEmFrac: 0.16,
 };
@@ -55,7 +53,6 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 5,
     markerMinApparentFadeBandPx: 4,
-    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -73,7 +70,6 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
-    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -89,7 +85,6 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
-    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -123,7 +118,6 @@ export const STRUCTURE_MARKER_STYLES = {
     // than lingering as a faint speck while you explore larger scales.
     markerMinApparentRadiusPx: 44,
     markerMinApparentFadeBandPx: 24,
-    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },

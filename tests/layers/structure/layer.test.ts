@@ -38,11 +38,11 @@ const STATE = {
 /** Every category's handed value at full opacity. */
 const FADE = Object.fromEntries(STRUCTURE_IDS.map((c) => [c, 1])) as Record<StructureId, number>;
 
-// 5 Mpc out: inside the cosmic categories' visibility bands, far past the Milky
-// Way ones.
+// 5 Mpc out; the Milky Way row runs too (FADE is all 1) and finds no Milky Way structure.
 const CTX = {
   snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS },
   drawCamPos: [0, 0, 5],
+  cam: { yaw: 0, pitch: 0, roll: 0, poseBasis: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
   drawPxPerRad: 1080 / (2 * Math.tan(Math.PI / 6)),
 } as unknown as FrameView;
 

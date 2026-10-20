@@ -134,7 +134,7 @@ Bands: `milkyWayDisk.approachSun { in: [0.0002, 0.002] }`, `milkyWayDisk.approac
 
 Bands: `structureRing.cosmic { ...SURVEY_DEEP_ZOOM, items: STRUCTURE_IDS_BY_SCALE.cosmic }`, `structureRing.milkyWayPlaces { out: [2 R, FOREGROUND_MAX_DISTANCE_MPC], items: STRUCTURE_IDS_BY_SCALE.milkyWay }`; `label:structure` inherits via `of`.
 
-- [ ] Descriptors at value 0 are still emitted where pick-index alignment needs them (`produceStructureMarkers.ts:74-77`).
+- [x] Descriptors at value 0 are still emitted where pick-index alignment needs them (`produceStructureMarkers.ts:74-77`).
 
 ### Task 7: `starBackdrop` to the star Layer; core's table keeps core's rows; backlog
 

@@ -1,5 +1,4 @@
 import type { Vec4 } from '../../../@types/math/Vec4';
-import type { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 /**
  * Marker + label style fields for one structure category. Structures always
@@ -32,11 +31,6 @@ export type StructureMarkerStyle = {
   readonly markerMinApparentRadiusPx: number;
   /** Smoothstep band width for the far-distance fade-out. */
   readonly markerMinApparentFadeBandPx: number;
-  /**
-   * Camera-distance band (from the render origin) over which this category's
-   * rings, halos and labels are visible; multiplies every alpha they carry.
-   */
-  readonly visibleBand: (typeof SCALE_FADE_BANDS)[keyof typeof SCALE_FADE_BANDS];
   /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
   readonly outlineColor: Vec4;
   /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */

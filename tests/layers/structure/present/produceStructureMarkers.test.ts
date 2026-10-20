@@ -8,7 +8,7 @@ import type { StructureStore } from '../../../../src/layers/structure/@types/Str
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import {
   STRUCTURE_MARKER_STYLES,
   SELECTED_RING_BRIGHTEN,
@@ -40,9 +40,8 @@ function makeState(
   } as unknown as TestState;
 }
 
-// Past the surveyDeepZoom band's full edge, so the visibility band is 1 and
-// the structures sit ~10 Mpc away to within 0.01%.
-const FULL_BAND_CAM_Z = SCALE_FADE_BANDS.surveyDeepZoom.fullAt * 1.01;
+// The structures sit ~10 Mpc away to within 0.01%.
+const FULL_BAND_CAM_Z = FOREGROUND_MAX_DISTANCE_MPC * 1.01;
 
 function makeCtx(
   focusBlend = 0,
@@ -191,24 +190,6 @@ describe('produceStructureMarkers', () => {
     expect(rest.ringColor[0]).toBeGreaterThan(
       STRUCTURE_MARKER_STYLES['galaxy-cluster'].ringColor[0],
     );
-  });
-
-  it('marker alpha at a camera distance equals the band value times the unbanded alpha', () => {
-    const band = SCALE_FADE_BANDS.surveyDeepZoom;
-    const unbanded = (() => {
-      const state = makeState();
-      state.store.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-      return produceStructureMarkers(state.store, state, makeCtx(0, band.fullAt * 1.01), ONE)[0]!;
-    })();
-    for (const dist of [band.fullAt * 1.01, (band.fullAt + band.goneAt) / 2, band.goneAt * 0.5]) {
-      const state = makeState();
-      state.store.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
-      const m = produceStructureMarkers(state.store, state, makeCtx(0, dist), ONE)[0]!;
-      const expected = fadeBand(band, dist);
-      expect(m.ringColor[3]).toBeCloseTo(unbanded.ringColor[3] * expected, 5);
-      expect(m.haloColor[3]).toBeCloseTo(unbanded.haloColor[3] * expected, 5);
-    }
-    expect(fadeBand(band, band.goneAt * 0.5)).toBe(0);
   });
 
   it('a 4 pc structure seen from 100 pc is not faded by the near guard', () => {

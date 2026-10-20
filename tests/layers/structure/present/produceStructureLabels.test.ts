@@ -49,11 +49,9 @@ function labelsOf(
   return produceStructureLabels(state.store, scale)(state, ctx, fade);
 }
 
-// The fixture camera sits 5 Mpc from the heliocentric origin — NOT at the
-// origin itself, because origin distance is the surveyDeepZoom band's key and
-// a camera at the origin is "deep zoom": the producer would emit nothing.
-// Every record's worldPos carries the same +5 z offset so the camera-to-
-// structure distances the apparent-size fades read are unchanged.
+// The fixture camera sits 5 Mpc from the heliocentric origin; every record's
+// worldPos carries the same +5 z offset so the camera-to-structure distances the
+// apparent-size fades read are unchanged.
 const CAM_Z = 5;
 
 /** `focusBlend` (frame-owned) nests under `snapshot`; every other override is a view field. */
@@ -171,37 +169,6 @@ describe('produceStructureLabels', () => {
     const state = makeState({ focusedOnly: true });
     state.store.setGroup('anchors', [rec('a'), rec('b')]);
     expect(labelsOf(state, makeCtx(), 'cosmic').labels).toEqual([]);
-  });
-
-  it('emits nothing at deep zoom — the surveyDeepZoom band empties the producer', () => {
-    // Camera 0.001 Mpc from the heliocentric origin (inside the band's goneAt
-    // edge). The record sits 10 Mpc from the CAMERA — squarely in the flat
-    // band of both apparent-size fades, featured, all toggles on — so the
-    // band factor is the only thing suppressing it.
-    const state = makeState();
-    state.store.setGroup('anchors', [rec('a', { worldPos: [10, 0, 0.001] })]);
-    const out = labelsOf(
-      state,
-      makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
-      'cosmic',
-    );
-    expect(out.labels).toEqual([]);
-  });
-
-  it('scales fadeAlpha by a fractional band factor mid-descent', () => {
-    // Camera 0.005 Mpc from the origin: strictly inside the band (goneAt
-    // 0.002 < 0.005 < fullAt ≈ 0.0103), so the label FADES rather than
-    // popping — a strict fraction, not the 0/1 a boolean gate would produce.
-    const state = makeState();
-    state.store.setGroup('anchors', [rec('a', { worldPos: [10, 0, 0.005] })]);
-    const out = labelsOf(
-      state,
-      makeCtx({ drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]> }),
-      'cosmic',
-    );
-    const alpha = out.labels[0]!.fadeAlpha!;
-    expect(alpha).toBeGreaterThan(0);
-    expect(alpha).toBeLessThan(1);
   });
 
   it("an 'above' category's label is anchored above its ring with a bottom alignment", () => {
