@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { slabRowActive } from '../../../src/utils/frame/slabRowActive';
-import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../src/data/scaleFadeBands';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { SlabRow } from '../../../src/@types/engine/frame/SlabRow';
 import type { Vec3 } from '../../../src/@types/math/Vec3';

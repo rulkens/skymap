@@ -10,7 +10,7 @@
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { fadeWindow } from '../../../utils/math/fadeWindow';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 export function deriveZoneOfAvoidanceLiveness(
   ctx: Pick<FrameView, 'drawCamPos'>,

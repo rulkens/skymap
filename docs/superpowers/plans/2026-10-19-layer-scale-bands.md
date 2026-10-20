@@ -43,16 +43,16 @@
 
 **Files:** move `src/services/engine/frame/foregroundMaxDistance.ts` → `src/data/rendering/foregroundMaxDistance.ts`; move `src/services/engine/frame/solarSystemLabelMaxDistance.ts` → `src/data/labels/solarSystemLabelMaxDistance.ts`; extract `MILKY_WAY_RADIUS_MPC` (and the `MILKY_WAY_DISC_RADIUS_KPC` it derives from, `src/services/engine/galaxyGenerator/v1/milkyWayCalibration.ts:28`) to `src/data/milkyWay/milkyWayRadiusMpc.ts` (one constant per file: the disc radius gets its own `src/data/milkyWay/milkyWayDiscRadiusKpc.ts` if anything else reads it); update `tests/services/engine/frame/frameFilePurity.test.ts` (its `'frame/foregroundMaxDistance': 1` entry at `:45` goes, the file has left `frame/`); every importer (16 src + 21 test files for the first, 3 + 5 for the second, 3 + 7 for the third, per the touchpoint map).
 
-- [ ] `npm run move-files -- --dry …` then the real moves; the v1 calibration file imports the radius from its new home.
-- [ ] `git grep` for each old path prints nothing; `src/data/` imports nothing from `src/services/` for these three.
-- [ ] No new test: pure moves.
+- [x] `npm run move-files -- --dry …` then the real moves; the v1 calibration file imports the radius from its new home.
+- [x] `git grep` for each old path prints nothing; `src/data/` imports nothing from `src/services/` for these three.
+- [x] No new test: pure moves.
 
 ### Task 2: `scaleFadeBands.ts` to `src/data/`
 
 **Files:** move `src/services/engine/presentation/scaleFadeBands.ts` → `src/data/scaleFadeBands.ts` (13 src + 18 test importers); `tests/services/engine/presentation/scaleFadeBands.test.ts` follows via `move-files`.
 
-- [ ] Move; the table's imports now all come from `src/data/` (after Task 1) and `src/utils/regions/regionById.ts`.
-- [ ] No new test: a pure move.
+- [x] Move; the table's imports now all come from `src/data/` (after Task 1) and `src/utils/regions/regionById.ts`.
+- [x] No new test: a pure move.
 
 ## Group A: core
 
@@ -138,7 +138,7 @@ Bands: `structureRing.cosmic { ...SURVEY_DEEP_ZOOM, items: STRUCTURE_IDS_BY_SCAL
 
 ### Task 7: `starBackdrop` to the star Layer; core's table keeps core's rows; backlog
 
-**Files:** create `src/layers/starCatalog/data/starBackdropDissolve.ts` (the `backdropBand(NEIGHBOURHOOD_EXTENT_MPC)` value, `scaleFadeBands.ts:45,85`, as a `FadeBand`); modify `src/layers/starCatalog/passes/starPointsPass.ts:131-136,156-159`; delete the ten Layer rows from `src/data/scaleFadeBands.ts` (after Task 2) and their now-unused locals (`CONSTELLATIONS_*_KPC`, …); update `tests/services/engine/presentation/scaleFadeBands.test.ts` (moved with Task 2) and `tests/layers/starCatalog/passes/starPointsPass.test.ts`; delete `docs/backlog/2026-09-19-layer-owned-scale-fade-bands.md`, `docs/backlog/2026-08-31-scale-fade-bands-to-data.md` and their `docs/BACKLOG.md` lines; create `docs/backlog/2026-10-19-per-subject-fades.md` (kinds 2 and 3, with L1 as its first prep and the greenfield note that per-subject kinds hand the consumer the band's edges) and `docs/backlog/2026-10-19-band-debug-panel.md`, each with a `needs-design` index line.
+**Files:** create `src/layers/starCatalog/data/starBackdropDissolve.ts` (the `backdropBand(NEIGHBOURHOOD_EXTENT_MPC)` value, `scaleFadeBands.ts:45,85`, as a `FadeBand`); modify `src/layers/starCatalog/passes/starPointsPass.ts:131-136,156-159`; delete the ten Layer rows from `src/data/scaleFadeBands.ts` (after Task 2) and their now-unused locals (`CONSTELLATIONS_*_KPC`, …); update `tests/data/scaleFadeBands.test.ts` (moved with Task 2) and `tests/layers/starCatalog/passes/starPointsPass.test.ts`; delete `docs/backlog/2026-09-19-layer-owned-scale-fade-bands.md`, `docs/backlog/2026-08-31-scale-fade-bands-to-data.md` and their `docs/BACKLOG.md` lines; create `docs/backlog/2026-10-19-per-subject-fades.md` (kinds 2 and 3, with L1 as its first prep and the greenfield note that per-subject kinds hand the consumer the band's edges) and `docs/backlog/2026-10-19-band-debug-panel.md`, each with a `needs-design` index line.
 
 - [ ] `git grep -n 'SCALE_FADE_BANDS\.\(surveyDeepZoom\|milkyWayApproach\|starBackdrop\|constellations\|milkyWayStructures\|zoneOfAvoidance\|localBubble\)' -- src tests` prints nothing.
 - [ ] `backdropBand`'s shared shape stays one home: `bodyGlintBackdrop` (core's row) and `starBackdropDissolve` both read one helper (move `backdropBand` to `src/utils/math/backdropBand.ts` if two files need it).

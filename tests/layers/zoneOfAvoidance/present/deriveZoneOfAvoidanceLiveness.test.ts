@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { deriveZoneOfAvoidanceLiveness } from '../../../../src/layers/zoneOfAvoidance/present/deriveZoneOfAvoidanceLiveness';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 /** Inside the visibility window: both bands saturate to 1 here. */

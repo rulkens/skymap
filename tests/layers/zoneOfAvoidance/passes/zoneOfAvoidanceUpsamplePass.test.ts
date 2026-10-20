@@ -12,7 +12,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { zoneOfAvoidanceUpsamplePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidanceUpsamplePass';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

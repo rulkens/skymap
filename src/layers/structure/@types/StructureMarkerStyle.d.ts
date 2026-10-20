@@ -1,5 +1,5 @@
 import type { Vec4 } from '../../../@types/math/Vec4';
-import type { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import type { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 /**
  * Marker + label style fields for one structure category. Structures always

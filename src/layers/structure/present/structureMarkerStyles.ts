@@ -15,7 +15,7 @@
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureMarkerStyle } from '../@types/StructureMarkerStyle';
 import { hexToGl } from '../../../utils/color/hexToGl';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 /**
  * The fields the four Milky Way rows share; each row adds its colours and

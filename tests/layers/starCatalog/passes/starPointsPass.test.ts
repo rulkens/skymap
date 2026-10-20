@@ -28,7 +28,7 @@ import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/ind
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';

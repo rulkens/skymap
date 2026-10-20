@@ -11,12 +11,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
-import { regionById } from '../../../../src/utils/regions/regionById';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { fadeBand } from '../../../../src/utils/math/fadeBand';
+import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../src/data/labels/solarSystemLabelMaxDistance';
+import { regionById } from '../../src/utils/regions/regionById';
+import { SCALE_UNITS } from '../../src/data/scaleUnits';
+import { fadeBand } from '../../src/utils/math/fadeBand';
 
 const NEIGHBOURHOOD_EXTENT_MPC = regionById('solar-neighbourhood').extentMpc;
 const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;

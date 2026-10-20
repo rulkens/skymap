@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 
 import { deriveVolumeLiveness } from '../../../src/utils/volume/deriveVolumeLiveness';
 import { clampVolumeIntensity } from '../../../src/utils/clampVolumeIntensity';
-import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../src/utils/math/fadeBand';
 import type { VolumeFieldRenderer } from '../../../src/@types/rendering/VolumeFieldRenderer';
 import type { VolumeFieldSettings } from '../../../src/@types/settings/VolumeFieldSettings';

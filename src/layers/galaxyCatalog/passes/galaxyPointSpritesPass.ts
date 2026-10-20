@@ -18,7 +18,7 @@ import {
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../data/galaxyLodBands';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   return {

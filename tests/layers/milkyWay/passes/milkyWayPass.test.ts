@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,

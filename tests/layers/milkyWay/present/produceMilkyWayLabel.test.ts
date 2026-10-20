@@ -4,7 +4,7 @@ import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/layers/milkyWay/present/produceMilkyWayLabel';
 import { MILKY_WAY_LABEL_STYLE } from '../../../../src/layers/milkyWay/present/milkyWayLabelStyle';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import {
   LEADER_LINE_PADDING_PX,
   MIN_LABEL_CLEARANCE_PX,

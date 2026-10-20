@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { clampVolumeFieldSettings } from '../../src/utils/clampVolumeFieldSettings';
-import { SCALE_FADE_BANDS } from '../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
 import type { VolumeFieldSettings } from '../../src/@types/settings/VolumeFieldSettings';
 
 // Out-of-range raw values that force every scalar clamp to fire.

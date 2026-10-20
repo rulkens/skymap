@@ -84,7 +84,7 @@ import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionById } from '../../../../utils/regions/regionById';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
-import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../data/scaleFadeBands';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';

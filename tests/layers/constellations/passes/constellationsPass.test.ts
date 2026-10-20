@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { constellationsPass } from '../../../../src/layers/constellations/passes/constellationsPass';
 import { NEAR0, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';

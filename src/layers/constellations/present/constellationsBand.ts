@@ -7,7 +7,7 @@
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 // Toggle-free so `enabled()`'s hard cull works ("opacity 0 ⇒ no render"):
 // a zero band disables the row regardless of the toggle.

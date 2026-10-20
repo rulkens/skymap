@@ -19,7 +19,7 @@ import { liftedLabelPlacement } from '../../../services/engine/presentation/lift
 import { textLayoutOf } from '../../../services/gpu/labelLayout/textLayoutOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.

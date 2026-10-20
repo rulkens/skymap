@@ -5,7 +5,7 @@
 
 import { fadeWindow } from '../../../utils/math/fadeWindow';
 import { clampLocalBubbleIntensity } from '../../../utils/clampLocalBubbleIntensity';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 export function localBubbleOpacity(
   camDistMpc: number,

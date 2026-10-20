@@ -5,7 +5,7 @@
  * owning Layer's `initialState` literal makes, not asset presentation.
  */
 
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 

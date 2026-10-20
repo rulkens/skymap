@@ -8,7 +8,7 @@ import type { StructureStore } from '../../../../src/layers/structure/@types/Str
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import {
   STRUCTURE_MARKER_STYLES,
   SELECTED_RING_BRIGHTEN,

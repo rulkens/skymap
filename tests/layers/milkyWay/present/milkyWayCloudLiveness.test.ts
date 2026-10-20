@@ -11,7 +11,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { deriveMilkyWayCloudAlpha } from '../../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
