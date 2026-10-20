@@ -270,9 +270,9 @@ Header stats: `recordCount`, `medianAbsMag` (`galaxyMedianAbsMag`), `magOffset`,
 - `collectOctreeChunks` and `octreeChunkPaths` also collect each chunk's info sibling. A family without info writes
   none, so stars stay unchanged.
 
-- [ ] Test `a galaxy catalog collects each chunk with its info sibling; the star catalog's list is unchanged`.
-- [ ] Test `dataFamilyOf routes glade.info.<hash>.bin, glade.pgc-3.<hash>.bin and 2-17.info.<hash>.bin`.
-- [ ] Commit.
+- [x] Test `a galaxy catalog collects each chunk with its info sibling; the star catalog's list is unchanged`.
+- [x] Test `dataFamilyOf routes glade.info.<hash>.bin, glade.pgc-3.<hash>.bin and 2-17.info.<hash>.bin`.
+- [x] Commit.
 
 ### Task 6: bake GLADE into this worktree (controller, inline)
 
