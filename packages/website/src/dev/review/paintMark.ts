@@ -5,10 +5,10 @@ import reviewPage from './ReviewPage/ReviewPage.module.css';
 import { reviewBlockOf } from './reviewBlockOf';
 
 function tag(el: Element, mark: DocsReviewMark): void {
-  el.classList.add(reviewPage.mark, reviewPage[mark.state]!);
+  el.classList.add(reviewPage.mark!, reviewPage[mark.state]!);
   el.setAttribute('data-review-id', mark.id);
   const rewrite = mark.state === 'rewrite';
-  if (rewrite && mark.after) el.classList.add(reviewPage.hasAfter);
+  if (rewrite && mark.after) el.classList.add(reviewPage.hasAfter!);
   const notes = [
     mark.reason !== 'owner' && mark.reason,
     mark.why,
@@ -20,7 +20,8 @@ function tag(el: Element, mark: DocsReviewMark): void {
 
 // The outermost block whose whole text is the mark's: a list item, not just the paragraph inside it.
 function wholeBlock(node: Text, want: string): Element | null {
-  const same = (el: Element): boolean => foldText(el.textContent ?? '').text.trim() === want;
+  const same = (el: Element): boolean =>
+    foldText(el.textContent ?? '').text.replaceAll(' ', '') === want.replaceAll(' ', '');
   let block = reviewBlockOf(node);
   if (!block || !same(block)) return null;
   for (
