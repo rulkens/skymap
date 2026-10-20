@@ -199,7 +199,7 @@ const REVERSE_IMPORT_TARGET_RE =
   /^src\/layers\/[^/]+\/(layer\.ts|state\/slices\.ts|state\/defaults\.ts|state\/[^/]+\/slice\.ts|state\/[^/]+\/initialState\.ts|sources\/.+|bodies\/.+)$/;
 const SELECTORS_MODULE_RE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors$/;
 
-describe('layer.ts, slices.ts, slice.ts, initialState.ts, defaults.ts and sources/ never import a selectors module', () => {
+describe('layer.ts, slices.ts, slice.ts, initialState.ts, defaults.ts, sources/ and bodies/ never import a selectors module', () => {
   const files = walk('src/layers').filter((file) => REVERSE_IMPORT_TARGET_RE.test(file));
   expect(files.length).toBeGreaterThan(0);
 
