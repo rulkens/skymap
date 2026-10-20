@@ -1,174 +1,24 @@
 ---
-import Base from '../layouts/Base.astro';
-import Beside from '../components/Beside/Beside.tsx';
-import Claims from '../components/Claims/Claims.tsx';
-import Columns from '../components/Columns/Columns.tsx';
-import Credits from '../components/Credits/Credits.tsx';
-import Figure from '../components/Figure/Figure.tsx';
-import Note from '../components/Note/Note.tsx';
-import ObjLink from '../components/ObjLink/ObjLink.tsx';
-import OpenApp from '../components/OpenApp/OpenApp.tsx';
-import PictureBand from '../components/PictureBand/PictureBand.tsx';
-import PressPictures from '../components/PressPictures/PressPictures.tsx';
-import Quotable from '../components/Quotable/Quotable.tsx';
-import SectionHead from '../components/SectionHead/SectionHead.tsx';
-import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
-import Sources from '../components/Sources/Sources.tsx';
+/* The about page: its text and front matter are content/pages/about.mdx. The route holds the structured data, which needs the site's origin. */
+import { getEntry, render } from 'astro:content';
+
 import { aboutJsonLd } from '../data/aboutJsonLd';
-import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
-import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
-import layout from '../styles/layout.module.css';
-import links from '../styles/links.module.css';
-import text from '../styles/type.module.css';
+import Base from '../layouts/Base.astro';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
-import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
 
-const section = `${layout.wrap} ${layout.section}`;
-const linkRow = `${links['link-row']} ${links.onward}`;
-
-const title = 'About Skymap: who makes it and which pictures you may reuse';
-const description = `Skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, press pictures, and a colophon.`;
-
-const ALIVE = [
-  { term: 'Licence', id: 'about-licence' },
-  { term: 'Version', id: 'about-version' },
-  { term: 'History', id: 'about-history' },
-];
-const COLOPHON = [
-  { term: 'Pictures', id: 'about-pictures' },
-  { term: 'Headings', id: 'about-display-face' },
-  { term: 'Text', id: 'about-text-face' },
-  { term: 'Font files', id: 'about-fonts-hosted' },
-  { term: 'Pages', id: 'about-built-with' },
-];
-// Every fact row the page prints, so the Sources list cannot drift from the copy.
-const factIds = [
-  'about-what-is',
-  'about-maker',
-  'about-ai',
-  ...ALIVE.map((item) => item.id),
-  'about-picture-licence',
-  'about-picture-reuse',
-  'gaia-licence',
-  ...COLOPHON.map((item) => item.id),
-];
-
-const whatIs = fact('about-what-is').text;
+const entry = (await getEntry('pages', 'about'))!;
+const { Content } = await render(entry);
 const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
-const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
 ---
 
 <Base
-  title={title}
-  description={description}
+  {...entry.data}
   jsonLd={[
     breadcrumbJsonLd(Astro.site!, [{ name: 'About', path: '/about/' }]),
-    ...aboutJsonLd(Astro.site!, pageUrl, whatIs),
+    ...aboutJsonLd(Astro.site!, pageUrl, fact('about-what-is').text),
   ]}
 >
-  <PictureBand id="about-milky-way" gap="none" eager>
-    <h1>About Skymap</h1>
-    <p class={text.say}>Skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
-    <ShotCaption id="about-milky-way" />
-  </PictureBand>
-
-  <section class={section} id="what">
-    <h2>What Skymap is</h2>
-    <Quotable>{whatIs}</Quotable>
-    <div class={linkRow}>
-      <OpenApp />
-      <ObjLink href={sitePath('/science/')}>The science behind Skymap</ObjLink>
-    </div>
-  </section>
-
-  <section class={section} id="maker">
-    <Columns count={2} footLast>
-      <div>
-        <h2>Who makes it</h2>
-        <p>{fact('about-maker').text}</p>
-        <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
-        <p>{fact('about-ai').text}</p>
-        <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
-      </div>
-      <div>
-        <h3>Open source, and maintained</h3>
-        <Claims items={ALIVE} narrow />
-        <div class={links['link-row']}>
-          <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
-          <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
-        </div>
-      </div>
-    </Columns>
-  </section>
-
-  <section class={section} id="dome">
-    <Beside picture="28rem" wordsFirst>
-      <Figure id="dome-saturn" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 23.75rem), 26rem" disc />
-      <div>
-        <h2>On a dome</h2>
-        <p>Skymap renders a fisheye picture for a dome theatre, live from the app or as a 4K film.</p>
-        <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
-      </div>
-    </Beside>
-  </section>
-
-  <section class={section} id="contact">
-    <h2>Get in touch</h2>
-    <Columns count={2}>
-      <div>
-        <h3>For a dome, a museum or a commission</h3>
-        {
-          CONTACT_ENDPOINT ? (
-            <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
-          ) : (
-            <p>The contact form is not open yet. The domes page says how to reach us in the meantime.</p>
-          )
-        }
-        <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
-      </div>
-      <div>
-        <h3>For a fault, a correction or a question</h3>
-        <p>
-          Open an issue in the repository. Issues are public and anyone can read them, so leave out anything
-          confidential.
-        </p>
-        <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
-      </div>
-    </Columns>
-    <Note>
-      What the site and the app load and keep is on the{' '}
-      <a href={sitePath('/privacy/')}>privacy page</a>.
-    </Note>
-  </section>
-
-  <section class={section} id="press">
-    <SectionHead title="Pictures and their terms" narrow>
-      <p>
-        {fact('about-picture-licence').text} {fact('about-picture-reuse').text} Each picture below lists what is in
-        it and the credit to print. Its <a href={sitePath('/docs/guide/sharing/')}>address</a> opens the same view in the app, where you can take your own; the same
-        terms follow that picture.
-      </p>
-    </SectionHead>
-    <PressPictures />
-    <Note>
-      {fact('gaia-licence').text}{' '}
-      <a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. Pictures
-      that show Earth close up or a photograph of a galaxy are not offered here, because their imagery has terms we
-      cannot pass on in one line. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.
-    </Note>
-  </section>
-
-  <section class={section} id="colophon">
-    <SectionHead title="Colophon" narrow>
-      <p>How this site is made, as of {formatDate(fact('about-built-with').checked)}.</p>
-    </SectionHead>
-    <Claims items={COLOPHON} />
-  </section>
-
-  <div class={section}>
-    <Sources ids={factIds} />
-    <Credits />
-  </div>
+  <Content />
 </Base>

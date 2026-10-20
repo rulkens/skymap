@@ -1,9 +1,10 @@
 /*
- * The docs collection: one MDX file per docs page, at the page's path under
- * `/docs/`. A file's front matter holds its title, description and job; the
- * page's group and place in the order are its row in data/docsTree.ts. `facts`
- * names fact rows a page rests on without printing them through `<Fact>`; the
- * printed ones are found in the text.
+ * The written pages: `docs` is one MDX file per docs page, at the page's path
+ * under `/docs/`, with its group and place in the order in data/docsTree.ts;
+ * `pages` is one MDX file per landing page, which its route in src/pages
+ * renders. Front matter holds a page's title, description and job. `facts`
+ * names fact rows a docs page rests on without printing them through `<Fact>`;
+ * the printed ones are found in the text.
  */
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
@@ -30,4 +31,9 @@ const docs = defineCollection({
   schema: pageFields.extend({ facts: z.array(z.string()).default([]) }),
 });
 
-export const collections = { docs };
+const pages = defineCollection({
+  loader: glob({ pattern: '*.mdx', base: './src/content/pages' }),
+  schema: pageFields,
+});
+
+export const collections = { docs, pages };

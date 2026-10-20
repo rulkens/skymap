@@ -280,21 +280,21 @@ The job lines are migrated verbatim. Their notes on merges and repeats are not p
 - `packages/website/src/pages/{features,404,privacy,science,about}.astro`
 - `tests/packages/website/appLinks.test.ts`
 
-- [ ] Add the `pages` collection (see **Schemas**).
-- [ ] For each of the five pages, start a new MDX file:
+- [x] Add the `pages` collection (see **Schemas**).
+- [x] For each of the five pages, start a new MDX file:
   - Front matter: the route's `title` and `description` strings, byte for byte, and `job: ""`.
   - Body: the route's component imports, its other consts as `export const`, and the markup that sat between `<Base>` and `</Base>`.
   - About's description interpolates `MAKER_NAME`, which front matter cannot do: write the name out (Alexander Rulkens).
-- [ ] Rewrite each route to the shape in **How a route renders a `pages` entry**, keeping its JSON-LD exactly. `features.astro` has none and gains none.
-- [ ] MDX conversion rules. Each one changes markup if missed:
+- [x] Rewrite each route to the shape in **How a route renders a `pages` entry**, keeping its JSON-LD exactly. `features.astro` has none and gains none.
+- [x] MDX conversion rules. Each one changes markup if missed:
   - HTML comments `<!-- -->` become `{/* */}`.
   - Keep a block element's text on the line of its opening tag. Text on its own lines inside a JSX block is parsed as Markdown and wrapped in a `<p>` (a `<p>` inside a `<p>`).
   - Escape `{`, `<` and Markdown-active characters at line start (`-`, `#`, `1.`, `*`, `_`, `>`) in running text.
   - Bare URLs in text become links under GFM.
   - `class=` stays as written.
-- [ ] `appLinks.test.ts:28`: widen the file filter to `/\.(astro|tsx|mdx)$/`, so the three landing bodies that call `appLink` stay under the test.
-- [ ] `npx prettier --write` the new MDX files, then re-check: prettier formats MDX and can reflow JSX text.
-- [ ] Check: build, then diff each of the five pages' built `<head>` and `<main>` against main's build. Ignore `astro-island` `uid`s; anything else is a finding.
+- [x] `appLinks.test.ts:28`: widen the file filter to `/\.(astro|tsx|mdx)$/`, so the three landing bodies that call `appLink` stay under the test.
+- [x] `npx prettier --write` the new MDX files, then re-check: prettier formats MDX and can reflow JSX text.
+- [x] Check: build, then diff each of the five pages' built `<head>` and `<main>` against main's build. Ignore `astro-island` `uid`s; anything else is a finding.
 - No new test: the schema is checked by the build, and the bodies by the compare gate.
 
 ### Task 5: The landing pages with slots and islands (classroom, domes, home)
