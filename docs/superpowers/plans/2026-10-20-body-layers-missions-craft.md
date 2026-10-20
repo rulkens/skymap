@@ -332,7 +332,7 @@ pass, through one handle); `.claude/skills/add-mission/SKILL.md` steps 7–9 (a 
 
 **Test:** none.
 
-- [ ] Task 5
+- [x] Task 5
 
 ---
 

@@ -93,5 +93,7 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
 `milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
 settings-only Layer: its `layer.ts` declares the body clusters, while its render
-and load code stay in core. `earthScenes` is a bodies-only Layer (its rows fold into
-the tables; core still draws them).
+and load code stay in core. `missions` draws its craft: the rows live in
+`missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
+through core's one mesh renderer handle. `earthScenes` is a bodies-only Layer (its
+rows fold into the tables; core still draws Søndermarken via `CORE_MESH_BODY_IDS`).
