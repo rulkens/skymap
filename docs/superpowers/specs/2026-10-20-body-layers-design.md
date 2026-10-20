@@ -26,9 +26,8 @@ in Søndermarken, his eye, the cells in it), so it gets its own Layer now.
 **Non-goals**
 
 - No visual change. Every pass draws what it draws today, in the same frame order.
-- starCatalog and blackHoles keep reaching into core tables for their bodies (`SCENE_ANCHORS`,
-  `ORBITAL_ELEMENTS`) until a later pass moves their rows. The roster joint (§6, P1) allows that move
-  but does not require it.
+- blackHoles keeps reaching into core tables for Sgr A*'s anchor. starCatalog's seeded stars do move
+  (in scope, §7 step 5).
 - The remaining core exhibits (Cosmic Flows, Cosmic Web, Zone of Avoidance, Observable Universe) stay
   where they are. Only Solar System moves.
 - The pass names stay hand-listed in `frameSections.ts`. Making the frame order declarative is the
@@ -58,7 +57,8 @@ Layer-to-Layer reads.
 
 ## 4. What core keeps
 
-- The position solver (`deriveBodyStates`, `sceneBodyStates`), now fed by the composed roster (P1).
+- The position solver (`deriveBodyStates`, `sceneBodyStates`) and the static body tables it reads,
+  which now include every Layer's `bodies/` rows (P1).
 - The pick encoding and the shared `bodyPickRenderer`.
 - Occluder spheres, the sampled-depth binding, and the ordered foreground roster in `frameSections.ts`.
 - **One mesh renderer handle** (`gpuHandleRegistry.ts:265`) with the env BRDF LUT, the probe schedule
@@ -74,7 +74,8 @@ Layer-to-Layer reads.
 1. Three Layers, as in §3. Terrain and atmosphere stay inside `body`.
 2. Craft live in `missions`, under that name. Its settings keys, toggles and exhibit ids are unchanged.
 3. Layers declare their bodies with a new `bodies` contract member (P1). The user consented to this
-   widening on 2026-10-20.
+   widening on 2026-10-20. The rows fold into core's static tables by import, the `sources`
+   precedent, and not into a runtime roster (agent's call after the reader survey, P1).
 4. Orbit trails: core keeps the pass. Each Layer's `guides.orbitTrails` rows carry that Layer's own
    show key. The S-star trails get their own toggle on `starCatalog`. This widening was also consented.
 5. The mesh renderer stays one core handle (§4). This revises an earlier per-Layer-instance ruling
@@ -97,36 +98,63 @@ from static tables (`SCENE_BODIES`, `sceneBodies.ts:23`) and from a store shaped
 entry or card. Without the joint, each new Layer adds a kind-field to the store and a table to
 `src/data/bodies/`: a bolt-on per Layer.
 
-### P1. Scene bodies are a composed roster (own spec, own PR)
+### P1. Layer body rows fold into core's body tables (own PR)
 
-A new Layer member `bodies?: readonly LayerBody[]` (static rows: the body, its position source, its
-presence window, its search aliases). Core folds `CORE_BODIES` and every Layer's rows into one roster,
-following the `CORE_COMPUTES` / `CORE_EXHIBITS` pattern where core's rows shrink as Layers take theirs.
-The P1 PR is behaviour-neutral: every row is still contributed by core.
+**Why not a composed runtime roster.** The body tables are read at import time all over the code base
+(a survey counted about 40 module-scope readers). `bodyRegions.ts:27` calls `deriveBodyStates` while it
+loads, and through `regionById`, `scaleFadeBands` and `FOREGROUND_MAX_DISTANCE_MPC` nearly every Layer
+imports it at module scope. A fold that imports the app composition, and through it `src/layers/**`,
+would therefore close an import cycle. Passing a runtime roster to every reader would rewrite ~80 call
+sites, including import-time ones that have no runtime to ask.
 
-These readers switch to the fold:
+**The precedent that works.** `Layer.sources` already solves this exact problem. A Layer's source rows
+are static leaf files under its `sources/`, `data/sources.ts` folds them into `SOURCE_REGISTRY` by
+direct import, the Layer member exists for typing (`Layer.d.ts:60`), and
+`tests/compositions/sourceRegistryCoverage.test.ts` pins the fold to the composition by identity. P1
+copies it for bodies:
 
-| Concern               | Reader today                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------- |
-| Positions             | `deriveBodyStates.ts:38,60,78,105` (four static tables)                                           |
-| Identity lookup       | `bodyRowAt.ts:12`, `bodyDriverGeometry.ts:17`, `bodySelectionRow.ts:39`                           |
-| Store                 | `createEngineData.ts:25-27` and its 7 reader files                                                |
-| Picks                 | `bodyPickRows.ts:13`, `sceneBodyPickId.ts:14`                                                     |
-| Mesh presentation     | `meshPresentations.ts:21`                                                                         |
-| Presence, slab hosts  | `spacecraftPresent.ts:19`, `meshBodySlabHostId.ts:20`                                             |
-| Captions              | `sceneBodyLabels.ts:82-110`                                                                       |
-| Search                | `rankPaletteMatches.ts:99`                                                                        |
-| Regions and reach     | `bodyRegions.ts:43`, `data/bodies/orbitReachByRegion.ts:21`                                       |
+```ts
+// src/@types/engine/layer/LayerBody.d.ts
+export type LayerBody = {
+  readonly body: SceneBody;
+  readonly position: BodyPosition;
+  readonly rotation?: RotationElements;
+};
+// src/@types/engine/layer/BodyPosition.d.ts: one variant per position table a moved row lands in
+export type BodyPosition = { readonly kind: 'site'; readonly site: SurfaceFixedSite };
 
-P1 gets its own brainstorm and spec before this feature's plan. That spec settles:
+// Layer.d.ts, beside `sources`
+/** Typing only: `data/bodies/layerBodyRows.ts` folds the same rows into the body tables by import. */
+readonly bodies?: readonly LayerBody[];
+```
 
-- the `LayerBody` and position-source shapes;
-- how static readers outside the engine (palette ranking, sagas calling `deriveBodyStates`) reach the
-  fold;
-- whether `SceneBody`'s kind union survives once each Layer owns its own bodies.
+- A Layer's rows live in `src/layers/<name>/bodies/`: one row per file plus a rows array, as
+  `sources/` does. They are leaf data: they import types and `src/data` makers, never `layer.ts`,
+  passes, or anything that reads the body tables (that would close the import cycle above).
+- `src/data/bodies/layerBodyRows.ts` concatenates every Layer's rows array (the `data/sources.ts`
+  shape). The static tables append their projection of it after core's own rows:
+  `SCENE_MESH_BODIES` takes the mesh-body seeds, `SURFACE_FIXED_SITES` the `site` positions, and
+  `ROTATION_ELEMENTS` the rotations. Every other table already derives from those (`SCENE_BODIES`,
+  `MESH_PRESENTATIONS`, `POSITION_DRIVERS`, `anchoredMeshBodyIds`, …), so no reader changes.
+- `tests/compositions/layerBodyRowsCoverage.test.ts` pins `layerBodyRows` to `APP_COMPOSITION` by
+  identity, as the sources test does.
+- `BodyPosition` grows one variant per PR that first moves such a row: `orbit` (an `OrbitalElements`
+  row into `ORBITAL_ELEMENTS`) and `sampled` (into `SAMPLED_BODIES`) with the missions PR, and `anchor`
+  (into `SCENE_ANCHORS`) with the seeded stars. P1 defines only what it uses.
 
-It also resolves the backlog item "Seeded stars still live in the body tables", whose detail file this
-change deletes.
+**The joint ships with its first writer.** P1 forms the `earthScenes` Layer as a bodies-only Layer
+(`layer.ts` with `bodies` and no passes, like `body` today) and moves Søndermarken into it. Its mesh
+seed, surface site and rotation row are the last row of `SCENE_MESH_BODIES`, `SURFACE_FIXED_SITES` and
+`ROTATION_ELEMENTS` today (`sceneMeshBodies.ts:65-72`, `surfaceFixedSites.ts:76`,
+`rotationElements.ts:287`), so appending them from the Layer keeps every table's order, and with it
+every pick index and draw order. The `earthScenes` PR later adds its mesh pass and slot.
+
+`siteGroundHeights.generated.ts` and `meshAssets.generated.ts` stay keyed by id in core: they are
+tool output, and the tools write them there.
+
+**Not changed by P1:** the store `state.data.bodies` (still filled from the static tables), the
+solver, every reader. Each Layer PR that takes over drawing reads its own `bodies/` rows to find its
+bodies, which is what retires the store's kind fields.
 
 ### P2. The partition takes a roster
 
@@ -219,14 +247,16 @@ temporary core writer would only be thrown away.
 
 ## 7. Packaging and order
 
-1. P1 spec, then the P1 PR. This feature's plan is written after the P1 spec, because P2's roster
-   type, the Layers' `bodies` rows and how the palette and selection reach Layer bodies all follow from
-   P1's shapes.
+1. The P1 PR (§6 P1 is its spec; it turned out small enough not to need its own document).
 2. One prep PR carrying P2, P3 and P4 as separate commits. This is the reading of "other prep: own
    PR"; the plan may split it if review wants.
 3. The `missions` craft PR, then `earthScenes`.
 4. The `body` PR, opening with P5, or two PRs if the plan finds the globe and atmosphere half large
    enough to stand alone.
+5. starCatalog's seeded stars (`SCENE_SUN`, `SCENE_STARS`, `SCENE_S_STARS` and their anchor and
+   S-star element rows) become starCatalog `bodies/` rows. `ORBIT_REACH_BY_REGION` then reads the
+   composed trail rows. This is the backlog item "Seeded stars still live in the body tables",
+   picked up by this spec.
 
 Each Layer PR deletes what it empties from core in the same change.
 
