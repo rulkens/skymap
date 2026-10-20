@@ -76,7 +76,7 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packCloudShellUniforms } from '../../../../utils/gpu/packCloudShellUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { sceneBodyStates } from '../sceneBodyStates';
 

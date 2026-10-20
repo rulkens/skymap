@@ -1,87 +1,56 @@
 /**
- * GalaxyPointVertexLayout — the byte-for-byte contract shared by three homes.
+ * GalaxyPointVertexLayout — byte layout contract (exempt from the comment
+ * budget: the tables are the source of truth shared with the WGSL).
  *
- * The per-instance vertex record and the pick uniform buffer form a
- * three-way contract: `galaxyPointRenderer`'s vertex-buffer packing, the
- * `galaxyPickRenderer` pipeline, and the `points/*.wesl` shaders must all agree
- * on the same stride, byte offsets, and `shaderLocation`s.  A mismatch
- * either validation-errors at pipeline creation or, worse, silently reads
- * garbage bytes into the wrong attribute.
- *
- * The layout lives in its own module rather than inside `galaxyPointRenderer.ts`
- * so neither renderer "owns" the shared truth: the point and pick pipelines
- * import the same constants from a neutral home, and a layout change is a
- * single edit here instead of a hunt for the authoritative copy.
+ * The per-instance vertex record and the pick uniform buffer must agree across
+ * `galaxyPointRenderer`'s packing, the `galaxyPickRenderer` pipeline and the
+ * `points/*.wesl` shaders: a mismatch either fails pipeline creation or silently
+ * reads garbage. Neutral home so neither renderer owns the truth.
  *
  * @module
  */
 
-// ─── Layout constants ─────────────────────────────────────────────────────────
-
 /**
- * 4-byte slots per catalog point in the vertex buffer.  Matches the
- * `PerVertex` struct in `points/io.wesl`:
+ * 4-byte slots per catalog point.  Matches `PerVertex` in `points/io.wesl`:
  *
  *   [x, y, z, magnitude, colorIndex,
  *    axisRatio (sign bit = isFallback flag),
  *    paCos, paSin, radiusMpc (sign bit = diameterIsFallback),
  *    angularWeight, absMag, sbAmp]
  *
- * Every slot is f32; the fallback-orientation bit rides on the sign of
- * axisRatio.  Identity comes from `(sourceCode << 26) | instance_index`
- * in the shader — no per-vertex global ID needed.
- *
- * paCos/paSin and absMag are galaxy-static values baked at upload so the
- * vertex stage skips a cos+sin and a log10+sqrt per invocation — see the
- * layout docblock in `buildPointInterleavedBuffer.ts` for the trade.
+ * Every slot is f32.  Identity comes from
+ * `(sourceCode << 26) | instance_index` in the shader.  paCos/paSin and absMag
+ * are baked at upload so the vertex stage skips the trig and log10+sqrt.
  */
 export const SLOTS_PER_GALAXY_POINT = 12;
 
-/**
- * Byte stride between per-instance records — 12 × 4 = 48.  Both
- * pipelines (point + pick) declare this stride; mismatched values
- * either validate-error or silently read garbage.
- */
-export const POINT_STRIDE = SLOTS_PER_GALAXY_POINT * 4; // 48 bytes
+/** Byte stride between per-instance records; point and pick pipelines both declare it. */
+export const POINT_STRIDE = SLOTS_PER_GALAXY_POINT * 4;
 
 /** Slot 5: galaxy b/a ratio.  `abs(axisRatio)` for the ellipse mask; sign bit flags a fallback orientation. */
 const AXIS_RATIO_BYTE_OFFSET = 20;
 
-/**
- * Slots 6/7: cos/sin of the negated east-of-north position angle —
- * the exact pair the shader forwards as `ellipse.xy`, pre-baked.
- */
+/** Slots 6/7: cos/sin of the negated east-of-north position angle, forwarded as `ellipse.xy`. */
 const PA_COS_SIN_BYTE_OFFSET = 24;
 
 /**
- * Slot 8: padded billboard radius in Mpc.  Baked at upload as
- * `max(diameterKpc, 30) * 2 / 1000` — folds in 4× thumbnail-footprint
- * padding and the missing-diameter floor.  Vertex shader takes
- * `abs()` then divides by distance_Mpc for angular radius; the sign bit
- * flags a fallback-diameter estimate (mirrors axisRatio's sign bit).
+ * Slot 8: padded billboard radius in Mpc, `max(diameterKpc, 30) * 2 / 1000`
+ * (4× thumbnail-footprint padding and the missing-diameter floor).  Sign bit
+ * flags a fallback diameter; the shader takes `abs()`.
  */
 const RADIUS_MPC_BYTE_OFFSET = 32;
 
-/**
- * Slot 9: the build-time angular weight (SKMP byte 55, decoded to f32).
- * Per-vertex, not uniform: it depends on the galaxy's HEALPix cell and
- * distance shell over the whole source, so the tier build bakes it.
- */
+/** Slot 9: build-time angular weight (SKMP byte 55, decoded to f32); per-vertex because it depends on HEALPix cell and distance shell. */
 const ANGULAR_WEIGHT_BYTE_OFFSET = 36;
 
-/**
- * Slot 10: absolute magnitude from the offset-normalised apparent
- * magnitude (slot 3) — the Malmquist mode-1 gate compares this against
- * `u.absMagLimit` directly instead of re-deriving it per vertex.
- */
+/** Slot 10: absolute magnitude from the offset-normalised apparent magnitude (slot 3); the Malmquist mode-1 gate compares it to `u.absMagLimit`. */
 const ABS_MAG_BYTE_OFFSET = 40;
 
-/** Slot 11: physical surface-brightness amplitude (see buildPointInterleavedBuffer slot 11). */
+/** Slot 11: physical surface-brightness amplitude (see `derivePointRecord`'s `sbAmp`). */
 const SB_AMP_BYTE_OFFSET = 44;
 
 /**
- * Vertex buffer attribute table — single source of truth, imported
- * verbatim by `GalaxyPickRenderer` so both pipelines stay layout-locked.
+ * Vertex attribute table, imported verbatim by `GalaxyPickRenderer`.
  *
  *   0  position (vec3<f32>)
  *   1  magnitude (f32)
@@ -92,10 +61,6 @@ const SB_AMP_BYTE_OFFSET = 44;
  *   6  angularWeight
  *   7  absMag
  *   8  sbAmp
- *
- * Named offset constants only exist for slots that other code reads by
- * name (bake / shader); position/magnitude/colorIndex use literal
- * offsets.
  */
 export const GALAXY_POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },
@@ -109,14 +74,9 @@ export const GALAXY_POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 8, offset: SB_AMP_BYTE_OFFSET, format: 'float32' },
 ];
 
-// ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
-
 /**
- * Byte offsets into the shared `Uniforms` buffer for the three slots the pick
- * pack shapes differently from the visual pack.  `pickUniformBytesOf` bakes all
- * three at pack time (there is no post-upload override); these named offsets
- * document the layout and back the byte-equality tests that prove the pick
- * pack matches the old override end-state.
+ * Byte offsets into `Uniforms` for the three slots the pick pack shapes
+ * differently from the visual pack (`pickUniformBytesOf` bakes them).
  *
  *   - `SELECTED_PACKED_BYTE_OFFSET` — the "no selection" sentinel so the 8×
  *     ring scaling doesn't inflate the pick area.
@@ -164,29 +124,15 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 180..183: galaxyFalloffStrength f32      (resolved-fraction exponent)    }
  *   bytes 184..191: _padU0 / _padU1       f32×2    (written as 0)                  }
  *
- * The two trailing pad words round the struct out to 192.
+ * Total: 192 bytes, a multiple of 16.
  *
- * Total: 192 bytes — a multiple of 16 ✓
+ * `vec3<f32>` needs 16-byte alignment, which is why `pointSizePx` +
+ * `brightness` fill the 8 bytes before `camPosWorld`.
  *
- * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
- * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
- * 8 bytes sit between `sourceCode` (offset 84) and `camPosWorld` (offset
- * 96) — filled here by `pointSizePx` + `brightness`.
+ * The picker (`galaxyPickRenderer.ts`) writes `selectedPacked` and
+ * `sourceCode` per source draw, plus `pointSizePx`.  The `apparentMagLimit` /
+ * `schechter*` words are unwritten padding that keeps `pickPass`'s offset stable.
  *
- * The picker (`galaxyPickRenderer.ts`) writes `selectedPacked` (offset 80) +
- * `sourceCode` (offset 84) for every per-source draw — see its `pick()`
- * docblock for the per-source uniform-write pattern that lets the pick
- * pass see the same packed identity space the visual pass does.  It also
- * writes `pointSizePx` at offset 88.
- *
- * The trailing u32 padding words round the struct out to a 16-byte
- * boundary so a future vec3/vec4 append doesn't fall into mis-alignment.
- * The `apparentMagLimit` / `schechter*` words are padding: nothing writes
- * or reads them, and they stay only to keep `pickPass`'s byte offset
- * stable.
- *
- * The value (192) is defined in `src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts` and
- * re-exported from here so callers that already import the layout don't
- * need a second import path.
+ * The value (192) is defined in `packGalaxyPointUniforms.ts`.
  */
 export { UNIFORM_BYTES } from './packGalaxyPointUniforms';

@@ -1,31 +1,13 @@
 ---
+/* The page for an address that is not on the site: its text and front matter are content/pages/404.mdx. */
+import { getEntry, render } from 'astro:content';
+
 import Base from '../layouts/Base.astro';
-import ObjLink from '../components/ObjLink/ObjLink.tsx';
-import ViewLink from '../components/ViewLink/ViewLink.tsx';
-import PictureBand from '../components/PictureBand/PictureBand.tsx';
-import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
-import Sources from '../components/Sources/Sources.tsx';
-import { appLink } from '../data/appLink';
-import { siteShot } from '../data/siteShot';
-import layout from '../styles/layout.module.css';
-import text from '../styles/type.module.css';
-import { sitePath } from '../utils/sitePath';
+
+const entry = (await getEntry('pages', '404'))!;
+const { Content } = await render(entry);
 ---
 
-<Base title="Page not found: Skymap" description="This address is not on the map. Start again from the Skymap home page.">
-  <!-- The void's ring is in the middle of the frame: zoomed, it stands beside the words, not under them. -->
-  <PictureBand id="void-bootes" gap="none" zoom={1.45} eager>
-    <h1>There is nothing here</h1>
-    <p class={text.say}>
-      This address is not on the map. The picture is the Boötes Void, reported in 1981 as “a million cubic megaparsec
-      void”: the volume of a ball about 400 million light-years across, with very little in it. You are in suitable
-      company.
-    </p>
-    <ObjLink hang size="big" href={sitePath('/')}>Skymap home page</ObjLink>
-    <ViewLink hang href={appLink(siteShot('void-bootes').link)}>The Boötes Void</ViewLink>
-    <ShotCaption id="void-bootes" open={false} />
-  </PictureBand>
-  <div class={`${layout.wrap} ${layout.section}`}>
-    <Sources ids={['bootes-void']} />
-  </div>
+<Base {...entry.data}>
+  <Content />
 </Base>

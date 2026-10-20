@@ -34,6 +34,7 @@ function walkInputFor(fade: ReturnType<typeof makeGalaxyCatalogFade>): DiskWalkI
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: { beginFrame: vi.fn(() => ({})), hasFadingContent: () => false },
     catalogs: new Map(),
+    records: new Map(),
     famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },

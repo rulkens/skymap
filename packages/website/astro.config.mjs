@@ -80,7 +80,7 @@ const devRootStatics = {
               rootStatics,
               jsxSourceAttributes(resolve(import.meta.dirname, 'src')),
               feedbackPlugin(`${BASE}__feedback`),
-              reviewPlugin(`${BASE}__review`),
+              reviewPlugin(BASE),
             ],
           },
         });

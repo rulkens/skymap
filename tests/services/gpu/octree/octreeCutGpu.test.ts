@@ -1,0 +1,145 @@
+/**
+ * `createOctreeCutGpu` on a mock device: the fade step each encode writes, the
+ * once-per-frame capture cut, and the lifecycle of a source's state.
+ */
+import { describe, it, expect, vi } from 'vitest';
+
+import { createOctreeCutGpu } from '../../../../src/services/gpu/octree/octreeCutGpu';
+import { FADE_STEP_FLOAT_INDEX } from '../../../../src/services/gpu/octree/octreeCutLayout';
+import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../../src/data/octree/octreeNodeFade';
+import { Source } from '../../../../src/data/source';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
+
+const CATALOG = starOctreeFromSkst({
+  starCount: 1,
+  nodeCount: 1,
+  mortonBitsPerAxis: 9,
+  cellEdgePc: 1,
+  gridOrigin: [0, 0, 0],
+  nodes: [{ mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }],
+  records: new Uint8Array(6),
+});
+const EMPTY = starOctreeFromSkst({
+  starCount: 0,
+  nodeCount: 0,
+  mortonBitsPerAxis: 9,
+  cellEdgePc: 1,
+  gridOrigin: [0, 0, 0],
+  nodes: [],
+  records: new Uint8Array(0),
+});
+
+function frame(nowMs: number): StarCutInputs {
+  return {
+    cut: {
+      originMpc: [0, 0, 0],
+      planes: new Float32Array(0),
+      refineThreshold: 0.05,
+      worldSpread: 1,
+      leafMarginRad: 0,
+      sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 10 }],
+    },
+    nowMs,
+    sizePx: 2.5,
+    brightness: 1,
+    glowOverlap: 1,
+    aggregateIntensityCap: 0.06,
+  };
+}
+
+function setup() {
+  // The uniform scratch is reused, so the fade step is read at write time.
+  const fadeSteps: number[] = [];
+  const device = {
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
+    createBindGroupLayout: vi.fn(() => ({})),
+    createPipelineLayout: vi.fn(() => ({})),
+    createComputePipeline: vi.fn(() => ({})),
+    createBindGroup: vi.fn(() => ({})),
+    createBuffer: vi.fn((d: GPUBufferDescriptor) => ({ label: d.label, destroy: vi.fn() })),
+    createCommandEncoder: vi.fn(() => ({
+      beginComputePass: () => pass,
+      finish: () => ({}),
+    })),
+    queue: {
+      submit: vi.fn(),
+      writeBuffer: vi.fn((buf: { label?: string }, _offset: number, data: unknown) => {
+        if (buf.label?.startsWith('star-cut-uniforms-')) {
+          fadeSteps.push(new Float32Array(data as ArrayBuffer)[FADE_STEP_FLOAT_INDEX]!);
+        }
+      }),
+    },
+  };
+  const pass = {
+    setBindGroup: vi.fn(),
+    setPipeline: vi.fn(),
+    dispatchWorkgroups: vi.fn(),
+    end: vi.fn(),
+  };
+  const encoder = { beginComputePass: vi.fn(() => pass) } as unknown as GPUCommandEncoder;
+  const gpu = createOctreeCutGpu(device as unknown as GPUDevice);
+  gpu.upload(Source.GaiaStars, CATALOG, 0);
+  const encode = (nowMs: number, recut = true) =>
+    gpu.encode(encoder, frame(nowMs), recut, () => ({}));
+  return { gpu, device, encoder, pass, encode, fadeSteps };
+}
+
+describe('octreeCutGpu fade step', () => {
+  it('snaps on the first encode, then steps by dt, clamped across an idle gap', () => {
+    const { encode, fadeSteps } = setup();
+    encode(1000);
+    encode(1020);
+    encode(1020 + 60_000);
+    encode(500); // clock went backwards
+    expect(fadeSteps[0]).toBe(1);
+    expect(fadeSteps[1]).toBeCloseTo(20 / NODE_FADE_MS, 6);
+    expect(fadeSteps[2]).toBeCloseTo(NODE_FADE_MAX_DT_MS / NODE_FADE_MS, 6);
+    expect(fadeSteps[3]).toBe(1);
+  });
+});
+
+describe('octreeCutGpu skipped re-cut', () => {
+  it('writes the eye with no dispatch, and the next cut steps its fades by the whole gap', () => {
+    const { encode, pass, fadeSteps } = setup();
+    encode(1000);
+    const perCut = pass.dispatchWorkgroups.mock.calls.length;
+    encode(1030, false);
+    expect(pass.dispatchWorkgroups.mock.calls.length).toBe(perCut);
+    encode(1060);
+    expect(pass.dispatchWorkgroups.mock.calls.length).toBe(2 * perCut);
+    // Uniforms go out every frame. 60 ms is past one frame's NODE_FADE_MAX_DT_MS but is two frames.
+    expect(fadeSteps).toHaveLength(3);
+    expect(fadeSteps[2]).toBeCloseTo(60 / NODE_FADE_MS, 6);
+  });
+});
+
+describe('octreeCutGpu capture cut', () => {
+  it('is submitted once per frame however many faces ask, with no fade', () => {
+    const { gpu, device, fadeSteps } = setup();
+    const inputs = frame(0);
+    for (let face = 0; face < 6; face++) gpu.submitCapture(inputs);
+    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+    expect(fadeSteps).toEqual([1]);
+
+    gpu.submitCapture(frame(16));
+    expect(device.queue.submit).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('octreeCutGpu lifecycle', () => {
+  it('has no draw before the first encode, and an empty catalog releases the state', () => {
+    const { gpu, encode, encoder } = setup();
+    expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).toBeNull();
+    encode(0);
+    expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).not.toBeNull();
+
+    gpu.upload(Source.GaiaStars, EMPTY, 0);
+    expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).toBeNull();
+    const passesBefore = vi.mocked(encoder.beginComputePass).mock.calls.length;
+    encode(16);
+    expect(vi.mocked(encoder.beginComputePass).mock.calls.length).toBe(passesBefore);
+  });
+});

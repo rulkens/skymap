@@ -81,7 +81,7 @@ describe('starCatalogSourceCounts', () => {
     } as unknown as StarCatalogRuntime;
 
     const iterator = starCatalogSourceCounts(runtime)[Symbol.asyncIterator]();
-    gaia.emit({ kind: 'ready', value: { starCount: 1234 } } as unknown as LoadState<SkstCatalog>);
+    gaia.emit({ kind: 'ready', value: { recordCount: 1234 } } as unknown as LoadState<SkstCatalog>);
 
     const reports = await drain(iterator, SEEDED_SOURCES.length + 1);
 

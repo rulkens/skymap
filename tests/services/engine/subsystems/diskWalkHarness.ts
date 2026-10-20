@@ -1,14 +1,8 @@
 /**
  * diskWalkHarness — drives ONE disk-planner body through the shared walk with
- * the other visitor slot stubbed out.
- *
- * The disk subsystems no longer own a catalog loop: the unit under test is the
+ * the other visitor slot stubbed out. The unit under test is the
  * `DiskRowVisitor` returned by `beginFrame`, and only `createDiskPlannerWalk`
- * knows how to drive one. Without this harness every subsystem test would
- * hand-roll the same three-line walk call plus a stub visitor for the slot it
- * doesn't care about — so the "solo run" idiom lives here once, and the
- * subsystem suites keep asserting body behaviour (gates, sticky maps,
- * crossfades) exactly as before.
+ * knows how to drive one; the "solo run" idiom lives here once.
  */
 
 import type { DiskPlannerWalk } from '../../../../src/@types/engine/subsystems/DiskPlannerWalk';
@@ -24,7 +18,7 @@ import type { ProceduralDiskFrameOutput } from '../../../../src/@types/engine/su
 export function noopDiskRowVisitor(): DiskRowVisitor {
   return {
     onSourceHidden() {},
-    beginSource() {},
+    beginBlock() {},
     onRow() {},
     endSource() {},
     endFrame() {},
@@ -34,8 +28,7 @@ export function noopDiskRowVisitor(): DiskRowVisitor {
 /**
  * Run one frame of the procedural body alone: the walk drives the subsystem's
  * visitor in the procedural slot and a no-op in the textured slot. Returns
- * `sys.lastOutput` (stashed by the visitor's `endFrame`) so call sites read
- * like the old single-subsystem frame call.
+ * `sys.lastOutput` (stashed by the visitor's `endFrame`).
  */
 export function runProceduralSolo(
   walk: DiskPlannerWalk,
@@ -49,8 +42,7 @@ export function runProceduralSolo(
 /**
  * Run one frame of the textured body alone: the walk drives a no-op in the
  * procedural slot and the subsystem's visitor in the textured slot. Returns
- * `sys.lastOutput` (stashed by the visitor's `endFrame`) so call sites read
- * like the old single-subsystem frame call.
+ * `sys.lastOutput` (stashed by the visitor's `endFrame`).
  */
 export function runTexturedSolo(
   walk: DiskPlannerWalk,

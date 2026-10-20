@@ -14,7 +14,7 @@ import type { ProbeCaptureKey } from '../../@types/rendering/ProbeCaptureKey';
 import type { SkyCapture } from '../../@types/rendering/SkyCapture';
 import type { SkyCaptureKey } from '../../@types/rendering/SkyCaptureKey';
 import { regionById } from '../../utils/regions/regionById';
-import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../scaleFadeBands';
 import { SCALE_UNITS } from '../scaleUnits';
 
 export const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];

@@ -2,9 +2,11 @@ import { composeSelectionRows } from '../../src/services/engine/selection/compos
 import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
 import { structureSelectionRow } from '../../src/layers/structure/present/structureSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
+import { galaxyRecordBridge } from '../../src/layers/galaxyCatalog/present/galaxyRecordBridge';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { milkyWaySelectionRow } from '../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
+import { galaxyRecordsOver } from './galaxyRecordsOver';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StructureStore } from '../../src/layers/structure/@types/StructureStore';
@@ -13,11 +15,19 @@ import type { SelectionResolver } from '../../src/@types/engine/selection/Select
 /** What the structure selection row reads; the real store satisfies it. */
 export type StructureRowFixture = Pick<StructureStore, 'byId' | 'byCategory'>;
 
-/** What the galaxyCatalog Layer's selection row reads; the real runtime satisfies it. */
+/** The catalogs a galaxy fixture loads; `galaxyRowRuntime` builds the row's reads from them. */
 export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
 
 /** What the starCatalog Layer's selection row reads; the real runtime satisfies it. */
 export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
+
+/** The galaxy selection row's reads over a fixture: flat record sources and their bridge. */
+export function galaxyRowRuntime(
+  galaxies: GalaxyRowFixture,
+): Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'famousMeta'> {
+  const records = galaxyRecordsOver(galaxies.catalogs, () => galaxies.famousMeta);
+  return { records, recordBridge: galaxyRecordBridge(records), famousMeta: galaxies.famousMeta };
+}
 
 /**
  * A composed `SelectionResolver` over fixed fixtures — the one-line fixture a
@@ -37,7 +47,7 @@ export function selectionResolverOver(
       ...coreSelectionRows(),
       structureSelectionRow(structures),
       milkyWaySelectionRow(),
-      ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxies)]),
+      ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))]),
       ...(stars === undefined ? [] : [starCatalogSelectionRow(stars)]),
     ],
     () => ALL_KINDS_ENABLED,

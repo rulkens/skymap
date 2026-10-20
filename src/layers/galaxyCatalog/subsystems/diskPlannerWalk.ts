@@ -1,36 +1,22 @@
 /**
  * diskPlannerWalk — the ONE per-frame catalog walk shared by the two
- * disk-planner bodies (LOD-1 procedural, LOD-2 textured).
+ * disk-planner bodies (LOD-1 procedural, LOD-2 textured): each surviving row's
+ * geometry (camDistSq, sqrt, apparent px) is computed once and handed as scalars
+ * to two injected DiskRowVisitor bodies.
  *
- * Each planner used to walk every visible catalog itself: read the row's
- * position, compute camDistSq, take a sqrt, compute apparent px — the same
- * geometry twice per row, and the dominant share of frame CPU. This walk
- * computes each surviving row's geometry ONCE and hands the scalars to two
- * injected DiskRowVisitor bodies.
+ * A stateful factory because it owns the SINGLE shared stride cursors (per
+ * source, per resident block, keyed by ordinal base): both bodies decimate
+ * against one cursor, so their sticky maps stay in phase.
  *
- * ### Why a stateful factory, not a pure utils/ helper
+ * onRow is called at two SEPARATE statements, never a loop over the visitors: a
+ * loop would be megamorphic across their hidden classes. No per-row object is
+ * allocated anywhere in the loop.
  *
- * The walk owns the SINGLE shared per-source stride cursor — genuine
- * cross-frame state with exactly one home. A factory closes over it; a pure
- * helper would force the cursor map to be threaded through the frame call
- * site. Both bodies decimating against one cursor also means they always see
- * the identical stride window, so their sticky maps stay in phase.
- *
- * ### Why two fixed call sites, not a visitor array
- *
- * onRow is called at two SEPARATE statements — 'procedural.onRow(...)' then
- * 'textured.onRow(...)' — never a loop over [procedural, textured]. A looped
- * call site would be megamorphic across the two visitors' hidden classes;
- * two fixed sites each stay monomorphic. onRow takes scalar args plus the
- * catalog reference: no per-row object is allocated anywhere in the loop.
- *
- * ### Why the early-out uses the 8-px bound and no px gate
- *
- * The distance early-out must not skip a row EITHER body could use, so it
- * uses the looser bound: PROCEDURAL_DISK_FADE_START_PX (8 px). Apparent-size
- * gating is each body's own business — the procedural body drops px <= 8
- * inside onRow, the textured body applies its 24-px gate (famous rows
- * exempt). Gating here would re-braid body policy into the shared loop.
+ * The distance early-out uses the looser bound, PROCEDURAL_DISK_FADE_START_PX
+ * (8 px), so it never skips a row EITHER body could use. Apparent-size gating
+ * stays in each body's `onRow` (procedural drops px <= 8, textured applies its
+ * 24-px gate, famous rows exempt); gating here would braid body policy into the
+ * shared loop.
  */
 
 import { strideWindow } from '../../../utils/render/disk/strideWindow';
@@ -59,16 +45,16 @@ export const DISK_ROW_ACCEPT_BUDGET = 2048;
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
 
-  // The single shared stride cursor: which row each source's decimated
-  // window resumes from next frame. One map for BOTH bodies.
-  const strideStartBySource = new Map<SourceType, number>();
+  // The shared stride cursors: which row each block's decimated window resumes
+  // from next frame, by source then ordinal base. One map for BOTH bodies.
+  const strideStartBySource = new Map<SourceType, Map<number, number>>();
 
   function runFrame(
     input: DiskWalkInput,
     procedural: DiskRowVisitor,
     textured: DiskRowVisitor,
   ): void {
-    const { cam, catalogs, sourceMask, pxPerRad } = input;
+    const { cam, records, sourceMask, pxPerRad } = input;
 
     // Looser (8-px) bound — see module header. Rows past it can't matter to
     // either body at any plausible galaxy diameter.
@@ -79,54 +65,58 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     const cz = cam.position[2];
 
     // Rows admitted this frame across ALL sources — see DISK_ROW_ACCEPT_BUDGET.
-    // Once spent, later sources skip their row loop (beginSource/endSource
+    // Once spent, later sources skip their row loop (beginBlock/endSource
     // still run, so purge + cursor stay correct) and are swept on a later,
     // rotated window.
     let acceptedThisFrame = 0;
 
-    for (const [source, catalog] of catalogs.entries()) {
+    for (const [source, record] of records) {
       if (((sourceMask >> source) & 1) === 0) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;
       }
 
-      const positions = catalog.positions;
-      const count = catalog.count;
-      const { safeStart, end, nextStart } = strideWindow(
-        count,
-        decimationFactor,
-        strideStartBySource.get(source) ?? 0,
-      );
+      const cursors = strideStartBySource.get(source) ?? new Map<number, number>();
+      strideStartBySource.set(source, cursors);
 
-      procedural.beginSource(source, safeStart, end);
-      textured.beginSource(source, safeStart, end);
+      record.forEachResidentBlock((block, ordinalBase) => {
+        const positions = block.positions;
+        const { safeStart, end, nextStart } = strideWindow(
+          block.count,
+          decimationFactor,
+          cursors.get(ordinalBase) ?? 0,
+        );
 
-      if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
-        for (let i = safeStart; i < end; i++) {
-          const i3 = i * 3;
-          const x = positions[i3 + 0]!;
-          const y = positions[i3 + 1]!;
-          const z = positions[i3 + 2]!;
+        procedural.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
+        textured.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
 
-          const dx = cx - x;
-          const dy = cy - y;
-          const dz = cz - z;
-          const camDistSq = dx * dx + dy * dy + dz * dz;
-          if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+        if (acceptedThisFrame < DISK_ROW_ACCEPT_BUDGET) {
+          for (let i = safeStart; i < end; i++) {
+            const i3 = i * 3;
+            const x = positions[i3 + 0]!;
+            const y = positions[i3 + 1]!;
+            const z = positions[i3 + 2]!;
 
-          const camDist = Math.sqrt(camDistSq);
-          const px = apparentSizePxAtDistance(catalog.diameterKpc[i]!, camDist, pxPerRad);
+            const dx = cx - x;
+            const dy = cy - y;
+            const dz = cz - z;
+            const camDistSq = dx * dx + dy * dy + dz * dz;
+            if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-          procedural.onRow(source, catalog, i, x, y, z, camDist, px);
-          textured.onRow(source, catalog, i, x, y, z, camDist, px);
+            const camDist = Math.sqrt(camDistSq);
+            const px = apparentSizePxAtDistance(block.diameterKpc[i]!, camDist, pxPerRad);
 
-          acceptedThisFrame++;
-          if (acceptedThisFrame >= DISK_ROW_ACCEPT_BUDGET) break;
+            procedural.onRow(source, block, i, x, y, z, camDist, px);
+            textured.onRow(source, block, i, x, y, z, camDist, px);
+
+            acceptedThisFrame++;
+            if (acceptedThisFrame >= DISK_ROW_ACCEPT_BUDGET) break;
+          }
         }
-      }
 
-      strideStartBySource.set(source, nextStart);
+        cursors.set(ordinalBase, nextStart);
+      });
 
       procedural.endSource(source);
       textured.endSource(source);

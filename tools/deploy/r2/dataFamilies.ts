@@ -9,6 +9,8 @@
  * 29.6→16.8 MB). A `false` row is already packed, or small and unmeasured.
  */
 import type { DataFamily } from '../@types/DataFamily';
+import { OCTREE_CATALOGS } from './octreeCatalogs';
+import { octreeDataFamilies } from './octreeDataFamilies';
 
 export const DATA_FAMILIES: readonly DataFamily[] = [
   {
@@ -29,22 +31,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     // Already gzip-packed: measured ~99% of raw.
     gzipOnWire: false,
   },
-  {
-    label: 'star-catalog-v2-index',
-    dir: 'star-catalog/v2',
-    fileName: /^stars\.bin$/,
-    transport: 'wrangler',
-    gzipOnWire: true,
-  },
-  // Chunk names carry the bake's own content hash, so the manifest never hashes or names
-  // them; the index lists every chunk, and `collectStarChunks` uploads them from it.
-  {
-    label: 'star-catalog-v2-chunks',
-    dir: 'star-catalog/v2/stars',
-    fileName: /^\d+-\d+\.bin$/,
-    transport: 'bulk',
-    gzipOnWire: true,
-  },
+  ...OCTREE_CATALOGS.flatMap(octreeDataFamilies),
   {
     label: 'scalar-field',
     dir: null,

@@ -11,7 +11,7 @@
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { BlackHoleRow } from '../@types/BlackHoleRow';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
 import { blackHoleMarkerBrightness } from './blackHoleMarkerBrightness';
