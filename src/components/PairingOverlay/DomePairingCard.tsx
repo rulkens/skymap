@@ -20,8 +20,8 @@ export type DomePairingCardProps = {
   readonly modules: readonly (readonly boolean[])[];
 };
 
-const CARD_WIDTH_PX = 600;
-const CARD_HEIGHT_PX = 720;
+const CARD_WIDTH_PX = 1200;
+const CARD_HEIGHT_PX = 1440;
 const TILT_RAD = degToRad(DOME_PARAMS.tiltDeg);
 /** Dome direction of the camera forward, where Earth sits. */
 const FRONT: Vec3 = [0, Math.cos(TILT_RAD), Math.sin(TILT_RAD)];

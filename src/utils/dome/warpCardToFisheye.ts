@@ -5,8 +5,8 @@
  * Inverse mapping: each output pixel → NDC → dome direction `v`; the card lies
  * in the plane ⟂ `d` at unit distance, so the hit is `v / (v·d)`. The card's up
  * is the zenith projected into that plane (its top faces the disc centre) and
- * its right is dome +x, matching the fisheye's image-right. Nearest-neighbour
- * sampling keeps QR modules crisp. Pixels outside the card stay transparent.
+ * its right is dome +x, matching the fisheye's image-right. Each output pixel
+ * averages a grid of nearest-neighbour samples. Pixels outside the card stay transparent.
  */
 
 import type { PixelImage } from '../../@types/dome/PixelImage';
@@ -18,6 +18,8 @@ import { directionToFisheye } from './directionToFisheye';
 import { fisheyeDirection } from './fisheyeDirection';
 
 const BORDER_SAMPLES = 16;
+// Per axis: 4×4 samples per output pixel anti-alias module edges, which the warp leaves at every angle.
+const SUBSAMPLES = 4;
 
 export function warpCardToFisheye(
   card: PixelImage,
@@ -63,18 +65,38 @@ export function warpCardToFisheye(
 
   for (let py = py0; py <= py1; py++) {
     for (let px = px0; px <= px1; px++) {
-      const v = fisheyeDirection(((px + 0.5) / size) * 2 - 1, 1 - ((py + 0.5) / size) * 2);
-      if (v === null) continue;
-      const along = dot3(v, d);
-      if (along <= 0) continue;
-      const s = dot3(v, right) / along / halfW;
-      const t = dot3(v, up) / along / halfH;
-      if (s < -1 || s >= 1 || t < -1 || t >= 1) continue;
-      const sx = Math.floor(((s + 1) / 2) * card.width);
-      const sy = Math.floor(((1 - t) / 2) * card.height);
-      const src = (sy * card.width + sx) * 4;
+      // Premultiplied sums, so samples off the card fade the edge instead of darkening it.
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      for (let j = 0; j < SUBSAMPLES; j++) {
+        for (let i = 0; i < SUBSAMPLES; i++) {
+          const nx = ((px + (i + 0.5) / SUBSAMPLES) / size) * 2 - 1;
+          const ny = 1 - ((py + (j + 0.5) / SUBSAMPLES) / size) * 2;
+          const v = fisheyeDirection(nx, ny);
+          if (v === null) continue;
+          const along = dot3(v, d);
+          if (along <= 0) continue;
+          const s = dot3(v, right) / along / halfW;
+          const t = dot3(v, up) / along / halfH;
+          if (s < -1 || s >= 1 || t < -1 || t >= 1) continue;
+          const sx = Math.floor(((s + 1) / 2) * card.width);
+          const sy = Math.floor(((1 - t) / 2) * card.height);
+          const src = (sy * card.width + sx) * 4;
+          const alpha = card.data[src + 3];
+          r += card.data[src] * alpha;
+          g += card.data[src + 1] * alpha;
+          b += card.data[src + 2] * alpha;
+          a += alpha;
+        }
+      }
+      if (a === 0) continue;
       const dst = (py * size + px) * 4;
-      out.set(card.data.subarray(src, src + 4), dst);
+      out[dst] = r / a;
+      out[dst + 1] = g / a;
+      out[dst + 2] = b / a;
+      out[dst + 3] = a / (SUBSAMPLES * SUBSAMPLES);
     }
   }
   return out;

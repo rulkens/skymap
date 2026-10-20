@@ -18,7 +18,7 @@ function makeCard() {
       if (x < 8) c = [255, 0, 0];
       else if (x >= W - 8) c = [0, 0, 255];
       else if (y < 8) c = [0, 255, 0];
-      if (Math.abs(x - W / 2) < 2 && Math.abs(y - W / 2) < 2) c = [0, 0, 0];
+      if (Math.abs(x - W / 2) < 6 && Math.abs(y - W / 2) < 6) c = [0, 0, 0];
       data.set([...c, 255], (y * W + x) * 4);
     }
   }
@@ -88,5 +88,13 @@ describe('warpCardToFisheye', () => {
     const [x, y] = directionToFisheye(fisheyeDirection(0.3, -0.4)!);
     expect(x).toBeCloseTo(0.3, 9);
     expect(y).toBeCloseTo(-0.4, 9);
+  });
+});
+
+describe('warpCardToFisheye edges', () => {
+  it('anti-aliases the card border: some edge pixels are partly covered', () => {
+    let partial = 0;
+    for (let i = 3; i < out.length; i += 4) if (out[i] > 0 && out[i] < 255) partial++;
+    expect(partial).toBeGreaterThan(0);
   });
 });
