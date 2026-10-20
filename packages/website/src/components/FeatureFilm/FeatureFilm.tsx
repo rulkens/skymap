@@ -1,8 +1,9 @@
 /*
  * FeatureFilm — a loop of the loop manifest on the Features page, in a small disc or, `wide`, a 16:9
- * frame. It plays while half of it is on screen and stops when it leaves; a button over its middle,
- * shown on hover or focus, stops and starts it. A visitor who asked for less motion or less data gets
- * the still, and nothing moves until they press play. Without script there is no film, so no button.
+ * frame. It plays while half of it is on screen and stops when it leaves; a wide film has a button over
+ * its middle, shown on hover or focus, that stops and starts it. A visitor who asked for less motion or
+ * less data gets the still, and only a wide film moves, when they press play. Without script there is
+ * no film, so no button.
  */
 import { useEffect, useRef, useState } from 'react';
 
@@ -46,7 +47,7 @@ function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
         screenRef={screen}
         wide={wide}
       >
-        {ready && (
+        {ready && wide && (
           <button
             className={styles.button}
             type="button"
