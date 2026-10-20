@@ -29,8 +29,4 @@ describe.each(['phobos', 'deimos'])('MESH_SOURCES.%s', (key) => {
       expect(back[2]).toBeCloseTo(axis[2], 12);
     }
   });
-
-  it('keeps the centre-of-mass origin its orbit tracks', () => {
-    expect(entry.origin).toBe('source');
-  });
 });

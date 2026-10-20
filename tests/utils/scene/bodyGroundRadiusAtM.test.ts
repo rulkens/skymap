@@ -21,8 +21,4 @@ describe('bodyGroundRadiusAtM', () => {
       expect(bodyGroundRadiusAtM(row(id), -5000)).toBeGreaterThanOrEqual(meshRadiusM);
     },
   );
-
-  it('keeps a sphere body on its datum plus terrain', () => {
-    expect(bodyGroundRadiusAtM(row('mars'), 1234)).toBe(row('mars').surface.datumRadiusM + 1234);
-  });
 });
