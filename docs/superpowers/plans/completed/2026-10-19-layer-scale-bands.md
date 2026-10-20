@@ -4,7 +4,7 @@
 
 **Architecture:** `visibility.ts` entry `bands` → `bandValueOf(entry, item, view)` in core → `resolveViewFadeValue(state, view, address)` = fade × clip × band (× the `of` entry's band, for a label with `of`) → the per-view gates (`gatePassByFade`, the perView branches of `gatePlannerByFade` / `gateComputeByFade`, `gateLabelProducer`, `gateWorldLabelProducer`). Once-scope planners and computes and scene-body admission keep `resolveFadeValue` (no band: one plan serves several views). Label producers also skip when every item's band is 0.
 
-**Spec:** `docs/superpowers/specs/2026-10-19-layer-scale-bands-design.md`. Rationale and rulings: `docs/grill-sessions/layer-scale-bands-2026-10-18.md` (B1, S1, B3, R1, C1, O1, K1, D1, E1, V1); running log `.superpowers/grill/2026-10-18-layer-scale-bands-rulings.md`.
+**Spec:** `docs/superpowers/specs/completed/2026-10-19-layer-scale-bands-design.md`. Rationale and rulings: `docs/grill-sessions/layer-scale-bands-2026-10-18.md` (B1, S1, B3, R1, C1, O1, K1, D1, E1, V1); running log `.superpowers/grill/2026-10-18-layer-scale-bands-rulings.md`.
 
 **Branch:** `docs/scale-fade-bands-refresh` (draft PR #920), worktree `.claude/worktrees/scale-bands-backlog`. Prep (Group P) is its own commits, sequenced first; separate PR vs riding #920 is the checkpoint answer recorded in the ledger.
 
@@ -147,24 +147,24 @@ Bands: `structureRing.cosmic { ...SURVEY_DEEP_ZOOM, items: STRUCTURE_IDS_BY_SCAL
 
 ### Task 8: Before/after, perf, smoke
 
-- [ ] Before/after pairs (main server vs branch server, deep links): the Milky Way disk at about 1 kpc and 0.5 kpc from the Sun (behaviour change #1); and value-identical checks at each moved band's mid-ramp: Local Bubble at 0.7 kpc and 7 kpc, constellations at 5 kpc, ZoA at 0.1 Mpc and 4 Mpc, survey and density at 0.005 Mpc, Milky Way places at 0.1 Mpc, the "You are here" label at 1.2 Mpc.
-- [ ] `npm run perf:cpu`, two interleaved main/branch runs each (the load on this machine makes single runs noisy).
+- [x] Before/after pairs (main server vs branch server, deep links): the Milky Way disk at about 1 kpc and 0.5 kpc from the Sun (behaviour change #1); and value-identical checks at each moved band's mid-ramp: Local Bubble at 0.7 kpc and 7 kpc, constellations at 5 kpc, ZoA at 0.1 Mpc and 4 Mpc, survey and density at 0.005 Mpc, Milky Way places at 0.1 Mpc, the "You are here" label at 1.2 Mpc.
+- [x] `npm run perf:cpu`, two interleaved main/branch runs each (the load on this machine makes single runs noisy).
 
 ## Definition of Done
 
-- [ ] `EntryBand` exists and `VisibilityEntryCommon.bands` is the only Layer contract change.
-- [ ] Eleven entries declare their bands as in the spec table; `SURVEY_DEEP_ZOOM` and `NEIGHBOURHOOD_RECEDE_KPC` live in `src/data/bands/`.
-- [ ] No Layer file imports `SCALE_FADE_BANDS`; `src/data/scaleFadeBands.ts` holds only core's seven rows.
-- [ ] `constellationsBand.ts`, `structureVisibleBands.ts`, `StructureMarkerStyle.visibleBand`, `VolumeFieldSettings.bands`, `MILKY_WAY_LABEL_FADE_BAND` and the survey fade's famous ternary are gone.
-- [ ] `FOREGROUND_MAX_DISTANCE_MPC`, `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` and `MILKY_WAY_RADIUS_MPC` live in `src/data/`; `src/data/` imports nothing from `src/services/` for them.
-- [ ] Once-scope planners and computes get no band; per-view consumers do (tests in Task 3).
-- [ ] The two old backlog items are gone; "per-subject fades" and "band debug panel" exist.
-- [ ] Deferral boundary respected: kinds 2 and 3, L1, core's caption/glint/cubemap rows untouched.
+- [x] `EntryBand` exists and `VisibilityEntryCommon.bands` is the only Layer contract change.
+- [x] Eleven entries declare their bands as in the spec table; `SURVEY_DEEP_ZOOM` and `NEIGHBOURHOOD_RECEDE_KPC` live in `src/data/bands/`.
+- [x] No Layer file imports `SCALE_FADE_BANDS`; `src/data/scaleFadeBands.ts` holds only core's seven rows.
+- [x] `constellationsBand.ts`, `structureVisibleBands.ts`, `StructureMarkerStyle.visibleBand`, `VolumeFieldSettings.bands`, `MILKY_WAY_LABEL_FADE_BAND` and the survey fade's famous ternary are gone.
+- [x] `FOREGROUND_MAX_DISTANCE_MPC`, `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` and `MILKY_WAY_RADIUS_MPC` live in `src/data/`; `src/data/` imports nothing from `src/services/` for them.
+- [x] Once-scope planners and computes get no band; per-view consumers do (tests in Task 3).
+- [x] The two old backlog items are gone; "per-subject fades" and "band debug panel" exist.
+- [x] Deferral boundary respected: kinds 2 and 3, L1, core's caption/glint/cubemap rows untouched.
 
 ## Manual smoke
 
-- [ ] The Milky Way disk descending toward the Sun from 3 kpc: the hand-off to the Gaia stars reads as smooth as on main, or is retuned (behaviour change #1).
-- [ ] Flying out from Earth to 20 kpc: the Local Bubble shell fades in, then out with the constellation figures and names at 10 kpc.
-- [ ] Flying out to 8 Mpc: the ZoA veil and lettering fade in and out together; the "You are here" label fades by 2 Mpc.
-- [ ] Diving to the Sun from 1 Mpc: survey points, cosmic structure rings and labels and the density field fade out together; the famous galaxies stay; Milky Way places fade in.
-- [ ] Clicking a survey galaxy and a structure ring mid-ramp still selects it; at band 0 neither is clickable.
+- [x] The Milky Way disk descending toward the Sun from 3 kpc: the hand-off to the Gaia stars reads as smooth as on main, or is retuned (behaviour change #1).
+- [x] Flying out from Earth to 20 kpc: the Local Bubble shell fades in, then out with the constellation figures and names at 10 kpc.
+- [x] Flying out to 8 Mpc: the ZoA veil and lettering fade in and out together; the "You are here" label fades by 2 Mpc.
+- [x] Diving to the Sun from 1 Mpc: survey points, cosmic structure rings and labels and the density field fade out together; the famous galaxies stay; Milky Way places fade in.
+- [x] Clicking a survey galaxy and a structure ring mid-ramp still selects it; at band 0 neither is clickable.
