@@ -15,14 +15,15 @@ import {
   NODE_RESIDENT_BIT,
   OPACITY_CHANNELS,
   WORD_BYTES,
-} from '../../../../src/layers/starCatalog/render/starCutLayout';
-import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/octreeFormat';
+} from '../../../../src/services/gpu/octree/octreeCutLayout';
+import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import { Source } from '../../../../src/data/sources';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
-import type { StarChunk } from '../../../../src/@types/data/starCatalog/StarChunk';
+import type { Octree } from '../../../../src/@types/octree/Octree';
+import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
+import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 
 type Write = { label: string; offset: number; bytes: number; data: ArrayBufferView | ArrayBuffer };
 
@@ -94,7 +95,7 @@ function columns(count: number): StarColumns {
  */
 function octreeOf(
   over: { chunks?: number; chunkCapacity?: number; chunkNodeCap?: number } = {},
-): StarOctree {
+): Octree<StarColumns> {
   const chunkCount = over.chunks ?? 3;
   const level = Uint8Array.of(...new Array(9).fill(1), 3);
   const morton = Uint32Array.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 0);
@@ -102,7 +103,8 @@ function octreeOf(
   const firstRecord = Uint32Array.from({ length: 10 }, (_, i) => i * 6);
   return {
     grid: { bits: 4, origin: [0, 0, 0], cellEdge: 1 },
-    starCount: 0,
+    family: 'star',
+    recordCount: 0,
     columns: STAR_COLUMN_SCHEMA,
     nodes: {
       count: 10,
@@ -133,7 +135,7 @@ function octreeOf(
 }
 
 /** Chunk 1 (root: level 1, Morton 1, index row 1): one level-0 row with 3 own records. */
-const CHUNK: StarChunk = {
+const CHUNK: OctreeChunk<StarColumns> = {
   ref: octreeOf().chunks[1]!,
   parent: null,
   nodes: {
@@ -246,7 +248,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     const base = octreeOf({ chunks: 2 });
     // Chunk 1 holds the roots at index rows 1 and 2 (level 1, Morton 1 and 2).
-    const octree: StarOctree = {
+    const octree: Octree<StarColumns> = {
       ...base,
       nodes: {
         ...base.nodes,
@@ -256,7 +258,7 @@ describe('starCatalogRenderer chunk pool', () => {
       },
       chunks: [base.chunks[0]!, { ...base.chunks[1]!, roots: [1, 2], nodes: 2, records: 5 }],
     };
-    const chunk: StarChunk = {
+    const chunk: OctreeChunk<StarColumns> = {
       ref: octree.chunks[1]!,
       parent: null,
       nodes: {
@@ -303,25 +305,6 @@ describe('starCatalogRenderer chunk pool', () => {
     ]);
   });
 
-  it("recordOrdinal and poolRecordIndex map a resident chunk's records both ways, and nothing once evicted", () => {
-    const { device } = recordingDevice();
-    const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
-    renderer.snapshotPickSlots();
-    // Chunk 1's third record: pool 100 + 1·50 + 2, ordinal 103 + 2.
-    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBe(152);
-    expect(renderer.recordOrdinal(Source.GaiaStars, 42)).toBe(42);
-    expect(renderer.recordOrdinal(Source.GaiaStars, 153)).toBeNull(); // past the chunk's records
-    expect(renderer.recordOrdinal(Source.GaiaStars, 100)).toBeNull(); // slot 0 is empty
-
-    renderer.evictChunk(Source.GaiaStars, 1, null);
-    renderer.snapshotPickSlots();
-    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBeNull();
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
-  });
-
   it('a slot evicted and refilled between the pick draw and its readback resolves to the star that was drawn', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
@@ -342,6 +325,9 @@ describe('starCatalogRenderer chunk pool', () => {
     );
     // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
     expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
+    // The inverse reads the live table: chunk 1 has left it, chunk 2 holds slot 1.
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 108)).toBe(152);
   });
 
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {
@@ -381,7 +367,7 @@ describe('starCatalogRenderer chunk pool', () => {
     ]);
     for (const w of zeroed) expect([...(w.data as Float32Array)].every((v) => v === 0)).toBe(true);
   });
-  it("a nested chunk's roots are written in its parent's slot rows, and its records pick through its record base", () => {
+  it("a nested chunk's roots are written in its parent's slot rows", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     // Index: level-2 row 0 roots chunk 0; the level-3 root. Chunk 0's level-1 row roots chunk 1.
@@ -406,7 +392,7 @@ describe('starCatalogRenderer chunk pool', () => {
       bytes: 0,
       nodes: 1,
     });
-    const octree: StarOctree = {
+    const octree: Octree<StarColumns> = {
       ...octreeOf(),
       nodes: {
         count: 2,
@@ -422,14 +408,14 @@ describe('starCatalogRenderer chunk pool', () => {
       chunks: [ref(0, 2, 1)],
       chunkCount: 2,
     };
-    const parent: StarChunk = {
+    const parent: OctreeChunk<StarColumns> = {
       ref: ref(0, 2, 1),
       parent: null,
       nodes: row(1, 1, 0, 1),
       records: columns(1),
       chunks: [ref(1, 3, 3)],
     };
-    const child: StarChunk = {
+    const child: OctreeChunk<StarColumns> = {
       ref: ref(1, 3, 3),
       parent: 0,
       nodes: row(0, 0, 3, NO_CHUNK_REF),
@@ -448,11 +434,6 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(word(writes.at(-1)!)).toBe(3 - 1);
     const childRows = writes.find((w) => w.label === NODES && w.offset === 2 * ROW_BYTES)!;
     expect((childRows.data as Uint32Array)[NODE_PARENT_WORD]).toBe(parentRow);
-
-    // The child's third record: pool 2 + 0·50 + 2, ordinal 3 + 2.
-    renderer.snapshotPickSlots();
-    expect(renderer.recordOrdinal(Source.GaiaStars, 4)).toBe(5);
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 5)).toBe(4);
 
     writes.length = 0;
     renderer.evictChunk(Source.GaiaStars, 0, 1);

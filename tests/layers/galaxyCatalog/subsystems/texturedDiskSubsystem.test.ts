@@ -24,6 +24,7 @@ import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/Famou
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
 import type { HiResFamousFrameOutput } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -100,7 +101,7 @@ function makeInput(
   const cam = makeCam();
   return {
     cam,
-    catalogs,
+    records: galaxyRecordsOver(catalogs),
     sourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousGalaxiesMeta,

@@ -555,6 +555,21 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Spirit' },
     figure: 'data-spirit',
   },
+  'mesh-phobos': {
+    title: 'Phobos shape model and Viking mosaic',
+    description:
+      'The shape of Phobos from 3.1 million facets, with its colour from a Viking Orbiter mosaic.',
+    shows: 'Phobos up close, with Stickney crater and its grooves.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-phobos&t=2026-10-07T12:00:00Z', label: 'Open Phobos' },
+  },
+  'mesh-deimos': {
+    title: 'Deimos shape model',
+    description: 'The shape of Deimos, the smaller moon of Mars, from Viking images.',
+    shows: 'Deimos up close.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-deimos&t=2026-10-07T12:00:00Z', label: 'Open Deimos' },
+  },
   skraafoto: {
     description:
       'The aerial photographs and the laser scan from which we rebuilt Søndermarken as a 3D model.',

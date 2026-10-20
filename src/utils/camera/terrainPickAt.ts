@@ -18,6 +18,7 @@ import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { cursorRayBodyLocal } from './cursorRayBodyLocal';
 import { raycastTerrain } from './raycastTerrain';
 import { surfacePickToleranceM } from './surfacePickToleranceM';
+import { bodyGroundRadiusAtM } from '../scene/bodyGroundRadiusAtM';
 
 export function terrainPickAt(input: {
   readonly arm: BodyFixedPose;
@@ -37,7 +38,7 @@ export function terrainPickAt(input: {
     cursorRayBodyLocal(arm, cursorPx, viewportPx, fovYRad),
     innerBoundRadiusM(body.surface),
     outerBoundRadiusM(body.surface),
-    (dir) => datumRadiusM + terrainHeightAt(arm.bodyId, dir),
+    (dir) => bodyGroundRadiusAtM(body, terrainHeightAt(arm.bodyId, dir)),
     surfacePickToleranceM(eyeM, datumRadiusM, fovYRad, viewportPx[1]),
   );
 }

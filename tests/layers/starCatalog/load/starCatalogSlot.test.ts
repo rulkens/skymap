@@ -8,12 +8,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogSlot } from '../../../../src/layers/starCatalog/load/starCatalogSlot';
 import { resizeStarPools } from '../../../../src/layers/starCatalog/load/resizeStarPools';
 import { SOURCE_REGISTRY, Source } from '../../../../src/data/sources';
-import type { StarChunkStream } from '../../../../src/layers/starCatalog/@types/StarChunkStream';
+import type { OctreeChunkStream } from '../../../../src/@types/octree/OctreeChunkStream';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogRenderer } from '../../../../src/layers/starCatalog/@types/StarCatalogRenderer';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
-const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ starCount: 0, nodes: { count: 0 } })));
+const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
 vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({
   starCatalogFetcher: fetchSpy,
 }));
@@ -25,7 +26,7 @@ function setup(override: { value: number | null }) {
     if (slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
     return 0;
   });
-  const chunkStreams = new Map<SourceType, StarChunkStream>();
+  const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
   const host = {
     renderer: { upload } as unknown as StarCatalogRenderer,
     chunkStreams,
@@ -68,7 +69,7 @@ describe('resizeStarPools', () => {
     const { slot, chunkStreams, runtime } = setup({ value: null });
     await slot.load(REQ);
     const destroy = vi.fn();
-    chunkStreams.set(Source.GaiaStars, { destroy } as unknown as StarChunkStream);
+    chunkStreams.set(Source.GaiaStars, { destroy } as unknown as OctreeChunkStream<StarColumns>);
     expect(resizeStarPools(runtime, 512)).toBe(`only ${POOL_CAP} slots fit`);
     expect(destroy).not.toHaveBeenCalled();
     expect(chunkStreams.has(Source.GaiaStars)).toBe(true);

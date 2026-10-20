@@ -11,10 +11,13 @@ import time
 
 import bpy
 import mathutils
+import mathutils.bvhtree
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 ATLAS_PX = 2048
+# A shape model's normal atlas carries the relief the decimated copy lost.
+RELIEF_ATLAS_PX = 4096
 
 EMISSION_COLOUR = "Emission Color"
 EMISSION_STRENGTH = "Emission Strength"
@@ -99,13 +102,20 @@ BAKE_PASSES = [
 ]
 
 
-def source(key):
+def source(key, relief=False, triangles=None):
+    """`relief`: a shape model. The full-resolution surface is kept as the bake SOURCE
+    and every row bakes selected-to-active onto a decimated copy, so the normal atlas
+    carries the relief the decimation removed (see `bake_relief`). `triangles` caps
+    the copy below the budget (measured: data/raw/meshes/phobos/README.md)."""
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
         "dir": d,
         "src": os.path.join(d, "%s.blend" % key),
         "out": os.path.join(d, "%s.prebaked.glb" % key),
+        "relief": relief,
+        "atlas_px": RELIEF_ATLAS_PX if relief else ATLAS_PX,
+        "triangles": triangles,
     }
 
 
@@ -114,7 +124,13 @@ def atlas_path(cfg, name):
 
 
 SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance"), source("curiosity"),
-                                 source("mer"), source("hubble"), source("petunias")]}
+                                 source("mer"), source("hubble"), source("petunias"),
+                                 source("phobos", relief=True, triangles=150000),
+                                 source("deimos", relief=True)]}
+
+# A natural body has no crevice-scale occlusion the runtime lacks, and an AO bake
+# from a selected-to-active source would darken by the CAGE, not the surface.
+RELIEF_PASSES = [row for row in BAKE_PASSES if row[0] != "occlusion"]
 
 
 def log(msg):
@@ -263,10 +279,14 @@ def arm_materials(obj):
         mat.node_tree.nodes.active = node
 
 
-def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples):
-    """One BAKE_PASSES row start to finish: its atlas image, the bake, the save."""
+def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples,
+              high=None, extrusion=0.0):
+    """One BAKE_PASSES row start to finish: its atlas image, the bake, the save.
+    With `high`, the row bakes `high`'s surface onto `obj` (selected-to-active),
+    casting rays `extrusion` metres out from `obj` and as far back in."""
     is_data = colourspace != "sRGB"
-    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX,
+    px = cfg["atlas_px"]
+    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), px, px,
                                 alpha=False, is_data=is_data)
     image.generated_color = (0, 0, 0, 1)
     image.colorspace_settings.name = colourspace
@@ -288,7 +308,13 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
-    restore = prepare([s.material for s in obj.material_slots]) if prepare else None
+    reads = obj
+    if high is not None:
+        high.select_set(True)
+        reads = high
+        settings = dict(settings, use_selected_to_active=True, cage_extrusion=extrusion,
+                        max_ray_distance=2 * extrusion)
+    restore = prepare([s.material for s in reads.material_slots]) if prepare else None
     bpy.ops.object.bake(uv_layer=uv_name, use_clear=True, **settings)
     if restore is not None:
         restore()
@@ -297,6 +323,47 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples):
     image.file_format = "PNG"
     image.save()
     return image
+
+
+def relief_gap(high, low):
+    """Largest distance from a sample of `high`'s vertices to `low`'s surface: how
+    far a bake ray must reach for the decimated copy to see every source detail."""
+    tree = mathutils.bvhtree.BVHTree.FromObject(low, bpy.context.evaluated_depsgraph_get())
+    n = len(high.data.vertices)
+    co = [0.0] * (3 * n)
+    high.data.vertices.foreach_get("co", co)
+    gap = 0.0
+    for i in range(0, n, max(1, n // 200000)):
+        hit = tree.find_nearest(mathutils.Vector(co[3 * i:3 * i + 3]))
+        if hit[0] is not None:
+            gap = max(gap, hit[3])
+    return gap
+
+
+def bake_relief(scene, obj, cfg, triangles):
+    """The shape model as source, a decimated copy as target: returns the target
+    and its baked images. The source is deleted before export."""
+    high = obj
+    low = high.copy()
+    low.data = high.data.copy()
+    scene.collection.objects.link(low)
+    # `decimate` applies its modifier to the ACTIVE object, which is still `high`.
+    select([low])
+    log("decimated copy -> %d tris" % decimate(low, triangles))
+    # 1.25x the measured gap plus a sliver of the extent, so a ray from a flat
+    # facet still reaches the deepest crater floor it spans.
+    lo, hi = bounds(high)
+    extrusion = 1.25 * relief_gap(high, low) + 1e-4 * max(hi[i] - lo[i] for i in range(3))
+    log("cage extrusion %.1f m" % extrusion)
+    uv_name = unwrap(low, source_uv([low]))
+    arm_materials(low)
+    images = {}
+    for name, settings, colourspace, prepare, samples in RELIEF_PASSES:
+        images[name] = bake_pass(low, uv_name, cfg, name, settings, colourspace, prepare,
+                                 samples, high=high, extrusion=extrusion)
+        log("baked %d^2 %s atlas from the full surface" % (cfg["atlas_px"], name))
+    bpy.data.objects.remove(high, do_unlink=True)
+    return low, uv_name, images
 
 
 def atlas_node(tree, image):
@@ -491,6 +558,15 @@ def main():
         % (triangles(obj), len(obj.material_slots), [l.name for l in obj.data.uv_layers]))
     lo, hi = bounds(obj)
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
+    if cfg["relief"]:
+        obj, uv_name, images = bake_relief(scene, obj, cfg,
+                                           min(args.triangles, cfg["triangles"] or args.triangles))
+        flatten_materials(obj, key, images)
+        keep_only_bake_uv(obj, uv_name)
+        export(obj, cfg["out"], None, None)
+        log("wrote %s (%d tris, %d verts, %.0fs total)"
+            % (cfg["out"], triangles(obj), len(obj.data.vertices), time.time() - started))
+        return
     extent = max(hi[i] - lo[i] for i in range(3))
     set_ao_distance(scene, extent)
     plane, plane_span = (ground_plane(obj, lo, hi, extent, blender_from_gltf(ground_up))

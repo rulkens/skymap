@@ -1,117 +1,15 @@
 /**
- * fieldStarSpherePass — the close-range, true-scale sphere for the ONE
- * catalogued Gaia field star the camera has descended into resolving range of.
- *
- * ### Why this layer exists
- *
- * Flying the camera down to solar-radius distance of a survey star leaves it
- * with no geometry: its `starCatalog` point sprite is deliberately
- * distance-retired in-shader near the camera, because `vertex.wesl`
- * reconstructs each star as `originRelCam + offset·cellScale` in f32, whose two
- * nearly-cancelling terms carry AU-scale error within ~a couple of AU of the
- * star (an f32 swim). So at close range the sprite is gone and the descent
- * bottoms out on nothing. This layer builds the missing surface: a real sphere
- * for the nearest resolvable star, composed on the f64 camera-relative
- * scene-body path where that geometry is well-conditioned.
- *
- * ### Presence is PROXIMITY, not selection
- *
- * WHICH star gets a sphere is a fact about where the camera is, not about what is
- * selected. Each frame the layer asks `nearestResolvableStar` for the nearest
- * catalogued star within the resolve radius of `ctx.drawCamPos` and draws THAT
- * one — reading `state.selectionRows` nowhere. Selection only DECORATES the
- * result (the halo `near0SelectionRingPass` draws, the InfoCard the reconciler
- * fills); it never decides whether the body exists. This is the load-bearing
- * un-braid: clicking the background nulls both selection slots, but the star the
- * camera is parked at must keep its sphere, because that sphere is its only
- * close-range geometry and the camera has not moved.
- *
- * No `FOREGROUND_MAX_DISTANCE_MPC` cut applies here: the proximity test above
- * already subsumes it by ~10.5 orders of magnitude (decision #16 D6).
- *
- * ### The presence hysteresis band — killing the threshold strobe
- *
- * A single distance threshold would strobe the sphere on and off under the
- * sub-pixel camera jitter of an orbiting view: one frame the star clears
- * STAR_RESOLVE_PX, the next it dips just under. So presence rides a hysteresis
- * band. A star turns ON only once its solar-radius sphere clears
- * `STAR_RESOLVE_PX` (4 px), and once present it stays present until it recedes
- * below `OFF_FRACTION × STAR_RESOLVE_PX` (3.2 px) — a band no single-frame jitter
- * can cross. Nearest-wins arbitrates a change of subject: a DIFFERENT star that
- * has itself crossed the ON threshold takes over immediately (the camera has
- * clearly moved to it), but a merely-nearer star still in the band does not
- * dislodge the one already shown. The present star is remembered per catalog in a
- * `WeakMap`, keyed by the catalog object so a tier swap starts empty.
- *
- * `enabled` runs the query and STORES the result; `draw` / `drawPick` READ the
- * stored star (never re-query), so the sphere they stamp and the presence flag
- * the executor gated on cannot disagree. `enabled` may run more than once per
- * frame (the pick program consults it too); the update is idempotent for a given
- * camera and stored state — a second call with the same camera re-derives the
- * same present star and re-stores it unchanged.
- *
- * ### Why option B (a thin sphere layer), NOT option A (a transient scene star)
- *
- * Adding the resolved star to the frame's scene bodies so core's scene-body
- * sort and `starSpheresPass` pick it up "for free" reads tidy but braids two
- * independent things: it makes the authored SCENE-BODY star set (a static seed
- * table + its show entry) depend on the RUNTIME star cut,
- * and it drives the catalog star through the point-partition path it does not
- * need — the star ALREADY has a representation there (its `starCatalog` sprite).
- * Option A would draw the resolved star as a scene point AND a Gaia sprite across
- * the whole foreground range, widening the very sprite/sphere overlap this layer
- * exists to resolve. Option B keeps the scene-body set pure and scopes the new
- * geometry to exactly the near star at exactly close range — growth at the
- * "NEAR0 foreground sphere layer" seam, reusing the RENDERER machinery
- * (`starRenderer`, `composeBodyMvp`, `RENDER_ORIGIN_MPC`, `SCALE_UNITS`) rather
- * than the SCENE-SET machinery (`sceneBodies` / `partitionBodiesByPresentation`),
- * which is authored-body plumbing.
- *
- * ### Why the f64 `composeBodyMvp` seam kills the wobble
- *
- * Like `earthPass` and `starSpheresPass`, this reads the slab's `Float64Array`
- * view-projection (`view.slab.vp`) rather than the f32-narrowed `view.vp`. A
- * sphere placed parsecs from the render origin sits where the VP's large
- * translation nearly cancels the tiny position; `composeBodyMvp` resolves that
- * cancellation in double precision BEFORE narrowing to f32, so the sphere lands
- * stable. The sprite's f32 reconstruction cannot — which is why the sprite is
- * retired from the near field in-shader rather than hidden behind this sphere.
- * See `composeBodyMvp`'s module header for the full compose-in-f64-then-narrow
- * argument.
- *
- * ### Colour
- *
- * The sphere is tinted by `starTintFromBpRp(present.bpRp)` — the CPU evaluation
- * of the ONE canonical Gaia BP−RP ramp (`starCatalog/tint.wesl`), so the
- * resolved sphere lands the same colour as the point cloud it rose out of.
- *
- * ### Pick aspect — the sphere occludes the stars behind it
- *
- * `draw` alone leaves the sphere absent from the r32uint pick pass, so the
- * background Gaia point-picks read THROUGH its face and a click lands on a tiny
- * star parsecs behind the one framed. `drawPick` closes both gaps: it stamps the
- * present star's identity into the NEAR0 pick pass via
- * `bodyPickRenderer.drawSphere`, gated by the SAME `enabled` predicate `draw`
- * rides (this layer declares no `pickEnabled`, so its pick gate IS `enabled` and
- * pickability tracks presence) and composing the SAME `composeBodyMvp` — except
- * the pick radius is FLOORED to the shared min footprint (`minPickRadiusMpc`), so
- * a just-resolved few-pixel star still gets a clickable hit area (the visual
- * sphere keeps its true radius). Because the sphere pick pipeline and the
- * `starCatalog` POINT pick pipeline share the pick pass's `depth32float`
- * attachment and both depth-test (`less`) + depth-write, the near sphere occludes
- * the far star points nearest-wins, order-independently.
- *
- * The packed id is the present star's catalog ordinal mapped to its pool index
- * (`poolRecordIndex`) — byte-for-byte what `starCatalog/pickFragment.wesl` writes
- * for this star's point pick — so clicking the sphere resolves to the exact same
- * star the point pick would, and the InfoCard/halo decorate the body already present.
- *
- * `RENDER_ORIGIN_MPC` is imported directly (not threaded through ctx state) —
- * the render origin is fixed at the Sun for the zoom-to-earth fold.
+ * fieldStarSpherePass — the true-scale sphere for the ONE Gaia star the camera
+ * is resolving (its sprite is retired in-shader up close, where f32 swims).
+ * Presence is PROXIMITY, never selection: `enabled` stores the nearest
+ * resolvable star, under a hysteresis band (ON at `STAR_RESOLVE_PX`, OFF below
+ * `OFF_FRACTION` of it); `draw`/`drawPick` read it. The f64 slab VP goes through
+ * `composeBodyMvp`; the pick radius floors at `minPickRadiusMpc` and stamps the
+ * point pick's packed id (`poolRecordIndex`).
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../@types/octree/Octree';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -125,33 +23,25 @@ import { STAR_RESOLVE_PX } from '../../../data/bodies/starResolvePx';
 import { starTintFromBpRp } from '../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../../../services/engine/helpers/nearestResolvableStar';
-import { starResidency } from '../load/starResidency';
+import { octreeResidency } from '../../../services/octree/octreeResidency';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
 type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };
 
-/**
- * The OFF threshold as a fraction of the ON threshold: a present star recedes to
- * absent only once its sphere shrinks below `OFF_FRACTION × STAR_RESOLVE_PX`,
- * giving the presence flag a hysteresis band the frame-to-frame camera jitter
- * cannot strobe across.
- */
+/** OFF threshold as a fraction of ON: the hysteresis band camera jitter cannot cross. */
 const OFF_FRACTION = 0.8;
 
-/**
- * Per-catalog presence memory. Keyed by the CATALOG object so a tier swap — a
- * fresh catalog object — starts empty and the old entry is GC'd with the WeakMap. Holds the currently
- * shown star, or `null` once nothing is present (both read as "not present").
- */
-const presentByCatalog = new WeakMap<StarOctree, PresentStar | null>();
+/** Keyed by the catalog object, so a tier swap starts empty. `null` and absent both mean not present. */
+const presentByCatalog = new WeakMap<Octree<StarColumns>, PresentStar | null>();
 
 /** The sole loaded star catalog (first committed Gaia catalog), or null. */
 function currentCatalog(
   runtime: Pick<StarCatalogRuntime, 'renderer'>,
-): { source: SourceType; octree: StarOctree } | null {
+): { source: SourceType; octree: Octree<StarColumns> } | null {
   for (const loaded of runtime.renderer.loadedCatalogs()) return loaded;
   return null;
 }
@@ -229,7 +119,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
       const current = presentByCatalog.get(catalog) ?? null;
       const nearest = nearestResolvableStar(
         catalog,
-        starResidency(runtime, loaded.source),
+        octreeResidency(runtime.chunkStreams, loaded.source),
         ctx.drawCamPos,
         offMpc,
       );

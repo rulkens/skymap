@@ -18,7 +18,6 @@ import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
-import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
@@ -49,9 +48,8 @@ export function galaxyCatalogPlanner(
         aliasIndexVersion = runtime.catalogsVersion;
         runtime.publish({
           aliasIndex: buildAliasIndex({
-            catalogs: runtime.catalogs,
+            records: runtime.records.values(),
             aliasMap: pgcAliasCommitted.value,
-            sources: [Source.Glade, Source.TwoMRS],
           }),
         });
       }
@@ -76,11 +74,7 @@ export function galaxyCatalogPlanner(
             selectRow !== null &&
             selectRow.type === 'structure' &&
             STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
-              ? structureMemberCount(
-                  selectRow,
-                  (source) => runtime.catalogs.get(source),
-                  sourceMask,
-                )
+              ? structureMemberCount(selectRow, runtime.records, sourceMask)
               : null,
         });
       }
@@ -111,7 +105,7 @@ export function galaxyCatalogPlanner(
       // textured); each `beginFrame` returns the visitor the walk drives.
       const sharedInput = {
         cam,
-        catalogs: runtime.catalogs,
+        records: runtime.records,
         sourceMask,
         pxPerRad,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a

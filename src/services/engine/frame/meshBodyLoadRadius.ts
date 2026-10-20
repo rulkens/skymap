@@ -6,11 +6,11 @@
  * the handoff.
  */
 
-import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { MESH_PRESENTATIONS } from '../../../data/bodies/meshPresentations';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 export function loadRadiusMpc(id: string): number {
-  const body = findByIdOrThrow(SCENE_MESH_BODIES, id, 'meshBodyLoadRadius');
+  const body = findByIdOrThrow(MESH_PRESENTATIONS, id, 'meshBodyLoadRadius');
   return body.boundingRadiusM * SCALE_UNITS.M_TO_MPC * 1e5;
 }
