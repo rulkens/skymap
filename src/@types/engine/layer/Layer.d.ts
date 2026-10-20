@@ -94,8 +94,8 @@ export type Layer<
   /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join
-   * `state.label3DProducers`, walked by `runLabel3DProducers`; `orbitTrails` rows
-   * join `state.orbitTrailRows`, walked by `orbitTrailsPass`. Each label `id`
+   * `state.label3DProducers`, walked by `runLabel3DProducers`; the `orbitTrails` group
+   * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`. Each label `id`
    * must be stable across frames. */
   guides?(runtime: Runtime): LayerGuides;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,

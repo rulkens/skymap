@@ -60,12 +60,13 @@ export const starCatalogLayer = defineLayer({
         produceLabels: produceStarCaptions(),
       },
     ],
-    orbitTrails: S_STAR_ORBITAL_ELEMENTS,
+    orbitTrails: { show: 'sStarTrails', rows: S_STAR_ORBITAL_ELEMENTS },
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
   planners: (runtime) => [starCatalogPlanner(runtime)],
   ui: [
     { slot: 'main', content: StarsSectionContainer },
     { slot: 'debug', content: StarCatalogTuningSectionContainer },
+    { slot: 'labelsAndGuides', content: { toggle: 'sStarTrails', label: 'S-star trails' } },
   ],
 });

@@ -4,7 +4,7 @@
  * then composes each instance's contributions onto core's `state.passes` /
  * `.computes` / `.assetRows` / `.visibilityEntries` / `.layerSlots` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
- * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
+ * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
  */
 
 import { put } from 'typed-redux-saga';
@@ -36,6 +36,7 @@ import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { gateComputeByFade } from '../layer/gateComputeByFade';
 import { gateLabelProducer } from '../layer/gateLabelProducer';
+import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
@@ -199,10 +200,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.label3DProducers = instances.flatMap((instance) =>
     instance.worldLabels.map(gateWorldLabelProducer),
   );
-  state.orbitTrailRows = [
-    ...CORE_TRAIL_ELEMENTS,
+  state.orbitTrailGroups = [
+    { show: 'orbitTrails' as const, rows: CORE_TRAIL_ELEMENTS },
     ...instances.flatMap((instance) => instance.orbitTrails),
-  ];
+  ].map((group) => gateOrbitTrailGroup(group, state));
   // Core keeps the slot until body Layers can reach the tile subsystem; the
   // body move deletes this row, and the two-provider throw catches a half-done move.
   state.terrain = composeTerrain([

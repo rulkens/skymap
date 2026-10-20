@@ -15,7 +15,7 @@ export type PassState = Pick<
   | 'tier'
   | 'selection'
   | 'selectionRows'
-  | 'orbitTrailRows'
+  | 'orbitTrailGroups'
   | 'data'
   | 'gpu'
   | 'subsystems'

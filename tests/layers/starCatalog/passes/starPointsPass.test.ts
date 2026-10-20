@@ -280,6 +280,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         orbitTrails: { enabled: true },
         missionTrails: { enabled: false },
       },
+      orbitTrailGroups: [{ show: 'orbitTrails', rows: [], fade: () => 1 }],
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     // The (hdr, NEAR0) roster, read off the order lines that draw it — three

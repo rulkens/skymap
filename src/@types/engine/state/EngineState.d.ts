@@ -33,7 +33,7 @@ import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { LayerTerrain } from '../layer/LayerTerrain';
-import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
@@ -123,9 +123,9 @@ export type EngineState = {
   /** Every Layer's `worldLabels`, in composition order, composed once by
    * `createLayers`; `runLabel3DProducers` walks this. */
   label3DProducers: readonly Label3DProducer[];
-  /** Core's conics then every Layer's `guides.orbitTrails`, composed once by
-   * `createLayers`; `orbitTrailsPass` walks this. */
-  orbitTrailRows: readonly OrbitalElements[];
+  /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade
+   * bound, composed once by `createLayers`; `orbitTrailsPass` walks this. */
+  orbitTrailGroups: readonly GatedOrbitTrailGroup[];
   /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
   terrain: LayerTerrain;
   /**

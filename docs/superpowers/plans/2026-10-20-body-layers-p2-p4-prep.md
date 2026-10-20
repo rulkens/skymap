@@ -150,7 +150,7 @@ already cover (`LabelsAndGuidesSectionContainer.test.ts:95,119`); "Orbit trails 
 
 **Done:** `INITIAL_SETTINGS.sStarTrails.enabled === true`; the Labels & Guides panel lists "S-star trails".
 
-- [ ] Task 2
+- [x] Task 2
 
 ### Task 3: `LayerGuides.orbitTrails` becomes a group; composition binds each group's fade
 
@@ -214,7 +214,7 @@ and `show` carried over. `orbitTrailLayer` (`:108`) declares a group.
 **Done:** tsc clean across `PassState`'s `orbitTrailGroups`. The pass compiles only once Task 4
 lands; Tasks 3 and 4 share one commit.
 
-- [ ] Task 3
+- [x] Task 3
 
 ### Task 4: `orbitTrailsPass` applies one fade per group
 
@@ -261,7 +261,7 @@ lands; Tasks 3 and 4 share one commit.
 **Done:** `grep -n "fade: 'orbitTrails'" src` returns nothing; `frameFilePurity`'s `ALLOWED` row for
 `orbitTrailsPass` stays at 1.
 
-- [ ] Task 4
+- [x] Task 4
 
 ---
 

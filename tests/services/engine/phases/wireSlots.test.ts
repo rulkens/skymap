@@ -338,6 +338,7 @@ function makeState(
       cosmicWebFilaments: { enabled: false, intensity: 1.0 },
       orbitTrails: { enabled: true },
       missionTrails: { enabled: false },
+      sStarTrails: { enabled: true },
       cosmicWebDensity: {
         enabled: true,
         items: {

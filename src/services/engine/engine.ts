@@ -302,7 +302,7 @@ export function createEngine(
     visibilityEntries: [],
     visibilityGates: new Map(),
     label3DProducers: [],
-    orbitTrailRows: [],
+    orbitTrailGroups: [],
     terrain: FLAT_TERRAIN,
     layerSlots: new Map(),
   };
