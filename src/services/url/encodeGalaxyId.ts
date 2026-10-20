@@ -1,25 +1,16 @@
 /**
- * encodeGalaxyId — the ONE home for the galaxy `#focus=<id>` priority ladder.
+ * encodeGalaxyId — the ONE home for the galaxy `#focus=<id>` priority ladder,
+ * fed by `selectionToFocusId` (focusUrl.ts) and `galaxyCatalogSelectionRow`'s
+ * `focusId.encode`, so the two can never drift in grammar. `resolveFocusId` is
+ * the inverse; the round-trip parity test guards that.
  *
- * Both galaxy encoders feed this function normalized fields:
- *   - selectionToFocusId (focusUrl.ts)           — from a built GalaxyInfo
- *   - galaxyCatalogSelectionRow's focusId.encode — from a cloud row via extractGalaxyRow
- *
- * Keeping the ladder in a single place means the two entry points can never
- * silently drift in grammar (a prefix or a pos-precision change re-anchors a
- * shared URL onto a different galaxy). The composed resolver's `resolveFocusId`
- * is the inverse of this function; the encode↔decode round-trip parity test is
- * the guard that keeps this home single.
- *
- * The ladder, with the rationale that used to live in both encoders:
- *   - famous id          : a curated seed id ("m31") beats every numeric id —
- *                          stable across rebuilds and human-readable.
- *   - sdss-/pgc- <objId> : objId > 0n is a real catalog identifier (SDSS's
- *                          19-digit objID exceeds JS Number's safe range; every
- *                          other source's slot carries a PGC number).
- *   - pos@<ra>,<dec>     : 4-decimal RA/Dec (~0.4 arcsec) — fine enough that no
- *                          real galaxy pair collides, coarse enough to stay
- *                          readable; survives rebuilds where a raw index would not.
+ *   - famous id          : a curated seed id ("m31") beats every numeric id.
+ *   - sdss-/pgc- <objId> : objId > 0n is a catalog identifier (SDSS's 19-digit
+ *                          objID exceeds JS Number's safe range; every other
+ *                          source's slot carries a PGC number).
+ *   - pos@<ra>,<dec>,<d> : 4-decimal RA/Dec (~0.4 arcsec) plus distance to 0.01
+ *                          Mpc so a chunked catalog can find the holding cell;
+ *                          the decoder still reads legacy `pos@<ra>,<dec>`.
  */
 
 import { Source } from '../../data/sources';
@@ -31,13 +22,11 @@ export function encodeGalaxyId(galaxy: {
   readonly objId: bigint;
   readonly ra: number;
   readonly dec: number;
+  readonly distMpc: number;
 }): string {
-  // Curated famous seed id beats every numeric id — stable + human-readable.
   if (galaxy.famousId) return galaxy.famousId;
-  // objId > 0n means a real catalog identifier: SDSS 19-digit objID, else a PGC.
   if (galaxy.objId > 0n) {
     return galaxy.source === Source.SDSS ? `sdss-${galaxy.objId}` : `pgc-${galaxy.objId}`;
   }
-  // Last resort: 4-decimal RA/Dec (~0.4 arcsec — no real galaxy pair collides).
-  return `pos@${galaxy.ra.toFixed(4)},${galaxy.dec.toFixed(4)}`;
+  return `pos@${galaxy.ra.toFixed(4)},${galaxy.dec.toFixed(4)},${galaxy.distMpc.toFixed(2)}`;
 }

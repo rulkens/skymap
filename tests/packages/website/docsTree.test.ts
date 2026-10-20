@@ -33,4 +33,13 @@ describe('docs tree', () => {
       live.sort(),
     );
   });
+
+  // Neither the build nor `astro check` notices a title written twice, or a made page left without one.
+  it('a row names its title exactly when no docs text holds one', () => {
+    const written = new Set(pagesIn('content/docs', '.mdx'));
+    for (const row of rows) {
+      expect(Boolean(row.title), row.path).toBe(!written.has(row.path));
+      expect(Boolean(row.job), row.path).toBe(Boolean(row.title) && row.status === 'live');
+    }
+  });
 });

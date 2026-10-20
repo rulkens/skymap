@@ -1,8 +1,7 @@
 /**
  * produceStructureLabels — per-frame labels for every structure category, read
  * from the Layer's store: close-approach / far fades, featured + visibility
- * gates, anchored at the ring centre or just above its drawn top. It rides the
- * `surveyDeepZoom` band, which famous-galaxy labels (their own producer) do not.
+ * gates, anchored at the ring centre or just above its drawn top.
  * `fadeAlpha` = distance fade × the category's handed value (label toggle fade
  * × clip, and its ring's clip); a category is skipped only at a
  * value of exactly 0, so its fade-out tail still draws. The label's `of` entry
@@ -26,12 +25,9 @@ import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
-import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
-import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
 import type { StructureScale } from '../../../@types/data/structure/StructureScale';
 import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
-import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from './structureVisibleBands';
 
 export function produceStructureLabels(
   store: StructureStore,
@@ -42,14 +38,6 @@ export function produceStructureLabels(
 
     const pxPerRad = ctx.drawPxPerRad;
     const [cx, cy, cz] = ctx.drawCamPos;
-
-    // Each category's visibility band is keyed on the camera's distance from
-    // the heliocentric render origin; labels dissolve with their rings on the
-    // descent into the solar system. When every band is at 0 the producer emits
-    // nothing — the fade reaches 0 continuously before this skip, so no pop.
-    const camDistMpc = Math.hypot(cx, cy, cz);
-    if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SCALE[scale], camDistMpc))
-      return { labels: [], awake: false };
 
     const focusedStructureId = structureIdOf(state.selection.focus);
 
@@ -71,15 +59,14 @@ export function produceStructureLabels(
     for (const p of store.all()) {
       if (!scaleIds.includes(p.category)) continue;
       if (focusedOnly && p.id !== focusedStructureId) continue;
-      // The category's handed value carries its label switch, its ring's switch and
-      // both fade-out tails; skip only at exactly 0.
+      // The category's handed value carries its label switch, its ring's switch, the
+      // distance band and both fade-out tails; skip only at exactly 0.
       const catFade = fade[p.category];
       if (catFade === 0) continue;
       // Featured gate: only the ~25-30 curated anchors earn text; the ~375
       // bulk clusters/SCs still render rings via the marker pass, no label.
       if (!p.featured) continue;
       const style = STRUCTURE_MARKER_STYLES[p.category];
-      const bandFade = fadeBand(style.visibleBand, camDistMpc);
 
       // Camera distance — for the marker close-approach / far-distance fades.
       const dx = p.worldPos[0] - cx;
@@ -107,11 +94,10 @@ export function produceStructureLabels(
         if (fadeAlpha <= 0) continue;
       }
 
-      // Bake the handed value into fadeAlpha on top of the distance fade, times
-      // bandFade (the category's visibility band — labels dissolve with their rings
-      // on descent). Nothing is exempt from the band: at solar-system zoom even the
-      // focused structure's label is chrome.
-      fadeAlpha *= catFade * bandFade;
+      // Bake the handed value into fadeAlpha on top of the distance fade. It carries the
+      // ring's distance band, so labels dissolve with their rings on descent; nothing is
+      // exempt: at solar-system zoom even the focused structure's label is chrome.
+      fadeAlpha *= catFade;
 
       // A centred label would sit under a ring that stays on screen at large
       // sizes, so Milky Way labels hang just above the ring's drawn top.

@@ -1,5 +1,5 @@
 /**
- * multiRootStarOctree — a hand-built v2 `StarOctree` (1 pc cells, origin 0) whose one chunk holds
+ * multiRootStarOctree — a hand-built v2 `Octree` (1 pc cells, origin 0) whose one chunk holds
  * two roots at different levels, so the chunk's last rows belong to only one of them:
  *
  *   index row 0  level 1 [4,6)³  root of chunk 0; blob record 0
@@ -9,15 +9,15 @@
  *   chunk row 0  level 0 [4,5)³  a star at (4.5,4.5,4.5) pc, under index row 0 (ordinal 4)
  *   chunk row 1  level 1 [0,2)³  a star at (0.5,0.5,0.5) pc, under index row 1 (ordinal 5)
  */
-import type { StarChunk } from '../../src/@types/data/starCatalog/StarChunk';
+import type { OctreeChunk } from '../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../src/@types/data/starCatalog/StarColumns';
-import type { StarOctree } from '../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../src/@types/octree/Octree';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import {
   NO_CHUNK_REF,
-  OFFSET_FRACTION_LEVELS,
-  STAR_COLUMN_SCHEMA,
+  OFFSET_FRACTION_LEVELS
 } from '../../src/data/octree/octreeFormat';
+import { STAR_COLUMN_SCHEMA } from "../../src/data/octree/starOctreeFamily";
 
 function columns(offsets: readonly number[]): StarColumns {
   const count = offsets.length / 3;
@@ -44,10 +44,11 @@ function table(rows: readonly (readonly number[])[]): OctreeNodeTable {
   };
 }
 
-export function multiRootStarOctree(): { octree: StarOctree; chunk: StarChunk } {
-  const octree: StarOctree = {
+export function multiRootStarOctree(): { octree: Octree<StarColumns>; chunk: OctreeChunk<StarColumns> } {
+  const octree: Octree<StarColumns> = {
     grid: { bits: 10, origin: [0, 0, 0], cellEdge: 1 },
-    starCount: 2,
+    family: 'star',
+    recordCount: 2,
     columns: STAR_COLUMN_SCHEMA,
     nodes: table([
       [1, 56, 1, 0, 0, 1, 0],
@@ -63,7 +64,7 @@ export function multiRootStarOctree(): { octree: StarOctree; chunk: StarChunk } 
     chunkNodeCap: 2,
     chunkCount: 1,
   };
-  const chunk: StarChunk = {
+  const chunk: OctreeChunk<StarColumns> = {
     ref: octree.chunks[0]!,
     parent: null,
     nodes: table([

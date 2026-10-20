@@ -22,7 +22,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { planetsPass } from '../../../../../src/services/engine/frame/passes/planetsPass';
 import { texturedBodiesPass } from '../../../../../src/services/engine/frame/passes/texturedBodiesPass';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';

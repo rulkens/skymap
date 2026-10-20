@@ -62,7 +62,7 @@ import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBody
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 
 /**
  * Resolve a body's ring radii into planet-radius units (ring radius / body

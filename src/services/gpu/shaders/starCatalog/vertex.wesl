@@ -82,15 +82,15 @@
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::StarUniforms;
-import package::starCatalog::cutIo::CutNode;
-import package::starCatalog::cutIo::CutUniforms;
-import package::starCatalog::cutIo::CutStream;
-import package::starCatalog::cutIo::nodeEdgeCells;
-import package::starCatalog::cutIo::nodeOwnCount;
-import package::starCatalog::cutIo::OPACITY_CHANNELS;
-import package::starCatalog::cutIo::nodeMinCells;
-import package::starCatalog::cutIo::leafEntryNode;
-import package::starCatalog::cutIo::leafEntryBlock;
+import package::octree::cutIo::CutNode;
+import package::octree::cutIo::CutUniforms;
+import package::octree::cutIo::CutStream;
+import package::octree::cutIo::nodeEdgeCells;
+import package::octree::cutIo::nodeOwnCount;
+import package::octree::cutIo::OPACITY_CHANNELS;
+import package::octree::cutIo::nodeMinCells;
+import package::octree::cutIo::leafEntryNode;
+import package::octree::cutIo::leafEntryBlock;
 import package::starCatalog::tint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;

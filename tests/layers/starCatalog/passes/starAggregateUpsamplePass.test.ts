@@ -16,9 +16,10 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -46,7 +47,7 @@ function makeCtx(offscreenView: GPUTextureView, camPos: Readonly<Vec3>): FrameVi
   } as unknown as FrameView;
 }
 
-function makeCatalog(): StarOctree {
+function makeCatalog(): Octree<StarColumns> {
   return starOctreeFromSkst({
     starCount: 1,
     nodeCount: 1,

@@ -38,7 +38,7 @@ import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from '../sceneBodyStates';
 

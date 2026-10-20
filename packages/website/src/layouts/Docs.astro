@@ -11,6 +11,7 @@ import DocsNav from '../components/DocsNav/DocsNav.tsx';
 import FigureSheet from '../components/FigureSheet/FigureSheet.tsx';
 import PageSections from '../components/PageSections/PageSections.tsx';
 import { DOCS_TREE } from '../data/docsTree';
+import { loadDocsTree } from '../utils/loadDocsTree';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { docsPlace } from '../utils/docsPlace';
 import { tocSections } from '../utils/tocSections';
@@ -20,18 +21,27 @@ import DocsLayout from './DocsLayout/DocsLayout.tsx';
 type Props = {
   path: string;
   description: string;
+  image?: string;
+  job?: string;
   headings: readonly MarkdownHeading[];
   factIds: readonly string[];
 };
 
-const { path, description, headings, factIds } = Astro.props;
-const { title } = docsPlace(DOCS_TREE, path).page;
+const { path, description, image, job, headings, factIds } = Astro.props;
+const tree = await loadDocsTree();
+const place = docsPlace(tree, path);
+const { title } = place.page;
+// A text carries its job in its front matter; a page made from data has it on its row.
+const rowJob = DOCS_TREE.flatMap((group) => group.pages).find((row) => row.path === path)?.job;
 const sections = tocSections(headings);
 ---
 
 <Base
   title={`${title} | Skymap docs`}
   description={description}
+  image={image}
+  job={job ?? rowJob}
+  jobSetIn={job === undefined && rowJob !== undefined ? 'docsTree.ts' : undefined}
   skipTo="page"
   jsonLd={[
     breadcrumbJsonLd(Astro.site!, [
@@ -40,8 +50,8 @@ const sections = tocSections(headings);
     ]),
   ]}
 >
-  <DocsLayout path={path} description={description} headings={headings} factIds={factIds}>
-    <DocsNav slot="nav" current={path} sections={sections} groups={DOCS_TREE.map(({ name, pages }) => ({ name, pages }))} client:visible />
+  <DocsLayout place={place} description={description} headings={headings} factIds={factIds}>
+    <DocsNav slot="nav" current={path} sections={sections} groups={tree.map(({ name, pages }) => ({ name, pages }))} client:visible />
     {sections.length > 0 && <PageSections slot="toc" sections={sections} client:visible />}
     <FigureSheet slot="sheet" client:idle />
     <slot />
