@@ -66,3 +66,16 @@
 .code {
   letter-spacing: 0.08em;
 }
+
+/* Dome mode: a flat QR in the corner the fisheye disc leaves dark. On a square screen
+   the corner clears the disc while the QR's inner corner stays within 14.6vmin, so 11vmin
+   plus a 2vmin inset fits; a wide screen's side margin gives it room to grow. */
+.cornerQr {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 2vmin);
+  left: 2vmin;
+  z-index: var(--z-bottom-stack);
+  width: clamp(11vmin, calc(50vw - 50vh - 4vmin), 18rem);
+  height: auto;
+  pointer-events: none;
+}

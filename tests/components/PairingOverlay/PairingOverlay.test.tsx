@@ -19,7 +19,7 @@ describe('PairingOverlay', () => {
     expect(screen.getByRole('img', { name: /QR code/ }).querySelector('path')).not.toBeNull();
   });
 
-  it('under ?dome offers the code as text and no flat DOM card', () => {
+  it('under ?dome offers the code as text and a flat QR beside the disc', () => {
     window.history.replaceState(null, '', '/?dome');
     vi.mocked(useAppSelector).mockReturnValue({
       phase: 'waiting',
@@ -29,7 +29,7 @@ describe('PairingOverlay', () => {
     render(<PairingOverlayContainer />);
     window.history.replaceState(null, '', '/');
     expect(screen.getByRole('status').textContent).toContain('K7M2Q9XA');
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.getByRole('img', { name: 'QR code for the pairing address' })).toBeTruthy();
   });
 
   it('renders nothing once paired', () => {
