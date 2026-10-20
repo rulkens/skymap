@@ -28,6 +28,7 @@ import { galaxyRecordBridge } from '../../../../src/layers/galaxyCatalog/present
 import { structureMembership } from '../../../../src/layers/galaxyCatalog/present/structureMembership';
 import { galaxyColumnsOf } from '../../../../src/utils/galaxy/galaxyColumnsOf';
 import { cartesianToRaDec } from '../../../../src/utils/math/cartesianToRaDec';
+import { octreeChunkInfoPath } from '../../../../src/utils/octree/octreeChunkInfoPath';
 import { octreeChunkPath } from '../../../../src/utils/octree/octreeChunkPath';
 import { octreeFromIndex } from '../../../../src/utils/octree/octreeFromIndex';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
@@ -38,8 +39,8 @@ const PGC_BASE = 1_000_000;
 const NAMED_ROW = 7;
 const ENTRY = SOURCE_REGISTRY[Source.Glade];
 
-/** pgc = PGC_BASE + row, except every 10th row, which has none (objId 0). */
-function makeCloud(): GalaxyCatalog {
+/** pgc = PGC_BASE + row, except every 10th row, which has none (objId 0); a cube `spreadMpc` wide. */
+function makeCloud(spreadMpc = 800): GalaxyCatalog {
   const rand = mulberry32(11);
   const f = (fill: () => number) => Float32Array.from({ length: N }, fill);
   return {
@@ -47,7 +48,11 @@ function makeCloud(): GalaxyCatalog {
     objIDs: BigUint64Array.from({ length: N }, (_, i) =>
       i % 10 === 0 ? 0n : BigInt(PGC_BASE + i),
     ),
-    positions: f(() => (rand() - 0.5) * 800),
+    // Off the origin, so a dense cube still has well-defined directions.
+    positions: Float32Array.from(
+      { length: 3 * N },
+      (_, i) => (i % 3 === 0 ? spreadMpc : 0) + (rand() - 0.5) * spreadMpc,
+    ),
     magU: f(() => 16 + rand()),
     magG: f(() => 14 + rand() * 5),
     magR: f(() => 14 + rand() * 5),
@@ -70,16 +75,35 @@ let outDir: string;
 let cloud: GalaxyCatalog;
 let payload: GalaxyOctreePayload;
 
-/** A logical data path's bytes from the bake, null when the bake has no such file. */
-async function fetchBytes(path: string): Promise<ArrayBuffer | null> {
-  const file = join(outDir, path);
-  if (!fs.existsSync(file)) return null;
-  const b = fs.readFileSync(file);
-  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+/** A logical data path's bytes from a bake, null when the bake has no such file. */
+const fetchFrom =
+  (dir: () => string) =>
+  async (path: string): Promise<ArrayBuffer | null> => {
+    const file = join(dir(), path);
+    if (!fs.existsSync(file)) return null;
+    const b = fs.readFileSync(file);
+    return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+  };
+const fetchBytes = fetchFrom(() => outDir);
+
+/** A bake's index payload, as `galaxyOctreeFetcher` decodes it. */
+async function payloadOf(fetch: typeof fetchBytes): Promise<GalaxyOctreePayload> {
+  const index = decodeOctreeIndex((await fetch('galaxy-octree/v1/glade.bin'))!);
+  return {
+    octree: octreeFromIndex(index, galaxyColumnsOf),
+    header: index.header,
+    info: decodeOctreeInfo(
+      (await fetch('galaxy-octree/v1/glade.info.bin'))!,
+      GALAXY_INFO_REQUIRED_COLUMNS,
+    ).columns,
+  };
 }
 
 /** The source with these chunk ids resident (decoded from disk, as the stream would). */
-async function sourceWith(resident: readonly number[] = []): Promise<GalaxyRecordSource> {
+async function sourceWith(
+  resident: readonly number[] = [],
+  fetch: typeof fetchBytes = fetchBytes,
+): Promise<GalaxyRecordSource> {
   const chunks = new Map<number, OctreeChunk<GalaxyColumns>>();
   for (const id of resident) {
     const ref = payload.header.chunkDirectory!.find((r) => r.id === id)!;
@@ -97,11 +121,8 @@ async function sourceWith(resident: readonly number[] = []): Promise<GalaxyRecor
   }
   return octreeGalaxyRecordSource(ENTRY, payload, {
     renderer: { recordOrdinal: (_s, n) => n, poolRecordIndex: (_s, n) => n },
-    residency: {
-      chunk: (id) => chunks.get(id) ?? null,
-      chunkOfRecord: () => null,
-    },
-    fetchBytes,
+    residency: { chunk: (id) => chunks.get(id) ?? null },
+    fetchBytes: fetch,
   });
 }
 
@@ -111,7 +132,7 @@ async function chunkRecord(): Promise<{ pgc: number; ordinal: number }> {
     'objId',
     'ordinal',
   ]).columns;
-  const ordinals = shard.get('ordinal') as Float32Array;
+  const ordinals = shard.get('ordinal') as Float64Array;
   const i = ordinals.findIndex((o) => o >= payload.octree.records.count);
   return { pgc: Number((shard.get('objId') as BigUint64Array)[i]!), ordinal: ordinals[i]! };
 }
@@ -122,15 +143,7 @@ beforeAll(async () => {
   outDir = fs.mkdtempSync(join(tmpdir(), 'octree-record-source-'));
   cloud = makeCloud();
   buildGladeOctree(cloud, { outDir, biasWeight: 'none', aliasPgcs: [PGC_BASE + NAMED_ROW] });
-  const index = decodeOctreeIndex((await fetchBytes('galaxy-octree/v1/glade.bin'))!);
-  payload = {
-    octree: octreeFromIndex(index, galaxyColumnsOf),
-    header: index.header,
-    info: decodeOctreeInfo(
-      (await fetchBytes('galaxy-octree/v1/glade.info.bin'))!,
-      GALAXY_INFO_REQUIRED_COLUMNS,
-    ).columns,
-  };
+  payload = await payloadOf(fetchBytes);
 });
 
 afterAll(() => fs.rmSync(outDir, { recursive: true, force: true }));
@@ -199,6 +212,50 @@ describe('octreeGalaxyRecordSource', () => {
     expect(bridge.row(Source.Glade, ordinal)).toEqual(flat.loadRow(ordinal));
   });
 
+  it('a chunk pair whose decode throws leaves the cache, so the next row ask fetches again', async () => {
+    const ordinal = payload.octree.records.count + 5;
+    let corrupt = true;
+    const source = await sourceWith([], async (path) => {
+      if (corrupt && path.includes('.info.') && !path.endsWith('glade.info.bin')) {
+        corrupt = false;
+        return new ArrayBuffer(16);
+      }
+      return fetchBytes(path);
+    });
+    await expect(source.loadRow(ordinal)).rejects.toThrow();
+    expect(await source.loadRow(ordinal)).not.toBeNull();
+  });
+
+  it("a resident chunk's row fetches only its info object", async () => {
+    const ref = payload.header.chunkDirectory![0]!;
+    const fetched: string[] = [];
+    const source = await sourceWith([ref.id], (path) => {
+      fetched.push(path);
+      return fetchBytes(path);
+    });
+    fetched.length = 0;
+    expect(await source.loadRow(ref.recordBase)).not.toBeNull();
+    expect(fetched).toEqual([octreeChunkInfoPath('galaxy', ENTRY.binBaseName, ref)]);
+  });
+
+  it.each(['chunkDirectory', 'namedPgcs', 'pgcShards'] as const)(
+    'an index without %s is refused',
+    (key) => {
+      const header = { ...payload.header, [key]: undefined };
+      expect(() =>
+        octreeGalaxyRecordSource(
+          ENTRY,
+          { ...payload, header },
+          {
+            renderer: { recordOrdinal: (_s, n) => n, poolRecordIndex: (_s, n) => n },
+            residency: { chunk: () => null },
+            fetchBytes,
+          },
+        ),
+      ).toThrow(key);
+    },
+  );
+
   it('hasDurableId is false for objId 0 and for pgcs outside namedPgcs', async () => {
     const source = await sourceWith();
     expect(source.hasDurableId(`pgc-${PGC_BASE + NAMED_ROW}`)).toBe(true);
@@ -215,5 +272,37 @@ describe('octreeGalaxyRecordSource', () => {
 
     expect(await source.resolvePosition(ra, dec, Math.hypot(row.x, row.y, row.z))).toBe(ordinal);
     expect(source.resolvePosition(ra, dec, null)).toBeNull();
+  });
+
+  it('resolvePosition finds a record from anywhere inside the match tolerance, across chunk faces', async () => {
+    // Dense enough that records sit within the 0.05 Mpc distance tolerance of a chunk's face.
+    const denseDir = fs.mkdtempSync(join(tmpdir(), 'octree-record-source-dense-'));
+    try {
+      buildGladeOctree(makeCloud(4), { outDir: denseDir, biasWeight: 'none', aliasPgcs: [] });
+      const fetch = fetchFrom(() => denseDir);
+      const dense = await payloadOf(fetch);
+      const source = octreeGalaxyRecordSource(ENTRY, dense, {
+        renderer: { recordOrdinal: (_s, n) => n, poolRecordIndex: (_s, n) => n },
+        residency: { chunk: () => null },
+        fetchBytes: fetch,
+      });
+      const misses: number[] = [];
+      for (
+        let ordinal = dense.octree.records.count;
+        ordinal < dense.octree.recordCount;
+        ordinal++
+      ) {
+        const row = (await source.loadRow(ordinal)) as GalaxyRow | null;
+        if (row === null) continue;
+        const [ra, dec] = cartesianToRaDec(row.x, row.y, row.z);
+        const d = Math.hypot(row.x, row.y, row.z);
+        for (const delta of [0.045, -0.045]) {
+          if ((await source.resolvePosition(ra, dec, d + delta)) === null) misses.push(ordinal);
+        }
+      }
+      expect(misses).toEqual([]);
+    } finally {
+      fs.rmSync(denseDir, { recursive: true, force: true });
+    }
   });
 });

@@ -122,6 +122,31 @@ describe('createProceduralDiskSubsystem', () => {
     expect(quarter.instances[0]!.sbAmp).toBeCloseTo(full.instances[0]!.sbAmp * 0.25, 5);
   });
 
+  it('drops the sticky disks of a block that leaves residency', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 2 });
+    const sys = createProceduralDiskSubsystem();
+    const input = makeInput(new Map([[Source.Glade, makeDenseCloud(4)]]));
+    const flat = input.records.get(Source.Glade)!;
+    let resident = true;
+    const records = new Map([
+      [
+        Source.Glade,
+        {
+          ...flat,
+          forEachResidentBlock: (visit: Parameters<typeof flat.forEachResidentBlock>[0]) => {
+            if (resident) flat.forEachResidentBlock(visit);
+          },
+        },
+      ],
+    ]);
+    const chunked = { ...input, records };
+
+    runProceduralSolo(walk, sys, chunked);
+    expect(runProceduralSolo(walk, sys, chunked).instances.length).toBe(4);
+    resident = false;
+    expect(runProceduralSolo(walk, sys, chunked).instances.length).toBe(0);
+  });
+
   it('emits nothing for a cloud whose source bit is clear', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createProceduralDiskSubsystem();

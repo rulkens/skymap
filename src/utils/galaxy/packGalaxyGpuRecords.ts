@@ -11,20 +11,19 @@ import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumn
 import type { GalaxyPointDerived } from '../../@types/engine/GalaxyPointDerived';
 import type { GalaxyPointFields } from '../../@types/engine/GalaxyPointFields';
 import type { GalaxyPointStats } from '../../@types/engine/GalaxyPointStats';
+import type { GalaxyOctreeObject } from '../../@types/data/galaxyCatalog/GalaxyOctreeObject';
 import type { ColumnId } from '../../@types/octree/ColumnId';
 import type { Octree } from '../../@types/octree/Octree';
-import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
-import type { Vec3 } from '../../@types/math/Vec3';
 import { GALAXY_GPU_RECORD_WORDS } from '../../data/galaxyCatalog/galaxyGpuRecordWords';
-import { OFFSET_FRACTION_LEVELS } from '../../data/octree/octreeFormat';
+import {
+  FLAG_DIAMETER_FALLBACK,
+  FLAG_ORIENTATION_FALLBACK,
+} from '../../data/octree/galaxyRecordFlags';
 import { f32ToF16Bits } from '../math/f32ToF16Bits';
-import { octreeNodeOriginRelCamMpc } from '../octree/octreeNodeOriginRelCamMpc';
 import { bandMagOfBakedAbsMag } from './bandMagOfBakedAbsMag';
 import { derivePointRecord } from './derivePointRecord';
+import { forEachGalaxyOctreeRecord } from './forEachGalaxyOctreeRecord';
 
-const ORIGIN: Vec3 = [0, 0, 0];
-const FLAG_ORIENTATION_FALLBACK = 1;
-const FLAG_DIAMETER_FALLBACK = 2;
 const HALF_SHIFT = 16;
 const ABS_MAG_SHIFT = 16;
 const COLOUR_SHIFT = 24;
@@ -32,13 +31,13 @@ const WEIGHT_SHIFT = 8;
 const FLAGS_SHIFT = 16;
 
 export function packGalaxyGpuRecords(
-  object: { readonly nodes: OctreeNodeTable; readonly records: GalaxyColumns },
+  object: GalaxyOctreeObject,
   octree: Pick<Octree<GalaxyColumns>, 'family' | 'grid' | 'columns'>,
   stats: GalaxyPointStats,
   out: Uint32Array,
   at: number,
 ): void {
-  const { nodes, records } = object;
+  const { records } = object;
   const outF32 = new Float32Array(out.buffer, out.byteOffset, out.length);
   const codeOf = (id: ColumnId): ((v: number) => number) => {
     const c = octree.columns.find((s) => s.id === id);
@@ -72,49 +71,36 @@ export function packGalaxyGpuRecords(
     sbAmp: 0,
   };
 
-  for (let row = 0; row < nodes.count; row++) {
-    const first = nodes.firstRecord[row]!;
-    // The blob, when the row has children, follows its own records.
-    const end = first + nodes.ownCount[row]! + (nodes.childMask[row] !== 0 ? 1 : 0);
-    if (end === first) continue;
-    const { originRelCamMpc: o, cellScaleMpc } = octreeNodeOriginRelCamMpc(
-      octree.grid,
-      octree.family,
-      nodes.morton[row]!,
-      nodes.level[row]!,
-      ORIGIN,
-    );
-    const scale = cellScaleMpc / OFFSET_FRACTION_LEVELS;
-    for (let r = first; r < end; r++) {
-      const ox = records.offset[3 * r]!;
-      const oy = records.offset[3 * r + 1]!;
-      const oz = records.offset[3 * r + 2]!;
-      f.x = o[0] + ox * scale;
-      f.y = o[1] + oy * scale;
-      f.z = o[2] + oz * scale;
-      const absMag = records.absMag[r]!;
-      f.magnitude = bandMagOfBakedAbsMag(absMag, Math.hypot(f.x, f.y, f.z), stats.magOffset);
-      f.axisRatio = records.axisRatio[r]!;
-      f.positionAngleDeg = records.pa[r]!;
-      f.diameterKpc = 10 ** records.logSize[r]!;
-      const flags = flagsCode(records.flags[r]!);
-      f.orientationIsFallback = (flags & FLAG_ORIENTATION_FALLBACK) !== 0;
-      f.diameterIsFallback = (flags & FLAG_DIAMETER_FALLBACK) !== 0;
-      derivePointRecord(f, stats, d);
+  // Blobs included: the pool draws them (D9).
+  forEachGalaxyOctreeRecord(object, octree, (r, x, y, z) => {
+    const ox = records.offset[3 * r]!;
+    const oy = records.offset[3 * r + 1]!;
+    const oz = records.offset[3 * r + 2]!;
+    f.x = x;
+    f.y = y;
+    f.z = z;
+    const absMag = records.absMag[r]!;
+    f.magnitude = bandMagOfBakedAbsMag(absMag, Math.hypot(f.x, f.y, f.z), stats.magOffset);
+    f.axisRatio = records.axisRatio[r]!;
+    f.positionAngleDeg = records.pa[r]!;
+    f.diameterKpc = 10 ** records.logSize[r]!;
+    const flags = flagsCode(records.flags[r]!);
+    f.orientationIsFallback = (flags & FLAG_ORIENTATION_FALLBACK) !== 0;
+    f.diameterIsFallback = (flags & FLAG_DIAMETER_FALLBACK) !== 0;
+    derivePointRecord(f, stats, d);
 
-      const w = (at + r) * GALAXY_GPU_RECORD_WORDS;
-      out[w] = ox | (oy << HALF_SHIFT);
-      out[w + 1] =
-        oz |
-        (absMagCode(absMag) << ABS_MAG_SHIFT) |
-        (colourCode(records.colourIndex[r]!) << COLOUR_SHIFT);
-      out[w + 2] =
-        axisRatioCode(f.axisRatio) |
-        (weightCode(records.angularWeight[r]!) << WEIGHT_SHIFT) |
-        (flags << FLAGS_SHIFT);
-      out[w + 3] = f32ToF16Bits(d.paCos) | (f32ToF16Bits(d.paSin) << HALF_SHIFT);
-      out[w + 4] = f32ToF16Bits(d.magnitude) | (f32ToF16Bits(d.sbAmp) << HALF_SHIFT);
-      outF32[w + 5] = d.radiusMpc;
-    }
-  }
+    const w = (at + r) * GALAXY_GPU_RECORD_WORDS;
+    out[w] = ox | (oy << HALF_SHIFT);
+    out[w + 1] =
+      oz |
+      (absMagCode(absMag) << ABS_MAG_SHIFT) |
+      (colourCode(records.colourIndex[r]!) << COLOUR_SHIFT);
+    out[w + 2] =
+      axisRatioCode(f.axisRatio) |
+      (weightCode(records.angularWeight[r]!) << WEIGHT_SHIFT) |
+      (flags << FLAGS_SHIFT);
+    out[w + 3] = f32ToF16Bits(d.paCos) | (f32ToF16Bits(d.paSin) << HALF_SHIFT);
+    out[w + 4] = f32ToF16Bits(d.magnitude) | (f32ToF16Bits(d.sbAmp) << HALF_SHIFT);
+    outF32[w + 5] = d.radiusMpc;
+  });
 }

@@ -248,10 +248,12 @@ describe('createDiskPlannerWalk', () => {
     resident = true;
     frame();
 
-    // Back from eviction, the block starts a fresh pass rather than resuming at row 2.
+    // The eviction frame purges the block's whole range; back from eviction, the block
+    // starts a fresh pass rather than resuming at row 2.
     const windows = events.filter((e) => e[0] === 'beginBlock').map((e) => [e[2], e[3]]);
     expect(windows).toEqual([
       [100, 102],
+      [100, 108],
       [100, 102],
     ]);
   });

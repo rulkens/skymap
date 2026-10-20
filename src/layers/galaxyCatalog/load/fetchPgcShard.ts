@@ -1,3 +1,4 @@
+import type { FetchDataBytes } from '../../../@types/loading/FetchDataBytes';
 import type { PgcShard } from '../@types/PgcShard';
 import { decodeOctreeInfo } from '../../../data/octree/decodeOctreeInfo';
 import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
@@ -6,13 +7,13 @@ import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
 export async function fetchPgcShard(
   name: string,
   k: number,
-  fetchBytes: (path: string) => Promise<ArrayBuffer | null>,
+  fetchBytes: FetchDataBytes,
 ): Promise<PgcShard | null> {
   const buf = await fetchBytes(`${GALAXY_OCTREE_FAMILY.dataPrefix}/${name}.pgc-${k}.bin`);
   if (buf === null) return null;
   const { columns } = decodeOctreeInfo(buf, ['objId', 'ordinal']);
   return {
     objId: columns.get('objId') as BigUint64Array,
-    ordinal: columns.get('ordinal') as Float32Array,
+    ordinal: columns.get('ordinal') as Float64Array,
   };
 }

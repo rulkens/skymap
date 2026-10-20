@@ -15,11 +15,21 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ColumnId } from '../../../@types/octree/ColumnId';
 import type { OctreeChunkRef } from '../../../@types/octree/OctreeChunkRef';
 import type { OctreeColumn } from '../../../@types/octree/OctreeColumn';
+import type { OctreeIndexHeader } from '../../../@types/octree/OctreeIndexHeader';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import type { StatId } from '../../../@types/octree/StatId';
+import type { GalaxyOctreeObjectAtBase } from '../@types/GalaxyOctreeObjectAtBase';
 import type { GalaxyOctreePayload } from '../@types/GalaxyOctreePayload';
 import type { OctreeGalaxyRecordSourceDeps } from '../@types/OctreeGalaxyRecordSourceDeps';
 import type { PgcShard } from '../@types/PgcShard';
+import {
+  POSITION_MATCH_MAX_ARCSEC,
+  POSITION_MATCH_MAX_DIST_DELTA_MPC,
+} from '../../../data/galaxyCatalog/positionMatchTolerance';
+import {
+  FLAG_DIAMETER_FALLBACK,
+  FLAG_ORIENTATION_FALLBACK,
+} from '../../../data/octree/galaxyRecordFlags';
 import { OCTREE_FAMILIES } from '../../../data/octree/octreeFamilies';
 import { NO_CHUNK_REF, OCTANTS } from '../../../data/octree/octreeFormat';
 import { galaxyColumnBlockOfOctreeObject } from '../../../utils/galaxy/galaxyColumnBlockOfOctreeObject';
@@ -33,12 +43,11 @@ import { octreeIndex } from '../../../utils/octree/octreeIndex';
 import { createChunkPairCache } from './createChunkPairCache';
 import { fetchPgcShard } from './fetchPgcShard';
 
-const FLAG_ORIENTATION_FALLBACK = 1;
-const FLAG_DIAMETER_FALLBACK = 2;
 const PGC_ID = /^pgc-(\d+)$/;
+const ARCSEC_RAD = Math.PI / (180 * 3600);
 
 export function octreeGalaxyRecordSource(
-  entry: GalaxyCatalogRegistryEntry,
+  entry: Pick<GalaxyCatalogRegistryEntry, 'code' | 'binBaseName'>,
   { octree, header, info }: GalaxyOctreePayload,
   deps: OctreeGalaxyRecordSourceDeps,
 ): GalaxyRecordSource {
@@ -49,12 +58,17 @@ export function octreeGalaxyRecordSource(
     if (v === undefined) throw new Error(`galaxy octree index lacks the ${id} stat`);
     return v;
   };
+  const key = <K extends 'chunkDirectory' | 'namedPgcs' | 'pgcShards'>(k: K) => {
+    const v = header[k];
+    if (v === undefined) throw new Error(`galaxy octree index lacks ${k}`);
+    return v as NonNullable<OctreeIndexHeader[K]>;
+  };
   const magOffset = stat('magOffset');
-  const directory = header.chunkDirectory ?? [];
+  const directory = key('chunkDirectory');
   const refById = new Map(directory.map((ref) => [ref.id, ref]));
-  const namedPgcs = header.namedPgcs ?? [];
-  const shardFirstPgcs = header.pgcShards ?? [];
-  const pairs = createChunkPairCache(name, octree, deps.fetchBytes);
+  const namedPgcs = key('namedPgcs');
+  const shardFirstPgcs = key('pgcShards');
+  const pairOf = createChunkPairCache(name, octree, deps.residency.chunk, deps.fetchBytes);
   const shards = new Map<number, Promise<PgcShard | null>>();
   const blocks = new WeakMap<OctreeNodeTable, GalaxyColumnBlock>();
   const indexObject: GalaxyOctreeObject = { nodes: octree.nodes, records: octree.records };
@@ -130,54 +144,68 @@ export function octreeGalaxyRecordSource(
   }
 
   /**
-   * Down from the index root toward `p`'s cell, through each chunk root's chunk (a chunk
-   * can have several roots and its ref names only the first, so the cell's child is looked
-   * up by key in the chunk); the objects passed hold every record whose cell contains `p`.
+   * Down from the index root through every cell the box `p ± r` meets, into each chunk root's
+   * chunk (a chunk can have several roots and its ref names only the first, so a cell's child
+   * is looked up by key in the chunk); the objects passed hold every record inside the box.
    */
-  async function objectsAbove(p: Vec3): Promise<{ object: GalaxyOctreeObject; base: number }[]> {
+  async function objectsNear(p: Vec3, r: number): Promise<GalaxyOctreeObjectAtBase[]> {
     const { unitMpc } = OCTREE_FAMILIES[octree.family];
-    const passed = [{ object: indexObject, base: 0 }];
-    let object = indexObject;
-    let row = object.nodes.count - 1;
-    while (row >= 0) {
+    const passed: GalaxyOctreeObjectAtBase[] = [{ object: indexObject, base: 0 }];
+    const stack = [{ object: indexObject, row: indexObject.nodes.count - 1 }];
+    while (stack.length > 0) {
+      const { object, row } = stack.pop()!;
       const { boxOrigin, boxEdge, childIndex } = octreeIndex(object.nodes, octree.grid);
       const half = boxEdge[row]! / 2;
-      let octant = 0;
-      for (let a = 0; a < 3; a++) {
-        if (p[a]! / unitMpc >= boxOrigin[row * 3 + a]! + half) octant |= 1 << a;
+      let met = 0;
+      for (let octant = 0; octant < OCTANTS; octant++) {
+        let meets = true;
+        for (let a = 0; a < 3; a++) {
+          const lo = boxOrigin[row * 3 + a]! + ((octant >> a) & 1) * half;
+          meets &&= (p[a]! + r) / unitMpc >= lo && (p[a]! - r) / unitMpc <= lo + half;
+        }
+        if (meets) met |= 1 << octant;
       }
       const chunkId = object.nodes.chunkRef[row]!;
       if (chunkId === NO_CHUNK_REF) {
-        row = childIndex[row * OCTANTS + octant]!;
+        for (let octant = 0; octant < OCTANTS; octant++) {
+          const child = childIndex[row * OCTANTS + octant]!;
+          if ((met >> octant) & 1 && child >= 0) stack.push({ object, row: child });
+        }
         continue;
       }
       const ref = refById.get(chunkId);
-      const pair = ref === undefined ? null : await pairs.get(ref);
-      if (ref === undefined || pair === null) break;
-      const level = object.nodes.level[row]! - 1;
-      const morton = object.nodes.morton[row]! * OCTANTS + octant;
-      object = pair.chunk;
-      passed.push({ object, base: ref.recordBase });
-      const child = lowerBoundNodeRow(object.nodes, level, morton);
-      const found =
-        child < object.nodes.count &&
-        object.nodes.level[child] === level &&
-        object.nodes.morton[child] === morton;
-      row = found ? child : -1;
+      const pair = met === 0 || ref === undefined ? null : await pairOf(ref);
+      if (ref === undefined || pair === null) continue;
+      const { nodes } = pair.chunk;
+      if (!passed.some((e) => e.object === pair.chunk)) {
+        passed.push({ object: pair.chunk, base: ref.recordBase });
+      }
+      for (let octant = 0; octant < OCTANTS; octant++) {
+        if (((met >> octant) & 1) === 0) continue;
+        const level = object.nodes.level[row]! - 1;
+        const morton = object.nodes.morton[row]! * OCTANTS + octant;
+        const child = lowerBoundNodeRow(nodes, level, morton);
+        if (child < nodes.count && nodes.level[child] === level && nodes.morton[child] === morton) {
+          stack.push({ object: pair.chunk, row: child });
+        }
+      }
     }
     return passed;
   }
 
-  async function nearestOnPath(
+  async function nearestInTolerance(
     raDeg: number,
     decDeg: number,
     distMpc: number,
   ): Promise<number | null> {
     const cosDec = Math.cos((decDeg * Math.PI) / 180);
+    // The match tolerance as a box half-edge: the distance band, plus the 30″ arc at that distance.
+    const r = POSITION_MATCH_MAX_DIST_DELTA_MPC + distMpc * POSITION_MATCH_MAX_ARCSEC * ARCSEC_RAD;
     let best: number | null = null;
     let bestSqArcsec = Infinity;
-    for (const { object, base } of await objectsAbove(
+    for (const { object, base } of await objectsNear(
       raDecDistToCartesian(raDeg, decDeg, distMpc),
+      r,
     )) {
       const { positions, count } = blockOf(object);
       const i = nearestRowByDirection(positions, count, raDeg, decDeg, distMpc);
@@ -233,9 +261,9 @@ export function octreeGalaxyRecordSource(
       if (ordinal < octree.records.count) return rowOf(indexObject, info, ordinal, ordinal);
       const ref = chunkOfOrdinal(ordinal);
       if (ref === null) return null;
-      return pairs
-        .get(ref)
-        .then((pair) => pair && rowOf(pair.chunk, pair.info, ordinal - ref.recordBase, ordinal));
+      return pairOf(ref).then(
+        (pair) => pair && rowOf(pair.chunk, pair.info, ordinal - ref.recordBase, ordinal),
+      );
     },
     resolveDurableId(id) {
       const pgc = pgcOf(id);
@@ -250,6 +278,6 @@ export function octreeGalaxyRecordSource(
       });
     },
     resolvePosition: (raDeg, decDeg, distMpc) =>
-      distMpc === null ? null : nearestOnPath(raDeg, decDeg, distMpc),
+      distMpc === null ? null : nearestInTolerance(raDeg, decDeg, distMpc),
   };
 }

@@ -101,7 +101,8 @@ function readColumn(dv: DataView, at: number, n: number, c: ColumnSchema): Octre
       return out;
     }
     default: {
-      const out = new Float32Array(n);
+      // f32 holds integers exactly only to 2^24; a u32 (an ordinal) needs f64.
+      const out = c.store === 'u32' ? new Float64Array(n) : new Float32Array(n);
       for (let i = 0; i < n; i++) out[i] = c.q0 + readIntegerScalar(dv, at + i * stride, c.store) * c.q1;
       return out;
     }

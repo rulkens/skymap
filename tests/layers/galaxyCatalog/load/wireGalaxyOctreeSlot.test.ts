@@ -53,6 +53,9 @@ const HEADER = {
     orientationEstimated: 5,
     diameterEstimated: 6,
   },
+  chunkDirectory: [],
+  namedPgcs: [],
+  pgcShards: [],
 } as unknown as OctreeIndexHeader;
 
 describe('wireGalaxyOctreeSlot', () => {

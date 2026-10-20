@@ -46,10 +46,11 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
 
   // The shared stride cursors: which row each block's decimated window resumes
-  // from next frame, by source then ordinal base. One map for BOTH bodies.
-  const strideStartBySource = new Map<SourceType, Map<number, number>>();
+  // from next frame, by source then ordinal base, with the block's row count so
+  // an evicted block's ordinals can be purged. One map for BOTH bodies.
+  const strideStartBySource = new Map<SourceType, Map<number, { next: number; count: number }>>();
   // This source's blocks walked this frame: a chunked source's evicted block
-  // leaves a cursor behind that only this prune removes.
+  // leaves a cursor (and sticky disks) behind that only this prune removes.
   const visited = new Set<number>();
 
   function runFrame(
@@ -80,17 +81,23 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
         continue;
       }
 
-      const cursors = strideStartBySource.get(source) ?? new Map<number, number>();
+      const cursors =
+        strideStartBySource.get(source) ?? new Map<number, { next: number; count: number }>();
       strideStartBySource.set(source, cursors);
 
       visited.clear();
       record.forEachResidentBlock((block, ordinalBase) => {
         visited.add(ordinalBase);
         const positions = block.positions;
+        let cursor = cursors.get(ordinalBase);
+        if (cursor === undefined) {
+          cursor = { next: 0, count: block.count };
+          cursors.set(ordinalBase, cursor);
+        }
         const { safeStart, end, nextStart } = strideWindow(
           block.count,
           decimationFactor,
-          cursors.get(ordinalBase) ?? 0,
+          cursor.next,
         );
 
         procedural.beginBlock(source, ordinalBase + safeStart, ordinalBase + end, ordinalBase);
@@ -121,10 +128,16 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
           }
         }
 
-        cursors.set(ordinalBase, nextStart);
+        cursor.next = nextStart;
       });
       if (cursors.size > visited.size) {
-        for (const base of cursors.keys()) if (!visited.has(base)) cursors.delete(base);
+        for (const [base, { count }] of cursors) {
+          if (visited.has(base)) continue;
+          cursors.delete(base);
+          // A window over the whole evicted block with no rows: each body purges its sticky disks there.
+          procedural.beginBlock(source, base, base + count, base);
+          textured.beginBlock(source, base, base + count, base);
+        }
       }
 
       procedural.endSource(source);

@@ -18,6 +18,10 @@ import {
   GALAXY_INFO_SCHEMA,
   GALAXY_OCTREE_FAMILY,
 } from '../../src/data/octree/galaxyOctreeFamily';
+import {
+  FLAG_DIAMETER_FALLBACK,
+  FLAG_ORIENTATION_FALLBACK,
+} from '../../src/data/octree/galaxyRecordFlags';
 import { Source } from '../../src/data/sources';
 import { countEstimatedProvenance } from '../../src/utils/countEstimatedProvenance';
 import { galaxyMagOffset } from '../../src/utils/galaxy/galaxyMagOffset';
@@ -36,8 +40,6 @@ const MORTON_BITS = 10;
 /** The byte-55 codec's range; `w = 0` (vmax) would otherwise bake as "never baked" and poison blob means. */
 const MIN_WEIGHT = 0.1;
 const MAX_WEIGHT = 10;
-const FLAG_ORIENTATION_FALLBACK = 1;
-const FLAG_DIAMETER_FALLBACK = 2;
 
 export function buildGladeOctree(
   cloud: GalaxyCatalog,

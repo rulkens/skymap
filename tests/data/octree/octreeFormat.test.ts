@@ -193,6 +193,16 @@ describe('octree info objects and the galaxy family', () => {
     expect(list(columns.get('objId')!)).toEqual([0n, 2n ** 53n + 1n, 2n ** 64n - 1n]);
   });
 
+  it('a u32 column decodes exactly past 2^24, where an f32 rounds', () => {
+    const schema: ColumnSchema[] = [{ id: 'ordinal', store: 'u32', q0: 0, q1: 1 }];
+    const header: OctreeInfoHeader = { kind: 'info', records: 1, columns: schema };
+    const raw = new Map<ColumnId, OctreeRawColumn>([['ordinal', Uint32Array.of(2 ** 24 + 1)]]);
+    const buf = encodeOctreeObject(header, null, schema, raw).buffer as ArrayBuffer;
+    expect(list(decodeOctreeInfo(buf, ['ordinal']).columns.get('ordinal')!)).toEqual([
+      2 ** 24 + 1,
+    ]);
+  });
+
   it('an SKOF object round-trips its own columns, NaN f16 included', () => {
     const { header, columns } = decodeOctreeInfo(infoObject(BigUint64Array.of(7n, 8n)), []);
     expect(header).toEqual({ kind: 'info', records: 2, columns: INFO_COLUMNS });

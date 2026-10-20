@@ -2,5 +2,5 @@
 export type PgcShard = {
   readonly objId: BigUint64Array;
   /** The record's catalog-global ordinal. */
-  readonly ordinal: Float32Array;
+  readonly ordinal: Float64Array;
 };

@@ -1,13 +1,16 @@
 /**
- * createChunkPairCache — a galaxy chunk's render and info objects fetched by ref for a
- * lookup (a row, a position descent), kept apart from the render pool so a lookup never
- * takes a slot from what is drawn. LRU by insertion order of a `Map`: a hit re-inserts.
+ * createChunkPairCache — a galaxy chunk's render and info objects by ref for a lookup (a
+ * row, a position descent), kept apart from the render pool so a lookup never takes a slot
+ * from what is drawn; a resident chunk lends its render object, so only the info is fetched.
+ * LRU by insertion order of a `Map`: a hit re-inserts. A miss or a throw leaves the cache,
+ * so a later ask retries.
  */
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
+import type { GalaxyOctreeObject } from '../../../@types/data/galaxyCatalog/GalaxyOctreeObject';
+import type { FetchDataBytes } from '../../../@types/loading/FetchDataBytes';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeChunkRef } from '../../../@types/octree/OctreeChunkRef';
 import type { GalaxyChunkPair } from '../@types/GalaxyChunkPair';
-import type { GalaxyChunkPairCache } from '../@types/GalaxyChunkPairCache';
 import { decodeOctreeChunk } from '../../../data/octree/decodeOctreeChunk';
 import { decodeOctreeInfo } from '../../../data/octree/decodeOctreeInfo';
 import { GALAXY_INFO_REQUIRED_COLUMNS } from '../../../data/octree/galaxyOctreeFamily';
@@ -20,39 +23,40 @@ const PAIRS = 16;
 export function createChunkPairCache(
   name: string,
   octree: Pick<Octree<GalaxyColumns>, 'columns'>,
-  fetchBytes: (path: string) => Promise<ArrayBuffer | null>,
-): GalaxyChunkPairCache {
+  residentChunk: (id: number) => GalaxyOctreeObject | null,
+  fetchBytes: FetchDataBytes,
+): (ref: OctreeChunkRef) => Promise<GalaxyChunkPair | null> {
   const pairs = new Map<number, Promise<GalaxyChunkPair | null>>();
 
   async function load(ref: OctreeChunkRef): Promise<GalaxyChunkPair | null> {
+    const resident = residentChunk(ref.id);
     const [renderBuf, infoBuf] = await Promise.all([
-      fetchBytes(octreeChunkPath('galaxy', name, ref)),
+      resident === null ? fetchBytes(octreeChunkPath('galaxy', name, ref)) : null,
       fetchBytes(octreeChunkInfoPath('galaxy', name, ref)),
     ]);
-    if (renderBuf === null || infoBuf === null) {
-      pairs.delete(ref.id);
-      return null;
+    if (infoBuf === null || (resident === null && renderBuf === null)) return null;
+    let chunk = resident;
+    if (chunk === null) {
+      const { header, nodes, columns } = decodeOctreeChunk(renderBuf!, octree);
+      chunk = { nodes, records: galaxyColumnsOf(columns, header.records) };
     }
-    const { header, nodes, columns } = decodeOctreeChunk(renderBuf, octree);
-    return {
-      chunk: {
-        ref,
-        nodes,
-        records: galaxyColumnsOf(columns, header.records),
-        chunks: header.chunks,
-      },
-      info: decodeOctreeInfo(infoBuf, GALAXY_INFO_REQUIRED_COLUMNS).columns,
-    };
+    return { chunk, info: decodeOctreeInfo(infoBuf, GALAXY_INFO_REQUIRED_COLUMNS).columns };
   }
 
-  return {
-    get(ref) {
-      let pair = pairs.get(ref.id);
-      if (pair !== undefined) pairs.delete(ref.id);
-      else pair = load(ref);
-      pairs.set(ref.id, pair);
-      if (pairs.size > PAIRS) pairs.delete(pairs.keys().next().value!);
-      return pair;
-    },
+  return (ref) => {
+    let pair = pairs.get(ref.id);
+    if (pair !== undefined) {
+      pairs.delete(ref.id);
+    } else {
+      const loading = load(ref);
+      const forget = () => {
+        if (pairs.get(ref.id) === loading) pairs.delete(ref.id);
+      };
+      loading.then((p) => p ?? forget(), forget);
+      pair = loading;
+    }
+    pairs.set(ref.id, pair);
+    if (pairs.size > PAIRS) pairs.delete(pairs.keys().next().value!);
+    return pair;
   };
 }

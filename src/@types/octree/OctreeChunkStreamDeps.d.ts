@@ -1,3 +1,4 @@
+import type { FetchDataBytes } from '../loading/FetchDataBytes';
 import type { OctreeChunk } from './OctreeChunk';
 import type { Octree } from './Octree';
 import type { OctreeStreamFormat } from './OctreeStreamFormat';
@@ -13,5 +14,5 @@ export type OctreeChunkStreamDeps<C extends { readonly count: number }> = {
   /** `renderer.evictChunk` for this source; the parent is still resident when its child goes. */
   readonly evict: (slot: number, hostSlot: number | null) => void;
   /** Resolves null on any failure; defaults to `fetch(dataUrl(path))`. */
-  readonly fetchChunk?: (path: string) => Promise<ArrayBuffer | null>;
+  readonly fetchChunk?: FetchDataBytes;
 };
