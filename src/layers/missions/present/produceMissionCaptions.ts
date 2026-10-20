@@ -6,20 +6,18 @@
  */
 
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
-import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
-import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
-import { SAMPLED_BODY_IDS } from '../../../data/bodies/sampledBodyIds';
+import { MISSIONS_BODY_ROWS } from '../bodies/missionsBodyRows';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
 import { meshBodyCaption } from '../../../utils/labels/meshBodyCaption';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 
-const CRAFT = SAMPLED_BODY_IDS.map((id) =>
-  findByIdOrThrow(SCENE_MESH_BODIES, id, 'produceMissionCaptions'),
-).filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id));
+const CRAFT = MISSIONS_BODY_ROWS.filter((row) => row.position.kind === 'sampled')
+  .map((row) => row.body)
+  .filter(isMeshBody);
 
 export const produceMissionCaptions: LayerScreenLabel<'missions'>['produceLabels'] = (
   state,

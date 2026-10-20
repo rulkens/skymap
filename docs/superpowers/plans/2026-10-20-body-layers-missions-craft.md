@@ -106,7 +106,7 @@ export type BodyPosition =
 
 **Done:** tsc clean; the grep for the old `data/missions/` paths returns nothing.
 
-- [ ] Task 1
+- [x] Task 1
 
 ### Task 2: the nine craft rows move into `missions/bodies/`; the Voyager cross-read is settled
 
@@ -169,7 +169,7 @@ whale, petunias, Hubble to full f64), `deriveBodyStates.launch.test.ts` (Voyager
 - `SCENE_MESH_BODIES` ids read `whale, petunias, voyager1, voyager2, hubble, curiosity, perseverance, spirit, opportunity, soendermarken`;
   `SURFACE_FIXED_SITES` reads `curiosity, perseverance, spirit, opportunity, soendermarken`.
 
-- [ ] Task 2
+- [x] Task 2
 
 ### Task 3: the roster splits; mesh and glint drawing become shared helpers (behaviour-neutral)
 

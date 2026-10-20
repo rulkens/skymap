@@ -11,13 +11,10 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
-import { orbiter } from './makers/orbiter';
 import { satellite } from './makers/satellite';
 import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
 import { LAYER_BODY_ROWS } from './layerBodyRows';
-import { SCENE_EARTH } from './sceneEarth';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
-import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
 import {
   MERCURY_GREY,
   VENUS_CREAM,
@@ -34,24 +31,10 @@ import {
   SAT_ICE,
   IO_SULFUR,
   TITAN_ORANGE,
-  WHALE_GREY,
-  PETUNIA_PINK,
-  HUBBLE_SILVER,
 } from './palette';
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
-
-// The whale and petunias (Hitchhiker's Guide easter egg) share one 400 km
-// circular geocentric orbit — the pot trails the whale in PHASE, not
-// altitude — so one semi-major axis and period feed both `satellite()` rows.
-// 40 m behind along the track, converted to mean-anomaly degrees by arc
-// length: 40 / (2π·a) × 360. The period is exported because the whale's
-// orbit lock reads it a second time, as a spin rate (`rotationElements.ts`).
-const MESH_BODY_SEMI_MAJOR_KM = SCENE_EARTH.surface.datumRadiusM / 1000 + 400;
-export const MESH_BODY_PERIOD_DAYS = periodDaysFromSemiMajorKm(MESH_BODY_SEMI_MAJOR_KM);
-const PETUNIA_TRAIL_OFFSET_DEG =
-  (40 / (2 * Math.PI * MESH_BODY_SEMI_MAJOR_KM * SCALE_UNITS.KM_TO_M)) * 360;
 
 export function elementsById(id: string): OrbitalElements {
   return findByIdOrThrow(ORBITAL_ELEMENTS, id, 'orbitalElements');
@@ -812,71 +795,6 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // off, unlike the same approximation Earth–Moon already makes. Deliberate;
     // the fix is scoped in docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
     color: CHARON_GREY,
-  }),
-
-  // The whale and the petunias (Hitchhiker's Guide easter egg): a circular,
-  // equatorial 400 km orbit — i=0/node=0/ω=0 are all undefined at this
-  // geometry, same convention as Deimos/Dione above — riding Earth's OWN
-  // equatorial pole (poleRaDeg/poleDecDeg match the 'earth' row in
-  // rotationElements.ts) rather than a distinct Laplace plane.
-  satellite({
-    id: 'whale',
-    focusId: 'earth',
-    semiMajorKm: MESH_BODY_SEMI_MAJOR_KM,
-    eccentricity: 0,
-    inclinationDeg: 0,
-    ascendingNodeDeg: 0,
-    argPeriapsisDeg: 0,
-    meanAnomalyDeg: 0,
-    periodDays: MESH_BODY_PERIOD_DAYS,
-    periodKind: 'anomalistic',
-    apsidalPrecessionYears: 0,
-    nodalPrecessionYears: 0,
-    poleRaDeg: 0.0,
-    poleDecDeg: 90.0,
-    color: WHALE_GREY,
-  }),
-  satellite({
-    // Trails the whale by PETUNIA_TRAIL_OFFSET_DEG in mean anomaly — behind in
-    // the direction of travel, so a smaller M at this shared epoch.
-    id: 'petunias',
-    focusId: 'earth',
-    semiMajorKm: MESH_BODY_SEMI_MAJOR_KM,
-    eccentricity: 0,
-    inclinationDeg: 0,
-    ascendingNodeDeg: 0,
-    argPeriapsisDeg: 0,
-    meanAnomalyDeg: -PETUNIA_TRAIL_OFFSET_DEG,
-    periodDays: MESH_BODY_PERIOD_DAYS,
-    periodKind: 'anomalistic',
-    apsidalPrecessionYears: 0,
-    nodalPrecessionYears: 0,
-    poleRaDeg: 0.0,
-    poleDecDeg: 90.0,
-    color: PETUNIA_PINK,
-  }),
-
-  // Hubble, geocentric. Columns verbatim from JPL Horizons ELEMENTS (`-48`,
-  // CENTER='500@399', REF_PLANE='FRAME', OUT_UNITS='KM-D') at JDTDB 2461298.5 =
-  // 2026-Sep-15 00:00 TDB, and the node rate is the mean of two 5-day `OM`
-  // steps over the same span. The refresh query is recorded in
-  // `data/raw/meshes/hubble/README.md`.
-  orbiter({
-    id: 'hubble',
-    focusId: 'earth',
-    epochJd: 2461298.5,
-    semiMajorKm: 6852.132959105691,
-    eccentricity: 2.423931415351075e-4,
-    inclinationDeg: 28.45103713579995,
-    ascendingNodeDeg: 185.7242679199093,
-    argPeriapsisDeg: 189.2459336243418,
-    meanAnomalyDeg: 51.61232139214808,
-    meanMotionDegPerDay: 5510.190163541656,
-    // OM 185.7242679 → 151.4846789 → 117.4543700 over 2026-09-15/20/25.
-    nodeRateDegPerDay: -6.827,
-    poleRaDeg: 270,
-    poleDecDeg: 90,
-    color: HUBBLE_SILVER,
   }),
 
   // The 39 bound S-stars: their per-row facts live in `sStarElements.ts` beside the verbatim
