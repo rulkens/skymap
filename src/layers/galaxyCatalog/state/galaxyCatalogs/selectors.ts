@@ -8,7 +8,6 @@ import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCa
 import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
 import type { GalaxyCatalogSourceType } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { RootState } from '../../../../store/types';
 import type { GalaxyProvenanceSettings } from '../../../../@types/settings/GalaxyProvenanceSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
@@ -80,6 +79,6 @@ export const selectGalaxyCatalogFormats = createSelector(
 );
 
 export const selectGalaxyCatalogFormat = (
-  state: RootState,
+  state: Parameters<typeof selectSettings>[0],
   source: GalaxyCatalogSourceType,
 ): GalaxyCatalogFormat => selectGalaxyCatalogFormats(state)[source]!;

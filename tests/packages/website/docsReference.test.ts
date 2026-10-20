@@ -97,7 +97,7 @@ describe('Settings page', () => {
     /^bodies\.items\.[\w-]+\.enabled$/,
     /^(constellations|localBubble)\.intensity$/,
     /^flow\.(mode|count|trail|flowSpeed|densityBias|wander|boundaryFadeWidth)$/,
-    /^galaxyCatalogs\.(brightness|provenance\..+)$/,
+    /^galaxyCatalogs\.(brightness|refineThreshold|provenance\..+)$/,
     /^galaxyCatalogs\.items\.(sdss|2mrs|glade|milliquas|desiDeep|desiWedge|desiSgw)\.labelEnabled$/,
     /^starCatalogs\.items\.(gaiaStars|sStar)\.labelEnabled$/,
     /^starCatalogs\.(refineThreshold|glowOverlap|exposure(Near|Mid|Far)X|aggregateIntensityCap|chunkSlotsOverride)$/,
