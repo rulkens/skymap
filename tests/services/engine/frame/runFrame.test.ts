@@ -1145,6 +1145,27 @@ describe('runFrame — the planner keep-ticking fold', () => {
 
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
+
+  it('a planner voting `settling` holds `settled()` back', () => {
+    const state = makeReadyState();
+    const settlingPlanner: FrameContentPlanner<void> = {
+      name: 'test-settling',
+      scope: 'once',
+      plan: () => ({ value: undefined, awake: false, settling: true }),
+    };
+    vi.mocked(renderFrame).mockImplementationOnce((input) => {
+      input.canvas.snapshot.plans.put(settlingPlanner, undefined, {
+        value: undefined,
+        awake: false,
+        settling: true,
+      });
+    });
+
+    runFrame(state, makeCamDeps(state), 0);
+    expect(state.settling).toBe(true);
+    runFrame(state, makeCamDeps(state), 16);
+    expect(state.settling).toBe(false);
+  });
 });
 
 describe('runFrame — effective intent', () => {

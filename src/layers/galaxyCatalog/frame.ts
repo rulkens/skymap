@@ -7,9 +7,10 @@
  * visible catalog, so it plans over the rig's views (anchor camera `views[0]`,
  * `pxPerRad` = the max over views) rather than five times per dome frame.
  * It also takes the octree sources' cut inputs and plans their chunks (the
- * shared stream driver). Its `awake` vote adds the cut's fade timer; both votes
- * report the textured planner's LANDED thumbnail work — never its outstanding
- * fetches; see the result at the tail.
+ * shared stream driver). Its votes add the driver's: the cut's fade timer to
+ * `awake`, chunks still arriving to `settling`; both report the textured
+ * planner's LANDED thumbnail work — never its outstanding fetches (our own
+ * origin serves the chunks; a thumbnail host can hang); see the result at the tail.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
@@ -163,7 +164,11 @@ export function galaxyCatalogPlanner(
       // LANDED is real motion, and it is the same content a sky capture must
       // re-bake for, so both votes read it.
       const fading = runtime.texturedDisks.hasFadingContent();
-      return { value: undefined, awake: fading || cutStep.awake, settling: fading };
+      return {
+        value: undefined,
+        awake: fading || cutStep.awake,
+        settling: fading || cutStep.settling,
+      };
     },
   };
 }

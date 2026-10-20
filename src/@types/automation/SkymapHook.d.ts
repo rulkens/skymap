@@ -8,7 +8,7 @@ export type SkymapHook = {
   readonly getState: () => RootState;
   /** Resolves after the next frame callback returns. */
   readonly nextFrame: () => Promise<void>;
-  /** Resolves after the first frame with no fade or label animation running. */
+  /** Resolves after the first frame with no fade, label animation or settling Layer content. */
   readonly settled: () => Promise<void>;
   /** Absolute path of the checkout this build came from; `''` in a built bundle. */
   readonly projectRoot: string;

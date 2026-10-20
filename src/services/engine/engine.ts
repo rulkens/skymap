@@ -262,7 +262,7 @@ export function createEngine(
       loadProgress: null,
     },
     booted: false,
-    fadesAnimating: false,
+    settling: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -466,7 +466,7 @@ export function createEngine(
     settled: () =>
       waitUntilSettled(
         () => state.subsystems.scheduler.nextFrame(),
-        () => state.fadesAnimating,
+        () => state.settling,
       ),
     debug: {
       // The same Map the bootstrap populates, so the dev panel observes slots as
