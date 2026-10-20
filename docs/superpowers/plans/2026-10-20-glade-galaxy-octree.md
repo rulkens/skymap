@@ -114,10 +114,10 @@ Task 13. Data: Task 6 bakes into this worktree's own `public/data` (assemble sym
 angle as a vector, halved back, in `[0, 180)`) and `'none'` (the blob value is 0, no sums). Both are rows in
 `AGGREGATE_RULES` (`aggregateRules.ts:8`) with the existing `ColumnAggregateRule` shape.
 
-- [ ] Test `axial mean of 175° and 5° at equal flux is 0°, not 90°`.
-- [ ] Test `axial mean weights by flux` (10° at flux 3, 40° at flux 1 → the doubled-angle mean, about 17.4°).
-- [ ] Test `the none rule writes 0 and takes no sums` (`sums === 0`, blob output 0).
-- [ ] Implement; the star digest test passes unchanged. Commit.
+- [x] Test `axial mean of 175° and 5° at equal flux is 0°, not 90°`.
+- [x] Test `axial mean weights by flux` (10° at flux 3, 40° at flux 1 → the doubled-angle mean, about 16.9°).
+- [x] Test `the none rule writes 0 and takes no sums` (`sums === 0`, blob output 0).
+- [x] Implement; the star digest test passes unchanged. Commit.
 
 ### Task 2: the galaxy family in the format — `review: yes`
 
