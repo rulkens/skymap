@@ -1,6 +1,6 @@
 /**
  * GalaxyBlobTuningSectionContainer — the DebugPanel's board for the galaxy octree's
- * blob glows (gain, overlap, peak cap), so their look can be tuned live. The values
+ * refine threshold and blob glows (gain, overlap, peak cap), tuned live. The values
  * are settings leaves the pooled renderer reads every draw; nothing persists them.
  */
 

@@ -35,12 +35,13 @@ export const GLADE_ENTRY = {
   falloffHalfMpc: 1000,
   priority: 62,
   durableId: { prefix: 'pgc', rank: 0 },
-  // First values; the bake sweep tunes them.
+  // At 700 Mpc the eye wants ~370 chunks, but 128 hold 99% of the galaxies they draw
+  // (64: 78%, 32: 50%); a slot costs chunkCapacity × 24 B ≈ 0.8 MB of GPU memory.
   octree: {
     budgets: {
-      small: { drawBudget: 600_000, slots: 16 },
-      medium: { drawBudget: 1_000_000, slots: 32 },
-      large: { drawBudget: 1_700_000, slots: 64 },
+      small: { drawBudget: 600_000, slots: 32 },
+      medium: { drawBudget: 1_000_000, slots: 64 },
+      large: { drawBudget: 1_700_000, slots: 128 },
     },
   },
 } as const satisfies GalaxyCatalogSourceEntry;

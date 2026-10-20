@@ -1,5 +1,5 @@
 /**
- * GALAXY_BLOB_TUNING_FIELDS — one row per look knob of the galaxy octree's blob glows,
+ * GALAXY_BLOB_TUNING_FIELDS — one row per knob of the galaxy octree's cut and blob glows,
  * iterated by the Debug panel's tuning board.
  */
 import type { SliderField } from '../../../@types/data/SliderField';
@@ -9,6 +9,16 @@ const x2 = (v: number) => `${v.toFixed(2)}×`;
 const d2 = (v: number) => v.toFixed(2);
 
 export const GALAXY_BLOB_TUNING_FIELDS: readonly SliderField<GalaxyBlobTuningKey>[] = [
+  {
+    key: 'refineThreshold',
+    label: 'Detail',
+    min: 0.01,
+    max: 0.5,
+    step: 0.01,
+    format: d2,
+    title:
+      'Octree-cut refine threshold. Lower splits far boxes earlier: more galaxies drawn, more chunks streamed. The bake places galaxies for its default.',
+  },
   {
     key: 'blobGain',
     label: 'Blob gain',
