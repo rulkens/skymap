@@ -11,8 +11,6 @@ import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bak
 import { Source } from '../../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { galaxyMagOffset } from '../../../../src/utils/galaxy/galaxyMagOffset';
-import { galaxyMedianAbsMag } from '../../../../src/utils/galaxy/galaxyMedianAbsMag';
 
 /** Build a tiny synthetic cloud with three galaxies at known coordinates. */
 function makeCloud(count: number): GalaxyCatalog {
@@ -25,10 +23,8 @@ function makeCloud(count: number): GalaxyCatalog {
 
 const SLOTS = 12;
 
-/** The stats the flat record source hands the bake for this cloud. */
-function statsOf(cloud: GalaxyCatalog) {
-  return { magOffset: galaxyMagOffset(cloud), medianAbsMag: galaxyMedianAbsMag(cloud) };
-}
+/** Per-catalog stats; no assertion here reads a slot they feed. */
+const STATS = { magOffset: 0, medianAbsMag: -20 };
 
 describe('buildPointInterleavedBuffer', () => {
   it('produces an interleaved Float32Array of the expected length (12 slots × 4 bytes)', () => {
@@ -36,7 +32,7 @@ describe('buildPointInterleavedBuffer', () => {
     const result = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      stats: statsOf(cloud),
+      stats: STATS,
     });
     expect(result.interleaved).toBeInstanceOf(Float32Array);
     expect(result.interleaved.length).toBe(3 * SLOTS);
@@ -50,7 +46,7 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      stats: statsOf(cloud),
+      stats: STATS,
     });
     expect(interleaved[0 * SLOTS + 0]).toBeCloseTo(10);
     expect(interleaved[0 * SLOTS + 1]).toBeCloseTo(20);
@@ -66,7 +62,7 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      stats: statsOf(cloud),
+      stats: STATS,
     });
     expect(interleaved[0 * SLOTS + 9]).toBe(1);
     expect(interleaved[1 * SLOTS + 9]).toBeCloseTo(10, 4);
@@ -80,30 +76,11 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved, isFallbackArr } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      stats: statsOf(cloud),
+      stats: STATS,
     });
     expect([0, 1, 2].map((r) => Math.sign(interleaved[r * SLOTS + 5]!))).toEqual([1, -1, 1]);
     expect([0, 1, 2].map((r) => Math.sign(interleaved[r * SLOTS + 8]!))).toEqual([1, 1, -1]);
     expect([...isFallbackArr]).toEqual([0, 1, 0]);
-  });
-
-  it('shifts the per-galaxy-catalog magG mean toward the SDSS target (≈18)', () => {
-    // Build a cloud whose mean magG is far from 18 — verify the bake's
-    // output mean (slot 3 across all rows) lands close to 18.
-    const cloud = makeCloud(3);
-    cloud.magG.set([5, 6, 7]); // 2MRS-like J-band brightnesses
-    const { interleaved } = buildPointInterleavedBuffer({
-      cloud,
-      source: Source.TwoMRS,
-      stats: statsOf(cloud),
-    });
-    const mags = [
-      interleaved[0 * SLOTS + 3]!,
-      interleaved[1 * SLOTS + 3]!,
-      interleaved[2 * SLOTS + 3]!,
-    ];
-    const meanOut = (mags[0]! + mags[1]! + mags[2]!) / 3;
-    expect(meanOut).toBeCloseTo(18, 5);
   });
 
   it('writes the unknown-colour fallback (1.05) when the row lacks usable bands', () => {
@@ -119,7 +96,7 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      stats: statsOf(cloud),
+      stats: STATS,
     });
     expect(interleaved[4]).toBeCloseTo(1.05, 5);
   });

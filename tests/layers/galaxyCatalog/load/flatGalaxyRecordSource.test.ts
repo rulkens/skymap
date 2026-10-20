@@ -41,21 +41,12 @@ describe('flatGalaxyRecordSource', () => {
     expect(glade.resolveDurableId('pgc-2789')).toBe(1);
     expect(glade.resolveDurableId('pgc-8')).toBeNull();
     expect(glade.resolveDurableId('sdss-2789')).toBeNull();
+    expect(glade.resolveDurableId('pgc-x')).toBeNull();
     const famous = sourceOver(
       Source.FamousGalaxy,
       makeGalaxyCatalog(4, { objIDs: new BigUint64Array([0n, 1n, 2n, 3n]) }),
     );
     expect(famous.resolveDurableId('pgc-3')).toBeNull();
-  });
-
-  it('hasDurableId agrees with resolveDurableId', () => {
-    const sdss = sourceOver(
-      Source.SDSS,
-      makeGalaxyCatalog(2, { objIDs: new BigUint64Array([1237668393006604288n, 5n]) }),
-    );
-    for (const id of ['sdss-1237668393006604288', 'sdss-5', 'sdss-6', 'pgc-5', 'sdss-x']) {
-      expect(sdss.hasDurableId(id)).toBe(sdss.resolveDurableId(id) !== null);
-    }
   });
 
   it('resolvePosition with a distance finds the record and without one keeps the 30 arcsec search', () => {

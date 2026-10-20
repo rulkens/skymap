@@ -45,9 +45,7 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
         runtime.famousMeta.some((m) => m.id === id),
       decode: (id) => {
         if (id.startsWith('pgc-') || id.startsWith('sdss-')) {
-          return /^\d+$/.test(id.slice(id.indexOf('-') + 1))
-            ? runtime.recordBridge.resolveDurableId(id)
-            : null;
+          return runtime.recordBridge.resolveDurableId(id);
         }
         if (id.startsWith('pos@')) {
           const m = POS_RE.exec(id);
