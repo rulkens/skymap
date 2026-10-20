@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import type { ColumnId } from '../../src/@types/octree/ColumnId';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
-import type { BiasWeightKind } from '../@types/catalog/BiasWeightKind';
+import type { GladeOctreeOptions } from '../@types/catalog/GladeOctreeOptions';
 import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
 import { GLADE_STRATIFY } from '../../src/data/galaxyCatalog/gladeStratify';
 import { pickColourIndex } from '../../src/data/galaxyCatalog/colourIndex';
@@ -38,13 +38,6 @@ const MIN_WEIGHT = 0.1;
 const MAX_WEIGHT = 10;
 const FLAG_ORIENTATION_FALLBACK = 1;
 const FLAG_DIAMETER_FALLBACK = 2;
-
-export type GladeOctreeOptions = {
-  readonly outDir: string;
-  readonly biasWeight: BiasWeightKind;
-  /** Every pgc that has a name in `pgc_aliases.json`; the bake keeps those GLADE has. */
-  readonly aliasPgcs: readonly number[];
-};
 
 export function buildGladeOctree(
   cloud: GalaxyCatalog,
