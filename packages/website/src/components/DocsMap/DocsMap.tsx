@@ -1,6 +1,6 @@
 /*
  * DocsMap — the docs' front page: what they cover, search, and the whole tree
- * of data/docsTree.ts, one band to a group. A group's name and purpose stand
+ * of the docs tree, one band to a group. A group's name and purpose stand
  * in the first three columns of the page grid and its pages in the other
  * nine, three to a row. A written page carries the ring, as every link to a
  * place does; a planned one is its name alone, dimmer, so the map is honest
@@ -9,13 +9,13 @@
  */
 import type { ReactNode } from 'react';
 
-import { DOCS_TREE } from '../../data/docsTree.ts';
+import type { DocsGroup } from '../../@types/DocsGroup.ts';
 import { sitePath } from '../../utils/sitePath.ts';
 import styles from './DocsMap.module.css';
 
-type DocsMapProps = { search?: ReactNode };
+type DocsMapProps = { groups: readonly DocsGroup[]; search?: ReactNode };
 
-function DocsMap({ search }: DocsMapProps) {
+function DocsMap({ groups, search }: DocsMapProps) {
   return (
     <>
       <header className={styles.opening} data-opening>
@@ -29,7 +29,7 @@ function DocsMap({ search }: DocsMapProps) {
       </header>
 
       <div className={styles.map}>
-        {DOCS_TREE.map((group) => {
+        {groups.map((group) => {
           const id = group.name.toLowerCase();
           return (
             <section

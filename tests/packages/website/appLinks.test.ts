@@ -25,7 +25,7 @@ const OTHER_USES: Record<string, number> = {
 };
 
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
-  .filter((name) => /\.(astro|tsx)$/.test(name))
+  .filter((name) => /\.(astro|tsx|mdx)$/.test(name))
   .map((name) => ({
     name: relative(SRC, join(SRC, name)),
     text: readFileSync(join(SRC, name), 'utf8'),

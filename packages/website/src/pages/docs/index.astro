@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import DocsMap from '../../components/DocsMap/DocsMap.tsx';
 import DocsSearch from '../../components/DocsSearch/DocsSearch.tsx';
+import { loadDocsTree } from '../../utils/loadDocsTree';
 import { breadcrumbJsonLd } from '../../utils/breadcrumbJsonLd';
 ---
 
@@ -10,7 +11,7 @@ import { breadcrumbJsonLd } from '../../utils/breadcrumbJsonLd';
   description="The Skymap documentation: every feature of the app by task, reference tables, the data sources with their licences, the science and how a frame is drawn."
   jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Docs', path: '/docs/' }])]}
 >
-  <DocsMap>
+  <DocsMap groups={await loadDocsTree()}>
     <DocsSearch slot="search" big client:visible />
   </DocsMap>
 </Base>
