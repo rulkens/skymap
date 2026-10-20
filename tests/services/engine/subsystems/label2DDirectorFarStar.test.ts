@@ -31,7 +31,7 @@ import { createLabel2DDirector } from '../../../../src/services/engine/subsystem
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';

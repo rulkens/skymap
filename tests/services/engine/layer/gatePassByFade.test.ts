@@ -8,16 +8,17 @@ import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPas
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
+import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeSurvey(live: readonly string[]) {
+function makeSurvey(live: readonly string[], entries: readonly VisibilityEntry[] = APP_VISIBILITY) {
   const fades = createFadeRegistry({ requestRender: () => {} });
   for (const item of GALAXY_CATALOG_IDS) {
     fades.register({ address: 'survey', item }, live.includes(item) ? 1 : 0);
   }
   const state = {
     subsystems: { fades, clipPlayer: { clipOpacityOf: () => 1 } },
-    visibilityEntries: APP_VISIBILITY,
+    visibilityEntries: entries,
   } as unknown as EngineState;
   const enabled = vi.fn(() => true);
   const pickEnabled = vi.fn(() => true);
@@ -33,11 +34,14 @@ function makeSurvey(live: readonly string[]) {
 
 const S = {} as PassState;
 const VIEW = {} as SlabView;
-const CTX = { snapshot: { nowMs: 0, focusBlend: 0 } } as unknown as FrameView;
+// A fresh view per test: the handed value is memoised on view identity.
+const ctx = () =>
+  ({ drawCamPos: [1, 0, 0], snapshot: { nowMs: 0, focusBlend: 0 } }) as unknown as FrameView;
 
 describe('gatePassByFade', () => {
   it('a per-item pass with one non-zero item is called with the record', () => {
     const { gated, enabled } = makeSurvey(['sdss']);
+    const CTX = ctx();
     expect(gated.enabled(S, CTX, VIEW)).toBe(true);
     expect(enabled).toHaveBeenCalledWith(
       S,
@@ -49,6 +53,19 @@ describe('gatePassByFade', () => {
 
   it('all items at 0 → enabled and pickEnabled are false and the inner is never called', () => {
     const { gated, enabled, pickEnabled } = makeSurvey([]);
+    const CTX = ctx();
+    expect(gated.enabled(S, CTX, VIEW)).toBe(false);
+    expect(gated.pickEnabled!(S, CTX, VIEW)).toBe(false);
+    expect(enabled).not.toHaveBeenCalled();
+    expect(pickEnabled).not.toHaveBeenCalled();
+  });
+
+  it('a pass whose band is 0 for every item is skipped and not picked', () => {
+    const banded = APP_VISIBILITY.map((e) =>
+      'key' in e && e.key === 'survey' ? { ...e, bands: { near: { out: [0, 1] } } } : e,
+    ) as readonly VisibilityEntry[];
+    const { gated, enabled, pickEnabled } = makeSurvey(GALAXY_CATALOG_IDS, banded);
+    const CTX = ctx();
     expect(gated.enabled(S, CTX, VIEW)).toBe(false);
     expect(gated.pickEnabled!(S, CTX, VIEW)).toBe(false);
     expect(enabled).not.toHaveBeenCalled();
