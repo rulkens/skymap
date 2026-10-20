@@ -303,11 +303,12 @@ The job lines are migrated verbatim. Their notes on merges and repeats are not p
 - `packages/website/src/content/pages/{classroom,domes,index}.mdx` (new)
 - `packages/website/src/pages/{classroom,domes,index}.astro`
 
-- [ ] Same conversion and rules as Task 4.
-- [ ] Domes has named slots on React components (`slot="note"`, `slot="picture"`, `<Fragment slot="today">`, `domes.astro:66-114`). Astro's JSX runtime maps `slot` attributes in MDX as in `.astro`. If `Fragment` is not in scope in MDX, import it from `astro/jsx-runtime`.
-- [ ] Islands move as written: `ClassroomHero client:visible`, `ContactForm client:visible`, `Places client:visible` and `Lead client:visible`. `Flight client:load` is the exception: it moves with the props contract in **How a route renders a `pages` entry**.
-- [ ] Home's route keeps the `head` fragment (preloads, the `is:inline` pre-paint script), `heroNav`, `stills` and its JSON-LD.
-- [ ] Check: as in Task 4, plus on the dev server each island hydrates: the flight scrubs, the classroom hero runs, the contact form renders. Diff the island count per page against main's build.
+- [x] Same conversion and rules as Task 4.
+- [x] Domes has named slots on React components (`slot="note"`, `slot="picture"`, `<Fragment slot="today">`, `domes.astro:66-114`). Astro's JSX runtime maps `slot` attributes in MDX as in `.astro`. If `Fragment` is not in scope in MDX, import it from `astro/jsx-runtime`.
+- [x] Islands move as written: `ClassroomHero client:visible`, `ContactForm client:visible`, `Places client:visible` and `Lead client:visible`. `Flight client:load` is the exception: it moves with the props contract in **How a route renders a `pages` entry**.
+- [x] Home's route keeps the `head` fragment (preloads, the `is:inline` pre-paint script), `heroNav`, `stills` and its JSON-LD.
+- [x] Check: as in Task 4, plus on the dev server each island hydrates: the flight scrubs, the classroom hero runs, the contact form renders. Diff the island count per page against main's build.
+- Done differently: Astro finds a `client:` island only where the tag stands in the text, not inside a `{ ? : }` expression, so domes' contact form moved into `layouts/ContactPanel.astro`, which the MDX imports.
 
 ### Task 6: The review bar edits `job` in front matter
 
