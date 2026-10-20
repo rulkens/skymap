@@ -103,7 +103,7 @@ The existing suite is the behaviour-neutral check: Søndermarken's position, reg
 presentation tests read the same tables. Run the targeted tests under `tests/data/bodies/`,
 `tests/compositions/` and `tests/conventions/layerImportBoundary.test.ts`.
 
-- [ ] Fold, Layer, composition, coverage test; targeted tests and `npm run typecheck:fast` green.
+- [x] Fold, Layer, composition, coverage test; targeted tests and `npm run typecheck:fast` green.
 
 ## Definition of Done
 
