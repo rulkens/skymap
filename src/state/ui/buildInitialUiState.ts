@@ -55,7 +55,7 @@ export function buildInitialUiState(): UiState {
 
   return {
     paletteOpen: false,
-    uiHidden: false,
+    uiHidden: searchHasGate(search, 'dome'),
     debugPanelOpen: false,
     paletteTab: 'highlights',
     splash: {

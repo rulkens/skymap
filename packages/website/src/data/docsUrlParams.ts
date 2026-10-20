@@ -96,7 +96,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     part: 'query',
     value: 'None',
     example: '?dome',
-    does: 'Starts the app in dome mode, drawing a fisheye disc.',
+    does: 'Starts the app in dome mode, drawing a fisheye disc, with the panels hidden (Tab shows them).',
     written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: true,

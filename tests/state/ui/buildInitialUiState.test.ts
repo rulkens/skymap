@@ -10,6 +10,15 @@ describe('buildInitialUiState', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  describe('uiHidden', () => {
+    it('starts hidden under ?dome and shown otherwise', () => {
+      window.history.replaceState(null, '', '/?dome');
+      expect(buildInitialUiState().uiHidden).toBe(true);
+      window.history.replaceState(null, '', '/');
+      expect(buildInitialUiState().uiHidden).toBe(false);
+    });
+  });
+
   describe('splash.visible', () => {
     it('is true on a first visit (no seenVersion, no deep link)', () => {
       const state = buildInitialUiState();
