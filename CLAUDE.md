@@ -2,6 +2,22 @@
 
 Quick orientation for an AI agent picking up work here; it points at the deeper docs.
 
+## Why this exists
+
+Skymap puts the measured universe in anyone's hands: students, teachers, planetarium
+audiences, anyone curious. It is built to last, and every change is held to three tests:
+
+- **Can we keep building on it?** Leave each file clearer than you found it, and finish
+  what you start: no half-renames, no old and new code left standing side by side.
+- **Could a new developer pick it up cold?** If the why isn't in the code, the docs or an
+  ADR, the work isn't done.
+- **Would a user come back?** A bug a user sees costs more than a feature that ships late,
+  so never trade reliability for landing speed.
+
+When you pass quality debt (a stale branch, a flaky test, dead code, an unclear name),
+say so and offer to fix it. Don't build around it. The conventions below are how we meet
+these tests.
+
 ## What this is
 
 A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at build time into a custom binary format, loaded in the browser, drawn as instanced point billboards with per-galaxy thumbnail quads on close approach. TS + Vite + React UI shell; raw WebGPU + WGSL renderer.
