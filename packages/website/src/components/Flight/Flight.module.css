@@ -1,0 +1,165 @@
+/*
+ * `:root[data-flight-live]` and `:root[data-flight-film]` are set before first paint by the page's
+ * inline script (prePaintScript.ts): the first turns the list of captioned pictures into one sticky
+ * stage, the second says a film may play over the stills.
+ */
+.root {
+  position: relative;
+  /* A layer of its own, under the nav's ground (components/Nav/Nav.tsx), which is clear while the stage is pinned. */
+  z-index: 2;
+  background: #000;
+}
+
+/* svh, not dvh: the page's length must not change when a phone's toolbar retracts. */
+:root[data-flight-live] .track {
+  height: calc(var(--units) * 100svh + 100svh);
+}
+
+:root[data-flight-live] .stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* The nav's local scrim: only as tall as the bar needs. */
+:root[data-flight-live] .stage::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  height: calc(var(--nav-height) * 1.6);
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.8) 30%, rgb(0 0 0 / 0));
+  pointer-events: none;
+}
+
+.film,
+.hint,
+.scale {
+  display: none;
+}
+
+:root[data-flight-film] .film {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* The film is shown once it has been attached and fits the window (useFlightFilm). */
+:root[data-flight-film] .film[data-playing] {
+  opacity: 1;
+}
+
+/* A quiet footnote in the captions' bottom padding; tabular figures so the number does not jitter as it changes. */
+:root[data-flight-live] .scale {
+  display: block;
+  position: absolute;
+  z-index: 3;
+  left: var(--gutter);
+  bottom: 1.25rem;
+  max-width: none;
+  margin: 0;
+  font-size: 0.8125rem;
+  /* Under 20px Jost is 400. */
+  font-weight: var(--weight-small);
+  line-height: 1;
+  color: var(--site-text-dim);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 0.5rem #000,
+    0 0 0.25rem #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:root[data-flight-live] .hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  bottom: 1.25rem;
+  max-width: none;
+  margin: 0;
+  font-size: var(--text-small);
+  font-weight: var(--weight-small);
+  line-height: 1.5;
+  text-align: center;
+  color: var(--site-text-muted);
+  text-shadow:
+    0 0 0.5rem #000,
+    0 0 0.25rem #000;
+  pointer-events: none;
+}
+
+/* A mouse with its wheel rolling; the wheel is a background so one box draws both. */
+@media (hover: hover) and (pointer: fine) {
+  :root[data-flight-live] .hint::before {
+    content: '';
+    width: 1.125rem;
+    height: 1.75rem;
+    border: 1px solid currentColor;
+    border-radius: 0.5625rem;
+    background: linear-gradient(var(--color-accent), var(--color-accent)) no-repeat 50% 0.3125rem /
+      2px 0.375rem;
+    animation: wheel 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes wheel {
+  60% {
+    background-position-y: 0.8125rem;
+    background-size: 2px 0.375rem;
+  }
+
+  80%,
+  100% {
+    background-position-y: 0.8125rem;
+    background-size: 2px 0;
+  }
+}
+
+/* Upright screens: the readout has the left of the bottom line, so the hint takes the right. */
+@media (max-width: 760px) and (orientation: portrait) {
+  :root[data-flight-live] .scale {
+    bottom: 0.875rem;
+  }
+
+  :root[data-flight-live] .hint {
+    left: auto;
+    right: var(--gutter);
+    bottom: 0.875rem;
+    line-height: 1;
+  }
+}
+
+/* Short screens (a phone on its side): no room for the hint. */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root[data-flight-live] .hint {
+    display: none;
+  }
+
+  :root[data-flight-live] .scale {
+    bottom: 0.625rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-flight-live] .hint::before {
+    animation: none;
+  }
+
+  :root[data-flight-film] .film {
+    transition: none;
+  }
+}

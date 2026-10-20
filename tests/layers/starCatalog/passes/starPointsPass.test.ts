@@ -11,13 +11,13 @@
  * anchors through the f32-narrowed `view.vp`.
  *
  * The membership assertions pin the other half of the structural XOR: the
- * layer uploads (via `setStars`) EXACTLY the `points` branch of
- * `partitionStarsByResolution` — the complement of the `spheres` branch
+ * layer uploads (via `setStars`) EXACTLY the seeded stars in the `unresolved`
+ * branch of core's scene-body sort — the complement of the `resolved` stars
  * `starSpheresPass`'s suite asserts over the same
  * camera-half-an-AU-off-Sirius mixed fixture. Because the anchors are rebased
  * per frame, the upload is per-frame (no membership cache): a promoted star
  * still LEAVES the point set the frame it resolves, so it is never drawn as
- * point AND sphere — the double-draw the partition exists to forbid.
+ * point AND sphere — the double-draw the one sort exists to forbid.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -34,10 +34,10 @@ import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../src/utils/star/starExposureRamp';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
-import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
-import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { positionedSeededStars } from '../../../../src/layers/starCatalog/present/positionedSeededStars';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
@@ -57,12 +57,13 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { SeededStarCatalogId } from '../../../../src/@types/data/starCatalog/SeededStarCatalogId';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
+import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// The record + the position this frame resolves for it — the pairing
-// `positionedVisibleStars` builds. A star is an anchor, so the resolved
-// position IS the anchor's array, by reference.
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
+
 /**
  * The `starCatalogs` appearance slice the layer reads: the shared sizePx slider,
  * the brightness trim, and the three exposure-ramp anchors. Concrete non-default
@@ -74,37 +75,23 @@ const STAR_CATALOG_SETTINGS = {
   exposureNearX: 15,
   exposureMidX: 57,
   exposureFarX: 70,
-};
+} as unknown as StarCatalogSettings;
 
-/**
- * Which seeded catalogs this fixture's star cluster has switched on. Each
- * source gates itself, so a roster is now a set of item bits rather than a
- * hand-passed star array.
- */
+/** Which seeded catalogs core admitted into this frame's scene bodies. */
 type Catalogs = Partial<Record<SeededStarCatalogId, boolean>>;
 const MAP_AND_SUN: Catalogs = { famousStar: true, sun: true };
 const EVERY_SEEDED: Catalogs = { famousStar: true, sun: true, sStar: true };
 
-function starSettings(catalogs: Catalogs): StarCatalogSettings {
-  // Cast: the pass reads only these knobs, so the fixture states only these.
-  return {
-    ...STAR_CATALOG_SETTINGS,
-    // The cluster master is on: `visibleStars` requires it AND the row's own
-    // bit, so omitting it would draw nothing at all.
-    enabled: true,
-    items: {
-      famousStar: { enabled: catalogs.famousStar ?? false },
-      sun: { enabled: catalogs.sun ?? false },
-      sStar: { enabled: catalogs.sStar ?? false },
-    },
-  } as unknown as StarCatalogSettings;
+// Positioned at the snapshot instant: a star's position IS its anchor's array.
+const STATES = deriveBodyStates(CONST_J2000);
+function sceneBodiesOf(catalogs: Catalogs): readonly PositionedSceneBody[] {
+  return (Object.keys(SEEDED_STAR_CATALOGS) as SeededStarCatalogId[])
+    .filter((id) => catalogs[id] === true)
+    .flatMap((id) => SEEDED_STAR_CATALOGS[id])
+    .map((body) => ({ body, positionMpc: STATES.get(body.id)!.positionMpc }));
 }
-
-const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
-const positioned = (id: string): PositionedStar => {
-  const star = visibleStars(starSettings(EVERY_SEEDED)).find((s) => s.id === id)!;
-  return { ...star, positionMpc: ANCHOR_POS.get(id)! };
-};
+const ALL_STARS = positionedSeededStars(sceneBodiesOf(EVERY_SEEDED));
+const positioned = (id: string): PositionedStar => ALL_STARS.find((s) => s.id === id)!;
 
 /** The pick identity a pass packs for a drawn star: its source + seed index. */
 const packedIdOf = (star: PositionedStar): number =>
@@ -131,11 +118,13 @@ const PASS_STUB = {
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-function makeCtx(camPos: Readonly<Vec3>, focus: FocusUniformsValue = ZERO_FOCUS): FrameView {
+function makeCtx(
+  camPos: Readonly<Vec3>,
+  focus: FocusUniformsValue = ZERO_FOCUS,
+  catalogs: Catalogs = MAP_AND_SUN,
+): FrameView {
   return {
-    // The instant the star layers resolve their positions at; a star anchor is
-    // static, so any instant gives the same roster.
-    snapshot: { simDays: CONST_J2000, focus },
+    snapshot: { simDays: CONST_J2000, focus, sceneBodies: sceneBodiesOf(catalogs) },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -200,14 +189,11 @@ function makeRenderer() {
   };
 }
 
-/** `PassState` carrying the star-catalog settings and the core `bodyPickRenderer` handle. */
-function makeState(catalogs: Catalogs = MAP_AND_SUN): EngineState {
+/** `PassState` carrying the star appearance knobs and the core `bodyPickRenderer` handle. */
+function makeState(): EngineState {
   return {
     gpu: { bodyPickRenderer: { drawPoints: vi.fn() } },
-    settings: {
-      starCatalogs: starSettings(catalogs),
-      bodies: { items: makeBodyItems() },
-    },
+    settings: { starCatalogs: STAR_CATALOG_SETTINGS, bodies: { items: makeBodyItems() } },
   } as unknown as EngineState;
 }
 
@@ -226,24 +212,24 @@ describe('starPointsPass.enabled', () => {
     const pass = starPointsPass(makeRuntime(renderer));
     // Renderer + the Sun alone with the camera half an AU off it: the Sun
     // resolves to a sphere, so the points branch is empty.
-    const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(pass.enabled(makeState({ sun: true }), onSunCtx, VIEW_STUB)).toBe(false);
+    const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc), ZERO_FOCUS, { sun: true });
+    expect(pass.enabled(makeState(), onSunCtx, VIEW_STUB, ALL_ON)).toBe(false);
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(pass.enabled(makeState(MAP_AND_SUN), nearCtx, VIEW_STUB)).toBe(true);
+    expect(pass.enabled(makeState(), nearCtx, VIEW_STUB, ALL_ON)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
     // A decade beyond the gate (cosmic scale) the whole neighbourhood is far
     // below a pixel: the shared gate turns the backdrop off before the
-    // partition is even computed, so the (hdr, NEAR0) step can be skipped
+    // sort is even run, so the (hdr, NEAR0) step can be skipped
     // wholesale. Derived from the gate so a farther seed growing it carries.
     const pass = starPointsPass(makeRuntime(makeRenderer()));
-    const state = makeState(MAP_AND_SUN);
-    expect(pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB)).toBe(
-      false,
-    );
+    const state = makeState();
+    expect(
+      pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB, ALL_ON),
+    ).toBe(false);
   });
 
   it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
@@ -255,8 +241,8 @@ describe('starPointsPass.enabled', () => {
     const beyondBand = SCALE_FADE_BANDS.starBackdrop.goneAt * 1.01;
     expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
     const pass = starPointsPass(makeRuntime(makeRenderer()));
-    const state = makeState(MAP_AND_SUN);
-    expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB)).toBe(false);
+    const state = makeState();
+    expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB, ALL_ON)).toBe(false);
   });
 });
 
@@ -288,7 +274,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // star-points.
       settings: {
         milkyWay: { enabled: false },
-        starCatalogs: starSettings(MAP_AND_SUN),
+        starCatalogs: STAR_CATALOG_SETTINGS,
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
@@ -329,9 +315,9 @@ describe('starPointsPass.draw', () => {
     const pass = starPointsPass(makeRuntime(renderer));
     const camPos: Vec3 = [0, 0, 5];
     const view = makeNear0View(camPos);
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
 
-    pass.draw!(PASS_STUB, view, makeCtx(camPos), state);
+    pass.draw!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, vpArg, viewportArg] = renderer.draw.mock.calls[0]!;
@@ -352,9 +338,9 @@ describe('starPointsPass.draw', () => {
     // anchors handed to the renderer must be their positions MINUS the eye.
     const camPos: Vec3 = [0, 0, 5];
     const view = makeNear0View(camPos);
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
 
-    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state);
+    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
     // Parsecs from everything, so the whole roster rides the points branch —
@@ -382,9 +368,9 @@ describe('starPointsPass.draw', () => {
     // point stars. Disjoint + covering by construction: the structural XOR.
     const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
 
-    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state);
+    starPointsPass(makeRuntime(renderer)).draw!(PASS_STUB, view, makeCtx(camPos), state, ALL_ON);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
     const uploadedIds = renderer.setStars.mock.calls[0]![0].map((star) => star.id);
@@ -396,13 +382,13 @@ describe('starPointsPass.draw', () => {
   it('re-uploads every frame (rebased anchors) and drops a star the frame it resolves', () => {
     const renderer = makeRenderer();
     const pass = starPointsPass(makeRuntime(renderer));
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
 
     // Two galaxy-scale frames with identical membership: because the anchors
     // are rebased per frame there is no membership cache — each draw re-uploads.
     const farCam: Vec3 = [0, 0, 5];
-    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
-    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
+    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state, ALL_ON);
+    pass.draw!(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state, ALL_ON);
     expect(renderer.setStars).toHaveBeenCalledTimes(2);
     expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toContain(SIRIUS.id);
 
@@ -410,7 +396,7 @@ describe('starPointsPass.draw', () => {
     // uploaded point set — otherwise it would draw as point AND sphere. The
     // Sun and Proxima stay points (parsecs away, sub-pixel).
     const nearCam = halfAuFrom(SIRIUS.positionMpc);
-    pass.draw!(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
+    pass.draw!(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state, ALL_ON);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
     const afterClose = renderer.setStars.mock.calls[2]![0].map((star) => star.id);
     expect(afterClose).toEqual(expect.arrayContaining([SUN.id, PROXIMA.id]));
@@ -431,12 +417,13 @@ describe('starPointsPass.draw', () => {
 
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
     starPointsPass(makeRuntime(renderer)).draw!(
       PASS_STUB,
       makeNear0View(camPos),
       makeCtx(camPos),
       state,
+      ALL_ON,
     );
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
@@ -466,12 +453,37 @@ describe('starPointsPass.draw', () => {
       PASS_STUB,
       makeNear0View(camPos),
       makeCtx(camPos, focus),
-      makeState(MAP_AND_SUN),
+      makeState(),
+      ALL_ON,
     );
     const uploaded = renderer.setStars.mock.calls[0]![0];
     const colorOf = (id: string) => uploaded.find((star) => star.id === id)!.color;
     expect(colorOf(PROXIMA.id)[0]).toBeCloseTo(PROXIMA.color[0] * backdropFade, 12);
     expect(colorOf(SIRIUS.id)[0]).toBeCloseTo(SIRIUS.color[0] * backdropFade * 0.08, 12);
+  });
+
+  it("star points scale their colour by their catalog's value", () => {
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const colourOf = (fade: Record<keyof typeof ALL_ON, number>, id: string) => {
+      const renderer = makeRenderer();
+      starPointsPass(makeRuntime(renderer)).draw!(
+        PASS_STUB,
+        makeNear0View(camPos),
+        makeCtx(camPos),
+        makeState(),
+        fade,
+      );
+      return renderer.setStars.mock.calls[0]![0].find((star) => star.id === id)!.color;
+    };
+    const halfFamous = { ...ALL_ON, famousStar: 0.5 };
+
+    const famousFull = colourOf(ALL_ON, PROXIMA.id);
+    const famousHalf = colourOf(halfFamous, PROXIMA.id);
+    expect(famousFull[0]).toBeGreaterThan(0);
+    expect(famousHalf).toEqual(famousFull.map((c) => c * 0.5));
+    expect(colourOf(halfFamous, SUN.id)).toEqual(colourOf(ALL_ON, SUN.id));
   });
 
   it('hands the renderer the sizePx slider and brightness × exposure-ramp factor', () => {
@@ -483,13 +495,14 @@ describe('starPointsPass.draw', () => {
       (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
 
     starPointsPass(makeRuntime(renderer)).draw!(
       PASS_STUB,
       makeNear0View(camPos),
       makeCtx(camPos),
       state,
+      ALL_ON,
     );
 
     const opts = renderer.draw.mock.calls[0]![3];
@@ -507,22 +520,21 @@ describe('starPointsPass.draw', () => {
     expect(opts.brightness).not.toBeCloseTo(STAR_CATALOG_SETTINGS.brightness, 6);
   });
 
-  it('uploads ONLY the Sun when the famous-star map gate is off', () => {
-    // Mid-band camera so the layer draws; the seed is the full roster but the
-    // famous-star catalog row is OFF — the star layers fall back to the Sun
-    // alone (its map is muted, the descent's aim point kept). The Sun is
-    // parsecs-sub-pixel here, so it rides the point branch.
+  it('uploads only the stars core admitted', () => {
+    // Mid-band camera so the layer draws; core admitted the Sun alone. The Sun
+    // is parsecs-sub-pixel here, so it rides the unresolved branch.
     const camDistMpc =
       (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState({ sun: true });
+    const state = makeState();
 
     starPointsPass(makeRuntime(renderer)).draw!(
       PASS_STUB,
       makeNear0View(camPos),
-      makeCtx(camPos),
+      makeCtx(camPos, ZERO_FOCUS, { sun: true }),
       state,
+      ALL_ON,
     );
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
@@ -571,9 +583,9 @@ describe('the Galactic Centre footprint exclusion', () => {
   };
 
   const stampedIds = (catalogs: Catalogs, camPos: Vec3, view = makeNear0View(camPos)): number[] => {
-    const state = makeState(catalogs);
+    const state = makeState();
     const pass = starPointsPass(makeRuntime(makeRenderer()));
-    pass.drawPick!(PASS_STUB, view, makeCtx(camPos), state);
+    pass.drawPick!(PASS_STUB, view, makeCtx(camPos, ZERO_FOCUS, catalogs), state, ALL_ON);
     const renderer = state.gpu.bodyPickRenderer as unknown as {
       drawPoints: ReturnType<typeof vi.fn>;
     };
@@ -615,12 +627,13 @@ describe('the Galactic Centre footprint exclusion', () => {
       blend: 1,
     };
     const camPos: Vec3 = [0, 0, 5e-3];
-    const state = makeState(MAP_AND_SUN);
+    const state = makeState();
     starPointsPass(makeRuntime(makeRenderer())).drawPick!(
       PASS_STUB,
       makeNear0View(camPos),
       makeCtx(camPos, focus),
       state,
+      ALL_ON,
     );
     const renderer = state.gpu.bodyPickRenderer as unknown as {
       drawPoints: ReturnType<typeof vi.fn>;

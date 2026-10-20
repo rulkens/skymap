@@ -1,0 +1,35 @@
+.film {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.disc {
+  flex: none;
+  width: 9rem;
+  padding: 0.5rem;
+}
+
+.words p {
+  margin: 0;
+  color: var(--site-text-dim);
+}
+
+.says {
+  composes: small from '../../styles/type.module.css';
+}
+
+.button {
+  composes: ring ring-small from '../../styles/ring.module.css';
+}
+
+@media (max-width: 900px) {
+  .disc {
+    width: 6.5rem;
+  }
+
+  .film {
+    margin-top: 1.5rem;
+  }
+}

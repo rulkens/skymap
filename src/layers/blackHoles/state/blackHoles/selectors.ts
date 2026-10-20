@@ -8,9 +8,3 @@ export const selectRoute = createSelector(
   [selectSettings],
   (settings): BlackHolesSettings => settings.blackHoles,
 );
-
-/** The per-hole item rows alone — the narrow reference `LabelHomes` reads. */
-export const selectBlackHoleItems = createSelector(
-  [selectRoute],
-  (route: BlackHolesSettings) => route.items,
-);

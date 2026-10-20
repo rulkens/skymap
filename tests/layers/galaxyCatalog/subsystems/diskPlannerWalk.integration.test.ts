@@ -12,7 +12,7 @@
  *      window each frame (one cursor), not two independent ones.
  *   3. The documented behaviour change — under the looser 8-px distance bound,
  *      famous rows reach the textured body (and prefetch) at ~3× the distance
- *      today's 24-px textured bound allowed; a non-famous row of identical geometry
+ *      the 24-px textured bound allows; a non-famous row of identical geometry
  *      still hits the 24-px skip and fetches nothing.
  *   4. One `runFrame` call populates BOTH bodies' `lastOutput` in a single frame.
  */
@@ -37,6 +37,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 // ── Fixtures (same idioms as the two subsystem suites) ──────────────────────
 
@@ -123,8 +124,8 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
   const cam = makeCam();
   return {
     cam,
-    catalogs,
-    visibleSourceMask: mask,
+    records: galaxyRecordsOver(catalogs),
+    sourceMask: mask,
     pxPerRad: pxPerRadFor(cam),
     // Live surface-brightness sliders — arbitrary plausible defaults; this
     // suite is about parity between merged/solo walks, not brightness math.
@@ -207,8 +208,7 @@ describe('diskPlannerWalk drives both bodies', () => {
   });
 
   it('one walk.runFrame call populates BOTH lastOutputs in a single frame', async () => {
-    // Deferred from Task 3: the single frame call drives both slots. Warm the
-    // atlas so the textured body has a bitmap to emit on the observed frame.
+    // Warm the atlas so the textured body has a bitmap to emit on the observed frame.
     const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(2)]]);
     const input = makeInput(catalogs);
 

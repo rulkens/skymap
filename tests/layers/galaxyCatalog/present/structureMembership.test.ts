@@ -3,7 +3,14 @@ import { structureMembership } from '../../../../src/layers/galaxyCatalog/presen
 import { Source } from '../../../../src/data/sources';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
+
+/** The flat record sources over these (source, catalog) pairs, in order. */
+function recordsOf(...pairs: readonly (readonly [SourceType, GalaxyCatalog])[]) {
+  return [...galaxyRecordsOver(new Map(pairs)).values()];
+}
 
 /**
  * Build a minimal GalaxyCatalog from a list of (x,y,z) tuples.
@@ -30,7 +37,7 @@ describe('structureMembership — pure cone search', () => {
       [10, 0, 0],
       [20, 0, 0],
     ]);
-    const result = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 10);
+    const result = structureMembership(recordsOf([Source.SDSS, catalog]), [0, 0, 0], 10);
     expect(result.count).toBe(1);
     expect(result.packedIds).toEqual([packSelection(Source.SDSS, 0)]);
   });
@@ -47,10 +54,7 @@ describe('structureMembership — pure cone search', () => {
       [0, 100, 0], // outside
     ]);
     const result = structureMembership(
-      [
-        { source: Source.SDSS, catalog: sdss },
-        { source: Source.TwoMRS, catalog: twomrs },
-      ],
+      recordsOf([Source.SDSS, sdss], [Source.TwoMRS, twomrs]),
       [0, 0, 0],
       10,
     );

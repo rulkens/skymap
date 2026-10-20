@@ -16,12 +16,16 @@ import { produceStructureMarkers } from './present/produceStructureMarkers';
 
 export function structureMarkersPlanner(
   runtime: Pick<StructureRuntime, 'store'>,
-): Extract<FrameContentPlanner<readonly StructureMarkerDescriptor[]>, { scope: 'perView' }> {
+): Extract<
+  FrameContentPlanner<readonly StructureMarkerDescriptor[], 'structureRing'>,
+  { scope: 'perView' }
+> {
   return {
     name: 'structure-markers',
     scope: 'perView',
-    plan: (view, state) => ({
-      value: produceStructureMarkers(runtime.store, state, view),
+    fade: 'structureRing',
+    plan: (view, state, fade) => ({
+      value: produceStructureMarkers(runtime.store, state, view, fade),
       awake: false,
       settling: false,
     }),

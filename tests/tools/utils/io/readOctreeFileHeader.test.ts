@@ -11,12 +11,12 @@ import {
   OCTREE_CHUNK_MAGIC,
   OCTREE_HEADER_BYTES_OFFSET,
   OCTREE_JSON_OFFSET,
-  STAR_COLUMN_SCHEMA,
 } from '../../../../src/data/octree/octreeFormat';
 import { readOctreeHeader } from '../../../../src/data/octree/readOctreeHeader';
 import { encodeOctreeObject } from '../../../../tools/octree/encodeOctreeObject';
 import type { OctreeRawColumn } from '../../../../tools/@types/octree/OctreeRawColumn';
 import { readOctreeFileHeader } from '../../../../tools/utils/io/readOctreeFileHeader';
+import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 
 const OBJECT = encodeOctreeObject(
   { kind: 'chunk', level: 3, morton: 5, nodes: 1, records: 2, chunks: [] },

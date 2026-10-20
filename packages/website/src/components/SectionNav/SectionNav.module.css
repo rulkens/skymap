@@ -1,0 +1,96 @@
+.root {
+  composes: wrap from '../../styles/layout.module.css';
+  padding-top: 3.5rem;
+}
+
+.heading {
+  composes: small from '../../styles/type.module.css';
+  max-width: none;
+  margin: 0 0 0.875rem;
+  color: var(--site-text-dim);
+}
+
+.cells {
+  composes: grid from '../../styles/layout.module.css';
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block: 1px solid var(--border-divider);
+
+  & li {
+    position: relative;
+    grid-column: span var(--span);
+  }
+
+  /* The divider stands in the middle of the gap, so each cell's words start on a line of the page grid. */
+  & li + li::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 calc(var(--col-gap) / -2);
+    border-left: 1px solid var(--border-divider);
+  }
+}
+
+.link {
+  composes: glyph-ring from '../../styles/ring.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  height: 100%;
+  min-height: var(--tap);
+  padding: 1.75rem 0;
+  color: var(--color-fg);
+  text-decoration: none;
+
+  /* The focus outline would be cut by the neighbouring cell's edge if it stood off. */
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.name {
+  font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* Narrow: a contents list, drawing beside the words, two columns while they fit. */
+@media (max-width: 900px) {
+  .root {
+    padding-top: 2.5rem;
+  }
+
+  .cells {
+    border-top: 0;
+
+    & li {
+      grid-column: span 6;
+      border-top: 1px solid var(--border-divider);
+    }
+
+    & li:nth-child(odd)::before {
+      content: none;
+    }
+  }
+
+  .link {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding: 1.25rem 0 1.25rem 0.4375rem;
+  }
+
+  .name {
+    font-size: 1.375rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .cells li {
+    grid-column: 1 / -1;
+  }
+
+  .cells li::before {
+    content: none;
+  }
+}

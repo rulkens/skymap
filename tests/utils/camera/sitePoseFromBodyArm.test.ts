@@ -20,6 +20,7 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 const ROVER: MeshBody = {
   id: 'fixture-rover',
   label: 'Fixture rover',
+  resolvePx: 3,
   boundingRadiusM: 2.479,
   albedo: [1, 1, 1],
   meshKey: 'fixture',

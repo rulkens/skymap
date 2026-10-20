@@ -1,10 +1,9 @@
 /**
  * produceStarCaptions — the star Layer's twin of `produceSceneBodyCaptions`'s
  * tests: candidate math for the curated map and the Sun. Cases specific to
- * the star family (kind routing, pick ids, the two-level visibility gate, the
- * starCatalogLabel/bodyLabel clip split) live here; the shared fade-band /
- * occlusion / registry-ramp mechanics stay covered once, on core's bodies, in
- * `produceSceneBodyCaptions.test.ts`.
+ * the star family (kind routing, pick ids, each caption reading its own item of
+ * the handed value) live here; the shared fade-band / occlusion mechanics stay
+ * covered once, on core's bodies, in `produceSceneBodyCaptions.test.ts`.
  */
 
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
@@ -23,7 +22,6 @@ import {
   unpackPick,
   PICK_SENTINEL_OFFSET,
 } from '../../../../src/data/selectionEncoding';
-import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { Source } from '../../../../src/data/source';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { StarRowFixture } from '../../../support/selectionResolverOver';
@@ -33,6 +31,8 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { ForegroundCaption } from '../../../../src/services/engine/presentation/foregroundCaption';
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 // Earth: ~1 AU from the Sun (negligible at parsec scale) and, by
@@ -53,12 +53,19 @@ const NO_STARS_LOADED: StarRowFixture = {
 
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
+// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
+const SCENE_BODIES = positionedBodiesOf(
+  [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
+  deriveBodyStates(CONST_J2000),
+);
+
 function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
   return {
     snapshot: {
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: SCENE_BODIES,
       focusBlend,
       focus: { ...ZERO_FOCUS, blend: focusBlend },
     },
@@ -69,68 +76,50 @@ function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
   } as unknown as FrameView;
 }
 
-/**
- * Mirrors `produceSceneBodyCaptions.test.ts`'s `makeState`, trimmed to the
- * two star-catalog rows this producer reads plus the body records
- * `sceneOccluderBodies`/`sceneBodyPartition` need to not throw.
- */
-function makeState(
-  famousEnabled = true,
-  famousLabelEnabled = true,
-  sunEnabled = true,
-  sunLabelEnabled = true,
-  clusterEnabled = true,
-  registryOverrides: Readonly<Partial<Record<string, number>>> = {},
-  clipOverrides: Readonly<Partial<Record<'bodyLabel' | 'starCatalogLabel', number>>> = {},
-): EngineState {
+/** The body records `sceneOccluderBodies`/`sceneBodyPartition` need to not throw. */
+function makeState(): EngineState {
   return {
     gpu: { texturedBodyRenderer: null },
     data: { bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES } },
     settings: {
       starCatalogs: {
-        enabled: clusterEnabled,
+        enabled: true,
         items: {
-          famousStar: { enabled: famousEnabled, labelEnabled: famousLabelEnabled },
-          sun: { enabled: sunEnabled, labelEnabled: sunLabelEnabled },
+          famousStar: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
           sStar: { enabled: true, labelEnabled: false },
         },
       },
     },
-    subsystems: {
-      fades: {
-        opacityOf: (handle: { item?: string }) => {
-          const item = handle.item;
-          if (item !== undefined && item in registryOverrides) return registryOverrides[item]!;
-          if (item === 'famousStar') return famousLabelEnabled ? 1 : 0;
-          if (item === 'sun') return sunLabelEnabled ? 1 : 0;
-          return 1;
-        },
-      },
-      clipPlayer: {
-        clipOpacityOf: (key: 'bodyLabel' | 'starCatalogLabel') => clipOverrides[key] ?? 1,
-      },
-    },
   } as unknown as EngineState;
 }
+
+/** The value core hands for the `label:starCatalog` entry. */
+const handed = (famousStar: number, sun = 1) => ({ famousStar, sun });
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
   return labels.find((l) => l.id === id)?.fadeAlpha;
 }
 
 describe('produceStarCaptions', () => {
-  it('a star caption recedes with the focus blend and is full at blend 0', () => {
-    const alphaAt = (blend: number) =>
-      fadeAlphaOf(produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend)).labels, PROXIMA_ID);
-    const full = alphaAt(0)!;
+  it('scales by the handed value exactly once', () => {
+    // At full blend: the director recedes captions, so a producer that receded on
+    // its own would land below 0.25.
+    const alphaOf = (value: number, blend: number) =>
+      fadeAlphaOf(
+        produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend), handed(value)).labels,
+        PROXIMA_ID,
+      );
+    const full = alphaOf(1, 0)!;
     expect(full).toBeGreaterThan(0);
-    expect(alphaAt(1)).toBeCloseTo(full * MILD_RECESSION, 10);
+    expect(alphaOf(0.25, 1)).toBeCloseTo(full * 0.25, 10);
   });
 
   it('captions every drawn famous star and the Sun with their kinds, and no S-star', () => {
     // `Label2DProducerOutput` types its labels as the base `Label2D`, but
     // every one this producer emits is built by `bodyCaption` and so carries
     // `kind` at runtime — the cast states that once, for every case below.
-    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS))
+    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(1))
       .labels as readonly ForegroundCaption[];
 
     // No S-star ever enters: SCENE_S_STARS is 39 rows, so a count this size
@@ -159,7 +148,7 @@ describe('produceStarCaptions', () => {
       undefined,
       NO_STARS_LOADED,
     );
-    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS));
+    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(1));
 
     const proxima = out.labels.find((l) => l.id === PROXIMA_ID)!;
     const proximaPick = unpackPick(proxima.pickId!)!;
@@ -178,49 +167,23 @@ describe('produceStarCaptions', () => {
     });
   });
 
-  it("drops a catalog's captions with its item toggle", () => {
-    const onOut = produceStarCaptions()(makeState(), makeCtx(EARTH_POS));
-    expect(fadeAlphaOf(onOut.labels, PROXIMA_ID)).toBeGreaterThan(0);
-    expect(fadeAlphaOf(onOut.labels, SUN_ID)).toBeGreaterThan(0);
+  it('each caption reads its own item: the star map and the Sun fade independently', () => {
+    const at = (famousStar: number, sun: number) =>
+      produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(famousStar, sun)).labels;
 
-    // Famous-star row off: the map goes dark, the Sun (its own row) does not.
-    const famousOffOut = produceStarCaptions()(
-      makeState(false /* famousEnabled */),
-      makeCtx(EARTH_POS),
-    );
-    expect(fadeAlphaOf(famousOffOut.labels, PROXIMA_ID)).toBe(0);
-    expect(fadeAlphaOf(famousOffOut.labels, SUN_ID)).toBeGreaterThan(0);
+    // Famous-star item at 0: the map goes dark, the Sun does not.
+    const famousOff = at(0, 1);
+    expect(fadeAlphaOf(famousOff, PROXIMA_ID)).toBe(0);
+    expect(fadeAlphaOf(famousOff, SUN_ID)).toBeGreaterThan(0);
 
-    // Sun row off: the Sun goes dark, the map does not.
-    const sunOffOut = produceStarCaptions()(
-      makeState(true, true, false /* sunEnabled */),
-      makeCtx(EARTH_POS),
-    );
-    expect(fadeAlphaOf(sunOffOut.labels, SUN_ID)).toBe(0);
-    expect(fadeAlphaOf(sunOffOut.labels, PROXIMA_ID)).toBeGreaterThan(0);
-  });
+    // Sun item at 0: the Sun goes dark, the map does not.
+    const sunOff = at(1, 0);
+    expect(fadeAlphaOf(sunOff, SUN_ID)).toBe(0);
+    expect(fadeAlphaOf(sunOff, PROXIMA_ID)).toBeGreaterThan(0);
 
-  it('mutes every star caption when the cluster master is off, even with rows and labels on', () => {
-    // `subjectVisible` for a star row is `starCatalogs.enabled &&
-    // items[id].enabled` — the master must silence both rows, the Sun
-    // included, exactly as it silences the drawn dots.
-    const out = produceStarCaptions()(
-      makeState(true, true, true, true, false /* clusterEnabled */),
-      makeCtx(EARTH_POS),
-    );
-    expect(fadeAlphaOf(out.labels, PROXIMA_ID)).toBe(0);
-    expect(fadeAlphaOf(out.labels, SUN_ID)).toBe(0);
-  });
-
-  it('dims the star-map captions through the starCatalogLabel clip, the Sun through bodyLabel', () => {
-    // The Sun's tour-clip grouping rides with the bodies even though its
-    // persistent toggle lives in the starCatalog cluster (produceStarCaptions'
-    // header) — a landmine this pins directly.
-    const out = produceStarCaptions()(
-      makeState(true, true, true, true, true, {}, { starCatalogLabel: 0.25 }),
-      makeCtx(EARTH_POS),
-    );
-    expect(fadeAlphaOf(out.labels, PROXIMA_ID)).toBeCloseTo(0.25);
-    expect(fadeAlphaOf(out.labels, SUN_ID)).toBeCloseTo(1);
+    // A clip or fade on one item dims only that item.
+    const dimmed = at(0.25, 1);
+    expect(fadeAlphaOf(dimmed, PROXIMA_ID)).toBeCloseTo(0.25 * fadeAlphaOf(at(1, 1), PROXIMA_ID)!);
+    expect(fadeAlphaOf(dimmed, SUN_ID)).toBe(fadeAlphaOf(at(1, 1), SUN_ID));
   });
 });

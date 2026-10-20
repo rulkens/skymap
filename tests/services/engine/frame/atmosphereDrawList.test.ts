@@ -134,6 +134,7 @@ const NO_ROW_PLANET: SeededPlanet = {
   id: 'atmosphereless-test-body',
   label: 'No Atmosphere',
   positionMpc: SEEDED_EARTH.positionMpc,
+  resolvePx: 3,
   surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
   albedo: [0.5, 0.5, 0.5],
   orientation: [...IDENTITY_MAT3] as Mat3,

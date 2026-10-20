@@ -33,6 +33,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -99,8 +100,8 @@ function makeInput(
   const cam = makeCam();
   return {
     cam,
-    catalogs,
-    visibleSourceMask: mask,
+    records: galaxyRecordsOver(catalogs),
+    sourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousGalaxiesMeta,
     nowMs: 0,

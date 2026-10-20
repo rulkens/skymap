@@ -7,6 +7,7 @@
  * rides each face — not the synthetic camera itself.
  */
 
+import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { cubemapCaptureFrameMock, deriveViewMock } = vi.hoisted(() => ({
@@ -51,7 +52,12 @@ function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   return {
     // Frame-owned: `scheduleProbeCapture` and `sceneBodyStates` both read
     // these off `ctx.snapshot.x`.
-    snapshot: { simDays: SIM_DAYS, nowMs, meshBodies: SCENE_MESH_BODIES },
+    snapshot: {
+      simDays: SIM_DAYS,
+      nowMs,
+      meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: positionedBodiesOf(SCENE_MESH_BODIES, deriveBodyStates(SIM_DAYS)),
+    },
     drawCamPos: positionMpc,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;

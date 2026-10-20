@@ -9,13 +9,10 @@ export const constellationsSlice = createSlice({
   reducerPath: 'constellations',
   initialState,
   reducers: {
-    setConstellationsEnabled: (constellations, action: PayloadAction<boolean>) => {
-      constellations.enabled = action.payload;
-    },
     setConstellationIntensity: (constellations, action: PayloadAction<number>) => {
       constellations.intensity = action.payload;
     },
   },
 });
 
-export const { setConstellationsEnabled, setConstellationIntensity } = constellationsSlice.actions;
+export const { setConstellationIntensity } = constellationsSlice.actions;

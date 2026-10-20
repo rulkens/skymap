@@ -11,7 +11,7 @@
  *     size is in the (8, ∞) band with finite orientation
  *   - emits nothing for galaxies below 8 px
  *   - emits nothing for galaxies with NaN axisRatio / positionAngleDeg
- *   - respects visibleSourceMask
+ *   - respects sourceMask
  *   - stride decimation walks 1/N of the cloud per frame and the
  *     sticky map keeps un-visited galaxies on screen between sweeps
  *   - `lastOutput` is updated each frame
@@ -29,6 +29,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 
 function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
@@ -78,8 +79,8 @@ function makeInput(
   const cam = makeCam();
   return {
     cam,
-    catalogs,
-    visibleSourceMask: mask,
+    records: galaxyRecordsOver(catalogs),
+    sourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     // Live surface-brightness sliders — arbitrary but plausible defaults;
     // these tests care about gating/sticky-map/crossfade behaviour, not

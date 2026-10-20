@@ -1,0 +1,61 @@
+.root {
+  composes: grid quarters from '../../styles/layout.module.css';
+  row-gap: 3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  & h3 {
+    margin: 0.25rem 0 0.5rem;
+  }
+}
+
+.picture {
+  display: block;
+  margin-bottom: 0.875rem;
+}
+
+.topic,
+.ask,
+.drawn {
+  composes: small from '../../styles/type.module.css';
+}
+
+.topic {
+  margin: 0;
+  color: var(--site-text-dim);
+}
+
+.ask {
+  margin: 0 0 0.5rem;
+  color: var(--color-fg);
+}
+
+.drawn {
+  margin: 0;
+  color: var(--site-text-dim);
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .root > li {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    row-gap: 0;
+
+    & > li {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: 1rem;
+      padding-block: 1.5rem;
+      border-top: 1px solid var(--border-divider);
+    }
+  }
+
+  .picture {
+    margin: 0.375rem 0 0;
+  }
+}

@@ -15,6 +15,7 @@ export function constellationsAssetRows(runtime: ConstellationsRuntime): readonl
       req: () => undefined,
       demand: (ctx) => ctx.settings.constellations.enabled,
       priority: 31, // small JSON on the near-sky rung, right behind the marker catalog
+      gates: 'constellations',
     },
   ];
 }

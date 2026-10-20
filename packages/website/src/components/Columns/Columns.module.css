@@ -1,0 +1,24 @@
+.root {
+  composes: grid from '../../styles/layout.module.css';
+  row-gap: 2.5rem;
+
+  & h3 {
+    font-size: var(--text-lead);
+  }
+
+  & p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.footLast > :last-child {
+  align-self: end;
+}
+
+.halves {
+  composes: halves from '../../styles/layout.module.css';
+}
+
+.thirds {
+  composes: thirds from '../../styles/layout.module.css';
+}

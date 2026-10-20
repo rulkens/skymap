@@ -9,25 +9,26 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
-import type { StarChunkStream } from './@types/StarChunkStream';
+import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import type { SourceType } from '../../@types/data/SourceType';
 
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { visibleStars } from '../../services/engine/frame/visibleStars';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
+import { positionedSeededStars } from './present/positionedSeededStars';
 
 import { createStarCatalogRenderer } from './render/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from './render/starCatalogPickRenderer';
 import { createStarRenderer } from './render/starRenderer';
 import { createStarPointRenderer } from './render/starPointRenderer';
 import { createStarAggregateUpsample } from './render/starAggregateUpsample';
-import type { StarPoolHost } from './@types/StarPoolHost';
+import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
 import { createStarCatalogSlot } from './load/starCatalogSlot';
 import { createFamousStarsMetaSlot } from './load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
+import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 
 export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntime {
   // `star-<id>` splits seeded from survey on the all-digits test
@@ -65,10 +66,11 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
   const starPointRenderer = createStarPointRenderer(device, HDR_TARGET_FORMAT);
   const bootBodyStates = deriveBodyStates(CONST_J2000);
   starPointRenderer.setStars(
-    visibleStars(deps.store.getState().settings.starCatalogs).map((star) => ({
-      ...star,
-      positionMpc: bootBodyStates.get(star.id)!.positionMpc,
-    })),
+    positionedSeededStars(
+      Object.values(SEEDED_STAR_CATALOGS)
+        .flat()
+        .map((body) => ({ body, positionMpc: bootBodyStates.get(body.id)!.positionMpc })),
+    ),
     // Boot seed, no frame yet — the main view's slot. `starPointsPass`
     // re-uploads every real frame, so this is overwritten before the first draw.
     0,
@@ -76,8 +78,12 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
-  const chunkStreams = new Map<SourceType, StarChunkStream>();
-  const poolHost: StarPoolHost = { renderer, chunkStreams, requestRender: deps.requestRender };
+  const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
+  const poolHost: OctreePoolHost<StarColumns> = {
+    renderer,
+    chunkStreams,
+    requestRender: deps.requestRender,
+  };
   const catalogs = new Map(
     STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
       ([source]) =>

@@ -16,10 +16,13 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
-import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
@@ -44,7 +47,7 @@ function makeCtx(offscreenView: GPUTextureView, camPos: Readonly<Vec3>): FrameVi
   } as unknown as FrameView;
 }
 
-function makeCatalog(): StarOctree {
+function makeCatalog(): Octree<StarColumns> {
   return starOctreeFromSkst({
     starCount: 1,
     nodeCount: 1,
@@ -66,21 +69,8 @@ function makeRuntime(upsample: unknown): StarCatalogRuntime {
   return { renderer, aggregateUpsample: upsample } as unknown as StarCatalogRuntime;
 }
 
-function makeSettings(): StarCatalogSettings {
-  return {
-    enabled: true,
-    sizePx: 2.5,
-    brightness: 1.0,
-    refineThreshold: 0.05,
-    glowOverlap: 1.0,
-    aggregateIntensityCap: 0.06,
-    items: { gaiaStars: { enabled: true, labelEnabled: false } },
-  } as unknown as StarCatalogSettings;
-}
-
-function makePassState(): PassState {
-  return { settings: { starCatalogs: makeSettings() } } as unknown as PassState;
-}
+// The pass reads no engine state: its enable rides the handed value.
+const PASS_STATE = {} as unknown as PassState;
 
 const inBand: Vec3 = [0, 0, (inner + (outer - inner) * 0.5) * PC_TO_MPC];
 
@@ -90,7 +80,7 @@ describe('starAggregateUpsamplePass', () => {
     const drawSpy = vi.fn();
     const runtime = makeRuntime({ draw: drawSpy, destroy: vi.fn() });
     const pass = starAggregateUpsamplePass(runtime);
-    pass.draw!(PASS_STUB, VIEW_STUB, makeCtx(offscreenView, inBand), makePassState());
+    pass.draw!(PASS_STUB, VIEW_STUB, makeCtx(offscreenView, inBand), PASS_STATE, ALL_ON);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![0]).toBe(PASS_STUB);
     expect(drawSpy.mock.calls[0]![1]).toBe(offscreenView);

@@ -1,0 +1,25 @@
+.root {
+  margin-top: var(--stack);
+  padding-block: 0.875rem 0.25rem;
+  border-top: 1px solid var(--border-divider);
+
+  & + & {
+    margin-top: 0;
+  }
+
+  /* The last of a run closes it with the rule the first opened it with. */
+  &:not(:has(+ .root)) {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-divider);
+  }
+
+  @media (max-width: 900px) {
+    max-width: var(--doc-measure);
+  }
+}
+
+.what {
+  max-width: none;
+  margin: 0;
+  color: var(--color-fg);
+}

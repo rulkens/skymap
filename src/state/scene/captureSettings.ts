@@ -15,8 +15,8 @@
  * (the `enabled` gates) automatically, so restore is a single
  * cluster-for-cluster assignment with no field-by-field translation to
  * keep in sync. That policy is why `starCatalogs` carries its per-item
- * `enabled` axis along with `labelEnabled`: `visibleStars` and the
- * foreground-caption layer read both, so a whole-cluster capture is what keeps a
+ * `enabled` axis along with `labelEnabled`: core's section rule and the
+ * caption entry read both, so a whole-cluster capture is what keeps a
  * star's dot and its caption restoring in lockstep rather than one outliving the
  * other.
  *

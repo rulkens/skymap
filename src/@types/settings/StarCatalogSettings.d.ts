@@ -7,7 +7,8 @@ import type { StarCatalogId } from '../data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
 
 export type StarCatalogSettings = {
-  /** TOTAL over the cluster: consumers read this before `items[id].enabled`. */
+  /** The cluster's section switch: core's section rule ANDs it with `items[id].enabled`;
+   * consumers read the handed value, never this. */
   enabled: boolean;
   /** Star-billboard radius in PIXELS, shared across catalogs. */
   sizePx: number;

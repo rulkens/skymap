@@ -1,8 +1,8 @@
 /**
  * create — the Local Bubble shell family's construction in dependency
  * order: the renderer, then the slot that commits into it. No fade is
- * driven here; core owns the arrival edge (`installFadeOnArrival`), and the
- * commit's `upload` is what opens the fade row's guard.
+ * driven here: the asset row's `gates` lets core fade the shell in on the
+ * slot's commit and out on its release.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

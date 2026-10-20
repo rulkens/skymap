@@ -61,7 +61,6 @@ export const DOCS_TREE: readonly DocsGroup[] = [
   },
   {
     name: 'Data',
-    purpose: 'Every catalogue and image the map is built from, with its licence and where to check it.',
     up: '/science/',
     pages: [
       { title: 'All sources at a glance', path: '/docs/data/', status: 'live' },
@@ -76,7 +75,6 @@ export const DOCS_TREE: readonly DocsGroup[] = [
   },
   {
     name: 'Science',
-    purpose: 'What is measured, what is derived, what is modelled and what is drawn.',
     up: '/science/',
     pages: [
       { title: 'Measured, derived, modelled, drawn', path: '/docs/science/', status: 'live' },
@@ -85,7 +83,6 @@ export const DOCS_TREE: readonly DocsGroup[] = [
   },
   {
     name: 'Rendering',
-    purpose: 'How one frame is drawn, from catalogue rows to pixels.',
     up: '/science/',
     pages: [
       { title: 'The frame', path: '/docs/rendering/', status: 'live' },
@@ -96,7 +93,6 @@ export const DOCS_TREE: readonly DocsGroup[] = [
   },
   {
     name: 'Project',
-    purpose: 'Where the project is going, whom it credits and how to cite it.',
     up: '/about/',
     pages: [
       { title: 'Roadmap', path: '/docs/roadmap/', status: 'live' },

@@ -1,0 +1,89 @@
+/*
+ * `:root[data-flight-live]` is the page the pre-paint script marked (prePaintScript.ts): the intro
+ * then stands on the stage; without it the wordmark heads a list of captioned pictures.
+ */
+.intro {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: calc(var(--nav-height) + 2rem) var(--gutter) 2.5rem;
+}
+
+.intro .word {
+  margin: 0 0 0.08em -0.04em;
+  font-size: min(clamp(4.5rem, 22vw, 8rem), 27vw);
+  line-height: 1;
+}
+
+.tag {
+  max-width: none;
+  margin: 0;
+  font-size: var(--text-lead);
+  line-height: 1.4;
+  color: var(--site-text);
+}
+
+:root[data-flight-live] .intro {
+  position: absolute;
+  z-index: 4;
+  inset: auto 0 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 1.5rem 3rem;
+  padding: 0 5.5rem 4.5rem var(--gutter);
+}
+
+/* A local scrim: under the words only, so the rest of the frame keeps its light. */
+:root[data-flight-live] .intro::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -7rem 0 0;
+  background: linear-gradient(
+    0deg,
+    rgb(0 0 0 / 0.9) 0%,
+    rgb(0 0 0 / 0.74) 55%,
+    rgb(0 0 0 / 0) 100%
+  );
+}
+
+:root[data-flight-live] .intro .word {
+  font-size: clamp(5.5rem, 10vw, 10rem);
+}
+
+/* Upright screens: the words take the bottom. */
+@media (max-width: 760px) and (orientation: portrait) {
+  :root[data-flight-live] .intro {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 0 var(--gutter) 3.75rem;
+  }
+
+  :root[data-flight-live] .intro::before {
+    inset: -11rem 0 0;
+  }
+
+  /* Never wider than the window, whatever the reader's text size. */
+  :root[data-flight-live] .intro .word {
+    font-size: min(clamp(4.5rem, 24vw, 7rem), 27vw);
+  }
+}
+
+/* Short screens (a phone on its side): everything smaller, nothing stacked. */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root[data-flight-live] .intro {
+    padding: 0 4rem 2.25rem var(--gutter);
+  }
+
+  :root[data-flight-live] .intro .word {
+    font-size: clamp(3.5rem, 9vw, 5rem);
+  }
+
+  :root[data-flight-live] .intro .tag {
+    max-width: none;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+  }
+}

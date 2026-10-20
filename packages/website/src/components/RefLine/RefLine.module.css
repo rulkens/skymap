@@ -1,0 +1,4 @@
+/* An identifier is one long word. */
+.id {
+  overflow-wrap: anywhere;
+}

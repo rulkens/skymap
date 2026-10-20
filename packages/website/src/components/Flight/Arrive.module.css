@@ -1,0 +1,71 @@
+/*
+ * `:root[data-flight-live]` is the page the pre-paint script marked (prePaintScript.ts): the words
+ * then stand on the stage, over the last stop, and the scroll fades them in.
+ */
+.arrive {
+  padding: 1rem var(--gutter) 3rem;
+
+  & p {
+    margin: 0 0 1rem;
+    color: var(--site-text);
+  }
+}
+
+:root[data-flight-live] .arrive {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 var(--gutter) 3.5rem;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 0 0.5rem rgb(0 0 0 / 0.9);
+
+  & p {
+    max-width: 38ch;
+    margin: 0;
+  }
+
+  /* A local scrim: under the words only, so the rest of the frame keeps its light. */
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -6rem 0 0;
+    background: radial-gradient(
+      ellipse 60% 100% at 50% 100%,
+      rgb(0 0 0 / 0.86) 0%,
+      rgb(0 0 0 / 0.6) 50%,
+      rgb(0 0 0 / 0) 100%
+    );
+  }
+}
+
+/* Upright screens: the words stand at the left, as the captions do. */
+@media (max-width: 760px) and (orientation: portrait) {
+  :root[data-flight-live] .arrive {
+    align-items: flex-start;
+    padding-bottom: 2.75rem;
+    text-align: left;
+  }
+}
+
+/* Short screens (a phone on its side): everything smaller, nothing stacked. */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root[data-flight-live] .arrive {
+    padding-bottom: 1rem;
+    gap: 0.25rem;
+
+    & p {
+      max-width: 60ch;
+      font-size: var(--text-small);
+      font-weight: var(--weight-small);
+    }
+  }
+}

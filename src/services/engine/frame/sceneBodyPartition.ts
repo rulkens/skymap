@@ -1,41 +1,25 @@
 /**
- * sceneBodyPartition — resolve THE per-frame `{ glints, flat, textured, meshes }`
- * split of the seeded non-Earth bodies from live engine state.
- *
- * `partitionBodiesByPresentation` is pure — it takes a body list, the per-frame
- * body-state snapshot (`sceneBodyStates`), a camera, a projection, and an
- * `isTextureResident` predicate. This thin adapter binds those inputs to the
- * current frame ONCE so the layers that consume opposite
- * branches (`planetsPass` the `flat` branch, `texturedBodiesPass` the
- * `textured` branch, and eventually the glints layer) cannot drift apart on how
- * they build them. If two layers spelled the residency lookup separately, a
- * resident body could be counted `textured` by one and `flat` by the other and
- * get double-drawn (both opaque into `foreground:0`, z-fighting).
- *
- * Residency is a RENDERING fact, so it is asked of the renderer: "is a real
- * surface texture bound for this body?" (`texturedBodyRenderer.hasMap`). The
- * loading system is not consulted. A committed `bodyTextures` slot used to stand
- * in for the fact, and that proxy holds only while every bound texture has a slot
- * behind it — which stops being true the moment the renderer can hold a texture
- * from another source (a shared body atlas tile). Asking the drawer what it has
- * bound cannot go stale that way. Residency tracks the surface (day) map — the
- * base drawn body — not the feature kinds.
- *
- * The apparent-size inputs are read off the frame context the same way in
- * `enabled` and `draw`: `ctx.drawCamPos` for the camera, `ctx.drawPxPerRad`
- * for the projection. Both call sites of both
- * layers therefore see the identical partition, which is the whole point — one
- * partition, consumed on opposite branches, is what keeps the descent handoff
- * seamless with no threshold-crossing double-draw or drop.
+ * sceneBodyPartition — core's own bodies (`coreSceneBodyIds`: the planets and the present
+ * mesh bodies) out of the frame's one scene-body sort, four ways: `glints` their
+ * unresolved; their resolved into `meshes`, `textured` or `flat`. Every consumer reads this
+ * one binding, so no body is textured to one pass and flat to another (z-fighting).
+ * Residency is asked of the renderers (`hasMesh`, `hasMap`), never the loading system: a
+ * body draws its mesh once resident and its sphere until then; a mission mesh body has no
+ * sphere, so a non-resident one is in no bucket at all (invisible, never a wrong shape).
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
+import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
+import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
-import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
-import { sceneBodyStates } from './sceneBodyStates';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
+import { meshPresentationOf } from '../../../utils/meshBodies/meshPresentationOf';
+import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
+import { coreSceneBodyIds } from './coreSceneBodyIds';
+import { sceneBodyPresentation } from './sceneBodyPresentation';
 
 export function sceneBodyPartition(
   state: PassState,
@@ -44,19 +28,31 @@ export function sceneBodyPartition(
   glints: readonly (PlanetBody | MeshBody)[];
   flat: readonly PlanetBody[];
   textured: readonly PlanetBody[];
-  meshes: readonly MeshBody[];
+  meshes: readonly MeshPresentation[];
 } {
-  return partitionBodiesByPresentation({
-    bodies: [...state.data.bodies.planets, ...ctx.snapshot.meshBodies],
-    bodyStates: sceneBodyStates(state, ctx),
-    camPosMpc: ctx.drawCamPos,
-    pxPerRad: ctx.drawPxPerRad,
-    // Resident iff the renderer has a real SURFACE map bound for the body. The
-    // id is a plain string on the body record while the renderer is keyed by
-    // `BodyTextureId`; a non-registry body simply misses that Map (→ not
-    // resident → flat), so the cast is safe. Before the GPU is up there is no
-    // renderer and nothing is drawn textured, hence the `?? false`.
-    isTextureResident: (id) =>
-      state.gpu.texturedBodyRenderer?.hasMap(id as BodyTextureId, 'surface') ?? false,
-  });
+  const own = coreSceneBodyIds(ctx.snapshot.meshBodies);
+  const isOwn = (body: SceneBody): body is PlanetBody | MeshBody => own.has(body.id);
+  const { unresolved, resolved } = sceneBodyPresentation(ctx);
+  const glints: (PlanetBody | MeshBody)[] = [];
+  const flat: PlanetBody[] = [];
+  const textured: PlanetBody[] = [];
+  const meshes: MeshPresentation[] = [];
+
+  for (const { body } of unresolved) if (isOwn(body)) glints.push(body);
+  for (const { body } of resolved) {
+    if (!isOwn(body)) continue;
+    const mesh = meshPresentationOf(body.id);
+    if (mesh !== null && (state.gpu.meshBodyRenderer?.hasMesh(body.id) ?? false)) meshes.push(mesh);
+    else if (isMeshBody(body)) continue;
+    // The renderer is keyed by `BodyTextureId`; a non-registry id misses its Map (→ flat),
+    // and before the GPU is up nothing is bound, hence the `?? false`.
+    else if (
+      bodyTextureSpec(body.id) !== null &&
+      (state.gpu.texturedBodyRenderer?.hasMap(body.id as BodyTextureId, 'surface') ?? false)
+    )
+      textured.push(body);
+    else flat.push(body);
+  }
+
+  return { glints, flat, textured, meshes };
 }

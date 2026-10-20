@@ -1,8 +1,9 @@
 /**
  * sceneBodyLabels — name captions for the true-scale foreground bodies core
- * still owns: Earth, the planets and the mesh bodies (the seeded stars, the
- * Sun and the Galactic Centre caption through their Layers' own producers, the
- * sampled craft through the missions Layer's `produceMissionCaptions`).
+ * captions: Earth, the planets and the mesh bodies, minus any body a Layer
+ * claims (a Layer that claims a body captions it: the sampled craft through the
+ * missions Layer's `produceMissionCaptions`). The seeded stars, the Sun and the
+ * Galactic Centre are not scene bodies here, and caption through their Layers.
  *
  * The scene bodies render true-scale in the foreground/HDR passes, so at
  * almost every zoom level they are sub-pixel and impossible to locate by
@@ -41,7 +42,6 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
-import { SAMPLED_BODY_IDS } from '../../../data/missions/sampledBodyIds';
 import { compressBrightness } from '../../../utils/color/compressBrightness';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
@@ -76,16 +76,21 @@ const PLANET_TINT_GAMMA = 0.3;
 export function sceneBodyLabels(
   bodyStates: ReadonlyMap<string, BodyState>,
   simDays: number,
+  claimed: ReadonlySet<string>,
 ): ForegroundCaption[] {
   return [
-    bodyCaption(
-      SCENE_EARTH,
-      bodyFootprintRadiusM(SCENE_EARTH),
-      bodyStates.get(SCENE_EARTH.id)!.positionMpc,
-      EARTH_TINT,
-      'earth',
-    ),
-    ...SCENE_PLANETS.map((planet) =>
+    ...(claimed.has(SCENE_EARTH.id)
+      ? []
+      : [
+          bodyCaption(
+            SCENE_EARTH,
+            bodyFootprintRadiusM(SCENE_EARTH),
+            bodyStates.get(SCENE_EARTH.id)!.positionMpc,
+            EARTH_TINT,
+            'earth',
+          ),
+        ]),
+    ...SCENE_PLANETS.filter((planet) => !claimed.has(planet.id)).map((planet) =>
       bodyCaption(
         planet,
         bodyFootprintRadiusM(planet),
@@ -99,7 +104,7 @@ export function sceneBodyLabels(
     ...SCENE_MESH_BODIES.filter(
       (body) =>
         !ANCHORED_MESH_BODY_IDS.has(body.id) &&
-        !SAMPLED_BODY_IDS.includes(body.id) &&
+        !claimed.has(body.id) &&
         spacecraftPresent(body.id, simDays),
     ).map((body) => meshBodyCaption(body, bodyStates.get(body.id)!.positionMpc)),
   ];

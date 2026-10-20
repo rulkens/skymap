@@ -11,8 +11,3 @@ export const selectRoute = createSelector(
 
 /** The whole cluster, under the slice's own name. */
 export const selectConstellations = selectRoute;
-
-export const selectConstellationsEnabled = createSelector(
-  [selectRoute],
-  (route: ConstellationsSettings): boolean => route.enabled,
-);

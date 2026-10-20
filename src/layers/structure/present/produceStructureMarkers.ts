@@ -4,15 +4,15 @@
  * structure store.
  *
  * Emits one marker descriptor per marker-bearing structure — applying
- * apparent-size fades, significance weighting, the selection brighten,
- * per-category opacity (the category toggle's fade, read from the
- * FadeRegistry), and a smooth focus *recession*. Famous
+ * apparent-size fades, significance weighting, the selection brighten, the
+ * per-category value core hands (toggle fade and clip) and each ring's focus
+ * emphasis, keyed on its own pick word so the focused ring never recedes. Famous
  * galaxies are not on this path; they never emit markers.
  *
- * Per-category opacity and recession bake into the DESCRIPTOR alpha rather
- * than riding a uniform: the marker renderer has a single global `fadeOpacity`
- * uniform that can't carry per-category or per-instance opacity, so the
- * producer is the only place the two can be applied independently per ring.
+ * The per-category value bakes into the DESCRIPTOR alpha rather than riding a
+ * uniform: the marker renderer has a single global `fadeOpacity` uniform that
+ * can't carry per-category opacity, so the producer is the only place it can
+ * be applied independently per ring.
  *
  * ### Emit-all-then-discard contract (pick-index alignment)
  *
@@ -23,16 +23,16 @@
  * the ring pick path packs `@builtin(instance_index)` as the per-category-local
  * index and `resolveStructureFromPick` resolves it through `byCategory(cat)[structureIndex]`.
  * Omitting a faded structure would index-shift that lookup. The only legitimate
- * skip is all-or-nothing-per-category — a category that is both DISABLED (its
- * `structures.items[cat].enabled` boolean is false, the authoritative gate) AND
- * fully faded (toggle opacity exactly 0) — which never perturbs within-category
- * alignment. A still-fading category (disabled but opacity > 0) keeps emitting
- * alpha-scaled descriptors so the fade-out tail draws to completion.
+ * skip is all-or-nothing-per-category — a category whose handed value is exactly
+ * 0 — which never perturbs within-category alignment. A still-fading category
+ * (value above 0) keeps emitting alpha-scaled descriptors so the fade-out tail
+ * draws to completion.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec4 } from '../../../@types/math/Vec4';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureMarkerDescriptor } from '../@types/StructureMarkerDescriptor';
 import type { StructureStore } from '../@types/StructureStore';
 import {
@@ -43,15 +43,21 @@ import {
   RING_PICK_MIN_ALPHA,
 } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
-import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
+import { structurePickId } from '../../../utils/picking/structurePickId';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
+import { structureVisibility } from '../visibility';
+
+const RING_ENTRY = visibilityEntryOf(structureVisibility, 'structureRing');
 
 export function produceStructureMarkers(
-  store: Pick<StructureStore, 'all'>,
+  store: Pick<StructureStore, 'all' | 'categoryIndexOf'>,
   state: PassState,
   ctx: FrameView,
+  fade: Readonly<Record<StructureId, number>>,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];
   const pxPerRad = ctx.drawPxPerRad;
@@ -59,36 +65,17 @@ export function produceStructureMarkers(
   // Distance from the render origin, which keys each category's visibility band.
   const camDistMpc = Math.hypot(cx, cy, cz);
 
-  // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked); focused → the
-  // "every OTHER ring recedes" mode (structure-focus). A galaxy selection
-  // leaves the matching id null, so no structure ring is bumped / recedes.
+  // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked). A
+  // galaxy selection leaves the matching id null, so no structure ring is bumped.
   const selectedStructureId = structureIdOf(state.selection.select);
   const hoveredStructureId = structureIdOf(state.selection.hover);
-  const focusedStructureId = structureIdOf(state.selection.focus);
-
-  // Per-category marker opacity (the category toggle's fade) lives in the
-  // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot the frame
-  // clock once so every category reads the same instant.
-  const fades = state.subsystems.fades;
-  const now = ctx.snapshot.nowMs;
-
-  // Clip-owned transient opacity for structure rings — hoisted outside the loop
-  // because ALL structure sources map to the same `'structureRing'` key, so the
-  // factor is identical for every structure. Returns 1 when no clip is playing.
-  // We address the key directly (`'structureRing'`) since `fadeIdToVisibilityKey`
-  // maps every `StructureId` to this value without discrimination.
-  const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureRing', now);
 
   for (const p of store.all()) {
-    // Per-category marker opacity: the category toggle's fade, read from the
-    // registry. The authoritative gate is the boolean — draw while the category
-    // is enabled OR still fading out. Only when it's both disabled AND fully
-    // faded do we skip (the all-or-nothing case, safe for within-category
-    // alignment). A mid-fade value scales the descriptor alpha; catOpacity is
-    // still multiplied into `weightedFade` below.
-    const catOpacity = fades.opacityOf({ kind: 'structure', id: p.category }, now);
-    const enabled = state.settings.structures.items[p.category].enabled;
-    if (!enabled && catOpacity === 0) continue;
+    // The category's handed value: toggle fade × clip. Skip only at
+    // exactly 0 (the all-or-nothing case, safe for within-category alignment); a
+    // mid-fade value scales the descriptor alpha below.
+    const catFade = fade[p.category];
+    if (catFade === 0) continue;
     // Render at the WIDER apparent extent, falling back to the core for
     // structures that only set physicalRadiusMpc.
     const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
@@ -112,31 +99,20 @@ export function produceStructureMarkers(
     // SIG_MIN_ALPHA (significance 0) to 1 (significance 1). Featured anchors
     // omit significance, so `?? 1` leaves their at-rest alpha unchanged.
     const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
-    // clipFactor is the clip-player's transient opacity for the structureRing
-    // key — 1 when no clip plays, otherwise the cue-driven dimming value.
-    const weightedFade = fadeAlpha * sigWeight * catOpacity * clipFactor;
+    const pickId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
+    const weightedFade =
+      fadeAlpha * sigWeight * catFade * emphasisOf(RING_ENTRY, ctx.snapshot, pickId);
 
-    // Focus mode: while some structure is FOCUSED, every OTHER marker
-    // smoothly recedes toward MILD_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
-    // focused structure is exempt (factor 1) — a faded ring never carries a
-    // bright label/marker. A bare select does NOT recede. At rest (blend 0): 1.
-    const isSelected = p.id === selectedStructureId;
-    const recession =
-      p.id === focusedStructureId
-        ? 1
-        : focusRecession({ kind: 'structure', id: p.category }, ctx.snapshot.focusBlend);
-
-    // Halo: style at-rest alpha × per-frame fade × recession baked into alpha.
+    // Halo: style at-rest alpha × per-frame fade baked into alpha.
     const haloColor: Vec4 = [
       style.haloColor[0],
       style.haloColor[1],
       style.haloColor[2],
-      style.haloColor[3] * weightedFade * recession * bandFade,
+      style.haloColor[3] * weightedFade * bandFade,
     ];
 
-    // Ring: same fade bake plus selection/hover. The selected ring is brightened and
-    // recession-free; every other ring is scaled by the focus recession.
-    // Hover is the weaker cue and does not exempt the ring from recession.
+    // Ring: same fade bake plus selection/hover brighten.
+    const isSelected = p.id === selectedStructureId;
     let ringGain = 1;
     if (p.id === hoveredStructureId) ringGain = HOVERED_RING_BRIGHTEN;
     if (isSelected) ringGain = SELECTED_RING_BRIGHTEN;
@@ -144,7 +120,7 @@ export function produceStructureMarkers(
       style.ringColor[0] * ringGain,
       style.ringColor[1] * ringGain,
       style.ringColor[2] * ringGain,
-      style.ringColor[3] * weightedFade * (isSelected ? 1 : recession) * bandFade,
+      style.ringColor[3] * weightedFade * bandFade,
     ];
 
     out.push({

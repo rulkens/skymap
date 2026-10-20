@@ -3,6 +3,7 @@ import { structureMemberCount } from '../../../../src/layers/galaxyCatalog/prese
 import { Source } from '../../../../src/data/sources';
 import { maskWith } from '../../../../src/utils/maskWith';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -37,9 +38,13 @@ const cluster: StructureInfo = {
   physicalRadiusMpc: 10,
 };
 
-/** Build a `getCloud` from a per-source catalog map. */
+/** The flat record sources over a per-source catalog map. */
 function cloudFrom(map: Partial<Record<SourceType, GalaxyCatalog>>) {
-  return (source: SourceType): GalaxyCatalog | undefined => map[source];
+  return galaxyRecordsOver(
+    new Map(
+      Object.entries(map).map(([source, catalog]) => [Number(source) as SourceType, catalog]),
+    ),
+  );
 }
 
 describe('structureMemberCount', () => {

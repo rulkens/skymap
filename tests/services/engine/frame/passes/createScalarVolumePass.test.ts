@@ -49,7 +49,6 @@ function makeRenderer(
     upload: () => {},
     unload: () => {},
     hasActiveFields: () => true,
-    listIds: () => ['mcpm'],
     draw: drawSpy,
     destroy: () => {},
   };

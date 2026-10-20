@@ -16,6 +16,7 @@ import {
   aimAlong,
   show,
   hide,
+  fade,
   focus,
   focusOnId,
   seq,
@@ -40,26 +41,19 @@ describe('tween', () => {
 // show / hide
 // ---------------------------------------------------------------------------
 
-describe('show', () => {
-  it('splits scoped entries out of the layer list', () => {
-    const e = show(['flow', 'survey:milliquas', 'label:galaxy-group']);
-    expect(e.layers).toEqual(['flow']);
-    expect(e.scoped).toEqual(['survey:milliquas', 'label:galaxy-group']);
+describe('show / hide / fade', () => {
+  it('keep bare, scoped and label args in one list, in order', () => {
+    const e = show(['flow', 'survey:milliquas', 'label:structure:void']);
+    expect(e.args).toEqual(['flow', 'survey:milliquas', 'label:structure:void']);
   });
-});
 
-describe('hide', () => {
-  it("mixes aggregates and scoped entries: 'labels' expands, scoped separates", () => {
-    const e = hide(['labels', 'survey:milliquas'], 0);
-    expect(e.layers).toEqual([
-      'surveyLabel',
-      'structureLabel',
-      'milkyWayLabel',
-      'starCatalogLabel',
-      'bodyLabel',
-    ]);
-    expect(e.scoped).toEqual(['survey:milliquas']);
-    expect(e.over).toBe(0);
+  it('reject an address no entry declares, at compile time', () => {
+    // @ts-expect-error a misspelled show key
+    hide(['flwo']);
+    // @ts-expect-error an item the structure label does not have
+    show(['label:structure:bogus']);
+    // @ts-expect-error fade has no scoped form
+    fade(['survey:bogus'], 0, 1);
   });
 });
 

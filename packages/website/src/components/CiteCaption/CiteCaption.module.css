@@ -1,0 +1,42 @@
+/* What a reader would print, set apart from the page's own words as a quotation is. */
+.root {
+  margin: 0 0 var(--stack);
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--site-text-dim);
+
+  & h3 {
+    margin: 1.25rem 0 0.25rem;
+    font: var(--weight-small) var(--text-small) / 1.45 var(--font-body);
+    color: var(--site-text-dim);
+  }
+
+  & h3:first-child {
+    margin-top: 0;
+  }
+
+  & p {
+    max-width: var(--doc-measure);
+    margin: 0 0 0.5rem;
+    color: var(--color-fg);
+    overflow-wrap: anywhere;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  & p {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.copy {
+  margin-block: -0.5rem;
+}
+
+.address {
+  font: 400 0.9375rem / 1.45 var(--font-family-mono);
+}

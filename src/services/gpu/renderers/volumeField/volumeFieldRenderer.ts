@@ -329,10 +329,9 @@ export function createVolumeFieldRenderer<Id extends string>(
       const entry = fields.get(id);
       if (!entry) return;
       // The renderer is FadeRegistry-agnostic: it neither registers nor
-      // unregisters fade handles. The fade-ownership manifest (`seedFades`)
-      // owns the whole volume-field handle set at construction, so a field's
-      // handle stays registered across upload/unload — `unload` just releases
-      // this field's GPU resources.
+      // unregisters fade identities. Core seeds every visibility identity at
+      // boot, so a field's identity stays registered across upload/unload —
+      // `unload` just releases this field's GPU resources.
       entry.volumeTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
@@ -345,7 +344,7 @@ export function createVolumeFieldRenderer<Id extends string>(
         if (s.intensity <= 0) continue;
         // Opacity is the SOLE visibility truth: a field is active iff its
         // resolved opacity is non-zero. The enabled toggle doesn't override
-        // a zero — it only SEEDS fade intent through the visibility bridge,
+        // a zero — it only SEEDS the fade target through the visibility sync,
         // so an enabled field spatially faded to 0 (deep zoom) must not
         // burn a full raymarch. This one test also covers the fade-out
         // tail (toggle off, opacity still ramping down) for free: the tail
@@ -353,9 +352,6 @@ export function createVolumeFieldRenderer<Id extends string>(
         if (fadeOpacityOf(id) > 0) return true;
       }
       return false;
-    },
-    listIds() {
-      return Array.from(fields.keys());
     },
     draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf) {
       pass.setPipeline(pipeline);
@@ -404,8 +400,8 @@ export function createVolumeFieldRenderer<Id extends string>(
           e.residentPaletteId = s.paletteId;
         }
         // Skip iff the field resolves invisible: opacity is the sole
-        // visibility truth (the enabled toggle only seeds fade intent via
-        // the visibility bridge — it never overrides a zero, so an enabled
+        // visibility truth (the enabled toggle only seeds the fade target via
+        // the visibility sync — it never overrides a zero, so an enabled
         // field spatially faded to 0 at deep zoom skips its raymarch).
         // While opacity > 0 we keep drawing so the ~100 ms fade-out tail is
         // visible. A just-enabled field is skipped only for its first tick

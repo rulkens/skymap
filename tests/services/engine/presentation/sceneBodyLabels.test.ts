@@ -15,21 +15,27 @@ import { compressBrightness } from '../../../../src/utils/color/compressBrightne
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+const NO_CLAIMS: ReadonlySet<string> = new Set();
 
 describe('sceneBodyLabels', () => {
-  const labels = sceneBodyLabels(J2000_STATES, CONST_J2000);
+  const labels = sceneBodyLabels(J2000_STATES, CONST_J2000, NO_CLAIMS);
 
-  it('emits one label per core scene body (Earth + planets + non-anchored, non-sampled mesh bodies)', () => {
-    // The seeded stars, the Sun and the sampled craft caption from their
-    // Layers' own producers, not here — core keeps only the bodies whose
-    // identity core owns.
+  it('emits one label per scene body nobody claims (Earth + planets + non-anchored mesh bodies)', () => {
+    // The seeded stars and the Sun are not scene bodies here: they caption from
+    // their Layer's own producer.
     const captioned = SCENE_MESH_BODIES.filter(
-      (body) =>
-        !ANCHORED_MESH_BODY_IDS.has(body.id) &&
-        !SAMPLED_BODY_IDS.includes(body.id) &&
-        spacecraftPresent(body.id, CONST_J2000),
+      (body) => !ANCHORED_MESH_BODY_IDS.has(body.id) && spacecraftPresent(body.id, CONST_J2000),
     );
     expect(labels).toHaveLength(1 + SCENE_PLANETS.length + captioned.length);
+  });
+
+  it('skips every body the claimed set holds, Earth and planets included', () => {
+    const claimed = new Set(['earth', 'mars', ...SAMPLED_BODY_IDS]);
+    const ids = sceneBodyLabels(J2000_STATES, CONST_J2000, claimed).map((label) => label.id);
+    expect(ids).not.toContain('sceneBody-earth');
+    expect(ids).not.toContain('sceneBody-mars');
+    expect(ids).toContain('sceneBody-venus');
+    for (const id of SAMPLED_BODY_IDS) expect(ids).not.toContain(`sceneBody-${id}`);
   });
 
   it('leaves anchored scans uncaptioned', () => {
@@ -51,7 +57,7 @@ describe('sceneBodyLabels', () => {
     // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
     // to the new world position — the label FOLLOWS the body.
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
-    const laterLabels = sceneBodyLabels(laterStates, CONST_J2000 + 120);
+    const laterLabels = sceneBodyLabels(laterStates, CONST_J2000 + 120, NO_CLAIMS);
 
     const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
     const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;

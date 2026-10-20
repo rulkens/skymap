@@ -1,0 +1,26 @@
+.root {
+  composes: grid from '../../styles/layout.module.css';
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.thirds {
+  composes: thirds from '../../styles/layout.module.css';
+}
+
+/* In a fixed row the words are short, and the numeral is as large as a section's name. */
+.fixed {
+  composes: quarters from '../../styles/layout.module.css';
+  row-gap: 2rem;
+  --numeral-size: var(--text-h2);
+  --numeral-gap: 0.75rem;
+  --numeral-leading: 1;
+}
+
+@media (min-width: 481px) and (max-width: 900px) {
+  .fixed > * {
+    grid-column: span 6;
+  }
+}

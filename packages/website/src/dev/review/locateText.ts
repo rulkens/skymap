@@ -1,3 +1,4 @@
+import { OVERLAY_UI } from '../overlay/overlayUi';
 import type { ReviewPortion } from './@types/ReviewPortion';
 import { foldText } from './foldText';
 import { reviewBlockOf } from './reviewBlockOf';
@@ -12,7 +13,7 @@ export function locateText(root: Element, needle: string): ReviewPortion[] | nul
   if (!want) return null;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
-      node.parentElement?.closest('script, style, [data-review-ui]')
+      node.parentElement?.closest(`script, style, ${OVERLAY_UI}`)
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT,
   });

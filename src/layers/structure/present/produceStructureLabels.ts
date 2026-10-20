@@ -3,20 +3,17 @@
  * from the Layer's store: close-approach / far fades, featured + visibility
  * gates, anchored at the ring centre or just above its drawn top. It rides the
  * `surveyDeepZoom` band, which famous-galaxy labels (their own producer) do not.
- * `fadeAlpha` = distance fade × category opacity × focus recession, the focused
- * structure exempt from recession; a disabled category is skipped only once
- * fully faded, so its fade-out tail still draws. Opacity is only READ here
- * (`syncVisibilityFades` writes it). Every candidate is emitted with
+ * `fadeAlpha` = distance fade × the category's handed value (label toggle fade
+ * × clip, and its ring's clip); a category is skipped only at a
+ * value of exactly 0, so its fade-out tail still draws. The label's `of` entry
+ * keeps it off while its own ring is off, per category. Every candidate is emitted with
  * `prominencePx` = ring apparent radius: the `label2DDirector` declutters
  * across all producers, so the large structure under the camera wins.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { StructureStore } from '../@types/StructureStore';
 import { structurePickId } from '../../../utils/picking/structurePickId';
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
@@ -27,7 +24,6 @@ import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
-import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
@@ -40,8 +36,8 @@ import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from './structureVisibleBands';
 export function produceStructureLabels(
   store: StructureStore,
   scale: StructureScale,
-): Label2DProducer['produceLabels'] {
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
+): LayerScreenLabel<'structure'>['produceLabels'] {
+  return (state, ctx, fade) => {
     const labels: Label2D[] = [];
 
     const pxPerRad = ctx.drawPxPerRad;
@@ -55,18 +51,7 @@ export function produceStructureLabels(
     if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SCALE[scale], camDistMpc))
       return { labels: [], awake: false };
 
-    // Snapshot the registry + clock + focused id once so every category reads
-    // the same instant and the same focus state.
-    const fades = state.subsystems.fades;
-    const now = ctx.snapshot.nowMs;
     const focusedStructureId = structureIdOf(state.selection.focus);
-
-    // Clip-owned transient opacity for structure labels — hoisted outside the loop
-    // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
-    // item: any }`) collapse to the same `'structureLabel'` key. Returns 1 when
-    // no clip is playing. We address the key directly since `fadeIdToVisibilityKey`
-    // maps every structure-label FadeId to this value without discrimination.
-    const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('structureLabel', now);
 
     // focusedOnly mode: only the focused structure's label draws — a hard
     // suppression, not a recession. With nothing (or a non-structure) focused,
@@ -86,29 +71,13 @@ export function produceStructureLabels(
     for (const p of store.all()) {
       if (!scaleIds.includes(p.category)) continue;
       if (focusedOnly && p.id !== focusedStructureId) continue;
-      // Per-category label opacity: the category toggle's fade, read from the
-      // registry. The authoritative gate is the boolean — emit while the
-      // category's label is enabled OR still fading out. Skip only when it's both
-      // disabled AND fully faded (the all-or-nothing case).
-      const catOpacity = fades.opacityOf(
-        { kind: 'labelLayer', layer: 'structure', item: p.category },
-        now,
-      );
-      const labelEnabled = state.settings.structures.items[p.category].labelEnabled;
-      if (!labelEnabled && catOpacity === 0) continue;
+      // The category's handed value carries its label switch, its ring's switch and
+      // both fade-out tails; skip only at exactly 0.
+      const catFade = fade[p.category];
+      if (catFade === 0) continue;
       // Featured gate: only the ~25-30 curated anchors earn text; the ~375
       // bulk clusters/SCs still render rings via the marker pass, no label.
       if (!p.featured) continue;
-      // Anchor gate: a label needs its ring marker as a visual anchor. Read the
-      // ring's OWN gate (the `enabled` boolean + markerLayer fade handle, same as
-      // produceStructureMarkers) so the label fades out in lock-step with the ring
-      // instead of popping when the category toggles off mid-fade.
-      if (
-        !state.settings.structures.items[p.category].enabled &&
-        fades.opacityOf({ kind: 'structure', id: p.category }, now) === 0
-      )
-        continue;
-
       const style = STRUCTURE_MARKER_STYLES[p.category];
       const bandFade = fadeBand(style.visibleBand, camDistMpc);
 
@@ -138,24 +107,11 @@ export function produceStructureLabels(
         if (fadeAlpha <= 0) continue;
       }
 
-      // Bake the resolved layer opacity into fadeAlpha on top of the distance
-      // fade: catOpacity (toggle fade) × recession (focus fade) × clipFactor
-      // (clip-owned transient dimming) × bandFade (the category's visibility band —
-      // labels dissolve with their rings on descent). The focused
-      // structure's own label is exempt from recession — a faded ring never
-      // carries a bright label, but the thing under inspection keeps its label.
-      // clipFactor is NOT exempted for the focused structure: a tour cue that
-      // dims all structure labels is expected to dim even the focused one (the
-      // tour controls the whole scene). Nothing is exempt from the band —
-      // at solar-system zoom even the focused structure's label is chrome.
-      const recession =
-        p.id === focusedStructureId
-          ? 1
-          : focusRecession(
-              { kind: 'labelLayer', layer: 'structure', item: p.category },
-              ctx.snapshot.focusBlend,
-            );
-      fadeAlpha *= catOpacity * recession * clipFactor * bandFade;
+      // Bake the handed value into fadeAlpha on top of the distance fade, times
+      // bandFade (the category's visibility band — labels dissolve with their rings
+      // on descent). Nothing is exempt from the band: at solar-system zoom even the
+      // focused structure's label is chrome.
+      fadeAlpha *= catFade * bandFade;
 
       // A centred label would sit under a ring that stays on screen at large
       // sizes, so Milky Way labels hang just above the ring's drawn top.
@@ -176,14 +132,12 @@ export function produceStructureLabels(
       // Byte-identical to what `ringPick.wesl` writes for this structure's own
       // marker ring — the category's source code over the per-category index,
       // both read from the store's single-sourced `categoryIndexOf`.
-      let pickId: number | undefined;
-      if (isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)) {
-        pickId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
-      }
+      const subjectId = structurePickId(p.category, store.categoryIndexOf(p.category, p.id));
 
       labels.push({
         id: p.id,
-        pickId,
+        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus) ? subjectId : undefined,
+        subjectId,
         worldPos: anchor,
         // Long names ("Perseus-Pisces Supercluster") break onto two balanced
         // lines here, at the presentation seam — the store keeps the unwrapped

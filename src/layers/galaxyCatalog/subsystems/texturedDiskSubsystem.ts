@@ -55,7 +55,7 @@ const LOAD_FADE_MS = 400;
  */
 const NOOP_ROW_VISITOR: DiskRowVisitor = {
   onSourceHidden() {},
-  beginSource() {},
+  beginBlock() {},
   onRow() {},
   endSource() {},
   endFrame() {},
@@ -123,30 +123,35 @@ export function createTexturedDiskSubsystem(
 
     const disks: DiskInstance[] = [];
 
-    // Hoisted per source by beginSource so onRow does no map lookup — the
-    // walk guarantees beginSource precedes every onRow for that source.
+    // Hoisted per block by beginBlock so onRow does no map lookup — the
+    // walk guarantees beginBlock precedes every onRow of that block.
     let stickyDisks: Map<number, DiskInstance> = new Map();
     // The source's live survey-fade opacity, sampled ONCE per source (not per
     // row — the row loop scales with ~2.5M galaxies) so a hidden catalog's
     // disks fade out with its point sprites instead of staying at full alpha
     // until the mask bit clears.
     let sourceOpacity = 1;
+    // The block's ordinal base, hoisted with the sticky map.
+    let ordinalBase = 0;
 
     const visitor: DiskRowVisitor = {
       onSourceHidden(source) {
         stickyFor(source).clear();
       },
 
-      beginSource(source, safeStart, end) {
+      beginBlock(source, windowStart, windowEnd, blockOrdinalBase) {
         stickyDisks = stickyFor(source);
         sourceOpacity = input.sourceOpacity(source);
+        ordinalBase = blockOrdinalBase;
         // Purge sticky entries inside the current stride window — the
-        // row visits are authoritative for those indices.
-        purgeStrideWindow(stickyDisks, safeStart, end);
+        // row visits are authoritative for those ordinals.
+        purgeStrideWindow(stickyDisks, windowStart, windowEnd);
       },
 
-      onRow(source, catalog, i, x, y, z, _camDist, px) {
+      onRow(source, block, i, x, y, z, _camDist, px) {
         if (source !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) return;
+        // Famous meta, the hi-res fold and the sticky map all key by ordinal.
+        const ordinal = ordinalBase + i;
 
         // The meta sidecar (`famous_galaxies_meta.json`) loads async and
         // defaults to `[]` until it resolves. Enqueueing before it lands
@@ -154,12 +159,12 @@ export function createTexturedDiskSubsystem(
         // SDSS/DSS chain (fetchGalaxyBitmap's `if (famousId)` shortcut) and
         // memoising the wrong bitmap until LRU eviction. Skip and let the
         // walk retry next frame — same pattern as hiResFamousSubsystem.
-        if (source === Source.FamousGalaxy && famousGalaxiesMeta[i]?.id === undefined) return;
+        if (source === Source.FamousGalaxy && famousGalaxiesMeta[ordinal]?.id === undefined) return;
 
-        const dKpcRow = catalog.diameterKpc[i]!;
+        const dKpcRow = block.diameterKpc[i]!;
         const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
-        const ar = catalog.axisRatio[i]!;
-        const pa = catalog.positionAngleDeg[i]!;
+        const ar = block.axisRatio[i]!;
+        const pa = block.positionAngleDeg[i]!;
 
         // Famous-galaxy thumbnails carry a hand-authored calibration that
         // overrides catalog geometry for the EMITTED instance (size, tilt,
@@ -168,7 +173,8 @@ export function createTexturedDiskSubsystem(
         // finite-orientation guard below (the corrupted-bin guard, not the
         // render values).  An absent calibration leaves the placement
         // bit-identical to the catalog path.
-        const cal = source === Source.FamousGalaxy ? famousGalaxiesMeta[i]?.calibration : undefined;
+        const cal =
+          source === Source.FamousGalaxy ? famousGalaxiesMeta[ordinal]?.calibration : undefined;
         const placement = resolveDiskPlacement(sizeWorldMpc, ar, pa, cal);
 
         const [ra, dec] = cartesianToRaDec(x, y, z);
@@ -182,7 +188,8 @@ export function createTexturedDiskSubsystem(
         if (!atlas.isLoaded(key)) {
           // The onRow guard above already proved this id is defined for
           // Famous rows, so it's safe to capture here at enqueue time.
-          const famousId = source === Source.FamousGalaxy ? famousGalaxiesMeta[i]!.id : undefined;
+          const famousId =
+            source === Source.FamousGalaxy ? famousGalaxiesMeta[ordinal]!.id : undefined;
           atlas.enqueueFetch({
             key,
             priority: px,
@@ -218,7 +225,7 @@ export function createTexturedDiskSubsystem(
         const loadFade = loadFadeAlpha(bitmapReadyTime.get(key), nowMs, LOAD_FADE_MS);
         // Survey-fade term: without it, toggling a catalog off left its
         // textured disks at full alpha through the point sprites' fade and
-        // popped them out only once the draw mask (`sourceMaskOf`) dropped the source.
+        // popped them out only once the planner's mask (`sourceMaskOf`) dropped the source.
         const fadeAlpha = distFade * loadFade * sourceOpacity;
 
         // Disks-only.  The `Number.isFinite` checks are a defensive
@@ -228,14 +235,13 @@ export function createTexturedDiskSubsystem(
           // Hi-res LOD-3 fold-in: only Famous-source rows can be assigned a
           // hi-res layer (the curated WebP atlas covers Famous galaxies only),
           // so non-Famous sources pass `undefined` and fold the -1 / 0 sentinel
-          // the shader's `hiResLayerIdx >= 0` gate skips.  `i` is the per-catalog
-          // local index, which for `Source.FamousGalaxy` matches the
-          // Famous-source-local key contract on `byFamousIdx`.
+          // the shader's `hiResLayerIdx >= 0` gate skips.  The famous catalog is
+          // flat, so its ordinal is the Famous-source-local key `byFamousIdx` uses.
           const hiRes = hiResLayerFold(
             source === Source.FamousGalaxy ? hiResFamous?.lastOutput.byFamousIdx : undefined,
-            i,
+            ordinal,
           );
-          stickyDisks.set(i, {
+          stickyDisks.set(ordinal, {
             x,
             y,
             z,

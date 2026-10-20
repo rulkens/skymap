@@ -1,31 +1,34 @@
 ---
 import Base from '../layouts/Base.astro';
-import AddressStrip from '../components/AddressStrip.astro';
-import CaptionGallery from '../components/CaptionGallery.astro';
-import Columns from '../components/Columns.astro';
-import Credits from '../components/Credits.astro';
-import Feature from '../components/Feature.astro';
-import LessonLinks from '../components/LessonLinks.astro';
-import ObjLink from '../components/ObjLink.astro';
-import OpenApp from '../components/OpenApp.astro';
-import PictureBand from '../components/PictureBand.astro';
-import Remark from '../components/Remark.astro';
-import SectionHead from '../components/SectionHead.astro';
-import Step from '../components/Step.astro';
-import Steps from '../components/Steps.astro';
+import AddressStrip from '../components/AddressStrip/AddressStrip.tsx';
+import ClassroomHero from '../components/ClassroomHero/ClassroomHero.tsx';
+import Columns from '../components/Columns/Columns.tsx';
+import Credits from '../components/Credits/Credits.tsx';
+import Feature from '../components/Feature/Feature.tsx';
+import LessonLinks from '../components/LessonLinks/LessonLinks.tsx';
+import ObjLink from '../components/ObjLink/ObjLink.tsx';
+import OpenApp from '../components/OpenApp/OpenApp.tsx';
+import Remark from '../components/Remark/Remark.tsx';
+import SectionHead from '../components/SectionHead/SectionHead.tsx';
+import Step from '../components/Step/Step.tsx';
+import Steps from '../components/Steps/Steps.tsx';
 import { appLink } from '../data/appLink';
 import { CLASS_FEATURES } from '../data/classFeatures';
-import { CLASS_VIEWS } from '../data/classViews';
 import { fact } from '../data/fact';
 import { HOME_LINKS } from '../data/homeLinks';
 import { HONESTY_BINS } from '../data/honestyBins';
-import { siteShot } from '../data/siteShot';
+import layout from '../styles/layout.module.css';
+import links from '../styles/links.module.css';
+import text from '../styles/type.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
 const title = 'Use Skymap in the classroom | Skymap';
 const description =
   'Pupils fly the distances of space at true scale, from the Moon to the galaxies. A five-minute tour, ready-made lesson links, no accounts, no install.';
+
+const section = `${layout.wrap} ${layout.section}`;
+const linkRow = `${links['link-row']} ${links.onward}`;
 
 const says = (id: string) => fact(id).short ?? fact(id).text;
 ---
@@ -35,20 +38,9 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   description={description}
   jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Classrooms', path: '/classroom/' }])]}
 >
-  <PictureBand views={CLASS_VIEWS} gap="none" eager>
-    <h1>Use Skymap in the classroom</h1>
-    <p class="say">
-      Distances in space are hard to feel from a page. In Skymap your pupils <a href={sitePath('/docs/guide/moving/')}>fly</a> across them, from the Moon to the
-      galaxies, at true scale.
-    </p>
-    <p>You <a href={sitePath('/docs/guide/sharing/')}>share a view as a link</a>, and every pupil who opens it lands on the same object at the same date.</p>
-    <div class="view-words" data-views>
-      {CLASS_VIEWS.map((view) => <AddressStrip hash={siteShot(view.id).link} />)}
-    </div>
-    <CaptionGallery ids={CLASS_VIEWS.map((view) => view.id)} />
-  </PictureBand>
+  <ClassroomHero client:visible />
 
-  <section class="wrap section" id="lesson">
+  <section class={section} id="lesson">
     <SectionHead title="What you can do in a lesson">
       <p>The first needs no preparation.</p>
     </SectionHead>
@@ -72,7 +64,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     <Remark text={says('earth-orbit-speed')} />
   </section>
 
-  <section class="wrap section" id="links">
+  <section class={section} id="links">
     <SectionHead title="Ready-made links">
       <p>
         Each link has one question. It opens where its picture was taken. The pictures have the <a href={sitePath('/docs/guide/settings/#turn-names-on-or-off')}>name labels</a> switched
@@ -82,7 +74,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     <LessonLinks />
   </section>
 
-  <section class="wrap section" id="make">
+  <section class={section} id="make">
     <SectionHead title="Make your own link">
       <p>There is no share button: the address bar is the link.</p>
     </SectionHead>
@@ -109,7 +101,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     </Columns>
   </section>
 
-  <section class="wrap section" id="runs">
+  <section class={section} id="runs">
     <SectionHead title="Before you rely on it" />
     <Columns count={3}>
       <div>
@@ -118,7 +110,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
           <a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a> is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}
           {says('webgpu-required')}
         </p>
-        <p class="small">{says('webgpu-browsers')}</p>
+        <p class={text.small}>{says('webgpu-browsers')}</p>
         <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
       </div>
       <div>
@@ -144,7 +136,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     </Columns>
   </section>
 
-  <section class="wrap section" id="honest">
+  <section class={section} id="honest">
     <SectionHead title="Measured, derived and drawn">
       <p>
         Some of the scene is data, some is <a href={sitePath('/docs/science/')}>derived from data</a>, and some is a choice of ours. It makes a lesson in how we
@@ -161,19 +153,19 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
         ))
       }
     </Columns>
-    <div class="link-row">
+    <div class={links['link-row']}>
       <ObjLink hang href={sitePath('/science/#bins')}>The science behind Skymap</ObjLink>
     </div>
   </section>
 
-  <div class="wrap section">
-    <div class="link-row onward">
+  <div class={section}>
+    <div class={linkRow}>
       <OpenApp />
       <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
     </div>
   </div>
 
-  <div class="wrap section last">
+  <div class={section}>
     <Credits />
   </div>
 </Base>
