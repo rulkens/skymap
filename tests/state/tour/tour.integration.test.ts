@@ -252,11 +252,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const alphaWith = (clipFactor: number): number | null => {
       const state = makeDrawState(fades, makeClipStub(clipFactor));
       const ctx = makeDrawCtx(0, MW_CAM_POS);
-      return deriveMilkyWayCloudAlpha(
-        state,
-        ctx,
-        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
-      );
+      return deriveMilkyWayCloudAlpha(ctx, resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'));
     };
     const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);

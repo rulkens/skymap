@@ -3,8 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/layers/milkyWay/present/produceMilkyWayLabel';
 import { MILKY_WAY_LABEL_STYLE } from '../../../../src/layers/milkyWay/present/milkyWayLabelStyle';
-import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import {
   LEADER_LINE_PADDING_PX,
   MIN_LABEL_CLEARANCE_PX,
@@ -97,21 +95,6 @@ function expectedLiftPx(camDistMpc: number, viewportHeightPx: number): number {
   return 1.5 * (30 / (camDistMpc * 1000)) * pxPerRad;
 }
 
-// The producer composes fadeAlpha = fadeBand(its own 0.6-2.0 Mpc band, dist) ·
-// fadeBand(surveyDeepZoom, dist) · layerOpacity. The surveyDeepZoom band's FULL
-// edge tracks FOREGROUND_MAX_DISTANCE_MPC, which the famous-stars seed roster
-// grows (Deneb at 802 pc now pushes the gate to ~0.8 Mpc, above the Milky-Way
-// label's 0.6 Mpc near band). So the distance fade at a fixed camera distance is
-// DERIVED here rather than pinned at 1 — keeping these expectations green as the
-// gate moves. (NOTE the coupling flagged for the spec owner: the label no longer
-// reaches full alpha at 0.5 Mpc.)
-//
-// The { fullAt: 0.6, goneAt: 2.0 } band mirrors produceMilkyWayLabel's own
-// MILKY_WAY_LABEL_FADE_BAND, which stays private to that module.
-const distanceFadeAt = (camDistMpc: number): number =>
-  fadeBand({ fullAt: 0.6, goneAt: 2.0 }, camDistMpc) *
-  fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
-
 describe('produceMilkyWayLabel', () => {
   it('outside the focused sphere the label draws but carries no pick; inside and at rest it keeps it', () => {
     const ctx = makeCtx(0.5);
@@ -130,37 +113,20 @@ describe('produceMilkyWayLabel', () => {
     expect(pickOf(at([5, 0, 0]))).toBeUndefined();
   });
 
-  it('emits one label carrying a leader at the composed distance fade when close and enabled', () => {
+  it('emits one label carrying a leader when enabled', () => {
     const out = produceMilkyWayLabel(makeState(), makeCtx(0.5), 1);
     expect(out.labels).toHaveLength(1);
     expect(out.labels[0]!.id).toBe('milkyWay'); // id = source id; text stays below
     expect(out.labels[0]!.text).toBe('You are here');
     expect(out.labels[0]!.leader).toBeDefined();
     // Label and its leader (the director synthesizes the stem from it) fade
-    // in lock-step at the derived distance fade.
-    const expected = distanceFadeAt(0.5);
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(expected);
+    // in lock-step at the handed value.
+    expect(out.labels[0]!.fadeAlpha).toBe(1);
   });
 
-  it('emits nothing far away (>= 2 Mpc) even when enabled', () => {
-    const out = produceMilkyWayLabel(makeState(), makeCtx(2.0), 1);
-    expect(out.labels).toEqual([]);
-  });
-
-  it('emits nothing on the deep-zoom descent (inside the survey band)', () => {
-    // At solar-system zoom the origin-anchored "You are here" annotation is COSMO
-    // content the near plane can no longer project, and leaving it emitting keeps
-    // the director's marker-line set non-empty — so the whole marker-lines pass
-    // runs every frame drawing a near-degenerate stem. The surveyDeepZoom band
-    // (gone by 2 kpc = 0.002 Mpc) must cull it: no label AND no leader stem.
-    const out = produceMilkyWayLabel(makeState(), makeCtx(1e-6), 1);
-    expect(out.labels).toEqual([]);
-  });
-
-  it('multiplies the handed value into the distance fade', () => {
+  it('uses the handed value as fadeAlpha', () => {
     const out = produceMilkyWayLabel(makeState(), makeCtx(0.5), 0.5);
-    // fadeAlpha = distanceFade(0.5) · handed value(0.5)
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(distanceFadeAt(0.5) * 0.5);
+    expect(out.labels[0]!.fadeAlpha).toBe(0.5);
   });
 
   it('focusedOnly mode: emits nothing when something else (or nothing) is focused', () => {

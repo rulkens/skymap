@@ -123,8 +123,8 @@ Bands: `localBubble.shell { in: [0.4, 1] kpc, out: [4 kpc, NEIGHBOURHOOD_RECEDE_
 
 Bands: `milkyWayDisk.approachSun { in: [0.0002, 0.002] }`, `milkyWayDisk.approachCentre { from: 'galactic-centre', in: [0.0006, 0.012] }`; `label:milkyWay.youAreHere { in: SURVEY_DEEP_ZOOM.in, out: [0.6, 2] }`; `survey.deepZoom { ...SURVEY_DEEP_ZOOM, items: SURVEY_IDS }` with `SURVEY_IDS = GALAXY_CATALOG_IDS.filter((id) => id !== 'famousGalaxy')`.
 
-- [ ] Test `the disk's two approach bands multiply` (at 1 kpc from the Sun the disk value is the product, not the min): the one intended behaviour change (C1).
-- [ ] The once-scope `galaxyCatalogPlanner` (`frame.ts:44`) gets no band (Review Focus #1); its output is unchanged.
+- [x] Test `the disk's two approach bands multiply` (at 1 kpc from the Sun the disk value is the product, not the min): the one intended behaviour change (C1).
+- [x] The once-scope `galaxyCatalogPlanner` (`frame.ts:44`) gets no band (Review Focus #1); its output is unchanged.
 
 ### Task 6: Structures
 

@@ -44,7 +44,7 @@ describe('BODY_REGIONS', () => {
     // region, claiming every anchor no tighter region took, so a fall-through
     // drags its extent 2.3e-3 → 8.178e-3 Mpc and `FOREGROUND_MAX_DISTANCE_MPC`
     // (extent × 100) 0.23 → 0.82 Mpc — past the Milky Way label's near fade
-    // edge (0.6 Mpc, `MILKY_WAY_LABEL_FADE_BAND` in `produceMilkyWayLabel.ts`),
+    // edge (0.6 Mpc, the `youAreHere` band in `milkyWay/visibility.ts`),
     // where the "You are here" label stops reaching full alpha in the Local
     // Group. That is a SECOND route to the same gate, distinct from the
     // `|anchorPos|` term prep-02 removed from `foregroundMaxDistance`; both have

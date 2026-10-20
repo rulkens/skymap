@@ -29,7 +29,7 @@ function makeState(clip = 1, entries: readonly VisibilityEntry[] = APP_VISIBILIT
 }
 
 const ctxAt = (nowMs: number) =>
-  ({ drawCamPos: [2, 0, 0], snapshot: { nowMs, focusBlend: 0 } }) as unknown as FrameView;
+  ({ drawCamPos: [0.5, 0, 0], snapshot: { nowMs, focusBlend: 0 } }) as unknown as FrameView;
 
 function milkyWayRow() {
   const produceLabels = vi.fn((_s: EngineState, _c: FrameView, _fade?: unknown) => OUTPUT);
@@ -83,7 +83,7 @@ describe('gateLabelProducer', () => {
 
   it('band 0 for every item skips a live producer', () => {
     const banded = APP_VISIBILITY.map((e) =>
-      'label' in e && e.label === 'milkyWay' ? { ...e, bands: { near: { out: [0, 1] } } } : e,
+      'label' in e && e.label === 'milkyWay' ? { ...e, bands: { near: { out: [0, 0.4] } } } : e,
     ) as readonly VisibilityEntry[];
     const { state, fades } = makeState(1, banded);
     fades.register({ address: 'label:milkyWay' }, 1);

@@ -298,6 +298,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const snapshotFields = {
     isReady: true as const,
     slabBodyCandidates: [],
+    bodyStates: new Map(),
     nowMs: 0,
     // The handed value's recession factor lerps on this; production seeds it
     // to 0 in frameContext, and an absent one yields NaN alphas here.

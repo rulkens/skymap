@@ -422,6 +422,7 @@ describe('renderFrame visual baseline', () => {
         focusBlend: 0,
         // No body rows in this scene: the two slabs above are cosmological.
         slabBodyCandidates: [],
+        bodyStates: new Map(),
         // The executor resolves hdr/density attachments — and the density
         // upsample its source texture — via ctx.snapshot.renderTargets.viewOf(id).
         renderTargets,

@@ -10,7 +10,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
@@ -52,10 +51,8 @@ function makeCtx(camPos: Readonly<Vec3>): FrameView {
 
 describe('milkyWayPass pick vs draw', () => {
   it('keeps drawing but stops taking clicks once the camera is inside the disc', () => {
-    // Well inside the impostor, still an order of magnitude outside the 2 kpc
-    // approach fade: the disc is DRAWN at full strength here.
+    // Well inside the impostor: the disc is DRAWN at full strength here.
     const inside = makeCtx([0, 0, 0.02]);
-    expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproachSun.fullAt);
     expect(PASS.enabled(STATE, inside, VIEW_STUB, 1)).toBe(true);
     expect(PASS.pickEnabled!(STATE, inside, VIEW_STUB, 1)).toBe(false);
 
@@ -67,10 +64,11 @@ describe('milkyWayPass pick vs draw', () => {
 
   it('stays unpickable wherever it is invisible — pick is a strict subset of draw', () => {
     // `pickEnabled` composes over `enabled` rather than restating its terms, so an
-    // invisible disc cannot come back as a click target.
-    const dissolved = makeCtx([0, 0, SCALE_FADE_BANDS.milkyWayApproachSun.goneAt / 2]);
-    expect(PASS.enabled(STATE, dissolved, VIEW_STUB, 1)).toBe(false);
-    expect(PASS.pickEnabled!(STATE, dissolved, VIEW_STUB, 1)).toBe(false);
+    // invisible disc cannot come back as a click target. A dissolved disc is handed 0
+    // (the distance bands are core's).
+    const outside = makeCtx([0, 0, 0.15]);
+    expect(PASS.enabled(STATE, outside, VIEW_STUB, 0)).toBe(false);
+    expect(PASS.pickEnabled!(STATE, outside, VIEW_STUB, 0)).toBe(false);
   });
 });
 

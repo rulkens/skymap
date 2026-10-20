@@ -13,8 +13,8 @@
  * neighbourhood is still being framed, yet stay under 1 Mpc so the NEAR0 passes
  * are provably idle at galaxy zoom. On today's 2.3 kpc neighbourhood it lands at
  * ~0.23 Mpc, which also keeps it inside the Milky Way label's near fade edge
- * (0.6 Mpc, `MILKY_WAY_LABEL_FADE_BAND` in `produceMilkyWayLabel.ts`) — this
- * gate is `surveyDeepZoom`'s FULL edge, and the earlier ×1000 dimmed the "You
+ * (0.6 Mpc, the `youAreHere` band in `milkyWay/visibility.ts`) — this
+ * gate is `SURVEY_DEEP_ZOOM`'s full edge, and the earlier ×1000 dimmed the "You
  * are here" label in the Local Group. Both edges are pinned by this file's test.
  */
 

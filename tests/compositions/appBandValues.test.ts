@@ -9,7 +9,11 @@ import type { FrameView } from '../../src/@types/engine/frame/FrameView';
 const KPC = SCALE_UNITS.KPC_TO_MPC;
 
 function valueAt(key: string, distanceMpc: number, item?: string): number {
-  const entry = APP_VISIBILITY.find((e) => 'key' in e && e.key === key)!;
+  const entry = APP_VISIBILITY.find((e) =>
+    key.startsWith('label:')
+      ? 'label' in e && e.label === key.slice(6)
+      : 'key' in e && e.key === key,
+  )!;
   const view = { drawCamPos: [distanceMpc, 0, 0], snapshot: {} } as unknown as FrameView;
   return bandValueOf(entry, item, view);
 }
@@ -37,5 +41,17 @@ describe('declared distance bands keep their old edges', () => {
   it('density: gone inside 0.002 Mpc, full from the foreground gate out', () => {
     expect(valueAt('cosmicWebDensity', 0.002)).toBe(0);
     expect(valueAt('cosmicWebDensity', 0.5)).toBe(1);
+  });
+
+  it('survey: gone at deep zoom for survey catalogs, famous exempt', () => {
+    expect(valueAt('survey', 0.002, 'sdss')).toBe(0);
+    expect(valueAt('survey', 0.5, 'sdss')).toBe(1);
+    expect(valueAt('survey', 0.002, 'famousGalaxy')).toBe(1);
+  });
+
+  it('"You are here" label: gone at deep zoom, full to 0.6 Mpc, gone by 2 Mpc', () => {
+    expect(valueAt('label:milkyWay', 0.002)).toBe(0);
+    expect(valueAt('label:milkyWay', 0.5)).toBe(1);
+    expect(valueAt('label:milkyWay', 2)).toBe(0);
   });
 });

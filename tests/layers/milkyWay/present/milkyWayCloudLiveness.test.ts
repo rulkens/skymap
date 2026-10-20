@@ -1,8 +1,6 @@
 /**
- * deriveMilkyWayCloudAlpha's approach fade — regression coverage for the
- * galactic-centre blowout: the GC gets its OWN approach band
- * (`milkyWayApproachGc`), wider than the Sun's, closing fully at the Centre.
- * The Sun's own descent (`milkyWayApproachSun`) is unaffected by the GC.
+ * deriveMilkyWayCloudAlpha — the apparent-size fade and focus emphasis. The distance
+ * bands are core's (`tests/layers/milkyWay/visibility.test.ts`).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -10,29 +8,18 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { deriveMilkyWayCloudAlpha } from '../../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import { MILKY_WAY_PICK_ID } from '../../../../src/layers/milkyWay/present/milkyWayPickId';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-const PC = SCALE_UNITS.PC_TO_MPC;
 const GALACTIC_CENTRE_POS = deriveBodyStates(CONST_J2000).get('galactic-centre')!.positionMpc;
 
-// Comfortably above the disc's apparent-size gate (12 px) and with the
-// handed value pinned at 1, so the returned alpha isolates the
-// approach band under test.
+// Comfortably above the disc's apparent-size gate (12 px).
 const FOV_Y_RAD = (60 * Math.PI) / 180;
 const CANVAS = { width: 1280, height: 720 };
 const PX_PER_RAD = CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2));
-
-function makeState(): EngineState {
-  return {} as unknown as EngineState;
-}
 
 function makeCtx(
   camPosMpc: Vec3,
@@ -46,45 +33,19 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-/** A point `distMpc` from Sgr A*, offset along its own local x-axis. */
-function nearGalacticCentre(distMpc: number): Vec3 {
-  return [GALACTIC_CENTRE_POS[0] + distMpc, GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]];
-}
-
-describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
-  it('culls the cloud entirely within 100 pc of Sgr A*', () => {
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(100 * PC)), 1);
-    expect(alpha).toBeNull();
-  });
-
-  it('partially fades between the galactic-centre approach band edges', () => {
-    const distMpc = 1000 * PC; // between goneAt (200 pc) and fullAt (4 kpc)
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(nearGalacticCentre(distMpc)), 1);
-    const expected = fadeBand(SCALE_FADE_BANDS.milkyWayApproachGc, distMpc);
-    expect(expected).toBeGreaterThan(0);
-    expect(expected).toBeLessThan(1);
-    expect(alpha).toBeCloseTo(expected, 6);
-  });
-
-  it('stays at full alpha outside both approach bands', () => {
-    // The GC band's 12 kpc fullAt reaches past the Sun (R₀ = 8.2 kpc), so a
-    // pose outside BOTH bands must sit on the far side of the Sun from the
-    // Centre: 5 kpc anti-GC-ward is 13.2 kpc from Sgr A* and 5 kpc from the
-    // Sun — outside each band's fullAt.
-    const r0 = Math.hypot(GALACTIC_CENTRE_POS[0], GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]);
-    const awayFromGc = GALACTIC_CENTRE_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
-    const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc), 1);
-    expect(alpha).toBe(1);
-  });
-});
-
 describe('deriveMilkyWayCloudAlpha — focus emphasis', () => {
   it('the disk recedes strongly unless the Milky Way is the focus', () => {
     const r0 = Math.hypot(GALACTIC_CENTRE_POS[0], GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]);
     const awayFromGc = GALACTIC_CENTRE_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
     const alphaWithFocus = (focusPickId: number | null) =>
-      deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc, { focusBlend: 1, focusPickId }), 1);
+      deriveMilkyWayCloudAlpha(makeCtx(awayFromGc, { focusBlend: 1, focusPickId }), 1);
     expect(alphaWithFocus(null)).toBeCloseTo(STRONG_RECESSION);
     expect(alphaWithFocus(MILKY_WAY_PICK_ID)).toBe(1);
+  });
+});
+
+describe('deriveMilkyWayCloudAlpha — handed value', () => {
+  it('is null when the handed value is 0', () => {
+    expect(deriveMilkyWayCloudAlpha(makeCtx([0, 0, 0.005]), 0)).toBeNull();
   });
 });

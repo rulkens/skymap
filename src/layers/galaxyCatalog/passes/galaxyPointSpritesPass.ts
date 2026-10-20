@@ -3,13 +3,12 @@
  * instanced additive billboard in the HDR target; the headline content layer.
  * Core skips the pass when every catalog's handed value is 0; within it, the
  * renderer's own loop skips a source at exactly 0 opacity, which is what keeps
- * a hidden catalog or a completed deep-zoom fade from rasterizing millions of
+ * a hidden catalog or a completed deep-zoom band from rasterizing millions of
  * alpha-0 instances.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
-import { Source } from '../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
@@ -17,8 +16,6 @@ import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../data/galaxyLodBands';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   return {
@@ -30,12 +27,6 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
 
     draw(pass, view, ctx, state, fade) {
       const { drawPxPerRad } = ctx;
-
-      // Deep-zoom survey fade, keyed on distance from the heliocentric render
-      // origin — NOT `cam.distance`, the orbit-to-focus radius. Spatial, so it is
-      // identical for every source this frame; hoisted out of the closure below.
-      const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
-      const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
       // The shader compares a packed `(sourceCode << 26u) | instance_index` per
       // vertex; structure targets light no galaxy halo, so they take the sentinel.
@@ -66,23 +57,15 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         // @group(3): the engine owns one focus buffer, written once per frame in
         // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
         focusBindGroup: state.gpu.focusUniform!.bindGroup,
-        // The famous catalog is exempt from the survey fade on purpose: its ~20 curated
-        // galaxies stay as landmarks at deep zoom while the survey points yield.
-        fadeOpacityOf: (source) =>
-          fade[galaxyCatalogIdOf(source)] * (source === Source.FamousGalaxy ? 1 : surveyFade),
+        fadeOpacityOf: (source) => fade[galaxyCatalogIdOf(source)],
       });
     },
 
     // Pick takes exactly the sources the draw takes: the same handed value, so a
     // catalog that is invisible, faded or clipped to 0 is not clickable either.
     drawPick(pass, view, ctx, state, fade) {
-      const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
-      const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
       const sources = Array.from(runtime.pointRenderer.loadedSources()).filter(
-        (s) =>
-          fade[galaxyCatalogIdOf(s.source)] *
-            (s.source === Source.FamousGalaxy ? 1 : surveyFade) !==
-          0,
+        (s) => fade[galaxyCatalogIdOf(s.source)] !== 0,
       );
       runtime.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
     },
