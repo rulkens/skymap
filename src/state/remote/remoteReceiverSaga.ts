@@ -44,12 +44,12 @@ import type { DomeMessage } from '../../@types/remote/DomeMessage';
 import type { RemoteId } from '../../@types/remote/RemoteId';
 import type { RemoteLinkStatus } from '../../@types/remote/RemoteLinkStatus';
 import type { RemoteTransport } from '../../@types/remote/RemoteTransport';
-import type { LayerSettingsRow } from '../../@types/engine/layer/LayerSettingsRow';
+import type { LayerToggleRow } from '../../@types/engine/layer/LayerToggleRow';
 import type { RootState } from '../../store/types';
 
 export function* remoteReceiverSaga(
   transport: RemoteTransport,
-  layerRows: readonly LayerSettingsRow[],
+  layerRows: readonly LayerToggleRow[],
 ): SagaIterator {
   const code = transport.newRoom();
   const origins = yield* call(transport.pairingOrigins);

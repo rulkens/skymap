@@ -27,7 +27,7 @@ describe('paletteRowLabel', () => {
       [
         {
           kind: 'alias',
-          entry: { pgc: 42038, names: ['NGC 4565'], source: Source.Glade, localIdx: 7 },
+          entry: { pgc: 42038, names: ['NGC 4565'], source: Source.Glade },
           score: 0,
         },
         'NGC 4565',
@@ -36,7 +36,7 @@ describe('paletteRowLabel', () => {
       [
         {
           kind: 'alias',
-          entry: { pgc: 1, names: [], source: Source.Glade, localIdx: 1 },
+          entry: { pgc: 1, names: [], source: Source.Glade },
           score: 0,
         },
         '(unnamed)',
