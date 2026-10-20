@@ -230,7 +230,7 @@ describe('diskPlannerWalk drives both bodies', () => {
 
   it('both bodies see the same shared stride window each frame', () => {
     // decimationFactor 2 over a 6-row cloud → stride ceil(6/2)=3. The single
-    // shared cursor yields window {0,1,2} on frame 1, {3,4,5} on frame 2. Both
+    // shared cursor yields window {0,1,2} on frame 1, {3,4,5} on frame 2 (after the whole first pass). Both
     // bodies must advance through the SAME window (one cursor), not independently.
     const count = 6;
     const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(count)]]);
@@ -258,33 +258,32 @@ describe('diskPlannerWalk drives both bodies', () => {
     const texWindow = (): Set<number> =>
       new Set(enqueueSpy.mock.calls.map((c) => keyToIdx.get(c[0].key)!));
 
-    // ── Frame 1: sticky maps are empty, so procedural's lastOutput IS this
-    // frame's window; textured enqueues a fetch per freshly-visited row.
-    walk.runFrame(
-      input,
-      proc.beginFrame(input),
-      tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
-    );
-    const procWindow1 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
-    const texWindow1 = texWindow();
-    expect(procWindow1).toEqual(new Set([0, 1, 2]));
-    expect(texWindow1).toEqual(procWindow1); // both saw the SAME window
+    // The procedural body's view of a frame: the rows the walk handed it.
+    const procFrame = (): Set<number> => {
+      const body = proc.beginFrame(input);
+      const rows = new Set<number>();
+      walk.runFrame(
+        input,
+        { ...body, onRow: (...a) => (rows.add(a[2]), body.onRow(...a)) },
+        tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
+      );
+      return rows;
+    };
 
+    // ── Frame 0: a block's first pass is whole, so the stride starts after it.
+    expect(procFrame()).toEqual(new Set([0, 1, 2, 3, 4, 5]));
     enqueueSpy.mockClear();
 
-    // ── Frame 2: cursor advances. Procedural's sticky map still holds window 1,
-    // so the NEWLY-added indices (lastOutput minus frame-1 window) are frame 2's
-    // window; textured enqueues only the freshly-visited rows.
-    walk.runFrame(
-      input,
-      proc.beginFrame(input),
-      tex.beginFrame({ ...input, famousGalaxiesMeta: [], nowMs: 0 }),
-    );
-    const procAll2 = new Set(proc.lastOutput.instances.map((d) => d.localIdx));
-    const procWindow2 = new Set([...procAll2].filter((i) => !procWindow1.has(i)));
-    const texWindow2 = texWindow();
+    // ── Frames 1 and 2: the textured body re-enqueues every row it visits while
+    // no fetch has landed, so its enqueues name its window.
+    const procWindow1 = procFrame();
+    expect(procWindow1).toEqual(new Set([0, 1, 2]));
+    expect(texWindow()).toEqual(procWindow1); // both saw the SAME window
+    enqueueSpy.mockClear();
+
+    const procWindow2 = procFrame();
     expect(procWindow2).toEqual(new Set([3, 4, 5]));
-    expect(texWindow2).toEqual(procWindow2); // advanced together, same window
+    expect(texWindow()).toEqual(procWindow2); // advanced together, same window
 
     enqueueSpy.mockRestore();
   });

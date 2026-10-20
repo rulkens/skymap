@@ -194,17 +194,17 @@ describe('createDiskPlannerWalk', () => {
 
     walk.runFrame(makeInput(catalogs), procedural, textured);
     walk.runFrame(makeInput(catalogs), procedural, textured);
+    walk.runFrame(makeInput(catalogs), procedural, textured);
 
     // Both slots see the SAME window each frame (one shared cursor, advanced
-    // once per frame — not once per visitor).
-    expect(windowsOf(proceduralEvents)).toEqual([
+    // once per frame — not once per visitor); a block's first pass is whole.
+    const windows = [
+      [0, 4],
       [0, 2],
       [2, 4],
-    ]);
-    expect(windowsOf(texturedEvents)).toEqual([
-      [0, 2],
-      [2, 4],
-    ]);
+    ];
+    expect(windowsOf(proceduralEvents)).toEqual(windows);
+    expect(windowsOf(texturedEvents)).toEqual(windows);
   });
 
   it('caps rows admitted to onRow at DISK_ROW_ACCEPT_BUDGET per frame, even when every row in a huge window clears the distance gate', () => {
@@ -219,6 +219,65 @@ describe('createDiskPlannerWalk', () => {
     walk.runFrame(makeInput(catalogs), recordingVisitor(events), noopDiskRowVisitor());
     const onRowCount = events.filter((e) => e[0] === 'onRow').length;
     expect(onRowCount).toBe(DISK_ROW_ACCEPT_BUDGET);
+  });
+
+  it('rows below the 8-px fade start spend no budget, so a drawable row after many tiny ones still reaches onRow', () => {
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    // Tiny rows (px 0.3) clear the distance gate but neither body can draw them.
+    const tiny = Array.from({ length: DISK_ROW_ACCEPT_BUDGET + 10 }, () => ({
+      distMpc: 10,
+      diameterKpc: 5,
+    }));
+    const catalogs = new Map<SourceType, GalaxyCatalog>([
+      [Source.Glade, makeCatalog([...tiny, { distMpc: 1, diameterKpc: 50 }])],
+    ]);
+    const rows: { i: number; camDist: number; px: number }[] = [];
+    walk.runFrame(makeInput(catalogs), rowCapturingVisitor(rows), noopDiskRowVisitor());
+    expect(rows.some((r) => r.i === tiny.length)).toBe(true);
+  });
+
+  it('a block the spent budget skips keeps its window, so it is not starved on the same phase every cycle', () => {
+    // Two blocks of one source: A spends the whole budget on every other frame, in phase with B's
+    // windows. B's first row must still be visited.
+    const walk = createDiskPlannerWalk({ decimationFactor: 2 });
+    const a = makeCatalog([
+      ...Array.from({ length: DISK_ROW_ACCEPT_BUDGET }, () => ({ distMpc: 1, diameterKpc: 50 })),
+      ...Array.from({ length: DISK_ROW_ACCEPT_BUDGET }, () => ({ distMpc: 50, diameterKpc: 50 })),
+    ]);
+    const b = makeCatalog([
+      { distMpc: 1, diameterKpc: 50 },
+      { distMpc: 1, diameterKpc: 50 },
+    ]);
+    const base = galaxyRecordsOver(new Map([[Source.Glade, a]])).get(Source.Glade)!;
+    const blockOf = (c: GalaxyCatalog) =>
+      galaxyRecordsOver(new Map([[Source.Glade, c]])).get(Source.Glade)!;
+    const records = new Map([
+      [
+        Source.Glade,
+        {
+          ...base,
+          forEachResidentBlock: (visit: Parameters<typeof base.forEachResidentBlock>[0]) => {
+            blockOf(a).forEachResidentBlock((block) => visit(block, 0));
+            blockOf(b).forEachResidentBlock((block) => visit(block, 10_000));
+          },
+        },
+      ],
+    ]);
+    const input = { ...makeInput(new Map()), records };
+    const ordinals: number[] = [];
+    let blockBase = 0;
+    const visitor: DiskRowVisitor = {
+      onSourceHidden() {},
+      beginBlock(_s, _start, _end, ordinalBase) {
+        blockBase = ordinalBase;
+      },
+      onRow: (_s, _block, i) => ordinals.push(blockBase + i),
+      endSource() {},
+      endFrame() {},
+    };
+    for (let f = 0; f < 6; f++) walk.runFrame(input, visitor, noopDiskRowVisitor());
+    expect(ordinals).toContain(10_000);
+    expect(ordinals).toContain(10_001);
   });
 
   it('the disk walk drops cursors of blocks no longer resident', () => {
@@ -243,18 +302,20 @@ describe('createDiskPlannerWalk', () => {
     const frame = () => walk.runFrame(input, recordingVisitor(events), noopDiskRowVisitor());
 
     frame();
+    frame();
     resident = false;
     frame();
     resident = true;
     frame();
 
     // The eviction frame purges the block's whole range; back from eviction, the block
-    // starts a fresh pass rather than resuming at row 2.
+    // starts a fresh (whole) pass rather than resuming at row 2.
     const windows = events.filter((e) => e[0] === 'beginBlock').map((e) => [e[2], e[3]]);
     expect(windows).toEqual([
-      [100, 102],
       [100, 108],
       [100, 102],
+      [100, 108],
+      [100, 108],
     ]);
   });
 

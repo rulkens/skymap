@@ -167,11 +167,12 @@ describe('createProceduralDiskSubsystem', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 2 });
     const sys = createProceduralDiskSubsystem();
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+    // Frame 1 is the block's whole first pass.
     const out1 = runProceduralSolo(walk, sys, makeInput(clouds));
-    expect(out1.instances.length).toBe(2);
+    expect(out1.instances.length).toBe(4);
     const out2 = runProceduralSolo(walk, sys, makeInput(clouds));
-    // Frame 2: cursor visits the other 2 indices; sticky entries from
-    // frame 1 persist, so total stays at 4.
+    // Frame 2: the cursor visits 2 indices; sticky entries from frame 1 hold
+    // the other 2, so the total stays at 4.
     expect(out2.instances.length).toBe(4);
   });
 
