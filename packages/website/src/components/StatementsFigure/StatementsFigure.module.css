@@ -1,0 +1,8 @@
+.root {
+  composes: grid from '../../styles/layout.module.css';
+  margin-bottom: 2.5rem;
+}
+
+.statements {
+  composes: statements from '../../styles/layout.module.css';
+}

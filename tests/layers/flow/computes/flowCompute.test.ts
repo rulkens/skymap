@@ -1,6 +1,6 @@
 /**
- * flowCompute — the row's own gate (enabled AND the cube committed) and what it
- * hands the renderer: the frame's single encoder, never an out-of-band submit.
+ * flowCompute — the row's own gate (handed value above 0 AND the cube committed) and what
+ * it hands the renderer: the frame's single encoder, never an out-of-band submit.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { flowCompute } from '../../../../src/layers/flow/computes/flowCompute';
@@ -52,7 +52,7 @@ function makeRuntime(init: { renderer: FlowFieldRenderer; slot?: unknown }): Flo
   } as unknown as FlowRuntime;
 }
 
-/** The minimal `PassState` `encode` reads: the toggle off `settings.flow`. */
+/** The minimal `PassState` `encode` reads: `settings.flow`, forwarded to the renderer. */
 function stateStub(flow?: Partial<FlowSettings>): PassState {
   return { settings: { flow: flowStub(flow) } } as unknown as PassState;
 }
@@ -63,21 +63,30 @@ const NOW_MS = 12345;
 const ctxStub = { snapshot: { nowMs: NOW_MS } } as unknown as FrameView;
 
 describe('flowCompute', () => {
-  it('skips when flow.enabled is false', () => {
+  // Off but still fading: the switch must not stop the integrator, or the ribbons freeze
+  // mid fade-out while the pass still draws them.
+  it('integrates while switched off but still fading', () => {
     const renderer = spyRenderer();
     const runtime = makeRuntime({ renderer });
-    flowCompute(runtime).encode(encoder, ctxStub, stateStub({ enabled: false }), () => ({}));
+    flowCompute(runtime).encode(encoder, ctxStub, stateStub({ enabled: false }), () => ({}), 0.4);
+    expect(renderer.encodeCompute).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips at a handed value of 0, even with the switch on', () => {
+    const renderer = spyRenderer();
+    const runtime = makeRuntime({ renderer });
+    flowCompute(runtime).encode(encoder, ctxStub, stateStub({ enabled: true }), () => ({}), 0);
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
   it('skips when the cube is not loaded', () => {
     const renderer = spyRenderer();
     const runtime = makeRuntime({ renderer, slot: null });
-    flowCompute(runtime).encode(encoder, ctxStub, stateStub(), () => ({}));
+    flowCompute(runtime).encode(encoder, ctxStub, stateStub(), () => ({}), 1);
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
-  it('delegates to encodeCompute when enabled + loaded, forwarding nowMs and the timing slot', () => {
+  it('delegates to encodeCompute when visible + loaded, forwarding nowMs and the timing slot', () => {
     const renderer = spyRenderer();
     const runtime = makeRuntime({ renderer });
     const state = stateStub({ enabled: true });
@@ -85,7 +94,7 @@ describe('flowCompute', () => {
     // the prelude's dispatch is untimed and its cost drains into whichever
     // render pass opens next, reading there as that pass regressing.
     const claim = () => ({});
-    flowCompute(runtime).encode(encoder, ctxStub, state, claim);
+    flowCompute(runtime).encode(encoder, ctxStub, state, claim, 1);
     expect(renderer.encodeCompute).toHaveBeenCalledTimes(1);
     expect(renderer.encodeCompute).toHaveBeenCalledWith(
       encoder,

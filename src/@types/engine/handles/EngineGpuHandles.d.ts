@@ -323,7 +323,7 @@ export type EngineGpuHandles = {
    * UV-sphere pipeline whose per-body `Map` gives each body its own uniform buffer
    * + bind group + surface texture, so no shared uniform can be clobbered
    * mid-frame. `texturedBodiesPass` draws the `textured` branch of
-   * `partitionBodiesByPresentation` through it; the `bodyTextures` family's commit
+   * `sceneBodyPartition` through it; the `bodyTextures` family's commit
    * routes each bitmap to `setMap` and its per-kind onRelease to `clearMap`. Same
    * `foreground:0` format invariant as `earthRenderer` / `planetRenderer`
    * (see `renderTargetFormats.ts`); excluded from `isEngineReady`.
@@ -379,7 +379,7 @@ export type EngineGpuHandles = {
   atmosphereShellRenderer: AtmosphereShellRenderer | null;
   /**
    * The sub-pixel scene bodies (the `glints` branch of
-   * `partitionBodiesByPresentation`) as brightness-scaled additive point sprites
+   * `sceneBodyPartition`) as brightness-scaled additive point sprites
    * into the depthless HDR target — the far half of the body LOD (`body-glints`
    * layer, sharing the frame program's `(hdr, NEAR0)` render step with
    * `star-points`).  Its brightness encodes apparent size x albedo x phase, and

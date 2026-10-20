@@ -29,7 +29,7 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-import { BODY_GLINT_MAX_PX } from '../../services/engine/frame/partitionBodiesByPresentation';
+import { BODY_GLINT_MAX_PX } from '../../data/bodies/bodyGlintMaxPx';
 
 // Rec.709 luma weights — the luminance of a linear-RGB albedo tint.
 const LUMA_R = 0.2126;

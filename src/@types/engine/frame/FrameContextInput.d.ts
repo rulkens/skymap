@@ -30,6 +30,4 @@ export type FrameContextInput = {
    *  see `ReadyFrameContext.nowMs`/`.simDays` for how each is read. */
   readonly nowMs: number;
   readonly simDays: number;
-  /** Galaxy-catalog draw mask (`deriveSourceMasks(state).draw`), this frame. */
-  readonly visibleSourceMask: number;
 };

@@ -1,10 +1,13 @@
 // zoneOfAvoidance/vertex.wesl — fullscreen-quad vertex stage for the
 // galactic-plane dust-band guide layer. Emits a 6-vertex triangle pair
 // directly in clip space (no view-projection multiply, no large
-// coordinates) and forwards the NDC the fragment stage builds its view ray
-// from. Verbatim technique from horizonShell/vertex.wesl.
+// coordinates) and forwards the canvas NDC each corner stands for, through
+// the window rect, which the fragment stage builds its view ray from.
 
+import package::zoneOfAvoidance::io::Uniforms;
 import package::zoneOfAvoidance::io::VsOut;
+
+@group(0) @binding(0) var<uniform> u: Uniforms;
 
 // Fullscreen quad corners in NDC, triangle-list order.
 const CORNERS = array<vec2<f32>, 6>(
@@ -23,6 +26,8 @@ fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
   // Depth 0 (near plane in ZO); the HDR pass has no depth test, so this only
   // has to sit inside the clip volume so the quad isn't culled.
   out.clipPos = vec4<f32>(c, 0.0, 1.0);
-  out.ndc = c;
+  // The quad always fills its target; the window rect maps each target
+  // corner to the canvas point it stands for.
+  out.ndc = u.windowNdcCentre + c * u.windowNdcHalf;
   return out;
 }

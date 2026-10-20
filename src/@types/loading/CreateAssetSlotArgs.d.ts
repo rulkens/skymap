@@ -20,5 +20,12 @@ export type CreateAssetSlotArgs<T, Req> = {
    * once per commit. Omitted for slots whose commit allocates nothing to free.
    */
   onRelease?: (payload: T) => void;
+  /**
+   * Frees a fetched payload the slot drops before its commit runs: superseded by
+   * a newer load, or landing after `release()`. Needed only for payloads owning
+   * memory the GC cannot reclaim (GPU resources, `ImageBitmap`s). A payload whose
+   * commit ran belongs to the consumer, even when a newer load supersedes it.
+   */
+  dispose?: (payload: T) => void;
   retry?: RetryPolicy;
 };

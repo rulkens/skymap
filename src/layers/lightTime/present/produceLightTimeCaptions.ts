@@ -1,14 +1,14 @@
 /**
  * produceLightTimeCaptions — one non-clickable NEAR0 caption per visible
  * sphere, sitting on the top of its silhouette as the camera sees it. Reads
- * the same `deriveLightTimeLiveness` the sphere pass reads, so a caption can
- * never outlive or precede its sphere.
+ * the same `deriveLightTimeLiveness` the sphere pass reads, over the label value,
+ * whose `of` keeps a caption from outliving or preceding its sphere.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
@@ -23,8 +23,12 @@ import { deriveLightTimeLiveness } from './deriveLightTimeLiveness';
 /** Both clamps, so every sphere's caption is the same size on screen. */
 const CAPTION_PX = 32;
 
-export const produceLightTimeCaptions: Label2DProducer['produceLabels'] = (state, ctx) => {
-  const liveness = deriveLightTimeLiveness(state, ctx);
+export const produceLightTimeCaptions: LayerScreenLabel<'lightTime'>['produceLabels'] = (
+  _state,
+  ctx,
+  fade,
+) => {
+  const liveness = deriveLightTimeLiveness(ctx, fade);
   if (liveness === null) return { labels: [], awake: false };
 
   const fwd = orbitForwardOf(ctx.cam);

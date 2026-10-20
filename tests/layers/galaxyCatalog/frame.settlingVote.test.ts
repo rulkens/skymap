@@ -10,6 +10,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
+import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
+import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
@@ -20,10 +22,9 @@ import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 // varies, which is what the votes read.
 function makeRuntime(fading: boolean) {
   return {
-    biasLastApplied: 0,
-    biasCorrection: { setMode: vi.fn() },
     hiResFamous: { committed: () => null },
     catalogs: new Map(),
+    records: new Map(),
     famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
@@ -40,19 +41,19 @@ function makeRuntime(fading: boolean) {
 const STATE = {
   settings: {
     bias: { mode: 0, absMagLimit: -19 },
-    galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1 },
+    galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1, items: makeGalaxyCatalogItems() },
   },
   selectionRows: { select: null },
-  subsystems: { fades: { opacityOf: () => 1 } },
 } as unknown as PassState;
 
-const SNAPSHOT = { visibleSourceMask: 0xffffffff, nowMs: 0 } as unknown as ReadyFrameContext;
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
+const FADE = makeGalaxyCatalogFade();
 const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 describe('galaxyCatalog frame — work votes', () => {
   it('votes both while a landed thumbnail is inside its load fade', () => {
     const tick = galaxyCatalogPlanner(makeRuntime(true));
-    expect(tick.plan(SNAPSHOT, VIEWS, STATE)).toEqual({
+    expect(tick.plan(SNAPSHOT, VIEWS, STATE, FADE)).toEqual({
       value: undefined,
       awake: true,
       settling: true,
@@ -64,7 +65,7 @@ describe('galaxyCatalog frame — work votes', () => {
   // fixture has no `hasInFlightWork` at all — reading it here would throw.
   it('votes neither while a fetch is merely outstanding', () => {
     const tick = galaxyCatalogPlanner(makeRuntime(false));
-    expect(tick.plan(SNAPSHOT, VIEWS, STATE)).toEqual({
+    expect(tick.plan(SNAPSHOT, VIEWS, STATE, FADE)).toEqual({
       value: undefined,
       awake: false,
       settling: false,

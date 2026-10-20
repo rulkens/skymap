@@ -1,6 +1,6 @@
 /** lightTime — the light-time spheres guide's settings cluster: the visibility toggle. */
 
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
 
@@ -8,11 +8,6 @@ export const lightTimeSlice = createSlice({
   name: 'settings/lightTime',
   reducerPath: 'lightTime',
   initialState,
-  reducers: {
-    setLightTimeEnabled: (lightTime, action: PayloadAction<boolean>) => {
-      lightTime.enabled = action.payload;
-    },
-  },
+  // No reducer: `setVisibility` writes the switch, the only field.
+  reducers: {},
 });
-
-export const { setLightTimeEnabled } = lightTimeSlice.actions;

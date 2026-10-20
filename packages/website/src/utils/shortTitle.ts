@@ -1,4 +1,4 @@
-/** A page's title is followed by " | skymap docs" and the whole may be 60 characters (tests/packages/website/siteMode.test.ts). */
+/** A page's title is followed by " | Skymap docs" and the whole may be 60 characters (tests/packages/website/siteMode.test.ts). */
 const TITLE_MAX = 46;
 
 /**

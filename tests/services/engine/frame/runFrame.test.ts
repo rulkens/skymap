@@ -33,15 +33,6 @@ vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
 
-// deriveSourceMasks is mocked here so the clipPlayer tick-ordering test can
-// observe the call sequence without needing a full FadeRegistry seeded for
-// every galaxy catalog source. Returns inert masks (draw 0, pick 0) — the
-// renderer-null bail-out fires before any renderer reads the masks, so they
-// do not need to be realistic in this test suite.
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: vi.fn(() => ({ draw: 0, pick: 0 })),
-}));
-
 // The GPU dispatch and pick-overlay composite are real WebGPU calls against
 // `deps.device`/`deps.context` — no JSDOM stub can service them. Mocked out
 // so the wake-fold test below can drive `runFrame` all the way through a
@@ -88,7 +79,6 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import {
@@ -96,7 +86,6 @@ import {
   setAutoRotate,
   commitCameraPose,
   startFrameTween,
-  beginDrag,
 } from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import {
@@ -116,11 +105,15 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
+import {
+  inputSourceAttached,
+  inputGestureStarted,
+  inputMoved,
+  inputConsumed,
+} from '../../../../src/state/input/inputSlice';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -161,16 +154,6 @@ function makeState(): EngineState {
         brightness: 0.5,
         depthFade: false,
         provenance: DEFAULT_GALAXY_PROVENANCE,
-        // deriveSourceMasks (called at the top of runFrame, before the
-        // renderer-null bail-out) iterates EVERY GALAXY_CATALOG_SOURCES code and reads
-        // items[id].enabled, so a partial record would throw on the first
-        // missing id. Seed them all enabled.
-        items: Object.fromEntries(
-          GALAXY_CATALOG_SOURCES.map((s) => [
-            SOURCE_REGISTRY[s].id,
-            { enabled: true, labelEnabled: true },
-          ]),
-        ),
       },
       tonemap: { exposure: 1, curve: 'linear' },
       bias: { mode: 'off', absMagLimit: -19 },
@@ -184,7 +167,6 @@ function makeState(): EngineState {
     },
     picking: {
       pickInFlight: false,
-      pointerDown: false,
     },
     gpu: {
       galaxyPointRenderer: null,
@@ -193,11 +175,6 @@ function makeState(): EngineState {
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
-      // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', id}) for every
-      // galaxy catalog to compute the fade-out draw tail; 0 everywhere (no fade in
-      // flight) is the right baseline for these fixtures. With the module mock
-      // above this value is also mocked out, but the real fades stub is kept
-      // here for completeness and so the type constraint is satisfied.
       fades: { opacityOf: () => 0 },
       // Minimal selection-subsystem stub.  The runFrame body reads
       // `focused()` (cluster-focus fade) + `selected()` (halo) for the
@@ -224,10 +201,8 @@ function makeState(): EngineState {
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
-      clickResolver: null,
-      inputBindings: null,
-      // Non-nullable from t=0: runFrame drains it before the produce step.
-      inputAggregator: createInputAggregator(),
+      pickDriver: null,
+      resizeWake: null,
       loadProgress: null,
     },
     booted: false,
@@ -348,13 +323,18 @@ describe('runFrame — the input drain runs before the produce step', () => {
       ...state.cameraRuntime,
       register: { ...state.cameraRuntime.register, pose: absoluteArm(BASE) },
     };
-    // The emit sink's DOM-time edge, so `orbitDrag` (priority 80) is the winner.
-    store.dispatch(beginDrag());
-
-    const agg = state.subsystems.inputAggregator;
-    agg.push({ kind: 'gestureStart' });
-    agg.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
-    agg.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
+    // px (100, 100) → (150, 100) on the 100 × 100 canvas, in source units.
+    store.dispatch(inputSourceAttached({ source: 'canvas', aspect: 1 }));
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
+    const motion = {
+      intent: 'orbit',
+      dx: 0.5,
+      dy: 0,
+      ratio: 1,
+      at: { x: 1.5, y: 1 },
+      held: true,
+    } as const;
+    store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
 
     runFrame(state, deps, 0);
 
@@ -649,13 +629,13 @@ describe('runFrame — orientation-frame roll', () => {
 
   it('a switch into a near-pole-aligned view resolves to a finite pose at the clamp, not NaN', () => {
     // PITCH_LIMIT edge (spec §10). With the view direction a hair off the frame
-    // pole — pitch pinned at the orbitControls clamp `π/2 − 0.01` — forward and
+    // pole — pitch pinned at the `PITCH_LIMIT` clamp `π/2 − 0.01` — forward and
     // the lookAt up-vector stay 0.01 rad apart through the ENTIRE slerp (B(t) is a
     // rotation, so it rotates forward and up together, preserving their angle). We
     // pin that every produced pose and its view-projection are finite: at exactly
     // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
     // switch well-defined.
-    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors orbitControls.ts:91
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/data/camera/pitchLimit.ts
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -720,43 +700,26 @@ describe('runFrame — demand re-evaluation', () => {
 });
 
 describe('runFrame — clipPlayer tick ordering (Task 12)', () => {
-  it('ticks clipPlayer before deriveSourceMasks — scene cues fire before mask derivation', () => {
-    // Task 12 contract: `clipPlayer.tick(nowMs)` must be the FIRST statement of
-    // `runFrame`, before `deriveSourceMasks` and `reevaluateDemand`. Scene cues
-    // (e.g. a visibility toggle dispatched by a cue) must be committed before
-    // this frame derives its draw masks from state, so a cue's effects are
-    // visible in the same frame rather than lagging one frame behind.
-    //
-    // Strategy: both `clipPlayer.tick` and `deriveSourceMasks` are replaced with
-    // spies. Each spy pushes a marker into a shared `callOrder` array. After
-    // running one frame we assert tick appeared before deriveSourceMasks.
+  it('ticks clipPlayer before reevaluateDemand', () => {
+    // `clipPlayer.tick(nowMs)` is the FIRST statement of `runFrame`: a cue's
+    // dispatch (e.g. a visibility toggle) must be in the store before this
+    // frame derives demand, so its effect shows this frame, not the next.
     const callOrder: string[] = [];
 
     const store = makeStore();
     const state = makeState();
 
-    // Replace the clipPlayer tick stub so it records its position in callOrder.
     state.subsystems.clipPlayer.tick = vi.fn<ClipPlayer['tick']>((clipEpoch) => {
       callOrder.push('tick');
       return { clipEpoch };
     });
-
-    // Replace the deriveSourceMasks mock's implementation for this test.
-    vi.mocked(deriveSourceMasks).mockImplementationOnce(() => {
-      callOrder.push('deriveSourceMasks');
-      return { draw: 0, pick: 0 };
+    vi.mocked(reevaluateDemand).mockImplementationOnce(() => {
+      callOrder.push('reevaluateDemand');
     });
 
-    const deps = makeDeps(store);
-    runFrame(state, deps, 500);
+    runFrame(state, makeDeps(store), 500);
 
-    // tick must precede deriveSourceMasks in the call sequence.
-    const tickIdx = callOrder.indexOf('tick');
-    const masksIdx = callOrder.indexOf('deriveSourceMasks');
-
-    expect(tickIdx).toBeGreaterThanOrEqual(0); // tick was called
-    expect(masksIdx).toBeGreaterThanOrEqual(0); // deriveSourceMasks was called
-    expect(tickIdx).toBeLessThan(masksIdx); // tick came first
+    expect(callOrder).toEqual(['tick', 'reevaluateDemand']);
   });
 
   it('passes nowMs to clipPlayer.tick', () => {
@@ -818,7 +781,7 @@ describe('runFrame — sim clock (Task 8)', () => {
 
 describe('runFrame — hover-pick removed from frame body', () => {
   it('does not call galaxyPickRenderer.pick inside the frame body', () => {
-    // Hover picking is fully pointer-driven via hoverPickDriver (wired in
+    // Hover picking is driven by createPickDriver (wired in
     // wireInput.ts); runFrame itself must never call galaxyPickRenderer.pick.
     // This test pins that invariant — a re-added hover-pick block in the
     // frame body would be caught here.
@@ -1001,12 +964,10 @@ describe('runFrame — the label-director wake fold', () => {
       settings: {
         ...base.settings,
         flow: { enabled: false },
-        // Read unconditionally by `visibleStars` past the ready gate — see
-        // frameContext.test.ts's makeState for the same addition and why.
-        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
       slabRows: [],
+      visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
@@ -1056,6 +1017,46 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
   });
+
+  it('the outgoing focused structure keeps full emphasis through the fade-out', () => {
+    const VIRGO_WORD = 42;
+    const base = makeReadyState(
+      () => false,
+      () => false,
+    );
+    const structureFocus = createStructureFocusSubsystem({ requestRender: vi.fn() }, 0);
+    const state = {
+      ...base,
+      selectionKindRows: [
+        {
+          type: 'structure',
+          encodePick: (ref: { id: string }) => (ref.id === 'virgo' ? VIRGO_WORD : null),
+        },
+      ],
+      subsystems: {
+        ...base.subsystems,
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        structureFocus,
+      },
+    } as unknown as EngineState;
+    // Virgo was focused and settled; the focus is already cleared (the fixture's
+    // focus row is null), so the frames below tick its fade-out.
+    structureFocus.update({ id: 'virgo', worldPos: [1, 0, 0], physicalRadiusMpc: 2 } as never, 0);
+    structureFocus.produceFocusUniforms(500);
+    const deps = makeCamDeps(state);
+    const snapshotAt = (nowMs: number) => {
+      runFrame(state, deps, nowMs);
+      return vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1].snapshot;
+    };
+
+    snapshotAt(600);
+    const fading = snapshotAt(800);
+    expect(fading.focusBlend).toBeGreaterThan(0);
+    expect(fading.focusPickId).toBe(VIRGO_WORD);
+    const settled = snapshotAt(1100);
+    expect(settled.focusBlend).toBe(0);
+    expect(settled.focusPickId).toBeNull();
+  });
 });
 
 describe('runFrame — the planner keep-ticking fold', () => {
@@ -1074,10 +1075,10 @@ describe('runFrame — the planner keep-ticking fold', () => {
       settings: {
         ...base.settings,
         flow: { enabled: false },
-        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
       slabRows: [],
+      visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers: [],
@@ -1109,6 +1110,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
             physicalRadiusMpc: 1,
             blend: 0.5,
           })),
+          lastFocusRef: () => null,
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
@@ -1154,7 +1156,7 @@ describe('runFrame — effective intent', () => {
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
 
-    h.push({ kind: 'wheel', deltaY: 100, duringGesture: false, xPx: 500, yPx: 500 });
+    h.notch(100, [500, 500]);
     h.frame();
 
     const committed = worldArmOf(h.store.getState().camera.base).distance;
@@ -1190,17 +1192,16 @@ describe('runFrame — effective intent', () => {
     // dispatch after them. Recorded the way the fixture records.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
     h.frame(4);
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 56, yPx: 50 });
+    h.press('orbit', [50, 50]);
+    h.moveTo([56, 50]);
     h.frame();
-    h.push({ kind: 'gestureEnd' });
+    h.release();
 
     const recorded: string[] = [];
     const inner = h.store.dispatch.bind(h.store);
     h.store.dispatch = ((action: { type: string }) => {
-      recorded.push(action.type);
+      // Filtered as the golden trace's recorder filters it: drain bookkeeping.
+      if (action.type !== inputConsumed.type) recorded.push(action.type);
       return inner(action as never);
     }) as typeof h.store.dispatch;
     h.frame();
@@ -1216,11 +1217,9 @@ describe('runFrame — effective intent', () => {
     // frame stale — and the drag flag clears in the same frame.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 100, yPx: 100 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 150, yPx: 100 });
-    h.push({ kind: 'gestureEnd' });
+    h.press('orbit', [100, 100]);
+    h.moveTo([150, 100]);
+    h.release();
 
     h.frame();
 

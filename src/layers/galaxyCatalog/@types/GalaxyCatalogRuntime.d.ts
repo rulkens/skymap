@@ -4,10 +4,12 @@
  * builds each one before returning, so no reader re-checks a handle.
  */
 
-import type { BiasMode } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
+import type { GalaxyRecordBridge } from './GalaxyRecordBridge';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
@@ -20,15 +22,18 @@ import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas'
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
 import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
 import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 
 export type GalaxyCatalogRuntime = {
-  /** The CPU-side catalog mirror; the point slots' commits are its only writers. */
+  /** The CPU-side catalog mirror, kept for the flat-only readers (hi-res famous, famous labels). */
   readonly catalogs: Map<SourceType, GalaxyCatalog>;
+  /** One record source per loaded catalog, set and deleted with `catalogs`; every other reader's view. */
+  readonly records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>;
+  /** The records' lookups made synchronous for the selection row. */
+  readonly recordBridge: GalaxyRecordBridge;
   /** The lazy PGC → human-name alias fetch slot; the pgcAlias asset row's factory hands this back. */
   readonly pgcAlias: AssetSlot<PgcAliasMap, void>;
   /** A getter over the meta slot's private cell, so the runtime literal is complete in one expression. */
@@ -38,7 +43,7 @@ export type GalaxyCatalogRuntime = {
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */
   readonly publish: (patch: Partial<GalaxyCatalogFacts>) => void;
 
-  readonly points: ReadonlyMap<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  readonly points: ReadonlyMap<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   readonly famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, GalaxyCatalogReq>;
   readonly hiResFamous: AssetSlot<HiResFamousPair, HiResFamousReq>;
 
@@ -51,7 +56,4 @@ export type GalaxyCatalogRuntime = {
   readonly texturedDisks: TexturedDiskSubsystem;
   readonly proceduralDisks: ProceduralDiskSubsystem;
   readonly diskPlannerWalk: DiskPlannerWalk;
-  readonly biasCorrection: BiasCorrectionSubsystem;
-  /** The bias mode the last bake was fired for; `frame` reconciles it against settings. */
-  biasLastApplied: BiasMode;
 };

@@ -12,7 +12,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { zoneOfAvoidanceUpsamplePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidanceUpsamplePass';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -26,8 +26,7 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-/** Inside the visibility window: both bands saturate to 1 here. */
-const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
+const INSIDE_CAM_DIST = MILKY_WAY_RADIUS_MPC * 10;
 
 const ZOA_VIEW = { __id: 'zoa-view' } as unknown as GPUTextureView;
 
@@ -71,10 +70,6 @@ function makeState(
           : over.label3D,
     },
     settings: { zoneOfAvoidance: { labelColor: [1, 1, 1], intensity: 1 } },
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
   } as unknown as EngineState;
 }
 
@@ -86,7 +81,7 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     const state = makeState({ labelDraw });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    pass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state, 1);
 
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(upsampleDraw.mock.calls[0]![0]).toBe(PASS_STUB);
@@ -107,7 +102,7 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     const state = makeState({ label3D: null });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    expect(() => pass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
+    expect(() => pass.draw(PASS_STUB, view, ctx, state, 1)).not.toThrow();
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
   });
 
@@ -118,7 +113,7 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     const state = makeState({ labelDraw, glyphCount: 0 });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    pass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state, 1);
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(labelDraw).not.toHaveBeenCalled();
   });

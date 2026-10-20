@@ -11,6 +11,7 @@
  * table change together.
  */
 
+import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
 import type { BodySpec } from '../../../@types/scene/BodySpec';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 
@@ -20,5 +21,6 @@ export function heliocentricPlanet(spec: BodySpec): PlanetBody {
     label: spec.label,
     surface: { datumRadiusM: spec.datumRadiusM, reliefM: spec.reliefM ?? [0, 0] },
     albedo: spec.albedo,
+    resolvePx: BODY_GLINT_MAX_PX,
   };
 }

@@ -1,7 +1,7 @@
 /**
  * clipOpacityChannel — the clip-owned transient opacity channel.
  *
- * Wraps one private FadeController per VisibilityLayerKey, created lazily on
+ * Wraps one private FadeController per VisibilityAddress, created lazily on
  * the first `fadeTo` call for a given key. This mirrors the pattern used by
  * `structureFocusSubsystem` (one private `createFadeController`, NOT the
  * shared FadeRegistry), extended to a keyed map: one controller per layer.
@@ -16,22 +16,13 @@
  *
  * ### Relation to the other opacity channels
  *
- * The clip factor is the third factor in the compositing chain:
+ * The clip factor is the last factor of the value core hands a consumer:
  *
- *   final = registry factor × intent-bridge factor × clip factor
+ *   handed value = registry fade × clip factor
  *
  * `reset()` clears the controller map entirely, which is equivalent to
  * resetting every layer's clip factor to 1 — because untouched keys always
  * return 1 by the lazy-default rule. Clearing is therefore correct teardown.
- *
- * ### tick vs currentOpacity
- *
- * The FadeController's opacity is time-based: `currentOpacity(now)` computes
- * the smoothstep position at `now` without needing `tick`. `tick` advances
- * the controller's internal bookkeeping (resolves pending Promises). This
- * channel calls `tick` on every controller so the FadeController lifecycle
- * is properly maintained even though this channel does not expose the
- * underlying Promises.
  *
  * ### The default clock is the last ticked frame time
  *
@@ -46,7 +37,7 @@
 
 import { createFadeController } from './fadeController';
 import type { ClipOpacityChannel } from '../../@types/animation/ClipOpacityChannel';
-import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../@types/animation/VisibilityAddress';
 import type { FadeController } from '../../@types/animation/FadeController';
 
 export function createClipOpacityChannel(
@@ -57,14 +48,14 @@ export function createClipOpacityChannel(
   _initialNowMs: number = 0,
 ): ClipOpacityChannel {
   // One private FadeController per key, created lazily on first fadeTo.
-  const controllers = new Map<VisibilityLayerKey, FadeController>();
+  const controllers = new Map<VisibilityAddress, FadeController>();
 
   // The channel's default clock: the frame time of the most recent tick.
   // See the module-header rationale ("The default clock is the last ticked
   // frame time").
   let lastTickNowMs = 0;
 
-  function getOrCreate(key: VisibilityLayerKey, nowMs: number): FadeController {
+  function getOrCreate(key: VisibilityAddress, nowMs: number): FadeController {
     let controller = controllers.get(key);
     if (controller === undefined) {
       // Default opacity 1 — untouched layers are fully visible.
@@ -75,7 +66,7 @@ export function createClipOpacityChannel(
   }
 
   function fadeTo(
-    key: VisibilityLayerKey,
+    key: VisibilityAddress,
     target: number,
     durationMs: number,
     nowMs?: number,
@@ -87,10 +78,10 @@ export function createClipOpacityChannel(
     const now = nowMs ?? lastTickNowMs;
     const controller = getOrCreate(key, now);
     // durationMs === 0 snaps instantly via FadeController's Math.max(0, durationMs) path.
-    void controller.fadeTo(target, durationMs, now);
+    controller.fadeTo(target, durationMs, now);
   }
 
-  function factorOf(key: VisibilityLayerKey, nowMs?: number): number {
+  function factorOf(key: VisibilityAddress, nowMs?: number): number {
     const controller = controllers.get(key);
     // No controller for this key means it was never touched — default 1.
     if (controller === undefined) return 1;
@@ -98,14 +89,7 @@ export function createClipOpacityChannel(
   }
 
   function tick(nowMs: number): void {
-    // Record the frame clock as the channel's default time (see module
-    // header), then advance every controller's bookkeeping (resolves
-    // pending Promises). Factor values advance by the stamped clock via
-    // currentOpacity regardless of tick; tick is for lifecycle correctness.
     lastTickNowMs = nowMs;
-    for (const controller of controllers.values()) {
-      controller.tick(nowMs);
-    }
   }
 
   function isAnimating(nowMs?: number): boolean {

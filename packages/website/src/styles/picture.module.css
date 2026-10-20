@@ -1,0 +1,32 @@
+/*
+ * picture.module.css — the shared parts of a picture's words: the label along the foot of a
+ * full-width picture and the cell a gallery's words share. A vocabulary, not a component: no
+ * `.root`; take a class with `composes: caption from '../../styles/picture.module.css'`.
+ */
+
+/*
+ * A picture's label along the foot of a full-width picture: the host sets `--caption-foot: ''` and a top
+ * padding of `--caption-rise` (4rem unless it sets one); the picture then ends at the label, black from the
+ * rule down across the window. The host clips the overflow and keeps 2rem under the label.
+ */
+.caption::before {
+  content: var(--caption-foot, none);
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw) -2rem;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
+}
+
+/* A gallery's words (a label, an address): one cell, so the tallest reserves the room, and a quicker change than the pictures'. */
+.view-words {
+  --view-out: 0.3s;
+  --view-wait: 0.3s;
+  --view-in: 0.6s;
+  display: grid;
+  align-items: start;
+}
+
+.view-words > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}

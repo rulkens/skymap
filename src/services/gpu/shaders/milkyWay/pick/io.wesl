@@ -9,7 +9,7 @@ import package::lib::camera::CameraUniforms;
 // @group(0), packed per pick — 96 bytes:
 //   0  cam          CameraUniforms (80 B)
 //   80 camPosWorld  vec3<f32>   } the two facts the apparent-size
-//   92 pxPerRad     f32         } derivation reads, as points/vertex.wesl does
+//   92 pxPerRad     f32         } derivation reads, as points/vertexBody.wesl does
 // The vec3 at 80 is already 16-aligned, so no pad precedes it.
 struct Uniforms {
   cam: CameraUniforms,

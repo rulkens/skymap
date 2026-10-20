@@ -11,8 +11,3 @@ export const selectRoute = createSelector(
 
 /** The whole cluster, under the slice's own name — mirrors `selectMilkyWay`. */
 export const selectZoneOfAvoidance = selectRoute;
-
-export const selectZoneOfAvoidanceEnabled = createSelector(
-  [selectRoute],
-  (route: ZoneOfAvoidanceSettings): boolean => route.enabled,
-);

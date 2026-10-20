@@ -13,9 +13,8 @@ import type { EarthBody } from '../../scene/EarthBody';
  * (`sceneBodies.ts`), not per-frame state, so the store simply holds whatever
  * the seed installed and hands live views back without defensive copies.
  *
- * The seeded STARS are not here: they are their own star catalogs, walked from
- * `SEEDED_STAR_CATALOGS` by `visibleStars`, which is the only reader a drawn
- * star ever had. Earth is a distinct getter (not folded into `planets`)
+ * The seeded STARS are not here: they are their own star catalogs, which the
+ * star show entry's `bodies` hands core's scene-body sort. Earth is a distinct getter (not folded into `planets`)
  * because it is the descent's landing target and carries its own textured
  * `EarthBody` form; it is `null` until seeded.
  *

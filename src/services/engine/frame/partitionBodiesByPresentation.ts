@@ -1,122 +1,34 @@
 /**
- * partitionBodiesByPresentation — the ONE branch point deciding which layer
- * draws each seeded body this frame.
- *
- * Four layers consume opposite branches of one result: `bodyGlintsPass` draws
- * the `glints` branch (sub-resolution additive point sprites in the HDR
- * accumulation), `planetsPass` the `flat` branch (flat-lit albedo spheres in
- * the depth-bearing foreground), `texturedBodiesPass` the `textured` branch
- * (surface-mapped spheres in the same foreground), and a mesh layer the
- * `meshes` branch (baked triangle meshes). Because all four read THIS
- * partition and take one branch each, a body lands in exactly one branch
- * **by construction** — every input body lands in exactly one array (disjoint)
- * and none is dropped (covering). That structural invariant — one partition
- * consumed four times, rather than four per-layer gates that could drift
- * apart — is what makes the descent handoff seamless: no frame can double-draw a
- * body or drop it at a threshold crossing.
- *
- * Earth is NOT in this list. It carries its own dedicated renderer
- * (`earthRenderer`, a planned atmosphere/day-night divergence), gated by the
- * same apparent-size test but drawn separately — so the caller passes the
- * non-Earth bodies (`state.data.bodies.planets`) and Earth rides `bodies.earth`.
- *
- * The per-body decision reuses the same apparent-size mechanism the stars and
- * galaxies use for their LOD promotion (`apparentSizePx` feeding a pixel
- * threshold): project the body's physical diameter at its camera distance into
- * pixels, then apply `BODY_GLINT_MAX_PX`. The diameter reads the body's live
- * position from the per-frame `bodyStates` snapshot (keyed by id), NOT a baked
- * record field, so the split tracks the clock. Textured-vs-flat is then a pure
- * registry-membership + residency test — never an `if (id === …)` chain. The
- * function stays pure (a function of the body list, the body-state snapshot, the
- * camera, the projection, and the residency predicate) so it unit-tests
- * headlessly, no GPU device or engine state to stand up.
+ * partitionBodiesByPresentation — the ONE apparent-size sort over every scene body: below
+ * its own `resolvePx` a body is `unresolved` (a point or glint), at or above it `resolved`
+ * (a sphere or mesh). Each drawing pass takes its own bodies from each branch, so no frame
+ * can double-draw a body or drop it at a crossing. The size is data on the body, so the
+ * sort branches on nothing else; a body the camera sits inside resolves, since
+ * `bodyApparentDiameterPx` returns Infinity at distance 0.
  */
 
-import type { PlanetBody } from '../../../@types/scene/PlanetBody';
-import type { MeshBody } from '../../../@types/scene/MeshBody';
-import type { BodyState } from '../../../@types/scene/BodyState';
+import type { PositionedSceneBody } from '../../../@types/engine/frame/PositionedSceneBody';
+import type { SceneBodyPresentation } from '../../../@types/engine/frame/SceneBodyPresentation';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
-import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
-import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 
-/**
- * Apparent-diameter threshold (px): a body renders as a resolved mesh at/above
- * it and as an additive glint below it — a hard XOR, never both. Equal to the
- * `bodyGlint` scale-fade band's `goneAt` (spec §9): the glint carries the whole
- * 1–3 px band, its fade ramping to ~0 by 3 px so that at the crossover the glint
- * is already invisible and the mesh takes over with no pop. ONE constant, so the
- * partition boundary and the fade band cannot drift to different pixel sizes.
- */
-export const BODY_GLINT_MAX_PX = 3;
-
-/**
- * Split `bodies` into the `{ glints, flat, textured, meshes }` presentations
- * for the current camera. Seed order is preserved within each branch and the
- * returned arrays reference the input identity records (no copies) — the
- * consuming layers resolve each body's live position/orientation from the
- * same `bodyStates` snapshot, keyed by id.
- *
- * `isTextureResident(id)` reports whether a real surface texture is BOUND for the
- * body — a rendering fact asked of the renderer, never inferred from the loading
- * system (`sceneBodyPartition` binds it to `texturedBodyRenderer.hasMap`). A
- * registry body with nothing bound but the shared 1×1 is `flat` — the flat albedo
- * sphere IS the placeholder, exactly as Earth shows mid-blue before Blue Marble
- * arrives.
- *
- * A body the camera sits INSIDE (distance 0) resolves unconditionally:
- * `bodyApparentDiameterPx` returns `Infinity` at distance 0 (the camera is
- * inside the body, maximally resolved), which clears the `BODY_GLINT_MAX_PX`
- * threshold so the body is a mesh, never a glint. That degenerate case lives in
- * the shared projection helper, so every LOD gate reading it (this partition,
- * `partitionStarsByResolution`, the planet layers) gets the right answer with a
- * plain `>= threshold` comparison and no per-site branch.
- */
 export function partitionBodiesByPresentation(input: {
-  bodies: readonly (PlanetBody | MeshBody)[];
-  bodyStates: ReadonlyMap<string, BodyState>;
+  bodies: readonly PositionedSceneBody[];
   camPosMpc: Readonly<Vec3>;
   pxPerRad: number;
-  isTextureResident: (id: string) => boolean;
-}): {
-  glints: readonly (PlanetBody | MeshBody)[];
-  flat: readonly PlanetBody[];
-  textured: readonly PlanetBody[];
-  meshes: readonly MeshBody[];
-} {
-  const { bodies, bodyStates, camPosMpc, pxPerRad, isTextureResident } = input;
-  const glints: (PlanetBody | MeshBody)[] = [];
-  const flat: PlanetBody[] = [];
-  const textured: PlanetBody[] = [];
-  const meshes: MeshBody[] = [];
-
-  for (const body of bodies) {
-    // Shared projection: apparent diameter in px, Infinity when the camera sits
-    // inside the body (that degenerate case is owned by the util, so no per-body
-    // branch here). A body resolves to a mesh at/above BODY_GLINT_MAX_PX.
+}): SceneBodyPresentation {
+  const { bodies, camPosMpc, pxPerRad } = input;
+  const unresolved: PositionedSceneBody[] = [];
+  const resolved: PositionedSceneBody[] = [];
+  for (const positioned of bodies) {
     const diameterPx = bodyApparentDiameterPx({
-      // Live position from the per-frame snapshot (keyed by id), not a baked
-      // record field. Every seeded body has a snapshot state, so the lookup holds.
-      positionMpc: bodyStates.get(body.id)!.positionMpc,
-      radiusM: bodyFootprintRadiusM(body),
+      positionMpc: positioned.positionMpc,
+      radiusM: bodyFootprintRadiusM(positioned.body),
       camPosMpc,
       pxPerRad,
     });
-    const resolved = diameterPx >= BODY_GLINT_MAX_PX;
-
-    // A MeshBody carries no bodyTextureSpec entry, so it must route on TYPE
-    // before the texture-residency check — otherwise it silently falls to flat.
-    if (!resolved) {
-      glints.push(body);
-    } else if (isMeshBody(body)) {
-      meshes.push(body);
-    } else if (bodyTextureSpec(body.id) !== null && isTextureResident(body.id)) {
-      textured.push(body);
-    } else {
-      flat.push(body);
-    }
+    (diameterPx >= positioned.body.resolvePx ? resolved : unresolved).push(positioned);
   }
-
-  return { glints, flat, textured, meshes };
+  return { unresolved, resolved };
 }

@@ -9,7 +9,7 @@ import type { Vec3 } from '../math/Vec3';
 export type LocalBubbleRenderer = {
   readonly label: string;
   upload(mesh: ShellMesh): void;
-  /** True once a drawable mesh is committed — the fade row's guard reads this. */
+  /** True once a drawable mesh is committed; `localBubblePass` draws nothing before. */
   hasMesh(): boolean;
   /** Frees the GPU vertex/index buffers uploaded by `upload`; `hasMesh()` is false after. */
   clearMesh(): void;

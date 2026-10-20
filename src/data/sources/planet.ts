@@ -16,7 +16,6 @@ export const PLANET_ENTRY = {
   // detail. The Moon rides this row's 'planet' caption kind, so it follows the
   // same gate.
   bearsLabel: true,
-  labelLayer: 'body',
   bearsMarker: false,
   detailLabel: 'Planet',
   shortLabel: 'Planet',

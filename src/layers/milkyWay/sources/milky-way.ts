@@ -14,7 +14,6 @@ export const MILKY_WAY_ENTRY = {
   // The "You are here" label has a stem line but no ring/halo marker —
   // markers are the structure-ring concept, which the disk overlay doesn't share.
   bearsMarker: false,
-  labelLayer: 'milkyWay',
   detailLabel: 'Milky Way',
   shortLabel: 'Milky Way',
   plural: 'Milky Way',

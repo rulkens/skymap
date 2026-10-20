@@ -20,7 +20,9 @@ Two related asks:
 
 The "what loads, when, and how big" audit was completed during the boot load-priority grill: `docs/grill-sessions/boot-load-priority-2026-07-24.md`. It carries the full `ASSET_WIRING` row-by-row inventory, per-asset byte sizes, defaults, and the ~101.7 MB boot total (~420 MB at tier `large`). Do not redo it.
 
-What remains here is the **policy** half (eviction/residency) and the **debug UI** sweep.
+The residency half (what each row frees, and what it doesn't) is in the
+[GPU memory audit](../research/engine/gpu-memory-audit-2026-10-13.md), whose findings
+are filed as their own backlog items. What remains here is the **policy** half (eviction/residency) and the **debug UI** sweep.
 
 ## Directions to explore (design decides)
 

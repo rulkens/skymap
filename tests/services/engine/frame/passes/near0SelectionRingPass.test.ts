@@ -121,6 +121,7 @@ function farClippingView(farMpc: number): SlabView {
     vp: new Float32Array(16),
     camPos: [0, 0, 0],
     viewportPx: [1920, 1080],
+    window: { originPx: [0, 0], sizePx: [1920, 1080] },
   } as unknown as SlabView;
 }
 

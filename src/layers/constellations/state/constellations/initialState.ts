@@ -8,5 +8,6 @@ import type { ConstellationsSettings } from '../../../../@types/settings/Constel
 
 export const initialState: ConstellationsSettings = {
   enabled: false,
+  labelEnabled: true,
   intensity: 1.0,
 };

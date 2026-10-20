@@ -7,7 +7,7 @@ import { Source } from '../../../src/data/sources';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
-import type { ScoredRow } from '../../../src/components/CommandPalette/paletteRowModel';
+import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
 
 describe('ROW_VIEW body leading visual', () => {
   it('a body whose focus id has a captured card shot renders as an img', () => {

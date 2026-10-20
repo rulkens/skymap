@@ -57,6 +57,8 @@ export type EarthRenderer = Renderer & {
    * wired — one `(bodyId, kind)` family feeds one setter, no inert kind remains.
    */
   setMap(kind: TextureKind, bitmap: ImageBitmap): void;
+  /** Destroy a kind's committed map (no-op if none); its placeholder binds again. */
+  clearMap(kind: TextureKind): void;
   /**
    * Seed a kind's PLACEHOLDER — what Earth shows for a kind `setMap` has not
    * supplied yet — from one tile of the shared low-resolution body atlas, in place

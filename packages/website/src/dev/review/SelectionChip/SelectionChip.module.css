@@ -1,0 +1,48 @@
+/* Fixed to the window and placed from script (placeChip); it never takes the pointer, so the selection stays. */
+.root {
+  position: fixed;
+  z-index: 2147483001;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-6);
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-bg);
+  border: 1px solid var(--review-line);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.3 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 300ms ease-in;
+}
+
+/* A failure waits to be read, so it takes the click that dismisses it. */
+.failed {
+  pointer-events: auto;
+  cursor: pointer;
+  border-color: #ffb4a8;
+  color: #ffb4a8;
+}
+
+.fading {
+  opacity: 0;
+}
+
+.dim {
+  composes: dim from '../ReviewControl/ReviewControl.module.css';
+}
+
+.key {
+  composes: key from '../ReviewControl/ReviewControl.module.css';
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

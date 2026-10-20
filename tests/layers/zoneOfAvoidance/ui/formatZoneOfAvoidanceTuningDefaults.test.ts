@@ -44,6 +44,7 @@ describe('formatZoneOfAvoidanceTuningDefaults', () => {
     // a walk that leaks `enabled` into the emitted literal.
     const settings: ZoneOfAvoidanceSettings = {
       enabled: true,
+      labelEnabled: true,
       intensity: 0.5,
       radialFalloff: 0.35,
       edgeSharpness: 5,

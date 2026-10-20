@@ -18,7 +18,8 @@ import { MISSION_EVENTS } from '../../../../../src/data/missions/missionEvents.g
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../../src/layers/missions/exhibits/timeline/missionPose';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { aimCamera, beginDrag, endDrag } from '../../../../../src/state/camera/cameraSlice';
+import { aimCamera, endDrag } from '../../../../../src/state/camera/cameraSlice';
+import { inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
 import { absoluteArm } from '../../../../../src/utils/camera/absoluteArm';
 import { rootReducer } from '../../../../../src/store/rootReducer';
@@ -369,7 +370,7 @@ describe('missionPose', () => {
       return shown;
     };
     frame(0);
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     let f = 1;
     for (; f < 125; f++) frame(f);
     expect(out).toBe(0);

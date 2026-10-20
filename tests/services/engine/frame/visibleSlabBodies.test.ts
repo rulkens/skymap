@@ -51,12 +51,14 @@ describe('visibleSlabBodies', () => {
     const belowFloor: PlanetBody = {
       id: 'below',
       label: 'Below floor',
+      resolvePx: 3,
       surface: { datumRadiusM: 3e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
     const aboveFloor: PlanetBody = {
       id: 'above',
       label: 'Above floor',
+      resolvePx: 3,
       surface: { datumRadiusM: 3.2e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
@@ -82,10 +84,12 @@ describe('visibleSlabBodies', () => {
       id: 'earth',
       label: 'Earth',
       surface: { datumRadiusM: 6.371e6, reliefM: [0, 0] as const },
+      resolvePx: 3,
     };
     const orphan: PlanetBody = {
       id: 'orphan',
       label: 'Orphan',
+      resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
@@ -138,6 +142,7 @@ describe('visibleSlabBodies', () => {
     const wideBody: PlanetBody = {
       id: 'wide',
       label: 'Wide body',
+      resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
@@ -180,6 +185,7 @@ describe('visibleSlabBodies', () => {
       const straddling: PlanetBody = {
         id: 'straddling',
         label: 'Straddling',
+        resolvePx: 3,
         surface: { datumRadiusM, reliefM: [0, 0] },
         albedo: [1, 1, 1],
       };

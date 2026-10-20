@@ -9,7 +9,7 @@ import type { ReconcileEffects } from '../../../store/effects/ReconcileEffects';
 import { logCameraState } from '../helpers/logCameraState';
 import { liveRenderCamera } from '../helpers/liveRenderCamera';
 import { liveFocusRow } from '../helpers/liveFocusRow';
-import { syncVisibilityFades } from './syncVisibilityFades';
+import { syncVisibilityTargets } from './syncVisibilityTargets';
 import { applySwapFormat } from '../phases/applySwapFormat';
 
 export function makeReconcileEffects(
@@ -18,7 +18,7 @@ export function makeReconcileEffects(
 ): ReconcileEffects {
   return {
     requestRender: () => state.subsystems.scheduler.requestRender(),
-    syncFades: () => syncVisibilityFades(state, { animate: true }),
+    syncFades: (opts) => syncVisibilityTargets(state, opts?.overMs),
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;
       const cam = liveRenderCamera(state);

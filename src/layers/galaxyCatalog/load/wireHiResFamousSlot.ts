@@ -22,7 +22,10 @@ export function wireHiResFamousSlot(deps: {
   readonly texturedDiskRenderer: Pick<TexturedDiskRenderer, 'bindHiResArray'>;
   readonly texturedDisks: Pick<TexturedDiskSubsystem, 'setHiResFamous'>;
 }): AssetSlot<HiResFamousPair, HiResFamousReq> {
-  const slot = createAssetSlot<HiResFamousPair, HiResFamousReq>({
+  // What the renderer has bound, which a pair superseded mid-commit makes differ from
+  // `slot.committed()`: its commit bound it, but the slot never recorded it.
+  let bound: HiResFamousPair | null = null;
+  return createAssetSlot<HiResFamousPair, HiResFamousReq>({
     name: 'hi-res-famous',
     fetch: async (req) => {
       // `initTexture()` is mandatory before `getTextureView()` — the handle throws
@@ -42,22 +45,23 @@ export function wireHiResFamousSlot(deps: {
       };
     },
     commit: async (pair) => {
-      // The slot still holds the PREVIOUS pair here: `AssetSlot` awaits `commit`
-      // before dispatching `committed`, so this read precedes the hand-over. The
-      // mirror fields this replaces existed only to answer this one question.
-      const previous = slot.committed()?.value ?? null;
+      const previous = bound;
+      bound = pair;
 
       // Bind and hand over FIRST: between these two lines and the destroys below
       // there is no frame where the renderer samples a dead view or the planner
       // reference is absent, so no famous galaxy drops to its atlas tile.
       deps.texturedDiskRenderer.bindHiResArray(pair.texture.getTextureView());
       deps.texturedDisks.setHiResFamous(pair.subsystem);
-
-      // Subsystem before texture: the planner holds the texture's evict-handler
-      // subscription, so the reverse order fires eviction into a torn-down planner.
-      previous?.subsystem.destroy();
-      previous?.texture.destroy();
+      if (previous) destroyPair(previous);
     },
+    dispose: destroyPair,
   });
-  return slot;
+}
+
+// Subsystem before texture: the planner holds the texture's evict-handler
+// subscription, so the reverse order fires eviction into a torn-down planner.
+function destroyPair(pair: HiResFamousPair): void {
+  pair.subsystem.destroy();
+  pair.texture.destroy();
 }

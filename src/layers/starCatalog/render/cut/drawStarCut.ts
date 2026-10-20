@@ -1,7 +1,7 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../@types/StarCatalogRenderer';
-import type { StarDrawStream } from '../../@types/StarDrawStream';
+import type { OctreeDrawStream } from '../../../../@types/octree/OctreeDrawStream';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { starFocusRelCam } from './starFocusRelCam';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -16,7 +16,7 @@ export function drawStarCut(
   pass: GPURenderPassEncoder,
   view: SlabView,
   ctx: FrameView,
-  stream: StarDrawStream,
+  stream: OctreeDrawStream,
 ): void {
   const inputs = renderer.getFrameCut();
   if (inputs === null) return;

@@ -1,0 +1,20 @@
+.root {
+  margin: 0 0 var(--stack);
+}
+
+.meaning,
+.sources {
+  max-width: var(--doc-measure);
+  margin: 0 0 0.5rem;
+}
+
+/* The record writes a term's meaning as the rest of a line that the term began. */
+.meaning::first-letter {
+  text-transform: uppercase;
+}
+
+.sources {
+  composes: small from '../../styles/type.module.css';
+  composes: tap-links from '../../styles/links.module.css';
+  color: var(--site-text-dim);
+}

@@ -33,7 +33,7 @@ const TEST_ATLAS_CONFIG: TextureAtlasConfig = {
 const TEST_SLOT_COUNT = 16; // (32 / 8) ** 2
 
 function makeFakeDevice(): GPUDevice {
-  const fakeTexture = { createView: () => ({}) as GPUTextureView };
+  const fakeTexture = { createView: () => ({}) as GPUTextureView, destroy: vi.fn() };
   const queue = {
     copyExternalImageToTexture: vi.fn(),
     writeBuffer: vi.fn(),
@@ -208,7 +208,7 @@ describe('createTileStreamSubsystem', () => {
     /** A device that records the atlas origin of every slot blit. */
     function makeRecordingDevice(): { device: GPUDevice; origins: GPUOrigin3D[] } {
       const origins: GPUOrigin3D[] = [];
-      const fakeTexture = { createView: () => ({}) as GPUTextureView };
+      const fakeTexture = { createView: () => ({}) as GPUTextureView, destroy: vi.fn() };
       const device = {
         createTexture: () => fakeTexture,
         queue: {
@@ -344,6 +344,20 @@ describe('createTileStreamSubsystem', () => {
     // allocations happen — but we don't allocate post-destroy in
     // production; just assert destroy() itself doesn't throw.
     expect(() => atlas.destroy()).not.toThrow();
+  });
+
+  // The surface-tile stream is stood down on every body switch: a store left to GC
+  // strands its 256 MiB atlas, since WebGPU frees textures only on destroy().
+  it('destroy frees the store it was handed', () => {
+    const slots = new TextureAtlas(device, TEST_ATLAS_CONFIG);
+    const destroySlots = vi.spyOn(slots, 'destroy');
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots,
+      requestRender: () => {},
+      ...makeBitmapDeps(),
+    });
+    atlas.destroy();
+    expect(destroySlots).toHaveBeenCalledOnce();
   });
 
   it('release fires for a payload that resolves after destroy()', async () => {

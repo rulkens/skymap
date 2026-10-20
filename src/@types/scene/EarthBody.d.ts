@@ -20,4 +20,6 @@ export type EarthBody = {
   readonly id: string;
   readonly label: string;
   readonly surface: BodySurface;
+  /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */
+  readonly resolvePx: number;
 };

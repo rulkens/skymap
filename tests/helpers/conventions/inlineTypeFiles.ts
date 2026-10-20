@@ -6,11 +6,8 @@
  * violates.
  */
 export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
-  'src/components/CommandPalette/paletteRowModel.ts',
   'src/components/CommandPalette/paletteRows.tsx',
   'src/components/CommandPalette/usePaletteSearch.ts',
-  'src/components/CommandPalette/utils/scoreAliasMatch.ts',
-  'src/components/CommandPalette/utils/scoreFamousMatch.ts',
   'src/components/DebugPanel/CameraBandBar.tsx',
   'src/components/DebugPanel/GpuTimingsSection.tsx',
   'src/components/InfoCard/tooltips.tsx',
@@ -38,9 +35,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/layers/structure/present/resolveStructureFromPick.ts',
   'src/layers/structure/present/structureSelectionRow.ts',
   'src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow.ts',
-  'src/services/animation/fadeController.ts',
-  'src/services/animation/scopedVisibilityActions.ts',
-  'src/services/animation/visibilityActionRow.ts',
   'src/services/engine/animation/applyPathTuning.ts',
   'src/services/engine/animation/buildDwellWarp.ts',
   'src/services/engine/animation/buildPathTrack.ts',
@@ -83,7 +77,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/subsystems/structureFocusSubsystem.ts',
   'src/services/engine/subsystems/surfaceTileSubsystem.ts',
   'src/services/engine/wiring/attachLabelDirectors.ts',
-  'src/services/engine/wiring/syncVisibilityFades.ts',
   'src/services/gpu/device.ts',
   'src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts',
   'src/services/gpu/renderers/bodies/texturedBodyRenderer.ts',
@@ -122,6 +115,8 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/utils/gpu/packScatteringParams.ts',
   'src/utils/math/cubeSphereMesh.ts',
   'src/utils/occlusion/selectOccluderSpheresKm.ts',
+  'src/utils/palette/scoreAliasMatch.ts',
+  'src/utils/palette/scoreFamousMatch.ts',
   'src/utils/occlusion/subjectOccludedByBodies.ts',
   'src/utils/render/disk/byDistanceToCamera.ts',
   'src/utils/surfaceTiles/cutSurfaceTiles.ts',

@@ -21,7 +21,6 @@ export const MESH_BODY_ENTRY = {
   // galaxy-catalog footprints).
   allSky: true,
   bearsLabel: true,
-  labelLayer: 'body',
   bearsMarker: false,
   detailLabel: 'Mesh body',
   shortLabel: 'Mesh body',

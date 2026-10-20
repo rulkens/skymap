@@ -132,6 +132,7 @@ export function createTileStreamSubsystem<T, S extends SlotStore>(
       userEvictHandler = undefined;
       loadedKeys.clear();
       failedKeys.clear();
+      slots.destroy();
     },
   };
   subsystem satisfies Destroyable;

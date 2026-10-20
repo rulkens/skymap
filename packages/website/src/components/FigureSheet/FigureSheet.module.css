@@ -1,0 +1,68 @@
+.root {
+  composes: sheet from '../../styles/sheet.module.css';
+  --bar: 3.75rem;
+  inset: 0;
+  height: 100dvh;
+  max-height: none;
+  padding: 0;
+}
+
+/* Only while open: a closed dialog given a display of its own would show. */
+.root[open] {
+  display: grid;
+  grid-template-rows: var(--bar) minmax(0, 1fr);
+}
+
+.bar {
+  composes: wrap from '../../styles/layout.module.css';
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.name {
+  composes: small from '../../styles/type.module.css';
+  max-width: none;
+  margin: 0;
+  color: var(--site-text-dim);
+}
+
+.close {
+  composes: ring ring-small from '../../styles/ring.module.css';
+  flex: none;
+}
+
+.room {
+  display: flex;
+  overflow: auto;
+  overscroll-behavior: contain;
+  cursor: zoom-out;
+}
+
+/*
+ * As large as the window shows the whole picture, up to its file's pixels. The auto margin centres it and,
+ * unlike `justify-content`, leaves an overflowing picture's start in reach.
+ */
+.room img {
+  flex: none;
+  width: min(100%, (100dvh - var(--bar)) * var(--shape), var(--file));
+  max-width: none;
+  height: auto;
+  margin: auto;
+  cursor: auto;
+}
+
+/* A window narrower than the app drew the picture (`--own`) shows it at that size and pans. */
+.root[data-pan] img {
+  width: var(--own);
+}
+
+.pan {
+  display: none;
+}
+
+.root[data-pan] .pan {
+  display: block;
+}

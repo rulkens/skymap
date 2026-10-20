@@ -16,8 +16,8 @@
  * ### The six arms
  *
  *   - `show` / `hide` — visibility INTENT. Dispatches the same settings actions
- *     the UI does (e.g. `setMilkyWayEnabled(true)`) then fades in/out over `over`
- *     seconds. `over` omitted → default fade duration; `0` → instant.
+ *     the UI does (`setVisibility`), which fades in/out over `over` seconds.
+ *     `over` omitted → default fade duration; `0` → instant.
  *
  *   - `fade` — transient opacity move. Does NOT touch intent; only drives
  *     `clipOpacity` (the clip-owned channel that multiplies into final alpha).
@@ -30,7 +30,7 @@
  *     knobs.
  *
  *   - `focus` — set the selection focus to `ref` (or `null` to clear). Drives the
- *     structure-isolation dim (`focusRecession` channel). `SelectionRef` carries
+ *     structure-isolation dim (`emphasisOf` recession). `SelectionRef` carries
  *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
  *
  *   - `frameTo` — cue-style orientation-frame reorientation. Fires
@@ -45,26 +45,19 @@
  *     steady pole. `commitCameraPose` is not dispatched here — see
  *     `stepCameraRuntime`, the loop stage that re-encodes `base` itself.
  *
- * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
+ * ### `args` are visibility addresses
  *
- * The keys in `show`/`hide`/`fade` are the same intent-addressing vocabulary the
- * UI and `syncVisibilityFades` use: `'flow'`, `'survey'`, `'cosmicWebFilaments'`,
- * `'structureRing'`, `'milkyWayDisk'`, etc. A cue on a multi-item layer (e.g.
- * `'survey'`) sets the cluster gate; the bridge expands to individual items.
- * See `src/@types/animation/VisibilityLayerKey.d.ts` for the full set.
- *
- * `show`/`hide` additionally carry `scoped` — `'family:scope'` entries
- * (`'survey:milliquas'`, `'structureRing:galaxy-group'`, `'label:milkyWay'`) that
- * address ONE item of a per-item layer. Authors write them inline in the same
- * list (`hide(['flow', 'survey:milliquas'])`); the helper splits them out at
- * construction because they take a different path at fire time: a targeted
- * settings action + the reactive fade bridge, rather than the row fan-out +
- * explicit fade sync. `fade` has no scoped form — the clipOpacity channel is
- * keyed by atomic layer.
+ * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY` derives: show keys
+ * (`'flow'`, `'survey'`), label addresses (`'label:milkyWay'`) and, for
+ * `show`/`hide`, one item of a per-item entry (`'survey:milliquas'`,
+ * `'label:structure:void'`). `'labels'` is expanded at construction, so a stored
+ * effect holds atomic addresses only. Every arg takes one path at fire time
+ * (`setVisibilityActionsFor`, the write carrying `over`). `fade` has no scoped
+ * form: the clip channel is keyed by address.
  */
 
-import type { VisibilityLayerKey } from './VisibilityLayerKey';
-import type { ScopedVisibilityArg } from './ScopedVisibilityArg';
+import type { VisibilityAddress } from './VisibilityAddress';
+import type { ScopedVisibilityAddress } from './ScopedVisibilityAddress';
 import type { SettingsAction } from './SettingsAction';
 import type { SelectionRef } from '../engine/SelectionRef';
 import type { OrientationFrameId } from '../camera/OrientationFrameId';
@@ -73,19 +66,17 @@ import type { Ease } from './Ease';
 export type SceneEffect =
   | {
       readonly kind: 'show';
-      readonly layers: VisibilityLayerKey[];
-      readonly scoped?: ScopedVisibilityArg[];
+      readonly args: (VisibilityAddress | ScopedVisibilityAddress)[];
       readonly over?: number;
     }
   | {
       readonly kind: 'hide';
-      readonly layers: VisibilityLayerKey[];
-      readonly scoped?: ScopedVisibilityArg[];
+      readonly args: (VisibilityAddress | ScopedVisibilityAddress)[];
       readonly over?: number;
     }
   | {
       readonly kind: 'fade';
-      readonly layers: VisibilityLayerKey[];
+      readonly args: VisibilityAddress[];
       readonly to: number;
       readonly over: number;
     }

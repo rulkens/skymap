@@ -6,17 +6,14 @@
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives
  * on `settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` (famous is a galaxy catalog
- * source). The two-asset join (catalog positions/diameters ⋈ meta names) happens
+ * source), which core reads. The two-asset join (catalog positions/diameters ⋈ meta names) happens
  * here, on the galaxy side, and emits the famous labels plus their anchor lines.
  *
- * ### Opacity-aware visibility gate (fades out, doesn't pop)
+ * ### Fades out, doesn't pop
  *
- * The hidden-state early return is gated on BOTH the famous-galaxy catalog
- * `labelEnabled` being false AND the `galaxy` layer opacity having reached 0 —
- * so a toggle-off keeps emitting at the declining `layerAlpha` until the
- * fade-out ramp completes, rather than popping the labels instantly (mirrors
- * `filamentsPass.enabled`). The OTHER early returns (meta/catalog absent —
- * nothing to fade) stay hard.
+ * Core keeps calling this while the label's fade-out tail is non-zero, with the
+ * declining handed value as `layerAlpha`. The early returns here (meta/catalog
+ * absent — nothing to fade) stay hard.
  *
  * ### Meta ⋈ catalog alignment
  *
@@ -25,24 +22,13 @@
  * first-class FocusableTarget, not a famous-galaxies-meta row, so it never appears here;
  * `produceMilkyWayLabel` labels the user's own position separately.
  *
- * ### galaxy-layer opacity × uniform focus recession bakes into fadeAlpha
+ * ### Handed value × distance fade bakes into fadeAlpha
  *
  * Each label's final `fadeAlpha` is the apparent-size distance fade multiplied
- * by two composed strands (see `focusRecession.ts`): the `galaxy` layer's
- * toggle opacity (`opacityOf({labelLayer, galaxy})`, read from the
- * FadeRegistry) and the focus recession factor. Famous labels reuse the SAME
- * `galaxy` handle and recede UNIFORMLY — there is no structure-membership link
- * at this producer, so (unlike `produceStructureLabels`) no famous label is
- * exempt from recession. The layer factor is the same for every famous label,
- * so it's snapshotted once before the loop and folded into both the label's and
- * its anchor line's `fadeAlpha` so the connector fades in lockstep with its label.
- *
- * ### Pure reader of the galaxy-layer opacity
- *
- * This producer only READS `fades.opacityOf({labelLayer, galaxy})` — the
- * visibility bridge (`syncVisibilityFades`) is the sole writer of the layer's
- * intent opacity, seeding and ramping it from the `famousGalaxy.labelEnabled`
- * setting. The producer never drives a fade of its own.
+ * by the value core hands for `famousGalaxy` (toggle fade × clip).
+ * The value is the same for every famous label, so it's read once before the loop
+ * and folded into both the label's and its anchor line's `fadeAlpha`, so the
+ * connector fades in lockstep with its label.
  *
  * ### No declutter here — the director owns it
  *
@@ -59,9 +45,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
@@ -73,7 +57,6 @@ import { focusedFamousIndex } from '../../../services/engine/helpers/focusedFamo
 import { famousDisplayName } from '../../../services/engine/helpers/famousDisplayName';
 import { FAMOUS_LABEL_STYLE } from '../../../services/engine/presentation/famousLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
-import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { textLayoutOf } from '../../../services/gpu/labelLayout/textLayoutOf';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
@@ -165,20 +148,9 @@ function deriveFamousLabelInputs(
 
 export function produceFamousGalaxyLabels(
   runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>,
-): Label2DProducer['produceLabels'] {
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
-    const fades = state.subsystems.fades;
-    const now = ctx.snapshot.nowMs;
+): LayerScreenLabel<'famousGalaxy'>['produceLabels'] {
+  return (state, ctx, fade) => {
     const empty: Label2DProducerOutput = { labels: [], awake: false };
-    // Render while the user wants famous labels OR the `galaxy` fade-out
-    // tail is still non-zero — so a toggle-off fades out smoothly instead of
-    // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
-    if (
-      !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
-      fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) === 0
-    ) {
-      return empty;
-    }
 
     const meta = runtime.famousMeta;
     const catalog = runtime.catalogs.get(Source.FamousGalaxy);
@@ -208,18 +180,9 @@ export function produceFamousGalaxyLabels(
     // the label anchor.
     const fontAtlases = state.gpu.fontAtlases;
 
-    // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
-    // identical for every famous label (the `galaxy` handle is shared, and
-    // there is no per-member focus exemption here). Folded into each label +
-    // anchor-line fadeAlpha below. `fades`/`now` were snapshotted at the top for
-    // the opacity-aware visibility gate; reuse them rather than re-reading the clock.
-    // The clip factor addresses the `'surveyLabel'` key — the VisibilityLayerKey
-    // that `fadeIdToVisibilityKey` maps `galaxy` to.
-    const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('surveyLabel', now);
-    const layerAlpha =
-      fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) *
-      focusRecession({ kind: 'labelLayer', layer: 'galaxy' }, ctx.snapshot.focusBlend) *
-      clipFactor;
+    // Identical for every famous label (no per-member focus exemption here), so
+    // read once; folded into each label + anchor-line fadeAlpha below.
+    const layerAlpha = fade.famousGalaxy;
 
     for (let i = 0; i < inputs.length; i += 1) {
       const p = inputs[i]!;
@@ -253,10 +216,15 @@ export function produceFamousGalaxyLabels(
       // camera motion already wakes the loop. Pinning awake mid-band would keep
       // the loop on whenever a galaxy is fading.
 
-      // Fold the layer opacity × recession into the distance fade. The same
+      // Fold the handed value into the distance fade. The same
       // `labelAlpha` drives both the label and its anchor line so the connector
       // fades in lockstep with its label.
       const labelAlpha = fadeAlpha * layerAlpha;
+
+      // Byte-identical to what the famous point batch's pick fragment writes:
+      // the meta ⋈ catalog join is index-aligned, so this loop index IS the
+      // catalog row the GPU stamps as `@builtin(instance_index)`.
+      const subjectId = packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET);
 
       // Build the label BEFORE its geometry so `measure` reads the same font /
       // text / alignment fields the final label carries — the measured ink
@@ -265,12 +233,8 @@ export function produceFamousGalaxyLabels(
       // with the lifted anchor.
       const label: Label2D = {
         id: p.id,
-        // Byte-identical to what the famous point batch's pick fragment writes:
-        // the meta ⋈ catalog join is index-aligned, so this loop index IS the
-        // catalog row the GPU stamps as `@builtin(instance_index)`.
-        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)
-          ? packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET)
-          : undefined,
+        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus) ? subjectId : undefined,
+        subjectId,
         worldPos: p.worldPos,
         text: p.name,
         font: 'cormorant',

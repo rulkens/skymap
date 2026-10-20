@@ -44,7 +44,7 @@ describe('data pages', () => {
     const titles = DATA_PAGES.map((page) => page.title);
     expect(titles.filter((title, i) => titles.indexOf(title) !== i)).toEqual([]);
     expect(
-      DATA_PAGES.filter((page) => `${page.title} | skymap docs`.length > 60).map(
+      DATA_PAGES.filter((page) => `${page.title} | Skymap docs`.length > 60).map(
         (page) => page.title,
       ),
     ).toEqual([]);
@@ -123,12 +123,12 @@ describe('what is written by hand for the data pages', () => {
       'data/dataFamilies.ts',
       'data/dataSourceNotes.ts',
       'data/dataPages.ts',
-      'components/DataEntryRecord.astro',
-      'components/Recorded.astro',
-      'components/SourceLink.astro',
-      'components/CreditEntry.astro',
-      'components/UseLegend.astro',
-      'components/UseTerms.astro',
+      'components/DataEntryRecord/DataEntryRecord.tsx',
+      'components/Recorded/Recorded.tsx',
+      'components/SourceLink/SourceLink.tsx',
+      'components/CreditEntry/CreditEntry.tsx',
+      'components/UseLegend/UseLegend.tsx',
+      'components/UseTerms/UseTerms.tsx',
       'pages/docs/credits.astro',
       'pages/docs/data/index.astro',
       'pages/docs/data/[page].astro',

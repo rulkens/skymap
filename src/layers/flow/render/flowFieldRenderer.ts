@@ -310,10 +310,6 @@ export function createFlowFieldRenderer(init: {
       lastCount = seed.count;
     },
 
-    fieldLoaded(): boolean {
-      return field !== null;
-    },
-
     encodeCompute(
       encoder: GPUCommandEncoder,
       flow: FlowSettings,

@@ -1,21 +1,23 @@
 /**
  * starRenderer — resolved (sphere-filling) star drawn flat-emissive into the
- * opaque near-field foreground target.
+ * near-field foreground target.
  *
  * Same skeleton as `earthRenderer`: the shared `uvSphereMesh` geometry, an
- * explicit bind-group layout, an opaque depth-tested pipeline profile
- * (depth write + reversed-Z 'greater' — the NEAR0 slab clears `0.0`, greater-z-wins
- * — CCW front face, back-face cull, no blend) against
- * the caller's foreground `targetFormat` / `depthFormat`. Two deltas:
+ * explicit bind-group layout, a depth-tested pipeline profile (depth write +
+ * reversed-Z 'greater' — the NEAR0 slab clears `0.0`, greater-z-wins — CCW
+ * front face, back-face cull) against the caller's foreground `targetFormat` /
+ * `depthFormat`, blending straight-alpha OVER so a sphere can fade with its
+ * catalog. At opacity 1 OVER is the opaque replace (`src·1 + dst·0`) while the
+ * destination is finite. Two deltas:
  *
  *   1. No texture machinery — a star is flat emissive, so there is no
  *      sampler, no placeholder texture and no `setTexture`; the fragment
  *      reads one uniform colour.
  *   2. The uniform block is `TintedSphereUniforms` (80 bytes: mat4x4<f32>
- *      MVP + vec3<f32> tint + trailing pad — see `lib/sphere.wesl` for the
+ *      MVP + vec3<f32> tint + f32 opacity — see `lib/sphere.wesl` for the
  *      authoritative layout), not the bare 64-byte `SphereUniforms`,
- *      because the spectral colour rides alongside the MVP. `draw` writes
- *      the whole 80-byte block in one `writeBuffer`.
+ *      because the spectral colour and opacity ride alongside the MVP. `draw`
+ *      writes the whole 80-byte block in one `writeBuffer`.
  *
  * The geometry uploads positions + indices only — `uvSphereMesh` also
  * emits uvs, but a flat emissive fragment samples nothing, so binding a uv
@@ -23,7 +25,7 @@
  * planet renderer does).
  *
  * **Precondition — draw at most once per frame:** `draw` writes the
- * MVP+colour into a single non-dynamic uniform buffer before issuing the
+ * MVP, colour and opacity into a single non-dynamic uniform buffer before issuing the
  * indexed draw, so a second same-frame `draw` would race
  * `queue.writeBuffer` against the pending `queue.submit` — the same
  * caveat documented on `earthRenderer`.
@@ -43,11 +45,12 @@ import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompil
 
 /**
  * `TintedSphereUniforms` byte size: mat4x4<f32> (64) + vec3<f32> (12) +
- * trailing pad (4) = 80.  The pad exists because a WGSL struct's size
- * rounds up to its 16-byte alignment; the CPU mirrors it with one zeroed
- * float so the `writeBuffer` length matches the GPU-side size exactly.
+ * f32 opacity (4) = 80. The opacity fills what was the struct's trailing
+ * pad, so the size iOS validates the binding against is unchanged.
  */
 const UNIFORM_BUFFER_SIZE = 80;
+/** Float index of `opacity` in the block: byte 76. */
+const OPACITY_FLOAT = 19;
 
 /**
  * @param reversedZ selects this slab's depth convention (single-sourced in
@@ -81,7 +84,7 @@ export function createStarRenderer(
   // ── Uniform buffer + CPU scratch ──────────────────────────────────────────
   //
   // One 80-byte `TintedSphereUniforms` block, rebuilt in `uniformScratch`
-  // each draw: floats 0..15 = mvp, 16..18 = colour, 19 = pad (stays 0).
+  // each draw: floats 0..15 = mvp, 16..18 = colour, 19 = opacity.
   const uniformBuffer = device.createBuffer({
     label: 'star-uniform-buffer',
     size: UNIFORM_BUFFER_SIZE,
@@ -92,7 +95,7 @@ export function createStarRenderer(
   // ── Bind group (explicit layout, not 'auto') ──────────────────────────────
   //
   // Binding 0 is visible to BOTH stages: the vertex stage reads `mvp`, the
-  // fragment stage reads `tint` from the same `TintedSphereUniforms` block.
+  // fragment stage reads `tint` and `opacity` from the same block.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'star-bgl',
     entries: [
@@ -113,7 +116,7 @@ export function createStarRenderer(
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'star.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'star.fragment');
 
-  // ── Render pipeline (opaque foreground profile, same as earthRenderer) ────
+  // ── Render pipeline (earthRenderer's depth profile, OVER-blended) ─────────
   const pipeline = device.createRenderPipeline({
     label: 'star-pipeline',
     layout: device.createPipelineLayout({
@@ -136,8 +139,19 @@ export function createStarRenderer(
       targets: [
         {
           format: targetFormat,
-          // No blend descriptor = opaque replace; the fragment emits alpha=1
-          // and the foreground composite blends the whole layer.
+          // Straight-alpha OVER, the factors `cloudShellRenderer` uses.
+          blend: {
+            color: {
+              srcFactor: 'src-alpha',
+              dstFactor: 'one-minus-src-alpha',
+              operation: 'add',
+            },
+            alpha: {
+              srcFactor: 'one',
+              dstFactor: 'one-minus-src-alpha',
+              operation: 'add',
+            },
+          },
         },
       ],
     },
@@ -155,12 +169,12 @@ export function createStarRenderer(
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3): void {
+  function draw(pass: GPURenderPassEncoder, mvp: Float32Array, color: Vec3, opacity: number): void {
     uniformScratch.set(mvp, 0);
     uniformScratch[16] = color[0];
     uniformScratch[17] = color[1];
     uniformScratch[18] = color[2];
-    // uniformScratch[19] is the struct-trailing pad — left at 0.
+    uniformScratch[OPACITY_FLOAT] = opacity;
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);

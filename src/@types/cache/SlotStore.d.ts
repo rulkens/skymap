@@ -13,4 +13,6 @@ export type SlotStore = {
   slotOf(key: string): number | undefined;
   occupiedCount(): number;
   setEvictHandler(handler: SlotEvictHandler | undefined): void;
+  /** Free whatever backs the slots; the stream that owns the store calls it. */
+  destroy(): void;
 };

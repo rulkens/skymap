@@ -1,5 +1,5 @@
 import type { LayerUiSection } from './LayerUiSection';
-import type { LayerSettingsRow } from './LayerSettingsRow';
+import type { LayerToggleRow } from './LayerToggleRow';
 import type { LayerDetailCard } from './LayerDetailCard';
 
 /**
@@ -12,6 +12,6 @@ import type { LayerDetailCard } from './LayerDetailCard';
 export type LayerUiSlots = {
   main: LayerUiSection;
   debug: LayerUiSection;
-  labelsAndGuides: LayerSettingsRow;
+  labelsAndGuides: LayerToggleRow;
   detailCard: LayerDetailCard;
 };

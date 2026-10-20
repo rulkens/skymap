@@ -9,17 +9,12 @@ them (`CaptionKind`, in `captionPriority.ts`) maintained by hand.
 
 Three of the original four per-caption dispatch sites have merged into
 `captionFadeRules.ts`'s `CAPTION_FADE_RULES` — a `satisfies Record<CaptionKind,
-CaptionFadeRule>` table with one row per kind carrying:
-
-- `labelEnabled` (was: `labelGateFor`, a `switch` in `foregroundLabelsPass`)
-- `subjectVisible` (was: inline `starMapEnabled` / `sunVisible` conjunctions)
-- `fadeTarget` (was: a 4-way ternary selecting `SCALE_FADE_BANDS`, keyed per-kind on
-  the right distance units)
-
-`foregroundLabelsPass.draw` now reduces to `CAPTION_FADE_RULES[label.kind]` plus
-applying the two gates (`foregroundLabelsPass.ts:501-505`). None of `labelGateFor`,
-`starMapEnabled`, or `sunVisible` exist in the tree anymore — confirmed by search, only
-the historical description above still names them.
+CaptionFadeRule>` table with one row per kind carrying `fadeTarget` (was: a 4-way
+ternary selecting `SCALE_FADE_BANDS`, keyed per-kind on the right distance units). The
+label switch (was: `labelGateFor`) and the "caption never outlives its dot" gate (was:
+inline `starMapEnabled` / `sunVisible` conjunctions) left the table entirely: each
+producer's label entry carries them in the value core hands it, and each producer names
+its own label item.
 
 This also closes the live trap the original write-up flagged: the band-selection
 ternary used to fall through `'constellation'` into the `'star'` arm (unreachable in

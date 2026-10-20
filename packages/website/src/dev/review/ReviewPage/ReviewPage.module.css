@@ -1,0 +1,95 @@
+/*
+ * What review mode does to the page it sits on. The classes are put on the page's own elements from
+ * script: `on` and the state classes on <html>, `pushed` on <main>, `anchor` on the headings that
+ * carry an icon, and the rest on the passages the marks cover. The marks are in the page always but
+ * look like nothing until "show marks" is on.
+ */
+.on {
+  --review-line: rgba(168, 208, 255, 0.5);
+  --review-line-dim: rgba(168, 208, 255, 0.25);
+  scroll-padding-top: calc(var(--nav-height) + var(--review-bar, 2.75rem));
+}
+
+/* The bar is fixed under the site's top bar: the page is pushed down by the height the bar measured. */
+.pushed {
+  padding-top: var(--review-bar, 2.75rem);
+}
+
+/* On a phone the bar goes to the foot, so the page makes room there instead. */
+@media (max-width: 900px) {
+  .on {
+    scroll-padding-top: 0;
+  }
+
+  .pushed {
+    padding-top: 0;
+    padding-bottom: var(--review-bar, 2.75rem);
+  }
+}
+
+/* The section icon hangs from its heading. */
+.anchor {
+  position: relative;
+}
+
+.showing .mark {
+  cursor: pointer;
+}
+
+.showing .cut {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.showing .keep {
+  text-decoration: underline;
+  text-decoration-color: #4ade80;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.showing .rewrite {
+  background: rgba(250, 204, 21, 0.3);
+}
+
+.showing .good {
+  background: rgba(74, 222, 128, 0.14);
+}
+
+.flash {
+  animation: flashing 1.5s ease-out;
+}
+
+@keyframes flashing {
+  from {
+    background: rgba(250, 204, 21, 0.6);
+    box-shadow: 0 0 0 0.2em rgba(250, 204, 21, 0.6);
+  }
+  to {
+    background: transparent;
+    box-shadow: 0 0 0 0.2em transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash {
+    animation: none;
+    background: rgba(250, 204, 21, 0.6);
+  }
+}
+
+.hiding .cut,
+.hiding .cutSection,
+.hiding .hasAfter {
+  display: none;
+}
+
+/* The owner's replacement stands in for the original only while the cut text is hidden. */
+.after {
+  display: none;
+  white-space: pre-line;
+}
+
+.hiding .after {
+  display: revert;
+}

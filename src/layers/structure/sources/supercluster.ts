@@ -10,7 +10,6 @@ export const SUPERCLUSTER_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'cosmic',
-  labelLayer: 'structure',
   detailLabel: 'Supercluster',
   shortLabel: 'Supercluster',
   plural: 'Superclusters',

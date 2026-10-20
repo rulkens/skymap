@@ -1,7 +1,7 @@
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../@types/engine/frame/SlabView';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from '../../services/engine/frame/passes/earthPass';
 
 /**

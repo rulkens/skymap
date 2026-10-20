@@ -2,24 +2,20 @@
  * produceConstellationCaptions — `Label2DProducer` candidate math for the
  * true-3D constellation stick-figure names, mirroring
  * `produceSceneBodyCaptions`: declutter, envelope, and lift run in
- * `label2DDirector`. Every figure shares ONE fade target this frame
- * (`constellationsFade`, the same home the stick-figure pass reads)
- * and is emitted even at target 0 — only a genuinely unloaded artifact
- * returns no candidates at all. No `lift` field: the anchor is empty space
- * at a figure centroid, not a body, so there is nothing to float a caption
- * above.
+ * `label2DDirector`. Every figure shares ONE fade target this frame: the
+ * names' label value, which carries the stick figures' distance band. Core
+ * skips this producer once that band reaches 0 (past 10 kpc), and the
+ * director then drops the names at their lagged alpha: a jump across the
+ * band's ramp in a frame or two pops them, an accepted cost. No `lift`
+ * field: the anchor is empty space at a figure centroid, not a body.
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
-import { constellationsFade } from './constellationsFade';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
@@ -32,7 +28,7 @@ const CONSTELLATION_PROMINENCE_PX = CAPTION_PRIORITY.constellation * CAPTION_TIE
 
 export function produceConstellationCaptions(
   runtime: ConstellationsRuntime,
-): Label2DProducer['produceLabels'] {
+): LayerScreenLabel<'constellations'>['produceLabels'] {
   // Memoized on the artifact's identity (static once its slot lands); a
   // released slot drops the set to empty so the captions dissolve with it.
   // Scoped to this closure, not module-level: a second engine instance must
@@ -55,15 +51,12 @@ export function produceConstellationCaptions(
     return cachedCaptions;
   }
 
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
+  return (_state, ctx, fade) => {
     const artifact = runtime.slot.committed()?.value;
     const captions = captionsFor(artifact);
     if (captions.length === 0) return { labels: [], awake: false };
 
     const camPos = ctx.drawCamPos;
-    // ORIGIN distance, not the per-anchor distance the body captions read —
-    // see `constellationsBand`.
-    const fadeAlpha = constellationsFade(state, ctx);
 
     const labels: Label2D[] = captions.map((label) => {
       const anchor: Vec3 = [
@@ -71,7 +64,12 @@ export function produceConstellationCaptions(
         label.worldPos[1] - camPos[1],
         label.worldPos[2] - camPos[2],
       ];
-      return { ...label, worldPos: anchor, fadeAlpha, prominencePx: CONSTELLATION_PROMINENCE_PX };
+      return {
+        ...label,
+        worldPos: anchor,
+        fadeAlpha: fade,
+        prominencePx: CONSTELLATION_PROMINENCE_PX,
+      };
     });
 
     return { labels, awake: false };

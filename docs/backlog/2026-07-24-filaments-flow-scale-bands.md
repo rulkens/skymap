@@ -12,7 +12,7 @@ content instead of dissolving out like their siblings.
 
 ## Verified current state
 
-- `src/services/engine/presentation/scaleFadeBands.ts` holds `SCALE_FADE_BANDS`,
+- `src/data/scaleFadeBands.ts` holds `SCALE_FADE_BANDS`,
   the declarative per-asset scale-visibility registry consumed via
   `fadeBand(band, value)` (`src/utils/math/fadeBand.ts`). Existing rows:
   `surveyDeepZoom`, `milkyWayApproachSun`, `starCaption`, `starBackdrop`,

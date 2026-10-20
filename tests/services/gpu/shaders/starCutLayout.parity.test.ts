@@ -1,6 +1,6 @@
 /**
  * Parity guard: the star cut's WESL declarations are hand-mirrored from
- * `starCutLayout.ts` (`?static` linking injects no values). A drift is
+ * `octreeCutLayout.ts` (`?static` linking injects no values). A drift is
  * invisible until the GPU addresses the wrong word, so the test reads the
  * shader text and compares: every `const`, the struct field order and byte
  * offsets, the workgroup sizes and array lengths. Patterns of
@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import * as layout from '../../../../src/layers/starCatalog/render/starCutLayout';
+import * as layout from '../../../../src/services/gpu/octree/octreeCutLayout';
 import {
   AGG_DRAW_BYTE_OFFSET,
   CUT_DRAWS_WORDS,
@@ -21,14 +21,15 @@ import {
   CUT_WORKGROUP,
   FLOATS_PER_VIEW,
   WORD_BYTES,
-  packStarCutNodes,
-  writeStarCutUniforms,
-} from '../../../../src/layers/starCatalog/render/starCutLayout';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+  packOctreeCutNodes,
+  writeOctreeCutUniforms,
+} from '../../../../src/services/gpu/octree/octreeCutLayout';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 function shader(file: string): string {
-  return readFileSync(join(process.cwd(), 'src/services/gpu/shaders/starCatalog', file), 'utf-8');
+  return readFileSync(join(process.cwd(), 'src/services/gpu/shaders/octree', file), 'utf-8');
 }
 
 const stripComments = (text: string) => text.replace(/\/\/.*$/gm, '');
@@ -86,7 +87,7 @@ function structFields(text: string, name: string): { fields: Field[]; arrayLengt
 const cut = shader('cut.wesl');
 const cutIo = shader('cutIo.wesl');
 
-describe('starCatalog cut WESL constants <-> starCutLayout.ts', () => {
+describe('octree cut WESL constants <-> octreeCutLayout.ts', () => {
   // Masks are the shader's own derivations; the TS side keeps only the widths.
   const expected: Record<string, number> = {
     CUT_BINS: layout.CUT_BINS,
@@ -167,15 +168,16 @@ describe('struct CutUniforms', () => {
     expect(fields.at(-1)!.byteOffset + arrayLength * 16).toBe(CUT_UNIFORM_BYTES);
   });
 
-  it('writeStarCutUniforms lands each value where the struct says', () => {
+  it('writeOctreeCutUniforms lands each value where the struct says', () => {
     const catalog = {
+      family: 'star',
       grid: { bits: 9, cellEdge: 2, origin: [0, 0, 0] },
       nodes: { count: 5 },
       chunkNodeCap: 4,
-    } as unknown as StarOctree;
+    } as unknown as Octree<StarColumns>;
     const planes = new Float32Array(FLOATS_PER_VIEW).fill(0.75);
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    writeStarCutUniforms(buf, catalog, { slots: 3 }, [0, 0, 0], {
+    writeOctreeCutUniforms(buf, catalog, { slots: 3 }, [0, 0, 0], {
       refineThreshold: 0.5,
       fadeStep: 0.125,
       drawBudget: 777,
@@ -220,7 +222,7 @@ describe('struct CutNode', () => {
     expect(fields.length).toBe(CUT_NODE_WORDS);
   });
 
-  it('packStarCutNodes lands each value where the struct says', () => {
+  it('packOctreeCutNodes lands each value where the struct says', () => {
     const catalog = starOctreeFromSkst({
       starCount: 3,
       nodeCount: 2,
@@ -233,7 +235,7 @@ describe('struct CutNode', () => {
       ],
       records: new Uint8Array(6 * 44),
     });
-    const words = packStarCutNodes(catalog, 0);
+    const words = packOctreeCutNodes(catalog, 0);
     const at = (node: number, name: string) =>
       words[node * CUT_NODE_WORDS + fields.find((f) => f.name === name)!.byteOffset / WORD_BYTES];
     expect(at(0, 'grid')).toBe(1);

@@ -49,7 +49,8 @@ export const voyagerMissions: Exhibit = {
   label: 'The Voyager missions',
   settings: {
     orbitTrails: { enabled: true },
-    missions: { ...missionsInitialState, trails: true, craft: CRAFTS[0]!.bodyId },
+    missionTrails: { enabled: true },
+    missions: { ...missionsInitialState, craft: CRAFTS[0]!.bodyId },
     // Galaxies, star names and structure rings are landmarks for other scales; here they only
     // crowd the craft.
     galaxyCatalogs: {

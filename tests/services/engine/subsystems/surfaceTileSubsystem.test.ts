@@ -317,6 +317,32 @@ describe('surfaceTileSubsystem body switch', () => {
   });
 });
 
+// A pull-back alone keeps the atlas (re-engaging reuses residency, below), so
+// flying away from the last tiled body needs an explicit release: without it the
+// ~324 MB pair stays until another tiled body engages, which may be never.
+describe('surfaceTileSubsystem release', () => {
+  it('names the engaged body, and nothing once released', async () => {
+    const subsystem = await engagedSubsystem();
+    expect(subsystem.engagedBodyId()).toBe('earth');
+
+    subsystem.release();
+
+    expect(subsystem.engagedBodyId()).toBeNull();
+    expect(subsystem.getAtlasView()).toBeNull();
+    expect(subsystem.residentSlot(TILE)).toBeNull();
+  });
+
+  it('re-engages from scratch after a release', async () => {
+    const subsystem = await engagedSubsystem();
+    subsystem.release();
+
+    subsystem.update({ bodyId: 'earth', plan: ENGAGED });
+
+    expect(subsystem.engagedBodyId()).toBe('earth');
+    expect(subsystem.getAtlasView()).not.toBeNull();
+  });
+});
+
 describe('surfaceTileSubsystem engage gate', () => {
   it('engages on the very plan a finer-tiered session stands down on', async () => {
     // One plan, settled exactly at the `large` tier's base level. That density is

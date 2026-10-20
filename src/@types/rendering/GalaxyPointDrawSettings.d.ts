@@ -19,15 +19,13 @@ export type GalaxyPointDrawSettings = {
   brightness: number;
   /** Selected galaxy as `(source << 26) | localIdx`, or `0xFFFFFFFF` for "no selection". */
   selectedPacked: number;
-  /** Bitmask of `Source` values to draw (see `data/sources.ts`). */
-  visibleSourceMask: number;
   /** Camera position in world Mpc (`orbitCamera.position`), used by the vertex shader for apparent-size sizing. */
   camPosWorld: Readonly<Vec3>;
   /** Pixels-per-radian for the current viewport + FOV: `viewportPx[1] / (2 * tan(fovYRad / 2))`. */
   pxPerRad: number;
   /** Per-axis provenance audit state: highlight overlay + tri-state cull. Applies to the visual AND pick passes (a culled galaxy is not pickable either). */
   provenance: GalaxyProvenanceSettings;
-  /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; `absMagLimit` ignored.  The Schechter / 1-over-Vmax modes read per-vertex weights (`schechterRatio`, angular-density) the bias-correction subsystem splices into the vertex buffer — not uniforms. */
+  /** Survey-bias correction selector (`data/galaxyCatalog/biasMode.ts`).  `AngularReweight` reads the per-vertex baked `angularWeight`, not a uniform. */
   biasMode: number;
   /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */
   absMagLimit: number;
@@ -52,12 +50,12 @@ export type GalaxyPointDrawSettings = {
    */
   focusBindGroup: GPUBindGroup;
   /**
-   * Look up the registry-managed opacity for a given source. Called
-   * once per visible source per frame from the points draw loop;
-   * the renderer writes the returned value into the per-source
-   * fade ring's `viewSlot` slot. The renderer passes the numeric source code;
-   * the `galaxyPointSpritesPass` closure resolves it to the catalog's string
-   * id and reads `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, now)`.
+   * Look up the opacity for a given source. Called once per source per frame
+   * from the points draw loop; the renderer skips a source at exactly 0 and
+   * writes any other value into the per-source fade ring's `viewSlot` slot. The
+   * renderer passes the numeric source code; the `galaxyPointSpritesPass`
+   * closure resolves it to the catalog's string id and reads the value core
+   * hands the pass.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;
   /**

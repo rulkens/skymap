@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Tier } from '../../../src/@types/data/Tier';
-import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { MeshOrigin } from '../../../tools/meshes/@types/MeshOrigin';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
@@ -198,7 +198,7 @@ function runTiers(
   bodyFromSource?: Mat3,
   groundUp?: Vec3,
   tierTriangles?: Partial<Record<Tier, number>>,
-  georeferencedCentreM?: Vec2,
+  origin: MeshOrigin = { kind: 'surfaceCentroid' },
 ) {
   const tiers = Object.fromEntries(
     Object.entries(glbPaths).map(([tier, path]) => [
@@ -216,7 +216,7 @@ function runTiers(
         attribution: 'A. Modeller — https://example.invalid/author',
         bodyFromSource,
         groundUp,
-        georeferencedCentreM,
+        origin,
       },
     ],
     outDir: join(dir, 'out'),
@@ -912,7 +912,10 @@ describe('buildMeshes()', () => {
       .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
 
     const row = (
-      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, [-5, 3])
+      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, {
+        kind: 'georeferenced',
+        centreM: [-5, 3],
+      })
     )[0]!;
     const decoded = await decodeMesh(readMesh());
 
@@ -925,5 +928,31 @@ describe('buildMeshes()', () => {
     // farthest translated vertex is (7, -3, 0), at distance sqrt(58).
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(58), 4);
     expect(row.groundOffsetM).toBeCloseTo(0, 6);
+  });
+
+  it("keeps a shape model's source origin instead of recentring on the surface centroid", async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
+
+    const row = (
+      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, {
+        kind: 'source',
+      })
+    )[0]!;
+    const decoded = await decodeMesh(readMesh());
+
+    // Untouched — the centroid recentre would have moved them by (2/3, 2/3, 0).
+    expectVertexNear(readMesh(), decoded, [0, 0, 0]);
+    expectVertexNear(readMesh(), decoded, [2, 0, 0]);
+    expectVertexNear(readMesh(), decoded, [0, 2, 0]);
+    expect(row.boundingRadiusM).toBeCloseTo(2, 4);
   });
 });

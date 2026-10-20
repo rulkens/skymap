@@ -32,7 +32,7 @@ describe('website facts', () => {
   it('only the object catalogue page loads the app, and no fact table does', () => {
     const importers = (pattern: RegExp) =>
       readdirSync(SITE, { recursive: true, encoding: 'utf8' })
-        .filter((name) => /\.(ts|astro|mdx)$/.test(name) && !name.startsWith('dev/'))
+        .filter((name) => /\.(tsx?|astro|mdx)$/.test(name) && !name.startsWith('dev/'))
         .filter((name) => pattern.test(readFileSync(join(SITE, name), 'utf8')))
         .sort();
     // heroVideoUrl takes one function with no imports of its own: the address of the data host.
@@ -42,11 +42,11 @@ describe('website facts', () => {
       'data/objectCatalogue.ts',
       'utils/heroVideoUrl.ts',
     ]);
-    expect(importers(/from '[./]+\/(data\/objectCatalogue|utils\/objectCount)'/)).toEqual([
-      'components/ObjectFinder.astro',
-      'components/ObjectList.astro',
+    expect(importers(/from '[./]+\/(data\/objectCatalogue|utils\/objectCount)(\.ts)?'/)).toEqual([
+      'components/ObjectList/ObjectList.tsx',
       'content/docs/reference/objects.mdx',
       'utils/objectCount.ts',
+      'utils/objectSectionCounts.ts',
     ]);
   });
 
@@ -69,7 +69,10 @@ describe('website facts', () => {
     );
     expect(moonKm! / C_KM_S).toBeCloseTo(moonSeconds!, 1);
     // Nearest and farthest in km, NASA Mars fact sheet (54.6 and 401.4 million km).
-    const [marsNear, marsFar] = statedFigures('mars-distance', /between (\d+) and (\d+) light-minutes/);
+    const [marsNear, marsFar] = statedFigures(
+      'mars-distance',
+      /between (\d+) and (\d+) light-minutes/,
+    );
     expect(Math.round(54.6e6 / C_KM_S / 60)).toBe(marsNear);
     expect(Math.round(401.4e6 / C_KM_S / 60)).toBe(marsFar);
     // Nearest and farthest in km, NASA Saturn fact sheet.

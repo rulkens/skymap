@@ -11,6 +11,7 @@
  * moves one path and not the other fails here.
  */
 
+import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 import { meshBodiesPass } from '../../../../../src/services/engine/frame/passes/meshBodiesPass';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
@@ -112,6 +113,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const ctx = {
     snapshot: {
       meshBodies: SCENE_MESH_BODIES,
+      sceneBodies: positionedBodiesOf(SCENE_MESH_BODIES, states),
       simDays: SIM_DAYS,
       // No body row has drawn into `foreground:0` in this fixture, so the
       // ring takes its un-occluded pipeline — the axis these cases are about.
@@ -156,7 +158,9 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // settings/fade graph this harness has no use for) projected through
   // `near0LabelProjection`'s rebased vp — the pair `labelsNearPass`, the
   // leader line and `labelPickQuads` all consume.
-  const caption = sceneBodyLabels(states, SIM_DAYS).find((l) => l.id === `sceneBody-${bodyId}`)!;
+  const caption = sceneBodyLabels(states, SIM_DAYS, new Set()).find(
+    (l) => l.id === `sceneBody-${bodyId}`,
+  )!;
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
     caption.worldPos[1] - ctx.drawCamPos[1],

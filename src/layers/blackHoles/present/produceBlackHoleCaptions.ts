@@ -6,15 +6,11 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import type { CaptionComposeContext } from '../../../@types/rendering/CaptionComposeContext';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
+import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
@@ -32,23 +28,9 @@ const BLACK_HOLE_CAPTION_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
 const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
 
-export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
-  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
-    const now = ctx.snapshot.nowMs;
-    // A tour cue addresses this caption with the near-field bodies' key, as it
-    // did while Sgr A* was a body.
-    const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
-    const composeCtx: CaptionComposeContext = {
-      settings: state.settings,
-      camPos: ctx.drawCamPos,
-      camOrbitDistanceMpc: ctx.cam.distance,
-      viewportShortSidePx: Math.min(ctx.canvasSize.width, ctx.canvasSize.height),
-      drawPxPerRad: ctx.drawPxPerRad,
-      fades: state.subsystems.fades,
-      nowMs: now,
-      focus: ctx.snapshot.focus,
-      occluders: sceneOccluderBodies(state, ctx),
-    };
+export function produceBlackHoleCaptions(): LayerScreenLabel<'blackHole'>['produceLabels'] {
+  return (state, ctx, fade) => {
+    const composeCtx = captionComposeContextOf(state, ctx);
     const states = sceneBodyStates(state, ctx);
 
     const labels = BLACK_HOLES.map((row, i) => {
@@ -60,7 +42,7 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
         'sgrAStar',
         packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
       );
-      return composeForegroundCaption(composeCtx, caption, clipFactor);
+      return composeForegroundCaption(composeCtx, caption, fade[row.id]);
     });
 
     return { labels, awake: false };

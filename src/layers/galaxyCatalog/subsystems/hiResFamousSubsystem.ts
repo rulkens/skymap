@@ -100,12 +100,12 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
   function runFrame(input: HiResFamousFrameInput): HiResFamousFrameOutput {
     if (destroyed) return lastOutput;
 
-    const { cam, catalogs, visibleSourceMask, pxPerRad, famousGalaxiesMeta } = input;
+    const { cam, catalogs, sourceMask, pxPerRad, famousGalaxiesMeta } = input;
 
     byFamousIdx.clear();
 
     // Visibility gate.  If the Famous source bit is clear, emit empty.
-    if (((visibleSourceMask >> Source.FamousGalaxy) & 1) === 0) {
+    if (((sourceMask >> Source.FamousGalaxy) & 1) === 0) {
       lastOutput = { byFamousIdx };
       return lastOutput;
     }

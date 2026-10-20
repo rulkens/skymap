@@ -13,7 +13,7 @@ import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
  * Bodies are seeded here, at construction — the project's seed-data-early
  * convention: real data flows in the moment the store exists, not at a later
  * wiring phase. The seeded STARS are not among them: they are star catalogs,
- * read straight from `SEEDED_STAR_CATALOGS` by `visibleStars`.
+ * which the star show entry's `bodies` hands the frame's scene-body sort.
  *
  * Filaments, flow, and volume fields have no store: filaments/flow held only a
  * `loaded` bit that mirrored their asset slot (read `slotFor(state, key)`

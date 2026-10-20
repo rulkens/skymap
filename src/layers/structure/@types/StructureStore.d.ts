@@ -13,10 +13,9 @@ import type { StructureId } from '../../../@types/data/structure/StructureId';
  * preserves the ring pick-path's `instance_index → byCategory(...)[idx]`
  * alignment that pick-index decode requires.
  *
- * Per-category marker/label VISIBILITY is not a store concern: it lives in the
- * FadeRegistry as `structure` / `labelLayer` handles, so the producers read
- * the same animated opacity the rings fade through. The store holds records
- * only.
+ * Per-category marker/label VISIBILITY is not a store concern: core hands the
+ * producers a per-category value (the `structureRing` and `label:structure`
+ * entries). The store holds records only.
  *
  * Famous galaxies are deliberately NOT held here — they are catalog data, owned
  * by the galaxyCatalog Layer's runtime; their label is produced from there.

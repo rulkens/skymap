@@ -1,7 +1,7 @@
 /**
  * bias — the galaxy-catalog Layer's Malmquist-correction cluster: which
  * correction the point vertex stage applies, and the volume-limited cut-off it
- * reads. `frame`'s reconcile bakes on a mode change.
+ * reads. Both are uniforms: a mode change is a redraw, never a bake.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';

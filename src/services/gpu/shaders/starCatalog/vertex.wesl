@@ -82,15 +82,15 @@
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::StarUniforms;
-import package::starCatalog::cutIo::CutNode;
-import package::starCatalog::cutIo::CutUniforms;
-import package::starCatalog::cutIo::CutStream;
-import package::starCatalog::cutIo::nodeEdgeCells;
-import package::starCatalog::cutIo::nodeOwnCount;
-import package::starCatalog::cutIo::OPACITY_CHANNELS;
-import package::starCatalog::cutIo::nodeMinCells;
-import package::starCatalog::cutIo::leafEntryNode;
-import package::starCatalog::cutIo::leafEntryBlock;
+import package::octree::cutIo::CutNode;
+import package::octree::cutIo::CutUniforms;
+import package::octree::cutIo::CutStream;
+import package::octree::cutIo::nodeEdgeCells;
+import package::octree::cutIo::nodeOwnCount;
+import package::octree::cutIo::OPACITY_CHANNELS;
+import package::octree::cutIo::nodeMinCells;
+import package::octree::cutIo::leafEntryNode;
+import package::octree::cutIo::leafEntryBlock;
 import package::starCatalog::tint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
@@ -154,7 +154,7 @@ const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5;
 //   SOLAR_RADIUS_MPC       = SOLAR_RADIUS_KM (data/bodies/solarRadiusKm.ts)
 //                            * KM_TO_MPC (data/scaleUnits.ts)
 //   STAR_SPHERE_RESOLVE_PX = STAR_RESOLVE_PX
-//                            (services/engine/frame/partitionStarsByResolution.ts)
+//                            (data/bodies/starResolvePx.ts)
 const SOLAR_RADIUS_MPC: f32 = 2.25668425e-14;
 const STAR_SPHERE_RESOLVE_PX: f32 = 4.0;
 // worldLenToPx reports the true apparent size (lib/camera.wesl's pxPerRad); the

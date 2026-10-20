@@ -7,27 +7,17 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { FlowRuntime } from '../@types/FlowRuntime';
 import { slotReady } from '../../../services/loading/slotReady';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
-export function flowFieldPass(runtime: FlowRuntime): ContentPass {
+export function flowFieldPass(runtime: FlowRuntime): ContentPass<'flow'> {
   return {
     name: 'flow',
+    fade: 'flow',
 
-    enabled(state, ctx, _view) {
-      // No cube committed → nothing to draw, even mid-fade.
-      if (!slotReady(runtime.slot)) return false;
-      if (state.settings.flow.enabled) return true;
-      return state.subsystems.fades.opacityOf({ kind: 'flow' }, ctx.snapshot.nowMs) > 0;
-    },
+    // No cube committed → nothing to draw, even mid-fade.
+    enabled: () => slotReady(runtime.slot),
 
-    draw(pass, view, ctx, state) {
-      runtime.renderer.draw(
-        pass,
-        view.vp,
-        view.viewportPx,
-        state.settings.flow,
-        resolveLayerOpacity(state, ctx, { kind: 'flow' }),
-      );
+    draw(pass, view, _ctx, state, fade) {
+      runtime.renderer.draw(pass, view.vp, view.viewportPx, state.settings.flow, fade);
     },
   };
 }

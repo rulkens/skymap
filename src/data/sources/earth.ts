@@ -14,7 +14,6 @@ export const EARTH_ENTRY = {
   // other named source — the labels-near layer draws the caption on the
   // NEAR0 slab rather than the COSMO one, which is a routing detail.
   bearsLabel: true,
-  labelLayer: 'body',
   bearsMarker: false,
   detailLabel: 'Earth',
   shortLabel: 'Earth',

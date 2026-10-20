@@ -11,7 +11,7 @@ const hideCode = (text: string): string =>
  *    colon, and the sentence ends with it (nothing follows, or a stop, a
  *    semicolon, a bracketed remark or a new sentence). Followed by a colon,
  *    a comma or more words, it stays in the line.
- * 3. After "Ours:", the record's lead-in for a string skymap itself prints,
+ * 3. After "Ours:", the record's lead-in for a string Skymap itself prints,
  *    every quotation is set apart, whatever follows it.
  * Length decides nothing. No word changes: only the marks, a stop left
  * hanging after them, the line breaks and the capital of what follows.

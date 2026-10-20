@@ -66,7 +66,7 @@ export const labelsNearPass: ContentPass = {
   // through), not `view.vp` — the caption anchors are camera-relative.
   // `bodyGlintsPass.drawPick` widens its own pick to this caption range for
   // the same affordance.
-  drawPick(pass, _view, ctx, state) {
+  drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.labelPickRendererNear;
     const fontAtlases = state.gpu.fontAtlases;
     if (pickRenderer === null || fontAtlases === null) return;
@@ -77,6 +77,6 @@ export const labelsNearPass: ContentPass = {
       projection,
       measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
-    pickRenderer.draw(pass, quads, projection.viewportPx);
+    pickRenderer.draw(pass, quads, view.window);
   },
 };

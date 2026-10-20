@@ -2,4 +2,4 @@
 
 import type { LightTimeSettings } from '../../../../@types/settings/LightTimeSettings';
 
-export const initialState: LightTimeSettings = { enabled: false };
+export const initialState: LightTimeSettings = { enabled: false, labelEnabled: true };

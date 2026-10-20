@@ -1,7 +1,7 @@
 /**
  * starCutCompute — the survey stars' octree cut, taken on the GPU from the
  * inputs the Layer's planner set this frame. A sky capture's own cut is not
- * this row's: the first capture face to draw submits it (`starCutGpu`).
+ * this row's: the first capture face to draw submits it (`octreeCutGpu`).
  */
 
 import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';

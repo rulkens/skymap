@@ -1,0 +1,30 @@
+/*
+ * a11y.module.css — the two classes that exist for assistive technology and the keyboard.
+ * A vocabulary, not a component: no `.root`; take a class with
+ * `composes: unseen from '../../styles/a11y.module.css'`.
+ */
+
+/* Words for a screen reader only: what a sighted reader takes from where a thing stands or how it is set. */
+.unseen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: 0;
+  z-index: 20;
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-accent);
+  transform: translateY(-120%);
+}
+
+.skip-link:focus {
+  transform: none;
+}

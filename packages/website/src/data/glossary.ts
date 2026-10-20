@@ -1,9 +1,9 @@
 import type { GlossaryTerm } from '../@types/GlossaryTerm';
 import { HONESTY_BINS } from './honestyBins';
 
-const SOURCES = { label: 'The sources, in The science behind skymap', path: '/science/#sources' };
-const BINS = { label: 'Measured, derived, drawn, in The science behind skymap', path: '/science/#bins' };
-const SIMPLE = { label: 'Known simplifications, in The science behind skymap', path: '/science/#simplifications' };
+const SOURCES = { label: 'The sources, in The science behind Skymap', path: '/science/#sources' };
+const BINS = { label: 'Measured, derived, drawn, in The science behind Skymap', path: '/science/#bins' };
+const SIMPLE = { label: 'Known simplifications, in The science behind Skymap', path: '/science/#simplifications' };
 const SETTINGS = { label: 'All settings', path: '/docs/reference/settings/' };
 const gloss = (id: (typeof HONESTY_BINS)[number]['id']) =>
   HONESTY_BINS.find((bin) => bin.id === id)!.gloss;

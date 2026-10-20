@@ -68,7 +68,7 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
 
 /**
  * Returns the `GALAXY_CATALOG_DATA_PREFIX`-relative path for a (source, tier)
- * pair — e.g. `galaxy-catalog/v9/sdss-large.bin`. This is the single site
+ * pair — e.g. `galaxy-catalog/v10/sdss-large.bin`. This is the single site
  * both the browser fetcher (`galaxyCatalogFetcher`, via `dataUrl`) and
  * `buildAllBins` (writing to disk) read, which is what keeps the fetch URL
  * and the on-disk layout from diverging.

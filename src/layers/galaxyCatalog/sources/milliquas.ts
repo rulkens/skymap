@@ -25,8 +25,7 @@ export const MILLIQUAS_ENTRY = {
   // expressed in ramp-position units over a span of only 2.0, but
   // Milliquas redshifts run z ≈ 1–7, so any non-zero coefficient
   // subtracts most of the range and clamps the whole catalog to the
-  // blue floor. The correction stays off until a quasar-specific
-  // bias-correction subsystem wires Milliquas in with its own QLF.
+  // blue floor. The correction stays off until the bake gets a quasar LF.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.0 },
   // Milliquas's quasar-completeness limit varies wildly by parent
   // galaxy catalog (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/

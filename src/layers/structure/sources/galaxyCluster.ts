@@ -10,7 +10,6 @@ export const GALAXY_CLUSTER_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'cosmic',
-  labelLayer: 'structure',
   detailLabel: 'Galaxy Cluster',
   shortLabel: 'Galaxy cluster',
   plural: 'Galaxy clusters',

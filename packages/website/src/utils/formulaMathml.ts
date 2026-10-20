@@ -3,7 +3,7 @@ const escape = (text: string) => text.replace(/[<>&]/g, (char) => ESCAPES[char]!
 
 /**
  * An equation written in a small subset of TeX, as the children of a MathML
- * `<math>` element (components/Formula.astro). Understood: numbers, names (a
+ * `<math>` element (components/Formula/Formula.tsx). Understood: numbers, names (a
  * single letter is a variable, set in italic by the browser; a longer run
  * such as `log` is upright), `_` and `^` with one item or a `{group}`, a
  * prime after an item, round brackets, `\frac{a}{b}`, `\sqrt{a}`,

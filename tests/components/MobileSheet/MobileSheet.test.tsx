@@ -1,17 +1,11 @@
 // @vitest-environment jsdom
 //
-// MobileSheet — pure-CSS scroll-snap bottom sheet wrapper tests.
+// MobileSheet — phone bottom sheet wrapper tests.
 //
-// The snap/momentum gesture is browser-native (scroll-snap-type) and is NOT
-// exercisable in jsdom, so we don't try to assert it.  Following the
-// InfoCard.structureHover philosophy, we assert on rendered output (the child
-// content renders) and on the one piece of JS behaviour the component owns:
-// the resetKey-driven scroll reset.
-//
-// jsdom does not implement `Element.prototype.scrollTo`, so `vi.spyOn` has
-// nothing to wrap.  We instead *define* the method as a typed mock in
-// beforeEach and restore the original (undefined) in afterEach, so the stub
-// both prevents a throw and observes the call without leaking between tests.
+// The drag is the one gesture the component owns (CSS scroll-snap was dropped:
+// iOS Safari won't scroll a pointer-events:none scroller), so we drive it with
+// pointer events and assert on the resting state the sheet lands in. jsdom does
+// not implement `scrollTo` / `setPointerCapture`, so both are stubbed per test.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -20,42 +14,74 @@ import MobileSheet from '../../../src/components/MobileSheet/MobileSheet';
 
 describe('MobileSheet', () => {
   const originalScrollTo = HTMLElement.prototype.scrollTo;
+  const originalCapture = HTMLElement.prototype.setPointerCapture;
 
   beforeEach(() => {
-    HTMLElement.prototype.scrollTo = vi.fn<
-      (options?: ScrollToOptions) => void
-    >() as unknown as typeof HTMLElement.prototype.scrollTo;
+    HTMLElement.prototype.scrollTo = vi.fn() as unknown as typeof HTMLElement.prototype.scrollTo;
+    HTMLElement.prototype.setPointerCapture = vi.fn();
   });
 
   afterEach(() => {
     HTMLElement.prototype.scrollTo = originalScrollTo;
+    HTMLElement.prototype.setPointerCapture = originalCapture;
   });
 
-  it('scrolls back to the peek when resetKey changes', () => {
-    const { rerender } = render(
-      createElement(MobileSheet, {
-        resetKey: 'galaxy:42',
-        children: createElement('p', null, 'marker'),
-      }),
-    );
-    vi.mocked(HTMLElement.prototype.scrollTo).mockClear();
+  const card = (resetKey = 'galaxy:42') =>
+    createElement(MobileSheet, {
+      resetKey,
+      children: createElement('button', { type: 'button', onClick: onCardButton }, 'card'),
+    });
+  const onCardButton = vi.fn();
+  const sheetOf = (el: HTMLElement) => el.closest('section') as HTMLElement;
+  const swipe = (from: HTMLElement, sheet: HTMLElement, dy: number) => {
+    fireEvent.pointerDown(from, { pointerId: 1, clientY: 500 });
+    fireEvent.pointerMove(sheet, { pointerId: 1, clientY: 500 + dy });
+    fireEvent.pointerUp(sheet, { pointerId: 1, clientY: 500 + dy });
+  };
 
-    // Same key — the effect dep is unchanged, so no reset fires.
-    rerender(
-      createElement(MobileSheet, {
-        resetKey: 'galaxy:42',
-        children: createElement('p', null, 'marker'),
-      }),
-    );
-    expect(HTMLElement.prototype.scrollTo).not.toHaveBeenCalled();
+  it('swipes up to expand and back down from the handle to the peek', () => {
+    const { container } = render(card());
+    const sheet = sheetOf(screen.getByText('card'));
+    expect(sheet.className).toMatch(/peeking/);
 
-    // New key — selecting a different target resets the sheet to the peek.
-    rerender(
-      createElement(MobileSheet, {
-        resetKey: 'structure:coma',
-        children: createElement('p', null, 'marker'),
-      }),
-    );
+    swipe(screen.getByText('card'), sheet, -120);
+    expect(sheet.className).not.toMatch(/peeking/);
+
+    // Expanded, the content scrolls: a drag on it must not collapse the sheet.
+    swipe(screen.getByText('card'), sheet, 120);
+    expect(sheet.className).not.toMatch(/peeking/);
+
+    swipe(container.querySelector('[class*="handle"]') as HTMLElement, sheet, 120);
+    expect(sheet.className).toMatch(/peeking/);
+  });
+
+  it('springs back on a short drag and lets a tap through as a click', () => {
+    render(card());
+    const button = screen.getByText('card');
+    const sheet = sheetOf(button);
+
+    swipe(button, sheet, -20);
+    expect(sheet.className).toMatch(/peeking/);
+
+    onCardButton.mockClear();
+    fireEvent.pointerDown(button, { pointerId: 2, clientY: 500 });
+    fireEvent.pointerMove(button, { pointerId: 2, clientY: 503 });
+    fireEvent.pointerUp(button, { pointerId: 2, clientY: 503 });
+    fireEvent.click(button);
+    expect(HTMLElement.prototype.setPointerCapture).not.toHaveBeenCalledWith(2);
+    expect(onCardButton).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns to the peek when resetKey changes', () => {
+    const { rerender } = render(card('galaxy:42'));
+    const sheet = sheetOf(screen.getByText('card'));
+    swipe(screen.getByText('card'), sheet, -120);
+
+    rerender(card('galaxy:42'));
+    expect(sheet.className).not.toMatch(/peeking/);
+
+    rerender(card('structure:coma'));
+    expect(sheet.className).toMatch(/peeking/);
     expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({ top: 0 });
   });
 
@@ -75,7 +101,7 @@ describe('MobileSheet', () => {
   });
 
   // The panel clips (overflow hidden) so only the body wrapper can scroll long content.
-  it('wraps panel content in a scroller under the title row, and renders no peek spacer', () => {
+  it('wraps panel content in a scroller under the title row, and never peeks', () => {
     const { container } = render(
       createElement(MobileSheet, {
         resetKey: 'panel:places',
@@ -84,7 +110,7 @@ describe('MobileSheet', () => {
       }),
     );
     expect(screen.getByText('marker').parentElement?.className).toMatch(/body/);
-    expect(container.querySelector('[class*="spacer"]')).toBeNull();
+    expect(container.querySelector('[class*="peeking"]')).toBeNull();
   });
 
   it('has no title row or close button for the selection card', () => {

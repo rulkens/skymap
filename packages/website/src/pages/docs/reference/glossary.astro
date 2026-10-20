@@ -4,9 +4,9 @@
  * so its headings (one for each first letter), its terms and the sources it
  * lists are the data's own and need no copy kept level with it.
  */
-import DocFigure from '../../../components/DocFigure.astro';
-import DocLink from '../../../components/DocLink.astro';
-import DocTable from '../../../components/DocTable.astro';
+import DocFigure from '../../../components/DocFigure/DocFigure.tsx';
+import DocLink from '../../../components/DocLink/DocLink.tsx';
+import DocTable from '../../../components/DocTable/DocTable.tsx';
 import { DATA_SOURCES } from '../../../data/dataSources';
 import { GLOSSARY } from '../../../data/glossary';
 import Docs from '../../../layouts/Docs.astro';
@@ -25,7 +25,7 @@ const headings = [
 
 <Docs
   path="/docs/reference/glossary/"
-  description="The terms you meet on this site and in skymap, each in a sentence or two, with the units of distance, the catalogues and the app’s own words."
+  description="The terms you meet on this site and in Skymap, each in a sentence or two, with the units of distance, the catalogues and the app’s own words."
   headings={headings}
   factIds={[...new Set(GLOSSARY.flatMap((term) => term.facts))]}
 >
@@ -34,7 +34,7 @@ const headings = [
   </p>
   <p>
     Three words have one fixed meaning across the site: <a href="#measured">measured</a>, <a href="#derived">derived</a> and{' '}
-    <a href="#drawn">drawn</a>. <DocLink href="/science/#bins">The science behind skymap</DocLink> sorts everything the app shows under
+    <a href="#drawn">drawn</a>. <DocLink href="/science/#bins">The science behind Skymap</DocLink> sorts everything the app shows under
     them.
   </p>
 

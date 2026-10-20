@@ -20,7 +20,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { ringsPass } from '../../../../../src/services/engine/frame/passes/ringsPass';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
@@ -81,6 +81,7 @@ function saturnBody(): SeededPlanet {
     id: SATURN_RING.bodyId,
     label: 'Saturn',
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+    resolvePx: 3,
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.8, 0.7, 0.5],
     orientation: IDENTITY_MAT3,
@@ -93,6 +94,7 @@ function earthBody(): SeededPlanet {
     id: 'earth',
     label: 'Earth',
     positionMpc: [1, 0, 0],
+    resolvePx: 3,
     surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
     albedo: [0.3, 0.4, 0.6],
     orientation: IDENTITY_MAT3,
@@ -124,7 +126,13 @@ function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
-  return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
+  return {
+    slab,
+    vp: f32Vp,
+    camPos: [0, 0, 5],
+    viewportPx: [1280, 720],
+    window: { originPx: [0, 0], sizePx: [1280, 720] },
+  };
 }
 
 /**

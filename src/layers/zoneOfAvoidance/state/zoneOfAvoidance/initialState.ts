@@ -10,5 +10,6 @@ import type { ZoneOfAvoidanceSettings } from '../../../../@types/settings/ZoneOf
 
 export const initialState: ZoneOfAvoidanceSettings = {
   enabled: true,
+  labelEnabled: true,
   ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
 };

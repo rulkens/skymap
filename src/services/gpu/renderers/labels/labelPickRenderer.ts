@@ -12,7 +12,7 @@
 import type { LabelPickQuad } from '../../../../@types/rendering/LabelPickQuad';
 import type { LabelPickRenderer } from '../../../../@types/rendering/LabelPickRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { PickWindow } from '../../../../@types/engine/frame/PickWindow';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import pickCode from '../../shaders/labels/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -95,13 +95,16 @@ export function createLabelPickRenderer(
   function draw(
     pass: GPURenderPassEncoder,
     quads: readonly LabelPickQuad[],
-    viewportPx: Vec2,
+    window: PickWindow,
   ): void {
     const n = quads.length;
     if (n === 0) return;
 
-    uniformScratch[0] = viewportPx[0];
-    uniformScratch[1] = viewportPx[1];
+    // Quads are laid out in canvas px; the target is the window, so shift
+    // them into its frame and size the px→NDC map to it.
+    const [ox, oy] = window.originPx;
+    uniformScratch[0] = window.sizePx[0];
+    uniformScratch[1] = window.sizePx[1];
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     const interleaved = new ArrayBuffer(n * INSTANCE_STRIDE);
@@ -110,10 +113,10 @@ export function createLabelPickRenderer(
     for (let i = 0; i < n; i++) {
       const q = quads[i]!;
       const base = i * INSTANCE_WORDS;
-      f32[base + 0] = q.rect.x0;
-      f32[base + 1] = q.rect.y0;
-      f32[base + 2] = q.rect.x1;
-      f32[base + 3] = q.rect.y1;
+      f32[base + 0] = q.rect.x0 - ox;
+      f32[base + 1] = q.rect.y0 - oy;
+      f32[base + 2] = q.rect.x1 - ox;
+      f32[base + 3] = q.rect.y1 - oy;
       u32[base + 4] = q.packedId >>> 0;
     }
 

@@ -1,21 +1,8 @@
 /**
- * wireInput.structure — structural assertion that the wireInput phase wires
- * structure clicks through the click resolver and dispatches Redux actions
- * for select and focus on click/dblclick.
- *
- * ### Why a source-string assertion
- *
- * The click flow is hard to unit-test in isolation: it requires a real
- * galaxyPickRenderer (GPU device), real orbit controls, and a real mouse
- * device.  This is a crude source-string guard — it regresses loudly if
- * a future refactor drops the structure-click wiring or stops reading the
- * authoritative selection ref for the dblclick focus. End-to-end
- * behaviour (single-click opens InfoCard, double-click tweens camera) is
- * verified by manual smoke.
- *
- * If this ever feels too fragile, promote it to a stub-based test that
- * exercises the actual `onClick` / `onDoubleClick` callbacks against a
- * mocked `runPickAtCss`.
+ * wireInput.structure — a source-string guard that the pick driver resolves
+ * hits through the engine's one composed resolver, not a rebuilt one. The
+ * driver itself needs a GPU pick program, so its behaviour is pinned in
+ * `createPickDriver.test.ts` and by manual smoke (click selects, hover card).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -30,27 +17,12 @@ const wireInputPath = resolve(__dirname, '../../../../src/services/engine/phases
 describe('wireInput structure wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
 
-  it('passes the composed resolver to createClickResolver', () => {
+  it('passes the composed resolver to createPickDriver', () => {
     // Structure hits reach the structure Layer's store through the composed
     // resolver's structure row (`composeSelectionRows` → `resolvePick`), not
-    // a direct field on the click-resolver input (D5). The resolver is
+    // a direct field on the pick-driver deps (D5). The resolver is
     // threaded in from `deps.selection` (engine.ts's one instance), not
     // rebuilt here — see F1.
     expect(src).toContain('resolvePick: deps.selection.resolvePick');
-  });
-
-  it('reads the authoritative selection slot for the dblclick focus', () => {
-    // The dblclick handler reads the pinned ref from the store via the
-    // `selectSelectedRef` selector — the slot is the single source of truth
-    // (galaxy OR structure OR null).
-    expect(src).toContain('selectSelectedRef(');
-  });
-
-  it('routes double-click through an updateSelectionFocus dispatch', () => {
-    // The dblclick handler unconditionally dispatches `updateSelectionFocus(ref)`
-    // where `ref` is whatever `selectSelectedRef` returns. When the ref is null
-    // (empty-space dblclick) the reducer treats it as a focus release, lifting
-    // the cluster-focus fade — no separate empty-space branch needed.
-    expect(src).toContain('updateSelectionFocus(');
   });
 });

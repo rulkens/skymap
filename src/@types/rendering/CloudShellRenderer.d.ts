@@ -24,6 +24,8 @@ import type { Renderer } from './Renderer';
 export type CloudShellRenderer = Renderer & {
   /** Swap in the cloud colour+alpha map (own copy; `.a` is the coverage). */
   setTexture(bitmap: ImageBitmap): void;
+  /** Destroy the map (no-op if none); the transparent placeholder binds again. */
+  clearTexture(): void;
   /**
    * Draw the shell for one `CloudShellUniforms` record (80 B) into the pass.
    * `inside` (camera below the shell radius) selects the front-cull pipeline,

@@ -1,0 +1,50 @@
+.root {
+  composes: small from '../../styles/type.module.css';
+  margin: 0;
+
+  & > div {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+    gap: 0.25rem var(--col-gap);
+    padding-block: 1rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  & dt {
+    grid-column: span 3;
+    color: var(--color-fg);
+  }
+
+  & dd {
+    grid-column: 4 / -1;
+    /* About 75 characters of the small text. */
+    max-width: 34rem;
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  /* The source reads as a reference, not as part of the sentence: its own line, still 44px tall to the thumb. */
+  & a {
+    display: block;
+    width: fit-content;
+    padding-block: 0.625rem;
+    margin-bottom: -0.625rem;
+  }
+}
+
+.narrow {
+  & dt {
+    grid-column: span 2;
+  }
+
+  & dd {
+    grid-column: 3 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .root dt,
+  .root dd {
+    grid-column: 1 / -1;
+  }
+}

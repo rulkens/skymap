@@ -9,7 +9,8 @@ import { describe, it, expect } from 'vitest';
 
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
 import { goHome } from '../../../src/state/selection/goHome';
-import { clearSelection, updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
+import { focusSelected } from '../../../src/state/selection/focusSelected';
+import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import {
   setPaletteOpen,
   toggleDebugPanelOpen,
@@ -18,9 +19,7 @@ import {
 import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { RootState } from '../../../src/store/types';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { UiState } from '../../../src/@types/ui/UiState';
-import type { SelectionState } from '../../../src/@types/store/SelectionState';
 import type { TimeState } from '../../../src/@types/time/TimeState';
 import type { TourRuntimeState } from '../../../src/@types/animation/tour/TourRuntimeState';
 
@@ -42,13 +41,6 @@ const ui = (paletteOpen: boolean): UiState => ({
   debugPanelOpen: false,
   paletteTab: 'highlights',
   splash: { visible: false, dismissedVersion: null },
-});
-
-const selection = (select: SelectionRef | null): SelectionState => ({
-  hover: null,
-  select,
-  focus: null,
-  pending: { select: null, focus: null },
 });
 
 const time = (rateIndex: number, paused: boolean): TimeState => ({
@@ -79,11 +71,8 @@ describe('KEYBOARD_SHORTCUTS', () => {
     expect(run(stateWith({ ui: ui(true) }))).toBeNull();
   });
 
-  it('f focuses selected ref, null when nothing selected', () => {
-    const run = byKeys('f').run;
-    const ref: SelectionRef = { type: 'milkyWay' };
-    expect(run(stateWith({ selection: selection(ref) }))).toEqual(updateSelectionFocus(ref));
-    expect(run(stateWith({ selection: selection(null) }))).toBeNull();
+  it('f issues the focusSelected command', () => {
+    expect(byKeys('f').run(stateWith({}))).toEqual(focusSelected());
   });
 
   it('[ and ] clamp via stepRate', () => {

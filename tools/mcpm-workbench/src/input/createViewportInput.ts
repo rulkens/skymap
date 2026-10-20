@@ -1,13 +1,13 @@
 /**
- * createViewportInput — the main app's gesture recognizer (`attachOrbitControls`)
+ * createViewportInput — the shared workbench gesture recognizer (`attachOrbitControls`)
  * plus its per-frame aggregator. A `dragAnchor` is hit-tested against the gizmo
  * handles once, at gesture start: a hit routes the whole gesture into the gizmo drag
  * math below (dispatched per move); a miss routes it into a plain camera register
  * that reaches the store once, at `gestureEnd` or a rest-wheel tick.
  */
-import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { attachOrbitControls } from '../../../../src/services/camera/orbitControls';
-import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
+import { createInputAggregator } from '../../../utils/input/createInputAggregator';
+import { attachOrbitControls } from '../../../utils/input/attachOrbitControls';
+import type { InputGestureEvent } from '../../../@types/input/InputGestureEvent';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { GizmoDragState } from '../../@types/GizmoDragState';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';

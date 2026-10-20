@@ -10,7 +10,6 @@ export const NEBULA_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'milkyWay',
-  labelLayer: 'structure',
   detailLabel: 'Nebula',
   shortLabel: 'Nebula',
   plural: 'Nebulae',

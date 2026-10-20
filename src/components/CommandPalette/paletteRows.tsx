@@ -1,18 +1,10 @@
 /**
- * paletteRows — the JSX table-dispatch vocabulary for the command palette.
- *
- * `ROW_VIEW` turns a `ScoredRow` into its rendered parts (leading visual +
- * primary/secondary text) for the shared <li>, keyed on the row's `kind`.
- *
- * Split from `paletteRowModel` (the non-JSX type/const seam) so the pure
- * ranking pipeline can import the row vocabulary without pulling in React +
- * the CSS module.  A new row kind is one entry here, not a new render branch.
- * Selection routing is NOT here — every row maps to a `PaletteAction` via
- * `utils/actionForRow`, and the container dispatches on `action.kind`.
- *
- * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
- * composes ResultsList's module rather than carrying its own — the row styles
- * belong to the one component that renders them.
+ * paletteRows — the JSX table-dispatch vocabulary for the command palette:
+ * `ROW_VIEW` turns a `ScoredRow` into its rendered parts for the shared <li>,
+ * keyed on `kind`. `ScoredRow` and `MILKY_WAY_NAMES` live outside this module so
+ * the pure ranking pipeline imports them without React. Selection routing is in
+ * `utils/palette/actionForRow`. ROW_VIEW composes ResultsList's CSS module, the
+ * one component that renders these rows.
  */
 import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
@@ -22,9 +14,9 @@ import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import { cardShotUrl } from '../../utils/palette/cardShotUrl';
 import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
-import { actionForRow } from './utils/actionForRow';
-import { MILKY_WAY_NAMES } from './paletteRowModel';
-import type { ScoredRow } from './paletteRowModel';
+import { actionForRow } from '../../utils/palette/actionForRow';
+import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
+import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import styles from './ResultsList.module.css';
 
 /** A row's leading visual: its captured shot when it has one, else a letter glyph. */
@@ -42,7 +34,7 @@ function thumbOrGlyph(shotUrl: string | undefined, label: string): ReactNode {
 /**
  * A milkyWay/body/star row's leading visual: the captured card shot of the
  * featured card that names the same focus id `actionForRow` resolves to (the
- * id grammar the URL deep-link layer uses), else today's letter glyph.
+ * id grammar the URL deep-link layer uses), else the letter glyph.
  */
 function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
   const action = actionForRow(row);
@@ -124,12 +116,9 @@ function glyphRowView(
 }
 
 /**
- * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
- * on `m.kind`. The list renderer wraps every row in one identical <li> (active
- * styling, hover, click → dispatchSelection); this table only supplies the
- * kind-specific leading visual + primary/secondary text. Each row narrows `m`
- * on `kind` (the fallback RowView is unreachable — the table is indexed by the
- * row's own tag). A new row kind is one entry here, not a new render branch.
+ * ROW_VIEW — kind-specific leading visual and primary/secondary text; the list
+ * renderer wraps every row in one identical <li>. The fallback RowView is
+ * unreachable (the table is indexed by the row's own tag).
  */
 export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   famous: (m) =>
@@ -167,8 +156,8 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     const primary = m.entry.names[0] ?? '(unnamed)';
     const remaining = m.entry.names.slice(1);
     return {
-      key: `alias:${m.entry.source}:${m.entry.localIdx}`,
-      testid: `alias-row-${m.entry.localIdx}`,
+      key: `alias:${m.entry.source}:${m.entry.pgc}`,
+      testid: `alias-row-${m.entry.source}-${m.entry.pgc}`,
       leading: (
         <span className={styles.glyph} aria-hidden="true">
           {primary[0] ?? '·'}

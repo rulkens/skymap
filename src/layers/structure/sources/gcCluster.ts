@@ -10,7 +10,6 @@ export const GC_CLUSTER_ENTRY = {
   bearsLabel: true,
   bearsMarker: true,
   scale: 'milkyWay',
-  labelLayer: 'structure',
   detailLabel: 'Galactic Centre',
   shortLabel: 'Galactic Centre',
   plural: 'Galactic Centre',

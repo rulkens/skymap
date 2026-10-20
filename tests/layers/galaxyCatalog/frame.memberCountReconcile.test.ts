@@ -8,14 +8,18 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/sources';
-import { maskWith } from '../../../src/utils/maskWith';
+import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
+import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
+import type { SourceType } from '../../../src/@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 
 /** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */
 const CLUSTER: SelectionRow = {
@@ -28,8 +32,8 @@ const CLUSTER: SelectionRow = {
   physicalRadiusMpc: 10,
 };
 
-/** A visibility mask covering the two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS_MASK = maskWith(maskWith(0, Source.SDSS), Source.TwoMRS);
+/** The two catalogs this file's fixtures populate. */
+const SDSS_AND_TWOMRS: readonly SourceType[] = [Source.SDSS, Source.TwoMRS];
 
 function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
   const flat = new Float32Array(positions.length * 3);
@@ -37,20 +41,30 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
   return makeGalaxyCatalog(positions.length, { positions: flat });
 }
 
-function makeSnapshot(visibleSourceMask: number): ReadyFrameContext {
-  return { visibleSourceMask, nowMs: 0 } as unknown as ReadyFrameContext;
-}
+const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 
 const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
+
+/** `visible` are the catalogs core hands a value above 0: they are the mask. */
+function fadeOf(visible: readonly SourceType[] = SDSS_AND_TWOMRS) {
+  return makeGalaxyCatalogFade(
+    Object.fromEntries(visible.map((s) => [galaxyCatalogIdOf(s), 1])),
+    0,
+  );
+}
 
 function makeState(select: SelectionRow | null): PassState {
   return {
     settings: {
       bias: { mode: 0, absMagLimit: -19 },
-      galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1 },
+      galaxyCatalogs: {
+        sbScale: 1,
+        sbMax: 1,
+        brightness: 1,
+        items: makeGalaxyCatalogItems(),
+      },
     },
     selectionRows: { select },
-    subsystems: { fades: { opacityOf: () => 1 } },
   } as unknown as PassState;
 }
 
@@ -59,8 +73,6 @@ function makeState(select: SelectionRow | null): PassState {
 function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
-    biasLastApplied: 0,
-    biasCorrection: { setMode: vi.fn() },
     hiResFamous: { committed: () => null },
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
@@ -70,6 +82,9 @@ function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
       hasFadingContent: () => false,
     },
     catalogs,
+    get records() {
+      return galaxyRecordsOver(catalogs);
+    },
     famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
@@ -84,12 +99,11 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER)); // primes the key — not asserted
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf()); // primes the key — not asserted
     publish.mockClear();
 
-    for (let i = 0; i < 9; i += 1)
-      tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER));
-    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(null)); // the one selection change
+    for (let i = 0; i < 9; i += 1) tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf());
+    tick.plan(SNAPSHOT, VIEWS, makeState(null), fadeOf()); // the one selection change
 
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
@@ -101,7 +115,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const tick = galaxyCatalogPlanner(runtime);
 
     const milkyWay: SelectionRow = { type: 'milkyWay' };
-    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(milkyWay));
+    tick.plan(SNAPSHOT, VIEWS, makeState(milkyWay), fadeOf());
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
   });
@@ -114,12 +128,12 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(makeSnapshot(maskWith(0, Source.SDSS)), VIEWS, makeState(CLUSTER));
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf([Source.SDSS]));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Same selection, same catalogsVersion — only the visible source swapped,
     // which is exactly what the renderer draws and the focus fade tracks.
-    tick.plan(makeSnapshot(maskWith(0, Source.TwoMRS)), VIEWS, makeState(CLUSTER));
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf([Source.TwoMRS]));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
   });
 
@@ -128,8 +142,6 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     let catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
     const publish = vi.fn();
     const runtime = {
-      biasLastApplied: 0,
-      biasCorrection: { setMode: vi.fn() },
       hiResFamous: { committed: () => null },
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
@@ -141,6 +153,9 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       get catalogs() {
         return catalogs;
       },
+      get records() {
+        return galaxyRecordsOver(catalogs);
+      },
       famousMeta: [],
       get catalogsVersion() {
         return catalogsVersion;
@@ -150,7 +165,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     } as unknown as GalaxyCatalogRuntime;
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf());
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Tier swap: same selection, same visible mask, but this source's array
@@ -166,7 +181,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       ],
     ]);
     catalogsVersion = 1;
-    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf());
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 2 });
   });
 });

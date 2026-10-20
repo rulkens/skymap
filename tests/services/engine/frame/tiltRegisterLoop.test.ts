@@ -13,9 +13,6 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
 }));
-vi.mock('../../../../src/services/engine/frame/deriveSourceMasks', () => ({
-  deriveSourceMasks: () => ({ draw: 0, pick: 0 }),
-}));
 vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
@@ -28,11 +25,7 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import {
-  beginDrag,
-  setAutoRotate,
-  startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate, startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -121,9 +114,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
     // Storing the PROJECTED pose and re-pinning/re-projecting it each frame
     // would walk the eye 8,519 km per frame with tilt and h/R constant
     // (nothing on screen moves except the ground underneath).
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    h.press('orbit', [50, 50]);
     h.frame();
 
     const before = display(h.state);
@@ -139,10 +130,8 @@ describe('the register loop during an active drag (R12b-1)', () => {
     const h = makeCameraSimHarness();
     toMidWindow(h);
 
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
-    h.push({ kind: 'dragMove', mode: 'orbit', xPx: 52, yPx: 50 });
+    h.press('orbit', [50, 50]);
+    h.moveTo([52, 50]);
     h.frame();
 
     // Authored register: centre-looking (tilt ~0). Displayed (what pick, the
@@ -166,11 +155,9 @@ describe('the register loop during an active drag (R12b-1)', () => {
     const walkKm = projectedWalkKm(h.state);
 
     // A real 6-px drag across three frames, then release.
-    h.store.dispatch(beginDrag());
-    h.push({ kind: 'gestureStart' });
-    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    h.press('orbit', [50, 50]);
     for (const x of [52, 54, 56]) {
-      h.push({ kind: 'dragMove', mode: 'orbit', xPx: x, yPx: 50 });
+      h.moveTo([x, 50]);
       h.frame();
       const cur = display(h.state);
       // Each frame moves the eye by the 2-px drag mapping only — never a
@@ -178,7 +165,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
       expect(stepKm(prev.eye, cur.eye)).toBeLessThan(walkKm * 0.5);
       prev = cur;
     }
-    h.push({ kind: 'gestureEnd' });
+    h.release();
     for (let i = 0; i < 10; i += 1) {
       h.frame();
       const cur = display(h.state);

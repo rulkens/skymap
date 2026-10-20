@@ -53,7 +53,6 @@ const SETTINGS: GalaxyPointDrawSettings = {
   pointSizePx: 2.5,
   brightness: 0.75,
   selectedPacked: SELECTED_PACKED,
-  visibleSourceMask: 0b11111,
   camPosWorld: [100, 200, 300],
   pxPerRad: 600,
   // Deliberately asymmetric across the four slots so a mis-ordered write

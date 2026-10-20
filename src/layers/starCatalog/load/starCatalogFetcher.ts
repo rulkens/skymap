@@ -1,26 +1,28 @@
 /**
- * starCatalogFetcher — `Fetcher<StarOctree, StarCatalogReq>` for every streamed `starCatalog`
+ * starCatalogFetcher — `Fetcher<Octree, StarCatalogReq>` for every streamed `starCatalog`
  * row, named from the row's own `binBaseName`. The row's `format` picks the file and what `tier`
  * means: `skst` is one `-<tier>.bin` per tier through the async compression codec; `octree` is
  * one tier-less index object (the tier sizes the chunk pool instead). Both adapt to the
- * `StarOctree` the renderer draws. A seeded catalog (`binBaseName` null) is built in code and
+ * `Octree` the renderer draws. A seeded catalog (`binBaseName` null) is built in code and
  * has nothing to fetch, so the guard below excludes it.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../@types/octree/Octree';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import {
   decodeSkstCatalog,
   STAR_CATALOG_DATA_PREFIX,
 } from '../../../data/starCatalog/starCatalogFormat';
-import { starIndexPath } from '../../../data/octree/octreeFormat';
+import { octreeIndexPath } from '../../../utils/octree/octreeIndexPath';
 import { decodeOctreeIndex } from '../../../data/octree/decodeOctreeIndex';
 import { starOctreeFromSkst } from '../../../utils/star/starOctreeFromSkst';
-import { starOctreeFromIndex } from '../../../utils/star/starOctreeFromIndex';
+import { octreeFromIndex } from '../../../utils/octree/octreeFromIndex';
+import { starColumnsOf } from '../../../utils/star/starColumnsOf';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 
-export const starCatalogFetcher: Fetcher<StarOctree, StarCatalogReq> = async (
+export const starCatalogFetcher: Fetcher<Octree<StarColumns>, StarCatalogReq> = async (
   req,
   signal,
   onProgress,
@@ -31,11 +33,11 @@ export const starCatalogFetcher: Fetcher<StarOctree, StarCatalogReq> = async (
   }
   if (entry.format === 'octree') {
     const buf = await fetchWithProgress(
-      dataUrl(starIndexPath(entry.binBaseName)),
+      dataUrl(octreeIndexPath('star', entry.binBaseName)),
       signal,
       onProgress,
     );
-    return starOctreeFromIndex(decodeOctreeIndex(buf));
+    return octreeFromIndex(decodeOctreeIndex(buf), starColumnsOf);
   }
   const name = `${entry.binBaseName}-${req.tier}.bin`;
   const buf = await fetchWithProgress(

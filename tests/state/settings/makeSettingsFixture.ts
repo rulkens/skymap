@@ -53,7 +53,8 @@ import {
 import { initialState as blackHolesInitialState } from '../../../src/layers/blackHoles/state/blackHoles/initialState';
 import { initialState as blackHoleLensingTuningInitialState } from '../../../src/layers/blackHoles/state/lensingTuning/initialState';
 import { initialState as missionsInitialState } from '../../../src/layers/missions/state/missions/initialState';
-import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
+import { initialState as missionTrailsInitialState } from '../../../src/layers/missions/state/missionTrails/initialState';
+import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
@@ -122,6 +123,7 @@ export function makeSettingsFixture(
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
     missions: { ...missionsInitialState },
+    missionTrails: { ...missionTrailsInitialState },
     earth: { ...earthInitialState },
     starCatalogs: {
       ...starCatalogsInitialState,

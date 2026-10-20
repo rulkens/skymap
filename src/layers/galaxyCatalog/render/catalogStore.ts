@@ -1,47 +1,14 @@
 /**
- * CatalogStore — the per-catalog GPU resources behind the point pipeline.
+ * CatalogStore — the per-catalog GPU resources behind the point pipeline: the
+ * interleaved vertex buffer plus the per-source FadeUniforms and SourceUniforms
+ * buffers and bind groups, created together at upload and destroyed together at
+ * unload. Split from `galaxyPointRenderer` on the storage/pipeline seam so the
+ * async upload bookkeeping is testable without a stub pipeline.
  *
- * A loaded galaxy catalog is a small cluster of coupled things: the
- * interleaved vertex buffer, the CPU mirror of those bytes (so the
- * bias-correction subsystem can splice two slots and re-upload), the
- * per-source FadeUniforms buffer + bind group, and the per-source
- * SourceUniforms buffer + bind group carrying the 6-bit GPU identity.
- * They are created together at upload, destroyed together at unload, and
- * every one of them outlives the frame that drew them.
- *
- * That storage life-cycle is a different concern from the pipeline
- * life-cycle.  `galaxyPointRenderer` owns things that exist once and never
- * change — shader modules, the render pipeline, the per-frame `@group(0)`
- * uniform buffer — and things that are recomputed every frame (the fade
- * opacity write, the visibility mask gate).  The store owns things that
- * appear and disappear as the user switches tiers, arrive asynchronously
- * from a worker bake, and must survive a replace without leaking VRAM.
- * Braiding the two in one closure meant every question about the async
- * upload path ("does a parallel rebake stomp the fresh buffer?") had to
- * be answered while stepping over pipeline-descriptor code, and the
- * upload bookkeeping could not be tested without standing up a stub
- * pipeline.  The alternative — leaving it as one file and reaching into
- * the private map from `draw()` — is what we had; splitting on the
- * storage/pipeline seam is what lets `draw()` consume a plain iterator.
- *
- * The store deliberately keeps TWO projections of the same map:
- *
- *   - `loadedSources()` — the narrow feed the pick program consumes
- *     (vertex buffer + count + the raw SourceUniforms *buffer*, because
- *     `galaxyPickRenderer` builds its own bind group around those bytes with
- *     its own pipeline's layout — a bind group is not portable across
- *     pipelines).
- *   - `entries()` — the full draw-time record (fade buffer + both bind
- *     groups) so `galaxyPointRenderer.draw()` binds without reaching into
- *     store internals.
- *
- * Both iterate in `GALAXY_CATALOG_SOURCES` draw order, not upload order,
- * so back-to-front blending is stable regardless of which `.bin` landed
- * first.
- *
- *   GalaxyCatalog → upload(id, …) → worker bake → GPU buffers + bind groups
- *                                                      ↓
- *                     galaxyPointRenderer.draw() ← entries() / galaxyPickRenderer ← loadedSources()
+ * Two projections of one map: `loadedSources()` is the narrow pick feed (the raw
+ * SourceUniforms buffer, since a bind group is not portable across pipelines);
+ * `entries()` is the full draw record. Both iterate in `GALAXY_CATALOG_SOURCES`
+ * order, not upload order, so back-to-front blending is stable.
  *
  * @module
  */
@@ -51,6 +18,7 @@ import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyC
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
+import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { CatalogDrawEntry } from '../@types/CatalogDrawEntry';
@@ -61,31 +29,17 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 import { createViewSlotUniformRing } from '../../../utils/gpu/createViewSlotUniformRing';
-import { SLOTS_PER_GALAXY_POINT } from './galaxyPointVertexLayout';
 
-// `?worker` emits the worker as a separate chunk and exports a class
-// whose `new` spawns it.  The bake runs off-thread to dodge the
-// 10-second main-thread freeze on .bin arrival.  Node-only tests
-// can't resolve `?worker`; they inject a synchronous fallback through
-// the factory's `buildRunner` param.
+// The bake runs off-thread to dodge a 10 s main-thread freeze on .bin arrival.
+// Node-only tests can't resolve `?worker`; they inject `buildRunner` instead.
 import BuildPointBufferWorker from '../../../services/engine/bake/buildPointInterleavedBuffer.worker?worker';
 
 /**
- * Off-thread bake runner.  Spawns a fresh worker per call, ships the
- * cloud via `postMessage` with a transferable list, and terminates the
- * worker on result.
- *
- * One worker per call (rather than long-lived) because parallel galaxy catalog
- * fetches resolve in unpredictable order; per-call workers run
- * concurrently at the OS level with zero shared state.  Spawn cost (a
- * few ms) is dwarfed by the 1–4 s bake.
- *
- * The cloud's typed arrays are `slice()`d before transfer because
- * transferring detaches the original `ArrayBuffer` (turning every view
- * into a 0-length husk), and the engine's picker + InfoCard still read
- * the cloud after the bake kicks off.  Copy-then-transfer costs ~50 ms
- * for a 100 MB cloud — strictly better than the multi-second
- * structured-clone alternative.
+ * Off-thread bake runner: one worker per call, because parallel catalog fetches
+ * resolve in unpredictable order and spawn cost (a few ms) is dwarfed by the
+ * 1–4 s bake. The cloud is copied before transfer, since transferring detaches
+ * the original buffers the picker and InfoCard still read (~50 ms for 100 MB,
+ * versus a multi-second structured clone).
  */
 function defaultWorkerRunner(
   input: BuildPointInterleavedBufferInput,
@@ -99,56 +53,28 @@ function defaultWorkerRunner(
   );
 }
 
-// ─── Source code ↔ catalog id resolution ──────────────────────────────────────
-//
-// The public key is the string `GalaxyCatalogId`, but the GPU-facing
-// identity (the 6-bit `sourceCode` packed into the pick texture) and the
-// draw order (`GALAXY_CATALOG_SOURCES`) are numeric.  Both maps are derived
-// from `SOURCE_REGISTRY` so the catalog set + codes stay defined in exactly
-// one place — adding a galaxy catalog there extends both without a hardcoded
-// list here.
-
-/** Numeric `Source` code → string `GalaxyCatalogId`. */
-const ID_OF_CODE = new Map<SourceType, GalaxyCatalogId>(
-  GALAXY_CATALOG_SOURCES.map((code) => [code, SOURCE_REGISTRY[code].id as GalaxyCatalogId]),
-);
+// The public key is the string `GalaxyCatalogId`; the GPU-facing `sourceCode`
+// and the draw order are numeric. Both derive from `SOURCE_REGISTRY`.
 
 /** String `GalaxyCatalogId` → numeric `Source` code. */
 const CODE_OF_ID = new Map<GalaxyCatalogId, SourceType>(
   GALAXY_CATALOG_SOURCES.map((code) => [SOURCE_REGISTRY[code].id as GalaxyCatalogId, code]),
 );
 
-/**
- * Loaded catalogs in `GALAXY_CATALOG_SOURCES` (source-code) draw order,
- * paired with their string id — the draw / pick iteration consults this
- * so it can key the id-keyed map while still emitting the numeric
- * `sourceCode` per draw.
- */
+/** Draw order paired with string ids: keys the id-keyed map while emitting the numeric `sourceCode`. */
 const CATALOG_DRAW_ORDER: readonly { code: SourceType; id: GalaxyCatalogId }[] =
-  GALAXY_CATALOG_SOURCES.map((code) => ({ code, id: ID_OF_CODE.get(code)! }));
-
-// ─── Per-source bookkeeping ───────────────────────────────────────────────────
+  GALAXY_CATALOG_SOURCES.map((code) => ({
+    code,
+    id: SOURCE_REGISTRY[code].id as GalaxyCatalogId,
+  }));
 
 /**
- * Allocate an empty store.  Everything it owns is created lazily, per
- * catalog, inside `upload`.
+ * Allocate an empty store; everything is created lazily per catalog in `upload`.
  *
- * A named bag rather than a positional list: the dependencies are opaque
- * handles (two of them structurally indistinguishable bind-group
- * layouts), so a mis-ordered call would typecheck and blow up later at
- * bind-group creation instead of at the call site.
- *
- * @param init.device       The WebGPU logical device. Owned by the caller.
- * @param init.fadeBgl      Canonical FadeUniforms layout — the per-source
- *                          `@group(1)` bind groups are built against it.
- * @param init.sourceBgl    Canonical SourceUniforms layout for `@group(2)`.
- * @param init.buildRunner  The vertex-buffer bake runner, defaulting to the
- *                          worker-spawning `defaultWorkerRunner`.  Injected
- *                          per store rather than swapped through a
- *                          module-global setter: a module-global is shared by
- *                          every instance in the process and leaks between
- *                          tests, so an override installed for one case
- *                          silently governs the next.
+ * A named bag, not positional: the two bind-group layouts are structurally
+ * indistinguishable, so a mis-ordered call would typecheck and fail late.
+ * `buildRunner` is injected per store because a module-global override leaks
+ * between tests.
  */
 export function createCatalogStore(init: {
   device: GPUDevice;
@@ -159,29 +85,7 @@ export function createCatalogStore(init: {
   const { device, fadeBgl, sourceBgl } = init;
   const buildRunner = init.buildRunner ?? defaultWorkerRunner;
 
-  // Loaded galaxy catalog buffers keyed by GalaxyCatalogId.  Map preserves
-  // insert order and keys on the stable string id (the same key domain the
-  // volume renderer uses for its fields) rather than the numeric source code.
   const galaxyCatalogs = new Map<GalaxyCatalogId, LoadedSource>();
-
-  // Optional callbacks invoked at the end of `upload` / `unload`.  The
-  // bias-correction subsystem installs them so a per-source bake fires
-  // when a new source arrives mid-mode.  Uni-directional: the store
-  // doesn't know what they do.  Null when no subsystem is attached.
-  let biasUploadCallback: ((source: SourceType, cloud: GalaxyCatalog) => void) | null = null;
-  let biasUnloadCallback: ((source: SourceType) => void) | null = null;
-
-  function setBiasUploadCallback(
-    cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null,
-  ): void {
-    biasUploadCallback = cb;
-  }
-
-  function setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void {
-    biasUnloadCallback = cb;
-  }
-
-  // ─── Data upload ────────────────────────────────────────────────────────────
 
   /** Free the catalog's GPU buffers and forget it; a no-op for one never uploaded. */
   function unload(id: GalaxyCatalogId): void {
@@ -196,30 +100,22 @@ export function createCatalogStore(init: {
       stale.sourceBuffer.destroy();
     }
     galaxyCatalogs.delete(id);
-    biasUnloadCallback?.(source);
   }
 
   /**
-   * Bake `galaxyCatalog` into an interleaved GPU vertex buffer for the
-   * catalog `id`, replacing any previous buffer.  Async because the bake
-   * runs in a worker — 3.5 M galaxies inline would freeze the main thread
-   * for ~10 s.  Freeing a catalog is `unload`'s job, not an empty upload's.
+   * Bake `galaxyCatalog` into a GPU vertex buffer for `id`, replacing any
+   * previous one. Freeing a catalog is `unload`'s job, not an empty upload's.
    *
-   * The public key is the string `GalaxyCatalogId`, but the numeric
-   * source code (resolved from the registry) is what the bake input and
-   * the GPU-facing `sourceCode` need — so the bias callbacks still carry
-   * the numeric source, keeping the subsystem's source-keyed caches and
-   * pick-identity packing untouched.
-   *
-   * Last-writer-wins on parallel uploads of the same catalog: both
-   * workers spawn, both `galaxyCatalogs.set` calls run in resolution
-   * order, the loser's GPU buffer leaks until the next upload destroys it.
-   * Theoretical — in practice each catalog uploads once per session.
+   * Parallel uploads of one catalog are last-writer-wins and leak nothing:
+   * each reads `prev` only after its own bake resolves, so the later one
+   * destroys the earlier one's buffers. The asset slot serializes commits
+   * anyway, so the case needs a caller outside it.
    */
-  async function upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void> {
-    // The store only handles galaxy catalog sources; the registry
-    // entry for this id carries the numeric source code, per-source
-    // sbBoost + falloffHalfMpc, and the discriminant we narrow on.
+  async function upload(
+    id: GalaxyCatalogId,
+    galaxyCatalog: GalaxyCatalog,
+    stats: GalaxyPointStats,
+  ): Promise<void> {
     const source = CODE_OF_ID.get(id);
     if (source === undefined) {
       throw new Error(`catalogStore cannot upload unknown galaxy catalog id '${id}'`);
@@ -231,15 +127,9 @@ export function createCatalogStore(init: {
       );
     }
 
-    // `buildRunner` is either the worker spawner (production) or an
-    // inline pure-function (Node tests, via the factory's `buildRunner`).
-    // The store always uploads in 'fast' mode; the bias-correction
-    // subsystem fires a per-source bake via `biasUploadCallback`
-    // below if a mode is active when this resolves.
-    const result = await buildRunner({ cloud: galaxyCatalog, source, mode: 'fast' });
+    const result = await buildRunner({ cloud: galaxyCatalog, source, stats });
     const { interleaved } = result;
 
-    // GPU buffers are fixed-size — destroy and reallocate on replace.
     const prev = galaxyCatalogs.get(id);
     if (prev) {
       prev.buffer.destroy();
@@ -254,8 +144,6 @@ export function createCatalogStore(init: {
     });
     device.queue.writeBuffer(buffer, 0, interleaved);
 
-    // One physical 16-byte fade buffer per view slot (Task 13b) — see
-    // `LoadedSource.fade`'s doc.
     const fade = createViewSlotUniformRing({
       device,
       label: `points-fade-${id}`,
@@ -263,11 +151,7 @@ export function createCatalogStore(init: {
       layout: fadeBgl,
     });
 
-    // SourceUniforms: 6-bit sourceCode + per-source sbBoost +
-    // per-source falloffHalfMpc + 4 B pad.  Written once here; the
-    // values are constant per source so per-frame writes would be
-    // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout
-    // and GalaxyCatalogSourceEntry.d.ts for the per-source value rationale.
+    // Constant per source, so written once; layout in lib/sourceUniforms.wesl.
     const sourceBuffer = device.createBuffer({
       label: `points-source-uniform-${id}`,
       size: 16,
@@ -289,93 +173,11 @@ export function createCatalogStore(init: {
     galaxyCatalogs.set(id, {
       buffer,
       count: galaxyCatalog.count,
-      interleaved,
       fade,
       sourceBuffer,
       sourceBindGroup,
     });
-
-    biasUploadCallback?.(source, galaxyCatalog);
   }
-
-  // ─── Bias-correction splice surface ──────────────────────────────────────
-  //
-  // Layout-aware writes into the interleaved CPU mirror + re-upload of
-  // the whole GPU buffer.  Slot indices are `SCHECHTER_RATIO_BYTE_OFFSET
-  // / 4` and `ANGULAR_WEIGHT_BYTE_OFFSET / 4`.  The bias-correction
-  // subsystem owns the state machine and calls these once its async
-  // bakes resolve.
-  //
-  // No-op on unloaded sources: a subsystem bake can race against
-  // `unload()`, and re-checking the map after every await would
-  // duplicate this safety net.  Length mismatch is a programmer error
-  // (not a race) and throws.
-  //
-  // These keep the numeric `source` in their public signature (the
-  // bias subsystem's caches are source-keyed); the id-keyed map is
-  // reached via `ID_OF_CODE`.
-
-  /**
-   * Slot 10 ← `ratios[i]`, then re-upload.  `ratios.length` must equal
-   * the source's `count`.
-   */
-  function spliceSchechterRatios(source: SourceType, ratios: Float32Array): void {
-    const id = ID_OF_CODE.get(source);
-    const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
-    if (!entry) return;
-    if (ratios.length !== entry.count) {
-      throw new Error(
-        `spliceSchechterRatios: length mismatch — got ${ratios.length} ratios, expected ${entry.count}`,
-      );
-    }
-    for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = ratios[i]!;
-    }
-    device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
-  }
-
-  /** Slot 11 ← `weights[i]`, then re-upload.  Length must equal `count`. */
-  function spliceAngularWeights(source: SourceType, weights: Float32Array): void {
-    const id = ID_OF_CODE.get(source);
-    const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
-    if (!entry) return;
-    if (weights.length !== entry.count) {
-      throw new Error(
-        `spliceAngularWeights: length mismatch — got ${weights.length} weights, expected ${entry.count}`,
-      );
-    }
-    for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = weights[i]!;
-    }
-    device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
-  }
-
-  /**
-   * Zero slots 10 (Schechter ratio) and 11 (angular weight) for one
-   * source or all of them.  Written as 0 rather than 1.0 because the
-   * shader's `select(1.0, slot, mode==N)` gate substitutes 1.0 when
-   * the mode is inactive — so the slot is dead in those modes, and 0
-   * is a cleaner "obviously cleared" sentinel for debug overlays.
-   */
-  function clearBiasOverlays(source?: SourceType): void {
-    const targets: LoadedSource[] =
-      source !== undefined
-        ? (() => {
-            const id = ID_OF_CODE.get(source);
-            const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
-            return entry ? [entry] : [];
-          })()
-        : Array.from(galaxyCatalogs.values());
-    for (const entry of targets) {
-      for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 10] = 0;
-        entry.interleaved[i * SLOTS_PER_GALAXY_POINT + 11] = 0;
-      }
-      device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
-    }
-  }
-
-  // ─── Public API for the engine + picker ─────────────────────────────────────
 
   /** Total points across every loaded catalog — drives the status-bar count. */
   function totalCount(): number {
@@ -384,18 +186,7 @@ export function createCatalogStore(init: {
     return total;
   }
 
-  // Whether a catalog's buffer is committed — the survey fade row guards on
-  // this (same demand-loaded pattern as filamentRenderer.hasCloud): a fade
-  // toward "visible" is suppressed until there is something to fade in.
-  function hasCatalog(id: GalaxyCatalogId): boolean {
-    return galaxyCatalogs.has(id);
-  }
-
-  /**
-   * Iterate loaded sources in GALAXY_CATALOG_SOURCES order.  Fresh iterator
-   * per call so the caller may `unload()` between iterations without
-   * affecting the snapshot.
-   */
+  /** Fresh iterator per call, so a caller may `unload()` between iterations. */
   function* loadedSourcesGen(): IterableIterator<{
     source: SourceType;
     vertexBuffer: GPUBuffer;
@@ -422,12 +213,7 @@ export function createCatalogStore(init: {
     return loadedSourcesGen();
   }
 
-  /**
-   * Draw-order iteration with the bind groups attached.  Same order and
-   * same skip-the-unloaded rule as `loadedSources()`; the extra fields
-   * exist only so the draw pass never has to know the shape of the
-   * private map.
-   */
+  /** `loadedSources()` order with the bind groups attached. */
   function* entriesGen(): IterableIterator<CatalogDrawEntry> {
     for (const { code, id } of CATALOG_DRAW_ORDER) {
       const entry = galaxyCatalogs.get(id);
@@ -467,13 +253,7 @@ export function createCatalogStore(init: {
   return {
     upload,
     unload,
-    setBiasUploadCallback,
-    setBiasUnloadCallback,
-    spliceSchechterRatios,
-    spliceAngularWeights,
-    clearBiasOverlays,
     totalCount,
-    hasCatalog,
     loadedSources,
     entries,
     destroy,

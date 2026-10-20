@@ -28,9 +28,15 @@ import type { ZoneOfAvoidanceShell } from '../../../@types/rendering/ZoneOfAvoid
 import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { PickWindow } from '../../../@types/engine/frame/PickWindow';
+import type { PickWindowNdc } from '../../../@types/engine/frame/PickWindowNdc';
+import { pickWindowNdc } from '../../../utils/gpu/pickWindowNdc';
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
-const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 112;
+const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 128;
+
+/** The visual band always covers the whole canvas. */
+const WHOLE_CANVAS_NDC: PickWindowNdc = { centre: [0, 0], halfExtent: [1, 1] };
 
 export function createZoneOfAvoidanceRenderer(
   device: GPUDevice,
@@ -145,6 +151,7 @@ export function createZoneOfAvoidanceRenderer(
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
+    windowNdc: PickWindowNdc,
   ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
     // Same derivation as horizonShellRenderer.draw — see that file's
@@ -198,6 +205,11 @@ export function createZoneOfAvoidanceRenderer(
     // fadeAlpha (float 24); float 25 is packedId (written once above);
     // floats 26..27 are pad, left at zero.
     f32[24] = fadeAlpha;
+    // windowNdcCentre (floats 28..29) + windowNdcHalf (floats 30..31).
+    f32[28] = windowNdc.centre[0];
+    f32[29] = windowNdc.centre[1];
+    f32[30] = windowNdc.halfExtent[0];
+    f32[31] = windowNdc.halfExtent[1];
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
   }
 
@@ -209,23 +221,26 @@ export function createZoneOfAvoidanceRenderer(
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
-    writeUniforms(cam, viewport, tuning, shell, fadeAlpha);
+    // Every call, since drawPick shares this buffer and leaves its own rect.
+    writeUniforms(cam, viewport, tuning, shell, fadeAlpha, WHOLE_CANVAS_NDC);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);
   }
 
-  // Pick twin of `draw`: same fullscreen-quad draw, same uniforms and the
-  // same `bindGroup`, against the r32uint pick pipeline.
+  // Pick twin of `draw`: same quad, uniforms and `bindGroup` against the
+  // r32uint pick pipeline. The camera basis keeps the canvas aspect; only
+  // the window rect says which part of the canvas the target covers.
   function drawPick(
     pass: GPURenderPassEncoder,
     cam: OrbitCamera,
-    viewport: Vec2,
+    canvasPx: Vec2,
+    window: PickWindow,
     tuning: ZoneOfAvoidanceTuning,
     shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
-    writeUniforms(cam, viewport, tuning, shell, fadeAlpha);
+    writeUniforms(cam, canvasPx, tuning, shell, fadeAlpha, pickWindowNdc(window, canvasPx));
     pass.setPipeline(pickPipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);

@@ -1,0 +1,42 @@
+.root {
+  composes: row from '../ReviewRow/ReviewRow.module.css';
+}
+
+.applied {
+  opacity: 0.55;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.state,
+.choice {
+  composes: button from '../ReviewControl/ReviewControl.module.css';
+}
+
+.passage {
+  composes: passage from '../ReviewRow/ReviewRow.module.css';
+}
+
+.reason {
+  composes: reason from '../ReviewRow/ReviewRow.module.css';
+}
+
+/* Two-way control above the one rewrite field: it says which of the two values the field is. */
+.segment {
+  display: flex;
+  margin-top: var(--space-3);
+}
+
+.segment .choice {
+  flex: 1;
+}
+
+.line {
+  margin-top: var(--space-2);
+  color: var(--site-text);
+  font-size: 0.75rem;
+}

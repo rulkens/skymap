@@ -1,6 +1,6 @@
 import famousGalaxySeed from '../../../../data/seeds/famous_galaxies.seed.json';
 import structureSeed from '../../../../data/seeds/structure_anchors.seed.json';
-import { MILKY_WAY_NAMES } from '../../../../src/components/CommandPalette/paletteRowModel';
+import { MILKY_WAY_NAMES } from '../../../../src/data/palette/milkyWayNames';
 import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
 import { BODY_SEARCH_NAMES } from '../../../../src/data/bodies/bodySearchNames';
 import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';

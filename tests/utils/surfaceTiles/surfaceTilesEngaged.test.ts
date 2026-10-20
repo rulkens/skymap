@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { surfaceTilesEngaged } from '../../../src/utils/surfaceTiles/surfaceTilesEngaged';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../src/data/rendering/foregroundMaxDistance';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { bodyRelativePose } from '../../../src/services/engine/camera/bodyRelativePose';
 import { imagePlaneBasis } from '../../../src/utils/camera/imagePlaneBasis';
@@ -32,6 +32,7 @@ const EARTH_VIEW: SlabView = {
   vp: new Float32Array(16),
   camPos: [0, 0, 5],
   viewportPx: [1280, 720],
+  window: { originPx: [0, 0], sizePx: [1280, 720] },
 };
 
 /** A ctx whose camera sits `distanceMpc` from the origin, looking at Earth, with

@@ -16,8 +16,6 @@ export type FilamentRenderer = {
   readonly label: string;
   upload(cloud: FilamentCloud): void;
   clear(): void;
-  /** True when a drawable cloud is committed — the fade row's guard reads this. */
-  hasCloud(): boolean;
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,

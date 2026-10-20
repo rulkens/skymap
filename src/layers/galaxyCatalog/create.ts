@@ -6,8 +6,9 @@
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
@@ -23,17 +24,17 @@ import { createGalaxyPointRenderer } from './render/galaxyPointRenderer';
 import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
-import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { wireImpostorSubsystems } from './load/wireImpostorSubsystems';
 import { wireGalaxyCatalogSourceSlot } from './load/wireGalaxyCatalogSourceSlot';
 import { createFamousGalaxiesMetaSlot } from './load/famousGalaxiesMetaSlot';
 import { createPgcAliasSlot } from './load/pgcAliasSlot';
 import { wireHiResFamousSlot } from './load/wireHiResFamousSlot';
+import { galaxyRecordBridge } from './present/galaxyRecordBridge';
 
 export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRuntime {
   const device = deps.ctx.device;
   const catalogs = new Map<SourceType, GalaxyCatalog>();
-  const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
+  const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
   // Private cell behind the runtime's getter: the meta slot is its only writer,
   // so nothing has to hand the runtime object to a closure built before it.
   let famousMeta: readonly FamousGalaxyMetaEntry[] = [];
@@ -47,13 +48,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     fadeBgl: deps.fadeBgl,
     sourceBgl: deps.sourceBgl,
     focusBgl: deps.focusBgl,
-  });
-
-  const biasCorrection = createBiasCorrectionSubsystem({
-    renderer: pointRenderer,
-    getMode: () => deps.store.getState().settings.bias.mode,
-    getLoadedClouds: () => catalogs,
-    requestRender: deps.requestRender,
   });
 
   const texturedDiskRenderer = createTexturedDiskRenderer(
@@ -86,13 +80,14 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     texturedDiskRenderer,
   });
 
-  const points = new Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
+  const points = new Map<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
     GALAXY_CATALOG_SOURCES.map((code) => [
       code,
       wireGalaxyCatalogSourceSlot(SOURCE_REGISTRY[code], deps, {
         pointRenderer,
         catalogs,
-        provenanceCounts,
+        records,
+        famousMeta: () => famousMeta,
         bumpCatalogsVersion: () => {
           catalogsVersion += 1;
         },
@@ -113,6 +108,8 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
 
   return {
     catalogs,
+    records,
+    recordBridge: galaxyRecordBridge(records),
     get famousMeta() {
       return famousMeta;
     },
@@ -132,10 +129,5 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     texturedDisks,
     proceduralDisks,
     diskPlannerWalk,
-    biasCorrection,
-    // Seeded from the live setting, not a default: the bake fires only on a
-    // CHANGE, and nothing bakes at boot today either (the per-source upload
-    // callback covers the boot path).
-    biasLastApplied: deps.store.getState().settings.bias.mode,
   };
 }

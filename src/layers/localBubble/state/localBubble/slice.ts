@@ -14,13 +14,10 @@ export const localBubbleSlice = createSlice({
   reducerPath: 'localBubble',
   initialState,
   reducers: {
-    setLocalBubbleEnabled: (localBubble, action: PayloadAction<boolean>) => {
-      localBubble.enabled = action.payload;
-    },
     setLocalBubbleIntensity: (localBubble, action: PayloadAction<number>) => {
       localBubble.intensity = action.payload;
     },
   },
 });
 
-export const { setLocalBubbleEnabled, setLocalBubbleIntensity } = localBubbleSlice.actions;
+export const { setLocalBubbleIntensity } = localBubbleSlice.actions;

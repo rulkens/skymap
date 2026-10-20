@@ -121,7 +121,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'own',
     name: 'Our own files and pictures',
-    about: 'What is ours in the data folder and on our hosts, and the terms that follow a picture made with skymap.',
+    about: 'What is ours in the data folder and on our hosts, and the terms that follow a picture made with Skymap.',
     pages: 'one',
     sections: ['Hand-typed data'],
     ids: [],

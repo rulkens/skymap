@@ -17,6 +17,7 @@ import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnaps
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { BodyId } from '../../data/body/BodyId';
+import type { SurfaceTileBodyId } from '../../data/SurfaceTileBodyId';
 import type { Vec3 } from '../../math/Vec3';
 
 export type SurfaceTileSubsystem = Destroyable & {
@@ -96,6 +97,12 @@ export type SurfaceTileSubsystem = Destroyable & {
    * transition to track.
    */
   getAtlasView(): GPUTextureView | null;
+
+  /** The body whose atlases are allocated, or `null` while none are. */
+  engagedBodyId(): SurfaceTileBodyId | null;
+
+  /** Destroy the atlases and residency; the next engaged frame starts over. */
+  release(): void;
 
   /** The HEIGHT atlas's texture view (Terrain-RGB `rgba8unorm`, 129-post
    *  slots, decoded in the shader), or `null` before the first engaged frame. */

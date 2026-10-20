@@ -5,7 +5,7 @@
  * Pipeline:
  *
  *   1. Read the user-selected subset of
- *      public/data/galaxy-catalog/v9/{sdss,2mrs,glade}.bin → merged xyz
+ *      public/data/galaxy-catalog/v10/{sdss,2mrs,glade}.bin → merged xyz
  *      positions, filtered to D < MAX_DISTANCE_MPC.  By default we read
  *      2MRS + GLADE only and exclude SDSS — its wedge footprint
  *      dominates the density field at the survey edges and DisPerSE
@@ -42,7 +42,7 @@
  *                    --sources sdss --output public/data/filament/v1/filaments-sdss.bin
  *
  * Run order: must be after `npm run build-tiers` so the survey .bin
- * files exist on disk under `public/data/galaxy-catalog/v9/`.  The
+ * files exist on disk under `public/data/galaxy-catalog/v10/`.  The
  * orchestrator reads those instead of re-parsing the raw catalogues,
  * because by the time DisPerSE runs we already have the cross-matched,
  * deduped positions on disk and reusing them keeps this script from
@@ -92,7 +92,7 @@ import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatal
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
 import { mulberry32 } from '../../src/utils/random/mulberry32';
-import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights';
+import { computeAngularWeights } from '../catalog/bias/computeAngularWeights';
 import { gaussian } from '../utils/random/gaussian';
 
 /**
@@ -586,7 +586,6 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
     // headroom for genuinely under-detected sky cells.
     const angular = computeAngularWeights({
       cloud,
-      source,
       weightMin: 1.0,
       weightMax: WEIGHT_CAP,
     });

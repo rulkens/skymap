@@ -1,0 +1,126 @@
+.root {
+  composes: wrap grid from '../../styles/layout.module.css';
+  --stick: calc(var(--nav-height) + 2.5rem);
+  padding-block: 5rem var(--section-space);
+}
+
+.bare {
+  composes: bare from '../../styles/layout.module.css';
+}
+
+/* The current group's marker is filled and its name is bright; the rest are dim. */
+.link {
+  composes: ring ring-small from '../../styles/ring.module.css';
+}
+
+.index .link {
+  min-height: 2.25rem;
+  padding-block: 0.25rem;
+  color: var(--site-text-dim);
+
+  &[aria-current] {
+    color: var(--color-fg);
+  }
+
+  &[aria-current]::before {
+    background: var(--color-accent);
+  }
+}
+
+.mark {
+  scroll-margin-top: 2.5rem;
+}
+
+.list {
+  padding-top: 1.75rem;
+}
+
+@media (min-width: 901px) {
+  .index {
+    grid-area: 1 / 1 / span var(--rows) / span 3;
+    align-self: start;
+    position: sticky;
+    top: var(--stick);
+  }
+
+  /* The group's parts are the grid's own items, so its picture can leave it for the stage. */
+  .group {
+    display: contents;
+  }
+
+  .mark,
+  .head,
+  .list {
+    grid-column: 4 / span 4;
+  }
+
+  .group:not(:first-of-type) > :is(.mark, .head) {
+    margin-top: 7rem;
+  }
+
+  .shot {
+    grid-column: 8 / -1;
+    grid-row: span 2;
+    align-self: start;
+    --cols: 5;
+    --shot-room: calc(100svh - var(--stick) - 11rem);
+  }
+
+  .group:not(:first-of-type) > .shot {
+    margin-top: 7rem;
+  }
+
+  /* The stage: every picture in one place, under the top bar, and only the current one seen. */
+  .root.live .shot {
+    grid-row: 1 / span var(--rows);
+    position: sticky;
+    top: var(--stick);
+    margin-top: 0;
+  }
+}
+
+/* Narrow: the index is a row of links that scrolls sideways under the top bar, and each picture heads its group. */
+@media (max-width: 900px) {
+  .root {
+    display: block;
+    padding-top: 2rem;
+  }
+
+  .index {
+    position: sticky;
+    top: var(--nav-height);
+    z-index: 2;
+    margin-inline: calc(-1 * var(--gutter));
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--border-divider);
+
+    & ul {
+      display: flex;
+      gap: 1.5rem;
+      padding-inline: var(--gutter);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+  }
+
+  .index .link {
+    min-height: var(--tap);
+    white-space: nowrap;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    padding-top: 3.5rem;
+  }
+
+  .mark {
+    order: -2;
+    scroll-margin-top: calc(var(--tap) + 1rem);
+  }
+
+  .group > .shot {
+    order: -1;
+    margin-bottom: 2rem;
+  }
+}

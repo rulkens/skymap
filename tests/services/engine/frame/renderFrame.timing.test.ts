@@ -22,6 +22,8 @@ import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDe
 import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
@@ -31,11 +33,10 @@ import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/Fr
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
@@ -225,6 +226,12 @@ function makeCam(): OrbitCamera {
 // SCENE's `plan` row names 'structure-markers' by string, not by object
 // identity — a stub with an empty result satisfies `runPlanSteps` without
 // dragging in `produceStructureMarkers`'s own state (see renderFrame.test.ts).
+// What `createLayers` gates each pass with: every fade resolves to 1 here.
+const PASS_GATE_STATE = {
+  subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
+  visibilityEntries: APP_VISIBILITY,
+} as unknown as Parameters<typeof gatePassByFade>[1];
+
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
@@ -268,7 +275,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   // No active field ⇒ the density passes stay gated off unless a test revives
   // this renderer in place (the raymarch row captured it at construction).
   const densityRuntime = {
-    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    renderer: { draw: vi.fn(), hasActiveFields: () => false },
     upsample: { draw: vi.fn(), destroy: vi.fn() },
   } as unknown as CosmicWebDensityRuntime;
 
@@ -291,8 +298,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const snapshotFields = {
     isReady: true as const,
     slabBodyCandidates: [],
+    bodyStates: new Map(),
     nowMs: 0,
-    // resolveLayerOpacity's recession factor lerps on this; production seeds it
+    // The handed value's recession factor lerps on this; production seeds it
     // to 0 in frameContext, and an absent one yields NaN alphas here.
     focusBlend: 0,
     renderTargets,
@@ -318,7 +326,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     pointSizePx: 2.5,
     brightness: 1.0,
     selected: null as { source: SourceType; localIdx: number } | null,
-    visibleSourceMask: 0xffffffff,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -376,6 +383,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
       settings: {
         galaxyCatalogs: {
+          items: makeGalaxyCatalogItems(),
           sizePx: settings.pointSizePx,
           brightness: settings.brightness,
           provenance: DEFAULT_GALAXY_PROVENANCE,
@@ -403,7 +411,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // engine-state shape carries it.
       picking: {
         pickInFlight: false,
-        pointerDown: false,
       },
       subsystems: {
         proceduralDisks: null,
@@ -437,7 +444,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         milkyWayAggregatePass(milkyWayRuntime),
         milkyWayUpsamplePass(milkyWayRuntime),
         milkyWayPass(milkyWayRuntime),
-      ],
+      ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
       computes: CORE_COMPUTES,
       planners: STUB_PLANNERS,
     } as never,

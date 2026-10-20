@@ -3,7 +3,8 @@
  * (whose job `create` inherits) minus `fontAtlases`, plus the core capabilities a
  * Layer's own subsystems close over today. `publish` is conditional on `Facts` (Ruling 7):
  * a factless Layer calling it is a `tsc` error at the call site, never a runtime throw.
- * No `fades`: core owns the fade edge (`installFadeOnArrival`), not a Layer's `create`.
+ * No fade registry: core drives every fade from the Layer's `visibility` entries and its
+ * asset rows' `gates`, never from a Layer's `create`.
  */
 
 import type { GpuContext } from '../../rendering/GpuContext';

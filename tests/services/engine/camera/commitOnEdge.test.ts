@@ -12,12 +12,12 @@ import {
   commitCameraPose,
   startCameraTween,
   cancelCameraTween,
-  beginDrag,
   endDrag,
   setAutoRotate,
   clipStarted,
   clipEnded,
 } from '../../../../src/state/camera/cameraSlice';
+import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import { pickWinner } from '../../../../src/services/engine/camera/cameraDrivers';
@@ -310,7 +310,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     simulateFrame(harness, 300);
 
     // User grabs — orbitDrag (priority 80) takes over.
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
 
     // Frame with drag active: prev driver was 'tween', new is 'orbitDrag'.
     // Commit-on-edge fires because prev === 'tween', baking the tween pose into base.
@@ -364,7 +364,7 @@ describe('commitOnEdge — clip deactivation', () => {
     const harness = makeHarness();
     const { store, state } = harness;
 
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     state.cameraRuntime = {
       ...state.cameraRuntime,
       register: { ...state.cameraRuntime.register, winner: 'orbitDrag' },
@@ -405,7 +405,7 @@ describe('commitOnEdge — clip deactivation', () => {
         },
       }),
     );
-    store.dispatch(beginDrag());
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     expect(
       pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
     ).toBe('orbitDrag');

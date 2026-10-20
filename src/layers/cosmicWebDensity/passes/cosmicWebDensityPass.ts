@@ -5,15 +5,19 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
 import { createScalarVolumePass } from '../../../services/engine/frame/passes/createScalarVolumePass';
 import { deriveCosmicWebDensityLiveness } from '../present/deriveCosmicWebDensityLiveness';
 
-export function cosmicWebDensityPass(runtime: CosmicWebDensityRuntime): ContentPass {
-  return createScalarVolumePass({
+export function cosmicWebDensityPass(
+  runtime: CosmicWebDensityRuntime,
+): ContentPass<'cosmicWebDensity'> {
+  return createScalarVolumePass<CosmicWebDensityFieldId, 'cosmicWebDensity'>({
     name: 'cosmic-web-density',
     targetId: 'cosmic-web-density',
+    fade: 'cosmicWebDensity',
     renderer: runtime.renderer,
-    liveness: (state, ctx) => deriveCosmicWebDensityLiveness(runtime, state, ctx),
+    liveness: (state, ctx, fade) => deriveCosmicWebDensityLiveness(runtime, state, ctx, fade),
   });
 }

@@ -400,6 +400,15 @@ export function createEarthRenderer(
     bindGroup = buildBindGroup();
   }
 
+  /** Free a kind's committed map; the placeholder underneath binds again. */
+  function clearMap(kind: TextureKind): void {
+    const texture = committed.get(kind);
+    if (texture === undefined) return;
+    texture.destroy();
+    committed.delete(kind);
+    bindGroup = buildBindGroup();
+  }
+
   /**
    * Upgrade ONE kind's stand-in from its 1×1 to a tile of the shared low-res
    * body atlas — structurally `setMap`, except the texture lands in
@@ -480,6 +489,7 @@ export function createEarthRenderer(
   const renderer: EarthRenderer = {
     label: 'earthRenderer',
     setMap,
+    clearMap,
     setPlaceholderMap,
     getMapView,
     draw,

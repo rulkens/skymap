@@ -10,11 +10,9 @@
  * Factory stubs stand in for the two GPU-bearing constructors; the ordering
  * assertions read a shared call log the stubs append to.
  *
- * It is also the pin for `AssetSlot`'s commit-before-`committed` ordering: the
- * previous pair is read from `slot.committed()` INSIDE `commit`, which is only
- * the old value because `AssetSlot` awaits `commit` before dispatching the
- * `committed` event. A later `AssetSlot` refactor that reorders those two
- * fails here — and should read the failure as its own, not re-point this test.
+ * The pair to retire is the one the renderer has BOUND, tracked by the wiring
+ * itself: a pair superseded mid-commit was bound but never became the slot's
+ * committed value, so `slot.committed()` would name the wrong one.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -105,6 +103,47 @@ describe('wireHiResFamousSlot', () => {
     // The first commit destroys nothing; on the second, subsystem before
     // texture on the teardown half, because the planner holds the texture's
     // evict-handler subscription.
+    expect(shared.calls).toEqual([
+      'bind texture#0',
+      'setHiResFamous subsystem#0',
+      'bind texture#1',
+      'setHiResFamous subsystem#1',
+      'destroy subsystem#0',
+      'destroy texture#0',
+    ]);
+  });
+
+  // The "fetch" allocates the GPU texture, so a load superseded before its commit
+  // must destroy the pair it built: nothing else ever sees it.
+  it('destroys a pair superseded before its commit', async () => {
+    const slot = makeSlot();
+
+    void slot.load(reqFor('small'));
+    await slot.load(reqFor('medium'));
+
+    expect(shared.calls).toEqual([
+      'destroy subsystem#0',
+      'destroy texture#0',
+      'bind texture#1',
+      'setHiResFamous subsystem#1',
+    ]);
+  });
+
+  // A pair superseded mid-commit was bound but never became the slot's committed
+  // value, so the next commit must retire what is bound, not what the slot holds.
+  it('retires a pair superseded mid-commit when the next one binds', async () => {
+    const slot = makeSlot();
+    let superseded = false;
+    slot.subscribe((state) => {
+      if (state.kind === 'committing' && !superseded) {
+        superseded = true;
+        void slot.load(reqFor('medium'));
+      }
+    });
+
+    await slot.load(reqFor('small'));
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
     expect(shared.calls).toEqual([
       'bind texture#0',
       'setHiResFamous subsystem#0',

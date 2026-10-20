@@ -1,0 +1,51 @@
+.root {
+  max-width: 36rem;
+}
+
+.summary {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #ff9d8a;
+  border-radius: 0.25rem;
+
+  & p {
+    margin: 0 0 0.25rem;
+    color: var(--color-fg);
+  }
+
+  & a {
+    display: block;
+    padding-block: 0.5rem;
+    color: #ffb4a6;
+  }
+}
+
+.note {
+  composes: small from '../../styles/type.module.css';
+  max-width: none;
+  color: var(--site-text-dim);
+}
+
+/* The widget is 65px tall; the space is kept so it does not push the button down when it appears. */
+.check {
+  min-height: 65px;
+  margin-bottom: 1.5rem;
+}
+
+.leave {
+  position: absolute;
+  left: -100vw;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.send {
+  composes: ring from '../../styles/ring.module.css';
+}
+
+.status {
+  min-height: 1.6em;
+  margin: 0.75rem 0 0;
+  color: var(--color-fg);
+}

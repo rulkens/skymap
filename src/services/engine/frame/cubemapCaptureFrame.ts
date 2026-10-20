@@ -13,7 +13,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { CaptureFrame } from '../../../@types/engine/frame/CaptureFrame';
 import type { NotReadyFrameContext } from '../../../@types/engine/frame/NotReadyFrameContext';
 import { deriveFrameContext } from './frameContext';
-import { deriveSourceMasks } from './deriveSourceMasks';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
@@ -61,10 +60,6 @@ export function cubemapCaptureFrame(input: {
     altitudeMpc: nearMpc,
     nowMs,
     simDays: state.cameraRuntime.outputs.simDays,
-    // draw mask: a capture, not a click target. Sampled at the FRAME's nowMs
-    // (not the registry's last-ticked clock) so a just-settled fade-out never
-    // gets baked into the capture — see `deriveSourceMasks`'s nowMs docblock.
-    visibleSourceMask: deriveSourceMasks(state, nowMs).draw,
   });
   if (!snapshot.isReady) return { isReady: false };
   return { isReady: true, snapshot, cam };

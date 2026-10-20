@@ -35,6 +35,7 @@ describe('meshBody()', () => {
       boundingRadiusM: 12345,
       albedo: [0.1, 0.2, 0.3],
       standoffRadii: 2,
+      resolvePx: 3,
     });
   });
 

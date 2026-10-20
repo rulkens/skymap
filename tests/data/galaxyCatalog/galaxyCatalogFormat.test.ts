@@ -1,10 +1,10 @@
 /**
- * Format-level tests for the v9 galaxy-catalog binary.
+ * Format-level tests for the v10 galaxy-catalog binary.
  *
  * Three contracts under test:
  *
  *   1. encode → decode is a faithful round trip for every field —
- *      the v9 `log10StellarMass` float and packed flags byte, the v8
+ *      the v10 `angularWeight` byte, the v9 `log10StellarMass` float and packed flags byte, the v8
  *      `diameterIsFallback` bit, the v7 `orientationIsFallback` bit, the
  *      v6 `spectroscopicZ` float, the v5 uint8 slots (`classByte`,
  *      `parentSurveyByte`), the v4 `diameterKpc`, the v3 orientation pair,
@@ -194,6 +194,22 @@ describe('galaxyCatalogFormat — v9 fields', () => {
   });
 });
 
+describe('galaxyCatalogFormat — v10 fields', () => {
+  it('writes angularWeight at record offset 55 and round-trips it', () => {
+    const cat = makeGalaxyCatalog(3);
+    cat.angularWeight.set([0, 128, 255]);
+    cat.diameterIsFallback.set([1, 1, 1]);
+
+    const buf = encodeGalaxyCatalog(cat);
+    const bytes = new Uint8Array(buf);
+
+    // Offset-pinned so a decoder agreeing with a wrong encoder still fails,
+    // and the flags byte beside it must not bleed into byte 55.
+    expect([0, 1, 2].map((i) => bytes[16 + i * 64 + 55])).toEqual([0, 128, 255]);
+    expect(Array.from(decodeGalaxyCatalog(buf).angularWeight)).toEqual([0, 128, 255]);
+  });
+});
+
 describe('galaxyCatalogFormat — field spec table invariants', () => {
   it('lays out disjoint field byte ranges within the 64 B stride, with flag bits sharing one byte at distinct positions', () => {
     const fieldRanges: { start: number; end: number }[] = [];
@@ -299,7 +315,7 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     const buf = new ArrayBuffer(16);
     const dv = new DataView(buf);
     dv.setUint32(0, 0x504d4b53, true); // "SKMP"
-    dv.setUint32(4, 8, true); // v8 — the previous on-disk shape
+    dv.setUint32(4, 9, true); // v9 — the previous on-disk shape
     dv.setUint32(8, 0, true);
     dv.setUint32(12, 0, true);
 
@@ -309,15 +325,15 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(FormatVersionError);
       const versionError = err as FormatVersionError;
-      expect(versionError.found).toBe(8);
-      expect(versionError.expected).toBe(9);
+      expect(versionError.found).toBe(9);
+      expect(versionError.expected).toBe(10);
     }
   });
 
-  it('rejects every earlier version (v1–v8) with the same regenerate message', () => {
+  it('rejects every earlier version (v1–v9) with the same regenerate message', () => {
     // The version check fires before the per-record loop, so a 16-byte
     // header with count=0 is enough to exercise every foreign version.
-    for (const version of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    for (const version of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
       const buf = new ArrayBuffer(16);
       const dv = new DataView(buf);
       dv.setUint32(0, 0x504d4b53, true);

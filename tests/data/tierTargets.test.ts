@@ -36,19 +36,19 @@ describe('tierTarget', () => {
 
 describe('tierFilenameForSource', () => {
   it('emits per-tier filenames for subsampled sources (SDSS, GLADE)', () => {
-    expect(tierFilenameForSource(Source.SDSS, 'small')).toBe('galaxy-catalog/v9/sdss-small.bin');
-    expect(tierFilenameForSource(Source.SDSS, 'medium')).toBe('galaxy-catalog/v9/sdss-medium.bin');
-    expect(tierFilenameForSource(Source.SDSS, 'large')).toBe('galaxy-catalog/v9/sdss-large.bin');
+    expect(tierFilenameForSource(Source.SDSS, 'small')).toBe('galaxy-catalog/v10/sdss-small.bin');
+    expect(tierFilenameForSource(Source.SDSS, 'medium')).toBe('galaxy-catalog/v10/sdss-medium.bin');
+    expect(tierFilenameForSource(Source.SDSS, 'large')).toBe('galaxy-catalog/v10/sdss-large.bin');
     expect(tierFilenameForSource(Source.Glade, 'medium')).toBe(
-      'galaxy-catalog/v9/glade-medium.bin',
+      'galaxy-catalog/v10/glade-medium.bin',
     );
   });
 
   it('emits the shared filename for tier-agnostic sources (2MRS, Famous)', () => {
-    expect(tierFilenameForSource(Source.TwoMRS, 'small')).toBe('galaxy-catalog/v9/2mrs.bin');
-    expect(tierFilenameForSource(Source.TwoMRS, 'large')).toBe('galaxy-catalog/v9/2mrs.bin');
+    expect(tierFilenameForSource(Source.TwoMRS, 'small')).toBe('galaxy-catalog/v10/2mrs.bin');
+    expect(tierFilenameForSource(Source.TwoMRS, 'large')).toBe('galaxy-catalog/v10/2mrs.bin');
     expect(tierFilenameForSource(Source.FamousGalaxy, 'medium')).toBe(
-      'galaxy-catalog/v9/famous.bin',
+      'galaxy-catalog/v10/famous.bin',
     );
   });
 });

@@ -77,8 +77,8 @@ instant cue as the FIRST timeline entry of `earthFlyout.ts`, ahead of any lead-i
 `wait`:
 
 ```ts
-hide(['starCatalogLabel', 'surveyLabel', 'structureLabel', 'milkyWayLabel'], 0),
+hide(['label:starCatalog', 'label:famousGalaxy', 'label:structure', 'label:milkyWay'], 0),
 ```
 
-`bodyLabel` stays visible on purpose — Earth/Mercury/Mars are the clip's
+`label:body` stays visible on purpose — Earth/Mercury/Mars are the clip's
 narrative anchor and the closing shot's single "Earth" label is the payoff.

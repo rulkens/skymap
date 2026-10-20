@@ -2,7 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-06';
-const IN_REPO = 'in the skymap repository';
+const IN_REPO = 'in the Skymap repository';
 const COUNTER_REPO = 'https://github.com/benvinegar/counterscale';
 // The version our counter's own page reported on the check date: the rows below were read from that tag.
 const COUNTER_SOURCE = `${COUNTER_REPO}/blob/v3.4.1`;
@@ -17,7 +17,7 @@ export const PRIVACY_FACTS: readonly Fact[] = [
   {
     id: 'privacy-site-requests',
     about: 'app',
-    text: 'The pages of this website load their text, pictures, typefaces and scripts from skymap’s own two addresses, skymap.rulkens.com and skymap-data.rulkens.com, and from nowhere else. They set no cookies, run no visit counter and keep nothing in your browser.',
+    text: 'The pages of this website load their text, pictures, typefaces and scripts from Skymap’s own two addresses, skymap.rulkens.com and skymap-data.rulkens.com, and from nowhere else. They set no cookies, run no visit counter and keep nothing in your browser.',
     source: `${REPO_BLOB}/packages/website/src/layouts/Base.astro`,
     sourceLabel: `the page template, ${IN_REPO}`,
     checked: CHECKED,
@@ -49,7 +49,7 @@ export const PRIVACY_FACTS: readonly Fact[] = [
   {
     id: 'privacy-counter-sends',
     about: 'app',
-    text: 'Our counter runs Counterscale 3.4.1. Its script reports when the app starts, again each time the app adds an entry to your browser’s history, as it does when the view named in the address changes, and when you go back or forward. Each report carries the counter’s name for the site (skymap), the app’s host name, the path of its address and a count of 1, 2 or 3 (see “No cookie”). Nothing after a # sign is sent, and what you look at in the app is written after the # sign. From the part after a question mark the script sends only the campaign labels a link may carry: utm_source, utm_medium, utm_campaign, utm_term and utm_content. It sends the address of the page that linked you, cut at the question mark. When your browser names no such page, it sends the value of ref, referer, referrer, source or utm_source from the app’s address instead.',
+    text: 'Our counter runs Counterscale 3.4.1. Its script reports when the app starts, again each time the app adds an entry to your browser’s history, as it does when the view named in the address changes, and when you go back or forward. Each report carries the counter’s name for the site (Skymap), the app’s host name, the path of its address and a count of 1, 2 or 3 (see “No cookie”). Nothing after a # sign is sent, and what you look at in the app is written after the # sign. From the part after a question mark the script sends only the campaign labels a link may carry: utm_source, utm_medium, utm_campaign, utm_term and utm_content. It sends the address of the page that linked you, cut at the question mark. When your browser names no such page, it sends the value of ref, referer, referrer, source or utm_source from the app’s address instead.',
     source: `${COUNTER_SOURCE}/packages/tracker/src/lib/track.ts`,
     sourceLabel: 'the counter’s script at version 3.4.1, in the Counterscale repository',
     checked: CHECKED,
@@ -97,7 +97,7 @@ export const PRIVACY_FACTS: readonly Fact[] = [
   {
     id: 'privacy-thumbnails',
     about: 'app',
-    text: 'The app fetches small pictures of galaxies from two astronomy archives outside skymap: the Sloan Digital Sky Survey’s SkyServer (skyserver.sdss.org) and the CDS in Strasbourg (alasky.cds.unistra.fr). It does so in two cases, for a galaxy that has no photograph of its own in skymap. First, whenever such a galaxy is drawn about 24 pixels across or larger, the app asks SkyServer for a picture to lay over it, and asks the CDS if SkyServer sends none. How large a galaxy is drawn depends on the window, so this can happen as the app opens, before you have touched anything: in a window 900 pixels high one such request went to each archive, and in one 720 pixels high none did. A tour sends them as it passes galaxies. Second, when the card of such a galaxy is pinned, by a click, a search or a link, its picture comes from SkyServer for a galaxy of the Sloan catalogue and from the CDS for any other. Pointing at a galaxy sends nothing. Each request holds the galaxy’s sky coordinates, so the archive can tell which patch of sky was on your screen, and, as every request does, it reaches the archive with your IP address and your browser’s description of itself. The 81 named galaxies use photographs kept with skymap, and the app turns to an archive for one of them only if that file fails to load.',
+    text: 'The app fetches small pictures of galaxies from two astronomy archives outside Skymap: the Sloan Digital Sky Survey’s SkyServer (skyserver.sdss.org) and the CDS in Strasbourg (alasky.cds.unistra.fr). It does so in two cases, for a galaxy that has no photograph of its own in Skymap. First, whenever such a galaxy is drawn about 24 pixels across or larger, the app asks SkyServer for a picture to lay over it, and asks the CDS if SkyServer sends none. How large a galaxy is drawn depends on the window, so this can happen as the app opens, before you have touched anything: in a window 900 pixels high one such request went to each archive, and in one 720 pixels high none did. A tour sends them as it passes galaxies. Second, when the card of such a galaxy is pinned, by a click, a search or a link, its picture comes from SkyServer for a galaxy of the Sloan catalogue and from the CDS for any other. Pointing at a galaxy sends nothing. Each request holds the galaxy’s sky coordinates, so the archive can tell which patch of sky was on your screen, and, as every request does, it reaches the archive with your IP address and your browser’s description of itself. The 81 named galaxies use photographs kept with Skymap, and the app turns to an archive for one of them only if that file fails to load.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem.ts`,
     sourceLabel: `when the app fetches a galaxy’s picture, ${IN_REPO}`,
     checked: '2026-10-07',

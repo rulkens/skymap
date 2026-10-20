@@ -16,6 +16,7 @@ export function flowAssetRows(runtime: FlowRuntime): readonly AssetWiringRow[] {
       req: () => undefined,
       demand: (ctx) => ctx.settings.flow.enabled,
       priority: 81, // same rung as filaments, behind them by size
+      gates: 'flow',
     },
   ];
 }

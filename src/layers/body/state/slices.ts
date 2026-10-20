@@ -5,5 +5,6 @@
 
 import { bodiesSlice } from './bodies/slice';
 import { earthSlice } from './earth/slice';
+import { orbitTrailsSlice } from './orbitTrails/slice';
 
-export const bodyLayerSettings = [bodiesSlice, earthSlice] as const;
+export const bodyLayerSettings = [bodiesSlice, earthSlice, orbitTrailsSlice] as const;

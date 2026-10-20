@@ -72,6 +72,7 @@ function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
   return {
     id: 'test-planet',
     label: 'Test Planet',
+    resolvePx: 3,
     surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     albedo: [1, 1, 1],
     ...overrides,
@@ -647,7 +648,6 @@ describe('slabViewOf', () => {
         nowMs: 0,
         simDays: 0,
         focusBlend: 0,
-        visibleSourceMask: 0xffffffff,
         focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
         renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
         cursorTexPx: null,

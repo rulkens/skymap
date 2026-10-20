@@ -39,7 +39,6 @@ import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
-import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -51,7 +50,12 @@ import { selectTimeState, selectIsLiveTicking } from '../../../state/time/select
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
+import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
+import { selectPendingInput } from '../../../state/input/selectors';
+import { inputConsumed } from '../../../state/input/inputSlice';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
@@ -78,15 +82,10 @@ const LIVE_IDLE_TICK_MS = 500;
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // First statement, by contract: scene cues fired here (fade / show / hide /
-  // focus) are in the store before this frame derives masks, demand or the pose,
+  // focus) are in the store before this frame derives demand or the pose,
   // and a frameTween a cue dispatches is seen by this frame's basis.
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
-  // The masks are a per-frame projection of settings + fade opacity, never a
-  // hand-maintained mirror; demand itself reads settings directly. Sampled at
-  // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
-  // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
-  const masks = deriveSourceMasks(state, nowMs);
   reevaluateDemand(state);
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
@@ -106,8 +105,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The frame's ONE store snapshot. The camera step runs before
   // `deriveFrameContext` so a camera-only-ready frame still makes motion
   // progress before the missing-GPU early return.
-  const steps = state.subsystems.inputAggregator.drain();
   const stored = deps.cb.store.getState();
+  const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
+  const pending = selectPendingInput(stored);
+  const steps = pendingToInputSteps(pending, canvasPx);
 
   // The sim instant is derived BEFORE the step: the follow driver aims at where
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
@@ -125,7 +126,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     nowMs,
     simDays,
     rootState: stored,
-    canvasPx: [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1],
+    canvasPx,
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
@@ -137,6 +138,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // listener fired by a commit sees this frame's register, not last frame's.
   state.cameraRuntime = next;
   for (const action of actions) deps.cb.store.dispatch(action);
+  // Same task as the read above, so no source dispatch can land in between.
+  if (pending.length > 0) deps.cb.store.dispatch(inputConsumed());
   if (requestRender) state.subsystems.scheduler.requestRender();
 
   const upBasis = next.outputs.upBasis;
@@ -161,14 +164,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // The camera assembly + altitude line, shared with `pickFrameContext`:
-  // `nowMs`/`visibleSourceMask`/`poseBasis`/`upBasis`/`simDays` are the only
+  // `nowMs`/`poseBasis`/`upBasis`/`simDays` are the only
   // fields the two callers vary on purpose; everything else reads off `state`
   // identically — safe to call here because `state.cameraRuntime = next` above
   // already made `state`'s view of the runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
     worldPose,
     nowMs,
-    visibleSourceMask: masks.draw,
     poseBasis,
     upBasis,
     simDays,
@@ -229,6 +231,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   snapshot.focusBlend = focusUniforms.blend;
   snapshot.focus = focusUniforms;
+  snapshot.focusPickId = encodeSelectionPick(
+    state.selectionKindRows,
+    state.subsystems.structureFocus.lastFocusRef(),
+  );
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
@@ -308,6 +314,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       surfaceTiles.setLastCut(cut);
     }
   }
+  // A pull-back keeps the tile atlases (~324 MB) for a quick re-engage; past twice
+  // the body's texture load radius its globe map unloads too, and so do they.
+  const engagedTileBody = surfaceTiles?.engagedBodyId() ?? null;
+  if (engagedTileBody !== null) {
+    const body = sceneBodyStates(state, canvas).get(engagedTileBody);
+    if (
+      body !== undefined &&
+      pastTextureReleaseRadius(engagedTileBody, canvas.drawCamPos, body.positionMpc)
+    ) {
+      surfaceTiles!.release();
+    }
+  }
 
   // Outside the gate: `isAnimating()` is true while the manifest is in flight,
   // before the layer can engage — voting only on engaged frames would sleep
@@ -337,7 +355,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   });
 
   // After the submit as a latency choice only; it owns its own encoder with
-  // `loadOp: 'load'`. Hover picking is pointer-driven (hoverPickDriver).
+  // `loadOp: 'load'`. Hover and select picks run in `createPickDriver`.
   drawPickDebugOverlay(state, deps);
 
   // Render-on-demand. Tick the FadeRegistry BEFORE the predicate reads

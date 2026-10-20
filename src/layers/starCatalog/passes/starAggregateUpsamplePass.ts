@@ -15,11 +15,12 @@ import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { createUpsamplePass } from '../../../services/engine/frame/passes/createUpsamplePass';
 import { starCatalogVisible } from '../render/cut/starCatalogVisible';
 
-export function starAggregateUpsamplePass(runtime: StarCatalogRuntime): ContentPass {
-  return createUpsamplePass({
+export function starAggregateUpsamplePass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
+  return createUpsamplePass<'starCatalog'>({
     name: 'star-upsample',
     sourceTargetId: 'star-aggregates',
+    fade: 'starCatalog',
     handleOf: () => runtime.aggregateUpsample,
-    enabled: (state, ctx) => starCatalogVisible(runtime, state.settings.starCatalogs, ctx),
+    enabled: (_state, ctx, fade) => starCatalogVisible(runtime, fade, ctx),
   });
 }

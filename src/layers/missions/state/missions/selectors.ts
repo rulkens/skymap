@@ -9,11 +9,6 @@ export const selectRoute = createSelector(
   (settings): MissionsSettings => settings.missions,
 );
 
-export const selectMissionTrailsEnabled = createSelector(
-  [selectRoute],
-  (route: MissionsSettings): boolean => route.trails,
-);
-
 /** The selected sampled craft's id, or null for none. */
 export const selectMissionCraft = createSelector(
   [selectRoute],

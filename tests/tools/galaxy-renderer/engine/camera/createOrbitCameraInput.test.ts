@@ -5,7 +5,7 @@
  * before auto-rotate resumes, both halves of the auto-rotate toggle, the
  * exponential wheel and its clamp, and that damping converges rather than snaps.
  *
- * Vitest runs `node` here (no jsdom), so — matching `orbitControls.test.ts` —
+ * Vitest runs `node` here (no jsdom), so — matching `attachOrbitControls.test.ts` —
  * the canvas and `window` are hand-rolled EventTarget recorders.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

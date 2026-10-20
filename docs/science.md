@@ -21,13 +21,13 @@ One right-handed equatorial Cartesian frame for everything, axes on the ICRS (J2
 
 ### Survey bias
 
-Flux-limited surveys over-represent nearby galaxies, because faint ones are only detectable when close (the Malmquist bias). Five runtime-selectable correction modes respond to it ([biasMode.ts](../src/data/galaxyCatalog/biasMode.ts)):
+Flux-limited surveys over-represent nearby galaxies, because faint ones are only detectable when close (the Malmquist bias). Three runtime-selectable correction modes respond to it ([biasMode.ts](../src/data/galaxyCatalog/biasMode.ts)):
 
 - **None**: raw catalogue.
 - **Volume-limited**: only galaxies brighter than a threshold `M_lim` (default −19), a uniformly-detectable subsample.
-- **1/V_max**: dim each galaxy by its inverse maximum-detection volume ([Schmidt 1968](https://ui.adsabs.harvard.edu/abs/1968ApJ...151..393S/abstract)), as alpha instead of a discard.
-- **Schechter LF**: dim by the inverse expected number density from each survey's Schechter luminosity function.
-- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins ([computeAngularWeights.ts](../src/services/engine/bake/computeAngularWeights.ts)). Corrects footprint artifacts such as GLADE's pencil-beam jets.
+- **Angular re-weight** (default): per catalogue, weight each galaxy by median versus local density in HEALPix-cell × distance-shell bins. Corrects footprint artifacts such as GLADE's pencil-beam jets.
+
+The angular weight is computed when the catalogues are built ([computeAngularWeights.ts](../tools/catalog/bias/computeAngularWeights.ts)) for each tier file over that file's own galaxies, the sample the tier draws, and stored with every galaxy. The build also offers two luminosity weightings the published files do not use (`--bias-weight`): **1/V_max**, the inverse maximum-detection volume ([Schmidt 1968](https://ui.adsabs.harvard.edu/abs/1968ApJ...151..393S/abstract)), and **Schechter LF**, the inverse expected number density from each survey's Schechter luminosity function.
 
 Per-survey flux limits and Schechter parameters live in the source modules under [src/data/sources/](../src/data/sources/), with their literature origins noted there ([Blanton et al. 2003](https://arxiv.org/abs/astro-ph/0210215), [Kochanek et al. 2001](https://arxiv.org/abs/astro-ph/0011456), [Norberg et al. 2002](https://arxiv.org/abs/astro-ph/0111011)).
 
@@ -64,9 +64,9 @@ Three kinds of content share the scene; this section says which is which.
 
 ### Stars and the Sun
 
-- **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites. The cut runs on the GPU: a node is in the cut when its parent refines and it does not ([cut.wesl](../src/services/gpu/shaders/starCatalog/cut.wesl)).
+- **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites. The cut runs on the GPU: a node is in the cut when its parent refines and it does not ([cut.wesl](../src/services/gpu/shaders/octree/cut.wesl)).
 - **Photometry**: Pogson flux `10^(−0.4·M)` anchored at 10 pc, inverse-square dimming, and a camera-distance exposure ramp ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/utils/star/starExposureRamp.ts)).
-- **True-scale spheres**: past 4 px of apparent disc a star becomes an emissive sphere ([partitionStarsByResolution.ts](../src/services/engine/frame/partitionStarsByResolution.ts)); the Sun is simply the nearest such star, with the bloom threshold calibrated so its disc blooms.
+- **True-scale spheres**: past 4 px of apparent disc a star becomes an emissive sphere ([starResolvePx.ts](../src/data/bodies/starResolvePx.ts), applied in [partitionBodiesByPresentation.ts](../src/services/engine/frame/partitionBodiesByPresentation.ts)); the Sun is simply the nearest such star, with the bloom threshold calibrated so its disc blooms.
 - **Tint**: BP−RP through spectral-class anchors for points ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); a blackbody-locus polynomial in temperature for resolved spheres ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
 
 ### Milky Way

@@ -9,7 +9,7 @@ export function breadcrumbJsonLd(
   site: URL,
   trail: readonly { name: string; path: string }[],
 ): Record<string, unknown> {
-  const items = [{ name: 'skymap', path: '/' }, ...trail];
+  const items = [{ name: 'Skymap', path: '/' }, ...trail];
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

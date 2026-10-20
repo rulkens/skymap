@@ -1,0 +1,34 @@
+.root {
+  composes: grid from '../../styles/layout.module.css';
+  align-items: end;
+  row-gap: 1rem;
+  margin-bottom: 2.5rem;
+
+  & h2 {
+    max-width: 20ch;
+    margin: 0;
+  }
+}
+
+.lead p:last-child {
+  margin-bottom: 0;
+}
+
+/* The words start on the page's middle line, where a section in two columns starts its second. */
+@media (min-width: 901px) {
+  .root h2:not(:only-child),
+  .lead {
+    grid-column: span 6;
+    --cols: 6;
+  }
+}
+
+.narrow {
+  & h2 {
+    max-width: 12ch;
+  }
+
+  & .lead p {
+    max-width: var(--measure-lead);
+  }
+}

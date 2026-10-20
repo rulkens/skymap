@@ -1,7 +1,7 @@
 /**
  * galaxyCatalogPlanner — the galaxy catalog Layer's once-per-frame CPU
- * planning row: reconciles the alias index, the structure member counts and
- * the bias mode against the live settings, runs the hi-res famous-galaxy
+ * planning row: reconciles the alias index and the structure member counts
+ * against the live settings, runs the hi-res famous-galaxy
  * planner, then does the ONE catalog walk that feeds both disk planners
  * (procedural and textured). Once, not per view: the walk touches the whole
  * visible catalog, so it plans over the rig's views (anchor camera `views[0]`,
@@ -18,15 +18,15 @@ import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
-import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { structureMemberCount } from './present/structureMemberCount';
+import { sourceMaskOf } from './present/sourceMaskOf';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
-): Extract<FrameContentPlanner<void>, { scope: 'once' }> {
+): Extract<FrameContentPlanner<void, 'survey'>, { scope: 'once' }> {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.
@@ -41,27 +41,31 @@ export function galaxyCatalogPlanner(
   return {
     name: 'galaxy-catalog',
     scope: 'once',
-    plan(snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState) {
+    fade: 'survey',
+    plan(snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState, fade) {
       const pgcAliasCommitted = runtime.pgcAlias.committed();
       if (pgcAliasCommitted !== null && runtime.catalogsVersion !== aliasIndexVersion) {
         aliasIndexVersion = runtime.catalogsVersion;
         runtime.publish({
           aliasIndex: buildAliasIndex({
-            catalogs: runtime.catalogs,
+            records: runtime.records.values(),
             aliasMap: pgcAliasCommitted.value,
-            sources: [Source.Glade, Source.TwoMRS],
           }),
         });
       }
 
+      // Built from the handed value, so the counts, the hi-res famous gate and the
+      // disk walk keep a hidden catalog through its fade-out, as the point sprites do.
+      const sourceMask = sourceMaskOf(fade);
+
       const selectRow = state.selectionRows.select;
       if (
         selectRow !== memberCountRow ||
-        snapshot.visibleSourceMask !== memberCountMask ||
+        sourceMask !== memberCountMask ||
         runtime.catalogsVersion !== memberCountVersion
       ) {
         memberCountRow = selectRow;
-        memberCountMask = snapshot.visibleSourceMask;
+        memberCountMask = sourceMask;
         memberCountVersion = runtime.catalogsVersion;
         runtime.publish({
           // Narrowed on the row's own tag, never a structural sniff — only a
@@ -70,21 +74,9 @@ export function galaxyCatalogPlanner(
             selectRow !== null &&
             selectRow.type === 'structure' &&
             STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
-              ? structureMemberCount(
-                  selectRow,
-                  (source) => runtime.catalogs.get(source),
-                  snapshot.visibleSourceMask,
-                )
+              ? structureMemberCount(selectRow, runtime.records, sourceMask)
               : null,
         });
-      }
-
-      // Set FIRST, then bake: the bake is async and may reject into a warning, so
-      // a compare that waited for it would re-fire every frame for its duration.
-      const biasMode = state.settings.bias.mode;
-      if (biasMode !== runtime.biasLastApplied) {
-        runtime.biasLastApplied = biasMode;
-        void runtime.biasCorrection.setMode(biasMode);
       }
 
       // The once row's rig-wide anchor (mirrors `starCutInputs.ts`'s
@@ -103,7 +95,7 @@ export function galaxyCatalogPlanner(
         pair.subsystem.runFrame({
           cam,
           catalogs: runtime.catalogs,
-          visibleSourceMask: snapshot.visibleSourceMask,
+          sourceMask,
           pxPerRad,
           famousGalaxiesMeta: runtime.famousMeta,
         });
@@ -113,17 +105,14 @@ export function galaxyCatalogPlanner(
       // textured); each `beginFrame` returns the visitor the walk drives.
       const sharedInput = {
         cam,
-        catalogs: runtime.catalogs,
-        visibleSourceMask: snapshot.visibleSourceMask,
+        records: runtime.records,
+        sourceMask,
         pxPerRad,
         // Both LOD disk bodies fold this into their emitted alpha/brightness so a
         // hidden catalog's disks fade out with the point sprites instead of
-        // popping once `deriveSourceMasks` drops the source from the mask.
-        sourceOpacity: (source: SourceType) =>
-          state.subsystems.fades.opacityOf(
-            { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },
-            snapshot.nowMs,
-          ),
+        // popping once the fade ends and the mask drops the source. The handed
+        // value itself, clip included.
+        sourceOpacity: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
       };
       runtime.diskPlannerWalk.runFrame(
         sharedInput,

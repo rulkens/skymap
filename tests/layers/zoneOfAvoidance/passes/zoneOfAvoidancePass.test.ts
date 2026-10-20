@@ -1,18 +1,16 @@
 /**
  * zoneOfAvoidancePass — the reduced-res producer half of the band (the upsample
  * layer is the consumer). The executor owns the pass and the additive-identity
- * clear, so what is pinned here is the draw-arg contract and the `enabled` gate
- * tracking `deriveZoneOfAvoidanceLiveness`.
+ * clear, so what is pinned here is the draw-arg contract.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { zoneOfAvoidancePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidancePass';
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';
 
 const PASS_STUB = {
@@ -26,8 +24,7 @@ const PASS_STUB = {
 // here, mirroring the production table's scale: 5.
 const ZOA_SCALE = 5;
 
-/** Inside the visibility window: both bands saturate to 1 here. */
-const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
+const INSIDE_CAM_DIST = MILKY_WAY_RADIUS_MPC * 10;
 
 function makeCtx(
   over: {
@@ -64,14 +61,9 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-/** A live state: toggle opacity 1. */
 function liveState(): EngineState {
   return {
     settings: { zoneOfAvoidance: { color: [1, 1, 1], intensity: 1, edgeSharpness: 1 } },
-    subsystems: {
-      fades: { opacityOf: () => 1 },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
   } as unknown as EngineState;
 }
 
@@ -86,23 +78,6 @@ function makeRuntime(
   } as unknown as ZoneOfAvoidanceRuntime;
 }
 
-// `enabled` never reads `view` — an opaque stub satisfies the 3-arg signature.
-const VIEW_STUB = {} as unknown as SlabView;
-
-describe('zoneOfAvoidancePass.enabled', () => {
-  it('is enabled when the camera sits inside the visibility window', () => {
-    const pass = zoneOfAvoidancePass(makeRuntime());
-    expect(pass.enabled(liveState(), makeCtx(), VIEW_STUB)).toBe(true);
-  });
-
-  it('is disabled once the camera is past the recede band (Local Group framed up)', () => {
-    const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
-    const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    const pass = zoneOfAvoidancePass(makeRuntime());
-    expect(pass.enabled(liveState(), ctx, VIEW_STUB)).toBe(false);
-  });
-});
-
 describe('zoneOfAvoidancePass.draw', () => {
   it('draws with ctx.cam, the downsampled viewport, and the composed opacity', () => {
     const drawSpy = vi.fn();
@@ -110,7 +85,7 @@ describe('zoneOfAvoidancePass.draw', () => {
     const pass = zoneOfAvoidancePass(runtime);
     const state = liveState();
     const ctx = makeCtx();
-    pass.draw(PASS_STUB, {} as never, ctx, state);
+    pass.draw(PASS_STUB, {} as never, ctx, state, 0.5);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     // draw(pass, cam, viewport, tuning, shell, opacity)
@@ -120,27 +95,29 @@ describe('zoneOfAvoidancePass.draw', () => {
     expect(args[2]).toEqual([Math.floor(1280 / ZOA_SCALE), Math.floor(720 / ZOA_SCALE)]);
     expect(args[3]).toBe(state.settings.zoneOfAvoidance);
     expect(args[4]).toBe(ZONE_OF_AVOIDANCE_SHELL);
-    expect(args[5]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
+    expect(args[5]).toBeCloseTo(0.5, 6); // the handed value, inside the window
   });
 });
 
 describe('zoneOfAvoidancePass.drawPick', () => {
-  it('draws with ctx.cam, the FULL canvas viewport, and the composed opacity', () => {
+  it('draws with ctx.cam, the FULL canvas size, the view window, and the composed opacity', () => {
     const drawPickSpy = vi.fn();
     const runtime = makeRuntime({ drawPick: drawPickSpy });
     const pass = zoneOfAvoidancePass(runtime);
     const state = liveState();
     const ctx = makeCtx();
-    pass.drawPick!(PASS_STUB, {} as never, ctx, state);
+    const window = { originPx: [10, 20], sizePx: [1, 1] };
+    pass.drawPick!(PASS_STUB, { window } as never, ctx, state, 0.5);
     expect(drawPickSpy).toHaveBeenCalledTimes(1);
     const args = drawPickSpy.mock.calls[0]!;
-    // drawPick(pass, cam, viewport, tuning, shell, opacity)
+    // drawPick(pass, cam, canvasPx, window, tuning, shell, opacity)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
-    // Full-res viewport — NOT the 'zoa' target's downsampled one `draw` uses,
-    // because the pick pass rasterises at full canvas resolution.
+    // Full canvas — NOT the 'zoa' target's downsampled one `draw` uses: the
+    // pick rays are the canvas's, whatever window the target covers.
     expect(args[2]).toEqual([1280, 720]);
-    expect(args[3]).toBe(state.settings.zoneOfAvoidance);
-    expect(args[5]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
+    expect(args[3]).toBe(window);
+    expect(args[4]).toBe(state.settings.zoneOfAvoidance);
+    expect(args[6]).toBeCloseTo(0.5, 6); // the handed value, inside the window
   });
 });

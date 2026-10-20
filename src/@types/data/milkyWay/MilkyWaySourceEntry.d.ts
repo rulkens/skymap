@@ -4,7 +4,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * Milky-Way-typed row of the SOURCE_REGISTRY — the GPU-generated star/dust
  * point-cloud overlay drawn by `milkyWayCloudRenderer`.
  *
- * The row is label-bearing (bearsLabel:true, labelLayer:'milkyWay'), carrying
+ * The row is label-bearing (bearsLabel:true), carrying
  * the "You are here" label through the standard label machinery rather than a
  * bespoke marker path.
  *

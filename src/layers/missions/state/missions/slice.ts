@@ -1,4 +1,4 @@
-/** missions — the missions Layer's sampled-craft cluster: the trail overlay (independent of orbitTrails), the selected craft and the mission clock's speed. */
+/** missions — the missions Layer's sampled-craft cluster: the selected craft and the mission clock's speed. */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
@@ -10,9 +10,6 @@ export const missionsSlice = createSlice({
   reducerPath: 'missions',
   initialState,
   reducers: {
-    setMissionTrailsEnabled: (missions, action: PayloadAction<boolean>) => {
-      missions.trails = action.payload;
-    },
     // The exhibit timeline's craft switch; the takeover bracket restores it on exit.
     setMissionCraft: (missions, action: PayloadAction<string | null>) => {
       missions.craft = action.payload;
@@ -26,4 +23,4 @@ export const missionsSlice = createSlice({
   },
 });
 
-export const { setMissionTrailsEnabled, setMissionCraft, stepMissionSpeed } = missionsSlice.actions;
+export const { setMissionCraft, stepMissionSpeed } = missionsSlice.actions;

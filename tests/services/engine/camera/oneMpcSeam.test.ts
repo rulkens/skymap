@@ -73,7 +73,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/frame/visibleSlabBodies.ts',
   'src/services/gpu/renderers/bodies/planetRenderer.ts',
   'src/services/engine/camera/cameraDrivers.ts',
-  'src/services/camera/orbitControls.ts',
+  'src/services/camera/applyInputToCamera.ts',
   'src/utils/camera/computeViewProj.ts',
   'src/layers/galaxyCatalog/passes/galaxyPointSpritesPass.ts',
 ];

@@ -24,7 +24,6 @@ export const FAMOUS_STAR_ENTRY = {
   // NEAR0 slab rather than the COSMO one, which is a routing detail, not a
   // capability difference.
   bearsLabel: true,
-  labelLayer: 'starCatalog',
   bearsMarker: false,
   detailLabel: 'Famous Star',
   shortLabel: 'Star',
