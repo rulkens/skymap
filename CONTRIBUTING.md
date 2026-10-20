@@ -1,5 +1,8 @@
 # Contributing to skymap
 
+Thanks for your interest in skymap. This page is the way in: why the project exists, how
+to get running, and how changes land.
+
 ## Why this exists
 
 Skymap puts the measured universe in anyone's hands: students, teachers, planetarium
@@ -48,13 +51,17 @@ work on this repo. The ones that shape most reviews:
   earns its place by catching a real bug nothing else catches. A bug fix starts as a
   failing test.
 - **Comments explain why, never what** ([comments.md](docs/superpowers/conventions/comments.md)).
-- **One symbol per file** in `utils/` and `@types/`; `type` aliases, never `interface`;
-  no barrel files.
+- **Strict TypeScript** in `src` and `tools`, with no `any` you could avoid; `type`
+  aliases, never `interface`.
+- **One symbol per file** in `utils/` and `@types/`, and no barrel files.
 
 ## Making a change
 
-1. Check [docs/BACKLOG.md](docs/BACKLOG.md) and `docs/superpowers/plans/` so you build on
-   what exists. A substantial feature gets a written plan before code.
+1. Typo fixes, doc tweaks and small bug fixes can go straight to a PR. For anything bigger
+   (a feature, a refactor, a new dependency, a behaviour change), open an issue first so
+   we can agree the approach before code is written. Check
+   [docs/BACKLOG.md](docs/BACKLOG.md) and `docs/superpowers/plans/` so you build on what
+   exists; a substantial feature gets a written plan before code.
 2. Work on a branch and open a draft PR early.
 3. Before asking for review, run `npm run typecheck`, `npm run lint`, `npm test` and
    `npm run format`. CI runs the same checks (plus the website build) and is the gate.
