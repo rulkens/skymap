@@ -1,14 +1,12 @@
 /**
  * produceZoneOfAvoidanceLettering — the sole `Label3DProducer` today: the
- * curved "Zone of Avoidance" caption riding the galactic plane. Reads the
- * same `deriveZoneOfAvoidanceLiveness` gate the band pass reads, over its
- * label value, whose `of` keeps it from outliving the band. Both `LABEL_RADIUS_MPC`
+ * curved "Zone of Avoidance" caption riding the galactic plane. Its label value,
+ * whose `of` keeps it from outliving the band, is the lettering's opacity. Both `LABEL_RADIUS_MPC`
  * and `LABEL_EM_MPC` — visual-pass placeholders — live here.
  */
 
 import type { LayerWorldLabel } from '../../../@types/engine/layer/LayerWorldLabel';
 import type { Label3D } from '../../../@types/rendering/Label3D';
-import { deriveZoneOfAvoidanceLiveness } from './deriveZoneOfAvoidanceLiveness';
 import { GAL_X_EQ, GAL_Z_EQ } from '../../../data/orientation/orientationFrames';
 import { FONT_IDS } from '../../../data/fonts';
 import {
@@ -30,9 +28,8 @@ const LABEL_RADIUS_MPC = 40;
 const LABEL_EM_MPC = 2;
 
 export const produceZoneOfAvoidanceLettering: LayerWorldLabel<'zoneOfAvoidance'>['produceLabels3D'] =
-  (state, ctx, fade) => {
-    const fadeAlpha = deriveZoneOfAvoidanceLiveness(ctx, fade);
-    if (fadeAlpha === null) return { labels: [], awake: false };
+  (state, _ctx, fade) => {
+    if (fade <= 0) return { labels: [], awake: false };
 
     const tuning = state.settings.zoneOfAvoidance;
     const label: Label3D = {
@@ -49,7 +46,7 @@ export const produceZoneOfAvoidanceLettering: LayerWorldLabel<'zoneOfAvoidance'>
       emMpc: LABEL_EM_MPC,
       repeatCount: ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
       color: [tuning.labelColor[0], tuning.labelColor[1], tuning.labelColor[2], 1],
-      fadeAlpha,
+      fadeAlpha: fade,
     };
     return { labels: [label], awake: false };
   };

@@ -1,6 +1,6 @@
 /**
- * galaxyPointSpritesPass — the selection packing, the deep-zoom survey fade
- * (and the famous catalog's exemption from it) and the SlabView threading, all
+ * galaxyPointSpritesPass — the selection packing, the handed per-catalog value
+ * and the SlabView threading, all
  * against stub state + ctx with no GPU device.
  */
 
@@ -165,70 +165,20 @@ describe('galaxyPointSpritesPass.draw', () => {
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
 
-  it('multiplies the deep-zoom survey fade into fadeOpacityOf', () => {
-    // The whole point cloud recedes on descent into the solar system: the
-    // handed per-source value (1) is multiplied by the
-    // surveyDeepZoom band, keyed on the camera's distance from the
-    // heliocentric origin. The default fixture camera sits 5 Mpc out — far
-    // outside the band — so the callback must return the handed value
-    // unchanged; a camera mid-band must scale it to a strict fraction.
-    const far = makeStateWithRenderer();
-    const farCtx = makeCtx();
-    galaxyPointSpritesPass(far.runtime).draw(
-      PASS_STUB,
-      slabViewOf(farCtx, COSMO),
-      farCtx,
-      far.state,
-      FULL,
-    );
-    const farSettings = far.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
-    expect(farFadeOf(Source.SDSS)).toBe(1);
-
-    // Mid-band: 0.005 Mpc from origin sits strictly between the band's goneAt
-    // (0.002) and fullAt (FOREGROUND_MAX_DISTANCE_MPC ≈ 0.0103), so the fade
-    // factor must be a strict fraction — proving the multiply, not just the
-    // fully-faded skip below.
-    const mid = makeStateWithRenderer();
-    const midCtx = makeCtx({
-      drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
-    });
-    galaxyPointSpritesPass(mid.runtime).draw(
-      PASS_STUB,
-      slabViewOf(midCtx, COSMO),
-      midCtx,
-      mid.state,
-      FULL,
-    );
-    const midSettings = mid.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
-    const midFade = midFadeOf(Source.SDSS);
-    expect(midFade).toBeGreaterThan(0);
-    expect(midFade).toBeLessThan(1);
-  });
-
-  it('exempts the famous catalog from the survey fade at deep zoom', () => {
-    // Inside the band's goneAt edge the survey sources resolve to 0 (the
-    // renderer's per-source loop then skips them), but the famous catalog
-    // keeps its handed value — its curated galaxies stay visible
-    // inside the Milky Way and near Earth as reference points. The pass
-    // still calls renderer.draw: famous may be loaded.
+  it('hands the per-catalog value to fadeOpacityOf unchanged', () => {
     const { state, runtime, drawSpy } = makeStateWithRenderer();
-    const deepCtx = makeCtx({
-      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
-    });
+    const ctx = makeCtx();
     galaxyPointSpritesPass(runtime).draw(
       PASS_STUB,
-      slabViewOf(deepCtx, COSMO),
-      deepCtx,
+      slabViewOf(ctx, COSMO),
+      ctx,
       state,
-      FULL,
+      makeGalaxyCatalogFade({ sdss: 0.5, famousGalaxy: 0.25 }),
     );
-    const deepSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
-    expect(deepFadeOf(Source.SDSS)).toBe(0);
-    // The handed value is 1 — famous must pass it through untouched.
-    expect(deepFadeOf(Source.FamousGalaxy)).toBe(1);
+    const settings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
+    const fadeOf = settings.fadeOpacityOf as (source: number) => number;
+    expect(fadeOf(Source.SDSS)).toBe(0.5);
+    expect(fadeOf(Source.FamousGalaxy)).toBe(0.25);
   });
 
   it('threads view.vp / view.viewportPx / view.camPos to renderer.draw', () => {
@@ -269,30 +219,5 @@ describe('galaxyPointSpritesPass.drawPick', () => {
     );
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
     expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS]);
-  });
-
-  it('drops band-faded survey sources from the pick, famous exempt, but still calls drawPoints', () => {
-    // Invisible → unpickable: inside the surveyDeepZoom goneAt edge a survey
-    // source's band-multiplied opacity is exactly 0, so it must stop claiming
-    // hits. Famous rides its exemption (still pickable). drawPoints is called
-    // regardless — its @group(0) pick-camera bind is the prefix contract the
-    // ring / disk / Milky-Way pick pipelines depend on.
-    const loaded = [Source.SDSS, Source.FamousGalaxy].map((source) => ({
-      source,
-      vertexBuffer: {} as GPUBuffer,
-      count: 1,
-      sourceBuffer: {} as GPUBuffer,
-    }));
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
-    });
-    const view = slabViewOf(ctx, COSMO);
-    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
-
-    galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state, FULL);
-
-    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
-    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
-    expect(passedSources.map((s) => s.source)).toEqual([Source.FamousGalaxy]);
   });
 });

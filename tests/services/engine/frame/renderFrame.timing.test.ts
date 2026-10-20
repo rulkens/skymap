@@ -35,10 +35,8 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
@@ -300,6 +298,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const snapshotFields = {
     isReady: true as const,
     slabBodyCandidates: [],
+    bodyStates: new Map(),
     nowMs: 0,
     // The handed value's recession factor lerps on this; production seeds it
     // to 0 in frameContext, and an absent one yields NaN alphas here.
