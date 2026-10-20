@@ -1,8 +1,6 @@
-import type { SourceType } from '../data/SourceType';
-import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyRecordSource } from '../data/galaxyCatalog/GalaxyRecordSource';
 
 export type BuildAliasIndexInput = {
-  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
+  records: Iterable<GalaxyRecordSource>;
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
-  sources: readonly SourceType[];
 };

@@ -18,6 +18,8 @@ import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/
 import { bodySelectionRow } from '../../../../src/services/engine/selection/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
@@ -58,8 +60,9 @@ describe('SelectionKindRow.encodePick', () => {
         star,
       ),
     ).toEqual(star);
-    const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12345 } as const;
-    const row = galaxyCatalogSelectionRow({ catalogs: new Map(), famousMeta: [] });
+    const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12 } as const;
+    const catalogs = new Map([[Source.SDSS, makeGalaxyCatalog(16)]]);
+    const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs, famousMeta: [] }));
     expect(roundTrip(row, galaxy)).toEqual(galaxy);
   });
 

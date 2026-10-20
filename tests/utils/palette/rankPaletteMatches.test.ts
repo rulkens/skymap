@@ -25,8 +25,8 @@ const COMA: StructureSearchEntry = {
   featured: true,
 };
 
-function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
-  return { pgc: localIdx, names, source: Source.Glade, localIdx };
+function alias(names: readonly string[], pgc: number): AliasIndexEntry {
+  return { pgc, names, source: Source.Glade };
 }
 
 function structure(name: string, abell: string | null, idx: number): StructureSearchEntry {

@@ -233,3 +233,26 @@ Only `AngularReweight` ships (the default; the mode is not persisted, not in the
 2. SDSS, 2MRS, DESI, Milliquas stay on SKMP in this slice; unification is revisited when REGALADE's replace-vs-add is ruled, since that changes what the flat family holds.
 3. `GLADE_ENTRY.mLim` (18, apparent) and `OctreeStratify.mLim` (absolute, resolves at `refUnit`) share a name and differ in meaning — the galaxy row needs its own stratify triple.
 4. Production: `galaxy-catalog/v9/*.bin` is `cf-cache-status: DYNAMIC` while `star-catalog/v2` is `HIT`; the galaxy octree wants the star family's cache rule.
+
+### Ruled 2026-10-14 (worktree `glade-octree`)
+
+1. **Weight scope: whole catalog.** The octree conserves flux through its blobs, so every view draws the whole catalog, as the large tier does today (where full-set and per-tier weights agree within 0.9%). The user is unsure the weight is needed at all on the octree: the spec keeps "None" in the dropdown and the A/B compares None against Angular before the column is treated as permanent.
+2. **Straight to chunked streaming.** Stage A (whole-file GPU cut) is skipped; the chunk emitter, `SlotPool` and the tile-stream subsystem already exist from #885.
+3. **Blob look: plain brighter billboard first**, the same draw as an own record; disc splats only if the A/B shows the need.
+4. **SDSS, 2MRS, DESI and Milliquas stay on SKMP** in this slice.
+
+Decided without an ask: the galaxy family gets its own stratify triple (open item 3 above), and the galaxy octree joins the star family's cache rule (open item 4).
+
+### Refactor-ground checkpoint (2026-10-16)
+
+19 touchpoints would be special cases today: 12 GLADE consumers index the flat `GalaxyCatalog` array (pick, highlight, `extractRow`, `resolvePgc`, alias index, `resolvePos`, disk walk, structure membership and count, `magOffset`/`medianAbsMag`, provenance count, source counts), and 7 star-only spots sit in the shared octree code (types, `octreeFormat.ts` constants and the parsec grid at 9 sites, chunk stream/pool guards, the ordinal mapping inside the star renderer, four deploy spots, aggregate dispatch, the vertex-stage body). Corrections to the list above: `src/data/octree/` is not star-free, the R2 sync needs edits, and about 35 companion types rename beyond the listed ones.
+
+Rulings:
+1. **Per-source record contract, two pipelines.** Consumers move onto a `GalaxyRecordSource` contract; the flat catalogs implement it first (prep), the GLADE octree second (feature). Decoding the flat files into the pooled record (one path) stays a later option.
+2. **Render + info objects** (the greenfield shape, against the recommendation): each chunk ships a render object (GPU columns) and an info object (ids, redshift, band magnitudes, mass) fetched only when a record is picked or focused.
+3. Shape approved: seven prep commits (rename to `Octree<C>`; family table for prefix, schema and grid unit; injected chunk stream and extracted ordinal mapping; one octree-catalog list for deploy; aggregate rule table; galaxy record contract over the flat path; galaxy vertex body as a library function).
+4. **Prep lands as one separate PR** before the feature PR.
+
+Ruled 2026-10-16 (later): **GLADE first, REGALADE next.** Both GLADE versions stay loadable, so they can be compared in
+the app and the mcpm workbench keeps working: GLADE's row keeps its tier files and gains an octree member, and a per-source
+galaxy catalog format setting (`'skmp' | 'octree'`, shown on rows that ship both) picks which one loads. A licence ask to the REGALADE authors is drafted (outreach emails, gitignored).

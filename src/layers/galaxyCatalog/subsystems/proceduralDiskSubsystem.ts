@@ -39,6 +39,7 @@ import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tile
 import type { SlotStore } from '../../../@types/cache/SlotStore';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
 import type { ProceduralDiskFrameOutput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
@@ -77,37 +78,46 @@ export function createProceduralDiskSubsystem(
     const { sbScale, sbMax, brightness } = input;
     const proceduralDisks: ProceduralDiskInstance[] = [];
 
-    // Hoisted per source by beginSource so onRow does no map lookup — the
-    // walk guarantees beginSource precedes every onRow for that source.
+    // Hoisted per block by beginBlock so onRow does no map lookup — the
+    // walk guarantees beginBlock precedes every onRow of that block.
     let stickyProcDisks: Map<number, ProceduralDiskInstance> = new Map();
     // The source's live survey-fade opacity, sampled ONCE per source (mirrors
     // texturedDiskSubsystem) so a hidden catalog's procedural disks fade out
     // with its point sprites instead of staying fully bright.
     let sourceOpacity = 1;
+    // The source's surface-brightness zero-point and the block's ordinal base,
+    // hoisted with the sticky map.
+    let record: GalaxyRecordSource | undefined;
+    let medianAbsMag = 0;
+    let ordinalBase = 0;
 
     const visitor: DiskRowVisitor = {
       onSourceHidden(source) {
         stickyFor(source).clear();
       },
 
-      beginSource(source, safeStart, end) {
+      beginBlock(source, windowStart, windowEnd, blockOrdinalBase) {
         stickyProcDisks = stickyFor(source);
         sourceOpacity = input.sourceOpacity(source);
+        record = input.records.get(source)!;
+        medianAbsMag = record.stats.medianAbsMag;
+        ordinalBase = blockOrdinalBase;
         // Purge sticky entries inside the current stride window — the
-        // row visits are authoritative for those indices.
-        purgeStrideWindow(stickyProcDisks, safeStart, end);
+        // row visits are authoritative for those ordinals.
+        purgeStrideWindow(stickyProcDisks, windowStart, windowEnd);
       },
 
-      onRow(source, catalog, i, x, y, z, _camDist, px) {
+      onRow(source, block, i, x, y, z, _camDist, px) {
         // The LOD-1 gate: below the fade start the point sprite carries and
         // the disk is skipped.  The walk applies no px gate — this threshold
         // is the body's own policy.
         if (px <= PROCEDURAL_DISK_FADE_START_PX) return;
 
-        const dKpcRow = catalog.diameterKpc[i]!;
+        const ordinal = ordinalBase + i;
+        const dKpcRow = block.diameterKpc[i]!;
         const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
-        const ar = catalog.axisRatio[i]!;
-        const pa = catalog.positionAngleDeg[i]!;
+        const ar = block.axisRatio[i]!;
+        const pa = block.positionAngleDeg[i]!;
 
         // Distance from origin (NOT from camera) — K-correction uses
         // cosmological redshift z = d / Hubble distance, which is a
@@ -115,11 +125,11 @@ export function createProceduralDiskSubsystem(
         const dMpcFromOrigin = Math.hypot(x, y, z);
         const colourIndex = pickColourIndex(
           source,
-          catalog.magU[i]!,
-          catalog.magG[i]!,
-          catalog.magR[i]!,
-          catalog.magI[i]!,
-          catalog.magZ[i]!,
+          block.magU[i]!,
+          block.magG[i]!,
+          block.magR[i]!,
+          block.magI[i]!,
+          block.magZ[i]!,
           dMpcFromOrigin,
         );
 
@@ -128,15 +138,18 @@ export function createProceduralDiskSubsystem(
         // per-catalog `medianAbsMag`), pre-scaled by the live sliders, so
         // the point -> disk crossfade holds constant brightness and
         // intrinsically bright galaxies bloom in the disk view too.
-        const medianAbsMag = catalog.medianAbsMag ?? -20.5;
-        const absMag = absoluteFromApparent(catalog.magG[i]!, dMpcFromOrigin);
+        const absMag = absoluteFromApparent(block.magG[i]!, dMpcFromOrigin);
         const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
         const regEntry = SOURCE_REGISTRY[source];
         const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
-        // sourceOpacity is the survey-fade term (see beginSource above) — folded
+        // sourceOpacity is the survey-fade term (see beginBlock above) — folded
         // in here because sbAmp is the sole brightness/alpha multiplier the
         // fragment shader reads (proceduralDisks/fragment.wesl's `intensity`).
         const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness * sourceOpacity;
+        // The pick word carries where the record sits in the drawn buffer, not
+        // its ordinal; a record with no drawn point has no pick identity.
+        const pick = record?.pickOfOrdinal(ordinal) ?? null;
+        if (pick === null) return;
 
         const emitted = maybeEmitProceduralDisk(
           px,
@@ -151,7 +164,7 @@ export function createProceduralDiskSubsystem(
           PROCEDURAL_DISK_FADE_START_PX,
           PROCEDURAL_DISK_FADE_END_PX,
           source,
-          i,
+          pick,
         );
         if (emitted) {
           // Famous-WebP crossfade-OUT: once a famous galaxy's curated WebP
@@ -171,7 +184,7 @@ export function createProceduralDiskSubsystem(
               final = { ...emitted, procFadeOut: 1 - fadeIn };
             }
           }
-          stickyProcDisks.set(i, final);
+          stickyProcDisks.set(ordinal, final);
         }
       },
 

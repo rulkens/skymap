@@ -82,13 +82,13 @@ describe('selectionToFocusId', () => {
     );
   });
 
-  it('falls back to pos@ra,dec rounded to 4 decimals when objID is 0n', () => {
+  it('falls back to pos@ra,dec,dMpc (4 and 2 decimals) when objID is 0n', () => {
     const info = baseInfo({
       source: Source.TwoMRS,
       objID: 0n,
       ra: 10.1234567,
       dec: -5.4567,
     });
-    expect(selectionToFocusId(info)).toBe('pos@10.1235,-5.4567');
+    expect(selectionToFocusId(info)).toBe('pos@10.1235,-5.4567,40.00');
   });
 });

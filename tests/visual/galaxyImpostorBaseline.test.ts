@@ -27,6 +27,7 @@ import { createDiskPlannerWalk } from '../../src/layers/galaxyCatalog/subsystems
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import { makeGalaxyCatalog } from '../fixtures/makeGalaxyCatalog';
+import { galaxyRecordsOver } from '../support/galaxyRecordsOver';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -62,6 +63,8 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: fill(0.7),
     positionAngleDeg: fill(45),
     diameterKpc: fill(50),
+    // The decoder always sets it; the disks read it from the record source's stats.
+    medianAbsMag: -20.5,
   });
 }
 
@@ -122,7 +125,7 @@ describe('galaxy-impostor visual baseline', () => {
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
 
       const cam = makeCam();
-      const catalogs = new Map([[Source.SDSS, makeCloud(8)]]);
+      const records = galaxyRecordsOver(new Map([[Source.SDSS, makeCloud(8)]]));
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
       // One shared walk drives both bodies per frame — the same call the engine
@@ -131,7 +134,7 @@ describe('galaxy-impostor visual baseline', () => {
       const driveFrame = (nowMs: number): void => {
         const sharedInput = {
           cam,
-          catalogs,
+          records,
           sourceMask: 0xffffffff,
           pxPerRad,
           // Live surface-brightness sliders — arbitrary plausible defaults;
