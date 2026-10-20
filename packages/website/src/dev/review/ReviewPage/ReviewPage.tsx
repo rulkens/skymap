@@ -72,7 +72,9 @@ function ReviewPage({ article, url, first, job }: ReviewPageProps) {
   const marking = useDevOverlayMode() === 'marks';
   const { review, change, adopt, saveFlag } = useReviewFile(url, first);
   const [hiding, setHiding] = useState(() => recall(HIDE_KEY) === '1');
-  const [marksShown, setMarksShown] = useState(false);
+  // Marks mode is for reading the marks, so they show there; M still toggles them in either mode.
+  const [marksShown, setMarksShown] = useState(marking);
+  useEffect(() => setMarksShown(marking), [marking]);
   const [help, setHelp] = useState<{ focus: boolean } | null>(null);
   const [open, setOpen] = useState<ReviewOpen | null>(null);
   const [reveal, setReveal] = useState<ReviewReveal>();
