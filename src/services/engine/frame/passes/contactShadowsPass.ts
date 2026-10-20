@@ -3,7 +3,7 @@
  * as a box decal onto whatever the row's depth holds (the terrain). It reads
  * the depth its step declared (`view.sampledDepth`), and only when its OWN row
  * wrote it — a `{ sample }` step's passes never see a stranger's terrain.
- * Poses as in `meshBodiesPass`.
+ * Poses as in `drawMeshBodiesOnRow`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -12,6 +12,7 @@ import { composeContactDecalMatrices } from '../../../../utils/camera/composeCon
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packContactShadowUniforms } from '../../../../utils/gpu/packContactShadowUniforms';
 import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
+import { bodySlabRosterIds } from '../bodySlabRosterIds';
 import { drawableMeshBodies } from '../drawableMeshBodies';
 import { sceneBodyStates } from '../sceneBodyStates';
 
@@ -25,7 +26,8 @@ export const contactShadowsPass: ContentPass = {
   enabled(state, ctx, view) {
     if (view.sampledDepth?.row !== view.slab) return false;
     if (view.slab.frame.kind !== 'body-m') return false;
-    return drawableMeshBodies(state, ctx, view.slab.frame.hostId).some(
+    const roster = bodySlabRosterIds(ctx.snapshot.meshBodies);
+    return drawableMeshBodies(state, ctx, view.slab.frame.hostId, roster).some(
       (body) => MESH_ASSETS[body.meshKey]?.contactDecal !== undefined,
     );
   },
@@ -41,7 +43,8 @@ export const contactShadowsPass: ContentPass = {
     if (hostPose === null) return;
     const depthView = view.sampledDepth!.view;
 
-    for (const body of drawableMeshBodies(state, ctx, hostId)) {
+    const roster = bodySlabRosterIds(ctx.snapshot.meshBodies);
+    for (const body of drawableMeshBodies(state, ctx, hostId, roster)) {
       const decal = MESH_ASSETS[body.meshKey]?.contactDecal;
       if (decal === undefined) continue;
       const { posM, rotM } = bodyStateInHostFrame(bodyStates.get(body.id)!, hostState);

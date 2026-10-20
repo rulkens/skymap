@@ -235,7 +235,7 @@ pulling its near plane in. No other test reaches `near0SphereBodies`.
 **Done:** the `bodyGlintsPass`, `scheduleProbeCapture` and `produceMissionCaptions` suites pass unchanged;
 `grep -rn coreSceneBodyIds src` returns only `coreSceneBodyPartition.ts`'s comment.
 
-- [ ] Task 3
+- [x] Task 3
 
 ### Task 4: missions draws its craft; core's roster narrows
 
