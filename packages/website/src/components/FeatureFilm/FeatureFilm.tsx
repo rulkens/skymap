@@ -1,7 +1,8 @@
 /*
  * FeatureFilm — a loop of the loop manifest on the Features page, in a small disc or, `wide`, a 16:9
- * frame. It plays while half of it is on screen and stops when it leaves. A visitor who asked for less
- * motion or less data gets the still only.
+ * frame. It plays while half of it is on screen and stops when it leaves; a button over its middle,
+ * shown on hover or focus, stops and starts it. A visitor who asked for less motion or less data gets
+ * the still, and nothing moves until they press play. Without script there is no film, so no button.
  */
 import { useEffect, useRef, useState } from 'react';
 
@@ -10,11 +11,13 @@ import { cx } from '../../utils/cx.ts';
 import { lessWanted } from '../../utils/lessWanted.ts';
 import { loopUrl } from '../../utils/loopUrl.ts';
 import DiscFilm from '../DiscFilm/DiscFilm.tsx';
+import Icon from '../Icon/Icon.tsx';
 import styles from './FeatureFilm.module.css';
 
 type FeatureFilmProps = { film: string; sizes: string; wide?: boolean };
 
 function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
+  const [ready, setReady] = useState(false);
   const [wanted, setWanted] = useState(false);
   const [seen, setSeen] = useState(false);
   const screen = useRef<HTMLSpanElement>(null);
@@ -22,6 +25,7 @@ function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
   useEffect(() => {
     const less = lessWanted();
     setWanted(!(less.data || less.motion));
+    setReady(true);
     const watch = new IntersectionObserver(([entry]) => setSeen(entry!.isIntersecting), {
       threshold: 0.5,
     });
@@ -41,7 +45,18 @@ function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
         playing={wanted && seen}
         screenRef={screen}
         wide={wide}
-      />
+      >
+        {ready && (
+          <button
+            className={styles.button}
+            type="button"
+            aria-label={wanted ? 'Pause film' : 'Play film'}
+            onClick={() => setWanted(!wanted)}
+          >
+            <Icon name={wanted ? 'pause' : 'play'} />
+          </button>
+        )}
+      </DiscFilm>
     </div>
   );
 }

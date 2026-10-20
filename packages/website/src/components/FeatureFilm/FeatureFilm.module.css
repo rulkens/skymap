@@ -16,3 +16,33 @@
     padding: 0;
   }
 }
+
+/* Over the middle of the film, on a dark disc so the drawing reads over any frame. */
+.button {
+  composes: glyph-ring from '../../styles/ring.module.css';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.film:hover .button,
+.button:focus-visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}
