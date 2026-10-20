@@ -16,6 +16,8 @@ import mathutils.bvhtree
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 ATLAS_PX = 2048
+# A shape model's normal atlas carries the relief the decimated copy lost.
+RELIEF_ATLAS_PX = 4096
 
 EMISSION_COLOUR = "Emission Color"
 EMISSION_STRENGTH = "Emission Strength"
@@ -100,12 +102,11 @@ BAKE_PASSES = [
 ]
 
 
-def source(key, relief=False, atlas_px=ATLAS_PX, triangles=None):
+def source(key, relief=False, triangles=None):
     """`relief`: a shape model. The full-resolution surface is kept as the bake SOURCE
     and every row bakes selected-to-active onto a decimated copy, so the normal atlas
     carries the relief the decimation removed (see `bake_relief`). `triangles` caps
-    the copy below the budget: at 150k Phobos' atlas still carries 0.3 deg median
-    (p99 2.9 deg) of relief, about half of it gone again by 600k, at 4x the .mesh."""
+    the copy below the budget (measured: data/raw/meshes/phobos/README.md)."""
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
@@ -113,7 +114,7 @@ def source(key, relief=False, atlas_px=ATLAS_PX, triangles=None):
         "src": os.path.join(d, "%s.blend" % key),
         "out": os.path.join(d, "%s.prebaked.glb" % key),
         "relief": relief,
-        "atlas_px": atlas_px,
+        "atlas_px": RELIEF_ATLAS_PX if relief else ATLAS_PX,
         "triangles": triangles,
     }
 
@@ -124,8 +125,8 @@ def atlas_path(cfg, name):
 
 SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance"), source("curiosity"),
                                  source("mer"), source("hubble"), source("petunias"),
-                                 source("phobos", relief=True, atlas_px=4096, triangles=150000),
-                                 source("deimos", relief=True, atlas_px=4096)]}
+                                 source("phobos", relief=True, triangles=150000),
+                                 source("deimos", relief=True)]}
 
 # A natural body has no crevice-scale occlusion the runtime lacks, and an AO bake
 # from a selected-to-active source would darken by the CAGE, not the surface.
