@@ -111,7 +111,9 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree {
 
   const records = n + blobs;
   const builders = schema.map((c) => {
-    const rule = AGGREGATE_RULES[COLUMN_AGGREGATE[c.id]];
+    const kind = COLUMN_AGGREGATE[c.id];
+    if (kind === undefined) throw new Error(`column '${c.id}' has no aggregate rule`);
+    const rule = AGGREGATE_RULES[kind];
     const source = rule.input === 'column' ? columns.get(c.id) : undefined;
     if (rule.input === 'column' && source === undefined) {
       throw new Error(`column '${c.id}' has no input values`);

@@ -2,6 +2,7 @@ import type { ColumnStore } from '../../@types/octree/ColumnStore';
 import type { OctreeChunkRef } from '../../@types/octree/OctreeChunkRef';
 export const OCTREE_INDEX_MAGIC = 'SKOI';
 export const OCTREE_CHUNK_MAGIC = 'SKOC';
+export const OCTREE_INFO_MAGIC = 'SKOF';
 export const OCTREE_VERSION = 1;
 export const OCTREE_VERSION_OFFSET = 4;
 export const OCTREE_HEADER_BYTES_OFFSET = 6;
@@ -30,6 +31,7 @@ export const COLUMN_STORE_BYTES: Readonly<Record<ColumnStore, number>> = {
   u32: 4,
   i8: 1,
   u16x3: 6,
+  u64: 8,
 };
 export const U16X3_Y_BYTE_OFFSET = 2;
 export const U16X3_Z_BYTE_OFFSET = 4;

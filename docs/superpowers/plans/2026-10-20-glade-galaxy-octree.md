@@ -128,7 +128,7 @@ angle as a vector, halved back, in `[0, 180)`) and `'none'` (the blob value is 0
 - `src/data/octree/galaxyOctreeFamily.ts` (create), `decodeOctreeBody.ts`, `readOctreeHeader.ts`
 - `src/data/octree/decodeOctreeInfo.ts` (create)
 - `tools/@types/octree/OctreeRawColumn.d.ts`, `tools/octree/encodeOctreeObject.ts`, `tools/octree/writeOctreeCatalog.ts`
-- `tools/octree/columnAggregate.ts`
+- `tools/octree/columnAggregate.ts`, `tools/octree/stratifyOctree.ts` (a schema column with no rule throws), `tools/octree/quantiseColumn.ts` (create: extracted from `writeOctreeCatalog`, shared with the info writer)
 - `tests/data/octree/octreeFormat.test.ts`
 
 Contract:
@@ -174,13 +174,13 @@ Info schema (written by Task 3/4, read by Task 11): `objId u64`, `specZ f32`, `l
 `COLUMN_AGGREGATE` (`columnAggregate.ts:6`) becomes keyed by render ids only (it is read only for schema columns):
 `axisRatio`, `colourIndex`, `logSize`, `angularWeight` → `fluxWeightedMean`; `pa` → `axialFluxMean`; `flags` → `none`.
 
-- [ ] Test `u64 round-trips 2^53 + 1 exactly through encode and decode`.
-- [ ] Test `an SKOF object round-trips its own columns, NaN f16 included`.
-- [ ] Test `a galaxy index decodes with chunkDirectory, pgcShards and namedPgcs; a star index decodes without them`.
-- [ ] Test `decodeOctreeInfo throws naming the missing required column`.
-- [ ] Test `quantising log10 w with the angularWeight schema equals encodeAngularWeight(w)` over `w` in
+- [x] Test `u64 round-trips 2^53 + 1 exactly through encode and decode`.
+- [x] Test `an SKOF object round-trips its own columns, NaN f16 included`.
+- [x] Test `a galaxy index decodes with chunkDirectory, pgcShards and namedPgcs; a star index decodes without them`.
+- [x] Test `decodeOctreeInfo throws naming the missing required column`.
+- [x] Test `quantising log10 w with the angularWeight schema equals encodeAngularWeight(w)` over `w` in
       `{0.1, 1, 3.7, 10}`.
-- [ ] Star digest test unchanged. Commit.
+- [x] Star digest test unchanged. Commit.
 
 ### Task 3: record permutation, info objects and pair hashes in the shared bake — `review: yes`
 

@@ -86,6 +86,11 @@ function readColumn(dv: DataView, at: number, n: number, c: ColumnSchema): Octre
       }
       return out;
     }
+    case 'u64': {
+      const out = new BigUint64Array(n);
+      for (let i = 0; i < n; i++) out[i] = dv.getBigUint64(at + i * stride, true);
+      return out;
+    }
     case 'f32':
     case 'f16': {
       const out = new Float32Array(n);

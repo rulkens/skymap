@@ -2,6 +2,7 @@ import type { ColumnId } from '../../src/@types/octree/ColumnId';
 import type { ColumnSchema } from '../../src/@types/octree/ColumnSchema';
 import type { OctreeChunkHeader } from '../../src/@types/octree/OctreeChunkHeader';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
+import type { OctreeInfoHeader } from '../../src/@types/octree/OctreeInfoHeader';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import type { OctreeRawColumn } from '../@types/octree/OctreeRawColumn';
 import { roundUpToMultiple } from '../../src/utils/math/roundUpToMultiple';
@@ -18,6 +19,7 @@ import {
   OCTREE_CHUNK_MAGIC,
   OCTREE_HEADER_BYTES_OFFSET,
   OCTREE_INDEX_MAGIC,
+  OCTREE_INFO_MAGIC,
   OCTREE_JSON_OFFSET,
   OCTREE_JSON_PAD_BYTE,
   OCTREE_NODE_BYTES,
@@ -28,15 +30,32 @@ import {
   U16X3_Z_BYTE_OFFSET,
 } from '../../src/data/octree/octreeFormat';
 
-/** Frames one index or chunk object; `raw` holds one already-quantised array per schema column. */
+const MAGIC = { index: OCTREE_INDEX_MAGIC, chunk: OCTREE_CHUNK_MAGIC, info: OCTREE_INFO_MAGIC };
+const NO_NODES: OctreeNodeTable = {
+  count: 0,
+  morton: new Uint32Array(0),
+  level: new Uint8Array(0),
+  childMask: new Uint8Array(0),
+  firstRecord: new Uint32Array(0),
+  ownCount: new Uint32Array(0),
+  blobCount: new Uint32Array(0),
+  chunkRef: new Uint32Array(0),
+};
+
+/**
+ * Frames one index, chunk or info object; `raw` holds one already-quantised array per schema
+ * column. An info object has no node table, so it takes a null `table`.
+ */
 export function encodeOctreeObject(
-  header: OctreeIndexHeader | OctreeChunkHeader,
-  nodes: OctreeNodeTable,
+  header: OctreeIndexHeader | OctreeChunkHeader | OctreeInfoHeader,
+  table: OctreeNodeTable | null,
   columns: readonly ColumnSchema[],
   raw: ReadonlyMap<ColumnId, OctreeRawColumn>,
 ): Uint8Array {
-  if (header.nodes !== nodes.count) {
-    throw new Error(`header names ${header.nodes} nodes, table has ${nodes.count}`);
+  const nodes = table ?? NO_NODES;
+  const declared = header.kind === 'info' ? 0 : header.nodes;
+  if (declared !== nodes.count) {
+    throw new Error(`header names ${declared} nodes, table has ${nodes.count}`);
   }
   const json = new TextEncoder().encode(JSON.stringify(header));
   const nodeTableOffset = roundUpToMultiple(OCTREE_JSON_OFFSET + json.length, OCTREE_ALIGN);
@@ -49,7 +68,7 @@ export function encodeOctreeObject(
 
   const out = new Uint8Array(cursor);
   const dv = new DataView(out.buffer);
-  const magic = header.kind === 'index' ? OCTREE_INDEX_MAGIC : OCTREE_CHUNK_MAGIC;
+  const magic = MAGIC[header.kind];
   for (let i = 0; i < magic.length; i++) out[i] = magic.charCodeAt(i);
   dv.setUint16(OCTREE_VERSION_OFFSET, OCTREE_VERSION, true);
   dv.setUint32(OCTREE_HEADER_BYTES_OFFSET, nodeTableOffset - OCTREE_JSON_OFFSET, true);
@@ -86,6 +105,13 @@ function writeColumn(
   v: OctreeRawColumn,
 ): void {
   const stride = COLUMN_STORE_BYTES[c.store];
+  if (v instanceof BigUint64Array || c.store === 'u64') {
+    if (!(v instanceof BigUint64Array) || c.store !== 'u64') {
+      throw new Error(`column ${c.id}: u64 ids and BigUint64Array raw values go together`);
+    }
+    for (let i = 0; i < n; i++) dv.setBigUint64(at + i * stride, v[i]!, true);
+    return;
+  }
   for (let i = 0; i < n; i++) {
     const b = at + i * stride;
     switch (c.store) {

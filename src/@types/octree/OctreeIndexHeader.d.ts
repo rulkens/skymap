@@ -22,4 +22,10 @@ export type OctreeIndexHeader = {
   readonly stats: Readonly<Partial<Record<StatId, number>>>;
   /** Only the chunks rooted in index rows; each chunk's header lists its own. */
   readonly chunks: readonly OctreeChunkRef[];
+  /** Every chunk at every depth, ascending `recordBase`: how an ordinal finds its chunk unloaded. Absent for stars. */
+  readonly chunkDirectory?: readonly OctreeChunkRef[];
+  /** The first pgc of each pgc shard, ascending. Absent for stars. */
+  readonly pgcShards?: readonly number[];
+  /** Pgcs with a name in `pgc_aliases.json`, ascending. Absent for stars. */
+  readonly namedPgcs?: readonly number[];
 };

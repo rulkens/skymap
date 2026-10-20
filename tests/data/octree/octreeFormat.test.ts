@@ -3,18 +3,24 @@ import { describe, expect, it } from 'vitest';
 import type { ColumnId } from '../../../src/@types/octree/ColumnId';
 import type { ColumnSchema } from '../../../src/@types/octree/ColumnSchema';
 import type { OctreeChunkHeader } from '../../../src/@types/octree/OctreeChunkHeader';
+import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../../src/@types/octree/OctreeIndexHeader';
+import type { OctreeInfoHeader } from '../../../src/@types/octree/OctreeInfoHeader';
 import type { OctreeNodeTable } from '../../../src/@types/octree/OctreeNodeTable';
 import type { OctreeRawColumn } from '../../../tools/@types/octree/OctreeRawColumn';
 import { decodeOctreeChunk } from '../../../src/data/octree/decodeOctreeChunk';
 import { decodeOctreeIndex } from '../../../src/data/octree/decodeOctreeIndex';
+import { decodeOctreeInfo } from '../../../src/data/octree/decodeOctreeInfo';
+import { GALAXY_COLUMN_SCHEMA } from '../../../src/data/octree/galaxyOctreeFamily';
 import {
   NO_CHUNK_REF,
   OCTREE_CHUNK_MAGIC,
   OCTREE_VERSION_OFFSET,
 } from '../../../src/data/octree/octreeFormat';
 import { readOctreeHeader } from '../../../src/data/octree/readOctreeHeader';
+import { encodeAngularWeight } from '../../../src/utils/galaxy/encodeAngularWeight';
 import { encodeOctreeObject } from '../../../tools/octree/encodeOctreeObject';
+import { quantiseColumn } from '../../../tools/octree/quantiseColumn';
 
 const RECORDS = 5;
 
@@ -50,7 +56,7 @@ function indexHeader(columns: readonly ColumnSchema[], nodes = 3): OctreeIndexHe
   };
 }
 
-// Test-only ids: the registry holds three, the round-trip needs nine distinct columns.
+// Test-only ids named after the store each one exercises.
 const id = (s: string) => s as ColumnId;
 
 const ALL_STORES: readonly ColumnSchema[] = [
@@ -158,5 +164,91 @@ describe('octree container format', () => {
     expect(() => decodeOctreeIndex(indexBuf.buffer as ArrayBuffer)).toThrow(
       /unsupported octree version: 2 .*regenerate/,
     );
+  });
+});
+
+const INFO_COLUMNS: readonly ColumnSchema[] = [
+  { id: 'objId', store: 'u64', q0: 0, q1: 1 },
+  { id: 'specZ', store: 'f32', q0: 0, q1: 1 },
+  { id: 'logMass', store: 'u8', q0: 0, q1: 1 / 16 },
+  { id: 'magU', store: 'f16', q0: 0, q1: 1 },
+];
+
+function infoObject(objId: BigUint64Array): ArrayBuffer {
+  const header: OctreeInfoHeader = { kind: 'info', records: objId.length, columns: INFO_COLUMNS };
+  const n = objId.length;
+  const raw = new Map<ColumnId, OctreeRawColumn>([
+    ['objId', objId],
+    ['specZ', new Float32Array(n).fill(0.25)],
+    ['logMass', new Uint8Array(n).fill(160)],
+    ['magU', quantiseColumn(new Float32Array(n).fill(NaN).fill(14.5, 0, 1), INFO_COLUMNS[3]!)],
+  ]);
+  return encodeOctreeObject(header, null, INFO_COLUMNS, raw).buffer as ArrayBuffer;
+}
+
+describe('octree info objects and the galaxy family', () => {
+  it('u64 round-trips 2^53 + 1 exactly through encode and decode', () => {
+    const ids = BigUint64Array.of(0n, 2n ** 53n + 1n, 2n ** 64n - 1n);
+    const { columns } = decodeOctreeInfo(infoObject(ids), ['objId']);
+    expect(list(columns.get('objId')!)).toEqual([0n, 2n ** 53n + 1n, 2n ** 64n - 1n]);
+  });
+
+  it('an SKOF object round-trips its own columns, NaN f16 included', () => {
+    const { header, columns } = decodeOctreeInfo(infoObject(BigUint64Array.of(7n, 8n)), []);
+    expect(header).toEqual({ kind: 'info', records: 2, columns: INFO_COLUMNS });
+    expect(list(columns.get('specZ')!)).toEqual([0.25, 0.25]);
+    expect(list(columns.get('logMass')!)).toEqual([10, 10]); // 160 / 16
+    const magU = list(columns.get('magU')!);
+    expect(magU[0]).toBe(14.5);
+    expect(magU[1]).toBeNaN();
+  });
+
+  it('a galaxy index decodes with chunkDirectory, pgcShards and namedPgcs; a star index decodes without them', () => {
+    const ref: OctreeChunkRef = {
+      id: 0,
+      level: 2,
+      morton: 5,
+      roots: [1],
+      hash: 'a3f19c2e',
+      bytes: 100,
+      nodes: 1,
+      records: 3,
+      recordBase: 5,
+    };
+    const galaxy: OctreeIndexHeader = {
+      ...indexHeader(GALAXY_COLUMN_SCHEMA),
+      family: 'galaxy',
+      stats: { recordCount: RECORDS },
+      chunkDirectory: [ref],
+      pgcShards: [1, 40_000],
+      namedPgcs: [2557],
+    };
+    const raw = new Map<ColumnId, OctreeRawColumn>(
+      GALAXY_COLUMN_SCHEMA.map((c) => [
+        c.id,
+        c.id === 'offset' ? ALL_RAW.get('offset')! : new Uint8Array(RECORDS).fill(3),
+      ]),
+    );
+    const galaxyBuf = encodeOctreeObject(galaxy, nodeTable(), GALAXY_COLUMN_SCHEMA, raw);
+    expect(decodeOctreeIndex(galaxyBuf.buffer as ArrayBuffer).header).toEqual(galaxy);
+
+    const star = indexHeader(ALL_STORES);
+    const starBuf = encodeOctreeObject(star, nodeTable(), ALL_STORES, ALL_RAW);
+    const decoded = decodeOctreeIndex(starBuf.buffer as ArrayBuffer).header;
+    expect(decoded).toEqual(star);
+    expect(decoded.chunkDirectory).toBeUndefined();
+  });
+
+  it('decodeOctreeInfo throws naming the missing required column', () => {
+    expect(() => decodeOctreeInfo(infoObject(BigUint64Array.of(1n)), ['objId', 'magZ'])).toThrow(
+      /magZ/,
+    );
+  });
+
+  it('quantising log10 w with the angularWeight schema equals encodeAngularWeight(w)', () => {
+    const schema = GALAXY_COLUMN_SCHEMA.find((c) => c.id === 'angularWeight')!;
+    const ws = [0.1, 1, 3.7, 10];
+    const raw = quantiseColumn(Float32Array.from(ws, Math.log10), schema);
+    expect(list(raw)).toEqual(ws.map(encodeAngularWeight));
   });
 });
