@@ -47,6 +47,7 @@ import type { HeldIntent } from '../../../src/@types/input/HeldIntent';
 import type { UnitPoint } from '../../../src/@types/input/UnitPoint';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
+import { FLAT_TERRAIN } from '../../../src/data/camera/flatTerrain';
 
 export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const {
@@ -86,6 +87,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
     },
     booted: true,
+    terrain: FLAT_TERRAIN,
     cameraRuntime: seedCameraRuntime({
       state: store.getState(),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },

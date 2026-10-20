@@ -1,3 +1,4 @@
+import type { LayerTerrain } from './LayerTerrain';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -26,5 +27,6 @@ export type LayerInstance = {
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
   readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
+  readonly terrain?: LayerTerrain;
   destroy(): void;
 };

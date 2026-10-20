@@ -21,6 +21,7 @@ import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 /**
  * Build a minimal EngineState with only the fields buildDemandCtx reads.
@@ -61,6 +62,7 @@ function makeState(
       points: opts.points ?? new Map(),
       famousGalaxiesMeta,
     },
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm(pose) },
       outputs: {

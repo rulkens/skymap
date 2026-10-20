@@ -25,6 +25,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -86,6 +87,7 @@ function makeState(
     slabRows: [],
     visibilityEntries: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },
       outputs: {

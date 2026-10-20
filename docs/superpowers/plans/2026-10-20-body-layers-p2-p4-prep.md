@@ -357,7 +357,7 @@ boot throws on two; none → flat."
 
 **Done:** tsc clean; `state.terrain` is `FLAT_TERRAIN` before boot and core's provider after `createLayers`.
 
-- [ ] Task 5
+- [x] Task 5
 
 ### Task 6: core readers switch to `state.terrain`; delete `terrainHeightAtOf`
 
@@ -401,7 +401,7 @@ the assertion is unchanged.
 `grep -rn "subsystems.surfaceTiles"` over `engine.ts`, `frameContext.ts`, `runFrame.ts`,
 `liveWorldPose.ts` and `makeReconcileEffects.ts` returns only `engine.ts:436-437,503-504`.
 
-- [ ] Task 6
+- [x] Task 6
 
 ---
 

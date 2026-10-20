@@ -145,6 +145,7 @@ import { loadDataManifest } from '../../../../src/services/loading/dataManifest'
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -396,6 +397,7 @@ function makeState(
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set (boot-load expectations stay
     // sdss/2mrs/glade/…, no Blue Marble fetch).
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),

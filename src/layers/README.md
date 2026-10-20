@@ -34,6 +34,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                                                                               |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                   |
 | `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                      |
+| `terrain?`      | `terrain.ts`                                   | Runtime-bound: the ground core's camera reads (`heightAt`, `residentHeightLevelAt`, `subCamera`). At most one Layer; boot throws on two; none → flat                          |
 | `bodies?`       | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types and `src/data` makers only; `data/bodies/layerBodyRows.ts` folds them into the static body tables by import |
 
 Three more folders hold the Runtime's private machinery — core never sees these:

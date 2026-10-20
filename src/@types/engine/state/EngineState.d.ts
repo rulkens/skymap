@@ -32,6 +32,7 @@ import type { VisibilityEntry } from '../layer/VisibilityEntry';
 import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
+import type { LayerTerrain } from '../layer/LayerTerrain';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
@@ -125,6 +126,8 @@ export type EngineState = {
   /** Core's conics then every Layer's `guides.orbitTrails`, composed once by
    * `createLayers`; `orbitTrailsPass` walks this. */
   orbitTrailRows: readonly OrbitalElements[];
+  /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
+  terrain: LayerTerrain;
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

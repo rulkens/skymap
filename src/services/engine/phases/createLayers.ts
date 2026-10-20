@@ -18,6 +18,8 @@ import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
+import { composeTerrain } from '../layer/composeTerrain';
+import { surfaceTileTerrain } from '../../../utils/surfaceTiles/surfaceTileTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -201,6 +203,14 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ...CORE_TRAIL_ELEMENTS,
     ...instances.flatMap((instance) => instance.orbitTrails),
   ];
+  // Core keeps the slot until body Layers can reach the tile subsystem; the
+  // body move deletes this row, and the two-provider throw catches a half-done move.
+  state.terrain = composeTerrain([
+    { name: 'core:surfaceTiles', terrain: surfaceTileTerrain(state.subsystems) },
+    ...instances.flatMap((instance) =>
+      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
+    ),
+  ]);
 
   // Two directors, each owning one slab's screen-space projection — a
   // producer names the slab whose director it registers on (`LayerGuides`'s

@@ -15,6 +15,7 @@ import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
+import type { LayerTerrain } from './LayerTerrain';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
@@ -109,4 +110,7 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
+  /** The ground core's camera reads. At most one provider per composition —
+   *  createLayers throws on two; with none, core reads FLAT_TERRAIN. */
+  terrain?(runtime: Runtime): LayerTerrain;
 };

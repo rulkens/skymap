@@ -1,4 +1,4 @@
-import type { LonLatDeg } from './LonLatDeg';
+import type { TerrainSubCamera } from '../camera/TerrainSubCamera';
 import type { SurfaceTileBodyId } from '../data/SurfaceTileBodyId';
 
 /**
@@ -46,5 +46,5 @@ export type SurfaceTileDebugSnapshot = {
    *  deepest band level available AT that point — the readout that answers
    *  "am I over a spot with deep imagery?" without cross-referencing bounds
    *  by hand. `null` while disengaged, matching `plan`. */
-  readonly subCamera: (LonLatDeg & { readonly coveredMaxLevel: number | null }) | null;
+  readonly subCamera: TerrainSubCamera | null;
 };

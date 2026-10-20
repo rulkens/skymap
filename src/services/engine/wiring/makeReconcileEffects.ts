@@ -27,7 +27,7 @@ export function makeReconcileEffects(
         canvas,
         liveFocusRow(state.selectionRows.focus, simDays),
         simDays,
-        state.subsystems.surfaceTiles?.getDebugSnapshot().subCamera ?? null,
+        state.terrain.subCamera(),
         state.cameraRuntime.outputs.displayed,
       );
       return cam === null ? null : { framed: state.cameraRuntime.outputs.displayed, simDays };

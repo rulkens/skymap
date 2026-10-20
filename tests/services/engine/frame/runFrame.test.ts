@@ -125,6 +125,7 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -216,6 +217,7 @@ function makeState(): EngineState {
     },
     // cameraRuntime Resource bag — required for the camera-driver block
     // that runs BEFORE the renderer-null bail-out.
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),

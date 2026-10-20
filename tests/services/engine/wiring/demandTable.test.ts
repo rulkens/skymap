@@ -67,6 +67,7 @@ import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/loa
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // ── Stub slot factory ────────────────────────────────────────────────────────
 
@@ -283,6 +284,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),

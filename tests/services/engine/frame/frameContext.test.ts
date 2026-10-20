@@ -49,6 +49,7 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -88,6 +89,7 @@ function makeState(
   return {
     booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
+    terrain: FLAT_TERRAIN,
     subsystems: { texturedDisks },
     // No focused pivot in these fixtures — the input's `altitudeMpc` below is
     // the raw cam.distance, the near-field bracket every arithmetic assertion

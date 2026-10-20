@@ -14,6 +14,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { CORE_TRAIL_ELEMENTS } from '../../../../src/data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 
 function makeState(
@@ -212,6 +213,23 @@ describe('createLayers composition', () => {
     ];
 
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
+  });
+
+  it('throws at boot when two Layers provide terrain', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const terrainLayer = (tag: string) =>
+      ({
+        name: tag,
+        create: () => ({}),
+        destroy: () => {},
+        passes: () => [],
+        terrain: () => FLAT_TERRAIN,
+      }) as unknown as Layer<string, unknown>;
+
+    await expect(
+      createLayers(state, makeDeps([terrainLayer('a'), terrainLayer('b')], store)),
+    ).rejects.toThrow(/terrain/);
   });
 
   it('throws at boot when a Layer mints a slot key core already owns', async () => {
