@@ -74,7 +74,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { sceneBodyPartition } from '../sceneBodyPartition';
+import { coreSceneBodyPartition } from '../coreSceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 import { glintBandClass } from '../../../../utils/picking/glintBandClass';
@@ -140,7 +140,7 @@ export const bodyGlintsPass: ContentPass = {
       sceneBodyStates(state, ctx),
     );
     if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, regionDistMpc) <= 0) return false;
-    return sceneBodyPartition(state, ctx).glints.length > 0;
+    return coreSceneBodyPartition(state, ctx).glints.length > 0;
   },
 
   // Pick gate — WIDER than `enabled`: this layer also carries Earth's caption-
@@ -154,7 +154,7 @@ export const bodyGlintsPass: ContentPass = {
   pickEnabled(state, ctx, _view) {
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    if (sceneBodyPartition(state, ctx).glints.length > 0) return true;
+    if (coreSceneBodyPartition(state, ctx).glints.length > 0) return true;
     return earthCaptionPickable(state, ctx);
   },
 
@@ -162,7 +162,7 @@ export const bodyGlintsPass: ContentPass = {
     const renderer = state.gpu.bodyGlintRenderer;
     if (renderer === null) return;
 
-    const { glints } = sceneBodyPartition(state, ctx);
+    const { glints } = coreSceneBodyPartition(state, ctx);
     // Live positions from the per-frame snapshot (keyed by id), resolved ONCE for
     // the whole pack loop — not the baked record fields; radius + albedo stay
     // authored identity on each record.
@@ -238,7 +238,7 @@ export const bodyGlintsPass: ContentPass = {
   // clickable footprint the scene-star points get in `bodyPickRenderer.drawPoints`
   // — these seeded solar-system bodies are sparse, labelled, click-invited
   // targets), so a sub-pixel planet stays easily pickable at its true screen
-  // position. The set is the SAME `sceneBodyPartition(state, ctx).glints` branch
+  // position. The set is the SAME `coreSceneBodyPartition(state, ctx).glints` branch
   // `draw` packs — a body is pickable-as-a-glint exactly when it draws as one; its
   // resolved complement (`flat` ∪ `textured`) rides `planetsPass`'s sphere pick.
   //
@@ -287,7 +287,7 @@ export const bodyGlintsPass: ContentPass = {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;
 
-    const { glints } = sceneBodyPartition(state, ctx);
+    const { glints } = coreSceneBodyPartition(state, ctx);
     // Live positions from the per-frame snapshot (keyed by id), resolved ONCE for
     // both the Earth stamp and the whole glint loop — not the baked record fields.
     const states = sceneBodyStates(state, ctx);

@@ -14,7 +14,9 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { CORE_TRAIL_ELEMENTS } from '../../../../src/data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
+import type { ShowKey } from '../../../../src/@types/animation/ShowKey';
 
 function makeState(
   registerProducer: ReturnType<typeof vi.fn>,
@@ -104,14 +106,18 @@ function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, 
   } as unknown as Layer<string, unknown>;
 }
 
-/** A Layer contributing one orbit-trail row and nothing else. */
-function orbitTrailLayer(tag: string, row: OrbitalElements): Layer<string, unknown> {
+/** A Layer contributing one orbit-trail group and nothing else. */
+function orbitTrailLayer(
+  tag: string,
+  rows: readonly OrbitalElements[],
+  show: ShowKey,
+): Layer<string, unknown> {
   return {
     name: tag,
     create: () => ({}),
     destroy: () => {},
     passes: () => [],
-    guides: () => ({ orbitTrails: [row] }),
+    guides: () => ({ orbitTrails: { show, rows } }),
   } as unknown as Layer<string, unknown>;
 }
 
@@ -147,20 +153,29 @@ describe('createLayers composition', () => {
     ]);
   });
 
-  it("composes core's orbit-trail rows then every Layer's guides.orbitTrails, in tuple order", async () => {
+  it("composes core's orbit-trail group then every Layer's guides.orbitTrails group, in tuple order", async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const aRow = { id: 'a-trail' } as unknown as OrbitalElements;
     const bRow = { id: 'b-trail' } as unknown as OrbitalElements;
-    const layers = [orbitTrailLayer('a', aRow), orbitTrailLayer('b', bRow)];
+    const aRows = [aRow];
+    const bRows = [bRow];
+    const layers = [
+      orbitTrailLayer('a', aRows, 'sStarTrails'),
+      orbitTrailLayer('b', bRows, 'orbitTrails'),
+    ];
 
     await createLayers(state, makeDeps(layers, store));
 
     // By reference, row for row: a structural compare would pass a copy that lost
     // the identity `orbitTrailsPass` walks.
-    const expected = [...CORE_TRAIL_ELEMENTS, aRow, bRow];
-    expect(state.orbitTrailRows).toHaveLength(expected.length);
-    expected.forEach((row, i) => expect(state.orbitTrailRows[i]).toBe(row));
+    const groups = state.orbitTrailGroups;
+    expect(groups).toHaveLength(3);
+    expect(groups[0]!.rows).toBe(CORE_TRAIL_ELEMENTS);
+    expect(groups[0]!.show).toBe('orbitTrails');
+    expect(groups[1]!.rows).toBe(aRows);
+    expect(groups[1]!.show).toBe('sStarTrails');
+    expect(groups[2]!.rows).toBe(bRows);
   });
 
   it('composes Layer world label producers onto state.label3DProducers', async () => {
@@ -212,6 +227,23 @@ describe('createLayers composition', () => {
     ];
 
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
+  });
+
+  it('throws at boot when terrain is provided more than once', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const terrainLayer = (tag: string) =>
+      ({
+        name: tag,
+        create: () => ({}),
+        destroy: () => {},
+        passes: () => [],
+        terrain: () => FLAT_TERRAIN,
+      }) as unknown as Layer<string, unknown>;
+
+    await expect(
+      createLayers(state, makeDeps([terrainLayer('a'), terrainLayer('b')], store)),
+    ).rejects.toThrow(/terrain/);
   });
 
   it('throws at boot when a Layer mints a slot key core already owns', async () => {

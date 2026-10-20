@@ -15,6 +15,7 @@ import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
+import type { LayerTerrain } from './LayerTerrain';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
@@ -93,8 +94,8 @@ export type Layer<
   /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join
-   * `state.label3DProducers`, walked by `runLabel3DProducers`; `orbitTrails` rows
-   * join `state.orbitTrailRows`, walked by `orbitTrailsPass`. Each label `id`
+   * `state.label3DProducers`, walked by `runLabel3DProducers`; the `orbitTrails` group
+   * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`. Each label `id`
    * must be stable across frames. */
   guides?(runtime: Runtime): LayerGuides;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
@@ -109,4 +110,7 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
+  /** The ground core's camera reads. One provider per composition, counting
+   *  core's surface-tile provider (until the body Layer takes it over); boot throws on two. */
+  terrain?(runtime: Runtime): LayerTerrain;
 };

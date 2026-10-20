@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
+import { coreSceneBodyPartition } from '../../../../src/services/engine/frame/coreSceneBodyPartition';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -26,6 +26,7 @@ import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
@@ -40,6 +41,7 @@ const STATE = {
     compositor: {},
     texturedBodyRenderer: null,
   },
+  terrain: FLAT_TERRAIN,
   subsystems: {
     texturedDisks: {},
     fades: { opacityOf: () => 1 },
@@ -78,7 +80,7 @@ const viewAt = (simDays: number) =>
 
 const drawnIds = (simDays: number): string[] => {
   const view = viewAt(simDays);
-  const { glints, meshes } = sceneBodyPartition(STATE as never, view);
+  const { glints, meshes } = coreSceneBodyPartition(STATE as never, view);
   return [...glints, ...meshes].map((body) => body.id);
 };
 // Core captions every body but the sampled craft, which the missions Layer claims and captions.
@@ -178,7 +180,7 @@ function partition(
     drawCamPos: CAM,
     drawPxPerRad: PX_PER_RAD,
   } as unknown as FrameView;
-  return sceneBodyPartition(state, ctx);
+  return coreSceneBodyPartition(state, ctx);
 }
 const bodiesOf = (bodies: readonly PositionedSceneBody[]) => bodies.map((p) => p.body);
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((b) => b.id);

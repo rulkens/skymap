@@ -48,7 +48,7 @@ import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp'
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { sceneBodyPartition } from '../sceneBodyPartition';
+import { coreSceneBodyPartition } from '../coreSceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/planetRenderer';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
@@ -71,7 +71,7 @@ export const planetsPass: ContentPass = {
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const bodyId = view.slab.frame.hostId;
-    return sceneBodyPartition(state, ctx).flat.some((p) => p.id === bodyId);
+    return coreSceneBodyPartition(state, ctx).flat.some((p) => p.id === bodyId);
   },
 
   // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
@@ -84,7 +84,7 @@ export const planetsPass: ContentPass = {
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const bodyId = view.slab.frame.hostId;
-    const { flat, textured } = sceneBodyPartition(state, ctx);
+    const { flat, textured } = coreSceneBodyPartition(state, ctx);
     return flat.some((p) => p.id === bodyId) || textured.some((p) => p.id === bodyId);
   },
 
@@ -92,7 +92,7 @@ export const planetsPass: ContentPass = {
     const renderer = state.gpu.planetRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
     const bodyId = view.slab.frame.hostId;
-    const planet = sceneBodyPartition(state, ctx).flat.find((p) => p.id === bodyId);
+    const planet = coreSceneBodyPartition(state, ctx).flat.find((p) => p.id === bodyId);
     if (planet === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
     // `view.slab.vp` — reading it here instead of re-deriving the pose is what
@@ -136,7 +136,7 @@ export const planetsPass: ContentPass = {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null || view.slab.frame.kind !== 'body-m') return;
     const bodyId = view.slab.frame.hostId;
-    const { flat, textured } = sceneBodyPartition(state, ctx);
+    const { flat, textured } = coreSceneBodyPartition(state, ctx);
     const planet = flat.find((p) => p.id === bodyId) ?? textured.find((p) => p.id === bodyId);
     if (planet === undefined) return;
     const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);

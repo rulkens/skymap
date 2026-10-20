@@ -523,6 +523,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
       {
+        name: 'S-star trails',
+        control: 'switch',
+        does: 'Shows the orbits of the S-stars, the stars that circle Sagittarius A* at the centre of the Milky Way, as lines.',
+        values: SWITCH,
+        first: ON,
+        state: 'sStarTrails.enabled',
+        firstValue: true,
+      },
+      {
         name: 'Mission trails',
         control: 'switch',
         does: 'Shows the trails of the Voyager spacecraft. The Voyager exhibit turns it on.',
