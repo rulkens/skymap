@@ -3,12 +3,12 @@
  * iterated by the Debug panel's tuning board.
  */
 import type { SliderField } from '../../../@types/data/SliderField';
-import type { GalaxyBlobTuningKey } from '../@types/GalaxyBlobTuningKey';
+import type { GalaxyOctreeTuningKey } from '../@types/GalaxyOctreeTuningKey';
 
 const x2 = (v: number) => `${v.toFixed(2)}×`;
 const d2 = (v: number) => v.toFixed(2);
 
-export const GALAXY_BLOB_TUNING_FIELDS: readonly SliderField<GalaxyBlobTuningKey>[] = [
+export const GALAXY_BLOB_TUNING_FIELDS: readonly SliderField<GalaxyOctreeTuningKey>[] = [
   {
     key: 'refineThreshold',
     label: 'Detail',

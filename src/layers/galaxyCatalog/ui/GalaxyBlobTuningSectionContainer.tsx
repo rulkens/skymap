@@ -10,13 +10,13 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectGalaxyCatalogs } from '../state/galaxyCatalogs/selectors';
 import { setGalaxyBlobTuning } from '../state/galaxyCatalogs/slice';
 import { GALAXY_BLOB_TUNING_FIELDS } from './galaxyBlobTuningFields';
-import type { GalaxyBlobTuningKey } from '../@types/GalaxyBlobTuningKey';
+import type { GalaxyOctreeTuningKey } from '../@types/GalaxyOctreeTuningKey';
 
 function GalaxyBlobTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const galaxyCatalogs = useAppSelector(selectGalaxyCatalogs);
   const onChange = useCallback(
-    (key: GalaxyBlobTuningKey, value: number) => dispatch(setGalaxyBlobTuning({ key, value })),
+    (key: GalaxyOctreeTuningKey, value: number) => dispatch(setGalaxyBlobTuning({ key, value })),
     [dispatch],
   );
   return (
