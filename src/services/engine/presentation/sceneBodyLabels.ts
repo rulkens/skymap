@@ -100,7 +100,7 @@ export function sceneBodyLabels(
       ),
     ),
     // An anchored scan is ground, not an object on it, so it goes uncaptioned
-    // (and unpicked, see meshBodiesPass).
+    // (and unpicked, see drawMeshBodyPicksOnRow).
     ...SCENE_MESH_BODIES.filter(
       (body) =>
         !ANCHORED_MESH_BODY_IDS.has(body.id) &&

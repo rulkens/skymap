@@ -13,7 +13,7 @@
 
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
-import { meshBodiesPass } from '../../../../../src/services/engine/frame/passes/meshBodiesPass';
+import { missionMeshesPass } from '../../../../../src/layers/missions/passes/missionMeshesPass';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { deriveSlabs, slabViewOf, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -147,7 +147,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   } as unknown as EngineState;
 
   const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');
-  meshBodiesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
+  missionMeshesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;

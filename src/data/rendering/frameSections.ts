@@ -64,11 +64,11 @@ export const PRELUDE: FrameSection = {
     // The reflection probe of this frame's one subject mesh body, after the sky
     // line so its blit samples a `solarSystem` bake this frame may have written.
     // Its roster is the sky blit plus the subject's HOST body row, and no more:
-    // `mesh-bodies` is excluded because the subject would draw into its own
-    // probe; `star-spheres` / `field-star-sphere` because the Sun stays analytic
-    // (a sub-pixel Sun would smear through the prefilter into a false highlight);
-    // `body-glints` / `orbit-trails` because neither is environment a surface
-    // reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
+    // `mission-meshes` / `core-mesh-bodies` are excluded because the subject
+    // would draw into its own probe; `star-spheres` / `field-star-sphere` because
+    // the Sun stays analytic (a sub-pixel Sun would smear through the prefilter
+    // into a false highlight); `body-glints` / `mission-glints` / `orbit-trails`
+    // because none is environment a surface reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
     // a probe face opens two steps, not three. `atmosphere-shell` is excluded
     // because it classifies its rays by a sampled scene depth, which a capture
     // face never resolves, and its pipeline carries no depth state to draw into
@@ -208,7 +208,7 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints', 'black-hole-marker'],
+      passes: ['body-glints', 'mission-glints', 'black-hole-marker'],
       slot: 'POST_LENSING',
     },
     // The near-field foreground bodies (the zoom-to-earth fold), into their own
@@ -226,12 +226,14 @@ export const SCENE: FrameSection = {
     // `cloud-shell` is the same exception placed early, immediately after the
     // `earth` surface it depth-tests against.
     //
-    // `mesh-bodies` draws LAST, after the depth marker, and that is NOT the
+    // The mesh passes draw LAST, after the depth marker, and that is NOT the
     // depth-tested listing choice the rest of this roster is. The shells write no
     // depth, so a mesh drawn last still depth-tests correctly against every opaque
     // sphere and only the shells' own fragments are overdrawn — which is also what
     // leaves the mesh's own distance in the depth the aerial line below samples,
     // so a rover silhouetted against Mars sky is fogged at its range, not space's.
+    // `mission-meshes` before `core-mesh-bodies` keeps each row's draw order:
+    // the craft, then Søndermarken and the shape-model moons.
     {
       kind: 'foreground',
       target: 'foreground:0',
@@ -256,7 +258,8 @@ export const SCENE: FrameSection = {
         // paints on a cloud deck in front of it. Accepted: the alternative costs
         // the shell the depth it exists to read (one marker per roster).
         { sampleDepth: ['contact-shadows', 'atmosphere-shell'] },
-        'mesh-bodies',
+        'mission-meshes',
+        'core-mesh-bodies',
       ],
     },
     // The aerial-perspective apply, on the enclosing body's own painter row — the

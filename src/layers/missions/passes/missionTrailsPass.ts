@@ -33,7 +33,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
     },
 
     draw(pass, view, ctx, state, fade) {
-      const { renderer } = runtime;
+      const renderer = runtime.trailRenderer;
       const states = sceneBodyStates(state, ctx);
       const tracks = renderer.ensureTracks(
         trajectoryRegistry.version(),

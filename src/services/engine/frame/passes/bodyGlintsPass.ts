@@ -9,9 +9,10 @@
  * `texturedBodiesPass` draw the `flat` / `textured` branches of the SAME
  * partition, so a body is a glint XOR a mesh by construction — the interim gap
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew
- * the glint) is closed here. The black holes' far-field markers share this
- * renderer's pipeline but not this pass: they are the blackHoles Layer's
- * `black-hole-marker`.
+ * the glint) is closed here. Core's roster only (`coreSceneBodyPartition`): the
+ * missions craft glint in that Layer's `mission-glints`, and the black holes'
+ * far-field markers in the blackHoles Layer's `black-hole-marker`, each through
+ * its own instance of this renderer's pipeline.
  *
  * ### Brightness = apparent size x albedo x phase, then the cross-fade
  *

@@ -320,7 +320,7 @@ Update the PRELUDE probe-roster comment (`:66-71`) to name both mesh passes and 
 `src/layers/missions/passes/`; boot passes `concatUniqueRows` and `checkFrameOrder`; the DebugPanel render
 toggles list `mission-meshes`, `core-mesh-bodies` and `mission-glints`.
 
-- [ ] Task 4
+- [x] Task 4
 
 ### Task 5: docs
 
