@@ -387,12 +387,12 @@ function the flat interleave calls. Its inputs are:
 The `u8` fields are the wire codes, re-quantised from the dequantised columns with the header schema (an exact
 inverse). `GALAXY_GPU_RECORD_WORDS = 6` in `src/data/`.
 
-- [ ] Test `the packed record decodes to the flat interleave's slots for the same galaxy` (build one galaxy as a flat
+- [x] Test `the packed record decodes to the flat interleave's slots for the same galaxy` (build one galaxy as a flat
       `GalaxyCatalog` and as a one-record chunk; compare magnitude, paCos/paSin, radius, sbAmp, absMag and colour
       within the quantisation step).
-- [ ] Test `re-quantised u8 fields equal the wire codes` (round-trip over all 256 codes per column).
-- [ ] Test `NaN axis ratio and fallback flags give the same signs as the flat interleave`.
-- [ ] Commit.
+- [x] Test `re-quantised u8 fields equal the wire codes` (round-trip over all 256 codes per column).
+- [x] Test `NaN axis ratio and fallback flags give the same signs as the flat interleave`.
+- [x] Commit.
 
 ### Task 10: the pooled point pipeline, cut compute and planner — `review: yes`
 
