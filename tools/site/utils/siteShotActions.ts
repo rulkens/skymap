@@ -7,6 +7,7 @@ import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { setBlackHoleLabelEnabled } from '../../../src/layers/blackHoles/state/blackHoles/slice';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
+import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
 import { setBiasMode } from '../../../src/layers/galaxyCatalog/state/bias/slice';
 import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import {
@@ -16,7 +17,9 @@ import {
 import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { setOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/slice';
+import { setBodyLabelEnabled } from '../../../src/layers/body/state/bodies/slice';
 import { requestTier } from '../../../src/state/tier/requestTier';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
@@ -53,13 +56,21 @@ export function siteShotActions({
   if (settings.hideCosmicWeb) actions.push(setCosmicWebDensityEnabled(false));
   if (settings.hideZoneOfAvoidance) actions.push(setZoneOfAvoidanceEnabled(false));
   if (settings.filaments) actions.push(setCosmicWebFilamentsEnabled(true));
+  if (settings.constellations) {
+    actions.push(
+      setVisibility({ cluster: 'constellations', field: 'enabled', on: true, overMs: 0 }),
+    );
+  }
+  if (settings.flow) actions.push(setFlowEnabled(true));
   if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
   if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));
   // The new size's files load after this; the row's `settleMs` is the wait for them.
   if (settings.dataSize !== undefined) actions.push(requestTier(settings.dataSize));
   if (settings.hideLabels) {
     actions.push(
-      ...labelDeclutterActions(),
+      ...labelDeclutterActions().filter(
+        (action) => !(settings.keepBodyLabels && setBodyLabelEnabled.match(action)),
+      ),
       setBlackHoleLabelEnabled({ id: 'sgr-a-star', enabled: false }),
     );
   }

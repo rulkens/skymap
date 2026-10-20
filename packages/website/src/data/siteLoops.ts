@@ -17,4 +17,18 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
   { id: 'place-sgr-a', shot: 'place-sgr-a', motion: 'orbit', seconds: 5 },
   { id: 'place-andromeda', shot: 'place-andromeda', motion: 'orbit', seconds: 5 },
   { id: 'place-virgo', shot: 'place-virgo', motion: { swayDeg: 12 }, seconds: 5 },
+  // The Features page's clock films. No short span brings all four moons back, so Jupiter's jumps where it repeats.
+  {
+    id: 'features-time-jupiter',
+    shot: 'features-time-jupiter',
+    motion: { clockDays: 4 },
+    seconds: 5,
+    width: 960,
+  },
+  {
+    id: 'features-time-earth',
+    shot: 'features-time-earth',
+    motion: { clockDays: SIDEREAL_DAY },
+    seconds: 5,
+  },
 ];

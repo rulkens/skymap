@@ -54,8 +54,8 @@ try {
   for (const loop of rows) {
     const framesDir = join(MASTERS_DIR, loop.id);
     const frameCount = loop.seconds * SITE_LOOP_PLAN.fps;
+    const shot = siteShot(loop.shot);
     if (browser) {
-      const shot = siteShot(loop.shot);
       rmSync(framesDir, { recursive: true, force: true });
       mkdirSync(framesDir, { recursive: true });
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
@@ -99,6 +99,8 @@ try {
       continue;
     }
     const file = join(OUT_DIR, `${loop.id}.mp4`);
+    const width = loop.width ?? SITE_LOOP_PLAN.size;
+    const height = Math.round((width * shot.size.height) / shot.size.width);
     let crf = SITE_LOOP_PLAN.crf;
     let kb = Infinity;
     for (
@@ -107,7 +109,11 @@ try {
       crf += SITE_LOOP_PLAN.crfStep
     ) {
       const frames = join(framesDir, '%04d.png');
-      execFileSync('ffmpeg', ['-v', 'error', ...loopVideoArgs(SITE_LOOP_PLAN, crf, frames, file)]);
+      execFileSync('ffmpeg', [
+        '-v',
+        'error',
+        ...loopVideoArgs({ ...SITE_LOOP_PLAN, width, height }, crf, frames, file),
+      ]);
       kb = Math.round(statSync(file).size / 1024);
     }
     if (kb > SITE_LOOP_PLAN.maxKb) failed = true;

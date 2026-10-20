@@ -6,6 +6,8 @@
 export type SiteShotSettings = {
   /** Labels, the selection ring and structure markers off. */
   hideLabels?: true;
+  /** With `hideLabels`: the planets', moons' and spacecraft's names stay on. */
+  keepBodyLabels?: true;
   /** Structure names off, their rings left on. */
   hideStructureLabels?: true;
   hideOrbitTrails?: true;
@@ -16,6 +18,10 @@ export type SiteShotSettings = {
   hideZoneOfAvoidance?: true;
   /** The traced filament skeleton on (off by default in the app). */
   filaments?: true;
+  /** The constellation figures and their names on (off by default in the app). */
+  constellations?: true;
+  /** The galaxy flow ribbons on (off by default in the app). */
+  flow?: true;
   fovDeg?: number;
   /** Density correction on "None — raw catalogue" in place of the app's first choice. */
   rawDensity?: true;

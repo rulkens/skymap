@@ -54,8 +54,9 @@ let failed = false;
 try {
   for (const shot of rows) {
     const master = join(MASTERS_DIR, `${shot.id}.png`);
+    const dpr = shot.dpr ?? DPR;
     if (!fromMasters) {
-      const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
+      const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: dpr });
       try {
         const page = await context.newPage();
         await openSiteShot(page, base!, shot);
@@ -99,10 +100,10 @@ try {
     const crop = shot.settings?.crop;
     const frame = crop
       ? sharp(master).extract({
-          left: crop.left * DPR,
-          top: crop.top * DPR,
-          width: crop.width * DPR,
-          height: crop.height * DPR,
+          left: crop.left * dpr,
+          top: crop.top * dpr,
+          width: crop.width * dpr,
+          height: crop.height * dpr,
         })
       : sharp(master);
     const narrowest = Math.min(...shot.widths);
