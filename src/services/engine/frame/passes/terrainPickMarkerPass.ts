@@ -17,7 +17,6 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
 import { frustumFovYRad } from '../../../../utils/camera/frustumFovYRad';
 import { terrainPickAt } from '../../../../utils/camera/terrainPickAt';
-import { surfaceTileTerrain } from '../../../../utils/surfaceTiles/surfaceTileTerrain';
 
 export const terrainPickMarkerPass: ContentPass = {
   name: 'terrain-pick-marker',
@@ -70,7 +69,7 @@ export const terrainPickMarkerPass: ContentPass = {
       cursorPx: cursorTexPx,
       viewportPx: view.viewportPx,
       fovYRad: frustumFovYRad(ctx.frustum),
-      terrainHeightAt: surfaceTileTerrain(state.subsystems).heightAt,
+      terrainHeightAt: (b, d) => state.subsystems.surfaceTiles?.terrainHeightAt(b, d) ?? 0,
     });
     if (pick === null) return;
 

@@ -110,7 +110,7 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
-  /** The ground core's camera reads. At most one provider per composition —
-   *  createLayers throws on two; with none, core reads FLAT_TERRAIN. */
+  /** The ground core's camera reads. One provider per composition, counting
+   *  core's surface-tile provider (until the body Layer takes it over); boot throws on two. */
   terrain?(runtime: Runtime): LayerTerrain;
 };

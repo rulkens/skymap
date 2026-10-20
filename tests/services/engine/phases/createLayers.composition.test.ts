@@ -229,7 +229,7 @@ describe('createLayers composition', () => {
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
   });
 
-  it('throws at boot when two Layers provide terrain', async () => {
+  it('throws at boot when terrain is provided more than once', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const terrainLayer = (tag: string) =>

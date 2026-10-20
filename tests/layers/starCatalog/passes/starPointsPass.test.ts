@@ -269,8 +269,8 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // pinning the STAR rows' wholesale-skip property. The constellation
       // overlay likewise rides this group; toggle it off for the same reason.
       // orbit-trails rides this same (hdr, NEAR0) group too; its enabled() gate
-      // reads the visibility intent, so the fixture carries the toggle on
-      // (matching the live default) — below the gate it draws alongside
+      // reads the visibility intent and `orbitTrailGroups` (the describe walks the raw
+      // ungated roster), so the fixture carries both (live default) — below the gate it draws alongside
       // star-points.
       settings: {
         milkyWay: { enabled: false },

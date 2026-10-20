@@ -1,4 +1,4 @@
-/** S-star-trails default — ON, as they were under the old shared orbit-trails switch. */
+/** S-star-trails default — ON. */
 
 import type { SStarTrailsSettings } from '../../../../@types/settings/SStarTrailsSettings';
 

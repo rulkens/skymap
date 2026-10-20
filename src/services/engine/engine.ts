@@ -529,7 +529,7 @@ export function createEngine(
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: state.terrain.heightAt,
-          residentHeightLevelAt: (bodyId, dir) => state.terrain.residentHeightLevelAt(bodyId, dir),
+          residentHeightLevelAt: state.terrain.residentHeightLevelAt,
           // Null unless the `terrain-pick-marker` overlay is on — its listener
           // is the only writer, so the pick row is dead with the toggle off.
           cursorTexPx: state.picking.cursorTexPx,
