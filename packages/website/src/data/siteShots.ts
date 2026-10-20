@@ -111,18 +111,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     credit: 'Model: NASA. Earth imagery: listed under Credits in the docs',
   },
   {
-    id: 'hubble-portrait',
-    link: 'focus=body-hubble&t=2026-09-18T13:00:12Z&pose=a,0,0,0,-1.938340168882169,0.09915032713380474,9e-22,0',
-    settings: { ...SUBJECT, settleMs: 4000 },
-    size: TALL,
-    widths: [720],
-    title: 'The Hubble Space Telescope',
-    caption: 'Off the coast of Namibia on 18 September 2026.',
-    drawn: 'The orbit is computed from tracking data; the telescope is a 3D model.',
-    alt: 'The Hubble telescope above a cloudy Atlantic, with stars beyond the edge of Earth.',
-    credit: 'Model: NASA. Earth imagery: listed under Credits in the docs',
-  },
-  {
     // About 27 s into the step the camera has pulled back to the whole field and the galaxies have faded. The
     // camera keeps turning there, so each run frames it a little differently: look at this one after a re-shoot.
     id: 'tour-cosmic-web',
