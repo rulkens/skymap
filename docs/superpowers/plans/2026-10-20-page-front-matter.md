@@ -327,25 +327,26 @@ The job lines are migrated verbatim. Their notes on merges and repeats are not p
 - `tests/tools/site/pageSourceFile.test.ts` (new)
 - `tests/tools/site/docsReview.test.ts`
 
-- [ ] Add the endpoint, both utils and `saveJob` as in **Dev endpoint**. The `__job` handler reuses `readBody` and the same-origin guard from `__review`.
-- [ ] Delete `job` from `DocsReview` and from `isDocsReview`'s checks. Delete `job: ''` from the empty review (`Review.tsx:32`) and from the test fixture (`docsReview.test.ts:9`).
-- [ ] `Review.tsx` reads the job from `document.querySelector<HTMLMetaElement>('meta[name="skymap:job"]')?.content` and passes it to `ReviewPage`.
+- [x] Add the endpoint, both utils and `saveJob` as in **Dev endpoint**. The `__job` handler reuses `readBody` and the same-origin guard from `__review`.
+- [x] Delete `job` from `DocsReview` and from `isDocsReview`'s checks. Delete `job: ''` from the empty review (`Review.tsx:32`) and from the test fixture (`docsReview.test.ts:9`).
+- [x] `Review.tsx` reads the job from `document.querySelector<HTMLMetaElement>('meta[name="skymap:job"]')?.content` and passes it to `ReviewPage`.
   - `ReviewPage` hands `ReviewBar` the props `job: string | undefined` and `onJob={(job) => saveJob(review.page, job).catch(console.error)}`.
   - `ReviewBar` renders the job input only when `job !== undefined`.
   - After a save the dev server reloads the page from the changed MDX, so the bar needs no local copy.
-- [ ] Remove the `job` key from the three local review JSON files under `.superpowers/sdd/2026-10-05-companion-website/review/`. They are gitignored, so nothing is committed.
-- [ ] Tests `setFrontMatterJob`:
+- [x] Remove the `job` key from the three local review JSON files under `.superpowers/sdd/2026-10-05-companion-website/review/`. They are gitignored, so nothing is committed.
+- [x] Tests `setFrontMatterJob`:
   - `replaces the job line and leaves every other line as it was`: a 5-line front matter with a multi-line `facts: [...]`. Assert that only the `job:` line differs.
   - `adds a job line at the end of the front matter when the page has none`.
   - `writes the job JSON-quoted, so a colon or a quote stays one string`: the input `Where: "here"` gives the line `job: "Where: \"here\""`.
   - `leaves a job: line in the body alone`.
   - `refuses a job that runs over several lines`: `job: >` followed by an indented line throws.
   - `refuses a file with no front matter`.
-- [ ] Tests `pageSourceFile`:
+- [x] Tests `pageSourceFile`:
   - `maps a docs page to its text`: `/docs/start/scene/` gives `docs/start/scene.mdx`.
   - `maps a landing page and home to the pages collection`: `/features/` gives `pages/features.mdx`, and `/` gives `pages/index.mdx`.
   - `refuses a path that climbs out`: `/docs/../../etc/` gives `null`.
-- [ ] `npx vitest run tests/tools/site`.
+- [x] `npx vitest run tests/tools/site`.
+- Done with the owner's answers: the bar shows a generated page's job read-only (the head's `skymap:job` meta carries a `data-set-in` of `docsTree.ts`), and `PUT __job` answers 404 for it. The three local review JSON files are in the companion-website checkout, not this one: their `job` key is now ignored and harmless.
 
 ---
 

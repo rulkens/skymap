@@ -9,11 +9,12 @@ import { useEffect, useState } from 'react';
 import type { DocsReview } from '../../../../../../tools/site/@types/DocsReview';
 import { wordsIn } from '../wordsIn';
 import ReviewPage from '../ReviewPage/ReviewPage.tsx';
+import type { JobMeta } from '../@types/JobMeta';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const ROUTE = `${BASE}__review`;
 
-type Loaded = { article: Element; url: string; first: DocsReview };
+type Loaded = { article: Element; url: string; first: DocsReview; job: JobMeta | undefined };
 
 function Review() {
   const [loaded, setLoaded] = useState<Loaded>();
@@ -29,8 +30,11 @@ function Review() {
       if (found?.status !== 200 && found?.status !== 404) return;
       const first: DocsReview = found.ok
         ? ((await found.json()) as DocsReview)
-        : { page, job: '', words: { before: wordsIn(article.textContent ?? '') }, marks: [] };
-      if (!stale) setLoaded({ article, url, first });
+        : { page, words: { before: wordsIn(article.textContent ?? '') }, marks: [] };
+      // The job is not in the review file: the page carries it from its text's front matter (layouts/Base.astro).
+      const meta = document.querySelector<HTMLMetaElement>('meta[name="skymap:job"]');
+      const job = meta ? { text: meta.content, setIn: meta.dataset.setIn } : undefined;
+      if (!stale) setLoaded({ article, url, first, job });
     })();
     return () => {
       stale = true;
