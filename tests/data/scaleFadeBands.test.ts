@@ -12,6 +12,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
+import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../src/data/labels/solarSystemLabelMaxDistance';
 import { regionById } from '../../src/utils/regions/regionById';
@@ -42,7 +43,7 @@ describe('star fade bands — pop-free coupling to their gates', () => {
     // hard-cuts the layer, so the gate lands on already-black sprites and never
     // pops. A retune that pushed `goneAt` out to (or past) the gate would
     // reintroduce the hard-cut blob this fix dissolved.
-    expect(SCALE_FADE_BANDS.starBackdrop.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(STAR_BACKDROP_DISSOLVE.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
   });
 
   it('the body-glint backdrop dissolves fully inside the shared foreground gate', () => {
@@ -57,17 +58,17 @@ describe('star fade bands — pop-free coupling to their gates', () => {
 });
 
 describe('both backdrop bands derive from one shape', () => {
-  it('starBackdrop and bodyGlintBackdrop apply the same fullAt/goneAt multiple to their own region extent', () => {
+  it('the star backdrop dissolve and bodyGlintBackdrop apply the same fullAt/goneAt multiple to their own region extent', () => {
     // Neither ratio is hardcoded here — only that the two bands, each keyed on a
     // DIFFERENT region extent (solar-neighbourhood vs. solar-system), come out
     // to the SAME multiple. If a future edit re-inlined one band's multiplier
     // independently of the other's (the bug this shape consolidation removes),
     // the two ratios would diverge and this would fail; retuning the shared
     // shape moves both ratios together and stays green.
-    expect(SCALE_FADE_BANDS.starBackdrop.fullAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+    expect(STAR_BACKDROP_DISSOLVE.fullAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
-    expect(SCALE_FADE_BANDS.starBackdrop.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+    expect(STAR_BACKDROP_DISSOLVE.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
   });

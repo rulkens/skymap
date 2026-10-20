@@ -211,7 +211,7 @@ describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
     // `FOREGROUND_MAX_DISTANCE_MPC` gate — deep in Milky-Way framing, where all ~22
     // collapse onto one bright dot. The `bodyGlintBackdrop` far-dissolve fixes it:
     // once the band zeroes, the layer must LEAVE the pass plan (opacity 0 ⇒ no
-    // render), exactly as `starPointsPass` does with `starBackdrop`.
+    // render), exactly as `starPointsPass` does with its backdrop dissolve.
     const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
     const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → band in (0,1)
     const dGone = backdrop.goneAt * 2; // past goneAt → band 0

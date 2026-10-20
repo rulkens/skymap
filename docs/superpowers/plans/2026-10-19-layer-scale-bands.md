@@ -140,8 +140,8 @@ Bands: `structureRing.cosmic { ...SURVEY_DEEP_ZOOM, items: STRUCTURE_IDS_BY_SCAL
 
 **Files:** create `src/layers/starCatalog/data/starBackdropDissolve.ts` (the `backdropBand(NEIGHBOURHOOD_EXTENT_MPC)` value, `scaleFadeBands.ts:45,85`, as a `FadeBand`); modify `src/layers/starCatalog/passes/starPointsPass.ts:131-136,156-159`; delete the ten Layer rows from `src/data/scaleFadeBands.ts` (after Task 2) and their now-unused locals (`CONSTELLATIONS_*_KPC`, …); update `tests/data/scaleFadeBands.test.ts` (moved with Task 2) and `tests/layers/starCatalog/passes/starPointsPass.test.ts`; delete `docs/backlog/2026-09-19-layer-owned-scale-fade-bands.md`, `docs/backlog/2026-08-31-scale-fade-bands-to-data.md` and their `docs/BACKLOG.md` lines; create `docs/backlog/2026-10-19-per-subject-fades.md` (kinds 2 and 3, with L1 as its first prep and the greenfield note that per-subject kinds hand the consumer the band's edges) and `docs/backlog/2026-10-19-band-debug-panel.md`, each with a `needs-design` index line.
 
-- [ ] `git grep -n 'SCALE_FADE_BANDS\.\(surveyDeepZoom\|milkyWayApproach\|starBackdrop\|constellations\|milkyWayStructures\|zoneOfAvoidance\|localBubble\)' -- src tests` prints nothing.
-- [ ] `backdropBand`'s shared shape stays one home: `bodyGlintBackdrop` (core's row) and `starBackdropDissolve` both read one helper (move `backdropBand` to `src/utils/math/backdropBand.ts` if two files need it).
+- [x] `git grep -n 'SCALE_FADE_BANDS\.\(surveyDeepZoom\|milkyWayApproach\|starBackdrop\|constellations\|milkyWayStructures\|zoneOfAvoidance\|localBubble\)' -- src tests` prints nothing.
+- [x] `backdropBand`'s shared shape stays one home: `bodyGlintBackdrop` (core's row) and `starBackdropDissolve` both read one helper (move `backdropBand` to `src/utils/math/backdropBand.ts` if two files need it).
 
 ## Group C: verify
 

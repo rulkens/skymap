@@ -29,7 +29,7 @@
  *     onto one bright dot. This band fades the whole field out a few solar-system
  *     radii out, so glints stop mattering long before Milky-Way framing rather
  *     than riding full-brightness to the coarse foreground gate — the sibling of
- *     `starPointsPass`'s `starBackdrop`. Hoisted per-frame in `draw` (one camera).
+ *     `starPointsPass`'s backdrop dissolve. Hoisted per-frame in `draw` (one camera).
  * `color` is the body's albedo tint (the shader premultiplies it by brightness).
  *
  * ### The zero-brightness skip (`feedback_opacity_zero_no_render`)
@@ -126,7 +126,7 @@ export const bodyGlintsPass: ContentPass = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
     // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
-    // mirroring `starPointsPass`'s `starBackdrop` gate (which also empties the
+    // mirroring `starPointsPass`'s backdrop-dissolve gate (which also empties the
     // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's distance
     // from the solar system's own anchor — the eye position (`drawCamPos`), NOT
     // `cam.distance`, which measures to the orbit TARGET and so read a different

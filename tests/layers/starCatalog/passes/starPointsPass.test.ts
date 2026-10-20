@@ -28,7 +28,7 @@ import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/ind
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
+import { STAR_BACKDROP_DISSOLVE } from '../../../../src/layers/starCatalog/data/starBackdropDissolve';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
@@ -132,7 +132,7 @@ function makeCtx(
 }
 
 // A below-gate camera 5 kpc down +z: well inside FOREGROUND_MAX_DISTANCE_MPC
-// (~0.23 Mpc) AND inside the starBackdrop band's live range (goneAt ~0.023 Mpc),
+// (~0.23 Mpc) AND inside the backdrop-dissolve band's live range (goneAt ~0.023 Mpc),
 // so both the distance gate and the band pass — yet still parsecs beyond every
 // seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
@@ -238,7 +238,7 @@ describe('starPointsPass.enabled', () => {
     // layer must disable outright (the "opacity 0 ⇒ no render" house rule)
     // rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
     // Derived from the band + gate so a roster growth carries both edges.
-    const beyondBand = SCALE_FADE_BANDS.starBackdrop.goneAt * 1.01;
+    const beyondBand = STAR_BACKDROP_DISSOLVE.goneAt * 1.01;
     expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     const state = makeState();
@@ -405,13 +405,12 @@ describe('starPointsPass.draw', () => {
   });
 
   it('premultiplies each uploaded colour by the backdrop-dissolve alpha', () => {
-    // Camera parked mid-band (between the starBackdrop fullAt and goneAt edges),
+    // Camera parked mid-band (between the backdrop-dissolve fullAt and goneAt edges),
     // where the dissolve alpha is a genuine fraction — the pin that fails if the
     // scale is dropped (colours upload at full strength) or inverted. From ~14
     // kpc every seeded star is a sub-pixel point, so the whole roster uploads.
-    const camDistMpc =
-      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
-    const expectedFade = fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc);
+    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
+    const expectedFade = fadeBand(STAR_BACKDROP_DISSOLVE, camDistMpc);
     expect(expectedFade).toBeGreaterThan(0);
     expect(expectedFade).toBeLessThan(1);
 
@@ -438,9 +437,8 @@ describe('starPointsPass.draw', () => {
   });
 
   it('dims stars outside the focus sphere and leaves the focused one at full strength', () => {
-    const camDistMpc =
-      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
-    const backdropFade = fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc);
+    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
+    const backdropFade = fadeBand(STAR_BACKDROP_DISSOLVE, camDistMpc);
     const camPos: Vec3 = [0, 0, camDistMpc];
     const focus: FocusUniformsValue = {
       center: PROXIMA.positionMpc,
@@ -463,8 +461,7 @@ describe('starPointsPass.draw', () => {
   });
 
   it("star points scale their colour by their catalog's value", () => {
-    const camDistMpc =
-      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
     const camPos: Vec3 = [0, 0, camDistMpc];
     const colourOf = (fade: Record<keyof typeof ALL_ON, number>, id: string) => {
       const renderer = makeRenderer();
@@ -491,8 +488,7 @@ describe('starPointsPass.draw', () => {
     // genuine non-trivial factor. The layer must forward `starCatalogs.sizePx`
     // verbatim and `brightness × starExposureRamp(camDistMpc, near, mid, far)` —
     // the SAME fold `starCatalogPass` applies — NOT the raw brightness trim.
-    const camDistMpc =
-      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
     const state = makeState();
@@ -523,8 +519,7 @@ describe('starPointsPass.draw', () => {
   it('uploads only the stars core admitted', () => {
     // Mid-band camera so the layer draws; core admitted the Sun alone. The Sun
     // is parsecs-sub-pixel here, so it rides the unresolved branch.
-    const camDistMpc =
-      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const camDistMpc = (STAR_BACKDROP_DISSOLVE.fullAt + STAR_BACKDROP_DISSOLVE.goneAt) / 2;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
     const state = makeState();

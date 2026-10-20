@@ -1,8 +1,9 @@
 /**
- * scaleFadeBands — the descent's crossfade transitions, AS DATA. Every scale
- * the camera crosses dissolves one kind of content in and another out; a new
- * transition is a declared row, not a hand-rolled smoothstep. Consumed through
- * `fadeBand`, which reads direction off each row's edge ordering.
+ * scaleFadeBands — core's crossfade transitions, AS DATA: the rows no single Layer
+ * owns (captions, the body-glint backdrop, the cubemap-capture bands). A Layer's own
+ * distance window is a `bands` entry on its `visibility.ts`; a new core transition is a
+ * declared row here, not a hand-rolled smoothstep. Consumed through `fadeBand`, which
+ * reads direction off each row's edge ordering.
  *
  * Deliberately over comment budget: rows do NOT all key on the same quantity,
  * so each row's comment opens with "Keyed on:" naming what feeds it, plus the
@@ -10,9 +11,9 @@
  */
 
 import type { FadeBand } from '../@types/math/FadeBand';
-import { FOREGROUND_MAX_DISTANCE_MPC } from './rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from './labels/solarSystemLabelMaxDistance';
 import { BODY_GLINT_MAX_PX } from './bodies/bodyGlintMaxPx';
+import { backdropBand } from '../utils/math/backdropBand';
 import { regionById } from '../utils/regions/regionById';
 import { SCALE_UNITS } from './scaleUnits';
 import { GALACTIC_CENTRE_ANCHOR } from './places/galacticCentre';
@@ -27,50 +28,12 @@ const SOLAR_SYSTEM_EXTENT_MPC = regionById('solar-system').extentMpc;
 // growing the star roster carries the caption band edges with it.
 const FARTHEST_STAR_PC = NEIGHBOURHOOD_EXTENT_MPC / SCALE_UNITS.PC_TO_MPC;
 
-// Eye-tuned recede edges, in kpc — the scale the tuning conversation happens at.
-const CONSTELLATIONS_FULL_AT_KPC = 1;
-const CONSTELLATIONS_GONE_AT_KPC = 10;
-
 // R₀ — the Galactic Centre's distance from the render origin, off the same
 // place seed the S-star orbits are scaled by, so the caption band cannot drift
 // from the position it labels.
 const SGR_A_STAR_R0_MPC = Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc);
 
-// The shape `starBackdrop` and `bodyGlintBackdrop` share — full at 2× a
-// region's extent, gone by 10× — one home so the two cannot drift apart.
-const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
-const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
-
-const backdropBand = (regionExtentMpc: number): FadeBand => ({
-  fullAt: regionExtentMpc * BACKDROP_FULL_AT_EXTENT_MULTIPLE,
-  goneAt: regionExtentMpc * BACKDROP_GONE_AT_EXTENT_MULTIPLE,
-});
-
 export const SCALE_FADE_BANDS = {
-  // Keyed on: CAMERA distance from the heliocentric render origin, Mpc.
-  // Cosmic-scale content yields once the local starfield fills the near field:
-  // outer edge = FOREGROUND_MAX_DISTANCE_MPC BY IMPORT, exactly where that
-  // starfield switches on. Consumers: the survey point clouds (draw + pick;
-  // the famous catalog is exempt), structure markers + labels, the "You are
-  // here" label, and scalar-volume liveness. The MW impostor deliberately
-  // OUTLIVES this band on its own `milkyWayApproachSun` row — it renders on
-  // NEAR0 and CAN draw inside the cosmological near plane.
-  surveyDeepZoom: { fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 },
-
-  // Keyed on: CAMERA distance from the heliocentric render origin — the Sun —
-  // Mpc. The impostor's fade for the descent toward the Sun: full ≥ 2 kpc,
-  // gone ≤ 200 pc — deep enough that the procedural clumps hand off to the
-  // REAL Gaia catalog (fully crossfaded in inside 8 kpc, gaia-stars
-  // crossfadePc) instead of vanishing above the starfield that replaces them.
-  milkyWayApproachSun: { fullAt: 0.002, goneAt: 0.0002 },
-
-  // Keyed on: CAMERA distance from the `galactic-centre` region's anchor
-  // (Sgr A*), Mpc. Wider than the Sun's band — the blowout is worse near the
-  // Centre — and it fades fully to 0: a dim floor reads as over-bright star
-  // blobs this deep, so don't add one back; past `goneAt` the S-star cluster
-  // is the content.
-  milkyWayApproachGc: { fullAt: 0.012, goneAt: 0.0006 },
-
   // Keyed on: the STAR's own distance from the camera, pc. Caption edges scale
   // with the roster via FARTHEST_STAR_PC. Pop-free contract with the caption
   // gate: `goneAt·PC_TO_MPC + 2·EXTENT ≤ SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`
@@ -78,16 +41,10 @@ export const SCALE_FADE_BANDS = {
   // layer's gate cuts it, so the cut cannot pop.
   starCaption: { fullAt: FARTHEST_STAR_PC * 1.1, goneAt: FARTHEST_STAR_PC * 2 },
 
-  // Keyed on: CAMERA distance from the `solar-neighbourhood` region's anchor,
-  // Mpc. Dissolves the minimum-size additive point backdrop before the hard
-  // FOREGROUND_MAX_DISTANCE_MPC gate would pop it off — the band completing
-  // STRICTLY inside the gate is what makes the gate cut invisible.
-  starBackdrop: backdropBand(NEIGHBOURHOOD_EXTENT_MPC),
-
   // Keyed on: CAMERA distance from the `solar-system` region's anchor, Mpc —
-  // the same dissolve-before-the-gate contract as `starBackdrop`, one
-  // scale-decade in. Both consumers DISABLE outright at 0 ("opacity 0 ⇒ no
-  // render"), so this far-dissolve is the binding smooth gate; the 2×/10×
+  // the same dissolve-before-the-gate contract as the star Layer's own backdrop
+  // dissolve, one scale-decade in. Both consumers DISABLE outright at 0 ("opacity
+  // 0 ⇒ no render"), so this far-dissolve is the binding smooth gate; the 2×/10×
   // multiples are an eye-tuning starting point.
   bodyGlintBackdrop: backdropBand(SOLAR_SYSTEM_EXTENT_MPC),
 
@@ -113,47 +70,6 @@ export const SCALE_FADE_BANDS = {
     goneAt: MILKY_WAY_RADIUS_MPC * 2,
   },
 
-  // Keyed on: CAMERA distance from the render origin, Mpc. A recede band —
-  // full at the low edge: the true-3D figures read as Earth's sky from within
-  // the neighbourhood and shear apart on pull-back. The layer DISABLES
-  // outright at 0 ("opacity 0 ⇒ no render"), so this is the smooth far gate;
-  // the edges are eye-tuned.
-  constellations: {
-    fullAt: CONSTELLATIONS_FULL_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
-    goneAt: CONSTELLATIONS_GONE_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
-  },
-
-  // Keyed on: CAMERA distance from the render origin, Mpc. A RECEDE fade — the
-  // Milky Way's own marked places (clusters, nebulae, Centre sites) are full
-  // from inside the galaxy out to two radii, and gone at the foreground gate,
-  // so the marker passes' inputs vanish as the survey markers take over. Eye-tuned.
-  milkyWayStructures: { fullAt: MILKY_WAY_RADIUS_MPC * 2, goneAt: FOREGROUND_MAX_DISTANCE_MPC },
-
-  // Keyed on: CAMERA distance from the render origin, Mpc. An APPROACH fade —
-  // full at the far edge — the veil explains a COSMIC-scale catalog gap.
-  // Derived off MILKY_WAY_RADIUS_MPC (2/10 radii, chosen for feel), the same
-  // posture `sgrAStarCaption` takes off R₀.
-  zoneOfAvoidance: { fullAt: MILKY_WAY_RADIUS_MPC * 10, goneAt: MILKY_WAY_RADIUS_MPC * 2 },
-
-  // Keyed on: the same quantity — composed with `zoneOfAvoidance` into a
-  // visibility WINDOW: the guide recedes once the Local Group is the subject.
-  // LITERAL Mpc values — no `local-group` row exists in BODY_REGIONS to derive
-  // them from.
-  zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
-
-  // Keyed on: CAMERA distance from the render origin, Mpc — the Sun, and the
-  // Local Bubble shell's own centre. An APPROACH fade: invisible from deep
-  // inside; goneAt sits below the mesh's ~536 pc max radius, so the camera is
-  // still inside the far lobes (the chimney) as it starts to fade in. Full by
-  // 1 kpc (~22° apparent diameter at the ~190 pc mean radius). Eye-tuned.
-  localBubble: { fullAt: 1 * SCALE_UNITS.KPC_TO_MPC, goneAt: 0.4 * SCALE_UNITS.KPC_TO_MPC },
-
-  // Keyed on: the same quantity — composed with `localBubble` into a
-  // visibility WINDOW, the same shape as `zoneOfAvoidance`/`-Recede`: the
-  // shell recedes before the Galaxy becomes the subject. Outer edge matches
-  // `constellations`'s recede band (10 kpc, ~3.4° apparent diameter there).
-  localBubbleRecede: { fullAt: 4 * SCALE_UNITS.KPC_TO_MPC, goneAt: 10 * SCALE_UNITS.KPC_TO_MPC },
-
   // Keyed on: a scene BODY's apparent diameter, px — a recede fade, glint full
   // at/below 1 px. Over the BODY_GLINT_MAX_PX→1 px band the glint fades in
   // while the mesh still draws: a popless handoff, BY CONSTRUCTION only while
@@ -162,9 +78,8 @@ export const SCALE_FADE_BANDS = {
   bodyGlint: { fullAt: 1, goneAt: BODY_GLINT_MAX_PX },
 
   // Keyed on: CAMERA distance from the `galactic-centre` region's anchor
-  // (Sgr A*), Mpc. An approach fade — opposite direction from
-  // milkyWayApproachGc. Engages the black-hole lens pass on close approach
-  // to Sgr A*; the far-field glint alpha is derived from this band
+  // (Sgr A*), Mpc. An approach fade. Engages the black-hole lens pass on close
+  // approach to Sgr A*; the far-field glint alpha is derived from this band
   // (1 - fadeBand) at its call site.
   sgrAStarLensing: { fullAt: 100 * SCALE_UNITS.AU_TO_MPC, goneAt: 500 * SCALE_UNITS.AU_TO_MPC },
 

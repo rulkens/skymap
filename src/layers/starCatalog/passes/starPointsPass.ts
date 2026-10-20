@@ -60,11 +60,11 @@
  *
  * `enabled` gates on the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC`), the backdrop-dissolve band
- * (`SCALE_FADE_BANDS.starBackdrop` > 0), AND an unresolved seeded star —
+ * (`STAR_BACKDROP_DISSOLVE` > 0), AND an unresolved seeded star —
  * the same sort `draw` consumes, so the enable gate and the uploaded
  * set cannot disagree. The backdrop is a minimum-size additive sprite field,
  * so at galaxy framing the whole roster collapses onto a few pixels into one
- * bright blob; the `starBackdrop` band dissolves it smoothly (its rgb scaled
+ * bright blob; the `STAR_BACKDROP_DISSOLVE` band dissolves it smoothly (its rgb scaled
  * per frame in `draw`) and completes STRICTLY inside the shared gate, so the
  * gate's hard cut lands on already-black sprites and never pops. Once the band
  * hits 0 the layer disables outright — the "opacity 0 ⇒ no render" house rule
@@ -89,7 +89,7 @@ import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
-import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
+import { STAR_BACKDROP_DISSOLVE } from '../data/starBackdropDissolve';
 import { starExposureRamp } from '../../../utils/star/starExposureRamp';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -133,7 +133,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
         STAR_BACKDROP_REGION,
         sceneBodyStates(state, ctx),
       );
-      if (fadeBand(SCALE_FADE_BANDS.starBackdrop, regionDistMpc) <= 0) return false;
+      if (fadeBand(STAR_BACKDROP_DISSOLVE, regionDistMpc) <= 0) return false;
       return sceneBodyPresentation(ctx).unresolved.some(({ body }) =>
         SEEDED_STAR_REFS.has(body.id),
       );
@@ -154,7 +154,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
       // read here from `view.camPos` (the frames coincide; see the module header).
       // It scales each star's uploaded colour below.
       const backdropFade = fadeBand(
-        SCALE_FADE_BANDS.starBackdrop,
+        STAR_BACKDROP_DISSOLVE,
         regionRelativeDistanceMpc(camPos, STAR_BACKDROP_REGION, sceneBodyStates(state, ctx)),
       );
 
