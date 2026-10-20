@@ -84,10 +84,10 @@ export function warpCardToFisheye(
           const sx = Math.floor(((s + 1) / 2) * card.width);
           const sy = Math.floor(((1 - t) / 2) * card.height);
           const src = (sy * card.width + sx) * 4;
-          const alpha = card.data[src + 3];
-          r += card.data[src] * alpha;
-          g += card.data[src + 1] * alpha;
-          b += card.data[src + 2] * alpha;
+          const alpha = card.data[src + 3]!;
+          r += card.data[src]! * alpha;
+          g += card.data[src + 1]! * alpha;
+          b += card.data[src + 2]! * alpha;
           a += alpha;
         }
       }

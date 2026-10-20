@@ -94,7 +94,7 @@ describe('warpCardToFisheye', () => {
 describe('warpCardToFisheye edges', () => {
   it('anti-aliases the card border: some edge pixels are partly covered', () => {
     let partial = 0;
-    for (let i = 3; i < out.length; i += 4) if (out[i] > 0 && out[i] < 255) partial++;
+    for (let i = 3; i < out.length; i += 4) if (out[i]! > 0 && out[i]! < 255) partial++;
     expect(partial).toBeGreaterThan(0);
   });
 });
