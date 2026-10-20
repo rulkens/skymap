@@ -1,0 +1,21 @@
+.root {
+  composes: wrap section grid from '../../styles/layout.module.css';
+  row-gap: 2.5rem;
+  align-items: center;
+}
+
+/* Six columns of the page grid and five, with an empty one between. */
+@media (min-width: 901px) {
+  .frame {
+    grid-column: span 6;
+    --cols: 6;
+  }
+
+  .copy {
+    grid-column: 8 / -1;
+  }
+}
+
+.caption {
+  margin-top: 0.5rem;
+}

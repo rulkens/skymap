@@ -27,7 +27,7 @@ describe('feedbackIndexLine', () => {
     element: {
       selector: 'section.hero > h1',
       source: {
-        file: 'packages/website/src/components/Flight.astro',
+        file: 'packages/website/src/components/Flight/Flight.tsx',
         loc: '65:9',
         inherited: true,
       },
@@ -38,7 +38,7 @@ describe('feedbackIndexLine', () => {
     const line = feedbackIndexLine(note, 'stem');
     expect(line).not.toContain('\n');
     expect(line).toBe(
-      '- 2026-10-06 14:03:22Z · /home/ · `section.hero > h1` · packages/website/src/components/Flight.astro:65:9 (ancestor) · Too dark · stem.json',
+      '- 2026-10-06 14:03:22Z · /home/ · `section.hero > h1` · packages/website/src/components/Flight/Flight.tsx:65:9 (ancestor) · Too dark · stem.json',
     );
   });
 

@@ -14,6 +14,7 @@
  *
  * Only TypeScript import/export specifiers are AST-tracked. It does NOT touch:
  *   - `.wesl` shader imports (`import package::...`) — a separate module graph.
+ *   - Imports inside the website's `.astro` and `.mdx` files — not TypeScript.
  *   - String-literal paths: `rawDataPath()` keys, shader/asset URLs, dynamic
  *     `import()` built from strings, anything referenced as text not as a
  *     module specifier.
@@ -68,7 +69,13 @@ async function main(): Promise<void> {
   // After the in-memory moves, every file ts-morph rewrote (the moved files
   // plus their importers) is now unsaved — that dirty set is the blast radius.
   const rewritten = project.getSourceFiles().filter((f) => !f.isSaved());
-  process.stdout.write(renderMoveReport('move-files', moves, rewritten.map((f) => f.getFilePath())));
+  process.stdout.write(
+    renderMoveReport(
+      'move-files',
+      moves,
+      rewritten.map((f) => f.getFilePath()),
+    ),
+  );
 
   if (dry) {
     process.stdout.write('\nmove-files: --dry, nothing saved.\n');

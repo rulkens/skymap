@@ -1,0 +1,38 @@
+.root {
+  max-width: var(--doc-measure);
+  margin: 0 0 var(--stack);
+  padding-block: 1rem;
+  border-block: 1px solid var(--border-divider);
+  color: var(--color-fg);
+  font-variant-numeric: normal;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  /* An equation is not broken: one wider than a phone scrolls inside its rules. */
+  overflow-x: auto;
+
+  /*
+   * A line of its own at full size, as `display="block"` gives, but on the text's left edge like everything else
+   * on the page: the attribute centres. 20px, so that a subscript, at seven tenths of it, is still 14px.
+   */
+  & math {
+    display: block math;
+    math-style: normal;
+    width: fit-content;
+    font-size: 1.25rem;
+  }
+
+  & math + math {
+    margin-top: 0.875rem;
+  }
+}
+
+.inline {
+  color: var(--color-fg);
+  white-space: nowrap;
+}
+
+/* Faces that carry the tables an integral sign and a root are sized from; the first is on every Mac, the second on Windows. */
+.root math,
+.inline math {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Noto Sans Math', math;
+}

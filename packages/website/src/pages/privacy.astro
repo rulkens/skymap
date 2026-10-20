@@ -1,22 +1,29 @@
 ---
 import Base from '../layouts/Base.astro';
-import Caveat from '../components/Caveat.astro';
-import Claims from '../components/Claims.astro';
-import Group from '../components/Group.astro';
-import Note from '../components/Note.astro';
-import ObjLink from '../components/ObjLink.astro';
-import PictureBand from '../components/PictureBand.astro';
-import Remark from '../components/Remark.astro';
-import SectionHead from '../components/SectionHead.astro';
-import ShotCaption from '../components/ShotCaption.astro';
-import Sources from '../components/Sources.astro';
+import Caveat from '../components/Caveat/Caveat.tsx';
+import Claims from '../components/Claims/Claims.tsx';
+import Group from '../components/Group/Group.tsx';
+import Note from '../components/Note/Note.tsx';
+import InlineAddress from '../components/InlineAddress/InlineAddress.tsx';
+import ObjLink from '../components/ObjLink/ObjLink.tsx';
+import PictureBand from '../components/PictureBand/PictureBand.tsx';
+import Remark from '../components/Remark/Remark.tsx';
+import SectionHead from '../components/SectionHead/SectionHead.tsx';
+import ShotCaption from '../components/ShotCaption/ShotCaption.tsx';
+import Sources from '../components/Sources/Sources.tsx';
 import { OPEN_APP_LABEL } from '../data/appLink';
 import { ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
 import { MAKER_NAME } from '../data/siteIdentity';
+import layout from '../styles/layout.module.css';
+import links from '../styles/links.module.css';
+import text from '../styles/type.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
+
+const section = `${layout.wrap} ${layout.section}`;
+const prose = `${text.prose} ${links['tap-links']}`;
 
 const title = 'Privacy: what Skymap loads, counts and keeps';
 const description =
@@ -51,15 +58,15 @@ const checked = formatDate(fact('privacy-site-requests').checked);
 >
   <PictureBand id="privacy-far-side" gap="none" eager>
     <h1>Privacy</h1>
-    <p class="say">
+    <p class={text.say}>
       This website collects nothing about you. The app counts visits without cookies and keeps one note in your
       browser.
     </p>
-    <Note flow>Each statement below was read from the code on <span class="date">{checked}</span>.</Note>
+    <Note flow>Each statement below was read from the code on <span class={text.date}>{checked}</span>.</Note>
     <ShotCaption id="privacy-far-side" />
   </PictureBand>
 
-  <section class="wrap section" id="website">
+  <section class={section} id="website">
     <SectionHead title="This website" narrow>
       <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, the about page and this one.</p>
     </SectionHead>
@@ -67,20 +74,20 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     <Remark text="Your browser fetched every file on this page from Skymap’s own addresses." live="files-fetched" />
   </section>
 
-  <section class="wrap section" id="app">
+  <section class={section} id="app">
     <SectionHead title="The app" narrow>
       <p>The map itself, which opens when you choose “{OPEN_APP_LABEL}”.</p>
     </SectionHead>
-    <Group title="The visit counter">
+    <Group title="The visit counter" first>
       <Claims items={COUNTER} />
     </Group>
-    <Caveat title="Where this falls short">
+    <Caveat landing title="Where this falls short">
       <p>
         The counter starts without asking you, and the app does not mention it. We have not set a limit of our own on
         how long its rows are kept, so treat them as kept with no fixed end date until this page says otherwise.
       </p>
       <p>
-        A content blocker that stops requests to <span class="host">counterscale.rulkens.workers.dev</span> stops the
+        A content blocker that stops requests to <InlineAddress>counterscale.rulkens.workers.dev</InlineAddress> stops the
         counter. The app works the same without it.
       </p>
     </Caveat>
@@ -93,17 +100,17 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     </Note>
   </section>
 
-  <section class="wrap section" id="form">
+  <section class={section} id="form">
     <SectionHead title="The contact form" narrow>
       <p>{fact('privacy-form-closed').text}</p>
     </SectionHead>
-    <div class="prose tap-links">
+    <div class={prose}>
       <p>
         Until it opens, the way to reach us is the <a href={ISSUES_URL}>issue list on GitHub</a>. An issue is public,
         it carries your GitHub name, and GitHub’s own privacy statement applies to it.
       </p>
     </div>
-    <Caveat title="The plan, not yet in effect">
+    <Caveat landing title="The plan, not yet in effect">
       <p>
         When the form opens, your message will go to a small program of ours on Cloudflare, which forwards the four
         fields (name, organisation, email address and message) to us as an email. A spam check, Cloudflare Turnstile,
@@ -117,33 +124,25 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     </Caveat>
   </section>
 
-  <section class="wrap section" id="responsible">
+  <section class={section} id="responsible">
     <SectionHead title="Who is responsible" narrow>
       <p>
         {MAKER_NAME}, who makes Skymap, decides what the site and the app load and keep.
       </p>
     </SectionHead>
-    <div class="prose tap-links">
+    <div class={prose}>
       <p>
         To ask what we hold about you, or to have it removed, open an issue on GitHub that says only that you have
         a privacy request, and we will reply with an address. Today the answer is short: the counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
       </p>
     </div>
-    <div class="link-row">
+    <div class={links['link-row']}>
       <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
       <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
     </div>
   </section>
 
-  <div class="wrap section last">
+  <div class={section}>
     <Sources ids={factIds} all />
   </div>
 </Base>
-
-<style>
-  /* An address inside a sentence: it may break anywhere, or it pushes a phone's page sideways. */
-  .host {
-    overflow-wrap: anywhere;
-    color: var(--color-fg);
-  }
-</style>

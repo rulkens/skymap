@@ -1,0 +1,3 @@
+.skip {
+  composes: skip-link from '../../styles/a11y.module.css';
+}

@@ -6,7 +6,7 @@ describe('pageWords', () => {
   it('leaves out the head, scripts and the list of sources', () => {
     const html =
       '<html><head><meta content="A row."></head><body><p>A row.</p><script>var a = "A row."</script>' +
-      '<details class="sources small" data-astro-cid-x><ol><li>A row. <a href="#">NASA</a></li></ol></details>' +
+      '<details class="Sources-root styles-small"><ol><li>A row. <a href="#">NASA</a></li></ol></details>' +
       '<p>After.</p></body></html>';
     expect(pageWords(html)).toBe('A row. After.');
   });

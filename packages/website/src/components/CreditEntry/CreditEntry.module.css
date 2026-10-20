@@ -1,0 +1,42 @@
+.root {
+  margin: 0 0 2.5rem;
+
+  & h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  & header {
+    padding-bottom: 0.75rem;
+  }
+
+  & :is(header p, dl) {
+    max-width: none;
+    margin: 0;
+  }
+}
+
+.terms {
+  composes: small from '../../styles/type.module.css';
+  composes: tap-links from '../../styles/links.module.css';
+  max-width: none;
+  margin: 0;
+}
+
+/* The name on the columns a row's words stand on, the terms in the last two: one edge down the whole page. */
+@media (min-width: 700px) {
+  .root header {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    align-items: end;
+  }
+
+  .root h3 {
+    grid-column: 1 / -3;
+  }
+
+  .root header p {
+    grid-column: -3 / -1;
+  }
+}

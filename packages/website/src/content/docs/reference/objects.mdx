@@ -3,15 +3,16 @@ description: Every named object in Skymap, with its other names, the id a link u
 facts: [search-catalogue-galaxies]
 ---
 
-import ObjectFinder from '../../../components/ObjectFinder.astro';
-import ObjectList from '../../../components/ObjectList.astro';
+import ObjectFinder from '../../../components/ObjectFinder/ObjectFinder.tsx';
+import ObjectList from '../../../components/ObjectList/ObjectList.tsx';
 import { objectCount } from '../../../utils/objectCount';
+import { objectSectionCounts } from '../../../utils/objectSectionCounts';
 
 Put an id after `#focus=` in the app’s address to open that object; an exhibit’s id goes after `#exhibit=` and a tour’s after `#tour=`. Each row here has an address of its own too: add the id to this page’s, as in `#body-saturn`. The rows and their links are made from the app’s own tables when the site is built.
 
 The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a <Source id="glade">GLADE</Source> or <Source id="2mrs">2MRS</Source> galaxy by its [designation](/docs/reference/glossary/#designation) (see [Finding things](/docs/guide/finding/)), and any object the camera is focused on has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
 
-<ObjectFinder />
+<ObjectFinder client:idle sections={objectSectionCounts()} />
 
 ## Sun, planets and dwarf planets
 

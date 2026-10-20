@@ -165,7 +165,10 @@ function partition(
   extra: readonly PositionedSceneBody[] = [],
 ) {
   const state = {
-    gpu: { texturedBodyRenderer: { hasMap: (id: string) => resident(id) } },
+    gpu: {
+      texturedBodyRenderer: { hasMap: (id: string) => resident(id) },
+      meshBodyRenderer: { hasMesh: (id: string) => resident(id) },
+    },
   } as unknown as PassState;
   const ctx = {
     snapshot: {
@@ -178,6 +181,7 @@ function partition(
   return sceneBodyPartition(state, ctx);
 }
 const bodiesOf = (bodies: readonly PositionedSceneBody[]) => bodies.map((p) => p.body);
+const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((b) => b.id);
 
 describe('sceneBodyPartition routing', () => {
   it('is disjoint and covering — every own body lands in exactly one branch', () => {
@@ -185,12 +189,12 @@ describe('sceneBodyPartition routing', () => {
       planetAt('mars', 3390000, CLOSE(3390000)), // resolved, registry
       planetAt('titan', 2575000, CLOSE(2575000)), // resolved, not registry
       planetAt('jupiter', 69911000, AU_M), // sub-pixel glint
-      meshAt('moon', 1737000, CLOSE(1737000)), // resolved mesh
+      meshAt('whale', 6.8, CLOSE(6.8)), // resolved mesh
     ];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
-    const all = [...glints, ...flat, ...textured, ...meshes];
+    const all = idsOf([...glints, ...flat, ...textured, ...meshes]);
     expect(all).toHaveLength(bodies.length);
-    expect(new Set(all)).toEqual(new Set(bodiesOf(bodies)));
+    expect(new Set(all)).toEqual(new Set(idsOf(bodiesOf(bodies))));
   });
 
   it('routes a resolved registry body to textured iff its texture is resident', () => {
@@ -212,17 +216,24 @@ describe('sceneBodyPartition routing', () => {
   });
 
   it('routes a sub-3px body, planet or mesh, to glints', () => {
-    const bodies = [planetAt('jupiter', 69911000, AU_M), meshAt('moon', 1737000, AU_M)];
+    const bodies = [planetAt('jupiter', 69911000, AU_M), meshAt('whale', 6.8, AU_M)];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     expect(glints).toEqual(bodiesOf(bodies));
     expect([...flat, ...textured, ...meshes]).toEqual([]);
   });
 
   it('routes a resolved MeshBody to meshes, never textured or flat', () => {
-    const moon = meshAt('moon', 1737000, CLOSE(1737000));
-    const { meshes, flat, textured, glints } = partition([moon], () => true);
-    expect(meshes).toEqual([moon.body]);
+    const whale = meshAt('whale', 6.8, CLOSE(6.8));
+    const { meshes, flat, textured, glints } = partition([whale], () => true);
+    expect(idsOf(meshes)).toEqual(['whale']);
     expect([...flat, ...textured, ...glints]).toEqual([]);
+  });
+
+  // A mission mesh has no sphere to fall back to: drawing one would be a wrong shape.
+  it('drops a resolved MeshBody whose mesh is not resident from every branch', () => {
+    const whale = meshAt('whale', 6.8, CLOSE(6.8));
+    const { meshes, flat, textured, glints } = partition([whale], () => false);
+    expect([...meshes, ...flat, ...textured, ...glints]).toEqual([]);
   });
 
   it("takes only core's own bodies", () => {

@@ -18,16 +18,18 @@
  * reaches the pages the same way it reaches the app.
  */
 import mdx from '@astrojs/mdx';
+import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { createIndex } from 'pagefind';
 import { readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
 import { toolPages } from '../../tools/utils/io/toolPages.ts';
 import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
+import { jsxSourceAttributes } from '../../tools/site/jsxSourceAttributes.ts';
 import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
 import { BASE, INDEXABLE } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
@@ -71,10 +73,12 @@ const devRootStatics = {
       if (command === 'dev')
         updateConfig({
           publicDir: pathToFileURL(`${publicDir}/`),
-          // The feedback and review endpoints (src/dev/feedback, src/dev/review) ride the dev server only.
+          // The feedback and review endpoints (src/dev/feedback, src/dev/review) ride the dev server only,
+          // as does the source pointer on React elements that feedback notes read.
           vite: {
             plugins: [
               rootStatics,
+              jsxSourceAttributes(resolve(import.meta.dirname, 'src')),
               feedbackPlugin(`${BASE}__feedback`),
               reviewPlugin(`${BASE}__review`),
             ],
@@ -109,13 +113,19 @@ const searchIndex = {
       if (!index) throw new Error(`pagefind: ${errors.join('; ')}`);
       await index.addDirectory({ path: out });
       const { outputPath } = await index.writeFiles({ outputPath: join(out, 'pagefind') });
-      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch.astro).
+      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch/DocsSearch.tsx).
       for (const name of readdirSync(outputPath))
         if (/-ui\.|-highlight\./.test(name)) rmSync(join(outputPath, name));
       logger.info(`search index written to ${outputPath}`);
     },
   },
 };
+
+// CSS-module class names are `{folder}-{class}` with no content hash. Every component sits in a folder of
+// its own (components/Nav/Nav.module.css), so the folder is already a unique prefix and the compiled CSS
+// stays readable; the stylesheet file name still carries the hash that busts caches. Same rule as
+// ~/Development/web/rulkens.com/astro.config.ts.
+const generateScopedName = (name, file) => `${basename(dirname(file))}-${name}`;
 
 export default defineConfig({
   site,
@@ -127,6 +137,9 @@ export default defineConfig({
   server: { port: DEV_PORTS.website },
   // One accent on the page: a code block is set in the mono face and not coloured by token.
   markdown: { syntaxHighlight: false },
-  integrations: [mdx(), devRootStatics, crawlFiles, searchIndex],
-  vite: { envDir: resolve(import.meta.dirname, '../..') },
+  integrations: [react(), mdx(), devRootStatics, crawlFiles, searchIndex],
+  vite: {
+    envDir: resolve(import.meta.dirname, '../..'),
+    css: { modules: { generateScopedName } },
+  },
 });

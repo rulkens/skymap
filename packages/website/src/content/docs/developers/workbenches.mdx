@@ -3,7 +3,7 @@ description: Six browser tools sit beside Skymap in its repository. Three are pu
 facts: [bench-public, bench-public-data, bench-local]
 ---
 
-import WorkbenchFigure from '../../../components/WorkbenchFigure.astro';
+import WorkbenchFigure from '../../../components/WorkbenchFigure/WorkbenchFigure.tsx';
 import { REPO_BLOB } from '../../../data/siteIdentity';
 import { WORKBENCHES } from '../../../data/workbenches';
 
@@ -23,7 +23,7 @@ export const BENCHES = {
 
 <Fact id="bench-not-app" inline /> They are tools, made for one person at a desk: no welcome screen, no phone layout, and labels in the project’s own shorthand. A published one needs [the same browser as the app](/docs/start/browsers/).
 
-<Table {...BENCHES} />
+<Table head={BENCHES.head} rows={BENCHES.rows} />
 
 ## Galaxy renderer
 

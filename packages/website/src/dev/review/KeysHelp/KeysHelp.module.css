@@ -1,0 +1,43 @@
+/* The key reference hangs from the bar, in the panel's corner; the two are never open together. */
+.root {
+  composes: panel from '../ReviewControl/ReviewControl.module.css';
+  position: absolute;
+  top: calc(100% + var(--space-8));
+  width: min(22rem, calc(100vw - 2rem));
+  padding: var(--space-6) var(--space-8);
+}
+
+/* On a phone the bar is at the foot: the box rises above it, clear of the feedback button like the panel. */
+@media (max-width: 900px) {
+  .root {
+    bottom: calc(100% + 4rem);
+  }
+}
+
+.root h3 {
+  margin: var(--space-6) 0 var(--space-2);
+  color: var(--site-text-dim);
+  font: 600 0.6875rem / 1.2 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.root h3:first-child {
+  margin-top: 0;
+}
+
+.root dl {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-2) var(--space-8);
+  margin: 0;
+}
+
+.root dt,
+.root dd {
+  margin: 0;
+}
+
+.key {
+  composes: key from '../ReviewControl/ReviewControl.module.css';
+}
