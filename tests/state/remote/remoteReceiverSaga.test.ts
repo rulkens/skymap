@@ -225,6 +225,22 @@ describe('remoteReceiverSaga', () => {
     expect(store.getState()[uiRoute].uiHidden).toBe(false);
   });
 
+  it('Add a phone re-shows the code; only a new remote dismisses it, and it toggles back', async () => {
+    const { store, say } = await setup();
+    const toggle = { name: 'togglePairing', payload: null };
+    await say({ from: 'a', kind: 'hello' });
+    await say({ from: 'a', kind: 'command', command: toggle });
+    expect(selectRemote(store.getState()).phase).toBe('waiting');
+    await vi.advanceTimersByTimeAsync(1000);
+    await say({ from: 'a', kind: 'hello' });
+    expect(selectRemote(store.getState()).phase).toBe('waiting');
+    await say({ from: 'b', kind: 'hello' });
+    expect(selectRemote(store.getState()).phase).toBe('paired');
+    await say({ from: 'a', kind: 'command', command: toggle });
+    await say({ from: 'a', kind: 'command', command: toggle });
+    expect(selectRemote(store.getState()).phase).toBe('paired');
+  });
+
   it('fifty state changes in one second send at most four statuses', async () => {
     const { store, statuses } = await setup();
     // Changes at 0, 20, … 980 ms: all inside one second.

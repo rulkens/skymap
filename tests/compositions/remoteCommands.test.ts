@@ -16,6 +16,7 @@ import {
   setSimDays,
 } from '../../src/state/time/timeSlice';
 import { actionsForPaletteAction } from '../../src/utils/palette/actionsForPaletteAction';
+import { remotePairingToggled } from '../../src/state/remote/remoteSlice';
 import type { PaletteAction } from '../../src/@types/palette/PaletteAction';
 import type { RemoteCommandEnv } from '../../src/@types/remote/RemoteCommandEnv';
 
@@ -66,6 +67,7 @@ describe('goTo', () => {
 
 describe.each([
   ['home', goHome()],
+  ['togglePairing', remotePairingToggled()],
   ['tourAdvance', advanceTour()],
   ['tourPrev', prevBeat()],
   ['tourTogglePause', togglePause()],

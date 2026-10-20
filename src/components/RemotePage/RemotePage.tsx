@@ -56,6 +56,13 @@ function RemotePage() {
         >
           Home
         </button>
+        <button
+          type="button"
+          className={controls.button}
+          onClick={() => sendCommand({ name: 'togglePairing', payload: null })}
+        >
+          Add a phone
+        </button>
         {!domeThere && (
           <button type="button" className={controls.button} onClick={() => join(null)}>
             Change code

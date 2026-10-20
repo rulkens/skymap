@@ -111,13 +111,15 @@ export function* remoteReceiverSaga(
       const message = parseRemoteMessage(yield* take(texts), parseRemoteCommand);
       if (message === null) continue;
       const { from } = message;
+      const known = watchdogs.has(from);
       const watchdog = watchdogs.get(from);
       if (watchdog) yield* cancel(watchdog);
       watchdogs.set(from, yield* fork(closeAfterSilence, from));
 
       switch (message.kind) {
         case 'hello': {
-          if (selectRemote(yield* select()).phase !== 'paired') {
+          // A live remote's 1 s heartbeat must not dismiss a re-shown code.
+          if (!known && selectRemote(yield* select()).phase !== 'paired') {
             yield* put(remotePaired());
             yield* put(setUiHidden(true));
           }

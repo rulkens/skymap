@@ -5,6 +5,7 @@ import type { PaletteAction } from '../palette/PaletteAction';
 export type RemoteCommandPayloads = {
   goTo: PaletteAction;
   home: null;
+  togglePairing: null;
   tourAdvance: null;
   tourPrev: null;
   tourTogglePause: null;

@@ -160,6 +160,7 @@ clock is stamped, so no wire payload carries `nowMs`.
 export type RemoteCommandPayloads = {
   goTo: PaletteAction; // focus, exhibit, tour, flyTo
   home: null;
+  togglePairing: null;
   tourAdvance: null;
   tourPrev: null;
   tourTogglePause: null;

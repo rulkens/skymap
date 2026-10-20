@@ -11,6 +11,7 @@ import { APP_EXHIBITS } from './appExhibits';
 import { clipRegistry } from '../data/animation/clips/clipRegistry';
 import { tourRegistry } from '../data/animation/tours/tourRegistry';
 import { RATE_LADDER } from '../data/time/rateLadder';
+import { remotePairingToggled } from '../state/remote/remoteSlice';
 import { goHome } from '../state/selection/goHome';
 import { advanceTour, prevBeat, togglePause } from '../state/tour/tourActions';
 import { startClip } from '../state/camera/clipActions';
@@ -73,6 +74,7 @@ export const REMOTE_COMMANDS: {
 } = {
   goTo: { parse: parsePaletteAction, toActions: actionsForPaletteAction },
   home: noPayloadRow(goHome),
+  togglePairing: noPayloadRow(remotePairingToggled),
   tourAdvance: noPayloadRow(advanceTour),
   tourPrev: noPayloadRow(prevBeat),
   tourTogglePause: noPayloadRow(togglePause),

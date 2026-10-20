@@ -1,4 +1,4 @@
-/** remoteSlice — the dome's pairing phase; only `remoteReceiverSaga` writes it. */
+/** remoteSlice — the dome's pairing phase; only `remoteReceiverSaga` writes it (a command reaches it through `runRemoteCommand`). */
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { RemoteState } from '../../@types/remote/RemoteState';
@@ -17,9 +17,13 @@ const remoteSlice = createSlice({
     remotePaired: (remote) => {
       remote.phase = 'paired';
     },
+    // Same room, so a second phone pairs with the code already shown.
+    remotePairingToggled: (remote) => {
+      if (remote.phase !== 'off') remote.phase = remote.phase === 'paired' ? 'waiting' : 'paired';
+    },
   },
 });
 
-export const { remotePairingStarted, remotePaired } = remoteSlice.actions;
+export const { remotePairingStarted, remotePaired, remotePairingToggled } = remoteSlice.actions;
 
 export default remoteSlice.reducer;
