@@ -18,7 +18,7 @@
  * are here" label in the Local Group. Both edges are pinned by this file's test.
  */
 
-import { BODY_REGIONS } from '../../../data/bodies/bodyRegions';
+import { BODY_REGIONS } from '../bodies/bodyRegions';
 
 const MARGIN = 100;
 

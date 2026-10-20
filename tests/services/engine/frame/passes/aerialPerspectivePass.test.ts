@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { aerialPerspectivePass } from '../../../../../src/services/engine/frame/passes/aerialPerspectivePass';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';

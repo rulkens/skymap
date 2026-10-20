@@ -10,13 +10,13 @@
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../frame/foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../data/labels/solarSystemLabelMaxDistance';
 import { BODY_GLINT_MAX_PX } from '../../../data/bodies/bodyGlintMaxPx';
 import { regionById } from '../../../utils/regions/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
-import { MILKY_WAY_RADIUS_MPC } from '../galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../data/milkyWay/milkyWayRadiusMpc';
 
 // Each near-field extent is read from the region whose content the row gates,
 // so a band cannot end up keyed on a scale that belongs to a different regime.

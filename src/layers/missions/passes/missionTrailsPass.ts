@@ -19,7 +19,7 @@ import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepth
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOccluderSpheres';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
 
 export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missionTrails'> {

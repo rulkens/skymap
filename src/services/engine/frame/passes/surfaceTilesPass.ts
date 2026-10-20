@@ -33,7 +33,7 @@ import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanc
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from './earthPass';
 
 export const surfaceTilesPass: ContentPass = {

@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

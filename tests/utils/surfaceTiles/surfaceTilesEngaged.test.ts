@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { surfaceTilesEngaged } from '../../../src/utils/surfaceTiles/surfaceTilesEngaged';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../src/data/rendering/foregroundMaxDistance';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { bodyRelativePose } from '../../../src/services/engine/camera/bodyRelativePose';
 import { imagePlaneBasis } from '../../../src/utils/camera/imagePlaneBasis';

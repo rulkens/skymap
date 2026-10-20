@@ -23,7 +23,7 @@ import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { atmosphereShellPass } from '../../../../../src/services/engine/frame/passes/atmosphereShellPass';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/data/bodies/atmosphereParams';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../../fixtures/makeSlab';

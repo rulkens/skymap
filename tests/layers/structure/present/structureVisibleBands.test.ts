@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from '../../../../src/layers/structure/present/structureVisibleBands';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 
 describe('structure visible bands by scale', () => {

@@ -66,7 +66,7 @@ import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { sceneBodyPresentation } from '../../../services/engine/frame/sceneBodyPresentation';
 import { positionedSeededStars } from '../present/positionedSeededStars';
 import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 

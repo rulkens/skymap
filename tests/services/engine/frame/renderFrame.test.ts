@@ -45,10 +45,8 @@ import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';

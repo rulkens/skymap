@@ -17,7 +17,7 @@ import { BLACK_HOLES } from '../data/blackHoles';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { INSTANCE_FLOATS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';

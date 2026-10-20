@@ -29,7 +29,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
