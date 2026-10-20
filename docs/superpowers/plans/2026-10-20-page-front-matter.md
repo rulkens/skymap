@@ -211,18 +211,18 @@ Suggested grouping for dispatch: **A** = Tasks 1–3 (docs and `Base`), **B** = 
 - all 27 `packages/website/src/content/docs/**/*.mdx`
 - `tests/packages/website/docsTree.test.ts`
 
-- [ ] `content.config.ts`:
+- [x] `content.config.ts`:
   - Define `pageFields` and `docs` as in **Schemas**, with the `pages` collection left out until Task 4.
   - Rewrite the header comment: fields live in each file, and order and group in `data/docsTree.ts`.
-- [ ] Add `DocsRow`, make `DocsGroup` generic, and type `DOCS_TREE` as `DocsGroup<DocsRow>[]`.
-- [ ] Delete `title` from every row whose page is a `content/docs` text (27 rows). Glossary, All sources at a glance, Credits and the `DATA_PAGES` rows keep theirs.
-- [ ] Add `title:` to each of the 27 MDX files, with the exact string the row had. Add `job:` from the table below, JSON-quoted.
-- [ ] Add `loadDocsTree`. `Docs.astro` and `docs/index.astro` use `await loadDocsTree()` in place of `DOCS_TREE`.
-- [ ] Update `docsTree.ts`'s header comment (titles live in the texts) and the `content.config.ts` cross-reference.
-- [ ] Test `docs tree › a row names its title exactly when no docs text holds one`.
+- [x] Add `DocsRow`, make `DocsGroup` generic, and type `DOCS_TREE` as `DocsGroup<DocsRow>[]`.
+- [x] Delete `title` from every row whose page is a `content/docs` text (27 rows). Glossary, All sources at a glance, Credits and the `DATA_PAGES` rows keep theirs.
+- [x] Add `title:` to each of the 27 MDX files, with the exact string the row had. Add `job:` from the table below, JSON-quoted.
+- [x] Add `loadDocsTree`. `Docs.astro` and `docs/index.astro` use `await loadDocsTree()` in place of `DOCS_TREE`.
+- [x] Update `docsTree.ts`'s header comment (titles live in the texts) and the `content.config.ts` cross-reference.
+- [x] Test `docs tree › a row names its title exactly when no docs text holds one`.
   - For every row, assert `Boolean(row.title)` equals `!existsSync(content/docs/<path less /docs/ and the last slash>.mdx)`.
   - This catches a title written twice, and a generated page left with no title. Neither the build nor `astro check` notices the first.
-- [ ] `npx vitest run tests/packages/website/docsTree.test.ts tests/packages/website/docsPlace.test.ts tests/packages/website/features.test.ts`, then `npm run site:build`.
+- [x] `npx vitest run tests/packages/website/docsTree.test.ts tests/packages/website/docsPlace.test.ts tests/packages/website/features.test.ts`, then `npm run site:build`.
 
 Job lines (from the cutter's `job-lines.md`):
 
