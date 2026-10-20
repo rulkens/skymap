@@ -16,8 +16,7 @@
 }
 
 .topic,
-.ask,
-.credit {
+.ask {
   composes: small from '../../styles/type.module.css';
 }
 
@@ -29,11 +28,6 @@
 .ask {
   margin: 0 0 0.5rem;
   color: var(--color-fg);
-}
-
-.credit {
-  margin: 0;
-  color: var(--site-text-dim);
 }
 
 @media (min-width: 601px) and (max-width: 900px) {
