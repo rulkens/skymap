@@ -648,7 +648,13 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   {
     id: 'features-card',
     link: 'focus=m31&pose=a,0.57651,0.10877,0.51485,-1.0847,-0.5820,0.16,0',
-    settings: { ui: true, hideStructures: true, hideZoneOfAvoidance: true, settleMs: 9000 },
+    settings: {
+      ui: true,
+      minimalUi: true,
+      hideStructures: true,
+      hideZoneOfAvoidance: true,
+      settleMs: 9000,
+    },
     size: FEATURE,
     widths: FEATURE_WIDTHS,
     title: 'The Andromeda Galaxy with its card open on the right',

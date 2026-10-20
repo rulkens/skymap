@@ -28,6 +28,16 @@ const KEY_DELAY_MS = 60;
 const RESULTS_SETTLE_MS = 1200;
 // A panel section unfolds over a short transition.
 const PANEL_SETTLE_MS = 600;
+// `minimalUi`: the app's own accessible names, which its CSS-module class names are not stable enough to be.
+const MINIMAL_UI_CSS = [
+  'Navigation cheatsheet',
+  'Renderer settings',
+  'Scale reference',
+  'Time controls',
+]
+  .map((name) => `[aria-label="${name}"]`)
+  .join(', ')
+  .concat(' { visibility: hidden !important; }');
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -72,6 +82,7 @@ try {
           await page.locator('button', { has: page.locator(`span:text-is("${heading}")`) }).click();
           await page.waitForTimeout(PANEL_SETTLE_MS);
         }
+        if (shot.settings?.minimalUi) await page.addStyleTag({ content: MINIMAL_UI_CSS });
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
         writeFileSync(
           master,

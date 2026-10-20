@@ -31,6 +31,8 @@ export type SiteShotSettings = {
   tourStep?: number;
   /** The app's own interface in the picture: a screenshot of the page, not of the canvas alone. */
   ui?: true;
+  /** With `ui`: the navigation and settings panels, the scale bar and the clock hidden; the top bar and the info card stay. */
+  minimalUi?: true;
   /** With `ui`: open the app’s search and type this before the shot; an empty string leaves it on its picture cards. */
   searchFor?: string;
   /** With `ui`: the app's debug panel open, as the D key opens it. */
