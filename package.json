@@ -165,7 +165,7 @@
     "earcut": "3.2.3",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.1.1",
-    "jscpd": "5.4.1",
+    "jscpd": "4.3.0",
     "jsdom": "27.0.1",
     "msdf-bmfont-xml": "2.8.0",
     "pixelmatch": "5.3.0",
