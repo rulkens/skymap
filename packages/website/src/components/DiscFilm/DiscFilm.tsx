@@ -3,6 +3,7 @@
  * `playing` is true, so a film never played is never fetched, and it shows once it has a frame
  * (`data-shown` on the frame) so the still never gives way to an empty box. While it plays, `--turn`
  * on the frame is how far through the loop it is (0 to 1). `children` sit in the frame, after the picture.
+ * `wide` sets a 16:9 film in a plain frame instead of a disc.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode, Ref } from 'react';
@@ -19,10 +20,20 @@ type DiscFilmProps = {
   /** Size, padding and ground of the frame. */
   className?: string;
   screenRef?: Ref<HTMLSpanElement>;
+  wide?: boolean;
   children?: ReactNode;
 };
 
-function DiscFilm({ still, sizes, film, playing, className, screenRef, children }: DiscFilmProps) {
+function DiscFilm({
+  still,
+  sizes,
+  film,
+  playing,
+  className,
+  screenRef,
+  wide = false,
+  children,
+}: DiscFilmProps) {
   const [started, setStarted] = useState(false);
   const [shown, setShown] = useState(false);
   const disc = useRef<HTMLSpanElement>(null);
@@ -48,7 +59,11 @@ function DiscFilm({ still, sizes, film, playing, className, screenRef, children 
   }, [playing, started]);
 
   return (
-    <span ref={disc} className={cx(styles.root, className)} data-shown={shown ? '' : undefined}>
+    <span
+      ref={disc}
+      className={cx(styles.root, wide && styles.wide, className)}
+      data-shown={shown ? '' : undefined}
+    >
       <span ref={screenRef} className={styles.screen}>
         <Shot id={still} sizes={sizes} alt="" />
         {film && started && (

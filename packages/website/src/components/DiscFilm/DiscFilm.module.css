@@ -30,6 +30,16 @@
   }
 }
 
+.wide {
+  aspect-ratio: 16 / 9;
+  border: 0;
+
+  &,
+  & .screen {
+    border-radius: 0;
+  }
+}
+
 .root[data-shown] video {
   opacity: 1;
 }

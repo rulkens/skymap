@@ -1,0 +1,24 @@
+.root {
+  display: grid;
+  justify-items: start;
+  row-gap: 0.25rem;
+}
+
+.film {
+  width: 9rem;
+  padding: 0.5rem;
+}
+
+.wide {
+  justify-items: stretch;
+
+  & .film {
+    width: auto;
+    padding: 0;
+  }
+}
+
+.button {
+  composes: ring ring-small from '../../styles/ring.module.css';
+  justify-self: start;
+}

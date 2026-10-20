@@ -1,11 +1,95 @@
 ---
 title: Features | Skymap
-description: Everything you can see and do in Skymap, group by group, each with a link to its page in the docs.
+description: What Skymap shows, in pictures and films. Places from a park in Copenhagen to the cosmic web, time, screens of all sizes and a link to every view.
 job: "What can Skymap do, and where is each thing explained?"
 ---
 
-import FeatureLead from '../../components/FeatureLead/FeatureLead.tsx';
-import FeatureStage from '../../components/FeatureStage/FeatureStage.tsx';
+import AddressStrip from '../../components/AddressStrip/AddressStrip.tsx';
+import FeatureFilm from '../../components/FeatureFilm/FeatureFilm.tsx';
+import FeatureSection from '../../components/FeatureSection/FeatureSection.tsx';
+import Figure from '../../components/Figure/Figure.tsx';
+import Phone3D from '../../components/Phone3D/Phone3D.tsx';
+import SectionHead from '../../components/SectionHead/SectionHead.tsx';
+import Shot from '../../components/Shot/Shot.tsx';
+import { siteShot } from '../../data/siteShot';
+import a11y from '../../styles/a11y.module.css';
+import layout from '../../styles/layout.module.css';
 
-<FeatureLead />
-<FeatureStage client:load />
+export const part = `${layout.wrap} ${layout.section}`;
+// The large visual takes seven of the page grid's twelve columns; a small still is 16rem, a disc's picture 8rem.
+export const big = '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)';
+export const small = '16rem';
+export const disc = '8rem';
+
+<h1 class={a11y.unseen}>Features</h1>
+
+<div class={part}>
+  <SectionHead title="Places">
+    <p>From a park in Copenhagen to the edge of the observable universe.</p>
+  </SectionHead>
+</div>
+
+<FeatureSection title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around, in the guide">
+  <Figure id="earth-terminator" sizes={big} />
+  <Shot slot="small" id="lead-park" sizes={small} />
+  <FeatureFilm slot="small" film="place-earth" sizes={disc} client:visible />
+</FeatureSection>
+
+<FeatureSection title="The Solar System" line="The planets and their moons on their orbits, where they are at the date on the clock." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons, in the docs">
+  <Figure id="saturn" sizes={big} />
+  <Shot slot="small" id="lesson-solar-system" sizes={small} />
+  <FeatureFilm slot="small" film="place-moon" sizes={disc} client:visible />
+</FeatureSection>
+
+<FeatureSection title="Missions" line="Spacecraft where they are at the date on the clock, and rovers on the ground on Mars." href="/docs/start/scene/#spacecraft" label="Spacecraft, in the docs">
+  <Figure id="data-perseverance" sizes={big} />
+  <FeatureFilm slot="small" film="place-voyager1" sizes={disc} client:visible />
+</FeatureSection>
+
+<FeatureSection title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way, in the docs">
+  <Figure id="features-constellations" sizes={big} />
+  <Shot slot="small" id="milky-way-drawn" sizes={small} />
+  <FeatureFilm slot="small" film="place-sgr-a" sizes={disc} client:visible />
+</FeatureSection>
+
+<FeatureSection title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web, in the docs">
+  <Figure id="features-flow" sizes={big} />
+  <Shot slot="small" id="tour-cosmic-web" sizes={small} />
+  <FeatureFilm slot="small" film="place-andromeda" sizes={disc} client:visible />
+</FeatureSection>
+
+<div class={part}>
+  <SectionHead title="The universe in motion">
+    <p>The scene runs on a clock that you can set, speed up and run backwards.</p>
+  </SectionHead>
+</div>
+
+<FeatureSection title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time, in the guide">
+  <FeatureFilm film="features-time-jupiter" sizes={big} wide client:visible />
+  <FeatureFilm slot="small" film="features-time-earth" sizes={disc} client:visible />
+</FeatureSection>
+
+<div class={part}>
+  <SectionHead title="Screens of all sizes">
+    <p>The same app on a phone, on a computer and on a planetarium dome.</p>
+  </SectionHead>
+</div>
+
+<FeatureSection title="Phone" line="The whole app in a phone’s browser, moved with your fingers." href="/docs/guide/screens-and-domes/" label="Screens, quality and domes, in the guide">
+  <Phone3D shot="features-phone" />
+</FeatureSection>
+
+<FeatureSection title="Desktop" line="A mouse and a keyboard to fly with, and an info card beside the view for what you select." href="/docs/reference/controls/" label="Controls, in the reference">
+  <Figure id="features-card" sizes={big} />
+  <Shot slot="small" id="guide-controls" sizes={small} />
+</FeatureSection>
+
+<FeatureSection title="Domes" line="A fisheye picture for a planetarium dome, from the live app or as a rendered film." href="/domes/" label="Domes and museums">
+  <Figure id="dome-earth" sizes={big} disc />
+  <Shot slot="small" id="dome-web" sizes={small} />
+</FeatureSection>
+
+<FeatureSection level={2} title="Deep linking" line="The address holds the place, the camera and the time, so a link opens the view you see." href="/docs/guide/sharing/" label="Sharing a view, in the guide">
+  <Figure id="guide-share-pose" sizes={big} />
+  <AddressStrip slot="small" hash={siteShot('guide-share-pose').link} />
+</FeatureSection>
