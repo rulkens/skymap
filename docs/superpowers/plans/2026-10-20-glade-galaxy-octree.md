@@ -51,7 +51,9 @@ Decided at plan time (each simpler than the spec text; the reviewer checks again
 - **D8. `GalaxyColumnBlock` trades the five bands for `colourIndexAt(i)`.** Only the procedural disk reads bands, to get
   the ramp position (`proceduralDiskSubsystem.ts:126`). The octree has the baked ramp position and no resident bands.
   The flat block computes it lazily per asked row, and nothing is precomputed for flat catalogs.
-- **D9. Blobs draw into the galaxy points target**, not a low-res target like the star aggregates.
+- **D9. Blobs draw as a star-style box-filling glow in the galaxy points pass** (user ruling 2026-10-20, replacing "plain
+  brighter billboard"): radius = the node's projected edge × an overlap factor, peak = the subtree's summed light over
+  that area with a cap, as `starCatalog/vertex.wesl:222-251`; no separate low-res target unless the perf gate asks.
 
 ## Global constraints
 
