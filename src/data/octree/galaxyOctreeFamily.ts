@@ -22,3 +22,21 @@ export const GALAXY_OCTREE_FAMILY: OctreeFamilyRow = {
   countStat: 'recordCount',
   unitMpc: 1,
 };
+
+// CPU-only columns beside each chunk; the files carry their own copy, so the reader never assumes this one.
+export const GALAXY_INFO_SCHEMA: readonly ColumnSchema[] = [
+  { id: 'objId', store: 'u64', q0: 0, q1: 1 },
+  { id: 'specZ', store: 'f32', q0: 0, q1: 1 },
+  // Raw 0 is "no mass"; a real log10 mass is far above 1/16.
+  { id: 'logMass', store: 'u8', q0: 0, q1: 1 / 16 },
+  { id: 'magU', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magG', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magR', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magI', store: 'f16', q0: 0, q1: 1 },
+  { id: 'magZ', store: 'f16', q0: 0, q1: 1 },
+];
+
+export const PGC_SHARD_SCHEMA: readonly ColumnSchema[] = [
+  { id: 'objId', store: 'u64', q0: 0, q1: 1 },
+  { id: 'ordinal', store: 'u32', q0: 0, q1: 1 },
+];

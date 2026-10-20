@@ -249,11 +249,11 @@ Header stats: `recordCount`, `medianAbsMag` (`galaxyMedianAbsMag`), `magOffset`,
 - **`namedPgcs`:** the GLADE pgcs present in `data/pgc_aliases.json`, read through the raw-data registry.
 - A dense cell (`ownCount > 8192`) stays the existing bake STOP. Report it; never raise the cap.
 
-- [ ] Test `a 5,000-record synthetic GLADE bake round-trips: every input pgc resolves through its shard to an ordinal whose info objId is that pgc`.
-- [ ] Test `records without a pgc are absent from the shards and from namedPgcs`.
-- [ ] Test `header stats equal the flat helpers over the same records`.
-- [ ] Test `w = 0 and w = 0.05 bake to angularWeight code 1, the codec's floor`.
-- [ ] Commit.
+- [x] Test `a 5,000-record synthetic GLADE bake round-trips: every input pgc resolves through its shard to an ordinal whose info objId is that pgc`.
+- [x] Test `records without a pgc are absent from the shards and from namedPgcs`.
+- [x] Test `header stats equal the flat helpers over the same records`.
+- [x] Test `w = 0 and w = 0.05 bake to angularWeight code 1, the codec's floor`.
+- [x] Commit.
 
 ### Task 5: deploy and fetch rows for the galaxy octree
 

@@ -82,6 +82,8 @@ export function writeOctreeCatalog(
     chunks: refsUnder(null),
     // Refs sit at their ids, and record ordinals follow ids: already ascending recordBase.
     ...(info ? { chunkDirectory: refs } : {}),
+    ...(meta.pgcShards ? { pgcShards: meta.pgcShards } : {}),
+    ...(meta.namedPgcs ? { namedPgcs: meta.namedPgcs } : {}),
   };
   const index = encodeOctreeObject(
     header,
