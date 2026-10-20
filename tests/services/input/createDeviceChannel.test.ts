@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * createCanvasDeviceChannel — positions are canvas-relative (the dome's offset,
+ * createDeviceChannel — positions are canvas-relative (the dome's offset,
  * squared canvas gets correct rays), and window moves count only over the
  * canvas or for a pointer pressed on it.
  */
@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { EventChannel } from 'redux-saga';
 
-import { createCanvasDeviceChannel } from '../../../src/services/input/createCanvasDeviceChannel';
+import { createDeviceChannel } from '../../../src/services/input/createDeviceChannel';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 
 let canvas: HTMLCanvasElement;
@@ -41,7 +41,7 @@ beforeEach(() => {
   document.body.append(canvas, panel);
   // The canvas sits 100 px right and 50 px down of the viewport origin, 200 × 100.
   canvas.getBoundingClientRect = () => ({ left: 100, top: 50, width: 200, height: 100 }) as DOMRect;
-  channel = createCanvasDeviceChannel(canvas);
+  channel = createDeviceChannel(canvas);
   events = [];
 });
 
@@ -51,7 +51,7 @@ afterEach(() => {
   panel.remove();
 });
 
-describe('createCanvasDeviceChannel', () => {
+describe('createDeviceChannel', () => {
   it('a window move over another element with nothing pressed emits nothing', () => {
     firePointer(panel, 'pointermove', 150, 75);
     drain();

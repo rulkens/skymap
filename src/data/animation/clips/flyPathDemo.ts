@@ -42,6 +42,7 @@ import { focusId } from '../../../utils/animation/focusId';
 export const flyPathDemo: Clip = {
   id: 'flyPathDemo',
   label: 'Fly-path demo (groups flythrough)',
+  dev: true,
   data: {
     start: 'live', // the path's first knot is the live camera pose
     timeline: [
