@@ -65,7 +65,7 @@ export function createStarCatalogRenderer(
   // ONE fact for the whole frame, so plain closure state, not a map keyed per ctx.
   let frameCut: StarCutInputs | null = null;
   let frameRecut = true;
-  const cut = createOctreeCutGpu(device);
+  const cut = createOctreeCutGpu(device, 'star-cut');
 
   const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
 

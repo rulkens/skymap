@@ -311,10 +311,10 @@ function createOctreeFrameDriver<C extends { readonly count: number }>(intervalF
   name. The star renderer passes `'star-cut'`, so its labels are unchanged.
 - `checkOctreePoolCaps`'s message names the family, not "star pool".
 
-- [ ] Test `a landing chunk re-plans at once and returns recut` (fake stream whose epoch bumps).
-- [ ] Test `a still cut with nothing wanted plans once, then not again`.
-- [ ] Test `a moving cut recuts every other frame`.
-- [ ] `tests/layers/starCatalog/frame.test.ts` passes unchanged. Commit.
+- [x] Test `a landing chunk re-plans at once and returns recut` (fake stream whose epoch bumps).
+- [x] Test `a still cut with nothing wanted plans once, then not again`.
+- [x] Test `a moving cut recuts every other frame`.
+- [x] `tests/layers/starCatalog/frame.test.ts` passes unchanged. Commit.
 
 ### Task 8: the galaxy catalog format, its setting and the boot flag
 

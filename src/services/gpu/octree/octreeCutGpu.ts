@@ -54,7 +54,7 @@ function poolRows(octree: Octree<{ readonly count: number }>, slots: number): nu
   return octree.nodes.count + slots * octree.chunkNodeCap;
 }
 
-export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
+export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeCutGpu {
   const STORAGE = GPUBufferUsage.STORAGE;
 
   const module = createShaderModuleWithDevLog(device, cutCode, 'octree.cut');
@@ -69,7 +69,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   const drawEntry = (binding: number, type: GPUBufferBindingType) =>
     bufferEntry(binding, GPUShaderStage.VERTEX, type);
   const computeBgl = device.createBindGroupLayout({
-    label: 'star-cut-compute-bgl',
+    label: `${cutLabel}-compute-bgl`,
     entries: [
       computeEntry(0, 'uniform'),
       computeEntry(1, 'read-only-storage'),
@@ -82,7 +82,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     ],
   });
   const drawBgl = device.createBindGroupLayout({
-    label: 'star-cut-draw-bgl',
+    label: `${cutLabel}-draw-bgl`,
     entries: [
       drawEntry(0, 'uniform'),
       drawEntry(1, 'read-only-storage'),
@@ -92,12 +92,12 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     ],
   });
   const layout = device.createPipelineLayout({
-    label: 'star-cut-pipeline-layout',
+    label: `${cutLabel}-pipeline-layout`,
     bindGroupLayouts: [computeBgl],
   });
   const pipeline = (entryPoint: string): GPUComputePipeline =>
     device.createComputePipeline({
-      label: `star-cut-${entryPoint}`,
+      label: `${cutLabel}-${entryPoint}`,
       layout,
       compute: { module, entryPoint },
     });
@@ -109,7 +109,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   // whether it draws blobs.
   const streamUniform = (stream: OctreeDrawStream, shift: number, isBlob: boolean): GPUBuffer => {
     const buffer = device.createBuffer({
-      label: `star-cut-stream-${stream}`,
+      label: `${cutLabel}-stream-${stream}`,
       size: CUT_STREAM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -142,7 +142,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   ): OctreeCutState {
     const make = (name: string, words: number, usage: number): GPUBuffer =>
       device.createBuffer({
-        label: `star-cut-${name}-${label}`,
+        label: `${cutLabel}-${name}-${label}`,
         size: Math.max(1, words) * WORD_BYTES,
         usage,
       });
@@ -158,7 +158,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     device.queue.writeBuffer(draws, 0, initialCutDraws());
     const hist = make('hist', CUT_HIST_WORDS, STORAGE);
     const uniforms = device.createBuffer({
-      label: `star-cut-uniforms-${label}`,
+      label: `${cutLabel}-uniforms-${label}`,
       size: CUT_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -169,7 +169,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     });
     const drawBindGroup = (stream: OctreeDrawStream, list: GPUBuffer): GPUBindGroup =>
       device.createBindGroup({
-        label: `star-cut-draw-bg-${stream}-${label}`,
+        label: `${cutLabel}-draw-bg-${stream}-${label}`,
         layout: drawBgl,
         entries: [
           bind(0, uniforms),
@@ -185,7 +185,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
       opacity,
       draws,
       computeBindGroup: device.createBindGroup({
-        label: `star-cut-compute-bg-${label}`,
+        label: `${cutLabel}-compute-bg-${label}`,
         layout: computeBgl,
         entries: [
           bind(0, uniforms),
@@ -217,19 +217,23 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     sources.delete(source);
   }
 
-  function upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void {
+  function upload(
+    source: SourceType,
+    octree: Octree<{ readonly count: number }>,
+    slots: number,
+  ): void {
     if (octree.records.count > 0) checkOctreePoolCaps(octree, slots);
     const packed = octree.records.count === 0 ? null : packOctreeCutNodes(octree);
     release(source);
     if (packed === null) return;
     const nodes = device.createBuffer({
-      label: `star-cut-nodes-${source}`,
+      label: `${cutLabel}-nodes-${source}`,
       size: poolRows(octree, slots) * CUT_NODE_WORDS * WORD_BYTES,
       usage: STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(nodes, 0, packed);
     const slotRows = device.createBuffer({
-      label: `star-cut-slot-rows-${source}`,
+      label: `${cutLabel}-slot-rows-${source}`,
       size: Math.max(1, slots) * WORD_BYTES,
       usage: STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -373,7 +377,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   ): void {
     const present = cutSources(inputs);
     if (present.length === 0) return;
-    const pass = encoder.beginComputePass({ label: 'star-cut', ...claimTimestampWrites() });
+    const pass = encoder.beginComputePass({ label: cutLabel, ...claimTimestampWrites() });
     for (const { row, entry } of present) {
       const { lastMs, skipped } = entry.live;
       // A source's first cut always runs: it has no lists to keep.
@@ -400,8 +404,8 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     capturedFor = inputs;
     const present = cutSources(inputs);
     if (present.length === 0) return;
-    const encoder = device.createCommandEncoder({ label: 'star-cut-capture' });
-    const pass = encoder.beginComputePass({ label: 'star-cut-capture' });
+    const encoder = device.createCommandEncoder({ label: `${cutLabel}-capture` });
+    const pass = encoder.beginComputePass({ label: `${cutLabel}-capture` });
     for (const { row, entry } of present) {
       entry.capture ??= createState(
         `${row.source}-capture`,

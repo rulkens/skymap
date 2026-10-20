@@ -316,7 +316,7 @@ export function checkOctreePoolCaps(
   if (slots > fits) {
     const n = Math.max(0, fits);
     throw new Error(
-      `star pool: ${slots} slots overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit row or ` +
+      `${octree.family} pool: ${slots} slots overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit row or ` +
         `${SELECTION_SOURCE_SHIFT}-bit record index; only ${n} slot${n === 1 ? '' : 's'} fit`,
     );
   }

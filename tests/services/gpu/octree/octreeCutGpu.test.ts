@@ -80,7 +80,7 @@ function setup() {
     end: vi.fn(),
   };
   const encoder = { beginComputePass: vi.fn(() => pass) } as unknown as GPUCommandEncoder;
-  const gpu = createOctreeCutGpu(device as unknown as GPUDevice);
+  const gpu = createOctreeCutGpu(device as unknown as GPUDevice, 'star-cut');
   gpu.upload(Source.GaiaStars, CATALOG, 0);
   const encode = (nowMs: number, recut = true) =>
     gpu.encode(encoder, frame(nowMs), recut, () => ({}));
