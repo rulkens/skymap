@@ -14,6 +14,7 @@ import { SCALE_UNITS } from '../scaleUnits';
 import { orbiter } from './makers/orbiter';
 import { satellite } from './makers/satellite';
 import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
+import { LAYER_BODY_ROWS } from './layerBodyRows';
 import { SCENE_EARTH } from './sceneEarth';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
 import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
@@ -882,4 +883,5 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // Gillessen lines, converted once in `sStarOrbitalElements.ts` (also the star Layer's trail
   // roster). Their focus is the `galactic-centre` place, so they join the `galactic-centre` region by existing.
   ...S_STAR_ORBITAL_ELEMENTS,
+  ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'orbit' ? [row.position.elements] : [])),
 ];

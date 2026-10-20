@@ -26,7 +26,7 @@ import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';

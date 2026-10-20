@@ -10,7 +10,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { MissionsRuntime } from '../@types/MissionsRuntime';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { countAtOrBefore } from '../../../utils/math/countAtOrBefore';

@@ -63,5 +63,5 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     altitudeM: groundOffsetM('mer'),
     seat: 'resting',
   },
-  ...LAYER_BODY_ROWS.map((row) => row.position.site),
+  ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'site' ? [row.position.site] : [])),
 ];

@@ -6,8 +6,9 @@
 
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 import type { SampledBody } from '../../@types/missions/SampledBody';
-import { VOYAGER_1_LIME, VOYAGER_2_GREEN } from '../bodies/palette';
-import { MISSION_EVENTS } from './missionEvents.generated';
+import { VOYAGER_1_LIME, VOYAGER_2_GREEN } from './palette';
+import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { MISSION_EVENTS } from '../missions/missionEvents.generated';
 
 /** Cape Canaveral Launch Complex 41, where both Voyagers' Titan IIIE lifted off. */
 const CAPE_CANAVERAL_LC41: LonLatDeg = { latDeg: 28.583, lonDeg: -80.583 };
@@ -32,4 +33,5 @@ export const SAMPLED_BODIES: readonly SampledBody[] = [
     launchIso: launchIso('voyager2'),
     launchPad: CAPE_CANAVERAL_LC41,
   },
+  ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'sampled' ? [row.position.sampled] : [])),
 ];

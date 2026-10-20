@@ -4,7 +4,7 @@ import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMeshBodyIds';
-import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';

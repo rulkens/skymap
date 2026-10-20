@@ -13,7 +13,7 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { SCENE_BODY_CAPTION_LABEL } from '../../../../src/data/labels/sceneBodyCaptionLabel';
 import { claimedLabelItemsOf } from '../../../../src/utils/visibility/claimedLabelItemsOf';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';

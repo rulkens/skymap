@@ -1,6 +1,6 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { meshBody, type MeshBodySeed } from './makers/meshBody';
-import { SAMPLED_BODIES } from '../missions/spacecraftBodies';
+import { SAMPLED_BODIES } from './sampledBodies';
 import { LAYER_BODY_ROWS } from './layerBodyRows';
 import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';

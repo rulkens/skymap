@@ -18,7 +18,7 @@ import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadius
 import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { SAMPLED_BODIES } from '../../../../src/data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../../src/data/bodies/sampledBodies';
 import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
 
 const states = deriveBodyStates(CONST_J2000);

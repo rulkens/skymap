@@ -8,7 +8,7 @@
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
-import { SAMPLED_BODY_IDS } from '../../../data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../data/bodies/sampledBodyIds';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
