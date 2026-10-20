@@ -1,8 +1,8 @@
 /**
  * createStructureMarkersPass — shared factory behind the cosmic and Milky Way
  * marker passes: halo + ring draws into the hdr layer for one scale's structure
- * categories, plus their ring pick. The slabs differ only in which bands gate
- * the pass and which renderer handle it drives.
+ * categories, plus their ring pick. The slabs differ only in which categories (scale)
+ * gate the pass and which renderer handle it drives.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -38,7 +38,6 @@ export function createStructureMarkersPass(
     },
 
     draw(pass, view, ctx, _state, fade) {
-      if (!live(fade)) return;
       // Upload THIS view's planned markers: one instance buffer is correct only because a
       // `perView` section is its own submit (`renderFrame`'s view-identity batching).
       renderer.setMarkers(ctx.snapshot.plans.get(planner, ctx), view.camPos);
@@ -50,7 +49,6 @@ export function createStructureMarkersPass(
     // One ring-pick draw per category; the renderer ORs each category's `sourceCode` into
     // the packed identity via its own @group(2).
     drawPick(pass, view, ctx, _state, fade) {
-      if (!live(fade)) return;
       renderer.pickRing(pass, view.slab.vp, view.viewportPx, ctx.drawPxPerRad);
     },
   };

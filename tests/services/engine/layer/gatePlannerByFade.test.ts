@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { gatePlannerByFade } from '../../../../src/services/engine/layer/gatePlannerByFade';
-import { resolveFadeValue } from '../../../../src/services/engine/presentation/resolveFadeValue';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
@@ -44,7 +43,6 @@ describe('gatePlannerByFade', () => {
     const gated = gatePlannerByFade(planner, state);
     if (gated.scope !== 'once') throw new Error('scope lost');
     gated.plan(SNAPSHOT, [viewAt2()], S);
-    expect(plan.mock.calls[0]![3]).toBe(resolveFadeValue(state, SNAPSHOT, 'probe' as never));
     expect(plan.mock.calls[0]![3]).toBe(1);
   });
 

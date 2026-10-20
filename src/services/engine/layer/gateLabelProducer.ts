@@ -1,6 +1,6 @@
 /**
- * Core's gate for a screen label row that names its `label` entry: skipped while no item of
- * the entry is live or every item's distance band is 0, else called with the entry's handed
+ * Core's gate for a screen label row that names its `label` entry: skipped unless some item
+ * of the entry is both live (raw fade) and in band, else called with the entry's handed
  * value as its third argument. The held target already folds switch, present and `of`.
  */
 

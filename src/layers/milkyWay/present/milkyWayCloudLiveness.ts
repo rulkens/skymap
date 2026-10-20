@@ -4,7 +4,8 @@
  * consumer and the dust pass, so the upsample can never composite an offscreen
  * nobody wrote. The disk's handed value carries the toggle and its fade-out tail;
  * its distance bands are folded in by core; the final `alpha > 0` gate below covers the
- * apparent-size band. Its focus emphasis is composed here once, for all three, keyed on the disk's own pick word.
+ * apparent-size band. Its focus
+ * emphasis is composed here once, for all three, keyed on the disk's own pick word.
  *
  * Uses the CANVAS height, not the slab view's viewport: the aggregate layer renders
  * into a FRACTION of the canvas, so `view.viewportPx` would split the three gates.

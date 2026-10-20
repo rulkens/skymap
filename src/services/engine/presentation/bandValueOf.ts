@@ -1,7 +1,6 @@
 /**
  * One entry's distance-band value for one item at one view: the product of the bands that
- * apply to the item. `in` and `out` use `smoothstep`, the curve `fadeBand` uses, so a row
- * moved off `SCALE_FADE_BANDS` keeps its numbers. The region anchor's position comes from
+ * apply to the item. `in` and `out` use `smoothstep`, the curve `fadeBand` uses. The region anchor's position comes from
  * `snapshot.bodyStates`, the same map `sceneBodyStates` hands passes.
  */
 

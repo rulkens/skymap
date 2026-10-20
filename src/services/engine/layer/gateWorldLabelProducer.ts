@@ -1,5 +1,5 @@
-/** `gateLabelProducer`'s rule over a world label row: skipped while no item of its `label`
- * entry is live or every item's band is 0, else called with the entry's handed value. */
+/** `gateLabelProducer`'s rule over a world label row: skipped unless some item of its
+ * `label` entry is both live (raw fade) and in band, else called with the entry's handed value. */
 
 import type { LayerWorldLabel } from '../../../@types/engine/layer/LayerWorldLabel';
 import type { Label3DProducer } from '../../../@types/engine/subsystems/Label3DProducer';
