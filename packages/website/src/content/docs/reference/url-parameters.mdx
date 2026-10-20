@@ -1,5 +1,5 @@
 ---
-description: The parameters a link to Skymap can carry, each with the form of its value, a worked example, what it does and whether the app writes it back.
+description: The parameters a link to Skymap can carry, each with the form of its value, a worked example and what it does.
 facts:
   [
     takeover-links,
@@ -64,12 +64,11 @@ These go after the `#`.
 
 <Table
   cols="stack"
-  head={['Parameter', 'Value', 'What it does', 'Does the app write it?']}
+  head={['Parameter', 'Value', 'What it does']}
   rows={HASH.map((param) => [
     { code: param.name },
     { text: param.value, code: param.example },
     param.does,
-    param.written,
   ])}
 />
 
@@ -80,9 +79,8 @@ These go after the `#`.
 These go after the `?`, before the `#`.
 
 <Table
-  cols="detail"
-  head={['Flag', 'What it does', 'Does the app write it?']}
-  rows={FLAGS.map((param) => [{ code: param.example }, param.does, param.written])}
+  head={['Flag', 'What it does']}
+  rows={FLAGS.map((param) => [{ code: param.example }, param.does])}
 />
 
 <Fact id="ref-dome-spelling" inline /> See [Screens, quality and domes](/docs/guide/screens-and-domes/) for dome mode. Four more flags are [at the foot of this page](#for-development).
