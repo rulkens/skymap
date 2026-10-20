@@ -1,6 +1,7 @@
 # Small bodies as mission shape-model meshes (phases 2–4)
 
-Phase 1 (Phobos + Deimos as meshes) is in brainstorming; this file holds the
+Phase 1 (Phobos + Deimos as meshes) shipped in #926/#927 (spec under
+`docs/superpowers/specs/completed/`); this file holds its leftovers and the
 rest of the programme. Prototype viewer (17 bodies, phone-sized, relief + colour
 maps): <https://claude.ai/artifact/789req9L8sFa4UWH6eHPSz>.
 
@@ -37,6 +38,23 @@ Licence check still owed for JAXA (Ryugu) and ESA/LAM (67P, Lutetia, Šteins).
   ray-cast bake onto a UV atlas (or ship geometry only); Itokawa's neck is borderline.
 - The renderer reads **tangent-space** normals (`meshBody/fragment.wesl`); the
   prototype baked object-space, so the bake converts.
+
+## Phase 1 leftovers
+
+- **Featured cards + thumbnails** (declined for phase 1): a card in the
+  palette's Solar System tab (`featuredTabs.ts`) is what gives a body its card
+  thumbnail (`SHOT_CARD_IDS`, then `npm run capture-featured`). Draft blurbs:
+  Phobos — "The larger of Mars's two moons, 27 km long and marked by the 9 km
+  crater Stickney. It orbits so low that Mars's tides will pull it apart within
+  about 50 million years." Deimos — "The smaller, outer moon of Mars, about 15 km
+  across. A thick blanket of dust fills its craters, so it looks smoother than Phobos."
+- **Mars eclipse on mesh moons:** a self-hosted mesh moon draws unshadowed
+  (`meshBodiesPass` skips the umbra when `hostId === body.id`); the sphere path
+  had no eclipse either, but the mesh path could take Mars as the occluder.
+- **Seed albedo twice:** `importMesh.py` repeats the `scenePlanets.ts` seed
+  albedos with no guard against drift.
+- Also out of phase-1 scope: mesh-surface camera following (the floor is the
+  bounding sphere), Deimos colour, a DSK reader (OBJs only today).
 
 ## Phases
 

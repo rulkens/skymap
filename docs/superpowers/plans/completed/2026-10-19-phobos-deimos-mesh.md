@@ -1,6 +1,6 @@
 # Phobos and Deimos as shape-model meshes — plan
 
-Spec: [`2026-10-19-phobos-deimos-mesh-design.md`](../specs/2026-10-19-phobos-deimos-mesh-design.md).
+Spec: [`2026-10-19-phobos-deimos-mesh-design.md`](../../specs/completed/2026-10-19-phobos-deimos-mesh-design.md).
 Two stacked PRs: **PR 1** (branch `ccr-e4a53f08-qcsijn`) = Ground preparation G1 + G2,
 behaviour-neutral; **PR 2** (branch `ccr-e4a53f08-qcsijn-moons`, based on PR 1) = the moons.
 
