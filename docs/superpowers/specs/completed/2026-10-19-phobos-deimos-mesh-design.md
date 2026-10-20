@@ -142,3 +142,28 @@ Found by a refactor-ground pass over the mesh path (session 2026-10-19):
 
 Heliocentric small bodies (phases 2–4), mesh-surface camera following,
 mesh-body sun shadows (existing backlog line), Deimos colour, DSK reader.
+
+## 2026-10-19 update (execution)
+
+- **One 150k mesh, not small 150k / medium full.** Measured on the float bake,
+  the relief beyond 150k triangles is 0.3° median (p99 2.9°) — a normal atlas
+  carries it; a 600k copy holds about half of it in geometry at four times the
+  download. Both tiers share the 150k mesh; atlases are 2048 / 4096.
+- **Reflection probe risk resolved by G1:** a self-hosted body has no body row
+  in its own probe (`scheduleProbeCapture` skips `hostId === subject.id`), so a
+  moon never captures its own interior.
+- **Picks** pack `sceneBodyPickId(id)` (the body's own table); the presentation
+  carries no pick field.
+- **The `.blend`s are generated, not edited**, so `meshes.sha256` pins only the
+  downloads; `npm run import-mesh` rebuilds them.
+
+## 2026-10-20 update (orientation, one-off check)
+
+The planned Stickney test needs the baked `.mesh`, which CI lacks, so it ran once
+by hand instead (Blender 5.2 bake, `phobos-medium`). On the baked mesh the
+best-fit ellipsoid's long axis (13.1 km) is +X, and Stickney's depression
+centroid sits at 53.6° W, 0.1° S. That puts it on the −Y (leading) side, about 5°
+from the catalogue's 49° W, 1° S; the offset is within the method's rim bias.
+`orientationForBody('phobos', J2000)` maps +X onto the direction to Mars (dot
+1.0000), so Stickney renders 55° from sub-Mars toward the leading apex. Not a
+mirror, not a 180° turn.

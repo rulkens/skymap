@@ -150,4 +150,29 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     attribution:
       'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
   },
+  phobos: {
+    key: 'phobos',
+    tierCeiling: 'medium',
+    boundingRadiusM: 13941.339598577306,
+    groundOffsetM: 9571.345703125,
+    meanAlbedo: [0.139687, 0.135896, 0.131613],
+    triangleCount: 150000,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ',
+    licence: 'NASA PDS (no licence stated); USGS public domain',
+    attribution:
+      'Shape: R. Gaskell (PSI), Phobos shape model M003, NASA PDS / NAIF. Colour: Viking Orbiter mosaic, DLR control, USGS Astrogeology',
+  },
+  deimos: {
+    key: 'deimos',
+    tierCeiling: 'small',
+    boundingRadiusM: 8706.800137046559,
+    groundOffsetM: 5264.77197265625,
+    meanAlbedo: [0.172132, 0.164886, 0.150846],
+    triangleCount: 5184,
+    substituted: [],
+    source: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ',
+    licence: 'NASA PDS (no licence stated)',
+    attribution: 'Shape: P. Thomas (Cornell), Deimos shape model K005, NASA PDS / NAIF',
+  },
 };
