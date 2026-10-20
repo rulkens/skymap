@@ -1,26 +1,32 @@
 import type { DocsGroup } from '../@types/DocsGroup';
+import type { DocsRow } from '../@types/DocsRow';
 import { DATA_PAGES } from './dataPages';
+
+const DATA_PAGE_JOB =
+  'Which published record is this source, under which licence may it be used, and which switch in the app shows it?';
 
 /**
  * Every page the docs have or will have, in sidebar order: the one list behind
  * the sidebar, the docs index, previous and next, and the link check's planned
  * pages (tools/site/checkSiteLinks.ts). A `live` row has a file at
- * `src/content/docs/<path under /docs/>.mdx`; tests/packages/website/docsTree.test.ts
- * holds the two together. Paths are the published ones from the taste research
- * (section 4.2), so a few sit outside their group's folder. The data sources'
- * rows are not typed: they are the pages data/dataPages.ts makes from
- * ATTRIBUTIONS.md. Still to be added: the topic pages of Science and Rendering.
+ * `src/content/docs/<path under /docs/>.mdx`, and that file's front matter
+ * holds the page's title and job; tests/packages/website/docsTree.test.ts
+ * holds the two together. A row names its own title and job only where no text
+ * exists: Glossary, Credits, All sources and the data sources' pages, which
+ * are made from data. Order, group and family are written here and nowhere
+ * else (src/utils/loadDocsTree.ts joins the titles back on). Paths are the
+ * published ones from the taste research (section 4.2), so a few sit outside
+ * their group's folder. Still to be added: the topic pages of Science and Rendering.
  */
-export const DOCS_TREE: readonly DocsGroup[] = [
+export const DOCS_TREE: readonly DocsGroup<DocsRow>[] = [
   {
     name: 'Start',
     purpose: 'A first flight, what the scene holds, and whether the app runs on your machine.',
     up: '/',
     pages: [
-      { title: 'First flight', path: '/docs/start/first-flight/', status: 'live' },
-      { title: 'What is in the scene', path: '/docs/start/scene/', status: 'live' },
+      { path: '/docs/start/first-flight/', status: 'live' },
+      { path: '/docs/start/scene/', status: 'live' },
       {
-        title: 'Browser support and troubleshooting',
         path: '/docs/start/browsers/',
         status: 'live',
         up: '/classroom/',
@@ -32,15 +38,14 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'Each thing the app does, one task to a page.',
     up: '/classroom/',
     pages: [
-      { title: 'Moving around', path: '/docs/guide/moving/', status: 'live' },
-      { title: 'Finding things', path: '/docs/guide/finding/', status: 'live' },
-      { title: 'Time', path: '/docs/guide/time/', status: 'live' },
-      { title: 'Tours and exhibits', path: '/docs/guide/tours/', status: 'live' },
-      { title: 'Sharing a view', path: '/docs/guide/sharing/', status: 'live' },
-      { title: 'Info cards', path: '/docs/guide/info-cards/', status: 'live' },
-      { title: 'Settings guide', path: '/docs/guide/settings/', status: 'live' },
+      { path: '/docs/guide/moving/', status: 'live' },
+      { path: '/docs/guide/finding/', status: 'live' },
+      { path: '/docs/guide/time/', status: 'live' },
+      { path: '/docs/guide/tours/', status: 'live' },
+      { path: '/docs/guide/sharing/', status: 'live' },
+      { path: '/docs/guide/info-cards/', status: 'live' },
+      { path: '/docs/guide/settings/', status: 'live' },
       {
-        title: 'Screens, quality and domes',
         path: '/docs/guide/screens-and-domes/',
         status: 'live',
         up: '/domes/',
@@ -52,24 +57,35 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'Every key, link parameter, setting and named object, in tables.',
     up: '/classroom/',
     pages: [
-      { title: 'Controls', path: '/docs/reference/controls/', status: 'live' },
-      { title: 'URL parameters', path: '/docs/reference/url-parameters/', status: 'live' },
-      { title: 'All settings', path: '/docs/reference/settings/', status: 'live' },
-      { title: 'Object catalogue', path: '/docs/reference/objects/', status: 'live' },
-      { title: 'Glossary', path: '/docs/reference/glossary/', status: 'live' },
+      { path: '/docs/reference/controls/', status: 'live' },
+      { path: '/docs/reference/url-parameters/', status: 'live' },
+      { path: '/docs/reference/settings/', status: 'live' },
+      { path: '/docs/reference/objects/', status: 'live' },
+      {
+        title: 'Glossary',
+        path: '/docs/reference/glossary/',
+        status: 'live',
+        job: 'What does this word mean in Skymap, and where is it explained further?',
+      },
     ],
   },
   {
     name: 'Data',
     up: '/science/',
     pages: [
-      { title: 'All sources at a glance', path: '/docs/data/', status: 'live' },
-      { title: 'From catalogue to pixels', path: '/docs/data/pipeline/', status: 'live' },
+      {
+        title: 'All sources at a glance',
+        path: '/docs/data/',
+        status: 'live',
+        job: 'Which sources does Skymap use, and what may I do with each?',
+      },
+      { path: '/docs/data/pipeline/', status: 'live' },
       ...DATA_PAGES.map((page) => ({
         title: page.title,
         path: page.path,
         status: 'live' as const,
         family: page.family.name,
+        job: DATA_PAGE_JOB,
       })),
     ],
   },
@@ -77,39 +93,42 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     name: 'Science',
     up: '/science/',
     pages: [
-      { title: 'Measured, derived, modelled, drawn', path: '/docs/science/', status: 'live' },
-      { title: 'Known simplifications', path: '/docs/simplifications/', status: 'live' },
+      { path: '/docs/science/', status: 'live' },
+      { path: '/docs/simplifications/', status: 'live' },
     ],
   },
   {
     name: 'Rendering',
     up: '/science/',
     pages: [
-      { title: 'The frame', path: '/docs/rendering/', status: 'live' },
-      { title: 'Techniques', path: '/docs/rendering/techniques/', status: 'live' },
-      { title: 'Precision across scales', path: '/docs/rendering/precision/', status: 'live' },
-      { title: 'Performance', path: '/docs/rendering/performance/', status: 'live' },
+      { path: '/docs/rendering/', status: 'live' },
+      { path: '/docs/rendering/techniques/', status: 'live' },
+      { path: '/docs/rendering/precision/', status: 'live' },
+      { path: '/docs/rendering/performance/', status: 'live' },
     ],
   },
   {
     name: 'Project',
     up: '/about/',
     pages: [
-      { title: 'Roadmap', path: '/docs/roadmap/', status: 'live' },
-      { title: 'Credits', path: '/docs/credits/', status: 'live', up: '/domes/' },
-      { title: 'Cite', path: '/docs/cite/', status: 'live', up: '/science/' },
+      { path: '/docs/roadmap/', status: 'live' },
       {
-        title: 'Developer workbenches',
+        title: 'Credits',
+        path: '/docs/credits/',
+        status: 'live',
+        up: '/domes/',
+        job: 'Who made what Skymap shows, what credit do they ask for, and how may I use it?',
+      },
+      { path: '/docs/cite/', status: 'live', up: '/science/' },
+      {
         path: '/docs/developers/workbenches/',
         status: 'live',
       },
       {
-        title: 'Command-line tools',
         path: '/docs/developers/cli/',
         status: 'live',
       },
       {
-        title: 'Debug panel and flags',
         path: '/docs/developers/debug/',
         status: 'live',
       },

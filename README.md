@@ -163,4 +163,6 @@ If you use skymap in a publication, talk, or derived work, please cite it via [C
 
 Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms: some are public domain or CC BY, some are non-commercial (Gaia's stars are CC BY-NC, the close-up Earth imagery CC BY-NC-SA), and several state no licence at all. So the MIT licence does not cover what skymap shows, or pictures taken of it. Each source is listed with its terms in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
+To work on skymap, start with [CONTRIBUTING.md](CONTRIBUTING.md).
+
 [CLAUDE.md](CLAUDE.md) at the repo root is onboarding guidance for AI coding assistants. It isn't load-bearing for the build or runtime. It exists because parts of this project were developed with AI assistance, and that context helps future AI-assisted edits.

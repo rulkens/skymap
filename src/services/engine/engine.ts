@@ -33,7 +33,7 @@ import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabe
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
+import { FLAT_TERRAIN } from '../../data/camera/flatTerrain';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -302,7 +302,8 @@ export function createEngine(
     visibilityEntries: [],
     visibilityGates: new Map(),
     label3DProducers: [],
-    orbitTrailRows: [],
+    orbitTrailGroups: [],
+    terrain: FLAT_TERRAIN,
     layerSlots: new Map(),
   };
 
@@ -527,9 +528,8 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
-          terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
-          residentHeightLevelAt: (bodyId, dir) =>
-            state.subsystems.surfaceTiles?.residentHeightLevelAt(bodyId, dir) ?? null,
+          terrainHeightAt: state.terrain.heightAt,
+          residentHeightLevelAt: state.terrain.residentHeightLevelAt,
           // Null unless the `terrain-pick-marker` overlay is on — its listener
           // is the only writer, so the pick row is dead with the toggle off.
           cursorTexPx: state.picking.cursorTexPx,

@@ -1,15 +1,14 @@
 ---
-/* The Features page: its groups, pictures and films are in components/FeatureStage/FeatureStage.tsx. */
-import Base from '../layouts/Base.astro';
-import FeatureLead from '../components/FeatureLead/FeatureLead.tsx';
-import FeatureStage from '../components/FeatureStage/FeatureStage.tsx';
+/* The Features page: its text and front matter are content/pages/features.mdx. */
+import { getEntry, render } from 'astro:content';
 
-const title = 'Features | Skymap';
-const description =
-  'Everything you can see and do in Skymap, group by group, each with a link to its page in the docs.';
+import Base from '../layouts/Base.astro';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+
+const entry = (await getEntry('pages', 'features'))!;
+const { Content } = await render(entry);
 ---
 
-<Base title={title} description={description}>
-  <FeatureLead />
-  <FeatureStage client:load />
+<Base {...entry.data} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Features', path: '/features/' }])]}>
+  <Content />
 </Base>

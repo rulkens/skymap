@@ -56,6 +56,31 @@ describe('APP_VISIBILITY', () => {
     }
   });
 
+  it("every band's in and out are ascending and in[1] ≤ out[0]", () => {
+    for (const entry of ENTRIES) {
+      for (const [name, band] of Object.entries(entry.bands ?? {})) {
+        const where = `${'key' in entry ? entry.key : `label:${entry.label}`}.${name}`;
+        if (band.in) expect(band.in[0], where).toBeLessThanOrEqual(band.in[1]);
+        if (band.out) expect(band.out[0], where).toBeLessThanOrEqual(band.out[1]);
+        if (band.in && band.out) expect(band.in[1], where).toBeLessThanOrEqual(band.out[0]);
+      }
+    }
+  });
+
+  it("a band's items are a subset of its entry's items", () => {
+    for (const entry of ENTRIES) {
+      for (const band of Object.values(entry.bands ?? {})) {
+        const strays = (band.items ?? []).filter((item) => !entry.items?.includes(item));
+        expect(strays).toEqual([]);
+      }
+    }
+  });
+
+  // Scene-body admission runs once per frame with no view, so it cannot measure a band.
+  it('no entry declares both bodies and bands', () => {
+    expect(SHOWS.filter((e) => e.bodies !== undefined && e.bands !== undefined)).toEqual([]);
+  });
+
   it('APP_VISIBILITY lists exactly the entries the composed Layers declare', () => {
     // `U` pinned: `layers` is a tuple of unlike Layer types.
     const declared = APP_COMPOSITION.layers.flatMap<VisibilityEntry>(

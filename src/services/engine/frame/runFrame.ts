@@ -38,7 +38,6 @@ import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry'
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
-import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -130,7 +129,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
+    terrainHeightAt: state.terrain.heightAt,
     clipEpoch,
     drivers: deps.controlSchemes.skymap.drivers,
   });

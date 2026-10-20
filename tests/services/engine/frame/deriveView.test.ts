@@ -45,6 +45,7 @@ import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // Roll and a rotated orientation basis keep every lookAt element off ±0, so the
 // pin below compares real values rather than the sign of a zero.
@@ -68,6 +69,7 @@ function makeState(): EngineState {
   return {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
+    terrain: FLAT_TERRAIN,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
@@ -374,6 +376,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       slabRows: [],
       visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], meshBodies: [] } },
+      terrain: FLAT_TERRAIN,
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },

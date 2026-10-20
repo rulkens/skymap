@@ -19,9 +19,9 @@
 
 import type { CaptionKind } from './captionPriority';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from './scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../data/labels/solarSystemLabelMaxDistance';
 
 /**
  * One caption kind's fade routing. `distanceMpc` is the caption anchor's
@@ -106,9 +106,9 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * The stick-figure names. They never reach the body-caption pipeline this
    * table drives — `sceneBodyLabels` emits only the body kinds above, and
    * `constellationCaptions` appends the figure names further down with their own
-   * per-frame target (`constellationsBand` × the handed `label:constellations`
-   * value, keyed on the camera's origin distance, not on an anchor distance). The row exists so the table stays total over the
-   * kind union; leaving the kind implicit would let it silently inherit the star
+   * per-frame target (the handed `label:constellations` value, keyed on the camera's
+   * origin distance, not on an anchor distance). The row exists so the table stays total over
+   * the kind union; leaving the kind implicit would let it silently inherit the star
    * map's parsec band.
    */
   constellation: { fadeTarget: PRODUCER_SUPPLIED },
