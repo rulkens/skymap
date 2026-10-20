@@ -15,7 +15,7 @@ Nothing reaches into the engine.
 **Tech Stack:** TypeScript, React, Redux Toolkit, redux-saga (`typed-redux-saga`, `eventChannel`), Vite plugin API,
 `ws`, `qrcode-generator`, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-10-11-dome-remote-design.md` (input path:
+**Spec:** `docs/superpowers/specs/completed/2026-10-11-dome-remote-design.md` (input path:
 `docs/superpowers/specs/completed/2026-10-15-input-architecture-design.md`).
 
 ## Global Constraints
@@ -144,17 +144,17 @@ export function parseDomeMessage(text: string): DomeMessage | null;
 - `parseDomeMessage`: shape checks on `status` and `searchResults` sufficient for the remote page to render without
   crashing (every field it reads has the right primitive type); unknown kinds drop.
 
-- [ ] Run the move, rename and widen; `npm run typecheck:fast`. No new test for the rename.
-- [ ] Tests `parseDeviceEvent`: `every DeviceEvent arm round-trips through JSON` (one fixture per arm, asserting
+- [x] Run the move, rename and widen; `npm run typecheck:fast`. No new test for the rename.
+- [x] Tests `parseDeviceEvent`: `every DeviceEvent arm round-trips through JSON` (one fixture per arm, asserting
       `parseDeviceEvent(JSON.parse(JSON.stringify(e)))` equals `e`); `drops an unknown kind`; `drops a non-finite
       number` (NaN serialises to null, so feed objects directly); `drops an at far outside the surface`, `keeps the up of a drag that ended off the trackpad`; `drops a zero or huge
       size`; `drops extra fields from the result`.
-- [ ] Tests `parseRemoteMessage`: `drops non-JSON text`; `drops JSON that is not an object`; `drops a message with no
+- [x] Tests `parseRemoteMessage`: `drops non-JSON text`; `drops JSON that is not an object`; `drops a message with no
       from`; `drops an unknown kind`; `cuts a search query to 64 characters`; `a command the parseCommand stub
       rejects drops the message`; `a device message with a bad event drops`.
-- [ ] Tests `parseDomeMessage`: `accepts a full status`; `drops a status with a missing time field`; `accepts search
+- [x] Tests `parseDomeMessage`: `accepts a full status`; `drops a status with a missing time field`; `accepts search
       results`; `drops an unknown kind`.
-- [ ] Implement; tests pass; `npx prettier --write` the touched files; commit.
+- [x] Implement; tests pass; `npx prettier --write` the touched files; commit.
 
 ---
 
@@ -206,11 +206,11 @@ export function runRemoteCommand(command: RemoteCommand, env: RemoteCommandEnv):
 
 `null`-payload rows accept `null` or `undefined` and nothing else.
 
-- [ ] Tests, one `describe` per row, each with `builds its actions` and `rejects a malformed payload` (and `rejects an
+- [x] Tests, one `describe` per row, each with `builds its actions` and `rejects a malformed payload` (and `rejects an
       unknown id` for `goTo`'s exhibit and tour arms, `clipStart` and `toggleSet`). Plus: `an unknown command name
       parses to null`; `a non-object command parses to null`; `time rows stamp env.nowMs, and a nowMs field in the payload is ignored`; `timeGoLive builds a
       goLive action`.
-- [ ] Implement; tests pass; prettier; commit.
+- [x] Implement; tests pass; prettier; commit.
 
 ---
 
@@ -257,11 +257,11 @@ export function selectDomeStatus(state: RootState, toggleRows: readonly ToggleRo
   - `time` from `selectTimeState` with `simDays = deriveSimDays(time, nowMs)`.
   - `toggles` is `toggleRows` without `set`.
 
-- [ ] Tests: `paletteRowLabel names every ScoredRow kind` (one fixture per kind, names matching what the palette
+- [x] Tests: `paletteRowLabel names every ScoredRow kind` (one fixture per kind, names matching what the palette
       shows today); `remoteSearchMatches caps at ten`; `an empty or whitespace query gives no matches`; `each match
       carries actionForRow's action`; `selectDomeStatus reports no tour when none runs`; `reports the running tour's
       beat and count`; `reports a focused body's id, Earth included`; `derives simDays at the nowMs it is handed`.
-- [ ] Implement; tests pass; prettier; commit.
+- [x] Implement; tests pass; prettier; commit.
 
 ---
 
@@ -314,7 +314,7 @@ export function* remoteReceiverSaga(transport: RemoteTransport, layerRows: reado
   change always goes out), plus one per `hello`. `toggleRows = selectToggleRows(state, layerRows)`.
 - `finally`: close every remote channel, close the link.
 
-- [ ] Tests (real store, memory transport, fake timers where time matters): `a command message dispatches exactly its
+- [x] Tests (real store, memory transport, fake timers where time matters): `a command message dispatches exactly its
       row's actions`; `an unknown command dispatches nothing`; `garbage text is dropped and the loop keeps running`
       (a valid message after it still works); `a remote's device events reach the input slice under remote:<id>`;
       `device events before any resize attach nothing`; `three seconds of silence end an open gesture and detach the
@@ -323,7 +323,7 @@ export function* remoteReceiverSaga(transport: RemoteTransport, layerRows: reado
       (new id) takes over while the old id is still within its silence window`; `a search answers with the same
       requestId`; `a hello is answered with a status`; `the first hello pairs and hides the UI`; `fifty state changes
       in one second send at most four statuses`.
-- [ ] Implement; tests pass; prettier; commit.
+- [x] Implement; tests pass; prettier; commit.
 
 ---
 
@@ -356,12 +356,12 @@ export function createLocalTransport(): RemoteTransport;
   `location.host` (`ws:` / `wss:` from `location.protocol`), reconnecting after a close with a one-second delay until
   `close()`; `pairingOrigins` fetches `/__remote/origins`, falling back to `[location.origin]`.
 
-- [ ] Tests, relay on a real `http.Server` on port 0 with `ws` clients: `two sockets in one room hear each other and
+- [x] Tests, relay on a real `http.Server` on port 0 with `ws` clients: `two sockets in one room hear each other and
       not themselves`; `a second room hears nothing`; `an oversized message is dropped`; `a fifth socket is
       refused`; `origins lists localhost last`. Room code: `is eight Crockford base32 characters`; `uses the random
       source it is handed` (fixed bytes → fixed code).
-- [ ] No test for `createLocalTransport` (thin `WebSocket` wrapper; the by-eye pass covers it).
-- [ ] Implement; tests pass; `npm run build` succeeds with both entries; prettier; commit.
+- [x] No test for `createLocalTransport` (thin `WebSocket` wrapper; the by-eye pass covers it).
+- [x] Implement; tests pass; `npm run build` succeeds with both entries; prettier; commit.
 
 ---
 
@@ -379,9 +379,9 @@ export function createLocalTransport(): RemoteTransport;
 **Behaviour:** shown only while `phase === 'waiting'`: the QR of `pairingUrl`, the room code as text, and the
 address as text (for a device that cannot scan). Gone once paired. Tab still brings the interface back (existing).
 
-- [ ] Read `docs/superpowers/conventions/ui-ux.md` first; copy and layout follow it.
-- [ ] Tests: `shows the code and the address while waiting`; `renders nothing once paired`.
-- [ ] Implement; tests pass; prettier; commit.
+- [x] Read `docs/superpowers/conventions/ui-ux.md` first; copy and layout follow it.
+- [x] Tests: `shows the code and the address while waiting`; `renders nothing once paired`.
+- [x] Implement; tests pass; prettier; commit.
 
 ---
 
@@ -418,13 +418,13 @@ export function focusNameFrom(
 - Status drives what is shown (running tour, paused state, toggle states); three seconds without one shows "dome not
   there". Focus shows `focusNameFrom(...) ?? 'Focused'`.
 
-- [ ] Read `docs/superpowers/conventions/ui-ux.md` first.
-- [ ] Tests: `the trackpad stylesheet sets touch-action none` (read the CSS module source); `a status renders the
+- [x] Read `docs/superpowers/conventions/ui-ux.md` first.
+- [x] Tests: `the trackpad stylesheet sets touch-action none` (read the CSS module source); `a status renders the
       running tour and its controls`; `three seconds without a status shows dome not there`; `toggling a row sends
       toggleSet`; `focusNameFrom finds a name among search matches, else null`; `the remote entry's import graph
       reaches nothing under src/services/gpu or src/services/engine` (ts-morph from `src/remoteMain.tsx`, via
       `tests/helpers/conventions/parseOnlyProject`).
-- [ ] Implement; tests pass; prettier; commit.
+- [x] Implement; tests pass; prettier; commit.
 
 ---
 
@@ -436,17 +436,17 @@ tests); **C** = Tasks 5–6 (relay, transport, boot, overlay); **D** = Task 7 (r
 
 ## Definition of Done
 
-- [ ] **Deliverables:** `remote.html` + `src/remoteMain.tsx`; `remoteRelayPlugin` in `vite.config.ts`;
+- [x] **Deliverables:** `remote.html` + `src/remoteMain.tsx`; `remoteRelayPlugin` in `vite.config.ts`;
       `createDeviceChannel`; `parseDeviceEvent`, `parseRemoteMessage`, `parseDomeMessage`; `REMOTE_COMMANDS`,
       `parseRemoteCommand`, `runRemoteCommand`; `remoteSearchMatches`, `paletteRowLabel`, `selectDomeStatus`, `focusIdOf`; the `remote`
       slice and `remoteReceiverSaga`; the pairing overlay; `ws`, `@types/ws`, `qrcode-generator` in `package.json`.
-- [ ] **By eye, side by side with main where a main behaviour exists**, dome at `/?dome&remote` and the remote in a
+- [x] **By eye, side by side with main where a main behaviour exists**, dome at `/?dome&remote` and the remote in a
       second window, then a phone on the LAN (`npm run dev -- --host`): pairing overlay shows QR, code and address
       and vanishes on join with the UI hidden; trackpad orbit, two-finger pinch, tap select, double-tap focus; laptop
       right-drag pan and wheel; search → go to; home; a tour start, previous / pause / next; an exhibit and a clip,
       then exit; time pause, rate, direction, date, live; each label toggle; closing the remote mid-drag stops the
       sky within three seconds; reloading the remote resumes control. Camera behaviour under remote drags judged in
       the fisheye view.
-- [ ] **Out of scope:** the Durable Object relay and public-site transport (the next PR); the full app as a
+- [x] **Out of scope:** the Durable Object relay and public-site transport (the next PR); the full app as a
       controller; a 3D preview; signed messages and LAN HTTPS; an offline bundle; jump-to-beat and in-beat scrubbing;
       the Display, Earth and Structures settings sections.
