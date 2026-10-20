@@ -49,11 +49,8 @@ An `--out` file ending in `.png` is written as PNG without `--png`; any other na
 ## Capture path
 
 Before shooting, the tool awaits `window.__skymap.settled()`: it resolves after the first frame
-with no fade or label animation running and no Layer content still settling (always at least one
-frame, never times out). Settling content is a galaxy thumbnail fading in, or an octree chunk
-(stars, GLADE in `galaxyFormat=glade:octree`) in flight or fading in after it lands. Auto-rotate,
-a moving cut and a playing clock do not hold it back; a chunk the full pool cannot take does not
-either.
+with no fade or label animation running (always at least one frame, never times out). Auto-rotate
+and a playing clock do not hold it back.
 
 With `--hide-ui` the image is read straight from the WebGPU canvas (`toBlob`, in the same task as a
 fresh frame, since a presented WebGPU canvas is cleared), so no page chrome can leak in; otherwise,

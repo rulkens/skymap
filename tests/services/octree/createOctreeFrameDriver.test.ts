@@ -87,23 +87,4 @@ describe('createOctreeFrameDriver', () => {
     expect(driver.step(NODE_FADE_MS, cutAt(0), []).awake).toBe(false);
     expect(driver.step(NODE_FADE_MS + 1, null, []).awake).toBe(false);
   });
-
-  it('settles only once no chunk is in flight and the last landing has faded in; a moving cut alone never holds it', () => {
-    const { state, stream } = fakeStream();
-    let inFlight = 1;
-    stream.inFlightCount = () => inFlight;
-    const driver = createOctreeFrameDriver<Cols>(INTERVAL);
-    const streams = [{ stream, octree: OCTREE }];
-    expect(driver.step(0, cutAt(0), streams).settling).toBe(true);
-
-    inFlight = 0;
-    state.epoch++;
-    expect(driver.step(100, cutAt(0), streams).settling).toBe(true);
-    expect(driver.step(100 + NODE_FADE_MS - 1, cutAt(0), streams).settling).toBe(true);
-    expect(driver.step(100 + NODE_FADE_MS, cutAt(0), streams).settling).toBe(false);
-
-    const moving = driver.step(1000, cutAt(EYE_SLACK_MPC * 10), streams);
-    expect(moving.awake).toBe(true);
-    expect(moving.settling).toBe(false);
-  });
 });

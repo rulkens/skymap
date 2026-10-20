@@ -4,8 +4,6 @@
  * `intervalFrames` for a moved cut or chunks wanted or in flight), and decide the
  * re-cut cadence (a moving cut re-cuts every other frame). The wake is a timer: the
  * fades can still move for `NODE_FADE_MS` after the cut last moved, or while a fetch is out.
- * `settling` is the same timer started by a landing or eviction only, so a still eye
- * settles once its chunks are in and faded, while a moving one never waits on its motion.
  */
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import type { OctreeCutSpec } from '../../@types/octree/OctreeCutSpec';
@@ -19,7 +17,6 @@ export function createOctreeFrameDriver<C extends { readonly count: number }>(
 ): OctreeFrameDriver<C> {
   let anchor: OctreeCutSpec | null = null;
   let changedAtMs = -Infinity;
-  let landedAtMs = -Infinity;
   // The pool's LRU clock; any strictly increasing count serves.
   let frameIndex = 0;
   // A landing chunk changes the cut without changing `sameOctreeCut`'s inputs.
@@ -40,7 +37,6 @@ export function createOctreeFrameDriver<C extends { readonly count: number }>(
     },
     step(nowMs, cut, streams) {
       if (nowMs < changedAtMs) changedAtMs = nowMs;
-      if (nowMs < landedAtMs) landedAtMs = nowMs;
       frameIndex++;
 
       let inFlight = 0;
@@ -94,10 +90,8 @@ export function createOctreeFrameDriver<C extends { readonly count: number }>(
       }
       const recut = !(moving && recutLast);
       recutLast = recut;
-      if (residencyChanged) landedAtMs = nowMs;
       const awake = cut !== null && (nowMs - changedAtMs < NODE_FADE_MS || inFlight > 0);
-      const settling = cut !== null && (nowMs - landedAtMs < NODE_FADE_MS || inFlight > 0);
-      return { recut, awake, settling, residencyChanged };
+      return { recut, awake, residencyChanged };
     },
   };
 }

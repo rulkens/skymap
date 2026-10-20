@@ -5,9 +5,8 @@
  * source's chunks (every fourth frame; a moving cut re-cuts every other). The cut and its LOD fades live on the GPU, so the wake vote
  * is a timer: the fades can still be moving for `NODE_FADE_MS` after the cut
  * last moved past a slack, or a chunk landed or left; it also holds while a
- * chunk is in flight. `settling` holds while a chunk is in flight or a landing
- * fades in: `settled()` waits for it, and a sky capture re-bakes until then (its
- * own fade-less cut draws the resident chunks, so a bake before a landing lacks it).
+ * chunk is in flight. `settling: false` always: a capture face draws its own
+ * fade-less cut.
  */
 
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
@@ -49,13 +48,9 @@ export function starCatalogPlanner(
           }
         }
       }
-      const { recut, awake, settling } = driver.step(
-        views[0]!.snapshot.nowMs,
-        inputs?.cut ?? null,
-        streams,
-      );
+      const { recut, awake } = driver.step(views[0]!.snapshot.nowMs, inputs?.cut ?? null, streams);
       runtime.renderer.setFrameCut(inputs, recut);
-      return { value: undefined, awake, settling };
+      return { value: undefined, awake, settling: false };
     },
   };
 }
