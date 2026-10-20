@@ -4,7 +4,7 @@
  * producer and consumer of the offscreen cannot disagree. Each field's handed value
  * already folds the section switch, its own switch and clip; its focus emphasis is
  * composed here, for both passes. No field can be the focus, so every field recedes
- * alike. The clamp, band fold and `hasActiveFields` check are `deriveVolumeLiveness`'s
+ * alike. The clamp and `hasActiveFields` check are `deriveVolumeLiveness`'s
  * pure core.
  */
 
@@ -26,14 +26,11 @@ export function deriveCosmicWebDensityLiveness(
   ctx: FrameView,
   fade: Readonly<Record<CosmicWebDensityFieldId, number>>,
 ): VolumeFieldLiveness<CosmicWebDensityFieldId> | null {
-  // Mpc from the heliocentric render origin — what every field's `bands` measure.
-  const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const emphasis = emphasisOf(DENSITY_ENTRY, ctx.snapshot);
 
   return deriveVolumeLiveness(
     runtime.renderer,
     (id) => state.settings.cosmicWebDensity.items[id],
     (id) => fade[id] * emphasis,
-    camDistMpc,
   );
 }

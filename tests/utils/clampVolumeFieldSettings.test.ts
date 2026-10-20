@@ -5,7 +5,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { clampVolumeFieldSettings } from '../../src/utils/clampVolumeFieldSettings';
-import { SCALE_FADE_BANDS } from '../../src/data/scaleFadeBands';
 import type { VolumeFieldSettings } from '../../src/@types/settings/VolumeFieldSettings';
 
 // Out-of-range raw values that force every scalar clamp to fire.
@@ -22,7 +21,6 @@ const rawHigh: VolumeFieldSettings = {
   densityScale: -1,
   trim: 2,
   exposure: 100,
-  bands: [SCALE_FADE_BANDS.surveyDeepZoom],
 };
 
 describe('clampVolumeFieldSettings — input object is not mutated', () => {

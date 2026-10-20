@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
+import { NEIGHBOURHOOD_RECEDE_KPC } from '../../../../src/data/bands/neighbourhoodRecedeKpc';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
@@ -70,7 +70,7 @@ describe('produceConstellationCaptions', () => {
   // constellation band — the exact window a director-registered producer
   // could never reach through the COSMO near plane.
   const pastBodyGate =
-    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + SCALE_FADE_BANDS.constellations.goneAt) / 2;
+    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + NEIGHBOURHOOD_RECEDE_KPC * SCALE_UNITS.KPC_TO_MPC) / 2;
 
   it('reads the handed label value, not a band-only `1`, for constellation demand', () => {
     // A prior version of this gate passed the band lookup

@@ -115,7 +115,7 @@ Each task: add the entry's `bands` (values from the spec table, which copies `sc
 
 Bands: `localBubble.shell { in: [0.4, 1] kpc, out: [4 kpc, NEIGHBOURHOOD_RECEDE_KPC] }`; `constellations.neighbourhood { out: [1 kpc, NEIGHBOURHOOD_RECEDE_KPC] }`; `zoneOfAvoidance.veil { in: [2 R, 10 R], out: [2, 6] }` (R = `MILKY_WAY_RADIUS_MPC`); `cosmicWebDensity.deepZoom: SURVEY_DEEP_ZOOM`. The two label entries inherit via `of`.
 
-- [ ] Saved snapshots: `mergeSettingsSnapshot.ts:35-43` keeps unknown fields, but snapshots live only in memory (`captureScene.ts:39`) and nothing persists settings (`persistedValues.ts:9`), so no restore path can carry a stale `bands`. No migration; say so in the commit body.
+- [x] Saved snapshots: `mergeSettingsSnapshot.ts:35-43` keeps unknown fields, but snapshots live only in memory (`captureScene.ts:39`) and nothing persists settings (`persistedValues.ts:9`), so no restore path can carry a stale `bands`. No migration; say so in the commit body.
 
 ### Task 5: Milky Way disk and label, survey
 

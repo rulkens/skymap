@@ -3,9 +3,8 @@
  * true-3D constellation stick-figure names, mirroring
  * `produceSceneBodyCaptions`: declutter, envelope, and lift run in
  * `label2DDirector`. Every figure shares ONE fade target this frame
- * (`constellationsBand` times the names' label value, the same band the
- * stick-figure pass reads) and is emitted even at target 0 — only an unloaded artifact
- * returns no candidates at all. No `lift` field: the anchor is empty space
+ * (the names' label value, which carries the same band as the stick-figure pass) and is
+ * emitted even at target 0 — only an unloaded artifact returns no candidates at all. No `lift` field: the anchor is empty space
  * at a figure centroid, not a body, so there is nothing to float a caption
  * above.
  */
@@ -16,7 +15,6 @@ import type { ConstellationsArtifact } from '../../../@types/loading/Constellati
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
-import { constellationsBand } from './constellationsBand';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
@@ -58,9 +56,6 @@ export function produceConstellationCaptions(
     if (captions.length === 0) return { labels: [], awake: false };
 
     const camPos = ctx.drawCamPos;
-    // ORIGIN distance, not the per-anchor distance the body captions read —
-    // see `constellationsBand`.
-    const fadeAlpha = constellationsBand(ctx) * fade;
 
     const labels: Label2D[] = captions.map((label) => {
       const anchor: Vec3 = [
@@ -68,7 +63,12 @@ export function produceConstellationCaptions(
         label.worldPos[1] - camPos[1],
         label.worldPos[2] - camPos[2],
       ];
-      return { ...label, worldPos: anchor, fadeAlpha, prominencePx: CONSTELLATION_PROMINENCE_PX };
+      return {
+        ...label,
+        worldPos: anchor,
+        fadeAlpha: fade,
+        prominencePx: CONSTELLATION_PROMINENCE_PX,
+      };
     });
 
     return { labels, awake: false };

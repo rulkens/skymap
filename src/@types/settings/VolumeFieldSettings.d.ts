@@ -16,7 +16,6 @@
 
 import type { DataItemSettings } from './DataItemSettings';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
-import type { FadeBand } from '../math/FadeBand';
 
 export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded by the owning Layer's `initialState` literal. */
@@ -61,12 +60,4 @@ export type VolumeFieldSettings = DataItemSettings & {
    * brightest entry.
    */
   exposure: number;
-  /**
-   * Scale-fade bands multiplied into this field's opacity by
-   * `deriveVolumeLiveness` (`fadeOpacityOf`), keyed on camera distance from
-   * the heliocentric render origin. Values, not band names, so a field's
-   * choreography is tunable via `writeVolumeField` without touching code.
-   * Seeded to `[SCALE_FADE_BANDS.surveyDeepZoom]` by `buildVolumeFieldSettings`.
-   */
-  bands: readonly FadeBand[];
 };

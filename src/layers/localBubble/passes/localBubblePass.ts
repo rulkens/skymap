@@ -7,7 +7,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { LocalBubbleRuntime } from '../@types/LocalBubbleRuntime';
-import { localBubbleOpacity } from '../present/localBubbleOpacity';
+import { clampLocalBubbleIntensity } from '../../../utils/clampLocalBubbleIntensity';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../services/engine/presentation/emphasisOf';
 import { localBubbleVisibility } from '../visibility';
@@ -18,19 +18,18 @@ export function localBubblePass(runtime: LocalBubbleRuntime): ContentPass<'local
     name: 'local-bubble',
     fade: 'localBubble',
 
-    enabled(state, _ctx, view, fade) {
-      if (!runtime.renderer.hasMesh()) return false;
-      const camDistMpc = Math.hypot(...view.camPos);
-      return localBubbleOpacity(camDistMpc, fade, state.settings.localBubble.intensity) > 0;
+    enabled(state) {
+      return (
+        runtime.renderer.hasMesh() &&
+        clampLocalBubbleIntensity(state.settings.localBubble.intensity) > 0
+      );
     },
 
     draw(pass, view, ctx, state, fade) {
-      const camDistMpc = Math.hypot(...view.camPos);
-      const opacity = localBubbleOpacity(
-        camDistMpc,
-        fade * emphasisOf(entry, ctx.snapshot),
-        state.settings.localBubble.intensity,
-      );
+      const opacity =
+        fade *
+        emphasisOf(entry, ctx.snapshot) *
+        clampLocalBubbleIntensity(state.settings.localBubble.intensity);
       runtime.renderer.draw(pass, view.vp, view.camPos, opacity);
     },
   };

@@ -5,7 +5,6 @@
  * owning Layer's `initialState` literal makes, not asset presentation.
  */
 
-import { SCALE_FADE_BANDS } from '../../../data/scaleFadeBands';
 import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 
@@ -18,6 +17,5 @@ export function buildVolumeFieldSettings(
     paletteId: entry.paletteId,
     trim: entry.trim,
     exposure: entry.exposure,
-    bands: [SCALE_FADE_BANDS.surveyDeepZoom],
   };
 }

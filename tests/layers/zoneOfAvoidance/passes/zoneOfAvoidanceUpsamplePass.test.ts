@@ -12,7 +12,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { zoneOfAvoidanceUpsamplePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidanceUpsamplePass';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -26,8 +26,7 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-/** Inside the visibility window: both bands saturate to 1 here. */
-const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
+const INSIDE_CAM_DIST = MILKY_WAY_RADIUS_MPC * 10;
 
 const ZOA_VIEW = { __id: 'zoa-view' } as unknown as GPUTextureView;
 

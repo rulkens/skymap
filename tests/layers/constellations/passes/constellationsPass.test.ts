@@ -1,13 +1,11 @@
 /**
- * constellationsPass — the hard distance cull ("opacity 0 ⇒ no render") gates the
- * row on its own, and the draw call is gated on `runtime.renderer.hasData()` — the
+ * constellationsPass — the draw call is gated on `runtime.renderer.hasData()` — the
  * slot commit's job, never this pass's.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { constellationsPass } from '../../../../src/layers/constellations/passes/constellationsPass';
 import { NEAR0, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { STRONG_RECESSION } from '../../../../src/data/strongRecession';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
@@ -58,20 +56,6 @@ function makeRuntime(
 }
 
 const PASS_STUB = {} as GPURenderPassEncoder;
-
-describe('constellationsPass enabled', () => {
-  it('the hard distance cull disables the row even at full value', () => {
-    // Past `goneAt`, the band alone is 0.
-    const farCamPos: readonly [number, number, number] = [
-      SCALE_FADE_BANDS.constellations.goneAt * 10,
-      0,
-      0,
-    ];
-    const ctx = makeCtx(farCamPos);
-    const pass = constellationsPass(makeRuntime(true));
-    expect(pass.enabled(makeState(), ctx, slabViewOf(ctx, NEAR0), 1)).toBe(false);
-  });
-});
 
 describe('constellationsPass draw', () => {
   it('skips the draw call when the renderer holds no data', () => {
