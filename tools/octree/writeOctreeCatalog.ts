@@ -3,7 +3,8 @@
  * `<outDir>/<name>/<level>-<morton>.<hash8>.bin` and the index `<outDir>/<name>.bin` last. An
  * object's header names its child chunks' hashes, so children are written before parents (ids
  * run breadth-first, so descending id order does it): a reader that sees an object never meets
- * a child not on disk yet.
+ * a child not on disk yet. With `info`, each object gets an info object beside it (written
+ * first), and one hash over both objects' bytes names the pair, so neither half can go stale.
  */
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -14,10 +15,12 @@ import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import type { OctreeCatalogMeta } from '../@types/octree/OctreeCatalogMeta';
+import type { OctreeInfoInput } from '../@types/octree/OctreeInfoInput';
 import type { OctreeObjects } from '../@types/octree/OctreeObjects';
 import type { OctreeRawColumn } from '../@types/octree/OctreeRawColumn';
-import { octreeChunkFileName } from '../../src/data/octree/octreeFormat';
+import { octreeChunkFileName, octreeChunkInfoFileName } from '../../src/data/octree/octreeFormat';
 import { contentHash8 } from '../utils/data/contentHash8';
+import { encodeOctreeInfo } from './encodeOctreeInfo';
 import { encodeOctreeObject } from './encodeOctreeObject';
 import { quantiseColumn } from './quantiseColumn';
 
@@ -26,6 +29,7 @@ export function writeOctreeCatalog(
   meta: OctreeCatalogMeta,
   outDir: string,
   name: string,
+  info?: OctreeInfoInput,
 ): OctreeIndexHeader {
   const chunkDir = join(outDir, name);
   fs.mkdirSync(chunkDir, { recursive: true });
@@ -46,7 +50,10 @@ export function writeOctreeCatalog(
       meta.schema,
       quantise(c.columns, meta.schema),
     );
-    const hash = contentHash8(bytes);
+    const infoBytes = info && encodeOctreeInfo(info, c.sourceRows);
+    const hash = contentHash8(infoBytes ? concatBytes(bytes, infoBytes) : bytes);
+    if (infoBytes)
+      fs.writeFileSync(join(chunkDir, octreeChunkInfoFileName({ ...c, hash })), infoBytes);
     fs.writeFileSync(join(chunkDir, octreeChunkFileName({ ...c, hash })), bytes);
     refs[id] = {
       id,
@@ -73,6 +80,8 @@ export function writeOctreeCatalog(
     columns: meta.schema,
     stats: { ...meta.stats, chunkCount: objects.chunks.length },
     chunks: refsUnder(null),
+    // Refs sit at their ids, and record ordinals follow ids: already ascending recordBase.
+    ...(info ? { chunkDirectory: refs } : {}),
   };
   const index = encodeOctreeObject(
     header,
@@ -80,8 +89,21 @@ export function writeOctreeCatalog(
     meta.schema,
     quantise(objects.index.columns, meta.schema),
   );
+  if (info) {
+    fs.writeFileSync(
+      join(outDir, `${name}.info.bin`),
+      encodeOctreeInfo(info, objects.index.sourceRows),
+    );
+  }
   fs.writeFileSync(join(outDir, `${name}.bin`), index);
   return header;
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
 }
 
 function recordCount(nodes: OctreeNodeTable): number {

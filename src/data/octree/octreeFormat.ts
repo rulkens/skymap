@@ -56,3 +56,10 @@ export const LEVEL_KEY_STRIDE = 2 ** 32;
 export function octreeChunkFileName(ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>): string {
   return `${ref.level}-${ref.morton}.${ref.hash}.bin`;
 }
+
+/** Its info object's file name: the hash stays the last infix, so `logicalDataName` strips it as for any data file. */
+export function octreeChunkInfoFileName(
+  ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>,
+): string {
+  return `${ref.level}-${ref.morton}.info.${ref.hash}.bin`;
+}

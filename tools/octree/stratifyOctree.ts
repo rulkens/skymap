@@ -23,6 +23,7 @@ import { fluxFromAbsMag } from '../stars/mergeFluxAggregate';
 import { AGGREGATE_RULES } from './aggregateRules';
 import { COLUMN_AGGREGATE } from './columnAggregate';
 import { levelForMagnitude } from './levelForMagnitude';
+import { NO_SOURCE_ROW } from './noSourceRow';
 
 const OCTANT_MASK = 0b111;
 const AXES = 3;
@@ -110,6 +111,7 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree {
   }
 
   const records = n + blobs;
+  const sourceRows = new Uint32Array(records).fill(NO_SOURCE_ROW);
   const builders = schema.map((c) => {
     const kind = COLUMN_AGGREGATE[c.id];
     if (kind === undefined) throw new Error(`column '${c.id}' has no aggregate rule`);
@@ -170,6 +172,7 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree {
       const r = order[q + k]!;
       const flux = fluxFromAbsMag(mags[r]!);
       cur = r;
+      sourceRows[rec] = r;
       builders.forEach((b, j) => {
         const record = recordScratch[j]!;
         record.flux = flux;
@@ -184,7 +187,7 @@ export function stratifyOctree(input: OctreeBuildInput): StratifiedOctree {
     if (nodes.childMask[i] !== 0) rec++;
   }
 
-  return { nodes, columns: new Map(builders.map((b) => [b.id, b.out])), childIndex };
+  return { nodes, columns: new Map(builders.map((b) => [b.id, b.out])), childIndex, sourceRows };
 }
 
 function cellOf(p: number, cellEdge: number, maxCell: number): number {

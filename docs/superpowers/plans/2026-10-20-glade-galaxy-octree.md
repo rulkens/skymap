@@ -187,8 +187,10 @@ Info schema (written by Task 3/4, read by Task 11): `objId u64`, `specZ f32`, `l
 **Files:**
 - `tools/@types/octree/OctreeObjects.d.ts` (or wherever `OctreeObjects` / `OctreeChunkObject` / `StratifiedOctree` live)
 - `tools/octree/stratifyOctree.ts`, `tools/octree/chunkOctree.ts`, `tools/octree/writeOctreeCatalog.ts`
-- `tools/@types/octree/OctreeInfoInput.d.ts` (create), `tools/octree/encodeOctreeInfo.ts` (create)
-- `tests/tools/octree/{stratifyOctree,chunkOctree,writeOctreeCatalog}.test.ts`
+- `tools/@types/octree/OctreeInfoInput.d.ts` (create), `tools/octree/encodeOctreeInfo.ts` (create),
+  `tools/octree/noSourceRow.ts` (create)
+- `src/data/octree/octreeFormat.ts` (`octreeChunkInfoFileName`, beside `octreeChunkFileName`)
+- `tests/tools/octree/{stratifyOctree,buildOctreeCatalog}.test.ts` (the writer's tests live in the latter)
 
 Contract:
 
@@ -207,12 +209,12 @@ type OctreeInfoInput = { readonly schema: readonly ColumnSchema[]; readonly colu
   ref in the parent's header carries it. Without `info`, the hash is over the render bytes alone, as today.
 - With `info`, the index header also gets `chunkDirectory`.
 
-- [ ] Test `sourceRows is a permutation of the input rows plus one NO_SOURCE_ROW per blob`.
-- [ ] Test `a record's info row is its input row's values` (a 3-level fixture: pick a chunk record, follow
+- [x] Test `sourceRows is a permutation of the input rows plus one NO_SOURCE_ROW per blob`.
+- [x] Test `a record's info row is its input row's values` (a 3-level fixture: pick a chunk record, follow
       `sourceRows`, compare `objId` as a BigInt).
-- [ ] Test `changing one info byte renames both files of the pair`.
-- [ ] Test `chunkDirectory lists every chunk once, ascending recordBase, matching the files written`.
-- [ ] Star digest test unchanged (no `info` → identical bytes). Commit.
+- [x] Test `changing one info byte renames both files of the pair`.
+- [x] Test `chunkDirectory lists every chunk once, ascending recordBase, matching the files written`.
+- [x] Star digest test unchanged (no `info` → identical bytes). Commit.
 
 ### Task 4: the GLADE emitter
 
