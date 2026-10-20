@@ -111,11 +111,13 @@ fn vs(
     weightCode == 0u,
   );
   p.absMag = pooled.absMagQ0 + f32((w1 >> 16u) & BYTE_MASK) * pooled.absMagQ1;
-  // A blob holds its members' mean: its light is the mean times their count.
-  p.sbAmp = magSb.y * select(1.0, f32(cutNodes[nodeIdx].blobCount), isBlob);
+  p.sbAmp = magSb.y;
 
   var out = galaxyPointVertex(vi, base, p, u, source, focus);
-  // The cut's LOD fade: a refining node's own records fade in as its blob fades out.
-  out.instanceTint = vec4<f32>(out.instanceTint.rgb * nodeOpacity, out.instanceTint.w);
+  // The cut's LOD fade: a refining node's own records fade in as its blob fades out. A blob
+  // holds its members' mean, so its light is the mean times their count; applied after the
+  // body because the body clamps sbAmp to galaxySbMax, which one blob must not escape.
+  let count = select(1.0, f32(cutNodes[nodeIdx].blobCount), isBlob);
+  out.instanceTint = vec4<f32>(out.instanceTint.rgb * nodeOpacity * count, out.instanceTint.w);
   return out;
 }

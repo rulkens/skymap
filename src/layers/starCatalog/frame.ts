@@ -15,7 +15,7 @@ import type { PassState } from '../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
 import type { OctreeDriverStream } from '../../@types/octree/OctreeDriverStream';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
-import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
+import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../data/octree/octreePlanIntervalFrames';
 import { starCutInputs } from './render/cut/starCutInputs';
 import { resizeStarPools } from './load/resizeStarPools';
 import { createOctreeFrameDriver } from '../../services/octree/createOctreeFrameDriver';
@@ -24,7 +24,7 @@ import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 export function starCatalogPlanner(
   runtime: StarCatalogRuntime,
 ): Extract<FrameContentPlanner<void, 'starCatalog'>, { scope: 'once' }> {
-  const driver = createOctreeFrameDriver<StarColumns>(STAR_PLAN_INTERVAL_FRAMES);
+  const driver = createOctreeFrameDriver<StarColumns>(OCTREE_PLAN_INTERVAL_FRAMES);
   // The debug chunk-pool size last applied; a change re-installs the pools from the loaded octrees.
   let appliedSlots: number | null = null;
   return {

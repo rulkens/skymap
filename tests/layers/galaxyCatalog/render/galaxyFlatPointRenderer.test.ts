@@ -11,7 +11,7 @@
  *
  * ### Why a stub `GPUDevice`
  *
- * `createGalaxyPointRenderer`'s constructor calls real WebGPU APIs
+ * `createGalaxyFlatPointRenderer`'s constructor calls real WebGPU APIs
  * (`createShaderModule`, `createRenderPipeline`, `createBuffer`, …) that
  * only exist on a live device. The stub's `createBuffer` returns a sentinel
  * (no VRAM) and the pipeline factories return just enough shape for
@@ -109,7 +109,7 @@ function makeStubDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-// Stub BGLs — createGalaxyPointRenderer requires fadeBgl + sourceBgl +
+// Stub BGLs — createGalaxyFlatPointRenderer requires fadeBgl + sourceBgl +
 // focusBgl as canonical shared layouts. These stubs satisfy the branded
 // opaque-newtype shape structurally.
 function makeStubFadeBgl() {

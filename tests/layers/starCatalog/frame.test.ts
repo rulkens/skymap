@@ -19,7 +19,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
-import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/data/starPlanIntervalFrames';
+import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../../src/data/octree/octreePlanIntervalFrames';
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
 
@@ -177,7 +177,7 @@ describe('starCatalogPlanner', () => {
       expect(plan(11 * NODE_FADE_MS)).toBe(false);
     });
 
-    it('plans on a first cut, then only every STAR_PLAN_INTERVAL_FRAMES while a chunk is in flight or the eye moves, and once at rest', () => {
+    it('plans on a first cut, then only every OCTREE_PLAN_INTERVAL_FRAMES while a chunk is in flight or the eye moves, and once at rest', () => {
       const { stream, counters } = stubStream();
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const frame = (t: number) =>
@@ -193,9 +193,9 @@ describe('starCatalogPlanner', () => {
       counters.inFlight = 1;
       frame(10); // the interval since the first walk has long passed
       expect(walks).toHaveBeenCalledTimes(2);
-      for (let i = 11; i < 10 + STAR_PLAN_INTERVAL_FRAMES; i++) frame(i);
+      for (let i = 11; i < 10 + OCTREE_PLAN_INTERVAL_FRAMES; i++) frame(i);
       expect(walks).toHaveBeenCalledTimes(2);
-      frame(10 + STAR_PLAN_INTERVAL_FRAMES);
+      frame(10 + OCTREE_PLAN_INTERVAL_FRAMES);
       expect(walks).toHaveBeenCalledTimes(3);
       expect(stream.update).toHaveBeenCalledTimes(3);
 
@@ -204,10 +204,10 @@ describe('starCatalogPlanner', () => {
       walks.mockClear();
       const at = (xPc: number, t: number) =>
         planner.plan(SNAPSHOT, [makeView(camAtPc(xPc), t)], STATE, ALL_ON);
-      for (let i = 0; i < 2 * STAR_PLAN_INTERVAL_FRAMES; i++) at(MID_BAND_PC + 10 * i, 101 + i);
+      for (let i = 0; i < 2 * OCTREE_PLAN_INTERVAL_FRAMES; i++) at(MID_BAND_PC + 10 * i, 101 + i);
       expect(walks).toHaveBeenCalledTimes(2); // moving: on the first move, then one interval on
-      const restPc = MID_BAND_PC + 10 * (2 * STAR_PLAN_INTERVAL_FRAMES - 1);
-      for (let i = 0; i < STAR_PLAN_INTERVAL_FRAMES; i++) at(restPc, 200 + i);
+      const restPc = MID_BAND_PC + 10 * (2 * OCTREE_PLAN_INTERVAL_FRAMES - 1);
+      for (let i = 0; i < OCTREE_PLAN_INTERVAL_FRAMES; i++) at(restPc, 200 + i);
       expect(walks).toHaveBeenCalledTimes(3); // stopped past the last plan's pose: one plan at rest
     });
 

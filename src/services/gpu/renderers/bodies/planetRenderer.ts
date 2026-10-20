@@ -26,7 +26,7 @@
  *
  * A planet's MVP + albedo rides in a single-instance vertex-buffer record,
  * stepped by `@builtin(instance_index)`, the same attribute layout
- * `galaxyPointRenderer` uses for its own batched draw. Here the "batch" is
+ * `galaxyFlatPointRenderer` uses for its own batched draw. Here the "batch" is
  * one row, but `planetsPass` calls `draw` once PER BODY-M SLAB ROW, all
  * inside ONE submit (Task 7's per-body slabs) — a single shared instance
  * buffer would let a later row's `writeBuffer` clobber an earlier row's bytes

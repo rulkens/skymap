@@ -31,6 +31,7 @@ import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompil
 import { createOctreeCutGpu } from '../../../services/gpu/octree/octreeCutGpu';
 import { WORD_BYTES } from '../../../services/gpu/octree/octreeCutLayout';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+import { GALAXY_OCTREE_FAMILY } from '../../../data/octree/galaxyOctreeFamily';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { GALAXY_GPU_RECORD_WORDS } from '../../../data/galaxyCatalog/galaxyGpuRecordWords';
 import {
@@ -50,6 +51,7 @@ const FADE_UNIFORM_BYTES = 16;
 const POOLED_UNIFORM_BYTES = 32;
 const POOLED_ABS_MAG_Q0_INDEX = 3;
 const POOLED_ABS_MAG_Q1_INDEX = 4;
+const FIXED_STEP_COLUMNS = ['colourIndex', 'axisRatio'] as const;
 const STREAMS: readonly OctreeDrawStream[] = ['leaf', 'aggregate'];
 
 export function createGalaxyPooledPointRenderer(init: {
@@ -156,9 +158,20 @@ export function createGalaxyPooledPointRenderer(init: {
 
     const absMag = octree.columns.find((c) => c.id === 'absMag');
     if (absMag === undefined) throw new Error('galaxyPooledPointRenderer: schema lacks absMag');
+    // pooledVertex.wesl hardcodes these two steps (q0 = 0) from the default schema.
+    for (const id of FIXED_STEP_COLUMNS) {
+      const got = octree.columns.find((c) => c.id === id);
+      const want = GALAXY_OCTREE_FAMILY.schema.find((c) => c.id === id)!;
+      if (got?.q0 !== want.q0 || got.q1 !== want.q1) {
+        throw new Error(`galaxyPooledPointRenderer: header overrides the ${id} decode step`);
+      }
+    }
     const pooledBuffer = uniformBuffer(`galaxy-pooled-uniform-${source}`, POOLED_UNIFORM_BYTES);
     const pooledWords = new Float32Array(POOLED_UNIFORM_BYTES / 4);
-    pooledWords.set(octree.grid.origin, 0);
+    pooledWords.set(
+      octree.grid.origin.map((v) => v * GALAXY_OCTREE_FAMILY.unitMpc),
+      0,
+    );
     pooledWords[POOLED_ABS_MAG_Q0_INDEX] = absMag.q0;
     pooledWords[POOLED_ABS_MAG_Q1_INDEX] = absMag.q1;
     device.queue.writeBuffer(pooledBuffer, 0, pooledWords);

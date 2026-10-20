@@ -29,7 +29,7 @@ import { structureMemberCount } from './present/structureMemberCount';
 import { sourceMaskOf } from './present/sourceMaskOf';
 import { galaxyCutInputs } from './render/cut/galaxyCutInputs';
 import { createOctreeFrameDriver } from '../../services/octree/createOctreeFrameDriver';
-import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
+import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../data/octree/octreePlanIntervalFrames';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
@@ -45,7 +45,7 @@ export function galaxyCatalogPlanner(
   let memberCountMask = -1;
   let memberCountVersion = -1;
   // The star planner's cadence: a chunk fetch outlasts a few frames either way.
-  const driver = createOctreeFrameDriver<GalaxyColumns>(STAR_PLAN_INTERVAL_FRAMES);
+  const driver = createOctreeFrameDriver<GalaxyColumns>(OCTREE_PLAN_INTERVAL_FRAMES);
 
   return {
     name: 'galaxy-catalog',

@@ -126,6 +126,21 @@ function makeRenderer() {
 }
 
 describe('galaxyPooledPointRenderer chunk pool', () => {
+  it('upload throws when the header overrides the colourIndex step', () => {
+    const { device } = recordingDevice();
+    const renderer = createGalaxyPooledPointRenderer({
+      device,
+      targetFormat: 'rgba16float',
+      focusBgl: {} as FocusUniformsBgl,
+    });
+    const columnsWithStep = GALAXY_COLUMN_SCHEMA.map((c) =>
+      c.id === 'colourIndex' ? { ...c, q1: 3 / 255 } : c,
+    );
+    expect(() =>
+      renderer.upload(Source.Glade, { ...OCTREE, columns: columnsWithStep }, 2, STATS),
+    ).toThrow(/colourIndex/);
+  });
+
   it("the pooled renderer writes a chunk's records at the slot's pool offset and evicts them", () => {
     const { renderer, writes } = makeRenderer();
     writes.length = 0;

@@ -64,7 +64,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
   // Core's "a source's catalog landed" pulse, and everything core does on it
-  // (D6, Ruling 3). The running total is `galaxyPointRenderer.totalCount()` by
+  // (D6, Ruling 3). The running total is `galaxyFlatPointRenderer.totalCount()` by
   // construction — per-source last-reported count, summed, replaced on a tier
   // swap — so the splash's ready echo needs no renderer read of its own. The
   // echo is per-arrival, not per-boot: a catalog the user enables mid-session
