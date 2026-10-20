@@ -157,7 +157,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   //
   // Two camera distances, each chosen so its site's OWN scale band reads
   // exactly 1 — the drawn alpha then starts at the intent value and any drop is
-  // attributable to the clip channel alone. 5 Mpc clears surveyDeepZoom's full
+  // attributable to the clip channel alone. 5 Mpc clears the survey deep-zoom band's full
   // edge (~0.23 Mpc); 1 Mpc keeps the Milky-Way disc above its 12-px
   // apparent-size edge, which 5 Mpc would not.
   const SURVEY_CAM_POS = [0, 0, 5] as Readonly<[number, number, number]>;

@@ -1,8 +1,7 @@
 /**
  * produceStructureLabels — per-frame labels for every structure category, read
  * from the Layer's store: close-approach / far fades, featured + visibility
- * gates, anchored at the ring centre or just above its drawn top. It rides the
- * `surveyDeepZoom` band, which famous-galaxy labels (their own producer) do not.
+ * gates, anchored at the ring centre or just above its drawn top.
  * `fadeAlpha` = distance fade × the category's handed value (label toggle fade
  * × clip, and its ring's clip); a category is skipped only at a
  * value of exactly 0, so its fade-out tail still draws. The label's `of` entry

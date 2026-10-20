@@ -92,6 +92,23 @@ describe('gateLabelProducer', () => {
     expect(produceLabels).not.toHaveBeenCalled();
   });
 
+  it('the only live item sits at band 0 while a dead item has band > 0 → skipped', () => {
+    const banded = APP_VISIBILITY.map((e) =>
+      'label' in e && e.label === 'structure'
+        ? { ...e, bands: { near: { out: [0, 0.4], items: ['void'] } } }
+        : e,
+    ) as readonly VisibilityEntry[];
+    const { state, fades } = makeState(1, banded);
+    for (const item of STRUCTURE_IDS) fades.register({ address: 'label:structure', item }, 0);
+    fades.setImmediate({ address: 'label:structure', item: 'void' }, 1);
+    const produceLabels = vi.fn((_s: EngineState, _c: FrameView, _fade?: unknown) => OUTPUT);
+    gateLabelProducer({ id: 's', label: 'structure', produceLabels }).produceLabels(
+      state,
+      ctxAt(0),
+    );
+    expect(produceLabels).not.toHaveBeenCalled();
+  });
+
   it('a per-item row is skipped only when no item is live', () => {
     const { state, fades } = makeState();
     for (const item of STRUCTURE_IDS) fades.register({ address: 'label:structure', item }, 0);
