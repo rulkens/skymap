@@ -45,7 +45,7 @@ export type GalaxyPickRenderer = {
    * @param uniformBytes The complete pick-shaped uniform bytes for the pick
    *                     frame (see `pickUniformBytesOf`).
    */
-  drawPoints(
+  drawFlatPoints(
     pass: GPURenderPassEncoder,
     sources: readonly PickSourceDraw[],
     uniformBytes: ArrayBuffer,

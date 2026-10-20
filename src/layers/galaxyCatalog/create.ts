@@ -20,7 +20,7 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 
-import { createGalaxyPointRenderer } from './render/galaxyPointRenderer';
+import { createGalaxyFlatPointRenderer } from './render/galaxyFlatPointRenderer';
 import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
@@ -42,7 +42,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   // read by `frame`'s reconciles through the getter below.
   let catalogsVersion = 0;
 
-  const pointRenderer = createGalaxyPointRenderer({
+  const pointRenderer = createGalaxyFlatPointRenderer({
     device,
     targetFormat: HDR_TARGET_FORMAT,
     fadeBgl: deps.fadeBgl,

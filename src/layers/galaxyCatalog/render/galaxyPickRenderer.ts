@@ -9,7 +9,7 @@
  * among the content-layer registry's pickable rows.
  *
  * The pick pipeline owns its OWN uniform buffer (`pickUniformBuffer`,
- * allocated at construction). `drawPoints` receives the caller's
+ * allocated at construction). `drawFlatPoints` receives the caller's
  * `uniformBytes` — the COMPLETE, already-pick-shaped image built at pick time
  * from the slab view via `pickUniformBytesOf` (none-selection sentinel, padded
  * point size, `pickPass = 1` all baked in) — and uploads them VERBATIM. No
@@ -26,7 +26,7 @@
 
 // Vertex source is textually shared with GalaxyPointRenderer but compiled
 // into our own GPUShaderModule — never share modules across pipelines
-// (see the `auto` bind-group-layout trap in galaxyPointRenderer.ts).
+// (see the `auto` bind-group-layout trap in galaxyFlatPointRenderer.ts).
 import vsCode from '../../../services/gpu/shaders/galaxyCatalog/points/vertex.wesl?static';
 import pickFsCode from '../../../services/gpu/shaders/galaxyCatalog/points/pickFragment.wesl?static';
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -48,7 +48,7 @@ import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
 
 /**
  * Construct a `GalaxyPickRenderer` bound to `device`.  The renderer owns its own
- * `pickUniformBuffer`; `drawPoints` callers pass the pick frame's packed
+ * `pickUniformBuffer`; `drawFlatPoints` callers pass the pick frame's packed
  * uniform bytes per call rather than sharing the point renderer's live GPU
  * buffer.
  *
@@ -104,7 +104,7 @@ export function createGalaxyPickRenderer(
     'pick',
   );
 
-  // @group(2) bind groups cached by GPUBuffer identity — drawPoints fires
+  // @group(2) bind groups cached by GPUBuffer identity — drawFlatPoints fires
   // on every hover/click and the loaded sources are stable between
   // picks.  WeakMap means a tier swap that destroys the old
   // sourceBuffer invalidates the cached bind group via GC.
@@ -151,7 +151,7 @@ export function createGalaxyPickRenderer(
     },
   });
 
-  // The pick renderer's own uniform buffer.  `drawPoints` uploads the
+  // The pick renderer's own uniform buffer.  `drawFlatPoints` uploads the
   // caller's `uniformBytes` (the complete, already-pick-shaped image built at
   // pick time from the slab view) here verbatim — the visual pass's GPU
   // buffer is never touched.
@@ -165,7 +165,7 @@ export function createGalaxyPickRenderer(
   });
 
   // @group(0) bind group built once at construction time, bound on
-  // every `drawPoints`.  Building once avoids a per-draw `createBindGroup`
+  // every `drawFlatPoints`.  Building once avoids a per-draw `createBindGroup`
   // and lets the pipeline layout's group(0) slot hold a stable object.
   const pickUniformBindGroup = device.createBindGroup({
     label: 'pick-uniform-bg',
@@ -190,7 +190,7 @@ export function createGalaxyPickRenderer(
    * a tier swap that destroys an old sourceBuffer invalidates the
    * cached bind group via GC.
    */
-  function drawPoints(
+  function drawFlatPoints(
     pass: GPURenderPassEncoder,
     sources: readonly PickSourceDraw[],
     uniformBytes: ArrayBuffer,
@@ -221,7 +221,7 @@ export function createGalaxyPickRenderer(
       pass.setBindGroup(2, sourceBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
       // 3 vertices per instance — the circumscribing-triangle billboard.
-      // Must stay in lockstep with galaxyPointRenderer's draw(3, N): both
+      // Must stay in lockstep with galaxyFlatPointRenderer's draw(3, N): both
       // pipelines compile the same points vertex shader, whose triCorner
       // lookup only defines corners for vertex_index 0..2.
       pass.draw(3, src.count);
@@ -237,7 +237,7 @@ export function createGalaxyPickRenderer(
 
   const renderer: GalaxyPickRenderer = {
     label: 'galaxyPickRenderer',
-    drawPoints,
+    drawFlatPoints,
     destroy,
   };
   renderer satisfies Renderer;

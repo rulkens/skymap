@@ -117,10 +117,10 @@ function makeStateWithRenderer(
   state: EngineState;
   runtime: GalaxyCatalogRuntime;
   drawSpy: ReturnType<typeof vi.fn>;
-  drawPointsSpy: ReturnType<typeof vi.fn>;
+  drawFlatPointsSpy: ReturnType<typeof vi.fn>;
 } {
   const drawSpy = vi.fn();
-  const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
+  const drawFlatPointsSpy = vi.fn<(...args: unknown[]) => void>();
   const state = {
     ...STATE_STUB,
     selection: { select: null, hover: null, focus: null },
@@ -130,9 +130,9 @@ function makeStateWithRenderer(
   } as unknown as EngineState;
   const runtime = {
     pointRenderer: { draw: drawSpy, loadedSources: () => loadedSources },
-    pickRenderer: { drawPoints: drawPointsSpy },
+    pickRenderer: { drawFlatPoints: drawFlatPointsSpy },
   } as unknown as GalaxyCatalogRuntime;
-  return { state, runtime, drawSpy, drawPointsSpy };
+  return { state, runtime, drawSpy, drawFlatPointsSpy };
 }
 
 describe('galaxyPointSpritesPass.draw', () => {
@@ -256,7 +256,7 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       count: 1,
       sourceBuffer: {} as GPUBuffer,
     }));
-    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
+    const { state, runtime, drawFlatPointsSpy } = makeStateWithRenderer({}, loaded);
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
 
@@ -267,14 +267,14 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       state,
       makeGalaxyCatalogFade({ sdss: 0.5, glade: 0 }),
     );
-    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
+    const passedSources = drawFlatPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
     expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS]);
   });
 
-  it('drops band-faded survey sources from the pick, famous exempt, but still calls drawPoints', () => {
+  it('drops band-faded survey sources from the pick, famous exempt, but still calls drawFlatPoints', () => {
     // Invisible → unpickable: inside the surveyDeepZoom goneAt edge a survey
     // source's band-multiplied opacity is exactly 0, so it must stop claiming
-    // hits. Famous rides its exemption (still pickable). drawPoints is called
+    // hits. Famous rides its exemption (still pickable). drawFlatPoints is called
     // regardless — its @group(0) pick-camera bind is the prefix contract the
     // ring / disk / Milky-Way pick pipelines depend on.
     const loaded = [Source.SDSS, Source.FamousGalaxy].map((source) => ({
@@ -287,12 +287,12 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
     const view = slabViewOf(ctx, COSMO);
-    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
+    const { state, runtime, drawFlatPointsSpy } = makeStateWithRenderer({}, loaded);
 
     galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state, FULL);
 
-    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
-    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
+    expect(drawFlatPointsSpy).toHaveBeenCalledTimes(1);
+    const passedSources = drawFlatPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
     expect(passedSources.map((s) => s.source)).toEqual([Source.FamousGalaxy]);
   });
 });

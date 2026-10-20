@@ -84,7 +84,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
             (s.source === Source.FamousGalaxy ? 1 : surveyFade) !==
           0,
       );
-      runtime.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
+      runtime.pickRenderer.drawFlatPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
     },
   };
 }
