@@ -96,7 +96,7 @@ export function coreSceneBodyPartition(state: PassState, ctx: FrameView): SceneB
   returns nothing.
 - The routing suite passes unchanged apart from the import.
 
-- [ ] Task 1
+- [x] Task 1
 
 ---
 

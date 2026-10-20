@@ -10,7 +10,7 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
-import { sceneBodyPartition } from './sceneBodyPartition';
+import { coreSceneBodyPartition } from './coreSceneBodyPartition';
 
 export function drawableMeshBodies(
   state: PassState,
@@ -20,6 +20,6 @@ export function drawableMeshBodies(
   if (state.gpu.meshBodyRenderer === null) return [];
   const attached = meshBodiesAttachedTo(hostId);
   if (attached.length === 0) return [];
-  const resolved = sceneBodyPartition(state, ctx).meshes;
+  const resolved = coreSceneBodyPartition(state, ctx).meshes;
   return attached.filter((body) => resolved.some((m) => m.id === body.id));
 }

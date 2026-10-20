@@ -19,7 +19,7 @@ import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId
 import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
-import { sceneBodyPartition } from './sceneBodyPartition';
+import { coreSceneBodyPartition } from './coreSceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function scheduleProbeCapture(input: {
@@ -38,7 +38,7 @@ export function scheduleProbeCapture(input: {
   let subject: MeshPresentation | null = null;
   let refreshedAtMs = Number.POSITIVE_INFINITY;
   let dueCount = 0;
-  for (const body of sceneBodyPartition(state, ctx).meshes) {
+  for (const body of coreSceneBodyPartition(state, ctx).meshes) {
     const at = runtime.refreshedAtMs.get(body.id) ?? Number.NEGATIVE_INFINITY;
     if (ctx.snapshot.nowMs - at >= PROBE_REFRESH_INTERVAL_MS) dueCount++;
     if (at < refreshedAtMs) {

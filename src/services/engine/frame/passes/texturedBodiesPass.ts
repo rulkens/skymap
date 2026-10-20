@@ -60,7 +60,7 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { sceneBodyPartition } from '../sceneBodyPartition';
+import { coreSceneBodyPartition } from '../coreSceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 
@@ -100,14 +100,14 @@ export const texturedBodiesPass: ContentPass = {
     if (state.gpu.texturedBodyRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const bodyId = view.slab.frame.hostId;
-    return sceneBodyPartition(state, ctx).textured.some((b) => b.id === bodyId);
+    return coreSceneBodyPartition(state, ctx).textured.some((b) => b.id === bodyId);
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.texturedBodyRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
     const bodyId = view.slab.frame.hostId;
-    const body = sceneBodyPartition(state, ctx).textured.find((b) => b.id === bodyId);
+    const body = coreSceneBodyPartition(state, ctx).textured.find((b) => b.id === bodyId);
     if (body === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
     // `view.slab.vp` — reading it here instead of re-deriving the pose is what

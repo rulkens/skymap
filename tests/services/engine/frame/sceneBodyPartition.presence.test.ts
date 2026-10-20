@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
+import { coreSceneBodyPartition } from '../../../../src/services/engine/frame/coreSceneBodyPartition';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -78,7 +78,7 @@ const viewAt = (simDays: number) =>
 
 const drawnIds = (simDays: number): string[] => {
   const view = viewAt(simDays);
-  const { glints, meshes } = sceneBodyPartition(STATE as never, view);
+  const { glints, meshes } = coreSceneBodyPartition(STATE as never, view);
   return [...glints, ...meshes].map((body) => body.id);
 };
 // Core captions every body but the sampled craft, which the missions Layer claims and captions.
@@ -178,7 +178,7 @@ function partition(
     drawCamPos: CAM,
     drawPxPerRad: PX_PER_RAD,
   } as unknown as FrameView;
-  return sceneBodyPartition(state, ctx);
+  return coreSceneBodyPartition(state, ctx);
 }
 const bodiesOf = (bodies: readonly PositionedSceneBody[]) => bodies.map((p) => p.body);
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((b) => b.id);
