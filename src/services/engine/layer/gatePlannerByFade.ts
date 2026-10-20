@@ -1,7 +1,8 @@
 /**
  * Core's gate for a planner that declares `fade`: hands it the handed value as `plan`'s last
- * argument. Never skips: what it plans feeds passes that run their own gate. `state` is the
- * engine's own, bound at wrap time, as in `gatePassByFade`.
+ * argument. Never skips: what it plans feeds passes that run their own gate. A once-scope
+ * plan serves every view, so it gets no distance band. `state` is the engine's own, bound at
+ * wrap time, as in `gatePassByFade`.
  */
 
 import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
@@ -10,6 +11,7 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { resolveFadeValue } from '../presentation/resolveFadeValue';
+import { resolveViewFadeValue } from '../presentation/resolveViewFadeValue';
 
 export function gatePlannerByFade<T>(
   planner: FrameContentPlanner<T>,
@@ -27,6 +29,6 @@ export function gatePlannerByFade<T>(
   return {
     ...planner,
     plan: (view: FrameView, s: PassState) =>
-      planner.plan(view, s, resolveFadeValue(state, view.snapshot, address)),
+      planner.plan(view, s, resolveViewFadeValue(state, view, address)),
   };
 }

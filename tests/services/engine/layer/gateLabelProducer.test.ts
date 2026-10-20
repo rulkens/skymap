@@ -11,23 +11,25 @@ import { createFadeRegistry } from '../../../../src/services/animation/fadeRegis
 import { gateLabelProducer } from '../../../../src/services/engine/layer/gateLabelProducer';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../../src/@types/engine/subsystems/Label2DProducerOutput';
 
 const OUTPUT: Label2DProducerOutput = { labels: [], awake: true };
 const MID_FADE_MS = 300;
 
-function makeState(clip = 1) {
+function makeState(clip = 1, entries: readonly VisibilityEntry[] = APP_VISIBILITY) {
   const fades = createFadeRegistry({ requestRender: () => {} });
   const clipPlayer = { clipOpacityOf: () => clip };
   const state = {
     subsystems: { fades, clipPlayer },
-    visibilityEntries: APP_VISIBILITY,
+    visibilityEntries: entries,
   } as unknown as EngineState;
   return { state, fades };
 }
 
-const ctxAt = (nowMs: number) => ({ snapshot: { nowMs, focusBlend: 0 } }) as unknown as FrameView;
+const ctxAt = (nowMs: number) =>
+  ({ drawCamPos: [2, 0, 0], snapshot: { nowMs, focusBlend: 0 } }) as unknown as FrameView;
 
 function milkyWayRow() {
   const produceLabels = vi.fn((_s: EngineState, _c: FrameView, _fade?: unknown) => OUTPUT);
@@ -77,6 +79,17 @@ describe('gateLabelProducer', () => {
     const { row, produceLabels } = milkyWayRow();
     gateLabelProducer(row).produceLabels(state, ctxAt(MID_FADE_MS));
     expect(produceLabels).toHaveBeenCalledWith(state, expect.anything(), 0);
+  });
+
+  it('band 0 for every item skips a live producer', () => {
+    const banded = APP_VISIBILITY.map((e) =>
+      'label' in e && e.label === 'milkyWay' ? { ...e, bands: { near: { out: [0, 1] } } } : e,
+    ) as readonly VisibilityEntry[];
+    const { state, fades } = makeState(1, banded);
+    fades.register({ address: 'label:milkyWay' }, 1);
+    const { row, produceLabels } = milkyWayRow();
+    gateLabelProducer(row).produceLabels(state, ctxAt(0));
+    expect(produceLabels).not.toHaveBeenCalled();
   });
 
   it('a per-item row is skipped only when no item is live', () => {
