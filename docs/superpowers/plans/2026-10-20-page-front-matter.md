@@ -267,9 +267,9 @@ The job lines are migrated verbatim. Their notes on merges and repeats are not p
 - `packages/website/src/layouts/Docs.astro`
 - `packages/website/src/pages/docs/[...slug].astro`
 
-- [ ] Add `ShareImage` and `shareImage` as in **Share image**.
-- [ ] `Base.astro`: apply the **Base props** contract. The six image meta tags read from `shareImage(image)`, and the dev-only `skymap:job` meta is added.
-- [ ] `Docs.astro`: add `image?: string; job?: string` to `Props` and pass both to `Base`. `[...slug].astro` passes `entry.data.image` and `entry.data.job`. The generated docs routes pass neither.
+- [x] Add `ShareImage` and `shareImage` as in **Share image**.
+- [x] `Base.astro`: apply the **Base props** contract. The six image meta tags read from `shareImage(image)`, and the dev-only `skymap:job` meta is added.
+- [x] `Docs.astro`: add `image?: string; job?: string` to `Props` and pass both to `Base`. `[...slug].astro` passes `entry.data.image` and `entry.data.job`. The generated docs routes pass neither.
 - No unit test: `shareImage` wraps `getImage` and a glob, and vitest cannot load `astro:assets`. The DoD smoke checks it.
 
 ### Task 4: The `pages` collection, and the landing pages without slots or islands
