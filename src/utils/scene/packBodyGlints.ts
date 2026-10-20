@@ -10,14 +10,11 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 import type { MeshBody } from '../../@types/scene/MeshBody';
-import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
-import { SCALE_FADE_BANDS } from '../../data/scaleFadeBands';
 import { GLINT_MIN_BRIGHTNESS } from '../../data/rendering/glintMinBrightness';
-import { INSTANCE_FLOATS } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
-import { fadeBand } from '../math/fadeBand';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../data/rendering/bodyGlintInstanceFloats';
 import { bodyApparentDiameterPx } from './bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
-import { bodyGlintBrightness } from './bodyGlintBrightness';
+import { bodyGlintBrightnessOf } from './bodyGlintBrightnessOf';
 
 /** Packs each glint above GLINT_MIN_BRIGHTNESS into `staging`; returns the count. */
 export function packBodyGlints(
@@ -32,7 +29,7 @@ export function packBodyGlints(
 ): number {
   const { states, camPosMpc, pxPerRad, backdropFade } = input;
   // A full staging buffer drops the rest silently; callers size it for their roster.
-  const capacity = Math.floor(staging.length / INSTANCE_FLOATS);
+  const capacity = Math.floor(staging.length / BODY_GLINT_INSTANCE_FLOATS);
   let count = 0;
   for (const body of glints) {
     if (count >= capacity) break;
@@ -43,17 +40,16 @@ export function packBodyGlints(
       camPosMpc,
       pxPerRad,
     });
-    const raw = bodyGlintBrightness({
-      albedo: body.albedo,
+    const brightness = bodyGlintBrightnessOf(
+      body.albedo,
       positionMpc,
       camPosMpc,
-      renderOriginMpc: RENDER_ORIGIN_MPC,
-      apparentDiameterPx: diameterPx,
-    });
-    const brightness = raw * fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx) * backdropFade;
+      diameterPx,
+      backdropFade,
+    );
     if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
 
-    const base = count * INSTANCE_FLOATS;
+    const base = count * BODY_GLINT_INSTANCE_FLOATS;
     staging[base + 0] = positionMpc[0] - camPosMpc[0];
     staging[base + 1] = positionMpc[1] - camPosMpc[1];
     staging[base + 2] = positionMpc[2] - camPosMpc[2];

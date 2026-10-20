@@ -68,8 +68,8 @@ export const PRELUDE: FrameSection = {
     // would draw into its own probe; `star-spheres` / `field-star-sphere` because
     // the Sun stays analytic (a sub-pixel Sun would smear through the prefilter
     // into a false highlight); `body-glints` / `mission-glints` / `orbit-trails`
-    // because none is environment a surface reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
-    // a probe face opens two steps, not three. `atmosphere-shell` is excluded
+    // because none is environment a surface reflects. The NEAR0 roster is empty on
+    // purpose — the blit rides COSMO — so a probe face opens two steps, not three. `atmosphere-shell` is excluded
     // because it classifies its rays by a sampled scene depth, which a capture
     // face never resolves, and its pipeline carries no depth state to draw into
     // a face's depth-attached step with: a probe reflects the body and its sky,

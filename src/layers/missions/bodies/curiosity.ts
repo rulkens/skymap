@@ -1,6 +1,5 @@
 /**
- * Curiosity at its current Gale crater position. Leaf data: types, `src/data` constants
- * and makers, pure utils.
+ * Curiosity at its current Gale crater position.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

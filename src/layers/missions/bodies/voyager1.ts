@@ -1,6 +1,6 @@
 /**
  * Voyager 1: the one source of its launch instant, read for both `presentFromIso`
- * and the sampled position. Leaf data: types, `src/data` constants and makers, pure utils.
+ * and the sampled position.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

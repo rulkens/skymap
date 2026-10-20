@@ -7,6 +7,6 @@
 import type { SampledBody } from '../../@types/missions/SampledBody';
 import { LAYER_BODY_ROWS } from './layerBodyRows';
 
-export const SAMPLED_BODIES: readonly SampledBody[] = [
-  ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'sampled' ? [row.position.sampled] : [])),
-];
+export const SAMPLED_BODIES: readonly SampledBody[] = LAYER_BODY_ROWS.flatMap((row) =>
+  row.position.kind === 'sampled' ? [row.position.sampled] : [],
+);

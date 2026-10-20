@@ -1,5 +1,5 @@
 /**
- * Hubble, geocentric. Leaf data: types, `src/data` constants and makers only.
+ * Hubble, geocentric.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

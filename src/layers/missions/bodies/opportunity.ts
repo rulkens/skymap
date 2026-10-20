@@ -1,6 +1,5 @@
 /**
- * Opportunity at its final resting place on Endeavour's rim. Leaf data: types, `src/data`
- * constants and makers, pure utils.
+ * Opportunity at its final resting place on Endeavour's rim.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

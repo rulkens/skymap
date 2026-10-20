@@ -1,6 +1,5 @@
 /**
- * Spirit at its final resting place in Gusev crater. Leaf data: types, `src/data` constants
- * and makers, pure utils.
+ * Spirit at its final resting place in Gusev crater.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

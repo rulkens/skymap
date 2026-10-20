@@ -8,7 +8,7 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { MissionsRuntime } from '../@types/MissionsRuntime';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
-import { INSTANCE_FLOATS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
 import { sceneBodyPartition } from '../../../services/engine/frame/sceneBodyPartition';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { bodyGlintBackdropFade } from '../../../utils/scene/bodyGlintBackdropFade';
@@ -19,7 +19,7 @@ import { MISSION_CRAFT_IDS } from '../present/missionCraftIds';
 
 export function missionGlintsPass(runtime: MissionsRuntime): ContentPass {
   // Reused across frames: the hot path allocates nothing. One record per craft at most.
-  const staging = new Float32Array(MISSION_CRAFT_IDS.size * INSTANCE_FLOATS);
+  const staging = new Float32Array(MISSION_CRAFT_IDS.size * BODY_GLINT_INSTANCE_FLOATS);
 
   return {
     name: 'mission-glints',

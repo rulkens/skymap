@@ -6,20 +6,20 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
-import { coreSceneBodyIds } from '../../../../src/services/engine/frame/coreSceneBodyIds';
-import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
-import { coreSceneBodyPartition } from '../../../../src/services/engine/frame/coreSceneBodyPartition';
-import { drawableMeshBodies } from '../../../../src/services/engine/frame/drawableMeshBodies';
-import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
-import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missionCraftIds';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { PassState } from '../../../../src/@types/engine/frame/PassState';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { positionedBodiesOf } from '../../helpers/frame/positionedBodiesOf';
+import { CORE_SCENE_BODY_IDS } from '../../../src/data/bodies/coreSceneBodyIds';
+import { bodySlabRosterIds } from '../../../src/services/engine/frame/bodySlabRosterIds';
+import { coreSceneBodyPartition } from '../../../src/services/engine/frame/coreSceneBodyPartition';
+import { drawableMeshBodies } from '../../../src/services/engine/frame/drawableMeshBodies';
+import { sceneBodyPartition } from '../../../src/services/engine/frame/sceneBodyPartition';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { MISSION_CRAFT_IDS } from '../../../src/layers/missions/present/missionCraftIds';
+import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
+import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const SIM_DAYS = 0;
 const STATES = deriveBodyStates(SIM_DAYS);
@@ -51,9 +51,7 @@ describe('the core and missions rosters', () => {
     'every resident mesh body on a host row is drawn by exactly one mesh pass (%s)',
     (hostId, cameraAt) => {
       const ctx = ctxAt(STATES.get(cameraAt)!.positionMpc, 1e12);
-      const core = idsOf(
-        drawableMeshBodies(STATE, ctx, hostId, coreSceneBodyIds(SCENE_MESH_BODIES)),
-      );
+      const core = idsOf(drawableMeshBodies(STATE, ctx, hostId, CORE_SCENE_BODY_IDS));
       const missions = idsOf(drawableMeshBodies(STATE, ctx, hostId, MISSION_CRAFT_IDS));
       const whole = idsOf(
         drawableMeshBodies(STATE, ctx, hostId, bodySlabRosterIds(SCENE_MESH_BODIES)),

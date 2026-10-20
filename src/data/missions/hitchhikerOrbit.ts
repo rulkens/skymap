@@ -3,7 +3,7 @@
 // altitude — so one semi-major axis and period feed both `satellite()` rows.
 // 40 m behind along the track, converted to mean-anomaly degrees by arc
 // length: 40 / (2π·a) × 360. The period is exported because the whale's
-// orbit lock reads it a second time, as a spin rate (`rotationElements.ts`).
+// orbit lock reads it a second time, as a spin rate (`whale.ts`).
 
 import { SCALE_UNITS } from '../scaleUnits';
 import { SCENE_EARTH } from '../bodies/sceneEarth';

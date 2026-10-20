@@ -48,7 +48,7 @@ decals and render passes; at most one extra instanced draw (≤9 glints, 252 B `
   (`assetWiring.ts:121`). The `presentFromIso` values move with the rows; the util stays.
 - **The roster splits.** `near0SphereBodies` (`deriveView.ts:128`) and the probe scheduler
   (`scheduleProbeCapture.ts:41`) need every body drawn on a body slab, whichever Layer draws it:
-  `bodySlabRosterIds` (everything) vs `coreSceneBodyIds` (what core draws).
+  `bodySlabRosterIds` (everything) vs `CORE_SCENE_BODY_IDS` (what core draws).
 - **Interim `CORE_MESH_BODY_IDS`.** While `earthScenes` is bodies-only, core still draws (and glints)
   Søndermarken, so core's roster needs a data-level set naming earthScenes' rows, marked
   `delete when earthScenes draws its own rows`.
@@ -243,7 +243,7 @@ review: yes
 
 **Files:**
 
-- Create: `src/data/bodies/coreMeshBodyIds.ts`, `src/services/engine/frame/coreSceneBodyIds.ts` (new:
+- Create: `src/data/bodies/coreMeshBodyIds.ts`, `src/data/bodies/coreSceneBodyIds.ts` (new:
   core's own roster), `src/layers/missions/present/missionCraftIds.ts`,
   `src/layers/missions/passes/missionMeshesPass.ts`, `src/layers/missions/passes/missionGlintsPass.ts`.
 - Move: `npm run move-files -- src/services/engine/frame/passes/contactShadowsPass.ts src/layers/missions/passes/contactShadowsPass.ts`.
@@ -264,8 +264,8 @@ review: yes
 /** The mesh bodies core still draws: earthScenes is bodies-only. delete when earthScenes draws its own rows */
 export const CORE_MESH_BODY_IDS: ReadonlySet<string>; // EARTH_SCENES_BODY_ROWS' mesh-body ids
 
-// coreSceneBodyIds.ts: SCENE_PLANETS ∪ (meshBodies ∩ CORE_MESH_BODY_IDS)
-export function coreSceneBodyIds(meshBodies: readonly MeshBody[]): ReadonlySet<string>;
+// src/data/bodies/coreSceneBodyIds.ts: SCENE_PLANETS ∪ CORE_MESH_BODY_IDS (static; no parameter)
+export const CORE_SCENE_BODY_IDS: ReadonlySet<string>;
 
 // missionCraftIds.ts
 export const MISSION_CRAFT_IDS: ReadonlySet<string>; // MISSIONS_BODY_ROWS' mesh-body ids
@@ -276,11 +276,11 @@ export type MissionsRuntime = {
 };
 ```
 
-- `coreSceneBodyPartition` binds roster `coreSceneBodyIds(ctx.snapshot.meshBodies)`; `hasSurfaceMap` unchanged.
+- `coreSceneBodyPartition` binds roster `CORE_SCENE_BODY_IDS`; `hasSurfaceMap` unchanged.
 - `missionMeshesPass` (`'mission-meshes'`, no runtime, no `fade`): enabled when the row is `body-m` and
   `drawableMeshBodies(…, hostId, MISSION_CRAFT_IDS)` is non-empty; `draw`/`drawPick` call the Task 3
   helpers; `pickIdOf` is `sceneBodyPickId` in PR 1, so pick encodings are unchanged.
-- `coreMeshBodiesPass` does the same with `coreSceneBodyIds(ctx.snapshot.meshBodies)`.
+- `coreMeshBodiesPass` does the same with `CORE_SCENE_BODY_IDS`.
 - `contactShadowsPass` keeps its name and gate order (`:25-31`), reading `MISSION_CRAFT_IDS`.
 - `missionGlintsPass(runtime)` (`'mission-glints'`, no picking — craft glints stay unpicked): gates are
   the foreground distance gate, then `bodyGlintBackdropFade > 0`, then a non-empty
@@ -308,7 +308,7 @@ Update the PRELUDE probe-roster comment (`:66-71`) to name both mesh passes and 
 
 - `every resident mesh body on a host row is drawn by exactly one mesh pass` — for host `mars` with the
   camera at Curiosity and host `earth` with the camera at Hubble, `drawableMeshBodies` with
-  `coreSceneBodyIds(SCENE_MESH_BODIES)` and with `MISSION_CRAFT_IDS` are disjoint and their union equals
+  `CORE_SCENE_BODY_IDS` and with `MISSION_CRAFT_IDS` are disjoint and their union equals
   the call with `bodySlabRosterIds(SCENE_MESH_BODIES)`. **Bug caught:** `CORE_MESH_BODY_IDS` and
   `MISSION_CRAFT_IDS` drift, so a craft draws twice and z-fights, or Søndermarken/Phobos/Deimos vanish.
 - `every sub-pixel scene body glints in exactly one glint pass` — camera 5 AU out: core's and missions'

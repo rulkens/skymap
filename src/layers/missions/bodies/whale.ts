@@ -1,6 +1,6 @@
 /**
  * The whale (Hitchhiker's Guide easter egg): a mesh body on the shared 400 km
- * circular orbit. Leaf data: types, `src/data` constants and makers only.
+ * circular orbit.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

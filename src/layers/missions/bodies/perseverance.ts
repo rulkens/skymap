@@ -1,6 +1,5 @@
 /**
- * Perseverance at its current Jezero crater position. Leaf data: types, `src/data` constants
- * and makers, pure utils.
+ * Perseverance at its current Jezero crater position.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

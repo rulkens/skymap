@@ -9,14 +9,14 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SceneBodyPartition } from '../../../@types/engine/frame/SceneBodyPartition';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
-import { coreSceneBodyIds } from './coreSceneBodyIds';
+import { CORE_SCENE_BODY_IDS } from '../../../data/bodies/coreSceneBodyIds';
 import { sceneBodyPartition } from './sceneBodyPartition';
 
 export function coreSceneBodyPartition(state: PassState, ctx: FrameView): SceneBodyPartition {
   return sceneBodyPartition(
     state,
     ctx,
-    coreSceneBodyIds(ctx.snapshot.meshBodies),
+    CORE_SCENE_BODY_IDS,
     // Before the GPU is up nothing is bound, hence the `?? false`.
     (bodyId) =>
       bodyTextureSpec(bodyId) !== null &&

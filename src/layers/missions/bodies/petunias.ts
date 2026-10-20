@@ -1,6 +1,6 @@
 /**
  * The bowl of petunias (Hitchhiker's Guide easter egg): trails the whale on the
- * shared 400 km orbit. Leaf data: types, `src/data` constants and makers only.
+ * shared 400 km orbit.
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';

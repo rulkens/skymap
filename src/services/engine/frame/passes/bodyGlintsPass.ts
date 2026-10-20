@@ -70,7 +70,6 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
@@ -80,22 +79,21 @@ import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 import { glintBandClass } from '../../../../utils/picking/glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
-import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
-import { fadeBand } from '../../../../utils/math/fadeBand';
+import { bodyGlintBrightnessOf } from '../../../../utils/scene/bodyGlintBrightnessOf';
 import { bodyGlintBackdropFade } from '../../../../utils/scene/bodyGlintBackdropFade';
 import { packBodyGlints } from '../../../../utils/scene/packBodyGlints';
-import { SCALE_FADE_BANDS } from '../../../../data/scaleFadeBands';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../data/labels/solarSystemLabelMaxDistance';
 import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
-import { MAX_GLINTS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/bodyGlintRenderer';
+import { MAX_GLINTS } from '../../../gpu/renderers/bodies/bodyGlintRenderer';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../../../data/rendering/bodyGlintInstanceFloats';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each glint's 7-float record (camera-relative position +
 // albedo tint + brightness) is rewritten in place before the single draw.
-const staging = new Float32Array(MAX_GLINTS * INSTANCE_FLOATS);
+const staging = new Float32Array(MAX_GLINTS * BODY_GLINT_INSTANCE_FLOATS);
 
 /**
  * The one fact "the Earth caption invites a click": the seeded Earth exists AND
@@ -305,16 +303,13 @@ export const bodyGlintsPass: ContentPass = {
         camPosMpc: camPos,
         pxPerRad: ctx.drawPxPerRad,
       });
-      const brightness =
-        bodyGlintBrightness({
-          albedo: body.albedo,
-          positionMpc,
-          camPosMpc: camPos,
-          renderOriginMpc: RENDER_ORIGIN_MPC,
-          apparentDiameterPx: diameterPx,
-        }) *
-        fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx) *
-        backdropFade;
+      const brightness = bodyGlintBrightnessOf(
+        body.albedo,
+        positionMpc,
+        camPos,
+        diameterPx,
+        backdropFade,
+      );
       if (
         brightness <= GLINT_MIN_BRIGHTNESS &&
         ctx.cam.distance >= SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC
