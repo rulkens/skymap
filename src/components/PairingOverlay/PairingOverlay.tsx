@@ -1,12 +1,14 @@
 /**
  * PairingOverlay — the dome's invitation to a remote: a QR of the pairing address, with the
  * address and room code as text for a device that cannot scan. The container removes it once
- * a remote has paired.
+ * a remote has paired. In dome mode the same content is pre-warped onto the fisheye instead.
  */
 
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
-import qrcode from 'qrcode-generator';
+import { hasUrlGate } from '../../utils/url/hasUrlGate';
+import { qrModules } from '../../utils/remote/qrModules';
+import DomePairingCard from './DomePairingCard';
 import styles from './PairingOverlay.module.css';
 
 export type PairingOverlayProps = {
@@ -16,24 +18,21 @@ export type PairingOverlayProps = {
 
 const QUIET_ZONE_MODULES = 2;
 
-function qrPath(text: string): { path: string; size: number } {
-  const qr = qrcode(0, 'M');
-  qr.addData(text);
-  qr.make();
-  const count = qr.getModuleCount();
+function qrPath(modules: readonly (readonly boolean[])[]): { path: string; size: number } {
   let path = '';
-  for (let row = 0; row < count; row++) {
-    for (let col = 0; col < count; col++) {
-      if (qr.isDark(row, col)) {
-        path += `M${col + QUIET_ZONE_MODULES} ${row + QUIET_ZONE_MODULES}h1v1h-1z`;
-      }
-    }
-  }
-  return { path, size: count + QUIET_ZONE_MODULES * 2 };
+  modules.forEach((row, r) =>
+    row.forEach((dark, c) => {
+      if (dark) path += `M${c + QUIET_ZONE_MODULES} ${r + QUIET_ZONE_MODULES}h1v1h-1z`;
+    }),
+  );
+  return { path, size: modules.length + QUIET_ZONE_MODULES * 2 };
 }
 
 function PairingOverlay({ code, pairingUrl }: PairingOverlayProps): ReactNode {
-  const { path, size } = useMemo(() => qrPath(pairingUrl), [pairingUrl]);
+  const modules = useMemo(() => qrModules(pairingUrl), [pairingUrl]);
+  // A dome shows a fisheye, where a flat DOM card would sit huge and distorted on the zenith.
+  if (hasUrlGate('dome')) return <DomePairingCard code={code} modules={modules} />;
+  const { path, size } = qrPath(modules);
   return (
     <div className={styles.root} role="status" aria-label="Pair a remote">
       <h2 className={styles.title}>Pair a remote</h2>

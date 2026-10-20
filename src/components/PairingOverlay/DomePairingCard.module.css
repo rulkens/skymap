@@ -1,0 +1,23 @@
+/* src/components/PairingOverlay/DomePairingCard.module.css */
+
+/* The same square box as `#c[data-view-rig='dome']` (global.css), so canvas pixels line up with the dome's. */
+.root {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  z-index: var(--z-bottom-stack);
+  font-family: var(--font-family-display);
+  pointer-events: none;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
