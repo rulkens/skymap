@@ -24,7 +24,7 @@ export type EngineAssetSlots = {
    */
   bodyTextures: Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /**
-   * One slot per `SCENE_MESH_BODIES` entry, keyed by the body's own id —
+   * One slot per `MESH_PRESENTATIONS` entry, keyed by the body's own id —
    * un-keyed unlike `bodyTextures`, since one fetch resolves the whole
    * `MeshAsset` rather than a per-kind map. Proximity-gated the same way:
    * demanded inside `meshBodyLoadRadius`'s radius, released past twice it.

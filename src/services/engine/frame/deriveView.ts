@@ -79,7 +79,7 @@ export function deriveView(
     visibleSlabBodies({
       ...slabGate,
       rows: meshBodies.map((body) => ({ ...bodySlabRowOf(body), body })),
-    }).map((row) => meshBodySlabHostId(row.body)),
+    }).map((row) => meshBodySlabHostId(row.body.id)),
   );
   const visibleRows = gatedRows.concat(
     slabBodyCandidates.filter((row) => meshHostIds.has(row.anchorId) && !gatedRows.includes(row)),
