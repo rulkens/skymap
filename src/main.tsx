@@ -54,6 +54,8 @@ import { RunSagaProvider } from './store/RunSagaProvider';
 import { settingsRoute, tierRoute, uiRoute } from './store/constants';
 import { INITIAL_SETTINGS } from './state/settings/initialSettings';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
+import { readUrlAtMount } from './state/ui/splashStorage';
+import { galaxyFormatsFromSearch } from './utils/url/galaxyFormatsFromSearch';
 import { PERSISTED_VALUES } from './state/persistedValues';
 import { selectArrivalPending } from './state/arrival/selectors';
 import { selectSplashVisible } from './state/ui/selectors';
@@ -93,7 +95,13 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   const initialTier = initialTierFromViewport(window.innerWidth);
   const { store, setSagaContext, runSaga } = createAppStore({
     [tierRoute]: initialTier,
-    [settingsRoute]: INITIAL_SETTINGS,
+    [settingsRoute]: {
+      ...INITIAL_SETTINGS,
+      galaxyCatalogs: {
+        ...INITIAL_SETTINGS.galaxyCatalogs,
+        formats: galaxyFormatsFromSearch(readUrlAtMount().search),
+      },
+    },
     [uiRoute]: buildInitialUiState(),
   });
   // Store lives for the page lifetime; unsubscribe is intentionally not held.

@@ -1,6 +1,7 @@
 import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
 import type { GalaxyDurableIdClaim } from './GalaxyDurableIdClaim';
+import type { OctreeBudgets } from '../../octree/OctreeBudgets';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
@@ -85,6 +86,8 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly falloffHalfMpc: number;
   /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
   readonly priority: number;
+  /** Present when the source also ships a chunked octree: its per-tier draw budgets and pool slots. */
+  readonly octree?: { readonly budgets: OctreeBudgets };
   /** The durable id kind this source's `objIDs` carry; absent when they carry none a URL may name. */
   readonly durableId?: GalaxyDurableIdClaim;
 };

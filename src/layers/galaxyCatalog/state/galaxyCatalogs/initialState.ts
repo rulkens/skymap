@@ -1,4 +1,5 @@
 import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
+import { GALAXY_REFINE_THRESHOLD } from '../../../../data/galaxyCatalog/galaxyRefineThreshold';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 
 export const initialState: GalaxyCatalogSettings = {
@@ -17,6 +18,8 @@ export const initialState: GalaxyCatalogSettings = {
   sbScale: 5.0,
   sbMax: 30.0,
   falloffStrength: 0.7,
+  formats: {},
+  refineThreshold: GALAXY_REFINE_THRESHOLD,
   items: {
     sdss: { enabled: true, labelEnabled: true },
     '2mrs': { enabled: true, labelEnabled: true },

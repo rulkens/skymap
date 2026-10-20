@@ -4,6 +4,8 @@
  * "hide all galaxy catalogs" has never been a product control.
  */
 
+import type { GalaxyCatalogFormat } from '../data/galaxyCatalog/GalaxyCatalogFormat';
+import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { GalaxyProvenanceSettings } from './GalaxyProvenanceSettings';
@@ -24,6 +26,10 @@ export type GalaxyCatalogSettings = {
    * `galaxyFalloffStrength`.
    */
   falloffStrength: number;
+  /** Per-source streaming format; no entry follows `galaxyCatalogFormatOf`'s default. Seeded from `?galaxyFormat`, never persisted. */
+  formats: Partial<Record<GalaxyCatalogSourceType, GalaxyCatalogFormat>>;
+  /** The galaxy octree cut's refine threshold (box edge over distance). */
+  refineThreshold: number;
   /** Only the famous catalog draws a label; the rest carry `labelEnabled` inertly. */
   items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
 };

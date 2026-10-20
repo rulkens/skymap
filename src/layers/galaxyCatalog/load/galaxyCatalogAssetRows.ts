@@ -17,6 +17,7 @@ import {
 } from '../../../data/sources';
 import { tierTarget } from '../../../data/tierTargets';
 import type { Tier } from '../../../@types/data/Tier';
+import { galaxyCatalogFormatOf } from '../../../utils/galaxyCatalogFormatOf';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
 
 /** One demand+req row per galaxy-catalog entry, derived from the fields it already carries. */
@@ -33,7 +34,10 @@ function pointRow(
     key: source,
     factory: () => runtime.points.get(source)!,
     req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
+    demand: (ctx) =>
+      ctx.settings.galaxyCatalogs.items[id]?.enabled === true &&
+      !excluded(ctx.tier) &&
+      galaxyCatalogFormatOf(ctx.settings.galaxyCatalogs.formats, source) === 'skmp',
     release: (ctx) => excluded(ctx.tier),
     priority: entry.priority,
     gates: { address: 'survey', item: id },

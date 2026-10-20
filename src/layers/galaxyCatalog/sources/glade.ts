@@ -35,4 +35,12 @@ export const GLADE_ENTRY = {
   falloffHalfMpc: 1000,
   priority: 62,
   durableId: { prefix: 'pgc', rank: 0 },
+  // First values; the bake sweep tunes them.
+  octree: {
+    budgets: {
+      small: { drawBudget: 600_000, slots: 16 },
+      medium: { drawBudget: 1_000_000, slots: 32 },
+      large: { drawBudget: 1_700_000, slots: 64 },
+    },
+  },
 } as const satisfies GalaxyCatalogSourceEntry;

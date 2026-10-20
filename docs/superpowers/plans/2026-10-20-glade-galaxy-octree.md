@@ -351,10 +351,10 @@ function galaxyFormatsFromSearch(search: string): Partial<Record<GalaxyCatalogSo
 - **Panel:** the GLADE row (any row with both `tierTargets` and `octree`) shows an Octree / Flat files choice beside its
   checkbox. Follow `docs/superpowers/conventions/ui-ux.md`: an interaction test and the layout tokens.
 
-- [ ] Test `galaxyFormatsFromSearch reads pairs and drops unknown sources, unknown formats and octree on a flat-only row`.
-- [ ] Test `the GLADE point row is not demanded when GLADE's format is octree`.
-- [ ] Test (UI) `choosing Flat files dispatches setGalaxyCatalogFormat for GLADE; rows without an octree show no choice`.
-- [ ] Commit.
+- [x] Test `galaxyFormatsFromSearch reads pairs and drops unknown sources, unknown formats and octree on a flat-only row`.
+- [x] Test `the GLADE point row is not demanded when GLADE's format is octree`.
+- [x] Test (UI) `choosing Flat files dispatches setGalaxyCatalogFormat for GLADE; rows without an octree show no choice`.
+- [x] Commit.
 
 ### Task 9: the 24-byte galaxy GPU record — `review: yes`
 

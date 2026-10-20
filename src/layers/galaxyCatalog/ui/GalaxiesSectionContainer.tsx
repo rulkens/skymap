@@ -1,6 +1,6 @@
 /**
  * GalaxiesSectionContainer — store boundary for the Galaxies settings section:
- * reads five settings selectors plus `selectSourceCounts`, wraps five dispatch
+ * reads six settings selectors plus `selectSourceCounts`, wraps five dispatch
  * calls in `useCallback` (all keyed on `[dispatch]` only — invariant, so each
  * handler has stable identity and the presentational child's `memo` bails
  * correctly). `GalaxiesSection` itself imports nothing from `store/`/`state/`.
@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   selectVisibleSourceMask,
   selectGalaxyCatalogSize,
+  selectGalaxyCatalogFormats,
   selectDepthFade,
   selectGalaxySbScale,
   selectGalaxySbMax,
@@ -22,6 +23,7 @@ import { selectSourceCounts } from '../../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogSize,
+  setGalaxyCatalogFormat,
   setDepthFade,
   setGalaxySbScale,
   setGalaxySbMax,
@@ -29,6 +31,8 @@ import {
 } from '../state/galaxyCatalogs/slice';
 import { setBiasMode, setAbsMagLimit } from '../state/bias/slice';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
+import type { GalaxyCatalogFormat } from '../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 
@@ -41,6 +45,7 @@ function GalaxiesSectionContainer(): React.ReactElement {
   const sourceCounts = useAppSelector(selectSourceCounts);
 
   const sourceMask = useAppSelector(selectVisibleSourceMask);
+  const formats = useAppSelector(selectGalaxyCatalogFormats);
   const pointSize = useAppSelector(selectGalaxyCatalogSize);
   const depthFadeEnabled = useAppSelector(selectDepthFade);
   const biasMode = useAppSelector(selectBiasMode);
@@ -52,6 +57,12 @@ function GalaxiesSectionContainer(): React.ReactElement {
   const onToggleSource = useCallback(
     (source: SourceType, enabled: boolean) =>
       dispatch(setGalaxyCatalogVisible({ id: galaxyCatalogIdOf(source), enabled })),
+    [dispatch],
+  );
+
+  const onFormatChange = useCallback(
+    (source: GalaxyCatalogSourceType, format: GalaxyCatalogFormat) =>
+      dispatch(setGalaxyCatalogFormat({ source, format })),
     [dispatch],
   );
 
@@ -89,6 +100,8 @@ function GalaxiesSectionContainer(): React.ReactElement {
       sourceMask={sourceMask}
       onToggleSource={onToggleSource}
       sourceCounts={sourceCounts}
+      formats={formats}
+      onFormatChange={onFormatChange}
       pointSize={pointSize}
       onPointSizeChange={onPointSizeChange}
       depthFadeEnabled={depthFadeEnabled}
