@@ -1,14 +1,56 @@
 ---
-/* The domes page: its text and front matter are content/pages/domes.mdx. */
+/*
+ * The domes page: its text and front matter are content/pages/domes.mdx. The contact section and the
+ * credits close the page here, because Astro finds a `client:` island only where its tag stands in the
+ * text, not inside a `{ ? : }` expression in MDX.
+ */
 import { getEntry, render } from 'astro:content';
 
+import Beside from '../components/Beside/Beside.tsx';
+import ContactClosed from '../components/ContactForm/ContactClosed.tsx';
+import ContactForm from '../components/ContactForm/ContactForm.tsx';
+import Credits from '../components/Credits/Credits.tsx';
+import { CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../data/contact';
 import Base from '../layouts/Base.astro';
+import layout from '../styles/layout.module.css';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { sitePath } from '../utils/sitePath';
 
 const entry = (await getEntry('pages', 'domes'))!;
 const { Content } = await render(entry);
+const section = `${layout.wrap} ${layout.section}`;
+const privacyHref = sitePath('/privacy/');
 ---
 
 <Base {...entry.data} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Domes and museums', path: '/domes/' }])]}>
   <Content />
+  <section class={section} id="contact">
+    <Beside>
+      <div>
+        <h2>Write to us</h2>
+        <p>
+          If you teach, <a href={sitePath('/classroom/')}>Use Skymap in the classroom</a> has links you can use today
+          without asking anyone.
+        </p>
+      </div>
+      <div>
+        {
+          CONTACT_ENDPOINT && TURNSTILE_SITE_KEY ? (
+            <ContactForm
+              client:visible
+              endpoint={CONTACT_ENDPOINT}
+              siteKey={TURNSTILE_SITE_KEY}
+              privacyHref={privacyHref}
+              issuesHref={ISSUES_URL}
+            />
+          ) : (
+            <ContactClosed privacyHref={privacyHref} issuesHref={ISSUES_URL} />
+          )
+        }
+      </div>
+    </Beside>
+  </section>
+  <div class={section}>
+    <Credits />
+  </div>
 </Base>

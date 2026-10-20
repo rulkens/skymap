@@ -5,9 +5,7 @@ job: "Can Skymap run in our dome or exhibit, and how do I ask for it?"
 ---
 
 import { Fragment } from 'astro/jsx-runtime';
-import Beside from '../../components/Beside/Beside.tsx';
 import Columns from '../../components/Columns/Columns.tsx';
-import Credits from '../../components/Credits/Credits.tsx';
 import DiscBand from '../../components/DiscBand/DiscBand.tsx';
 import Figure from '../../components/Figure/Figure.tsx';
 import ObjLink from '../../components/ObjLink/ObjLink.tsx';
@@ -21,7 +19,6 @@ import { appLink } from '../../data/appLink';
 import { fact } from '../../data/fact';
 import { REPO_URL } from '../../data/siteIdentity';
 import { siteShot } from '../../data/siteShot';
-import ContactPanel from '../../layouts/ContactPanel.astro';
 import layout from '../../styles/layout.module.css';
 import text from '../../styles/type.module.css';
 import { sitePath } from '../../utils/sitePath';
@@ -117,19 +114,3 @@ export const STEPS = [
     ))}
   </Steps>
 </section>
-
-<section class={section} id="contact">
-  <Beside>
-    <div>
-      <h2>Write to us</h2>
-      <p>If you teach, <a href={sitePath('/classroom/')}>Use Skymap in the classroom</a> has links you can use today without asking anyone.</p>
-    </div>
-    <div>
-      <ContactPanel />
-    </div>
-  </Beside>
-</section>
-
-<div class={section}>
-  <Credits />
-</div>

@@ -308,7 +308,7 @@ The job lines are migrated verbatim. Their notes on merges and repeats are not p
 - [x] Islands move as written: `ClassroomHero client:visible`, `ContactForm client:visible`, `Places client:visible` and `Lead client:visible`. `Flight client:load` is the exception: it moves with the props contract in **How a route renders a `pages` entry**.
 - [x] Home's route keeps the `head` fragment (preloads, the `is:inline` pre-paint script), `heroNav`, `stills` and its JSON-LD.
 - [x] Check: as in Task 4, plus on the dev server each island hydrates: the flight scrubs, the classroom hero runs, the contact form renders. Diff the island count per page against main's build.
-- Done differently: Astro finds a `client:` island only where the tag stands in the text, not inside a `{ ? : }` expression, so domes' contact form moved into `layouts/ContactPanel.astro`, which the MDX imports.
+- Done differently: Astro finds a `client:` island only where the tag stands in the text, not inside a `{ ? : }` expression, so the domes route renders the contact section (form or closed note) and the credits after the MDX body (owner's pick over a `.astro` switch inside the MDX).
 
 ### Task 6: The review bar edits `job` in front matter
 
