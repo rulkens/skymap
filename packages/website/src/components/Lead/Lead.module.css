@@ -1,0 +1,14 @@
+.title {
+  max-width: 13ch;
+}
+
+.say {
+  max-width: 27rem;
+  font-size: var(--text-lead);
+}
+
+@media (max-width: 900px) {
+  .title {
+    max-width: 17ch;
+  }
+}

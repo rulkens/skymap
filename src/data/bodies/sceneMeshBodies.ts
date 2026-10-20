@@ -1,6 +1,8 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { meshBody, type MeshBodySeed } from './makers/meshBody';
 import { SAMPLED_BODIES } from '../missions/spacecraftBodies';
+import { LAYER_BODY_ROWS } from './layerBodyRows';
+import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 
 const launchIso = (id: string): string =>
@@ -66,9 +68,9 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
     meshKey: 'mer',
     presentFromIso: '2004-01-25T05:05:00Z',
   },
-  // ~170 m bounding radius: the default 2-radii standoff would park the
-  // camera the better part of a km up, well past where the park reads.
-  { id: 'soendermarken', label: 'Søndermarken', meshKey: 'soendermarken', standoffRadii: 1.5 },
 ];
 
-export const SCENE_MESH_BODIES: readonly MeshBody[] = SEED_MESH_BODIES.map(meshBody);
+export const SCENE_MESH_BODIES: readonly MeshBody[] = [
+  ...SEED_MESH_BODIES.map(meshBody),
+  ...LAYER_BODY_ROWS.map((row) => row.body).filter(isMeshBody),
+];

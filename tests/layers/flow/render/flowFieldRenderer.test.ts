@@ -11,7 +11,7 @@ import { HEAD_SPEED_SCALE } from '../../../../src/data/flow/flowFieldConstants';
  * renderer makes during construction + upload must return a plausibly-shaped
  * stand-in. The objects are never inspected by the renderer — we only assert
  * that construction wires the 3 compute pipelines + render pipeline + BGLs
- * without throwing, and that `fieldLoaded` reflects the field-committed gate.
+ * without throwing.
  * Adds `createComputePipeline` (the engine's first compute renderer) on top of
  * the volumeFieldRenderer mock.
  */
@@ -58,15 +58,6 @@ function mockCube(): ScalarCube {
 }
 
 describe('createFlowFieldRenderer', () => {
-  it('fieldLoaded is false before upload, true after', () => {
-    // The flow fade row's guard reads this — it reports whether a cube is
-    // committed, independent of the slot lifecycle.
-    const renderer = createFlowFieldRenderer({ device: mockDevice(), targetFormat: 'rgba16float' });
-    expect(renderer.fieldLoaded()).toBe(false);
-    renderer.upload(mockCube());
-    expect(renderer.fieldLoaded()).toBe(true);
-  });
-
   it('encodeCompute packs dt and headStep from real elapsed time, not a fixed per-frame step', () => {
     // Pins the whole point of this change: dt/headStep must track wall-clock
     // gaps between calls, not a hardcoded per-frame constant. Would fail if

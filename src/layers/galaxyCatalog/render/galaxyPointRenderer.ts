@@ -207,7 +207,7 @@ export function createGalaxyPointRenderer(init: {
     viewportPx: Vec2,
     settings: GalaxyPointDrawSettings,
   ): void {
-    const { visibleSourceMask, focusBindGroup, viewSlot } = settings;
+    const { focusBindGroup, viewSlot } = settings;
 
     // Materialised because the "nothing loaded, skip the uniform write
     // entirely" early-out needs to know emptiness before the loop.  At
@@ -236,11 +236,6 @@ export function createGalaxyPointRenderer(init: {
 
     for (const catalog of catalogs) {
       const source = catalog.source;
-      // Inlined `maskHas(visibleSourceMask, source)` — hot path.  The
-      // mask + per-source fade are keyed by the numeric code the store
-      // yields alongside each entry.
-      if (((visibleSourceMask >> source) & 1) === 0) continue;
-
       // Fully faded (exactly 0) → skip the source outright: every instance
       // would rasterize at alpha 0 into an additive target — pure GPU cost
       // for zero contribution. No pop is possible: a fade reaches 0
@@ -287,7 +282,6 @@ export function createGalaxyPointRenderer(init: {
     upload: store.upload,
     unload: store.unload,
     totalCount: store.totalCount,
-    hasCatalog: store.hasCatalog,
     loadedSources: store.loadedSources,
     draw,
     destroy,

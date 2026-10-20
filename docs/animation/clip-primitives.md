@@ -323,35 +323,32 @@ frame. They change what's _drawn_, not where the camera _is_.
 
 | Helper    | Signature                                                           | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `show`    | `show(layers: VisibilityLayerKey[], over?) → SceneEffect`           | Turn layers **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Rides the live fade bridge — dispatches the same settings actions the UI does.                                                                                                                                                                                                                                        |
-| `hide`    | `hide(layers, over?) → SceneEffect`                                 | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
-| `fade`    | `fade(layers, to, over) → SceneEffect`                              | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
+| `show`    | `show(args: VisibilityArg[], over?) → SceneEffect`                  | Turn things **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Dispatches `setVisibility`, the write the panel rows make, carrying `over`.                                                                                                                                                                                                                                           |
+| `hide`    | `hide(args, over?) → SceneEffect`                                   | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `fade`    | `fade(args, to, over) → SceneEffect`                                | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
 | `scene`   | `scene(action: SettingsAction) → SceneEffect`                       | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws (multiplies on top of the per-layer label toggles).  |
 | `focus`   | `focus(id: FocusId \| null) → FocusBoundEffect`                     | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
 | `frameTo` | `frameTo(frame: OrientationFrameId, { over, ease? }) → SceneEffect` | Roll the horizon to another orientation frame over `over` seconds (`ease` defaults `'easeInOutCubic'`). The eye does **not** move and its aim does not change — only which way is up. Authored **in the clip**, never on the beat, so an act owns its pole; a clip pins the frame it started under, so a switch mid-clip cannot reinterpret its authored yaws. A tour restores the viewer's pre-tour frame when it ends.                               |
 
-**`layers` are `VisibilityLayerKey`s** — the intent-addressing keys the UI and
-`syncVisibilityFades` use. The full set is:
-`'milkyWayDisk'`, `'proceduralDisks'`, `'texturedDisks'`, `'volumesMaster'`,
-`'milkyWayLabel'`, `'surveyLabel'`, `'scaleBar'`, `'structureRing'`,
-`'structureLabel'`, `'survey'`, `'filaments'`, `'flow'`, `'volumeField'`. A
-`show`/`hide` on a multi-item layer (e.g. `'survey'`) sets the cluster gate; the
-bridge expands to the items.
+**`args` are visibility addresses**, derived from every Layer's `visibility.ts`
+(`APP_VISIBILITY`): show keys (`'flow'`, `'survey'`, `'structureRing'`,
+`'milkyWayDisk'`, `'cosmicWebDensity'`, …) and label addresses (`'label:milkyWay'`,
+`'label:famousGalaxy'`, `'label:structure'`, …). A bare per-item address writes the
+cluster's section switch where it has one (`'cosmicWebDensity'`, `'starCatalog'`),
+otherwise every item (`'survey'`, `'structureRing'`).
 
-`show`/`hide` (not `fade`) additionally accept two authoring extensions inline
-in the same list:
+`show`/`hide` (not `fade`) additionally accept, inline in the same list:
 
-- **The `'labels'` aggregate** — every text label
-  (`surveyLabel` + `structureLabel` + `milkyWayLabel`), expanded to atomic keys
-  at construction.
-- **Scoped `'family:scope'` entries** — address ONE item where the bare key
-  fans over all: `'survey:milliquas'` (one catalog), `'structureRing:galaxy-group'`
-  (one structure category — structure settings items ARE the four categories),
-  and the unified label namespace `'label:milkyWay'` / `'label:survey'` /
-  `'label:structure'` / `'label:galaxy-group'` (etc. per category). Template-literal
-  typed, so a bad scope is a compile error. Scoped entries dispatch one
-  targeted settings action at fire time and fade via the reactive
-  settings→fade bridge — a custom `over` applies to the atomic layers only.
+- **The `'labels'` aggregate** — every label address the composition declares,
+  expanded at construction.
+- **Scoped entries** — one item of a per-item entry, where the bare address fans
+  over all: `'survey:milliquas'` (one catalog), `'structureRing:galaxy-group'` (one
+  structure category) and `'label:structure:galaxy-group'` (one category's labels).
+  Template-literal typed, so a bad item is a compile error.
+
+Every arg takes one path: `setVisibilityActionsFor` builds its `setVisibility`
+writes, each carrying the cue's `over`, and the reactive fade sync that write wakes
+ramps over it.
 
 ### Focus IDs and deferred resolution
 
@@ -393,21 +390,25 @@ framing (`{ target, distance, radius }`) comes from
 
 ## Opacity: three factors, multiplied
 
-A layer's rendered alpha is the **product of three independent factors**:
+A layer's rendered alpha is the **product of three independent factors**, computed
+once in core (`resolveVisibilityOpacity`) and handed to the pass or label producer:
 
 ```
-final alpha = intentOpacity(bridge)  ×  focusRecession(structureFocus)  ×  clipOpacity(clipPlayer)
+handed value = fade(FadeRegistry)  ×  recession(entry, focus blend)  ×  clip(clipPlayer)
 ```
 
-- **`intentOpacity`** — the settings/visibility bridge (the shared `FadeRegistry` +
-  the intent-bridge fade). `show`/`hide` move this (and the underlying
-  enabled-intent).
-- **`focusRecession`** — the structure-focus **layer** recession: under focus the
-  surrounding layers (filaments, volumes, structure rings, labels) dim toward their
-  recession targets. Galaxy points do **not** recede here. `focus(id)` moves this.
-- **`clipOpacity`** — the clip-owned transient channel (`ClipOpacityChannel`, one
-  private `FadeController` per layer, lazily created). `fade()` moves _only_ this. It
-  defaults to 1 for every untouched layer and **resets to 1 when the clip ends**.
+- **`fade`** — the visibility fade in the shared `FadeRegistry`, heading for each
+  entry's target (switch, gating slot, `of`). `show`/`hide` move this (and the
+  underlying enabled-intent).
+- **`recession`** — the focus recession an entry declares (`recession: 'strong' |
+  'mild'`): under focus the receding entries (filaments, volumes, structure rings,
+  labels) dim toward their strength. Galaxy points do **not** recede here. `focus(id)`
+  moves this.
+- **`clip`** — the clip-owned transient channel (`ClipOpacityChannel`, one private
+  `FadeController` per address, lazily created). `fade()` moves _only_ this. It
+  defaults to 1 for every untouched address and **resets to 1 when the clip ends**. A
+  label entry with `of` also takes its thing's clip, so `fade(['constellations'], 0, 2)`
+  dims the names with the lines.
 
 > **Galaxy points carry one extra factor, off this product.** Under structure focus
 > the points shader multiplies each galaxy's alpha by a per-vertex **isolation**
@@ -415,12 +416,12 @@ final alpha = intentOpacity(bridge)  ×  focusRecession(structureFocus)  ×  cli
 > geometric (distance from the structure centre vs its radius), driven by the same
 > `focus(id)` / `selection.focus`, and is **galaxy-only** — not part of the layer
 > product above. This is what makes `focus(id)` "dim everything that isn't in this
-> cluster"; `focusRecession` handles the chrome, the isolation factor handles the
+> cluster"; `recession` handles the chrome, the isolation factor handles the
 > galaxy field.
 
 This is why **`fade()` can dim an intent-bearing layer without desyncing it from
-intent**: `fade(['survey'], 0, 3)` drives `clipOpacity(survey) → 0` while
-`intentOpacity(survey)` stays 1 (galaxies stay loaded). And it's why the "load but
+intent**: `fade(['survey'], 0, 3)` drives `clip(survey) → 0` while the `survey`
+fade stays 1 (galaxies stay loaded). And it's why the "load but
 don't show" trick works: `fade(['flow'], 0, 0)` masks the layer to 0, then
 `scene(setFlowEnabled(true))` raises intent behind the mask, then
 `fade(['flow'], 1, 3)` reveals it — no flash.
@@ -465,7 +466,7 @@ const cosmicFlows: ClipData = {
       hold(2),
       all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)]), // crossfade (intent untouched)
     ]),
-    fade(['flow', 'milkyWayDisk', 'structureRing', 'structureLabel'], 0, 3), // per-layer fade to black
+    fade(['flow', 'milkyWayDisk', 'structureRing', 'label:structure'], 0, 3), // per-layer fade to black
   ],
 };
 ```

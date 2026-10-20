@@ -16,8 +16,8 @@ Unticking a field in the "Cosmic web density" panel fades it out but never frees
 its GPU memory. `onRowEnabledChange`
 (`src/layers/cosmicWebDensity/ui/CosmicWebDensitySectionContainer.tsx`) dispatches
 `writeCosmicWebDensityField({ id, patch: { enabled } })`, a settings write that
-drives the `cosmicWebDensityField` fade row
-(`src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows.ts`). The cube stays
+drives the field's item of the `cosmicWebDensity` visibility entry
+(`src/layers/cosmicWebDensity/visibility.ts`). The cube stays
 resident in the Layer's `VolumeFieldRenderer`'s field `Map` for the life of the
 engine — the only release is `destroy()` at teardown.
 
@@ -58,7 +58,7 @@ The eviction mechanism already exists and has two users:
 - `meshSlotRegistry.ts:24` and `bodyTextureSlotRegistry.ts:82` are both one-liners.
 - `VolumeFieldRenderer.unload(id)` (`volumeFieldRenderer.ts:329-342`) already destroys
   all four per-field resources and leaves the fade handle registered, which is the
-  correct split — `seedFades` owns the handle set across upload/unload.
+  correct split — `seedVisibilityFades` owns the identity set across upload/unload.
 
 So the wiring is three `onRelease` lines plus three `release` predicates.
 

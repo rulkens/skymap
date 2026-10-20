@@ -13,7 +13,7 @@ import { applySceneEffect } from '../../animation/applySceneEffect';
 import { clipEnded } from '../../../state/camera/cameraSlice';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
-import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { AppDispatch } from '../../../store/types';
@@ -83,9 +83,9 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     const { effect } = cue;
     if (effect.kind === 'fade') {
       // The fade verb is the player's own (`applySceneEffect` throws on it).
-      for (const layer of effect.layers) {
+      for (const address of effect.args) {
         // `effect.over` is SECONDS; `fadeTo` takes ms.
-        clipOpacity.fadeTo(layer, effect.to, effect.over * 1000, nowMs);
+        clipOpacity.fadeTo(address, effect.to, effect.over * 1000, nowMs);
       }
       requestRender();
     } else {
@@ -144,8 +144,8 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     fireEndResolver();
   }
 
-  function clipOpacityOf(layer: VisibilityLayerKey, nowMs: number): number {
-    return clipOpacity.factorOf(layer, nowMs);
+  function clipOpacityOf(address: VisibilityAddress, nowMs: number): number {
+    return clipOpacity.factorOf(address, nowMs);
   }
 
   function destroy(): void {

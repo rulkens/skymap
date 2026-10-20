@@ -1,6 +1,6 @@
 /**
  * makeGalaxyCatalogItems — `settings.galaxyCatalogs.items` for engine fixtures,
- * keyed off `GALAXY_CATALOG_SOURCES`. `sourceMaskOf` reads `items[id].enabled`
+ * keyed off `GALAXY_CATALOG_SOURCES`. Consumers read `items[id].enabled`
  * for every one of them, so a hand-listed record dies on the first missing id.
  * `of` returns the per-row deviations from an all-on baseline.
  */

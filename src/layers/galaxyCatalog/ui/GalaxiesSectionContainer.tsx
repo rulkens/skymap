@@ -40,7 +40,7 @@ function GalaxiesSectionContainer(): React.ReactElement {
   // the selector accumulates them one source at a time.
   const sourceCounts = useAppSelector(selectSourceCounts);
 
-  const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
+  const sourceMask = useAppSelector(selectVisibleSourceMask);
   const pointSize = useAppSelector(selectGalaxyCatalogSize);
   const depthFadeEnabled = useAppSelector(selectDepthFade);
   const biasMode = useAppSelector(selectBiasMode);
@@ -86,7 +86,7 @@ function GalaxiesSectionContainer(): React.ReactElement {
 
   return (
     <GalaxiesSection
-      visibleSourceMask={visibleSourceMask}
+      sourceMask={sourceMask}
       onToggleSource={onToggleSource}
       sourceCounts={sourceCounts}
       pointSize={pointSize}

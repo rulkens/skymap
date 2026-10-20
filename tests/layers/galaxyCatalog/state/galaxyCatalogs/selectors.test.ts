@@ -3,10 +3,11 @@ import { describe, it, expect } from 'vitest';
 import { selectVisibleSourceMask } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../../../src/store/constants';
-import { sourceMaskOf } from '../../../../../src/layers/galaxyCatalog/present/sourceMaskOf';
+import { Source, GALAXY_CATALOG_SOURCES } from '../../../../../src/data/sources';
+import { maskHas } from '../../../../../src/utils/maskHas';
+import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import type { RootState } from '../../../../../src/store/types';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
-import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
 // Every test builds a RootState by mounting a fresh boot-settings literal at the
 // settings route, optionally patched. The selectors are RootState-scoped, so
@@ -16,34 +17,18 @@ function makeRoot(patch?: Partial<EngineSettingsState>): RootState {
   return { [settingsRoute]: settings } as RootState;
 }
 
-// Drive `sourceMaskOf` against a minimal state stub so the mask selector
-// can be compared against the engine's authoritative pick-mask packing. The
-// selector must reproduce the EXACT `pick` bits for any enabled-set — it's the
-// read seam that replaced the old `onMaskChange` echo (which sent the pick
-// mask). `sourceMaskOf` is pure: it RETURNS `{ draw, pick }`, so the stub
-// is just its two inputs (settings + a fades opacity table), no `sources` slot.
-function deriveMasks(
-  settings: EngineSettingsState,
-  opacityFor: (id: GalaxyCatalogId) => number = () => 0,
-): { draw: number; pick: number } {
-  const state = {
-    settings,
-    subsystems: {
-      fades: { opacityOf: (h: { id: GalaxyCatalogId }) => opacityFor(h.id) },
-    },
-  };
-  return sourceMaskOf(state as never, 0);
-}
-
 describe('selectVisibleSourceMask', () => {
-  it('packs the enabled bits to the sourceMaskOf pick bitmask (all enabled)', () => {
-    const state = makeRoot(); // every galaxy catalog enabled
-    const { pick } = deriveMasks(state[settingsRoute]);
+  it('sets exactly the bit of every enabled galaxy catalog', () => {
+    const root = makeRoot();
+    const mask = selectVisibleSourceMask(root);
 
-    expect(selectVisibleSourceMask(state)).toBe(pick);
+    for (const s of GALAXY_CATALOG_SOURCES) {
+      const { enabled } = root[settingsRoute].galaxyCatalogs.items[galaxyCatalogIdOf(s)];
+      expect(maskHas(mask, s)).toBe(enabled);
+    }
   });
 
-  it('follows intent only — a disabled galaxy catalog still fading out is not in the mask', () => {
+  it('follows intent only — a disabled galaxy catalog is not in the mask', () => {
     const base = makeRoot();
     const state = makeRoot({
       galaxyCatalogs: {
@@ -54,12 +39,10 @@ describe('selectVisibleSourceMask', () => {
         },
       },
     });
-    // SDSS hidden but still fading out (opacity 0.5): the draw mask keeps the
-    // bit, the pick mask drops it. The selector must match pick, not draw.
-    const { draw, pick } = deriveMasks(state[settingsRoute], (id) => (id === 'sdss' ? 0.5 : 0));
+    const mask = selectVisibleSourceMask(state);
 
-    expect(selectVisibleSourceMask(state)).toBe(pick);
-    expect(selectVisibleSourceMask(state)).not.toBe(draw);
+    expect(maskHas(mask, Source.SDSS)).toBe(false);
+    expect(maskHas(mask, Source.TwoMRS)).toBe(true);
   });
 
   it('memoizes on galaxyCatalogs alone — recomputes only when that cluster changes', () => {

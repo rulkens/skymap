@@ -5,7 +5,7 @@
  * it is non-null from t=0.
  */
 
-import type { VisibilityLayerKey } from '../../animation/VisibilityLayerKey';
+import type { VisibilityAddress } from '../../animation/VisibilityAddress';
 import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { Destroyable } from '../../rendering/Destroyable';
 
@@ -26,6 +26,6 @@ export type ClipPlayer = {
   /** Register BEFORE `clipStarted`, or a zero-duration clip completes with no resolver. */
   registerEndResolver(onEnd: () => void): void;
 
-  /** 1 for any layer the current clip never touched; back to 1 when the clip ends. */
-  clipOpacityOf(layer: VisibilityLayerKey, nowMs: number): number;
+  /** 1 for any address the current clip never touched; back to 1 when the clip ends. */
+  clipOpacityOf(address: VisibilityAddress, nowMs: number): number;
 } & Destroyable;

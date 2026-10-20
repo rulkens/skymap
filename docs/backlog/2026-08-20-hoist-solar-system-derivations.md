@@ -17,8 +17,12 @@ field-star-sphere, planets, textured-bodies, rings, star-points, body-glints,
 orbit-trails, foreground-labels) are recomputed independently at every call
 site instead of hoisted to `runFrame` and memoised once:
 
-- `sceneBodyPartition` — shared by 3 layers (glints/flat/textured split).
-- `partitionStarsByResolution` — shared by 2 layers (spheres/points split).
+- `sceneBodyPresentation` — one sort of every scene body (planets, craft,
+  seeded stars) into unresolved/resolved, read by core's body passes, both
+  star passes, the occluders and NEAR0's sizing; each call sorts afresh.
+- `sceneBodyPartition` — core's own bodies out of that sort, split four ways
+  (glints/flat/textured/meshes), shared by core's body passes and the probe
+  capture.
 
 (`ringsPass`'s rings derivation was hoisted since this item was filed —
 `enabled()` and `draw()` now share one `ringDrawForBody` call — so it drops
@@ -36,8 +40,8 @@ style") as the norm the solar-system derivations should migrate to.
 
 ## Why it matters
 
-Bug-risk, not just cleanup: `sceneBodyPartition` and
-`partitionStarsByResolution` each have multiple independent copies (one per
+Bug-risk, not just cleanup: `sceneBodyPresentation` and
+`sceneBodyPartition` each have multiple independent copies (one per
 consuming layer, sometimes one per `enabled()`/`draw()` pair within a layer).
 Nothing keeps those copies in agreement — an edit to the partition logic that
 updates one call site but misses a sibling produces a layer whose `enabled()`
@@ -55,8 +59,8 @@ implementation as the template. Shape:
    `ctx` for the frame's duration.
 2. Update every consuming layer's `enabled()` and `draw()` to read the
    memoised result off `ctx` instead of recomputing.
-3. Sequencing: `sceneBodyPartition` and `partitionStarsByResolution` touch
-   the same layer files the `starCatalog` Layer split also touches — worth
-   checking whether either lands first to avoid re-doing the other's diff.
+3. Sequencing: the pick path derives frame contexts speculatively, so the
+   memo must key on the frame context, never on a cached per-view answer
+   (`sceneBodyPresentation`'s header).
 4. Not gated on any ladder rung — decisions.md #7 names it as long-tail work
    independent of the umbrella `SubsystemBundle` reassessment.

@@ -13,18 +13,20 @@ import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
-import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
+import type { LayerTerrain } from './LayerTerrain';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
+import type { LayerBody } from './LayerBody';
 import type { LayerGuides } from './LayerGuides';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { SourceCountReport } from './SourceCountReport';
+import type { VisibilityEntry } from './VisibilityEntry';
 
 export type Layer<
   Name extends string,
@@ -59,12 +61,17 @@ export type Layer<
   readonly exhibits?: readonly Exhibit[];
   /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;
+  /** Typing only: `data/bodies/layerBodyRows.ts` folds the same rows into the body tables by import. */
+  readonly bodies?: readonly LayerBody[];
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
-  /** Contributions to the three `LayerUiSlots`: whole sections (`main` in
-   * SettingsPanel, `debug` in DebugPanel) or a `labelsAndGuides` data row,
-   * appended after the core rows in `LabelsAndGuidesSectionContainer`. */
+  /** Contributions to the `LayerUiSlots`: whole sections (`main` in SettingsPanel,
+   * `debug` in DebugPanel), a detail card, or a `labelsAndGuides` toggle row, which
+   * `selectToggleRows` appends after the label-category rows in composition order. */
   readonly ui?: readonly LayerUiEntry[];
+  /** What this Layer can show and label. The address types derive from `APP_VISIBILITY`,
+   * which imports the same tuple from the Layer's `visibility.ts`, never from here. */
+  readonly visibility?: readonly VisibilityEntry[];
 
   // Lifecycle. Every member below is invoked from exactly one place —
   // `instantiateLayer` — which is where to look to see the call shapes together.
@@ -84,14 +91,11 @@ export type Layer<
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
    * the slots behind them. */
   assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];
-  /** Rows join `FADE_LAYERS` in `createLayers`. Declares only: core owns the arrival
-   * edge (`installFadeOnArrival`), so never drive a fade from `create`. */
-  fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
   /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join
-   * `state.label3DProducers`, walked by `runLabel3DProducers`; `orbitTrails` rows
-   * join `state.orbitTrailRows`, walked by `orbitTrailsPass`. Each label `id`
+   * `state.label3DProducers`, walked by `runLabel3DProducers`; the `orbitTrails` group
+   * joins `state.orbitTrailGroups`, walked by `orbitTrailsPass`. Each label `id`
    * must be stable across frames. */
   guides?(runtime: Runtime): LayerGuides;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
@@ -106,4 +110,7 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
+  /** The ground core's camera reads. One provider per composition, counting
+   *  core's surface-tile provider (until the body Layer takes it over); boot throws on two. */
+  terrain?(runtime: Runtime): LayerTerrain;
 };

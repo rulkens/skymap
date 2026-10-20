@@ -15,9 +15,8 @@ const GROUP_ORDER: readonly StructureGroupId[] = ['anchors', 'bulk'];
  *
  * Same factory + closure shape as the other stores: a private group map and a
  * read-only query surface, mutation only through `setGroup`/`clearGroup`.
- * Per-category marker/label visibility is NOT held here — it lives in the
- * FadeRegistry (structure/labelLayer handles), the same animated opacity the
- * rings fade through. The merged list, per-category lists and per-category id
+ * Per-category marker/label visibility is NOT held here — core hands the
+ * producers a per-category value. The merged list, per-category lists and per-category id
  * index are derived once per `setGroup`/`clearGroup`: `categoryIndexOf` runs
  * once per label per frame, so rebuilding on each call was O(N²) allocation.
  */

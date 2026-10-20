@@ -1,10 +1,10 @@
 /**
  * deriveLightTimeLiveness — the one derivation of "which spheres draw this
  * frame, how strongly, and around what point", shared by the sphere pass and
- * the captions so the two cannot disagree. `null` when no sphere would draw.
+ * the captions so the two cannot disagree: each hands its own value (the pass
+ * its show value, the captions their label value). `null` when no sphere would draw.
  */
 
-import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
 import {
@@ -14,13 +14,11 @@ import {
 import { fadeWindow } from '../../../utils/math/fadeWindow';
 import { EARTH_REF } from '../../../data/selection/earthRef';
 import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
 export function deriveLightTimeLiveness(
-  state: PassState,
-  ctx: FrameView,
+  ctx: Pick<FrameView, 'snapshot' | 'drawCamPos'>,
+  layerOpacity: number,
 ): LightTimeLiveness | null {
-  const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'lightTime' });
   if (!(layerOpacity > 0)) return null;
   const centre = ctx.snapshot.bodyStates.get(EARTH_REF.id)?.positionMpc;
   if (centre === undefined) return null;

@@ -2,9 +2,9 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`,
+ * `.computes` / `.assetRows` / `.visibilityEntries` / `.layerSlots` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
- * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
+ * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
  */
 
 import { put } from 'typed-redux-saga';
@@ -18,6 +18,8 @@ import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
+import { composeTerrain } from '../layer/composeTerrain';
+import { surfaceTileTerrain } from '../../../utils/surfaceTiles/surfaceTileTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -31,12 +33,18 @@ import {
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
+import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
+import { gateComputeByFade } from '../layer/gateComputeByFade';
+import { gateLabelProducer } from '../layer/gateLabelProducer';
+import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
+import { gatePassByFade } from '../layer/gatePassByFade';
+import { gatePlannerByFade } from '../layer/gatePlannerByFade';
+import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
-import { FADE_LAYERS } from '../wiring/fadeLayers';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -140,19 +148,21 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // answers to it, and `checkFrameOrder` counts order lines rather than passes —
   // so a core pass left behind under a name a Layer now contributes would keep
   // drawing, silently, with the Layer's own version never reached.
+  // Every pass, compute, planner and label row is gated here, once, so the executors never see
+  // a `fade` or `label` declaration: they call what they always called.
   state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
-  ]);
+  ]).map((pass) => gatePassByFade(pass, state));
   state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
     CORE_COMPUTES,
     ...instances.map((instance) => instance.computes),
-  ]);
+  ]).map((compute) => gateComputeByFade(compute, state));
   state.planners = concatUniqueRows(
     'createLayers: planner rows',
     (planner) => planner.name,
     instances.map((instance) => instance.planners),
-  );
+  ).map((planner) => gatePlannerByFade(planner, state));
   // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
   // first — so a duplicate would silently SHADOW the other rather than surface,
   // leaving whichever slot core still mints loading into nothing. One fold over
@@ -181,12 +191,27 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     );
   }
   state.slabRows = slabRows;
-  state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
-  state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
-  state.orbitTrailRows = [
-    ...CORE_TRAIL_ELEMENTS,
+  // Static, like `slabs`; a duplicate address would put two entries on one controller.
+  state.visibilityEntries = concatUniqueRows(
+    'createLayers: visibility entries',
+    visibilityAddressOf,
+    deps.composition.layers.map((layer) => layer.visibility ?? []),
+  );
+  state.label3DProducers = instances.flatMap((instance) =>
+    instance.worldLabels.map(gateWorldLabelProducer),
+  );
+  state.orbitTrailGroups = [
+    { show: 'orbitTrails' as const, rows: CORE_TRAIL_ELEMENTS },
     ...instances.flatMap((instance) => instance.orbitTrails),
-  ];
+  ].map((group) => gateOrbitTrailGroup(group, state));
+  // Core keeps the slot until body Layers can reach the tile subsystem; the
+  // body move deletes this row, and the two-provider throw catches a half-done move.
+  state.terrain = composeTerrain([
+    { name: 'core:surfaceTiles', terrain: surfaceTileTerrain(state.subsystems) },
+    ...instances.flatMap((instance) =>
+      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
+    ),
+  ]);
 
   // Two directors, each owning one slab's screen-space projection — a
   // producer names the slab whose director it registers on (`LayerGuides`'s
@@ -209,7 +234,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       if (!director) {
         throw new Error(`createLayers: no label director for slab ${slabName(slab)}`);
       }
-      director.registerProducer(producer);
+      director.registerProducer(gateLabelProducer(producer));
     }
   }
   state.layerSlots = layerSlots;

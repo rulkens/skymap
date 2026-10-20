@@ -16,6 +16,7 @@ import type { SitePose } from '../../../src/@types/camera/SitePose';
 const ROVER: MeshBody = {
   id: 'fixture-rover',
   label: 'Fixture rover',
+  resolvePx: 3,
   boundingRadiusM: 2.479,
   albedo: [1, 1, 1],
   meshKey: 'fixture',

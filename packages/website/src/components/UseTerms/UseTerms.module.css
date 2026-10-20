@@ -1,0 +1,32 @@
+.root {
+  composes: small from '../../styles/type.module.css';
+  position: relative;
+  display: block;
+  padding-left: 1.125rem;
+  color: var(--site-text-muted);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0.125rem;
+    top: 0.55em;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border: 1px solid currentColor;
+    transform: rotate(45deg);
+  }
+}
+
+/* Both classes: the composed `small` sets a weight of its own, and a later copy of it lands after a rule of one class. */
+.root.limits {
+  font-weight: 500;
+  color: var(--color-fg);
+
+  &::before {
+    background: currentColor;
+  }
+}
+
+.unseen {
+  composes: unseen from '../../styles/a11y.module.css';
+}

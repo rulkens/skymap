@@ -14,13 +14,12 @@ import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { starCatalogVisible } from '../render/cut/starCatalogVisible';
 import { drawStarCut } from '../render/cut/drawStarCut';
 
-export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass {
+export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
   return {
     name: 'star-aggregates',
+    fade: 'starCatalog',
 
-    enabled(state, ctx, _view) {
-      return starCatalogVisible(runtime, state.settings.starCatalogs, ctx);
-    },
+    enabled: (_state, ctx, _view, fade) => starCatalogVisible(runtime, fade, ctx),
 
     draw(pass, view, ctx, state) {
       // The DESTINATION target's size, not the canvas: STAR_GLOW_MIN_PX floors the

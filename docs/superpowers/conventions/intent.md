@@ -66,8 +66,8 @@ visibility bitmask, the fade _target_ for each layer, the demand decision (what
 to load), the scale-bar legend, the focus blend. The rule:
 
 > **Derived State is computed on read (or memoized), never stored as a second
-> authoritative copy.** `deriveSourceMasks` recomputes the bitmask every frame
-> from `enabled` + live fade opacity; it is never cached and hand-synced. That is
+> authoritative copy.** `sourceMaskOf` recomputes the bitmask every frame from
+> the per-catalog values core hands the planner; it is never cached and hand-synced. That is
 > the model — extend it, don't add mirrors.
 
 Validation is _non-destructive and continuous_: the same Intent always yields the

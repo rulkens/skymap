@@ -1,24 +1,22 @@
 /**
- * Both branches read the REAL driver tables, so the fixtures borrow ids that
- * already have a driver row: the whale's `earth` focus owns a slab row, while
- * a Sun-focused body's does not; `pluto`'s driver stands in for any of them.
+ * All three branches read the REAL driver tables: the whale's `earth` focus owns
+ * a slab row, Voyager 1 hangs off the rowless Sun, and Mars owns its own row.
  */
 
 import { describe, expect, it } from 'vitest';
 
-import type { MeshBody } from '../../../src/@types/scene/MeshBody';
-import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { meshBodySlabHostId } from '../../../src/utils/meshBodies/meshBodySlabHostId';
-
-const whale = SCENE_MESH_BODIES.find((body) => body.id === 'whale')!;
 
 describe('meshBodySlabHostId', () => {
   it('routes to the host row when the host owns one', () => {
-    expect(meshBodySlabHostId(whale)).toBe('earth');
+    expect(meshBodySlabHostId('whale')).toBe('earth');
   });
 
   it('routes to the body itself when its host owns no slab row', () => {
-    const sunFocused: MeshBody = { ...whale, id: 'pluto' };
-    expect(meshBodySlabHostId(sunFocused)).toBe('pluto');
+    expect(meshBodySlabHostId('voyager1')).toBe('voyager1');
+  });
+
+  it('keeps a body that owns a row on its own row, not its host’s', () => {
+    expect(meshBodySlabHostId('phobos')).toBe('phobos');
   });
 });

@@ -1,83 +1,67 @@
 /**
  * selectToggleRows — every Labels & Guides checkbox, in panel order: one row per label category
- * (`LABEL_CATEGORIES`, registry-code order), the orbit-trails guide row, then each Layer row in composition order.
- * Lives in `compositions/` because it reads five Layers' label homes, which nothing under `state/` may import.
+ * (`LABEL_CATEGORIES`, registry-code order), then each Layer row in composition order. Every row reads and writes
+ * through its entry: a category through the label entry that lists it, a Layer row through the show entry it names.
+ * Lives in `compositions/` because the Layer rows' entries come from `APP_VISIBILITY`.
  *
  * Referentially stable: an unrelated store write returns the same array, so the `memo` section behind it does not
- * re-render. The label homes are per-cluster selector outputs, never `state.settings` itself, which Immer
- * re-identifies on every write. The memo has one slot: every caller must pass the same `layerRows` array, or
- * alternating calls rebuild the rows each time.
+ * re-render. Every row's value is a boolean key, never `state.settings` itself, which Immer re-identifies on every
+ * write. The memo has one slot: every caller must pass the same `layerRows` array, or alternating calls rebuild the
+ * rows each time.
  */
-import { createSelector } from '@reduxjs/toolkit';
-import { selectStructureItems } from '../layers/structure/state/structures/selectors';
-import { selectGalaxyCatalogItems } from '../layers/galaxyCatalog/state/galaxyCatalogs/selectors';
-import { selectStarCatalogItems } from '../layers/starCatalog/state/starCatalogs/selectors';
-import { selectBodyItems } from '../layers/body/state/bodies/selectors';
-import { selectBlackHoleItems } from '../layers/blackHoles/state/blackHoles/selectors';
-import { selectMilkyWayLabelEnabled } from '../layers/milkyWay/state/milkyWay/selectors';
-import { selectOrbitTrailsEnabled } from '../layers/body/state/orbitTrails/selectors';
-import { setOrbitTrailsEnabled } from '../layers/body/state/orbitTrails/slice';
-import { projectLabelCategoryVisibility } from '../state/settings/projectLabelCategoryVisibility';
-import { LABEL_HOME_BY_SOURCE_TYPE } from '../data/labels/labelHomeBySourceType';
-import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../data/labels/sourceTypeByLabelCategory';
 import { LABEL_CATEGORIES } from '../data/structure/labelCategories';
 import { CATEGORY_DISPLAY_INFO } from '../data/structure/categoryDisplayInfo';
 import { memoizeLastByKeys } from '../utils/cache/memoizeLastByKeys';
+import { labelEntryFor } from '../utils/visibility/labelEntryFor';
+import { visibilityEntryOf } from '../utils/visibility/visibilityEntryOf';
+import { visibilityClusterOf } from '../utils/visibility/visibilityClusterOf';
+import { visibilitySwitchOf } from '../utils/visibility/visibilitySwitchOf';
+import { setVisibility } from '../state/settings/setVisibilityAction';
+import { APP_VISIBILITY } from './appVisibility';
 import type { ToggleRow } from '../@types/settings/ToggleRow';
-import type { LayerSettingsRow } from '../@types/engine/layer/LayerSettingsRow';
+import type { LayerToggleRow } from '../@types/engine/layer/LayerToggleRow';
+import type { ShowEntry } from '../@types/engine/layer/ShowEntry';
 import type { RootState } from '../store/types';
 
-const selectLabelCategoryVisibility = createSelector(
-  [
-    selectStructureItems,
-    selectGalaxyCatalogItems,
-    selectStarCatalogItems,
-    selectBodyItems,
-    selectBlackHoleItems,
-    selectMilkyWayLabelEnabled,
-  ],
-  (structures, galaxyCatalogs, starCatalogs, bodies, blackHoles, milkyWayLabelEnabled) =>
-    projectLabelCategoryVisibility({
-      structures,
-      galaxyCatalogs,
-      starCatalogs,
-      bodies,
-      blackHoles,
-      milkyWayLabelEnabled,
-    }),
-);
+// A category's label entry, and the item it reads: none for an item-less entry (the Milky Way's).
+const LABEL_ROWS = LABEL_CATEGORIES.map((cat) => {
+  const entry = labelEntryFor(cat);
+  return { cat, entry, item: entry.items === undefined ? undefined : cat };
+});
 
-// A key, not createSelector inputs: the Layer values are one boolean per row, a variable-length input.
+// Keys, not createSelector inputs: the values are one boolean per row, a variable-length input.
 const rowsMemo = memoizeLastByKeys<readonly ToggleRow[]>();
 
 export function selectToggleRows(
   state: RootState,
-  layerRows: readonly LayerSettingsRow[],
+  layerRows: readonly LayerToggleRow[],
 ): readonly ToggleRow[] {
-  const labelVisibility = selectLabelCategoryVisibility(state);
-  const orbitTrailsEnabled = selectOrbitTrailsEnabled(state);
-  const layerValues = layerRows.map((row) => row.select(state));
-  return rowsMemo.get([labelVisibility, orbitTrailsEnabled, layerRows, ...layerValues], () => [
-    // The category's source type names its label home, and the home knows which action writes the bit.
-    ...LABEL_CATEGORIES.map((cat) => ({
+  const labelValues = LABEL_ROWS.map(({ entry, item }) =>
+    visibilitySwitchOf(state.settings, entry, item),
+  );
+  const entries = layerRows.map(
+    (row) => visibilityEntryOf(APP_VISIBILITY, row.toggle) as ShowEntry,
+  );
+  const layerValues = entries.map((entry) => visibilitySwitchOf(state.settings, entry));
+  return rowsMemo.get([layerRows, ...labelValues, ...layerValues], () => [
+    ...LABEL_ROWS.map(({ cat, entry, item }, index) => ({
       id: `toggle-label-${cat}`,
       label: CATEGORY_DISPLAY_INFO[cat].plural,
-      enabled: labelVisibility[cat],
-      set: (enabled: boolean) =>
-        LABEL_HOME_BY_SOURCE_TYPE[SOURCE_TYPE_BY_LABEL_CATEGORY[cat]].write(cat, enabled),
+      enabled: labelValues[index]!,
+      set: (on: boolean) =>
+        setVisibility({
+          cluster: entry.cluster,
+          ...(item !== undefined ? { item } : {}),
+          field: 'labelEnabled',
+          on,
+        }),
     })),
-    // Hand-authored: orbit trails gate line geometry, not labels, so no registry row derives it.
-    {
-      id: 'toggle-orbit-trails',
-      label: 'Orbit trails',
-      enabled: orbitTrailsEnabled,
-      set: setOrbitTrailsEnabled,
-    },
     ...layerRows.map((row, index) => ({
-      id: row.id,
+      id: `toggle-${row.toggle}`,
       label: row.label,
       enabled: layerValues[index]!,
-      set: row.set,
+      set: (on: boolean) =>
+        setVisibility({ cluster: visibilityClusterOf(entries[index]!), field: 'enabled', on }),
     })),
   ]);
 }

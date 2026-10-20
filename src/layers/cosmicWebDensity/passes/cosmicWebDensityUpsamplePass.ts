@@ -9,11 +9,15 @@ import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime'
 import { createUpsamplePass } from '../../../services/engine/frame/passes/createUpsamplePass';
 import { deriveCosmicWebDensityLiveness } from '../present/deriveCosmicWebDensityLiveness';
 
-export function cosmicWebDensityUpsamplePass(runtime: CosmicWebDensityRuntime): ContentPass {
-  return createUpsamplePass({
+export function cosmicWebDensityUpsamplePass(
+  runtime: CosmicWebDensityRuntime,
+): ContentPass<'cosmicWebDensity'> {
+  return createUpsamplePass<'cosmicWebDensity'>({
     name: 'cosmic-web-density-upsample',
     sourceTargetId: 'cosmic-web-density',
+    fade: 'cosmicWebDensity',
     handleOf: () => runtime.upsample,
-    enabled: (state, ctx) => deriveCosmicWebDensityLiveness(runtime, state, ctx) !== null,
+    enabled: (state, ctx, fade) =>
+      deriveCosmicWebDensityLiveness(runtime, state, ctx, fade) !== null,
   });
 }

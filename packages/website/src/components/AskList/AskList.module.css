@@ -1,0 +1,30 @@
+.root {
+  composes: small from '../../styles/type.module.css';
+  composes: tap-links from '../../styles/links.module.css';
+
+  & p {
+    max-width: 60ch;
+  }
+
+  & li {
+    padding-block: 1rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  & b {
+    font-weight: 400;
+    color: var(--color-fg);
+  }
+
+  & blockquote {
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+    border-left: 1px solid var(--site-text-dim);
+    color: var(--site-text-muted);
+    overflow-wrap: anywhere;
+  }
+}
+
+.bare {
+  composes: bare from '../../styles/layout.module.css';
+}

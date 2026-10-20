@@ -5,7 +5,7 @@
  * ### What it draws — the sub-pixel bodies
  *
  * The `glints` branch of `sceneBodyPartition` — every seeded body whose apparent
- * diameter stays below `BODY_GLINT_MAX_PX`. Its siblings `planetsPass` /
+ * diameter stays below its `resolvePx` (`BODY_GLINT_MAX_PX`). Its siblings `planetsPass` /
  * `texturedBodiesPass` draw the `flat` / `textured` branches of the SAME
  * partition, so a body is a glint XOR a mesh by construction — the interim gap
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew
@@ -29,7 +29,7 @@
  *     onto one bright dot. This band fades the whole field out a few solar-system
  *     radii out, so glints stop mattering long before Milky-Way framing rather
  *     than riding full-brightness to the coarse foreground gate — the sibling of
- *     `starPointsPass`'s `starBackdrop`. Hoisted per-frame in `draw` (one camera).
+ *     `starPointsPass`'s backdrop dissolve. Hoisted per-frame in `draw` (one camera).
  * `color` is the body's albedo tint (the shader premultiplies it by brightness).
  *
  * ### The zero-brightness skip (`feedback_opacity_zero_no_render`)
@@ -74,7 +74,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { sceneBodyPartition } from '../sceneBodyPartition';
+import { coreSceneBodyPartition } from '../coreSceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 import { glintBandClass } from '../../../../utils/picking/glintBandClass';
@@ -84,11 +84,11 @@ import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { regionById } from '../../../../utils/regions/regionById';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
-import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../data/scaleFadeBands';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../data/labels/solarSystemLabelMaxDistance';
 import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
 import { MAX_GLINTS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/bodyGlintRenderer';
 
@@ -126,7 +126,7 @@ export const bodyGlintsPass: ContentPass = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
     // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
-    // mirroring `starPointsPass`'s `starBackdrop` gate (which also empties the
+    // mirroring `starPointsPass`'s backdrop-dissolve gate (which also empties the
     // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's distance
     // from the solar system's own anchor — the eye position (`drawCamPos`), NOT
     // `cam.distance`, which measures to the orbit TARGET and so read a different
@@ -140,7 +140,7 @@ export const bodyGlintsPass: ContentPass = {
       sceneBodyStates(state, ctx),
     );
     if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, regionDistMpc) <= 0) return false;
-    return sceneBodyPartition(state, ctx).glints.length > 0;
+    return coreSceneBodyPartition(state, ctx).glints.length > 0;
   },
 
   // Pick gate — WIDER than `enabled`: this layer also carries Earth's caption-
@@ -154,7 +154,7 @@ export const bodyGlintsPass: ContentPass = {
   pickEnabled(state, ctx, _view) {
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    if (sceneBodyPartition(state, ctx).glints.length > 0) return true;
+    if (coreSceneBodyPartition(state, ctx).glints.length > 0) return true;
     return earthCaptionPickable(state, ctx);
   },
 
@@ -162,7 +162,7 @@ export const bodyGlintsPass: ContentPass = {
     const renderer = state.gpu.bodyGlintRenderer;
     if (renderer === null) return;
 
-    const { glints } = sceneBodyPartition(state, ctx);
+    const { glints } = coreSceneBodyPartition(state, ctx);
     // Live positions from the per-frame snapshot (keyed by id), resolved ONCE for
     // the whole pack loop — not the baked record fields; radius + albedo stay
     // authored identity on each record.
@@ -238,7 +238,7 @@ export const bodyGlintsPass: ContentPass = {
   // clickable footprint the scene-star points get in `bodyPickRenderer.drawPoints`
   // — these seeded solar-system bodies are sparse, labelled, click-invited
   // targets), so a sub-pixel planet stays easily pickable at its true screen
-  // position. The set is the SAME `sceneBodyPartition(state, ctx).glints` branch
+  // position. The set is the SAME `coreSceneBodyPartition(state, ctx).glints` branch
   // `draw` packs — a body is pickable-as-a-glint exactly when it draws as one; its
   // resolved complement (`flat` ∪ `textured`) rides `planetsPass`'s sphere pick.
   //
@@ -287,7 +287,7 @@ export const bodyGlintsPass: ContentPass = {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;
 
-    const { glints } = sceneBodyPartition(state, ctx);
+    const { glints } = coreSceneBodyPartition(state, ctx);
     // Live positions from the per-frame snapshot (keyed by id), resolved ONCE for
     // both the Earth stamp and the whole glint loop — not the baked record fields.
     const states = sceneBodyStates(state, ctx);

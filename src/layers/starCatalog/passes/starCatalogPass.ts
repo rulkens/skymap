@@ -12,13 +12,12 @@ import { starCatalogVisible } from '../render/cut/starCatalogVisible';
 import { drawStarCut } from '../render/cut/drawStarCut';
 import { drawStarPick } from '../render/cut/drawStarPick';
 
-export function starCatalogPass(runtime: StarCatalogRuntime): ContentPass {
+export function starCatalogPass(runtime: StarCatalogRuntime): ContentPass<'starCatalog'> {
   return {
     name: 'star-catalog',
+    fade: 'starCatalog',
 
-    enabled(state, ctx, _view) {
-      return starCatalogVisible(runtime, state.settings.starCatalogs, ctx);
-    },
+    enabled: (_state, ctx, _view, fade) => starCatalogVisible(runtime, fade, ctx),
 
     draw(pass, view, ctx) {
       drawStarCut(runtime.renderer, pass, view, ctx, 'leaf');

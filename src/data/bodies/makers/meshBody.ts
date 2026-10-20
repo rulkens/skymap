@@ -10,6 +10,7 @@
  */
 
 import { MESH_ASSETS } from '../meshAssets.generated';
+import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
 
 /** Camera floor at two radii: the body fills the view. A ratio, not metres, so the 0.46 m pot and the 6.8 m whale both frame. */
@@ -39,5 +40,6 @@ export function meshBody(seed: MeshBodySeed): MeshBody {
     standoffRadii: seed.standoffRadii ?? MESH_BODY_STANDOFF_RADII,
     captionRevealM: seed.captionRevealM,
     presentFromIso: seed.presentFromIso,
+    resolvePx: BODY_GLINT_MAX_PX,
   };
 }

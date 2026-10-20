@@ -355,7 +355,6 @@ export type VolumeFieldRenderer = {
   destroy(): void;
   upload(id: VolumeFieldId, cube: ScalarCube): void;
   unload(id: VolumeFieldId): void;
-  listIds(): VolumeFieldId[];
   // Walks every field; per-field knobs arrive through the `settingsOf` projection.
   draw(pass, viewProj, viewportPx, cameraPosWorld, settingsOf, fadeOpacityOf): void;
 };

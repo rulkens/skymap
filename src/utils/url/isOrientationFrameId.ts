@@ -10,7 +10,8 @@ const ORIENTATION_FRAME_IDS = Object.keys(ORIENTATION_FRAMES);
  * Narrow an arbitrary string to OrientationFrameId. The URL `orientation` param
  * is external input (a share link's hash can carry a hand-typed junk value), so
  * the read path routes it through this classifier before dispatching, rather
- * than trusting the string. Mirrors `isStructureId`'s registry-derived shape.
+ * than trusting the string. Tests membership in ORIENTATION_FRAME_IDS, so a new
+ * frame needs no edit here.
  */
 export function isOrientationFrameId(value: string): value is OrientationFrameId {
   return ORIENTATION_FRAME_IDS.includes(value);

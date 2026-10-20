@@ -2,87 +2,46 @@
  * produceMilkyWayLabel — the per-frame "You are here" label + stem, registered
  * on the COSMO slab's director via the Layer's `guides.screenLabels`.
  *
- * It only READS `fades.opacityOf(LAYER_ID)`; `syncVisibilityFades` is the sole
- * writer of that intent opacity. The two distance bands stay here — pure functions
- * of where the camera is — and multiply into the resolved layer opacity, so the
- * registry never learns a Milky-Way special case: layer opacity carries the user
- * toggle, the distance alphas the orientation-usefulness gate.
+ * Core hands the label value (toggle, fade, clip and the `youAreHere` distance band, which
+ * also keeps this producer from being called where the origin cannot project), so core
+ * never learns a Milky-Way special case.
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { FadeBand } from '../../../@types/math/FadeBand';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import { Source } from '../../../data/sources';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
+import { MILKY_WAY_PICK_ID } from './milkyWayPickId';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
 import { textLayoutOf } from '../../../services/gpu/labelLayout/textLayoutOf';
-import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.
 const MILKY_WAY_DIAMETER_KPC = 30;
 
-// Far fade: full inside the Local Group (<0.6 Mpc), gone once large-scale
-// structure fills the view (>2 Mpc) — a label there would be visual noise.
-// A recede fade (`fullAt < goneAt`): fades OUT as distance RISES.
-const MILKY_WAY_LABEL_FADE_BAND: FadeBand = { fullAt: 0.6, goneAt: 2.0 };
-
 const LABEL_TEXT = 'You are here';
 
-const LAYER_ID = { kind: 'labelLayer', layer: 'milkyWay' } as const;
-
-export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2DProducerOutput {
-  const fades = state.subsystems.fades;
-  const now = ctx.snapshot.nowMs;
-
-  // Two reads of the same row, answering different questions: the RAW intent
-  // opacity decides whether the producer emits at all, so a clip fade to 0 cannot
-  // truncate a disabled label's fade-out tail; the RESOLVED opacity is what draws.
-  const intentOpacity = fades.opacityOf(LAYER_ID, now);
-  const labelEnabled = state.settings.milkyWay.labelEnabled;
-
-  // A still-fading disabled label keeps emitting so its fade-out tail completes.
-  if (!labelEnabled && intentOpacity === 0) return { labels: [], awake: false };
-
+export const produceMilkyWayLabel: LayerScreenLabel<'milkyWay'>['produceLabels'] = (
+  state,
+  ctx,
+  fade,
+) => {
   if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
     return { labels: [], awake: false };
 
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  const distAlpha = fadeBand(MILKY_WAY_LABEL_FADE_BAND, camDist);
-  // Near-side cull. This annotation is COSMO-slab content anchored at the world
-  // origin, and once the camera descends inside COSMO_NEAR_MPC (0.01 Mpc) the
-  // origin no longer projects validly: the stem's endpoints land at a degenerate
-  // clip-w and blow up into a screen-filling quad, and the non-empty line set
-  // keeps the whole 'marker-lines' pass running every frame to draw it. The
-  // impostor could move to NEAR0; this origin-anchored label cannot, so it rides
-  // the shallower survey band instead (gone by 2 kpc, well clear of the blowup).
-  const deepZoomFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDist);
-  if (distAlpha <= 0 || deepZoomFade <= 0) return { labels: [], awake: false };
-
-  // Applied to BOTH the label and the stem so they fade in lock-step.
-  const fadeAlpha = distAlpha * deepZoomFade * resolveLayerOpacity(state, ctx, LAYER_ID);
-
   const style = MILKY_WAY_LABEL_STYLE;
 
   // Built BEFORE its geometry so `measure` reads the same font / text / alignment
   // the final label carries; `worldPos` is provisional until the lift below.
   const label: Label2D = {
     id: 'milkyWay',
-    // The impostor is a singleton — no per-instance identity — so its pick is
-    // the source code over localIdx 0, exactly what `milkyWayPickRenderer`
-    // stamps. Note the impostor picks on NEAR0 while this label picks on
-    // COSMO; both decode to the same `{ type: 'milkyWay' }` selection.
-    pickId: isPickableUnderFocus([0, 0, 0], ctx.snapshot.focus)
-      ? packSelection(Source.MilkyWay, 0 + PICK_SENTINEL_OFFSET)
-      : undefined,
+    // Exactly what `milkyWayPickRenderer` stamps. The impostor picks on NEAR0
+    // while this label picks on COSMO; both decode to `{ type: 'milkyWay' }`.
+    pickId: isPickableUnderFocus([0, 0, 0], ctx.snapshot.focus) ? MILKY_WAY_PICK_ID : undefined,
+    subjectId: MILKY_WAY_PICK_ID,
     worldPos: [0, 0, 0],
     text: LABEL_TEXT,
     font: 'cormorant',
@@ -91,7 +50,7 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
     worldEmMpc: style.worldEmMpc,
     minPixelSize: style.minPixelSize,
     maxPixelSize: style.maxPixelSize,
-    fadeAlpha,
+    fadeAlpha: fade,
     alignX: 'center',
     outlineColor: [...style.outlineColor],
     outlineEmFrac: style.outlineEmFrac,
@@ -141,6 +100,6 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
 
   // Never `awake`: alpha is a pure function of camera distance, and camera motion
   // already wakes the loop. `awake: alpha < 1` would instead pin the loop for as
-  // long as the camera parked inside the 0.6–2.0 Mpc fade band.
+  // long as the camera parked inside the 0.6–2.0 Mpc band.
   return { labels, awake: false };
-}
+};

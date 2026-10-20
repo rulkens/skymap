@@ -11,8 +11,3 @@ export const selectRoute = createSelector(
 
 /** The whole cluster, under the slice's own name. */
 export const selectOrbitTrails = selectRoute;
-
-export const selectOrbitTrailsEnabled = createSelector(
-  [selectRoute],
-  (route: OrbitTrailsSettings): boolean => route.enabled,
-);

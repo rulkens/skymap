@@ -119,10 +119,10 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
 
           // A windowed take opening mid-tour (from > 0) has just re-created
           // the past in one dispatch — but the store change is not what the
-          // viewer sees: the visibility bridge animates source fades (~600 ms)
+          // viewer sees: the visibility sync animates source fades (~600 ms)
           // and the label-fade envelope (~300 ms) plays the folded diff as a
           // dissolve. On film the reconstruction must read as "already
-          // happened", so the window's opening beat waits for those bridges
+          // happened", so the window's opening beat waits for those ramps
           // to finish before its clip starts. Only the FIRST entry needs it:
           // every later fold reproduces cues that just played (a visual
           // no-op), a Prev back to `from` is a live in-tour transition, and a

@@ -22,13 +22,7 @@ vi.mock('../../../../src/services/engine/frame/sceneOccluderBodies', () => ({
   sceneOccluderBodies: () => [],
 }));
 
-const STATE = {
-  settings: { blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled: true } } } },
-  subsystems: {
-    fades: { opacityOf: () => 1 },
-    clipPlayer: { clipOpacityOf: () => 1 },
-  },
-} as unknown as EngineState;
+const STATE = {} as unknown as EngineState;
 
 const CTX = {
   snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
@@ -39,7 +33,9 @@ const CTX = {
 } as unknown as FrameView;
 
 describe('produceBlackHoleCaptions', () => {
-  const [caption] = produceBlackHoleCaptions()(STATE, CTX).labels;
+  const [caption] = produceBlackHoleCaptions()(STATE, CTX, {
+    [SGR_A_STAR_ENTRY.id]: 1,
+  }).labels;
 
   it('packs a pick id the Layer’s selection row resolves to the hole', () => {
     const pick = unpackPick(caption!.pickId!)!;

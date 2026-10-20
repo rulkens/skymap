@@ -20,10 +20,8 @@ import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gp
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../fixtures/makeGalaxyCatalogItems';
 import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX } from '../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
@@ -37,6 +35,8 @@ import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/ga
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
+import { gatePassByFade } from '../../src/services/engine/layer/gatePassByFade';
+import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
 import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
 import { milkyWayAggregatePass } from '../../src/layers/milkyWay/passes/milkyWayAggregatePass';
@@ -257,6 +257,12 @@ function makeCompositor(records: DrawRecord[]): any {
 // Fixture camera optics — the ctx built in the test body mirrors these.
 // SCENE's `plan` row names 'structure-markers' by string — a stub with an
 // empty result satisfies `runPlanSteps` without the marker producers' state.
+// What `createLayers` gates each pass with: every fade resolves to 1 here.
+const PASS_GATE_STATE = {
+  subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
+  visibilityEntries: APP_VISIBILITY,
+} as unknown as Parameters<typeof gatePassByFade>[1];
+
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
@@ -411,11 +417,12 @@ describe('renderFrame visual baseline', () => {
         isReady: true as const,
         plans: createFramePlannerResultStore(),
         nowMs: 0,
-        // resolveLayerOpacity's recession factor lerps on this; production
+        // The handed value's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
         focusBlend: 0,
         // No body rows in this scene: the two slabs above are cosmological.
         slabBodyCandidates: [],
+        bodyStates: new Map(),
         // The executor resolves hdr/density attachments — and the density
         // upsample its source texture — via ctx.snapshot.renderTargets.viewOf(id).
         renderTargets,
@@ -536,8 +543,7 @@ describe('renderFrame visual baseline', () => {
         subsystems: {
           fades: {
             register: vi.fn(),
-            unregister: vi.fn(),
-            fadeTo: vi.fn(() => Promise.resolve()),
+            fadeTo: vi.fn(),
             setImmediate: vi.fn(),
             opacityOf: vi.fn(() => 1),
             isAnyAnimating: vi.fn(() => false),
@@ -568,7 +574,7 @@ describe('renderFrame visual baseline', () => {
           milkyWayAggregatePass(milkyWayRuntime),
           milkyWayUpsamplePass(milkyWayRuntime),
           milkyWayPass(milkyWayRuntime),
-        ],
+        ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,
       } as never,

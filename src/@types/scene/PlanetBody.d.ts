@@ -20,4 +20,6 @@ export type PlanetBody = {
   readonly label: string;
   readonly surface: BodySurface;
   readonly albedo: Vec3; // flat lit colour (no texture yet), linear RGB
+  /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */
+  readonly resolvePx: number;
 };

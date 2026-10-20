@@ -2,8 +2,8 @@
  * computeSceneEntering — the scene entering beat K, RECONSTRUCTED rather than
  * tracked: the tour-start baseline folded through every scene cue of beats 0..K-1,
  * so a mid-fly skip or a Prev is jump-to-index with no path-dependence. The fold
- * runs cues through the tables `applySceneEffect` dispatches from and through the
- * REAL settings reducer, so it cannot drift from playback.
+ * runs cues through the `setVisibilityActionsFor` writes `applySceneEffect` dispatches and
+ * through the REAL settings reducer, so it cannot drift from playback.
  *
  * Only `show` / `hide` / `scene` participate. `frameTo` is excluded even though it
  * DOES write a setting: `orientation` lives on `SceneSnapshot`, not the returned
@@ -12,8 +12,7 @@
 
 import settingsReducer from '../settings/settingsReducer';
 import { captureSettings } from '../scene/captureSettings';
-import { VISIBILITY_ACTION_ROW } from '../../services/animation/visibilityActionRow';
-import { scopedVisibilityActions } from '../../services/animation/scopedVisibilityActions';
+import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 import type { Action } from '@reduxjs/toolkit';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { ClipData } from '../../@types/animation/ClipData';
@@ -27,10 +26,7 @@ function actionsOf(effect: Effect, settings: EngineSettingsState): readonly Acti
     case 'show':
     case 'hide': {
       const on = effect.kind === 'show';
-      return [
-        ...effect.layers.flatMap((layer) => VISIBILITY_ACTION_ROW[layer].actions(on, settings)),
-        ...(effect.scoped ?? []).flatMap((arg) => scopedVisibilityActions(arg, on, settings)),
-      ];
+      return effect.args.flatMap((arg) => setVisibilityActionsFor(settings, arg, on));
     }
     case 'scene':
       return [effect.action];

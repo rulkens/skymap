@@ -1,14 +1,14 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { CatalogDrawEntry } from './CatalogDrawEntry';
 
 /** The per-catalog GPU-resource store — see `catalogStore.ts`'s module header. */
 export type CatalogStore = {
-  upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
+  upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog, stats: GalaxyPointStats): Promise<void>;
   unload(id: GalaxyCatalogId): void;
   totalCount(): number;
-  hasCatalog(id: GalaxyCatalogId): boolean;
   /** Narrow public projection consumed by the pick program. */
   loadedSources(): IterableIterator<{
     source: SourceType;

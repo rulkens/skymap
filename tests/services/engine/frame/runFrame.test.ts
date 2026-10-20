@@ -126,6 +126,7 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -217,6 +218,7 @@ function makeState(): EngineState {
     },
     // cameraRuntime Resource bag — required for the camera-driver block
     // that runs BEFORE the renderer-null bail-out.
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
@@ -967,12 +969,10 @@ describe('runFrame — the label-director wake fold', () => {
       settings: {
         ...base.settings,
         flow: { enabled: false },
-        // Read unconditionally by `visibleStars` past the ready gate — see
-        // frameContext.test.ts's makeState for the same addition and why.
-        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
       slabRows: [],
+      visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
@@ -1022,6 +1022,46 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
   });
+
+  it('the outgoing focused structure keeps full emphasis through the fade-out', () => {
+    const VIRGO_WORD = 42;
+    const base = makeReadyState(
+      () => false,
+      () => false,
+    );
+    const structureFocus = createStructureFocusSubsystem({ requestRender: vi.fn() }, 0);
+    const state = {
+      ...base,
+      selectionKindRows: [
+        {
+          type: 'structure',
+          encodePick: (ref: { id: string }) => (ref.id === 'virgo' ? VIRGO_WORD : null),
+        },
+      ],
+      subsystems: {
+        ...base.subsystems,
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        structureFocus,
+      },
+    } as unknown as EngineState;
+    // Virgo was focused and settled; the focus is already cleared (the fixture's
+    // focus row is null), so the frames below tick its fade-out.
+    structureFocus.update({ id: 'virgo', worldPos: [1, 0, 0], physicalRadiusMpc: 2 } as never, 0);
+    structureFocus.produceFocusUniforms(500);
+    const deps = makeCamDeps(state);
+    const snapshotAt = (nowMs: number) => {
+      runFrame(state, deps, nowMs);
+      return vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1].snapshot;
+    };
+
+    snapshotAt(600);
+    const fading = snapshotAt(800);
+    expect(fading.focusBlend).toBeGreaterThan(0);
+    expect(fading.focusPickId).toBe(VIRGO_WORD);
+    const settled = snapshotAt(1100);
+    expect(settled.focusBlend).toBe(0);
+    expect(settled.focusPickId).toBeNull();
+  });
 });
 
 describe('runFrame — the planner keep-ticking fold', () => {
@@ -1040,10 +1080,10 @@ describe('runFrame — the planner keep-ticking fold', () => {
       settings: {
         ...base.settings,
         flow: { enabled: false },
-        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
       slabRows: [],
+      visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers: [],
@@ -1075,6 +1115,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
             physicalRadiusMpc: 1,
             blend: 0.5,
           })),
+          lastFocusRef: () => null,
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },

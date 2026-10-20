@@ -20,7 +20,7 @@ import { turnedOrbitCamera } from '../../../utils/camera/turnedOrbitCamera';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { starSphereRangeM } from '../../../utils/star/starSphereRangeM';
-import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
@@ -28,14 +28,15 @@ import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { viewBodyPose } from '../camera/viewBodyPose';
 import { deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
-import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
+import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
+import { near0SphereBodies } from './near0SphereBodies';
 
 export function deriveView(
   snapshot: ReadyFrameContext,
   cam: OrbitCamera,
   spec: ViewSpec,
 ): FrameView {
-  const { bodyStates, slabBodyCandidates, meshBodies, positionedStars } = snapshot;
+  const { bodyStates, slabBodyCandidates, meshBodies, sceneBodies } = snapshot;
   const { id, rotation, eyeOffsetMpc, frustum, sizePx } = spec;
 
   const viewFromCamEye = viewFromCameraEye(rotation, eyeOffsetMpc);
@@ -78,7 +79,7 @@ export function deriveView(
     visibleSlabBodies({
       ...slabGate,
       rows: meshBodies.map((body) => ({ ...bodySlabRowOf(body), body })),
-    }).map((row) => meshBodySlabHostId(row.body)),
+    }).map((row) => meshBodySlabHostId(row.body.id)),
   );
   const visibleRows = gatedRows.concat(
     slabBodyCandidates.filter((row) => meshHostIds.has(row.anchorId) && !gatedRows.includes(row)),
@@ -113,21 +114,20 @@ export function deriveView(
     );
   }
 
-  // NEAR0's distanceRangeM (spec §7.1): the star spheres actually drawn in
-  // THIS view, not `foregroundFrustum`'s bracket.
-  const { spheres } = partitionStarsByResolution({
-    stars: positionedStars,
+  // NEAR0's distanceRangeM (spec §7.1): the spheres NEAR0 actually draws in THIS
+  // view, not `foregroundFrustum`'s bracket.
+  const { resolved } = partitionBodiesByPresentation({
+    bodies: sceneBodies,
     camPosMpc: drawCamPos,
-    thresholdPx: STAR_RESOLVE_PX,
     pxPerRad,
   });
   const starRangeM = starSphereRangeM({
     // Outer: distanceRangeM is the painter-sort interval and must SPAN the row's
     // drawn content (Slab.d.ts). Body rows bracket theirs off the same outer
-    // footprint (`bodySlabRow`'s `marginM`), so the star row has to match that currency.
-    spheres: spheres.map((star) => ({
-      positionMpc: star.positionMpc,
-      radiusM: outerBoundRadiusM(star.surface),
+    // footprint (`bodySlabRow`'s `marginM`), so the NEAR0 row has to match that currency.
+    spheres: near0SphereBodies(resolved, meshBodies).map((sphere) => ({
+      positionMpc: sphere.positionMpc,
+      radiusM: bodyFootprintRadiusM(sphere.body),
     })),
     camPosMpc: drawCamPos,
   });

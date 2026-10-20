@@ -28,10 +28,12 @@ import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
+import { gateLabelProducer } from './layer/gateLabelProducer';
+import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabel';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
+import { FLAT_TERRAIN } from '../../data/camera/flatTerrain';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -297,9 +299,11 @@ export function createEngine(
     planners: [],
     assetRows: [],
     slabRows: [],
-    fadeRows: [],
+    visibilityEntries: [],
+    visibilityGates: new Map(),
     label3DProducers: [],
-    orbitTrailRows: [],
+    orbitTrailGroups: [],
+    terrain: FLAT_TERRAIN,
     layerSlots: new Map(),
   };
 
@@ -310,10 +314,13 @@ export function createEngine(
   // Scene-body captions first so an equal-prominence tiebreak favours the
   // navigation aid over the diffuse constellation overlay — the constellations
   // Layer's own producer registers later, from `createLayers`, landing second.
-  state.subsystems.foregroundLabelDirector.registerProducer({
-    id: 'sceneBodyCaptions',
-    produceLabels: produceSceneBodyCaptions,
-  });
+  state.subsystems.foregroundLabelDirector.registerProducer(
+    gateLabelProducer({
+      id: 'sceneBodyCaptions',
+      label: SCENE_BODY_CAPTION_LABEL,
+      produceLabels: produceSceneBodyCaptions,
+    }),
+  );
 
   // One instance feeds both the dev panel and the load-progress emitter, so the
   // loading bar and the panel agree on what is in flight.
@@ -521,9 +528,8 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
-          terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
-          residentHeightLevelAt: (bodyId, dir) =>
-            state.subsystems.surfaceTiles?.residentHeightLevelAt(bodyId, dir) ?? null,
+          terrainHeightAt: state.terrain.heightAt,
+          residentHeightLevelAt: state.terrain.residentHeightLevelAt,
           // Null unless the `terrain-pick-marker` overlay is on — its listener
           // is the only writer, so the pick row is dead with the toggle off.
           cursorTexPx: state.picking.cursorTexPx,

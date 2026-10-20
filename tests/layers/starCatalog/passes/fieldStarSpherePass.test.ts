@@ -22,17 +22,17 @@ import { residencyOf } from '../../../fixtures/residencyOf';
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
-import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+import type { OctreeResidency } from '../../../../src/@types/octree/OctreeResidency';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
   encodeSkstCatalog,
   decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { STAR_RESOLVE_PX } from '../../../../src/services/engine/frame/partitionStarsByResolution';
+import { STAR_RESOLVE_PX } from '../../../../src/data/bodies/starResolvePx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { Source } from '../../../../src/data/sources';
@@ -42,6 +42,10 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+
+// The star entry's handed value with every catalog fully faded in.
+const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
 const GRID: StarOctreeGrid = { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] };
 const FOV = Math.PI / 3;
@@ -59,7 +63,7 @@ function sorted(stars: OctreeLeafStar[]): OctreeLeafStar[] {
  * AU-scale resolve radius, so only record 1 is ever in range. Built through the
  * real octree + encode/decode path so the reconstruction matches the runtime.
  */
-async function threeStarCatalog(): Promise<StarOctree> {
+async function threeStarCatalog(): Promise<Octree<StarColumns>> {
   const stars: OctreeLeafStar[] = [
     { mortonIndex: 0, offset: [100, 100, 100], absMag: 5, bpRp: 0.3 },
     { mortonIndex: 0, offset: [500, 500, 500], absMag: 4, bpRp: 0.65 },
@@ -84,7 +88,7 @@ function camAt(starPos: Readonly<Vec3>, distMpc: number): Vec3 {
   return [starPos[0] + distMpc, starPos[1], starPos[2]];
 }
 
-const NO_CHUNKS: StarResidency = residencyOf();
+const NO_CHUNKS: OctreeResidency<StarColumns> = residencyOf();
 
 function makeCtx(camPos: Vec3): FrameView {
   return {
@@ -100,7 +104,7 @@ function makeCtx(camPos: Vec3): FrameView {
  * renderer (`draw`).
  */
 function makeRuntime(
-  catalog: StarOctree | null,
+  catalog: Octree<StarColumns> | null,
   overrides: Record<string, unknown> = {},
 ): StarCatalogRuntime {
   const renderer =
@@ -151,7 +155,7 @@ describe('fieldStarSpherePass.enabled', () => {
     const starPos = resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc;
     // Camera well within the ON distance; state carries no selectionRows.
     const cam = camAt(starPos, ON_MPC * 0.5);
-    expect(pass.enabled(makeState(), makeCtx(cam), makeNear0View(cam))).toBe(true);
+    expect(pass.enabled(makeState(), makeCtx(cam), makeNear0View(cam), ALL_ON)).toBe(true);
   });
 
   it('honours the hysteresis band: present stays present, absent stays absent', async () => {
@@ -163,9 +167,11 @@ describe('fieldStarSpherePass.enabled', () => {
     const passA = fieldStarSpherePass(makeRuntime(catA));
     const posA = resolveStarRecord(catA, NO_CHUNKS, 1)!.positionMpc;
     const camAOn = camAt(posA, ON_MPC * 0.5);
-    expect(passA.enabled(makeState(), makeCtx(camAOn), makeNear0View(camAOn))).toBe(true);
+    expect(passA.enabled(makeState(), makeCtx(camAOn), makeNear0View(camAOn), ALL_ON)).toBe(true);
     const camABand = camAt(posA, bandDist);
-    expect(passA.enabled(makeState(), makeCtx(camABand), makeNear0View(camABand))).toBe(true);
+    expect(passA.enabled(makeState(), makeCtx(camABand), makeNear0View(camABand), ALL_ON)).toBe(
+      true,
+    );
 
     // Sub-case B — was ABSENT (camera only ever saw the band): stays absent. A
     // separate catalog keeps its WeakMap entry independent of sub-case A.
@@ -173,7 +179,9 @@ describe('fieldStarSpherePass.enabled', () => {
     const passB = fieldStarSpherePass(makeRuntime(catB));
     const posB = resolveStarRecord(catB, NO_CHUNKS, 1)!.positionMpc;
     const camBBand = camAt(posB, bandDist);
-    expect(passB.enabled(makeState(), makeCtx(camBBand), makeNear0View(camBBand))).toBe(false);
+    expect(passB.enabled(makeState(), makeCtx(camBBand), makeNear0View(camBBand), ALL_ON)).toBe(
+      false,
+    );
   });
 
   it('is absent (and clears its stored state) once the camera recedes past OFF', async () => {
@@ -182,19 +190,31 @@ describe('fieldStarSpherePass.enabled', () => {
     const starPos = resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc;
     // Adopt it up close, then pull well past OFF — the star drops.
     const camOn = camAt(starPos, ON_MPC * 0.5);
-    expect(pass.enabled(makeState(), makeCtx(camOn), makeNear0View(camOn))).toBe(true);
+    expect(pass.enabled(makeState(), makeCtx(camOn), makeNear0View(camOn), ALL_ON)).toBe(true);
     const camOff = camAt(starPos, OFF_MPC * 4);
-    expect(pass.enabled(makeState(), makeCtx(camOff), makeNear0View(camOff))).toBe(false);
+    expect(pass.enabled(makeState(), makeCtx(camOff), makeNear0View(camOff), ALL_ON)).toBe(false);
     // Cleared, not merely hidden: back in the band it stays absent (the prior
     // presence did not survive the recede).
     const bandDist = (ON_MPC + OFF_MPC) / 2;
     const camBand = camAt(starPos, bandDist);
-    expect(pass.enabled(makeState(), makeCtx(camBand), makeNear0View(camBand))).toBe(false);
+    expect(pass.enabled(makeState(), makeCtx(camBand), makeNear0View(camBand), ALL_ON)).toBe(false);
   });
 
   it('is absent while the catalog is not loaded (pre-bootstrap)', () => {
     const pass = fieldStarSpherePass(makeRuntime(null));
-    expect(pass.enabled(makeState(), makeCtx([0, 0, 0]), makeNear0View([0, 0, 0]))).toBe(false);
+    expect(pass.enabled(makeState(), makeCtx([0, 0, 0]), makeNear0View([0, 0, 0]), ALL_ON)).toBe(
+      false,
+    );
+  });
+
+  it("the field-star sphere is off while its catalog's value is 0", async () => {
+    const cat = await threeStarCatalog();
+    const pass = fieldStarSpherePass(makeRuntime(cat));
+    const cam = camAt(resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc, ON_MPC * 0.5);
+    const enabledAt = (gaiaStars: number) =>
+      pass.enabled(makeState(), makeCtx(cam), makeNear0View(cam), { ...ALL_ON, gaiaStars });
+    expect(enabledAt(0)).toBe(false);
+    expect(enabledAt(0.5)).toBe(true);
   });
 });
 
@@ -208,9 +228,22 @@ describe('fieldStarSpherePass.draw', () => {
     const state = makeState();
 
     // enabled runs first (the executor's contract) → stores the present star.
-    expect(pass.enabled(state, makeCtx(cam), makeNear0View(cam))).toBe(true);
-    pass.draw!(PASS_STUB, makeNear0View(cam), makeCtx(cam), state);
+    expect(pass.enabled(state, makeCtx(cam), makeNear0View(cam), ALL_ON)).toBe(true);
+    pass.draw!(PASS_STUB, makeNear0View(cam), makeCtx(cam), state, ALL_ON);
     expect(drawSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a sphere draws with its catalog's handed value", async () => {
+    const cat = await threeStarCatalog();
+    const cam = camAt(resolveStarRecord(cat, NO_CHUNKS, 1)!.positionMpc, ON_MPC * 0.5);
+    const drawSpy = vi.fn();
+    const pass = fieldStarSpherePass(makeRuntime(cat, { starRenderer: { draw: drawSpy } }));
+    const state = makeState();
+    const fade = { ...ALL_ON, gaiaStars: 0.5 };
+
+    expect(pass.enabled(state, makeCtx(cam), makeNear0View(cam), fade)).toBe(true);
+    pass.draw!(PASS_STUB, makeNear0View(cam), makeCtx(cam), state, fade);
+    expect(drawSpy.mock.calls[0]![3]).toBe(0.5);
   });
 });
 
@@ -227,8 +260,8 @@ describe('fieldStarSpherePass.drawPick', () => {
     const pass = fieldStarSpherePass(makeRuntime(cat));
     const state = makeState({ bodyPickRenderer: { drawSphere } });
 
-    expect(pass.enabled(state, makeCtx(cam), makeNear0View(cam))).toBe(true);
-    pass.drawPick!(PASS_STUB, makeNear0View(cam), makeCtx(cam), state);
+    expect(pass.enabled(state, makeCtx(cam), makeNear0View(cam), ALL_ON)).toBe(true);
+    pass.drawPick!(PASS_STUB, makeNear0View(cam), makeCtx(cam), state, ALL_ON);
 
     expect(drawSphere).toHaveBeenCalledTimes(1);
     // The nearest resolvable record is the middle star, index 1.

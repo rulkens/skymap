@@ -31,6 +31,7 @@ export function cosmicWebDensityAssetRows(
           : { binBaseName: entry.binBaseName },
       demand: (ctx) => ctx.settings.cosmicWebDensity.items[entry.id].enabled,
       priority: PRIORITY[entry.id],
+      gates: { address: 'cosmicWebDensity', item: entry.id },
     }),
   );
 }

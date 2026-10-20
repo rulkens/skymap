@@ -168,4 +168,10 @@ export type Label2D = {
    * came from rather than parsed back out of `id` at pick time.
    */
   readonly pickId?: number;
+  /**
+   * The same packed word as `pickId`, set whenever the label names a selectable subject,
+   * clickable this frame or not. Focus emphasis keys on it: a focused subject whose label the
+   * focus sphere makes unclickable still keeps full emphasis.
+   */
+  readonly subjectId?: number;
 };

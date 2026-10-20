@@ -1,3 +1,4 @@
+import type { LayerTerrain } from './LayerTerrain';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -6,10 +7,9 @@ import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
-import type { FadeLayer } from '../../animation/FadeLayer';
 import type { LayerScreenLabel } from './LayerScreenLabel';
-import type { Label3DProducer } from '../subsystems/Label3DProducer';
-import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { LayerWorldLabel } from './LayerWorldLabel';
+import type { OrbitTrailGroup } from './OrbitTrailGroup';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
 export type LayerInstance = {
@@ -19,14 +19,15 @@ export type LayerInstance = {
   readonly planners: readonly FrameContentPlanner<unknown>[];
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
-  readonly fades: readonly FadeLayer<unknown>[];
   readonly screenLabels: readonly LayerScreenLabel[];
-  readonly worldLabels: readonly Label3DProducer[];
-  readonly orbitTrails: readonly OrbitalElements[];
+  readonly worldLabels: readonly LayerWorldLabel[];
+  /** `[]` or `[the Layer's group]`. */
+  readonly orbitTrails: readonly OrbitTrailGroup[];
   readonly selection: readonly SelectionKindRow[];
   /** Bound feeds, absent when the Layer declares no such member; `createLayers`
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
   readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
+  readonly terrain?: LayerTerrain;
   destroy(): void;
 };

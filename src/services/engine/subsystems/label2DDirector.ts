@@ -6,6 +6,13 @@
  * the projection, declutter policy, envelope policy, and lift policy, so a
  * second instance is data, not a second code path.
  *
+ * ### Emphasis
+ *
+ * At the merge, before declutter, each label of a producer that names its
+ * `label` entry is multiplied by `emphasisOf` keyed on its `subjectId`, so
+ * focus recession is written once for every label and the focused subject's
+ * own label keeps full emphasis. Producers never see recession.
+ *
  * ### Highlight
  *
  * After the envelope and before the lift, a label whose `pickId` names the
@@ -121,6 +128,8 @@ import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
 import { declutterByScreenSeparation } from '../../../utils/labels/declutterByScreenSeparation';
 import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
+import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { emphasisOf } from '../presentation/emphasisOf';
 import {
   HOVERED_LABEL_WHITEN,
   SELECTED_LABEL_WHITEN,
@@ -768,10 +777,20 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // array via signature.
     const mergedLabels: Label2D[] = [];
     let anyAwake = false;
+    // At blend 0 every emphasis is exactly 1, so the resting frame skips the lookups.
+    const atRest = ctx.snapshot.focusBlend === 0;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
-      for (const l of out.labels) mergedLabels.push(l);
       if (out.awake) anyAwake = true;
+      if (p.label === undefined || atRest) {
+        for (const l of out.labels) mergedLabels.push(l);
+        continue;
+      }
+      const entry = visibilityEntryOf(state.visibilityEntries, `label:${p.label}`);
+      for (const l of out.labels) {
+        const emphasis = emphasisOf(entry, ctx.snapshot, l.subjectId);
+        mergedLabels.push(emphasis === 1 ? l : { ...l, fadeAlpha: (l.fadeAlpha ?? 1) * emphasis });
+      }
     }
 
     // Cross-producer declutter — producers emit every candidate (no internal

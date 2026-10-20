@@ -11,8 +11,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
+import { NEIGHBOURHOOD_RECEDE_KPC } from '../../../../src/data/bands/neighbourhoodRecedeKpc';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -63,45 +63,36 @@ function makeRuntime(): ConstellationsRuntime {
   } as unknown as ConstellationsRuntime;
 }
 
-function makeState(opts: { layerFade: number }): EngineState {
-  return {
-    subsystems: {
-      fades: { opacityOf: () => opts.layerFade },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
-  } as unknown as EngineState;
-}
+const STATE = {} as EngineState;
 
 describe('produceConstellationCaptions', () => {
   // A camera distance PAST the body-caption gate but still inside the
   // constellation band — the exact window a director-registered producer
   // could never reach through the COSMO near plane.
   const pastBodyGate =
-    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + SCALE_FADE_BANDS.constellations.goneAt) / 2;
+    (SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC + NEIGHBOURHOOD_RECEDE_KPC * SCALE_UNITS.KPC_TO_MPC) / 2;
 
-  it('reads the fade-registry opacity, not a band-only `1`, for constellation demand', () => {
-    // A prior version of this gate passed `constellationLayerOpacity` the
-    // constant `1` (the band-only cull) and never the registry's actual
-    // toggle opacity, so a constellations-layer switch-off couldn't drop the
-    // row on its own. With the toggle opacity at 0 the product is 0 despite
+  it('reads the handed label value, not a band-only `1`, for constellation demand', () => {
+    // A prior version of this gate passed the band lookup
+    // constant `1` (the band-only cull) and never the toggle opacity, so a
+    // constellations-layer switch-off couldn't drop the row on its own. With
+    // the handed value at 0 the product is 0 despite
     // the distance band being favourable — every figure is still EMITTED
     // (the zero-target landmine), just at target 0.
     const out = produceConstellationCaptions(makeRuntime())(
-      makeState({ layerFade: 0 }),
+      STATE,
       makeCtx([pastBodyGate, 0, 0], pastBodyGate),
+      0,
     );
     expect(out.labels.length).toBe(CONSTELLATION_ARTIFACT.constellations.length);
     for (const l of out.labels) expect(l.fadeAlpha).toBe(0);
   });
 
-  it('emits a caption per figure at its centroid, fading with band × registry', () => {
+  it('emits a caption per figure at its centroid, fading with band × the handed value', () => {
     // Eye inside the full-alpha band edge so the distance factor is 1 and the
-    // target reduces to the fade-registry opacity alone.
+    // target reduces to the handed value alone.
     const camPos: Vec3 = [5e-4, 0, 0];
-    const out = produceConstellationCaptions(makeRuntime())(
-      makeState({ layerFade: 0.5 }),
-      makeCtx(camPos, 5e-4),
-    );
+    const out = produceConstellationCaptions(makeRuntime())(STATE, makeCtx(camPos, 5e-4), 0.5);
 
     const orion = out.labels.find((l) => l.id === 'Orion')!;
     expect(orion).toBeDefined();
@@ -116,10 +107,7 @@ describe('produceConstellationCaptions', () => {
     // A `pickId` here would stamp a click box over the star field the figure
     // spans, stealing clicks from the stars it connects. The absence IS the
     // opt-out (`labelPickQuads` skips any label without one).
-    const out = produceConstellationCaptions(makeRuntime())(
-      makeState({ layerFade: 1 }),
-      makeCtx([5e-4, 0, 0], 5e-4),
-    );
+    const out = produceConstellationCaptions(makeRuntime())(STATE, makeCtx([5e-4, 0, 0], 5e-4), 1);
     for (const l of out.labels) expect(l.pickId).toBeUndefined();
   });
 
@@ -129,10 +117,9 @@ describe('produceConstellationCaptions', () => {
     // through the SAME producer instance still emits the full figure set,
     // proving the memo re-derives on read rather than going stale/empty.
     const produce = produceConstellationCaptions(makeRuntime());
-    const state = makeState({ layerFade: 1 });
     const ctx = makeCtx([5e-4, 0, 0], 5e-4);
-    produce(state, ctx);
-    const out = produce(state, ctx);
+    produce(STATE, ctx, 1);
+    const out = produce(STATE, ctx, 1);
     expect(out.labels.length).toBe(CONSTELLATION_ARTIFACT.constellations.length);
   });
 });

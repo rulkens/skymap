@@ -1,0 +1,50 @@
+.root {
+  margin: 0 0 var(--stack);
+
+  & p {
+    max-width: var(--doc-measure);
+    margin: 0 0 0.75rem;
+    color: var(--site-text-muted);
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+
+  & strong {
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  /* 44px to the thumb without a box of its own, so the comma after a link stays on the link's line. */
+  & a {
+    padding-block: 0.625rem;
+  }
+}
+
+/* A quotation is the holder's text: behind a rule, in the page's brightest words, its copy control at its first line. */
+.quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+
+  & blockquote {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--site-text-dim);
+  }
+
+  & blockquote p {
+    margin: 0;
+    color: var(--color-fg);
+  }
+}
+
+.copy {
+  margin-block: -0.5rem;
+}

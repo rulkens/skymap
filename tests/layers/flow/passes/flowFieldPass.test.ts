@@ -1,7 +1,7 @@
 /**
- * flowFieldPass tests — the enabled() gate (settings.flow.enabled AND the
- * runtime slot's committed state) and the draw delegation to the runtime's
- * own renderer. No real GPUDevice — every GPU-typed value is a cast stub.
+ * flowFieldPass tests — the enabled() gate (the runtime slot's committed state) and
+ * the draw delegation to the runtime's own renderer at the handed value. No real
+ * GPUDevice — every GPU-typed value is a cast stub.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { flowFieldPass } from '../../../../src/layers/flow/passes/flowFieldPass';
@@ -19,7 +19,6 @@ function makeCtx(): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
         apparentRadiusMpc: 1,
@@ -54,15 +53,8 @@ function makeView(): SlabView {
   };
 }
 
-/** Build an EngineState stub with just the settings + fade-registry the gate reads. */
-function makeState(over: { enabled?: boolean; opacity?: number } = {}): EngineState {
-  return {
-    settings: { flow: { enabled: over.enabled ?? true } },
-    subsystems: {
-      fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
-  } as unknown as EngineState;
+function makeState(): EngineState {
+  return { settings: { flow: { enabled: true } } } as unknown as EngineState;
 }
 
 /**
@@ -90,47 +82,30 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 describe('flowFieldPass.enabled', () => {
-  it('returns false when the cube is not loaded (even if enabled)', () => {
+  it('returns false when the cube is not loaded, even at full value', () => {
     const pass = flowFieldPass(makeRuntime({ loaded: false }));
-    expect(pass.enabled(makeState({ enabled: true, opacity: 1 }), makeCtx(), makeView())).toBe(
-      false,
-    );
+    expect(pass.enabled(makeState(), makeCtx(), makeView(), 1)).toBe(false);
   });
 
-  it('returns true when enabled AND loaded', () => {
+  it('returns true once the cube is loaded', () => {
     const pass = flowFieldPass(makeRuntime({ loaded: true }));
-    expect(pass.enabled(makeState({ enabled: true }), makeCtx(), makeView())).toBe(true);
-  });
-
-  it('returns true when disabled but loaded and fade opacity > 0 (fade-out keep-alive)', () => {
-    const pass = flowFieldPass(makeRuntime({ loaded: true }));
-    expect(pass.enabled(makeState({ enabled: false, opacity: 0.3 }), makeCtx(), makeView())).toBe(
-      true,
-    );
-  });
-
-  it('returns false when disabled, loaded, and fade opacity is 0', () => {
-    const pass = flowFieldPass(makeRuntime({ loaded: true }));
-    expect(pass.enabled(makeState({ enabled: false, opacity: 0 }), makeCtx(), makeView())).toBe(
-      false,
-    );
+    expect(pass.enabled(makeState(), makeCtx(), makeView(), 1)).toBe(true);
   });
 });
 
 describe('flowFieldPass.draw', () => {
-  it('delegates to the runtime renderer.draw with the pass, vp, viewport, settings.flow, and fade opacity', () => {
+  it('delegates to the runtime renderer.draw with the pass, vp, viewport, settings.flow, and handed value', () => {
     const drawSpy = vi.fn();
     const pass = flowFieldPass(makeRuntime({ draw: drawSpy }));
-    const state = makeState({ opacity: 0.42 });
+    const state = makeState();
     const view = makeView();
-    pass.draw(PASS_STUB, view, makeCtx(), state);
+    pass.draw(PASS_STUB, view, makeCtx(), state, 0.42);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
     expect(call[1]).toBe(view.vp);
     expect(call[2]).toEqual(view.viewportPx);
     expect(call[3]).toBe(state.settings.flow);
-    // The layer fade opacity (from fades.opacityOf) is folded in as the 5th arg.
     expect(call[4]).toBe(0.42);
   });
 });

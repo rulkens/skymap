@@ -19,7 +19,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { BodySurface } from '../../../../src/@types/scene/BodySurface';
@@ -134,6 +134,7 @@ const NO_ROW_PLANET: SeededPlanet = {
   id: 'atmosphereless-test-body',
   label: 'No Atmosphere',
   positionMpc: SEEDED_EARTH.positionMpc,
+  resolvePx: 3,
   surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
   albedo: [0.5, 0.5, 0.5],
   orientation: [...IDENTITY_MAT3] as Mat3,

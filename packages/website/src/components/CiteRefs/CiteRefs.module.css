@@ -1,0 +1,9 @@
+.name,
+.reference {
+  composes: tap-links from '../../styles/links.module.css';
+}
+
+.asks {
+  composes: small from '../../styles/type.module.css';
+  color: var(--site-text-dim);
+}

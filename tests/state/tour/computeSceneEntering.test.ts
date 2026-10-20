@@ -3,8 +3,8 @@
  *
  * The scene entering beat K is a pure function: the tour baseline folded
  * through every scene cue (show / hide / scene) of beats 0..K-1, applied via
- * the REAL settings reducer + the same action tables `applySceneEffect` uses.
- * These tests pin that contract with hand-built beats — no store, no sagas,
+ * the REAL settings reducer + the `setVisibilityActionsFor` writes
+ * `applySceneEffect` dispatches. These tests pin that contract with hand-built beats — no store, no sagas,
  * no playback.
  */
 

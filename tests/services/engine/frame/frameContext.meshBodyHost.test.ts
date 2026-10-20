@@ -22,6 +22,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -36,14 +37,15 @@ const STATE = {
     compositor: {},
     texturedBodyRenderer: null,
   },
+  terrain: FLAT_TERRAIN,
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
+  visibilityEntries: [],
   data: {
     bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },
   },
   settings: {
-    starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
     bodies: { items: {} },
   },
   picking: { pickInFlight: false, cursorTexPx: null },

@@ -36,6 +36,7 @@ function pointRow(
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
     release: (ctx) => excluded(ctx.tier),
     priority: entry.priority,
+    gates: { address: 'survey', item: id },
   };
 }
 

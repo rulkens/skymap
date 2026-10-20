@@ -156,13 +156,14 @@ export async function createFlowHarness(
 
     const encoder = device.createCommandEncoder();
 
-    // Compute pass (seed-when-armed + integrate). The gate skips entirely when
-    // the layer is off or the cube hasn't loaded.
+    // Compute pass (seed-when-armed + integrate). The handed value stands in for
+    // core's: 0 when the layer is off, so it skips; it also skips until the cube loads.
     flowComputeRow.encode(
       encoder,
       { snapshot: { nowMs: now } } as unknown as FrameView,
       { settings: { flow: s.flow } } as unknown as PassState,
       () => ({}),
+      s.flow.enabled ? 1 : 0,
     );
 
     // HDR accumulation pass — the renderer draws its additive ribbons into it.

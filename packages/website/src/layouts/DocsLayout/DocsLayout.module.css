@@ -1,0 +1,167 @@
+/* A layer of its own under the top bar's: what stands in front of what below (the contents' bar, a wide figure over the list) stays in here. */
+.root {
+  composes: wrap grid from '../../styles/layout.module.css';
+  position: relative;
+  z-index: 0;
+  /* The height of the contents' bar where it stays under the top bar (components/DocsNav). */
+  --docs-bar: 0rem;
+}
+
+@media (max-width: 900px) {
+  .root {
+    --docs-bar: 3.75rem;
+  }
+}
+
+.page {
+  padding-block: 2rem 5rem;
+}
+
+.opening {
+  margin-bottom: 2rem;
+}
+
+.where {
+  composes: small from '../../styles/type.module.css';
+  composes: tap-links from '../../styles/links.module.css';
+  display: flex;
+  gap: 0.5rem;
+  max-width: none;
+  margin: 0 0 1.25rem;
+  color: var(--site-text-faint);
+}
+
+.where a {
+  color: var(--site-text-dim);
+  text-decoration: none;
+}
+
+.where a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.unseen {
+  composes: unseen from '../../styles/a11y.module.css';
+}
+
+/* A reading page's title: the largest type on it, and well under a landing page's, whose title has a picture to hold. */
+.opening h1 {
+  margin-bottom: 1.25rem;
+  font-size: var(--text-doc-title);
+}
+
+.lead {
+  composes: say from '../../styles/type.module.css';
+}
+
+/* Under the lead size the type vocabulary gives an opening, and so a rule of two classes. */
+.opening .lead {
+  max-width: none;
+  margin: 0;
+  font-size: var(--text-body);
+  text-wrap: pretty;
+}
+
+.footer {
+  margin-top: 4.5rem;
+}
+
+.turns {
+  composes: grid from '../../styles/layout.module.css';
+  row-gap: 1.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-divider);
+}
+
+.turn {
+  display: grid;
+  max-width: none;
+  margin: 0;
+}
+
+.label {
+  composes: small from '../../styles/type.module.css';
+  color: var(--site-text-dim);
+}
+
+.next {
+  justify-items: end;
+  text-align: right;
+}
+
+.turns .next .turnLink {
+  margin-right: 0;
+  text-align: right;
+}
+
+.links {
+  composes: link-row from '../../styles/links.module.css';
+}
+
+.footer .links {
+  margin-block: 2rem 2.5rem;
+}
+
+.toc {
+  composes: small from '../../styles/type.module.css';
+  display: none;
+}
+
+.tocLabel {
+  margin: 0 0 0.5rem;
+  color: var(--site-text-dim);
+}
+
+@media (min-width: 901px) {
+  .page {
+    grid-column: 4 / span 7;
+    --cols: 7;
+    padding-block: 2.5rem 7.5rem;
+  }
+
+  .turn {
+    grid-column: span 3;
+  }
+
+  /* A next page with no previous one keeps the right half, where next always is. */
+  .turn.next:only-child {
+    grid-column: 4 / span 3;
+  }
+}
+
+/* Where the window would set the line, the text's own measure does (DocBody has the same). */
+@media (max-width: 900px) {
+  .opening .lead {
+    max-width: 35rem;
+  }
+}
+
+/* Room for the third part: the text gives up a column and the page's headings stand beside it. */
+@media (min-width: 1200px) {
+  .page {
+    grid-column: 4 / span 6;
+    --cols: 6;
+  }
+
+  /* The root as well, so the list's line height holds over the small text's, which the module copies repeat later. */
+  .root .toc {
+    display: block;
+    grid-column: 10 / -1;
+    position: sticky;
+    top: var(--nav-height);
+    align-self: start;
+    max-height: calc(100svh - var(--nav-height));
+    padding-block: 2.625rem 3rem;
+    /* Room for the mark of the section being read, which hangs left of the text edge. */
+    margin-left: -1rem;
+    padding-left: 1rem;
+    overflow-y: auto;
+    line-height: 1.3;
+  }
+
+  /* A wide figure passes in front of the list (DocFigure); the keyboard brings it back to the front. */
+  .root .toc:focus-within {
+    z-index: 2;
+  }
+}

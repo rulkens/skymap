@@ -91,9 +91,10 @@ re-derives its own orbit point `x` from the eye-relative 3D basis
 (`eyeRelativeOrbitBasisKm`) and tests it against the frame's OPAQUE bodies as
 spheres (`sceneOccluderSpheres`).
 
-Opaque, not drawn: the set is the flat ∪ textured branches of
-`sceneBodyPartition`, the resolved branch of `partitionStarsByResolution`, and
-Earth — the bodies the `foreground:0` sphere layers actually paint. A body in
+Opaque, not drawn: the set is the resolved scene bodies with a ground
+`surface` (`sceneOccluderBodies` over `sceneBodyPresentation`: the resolved
+planets and stars) and Earth — the bodies the `foreground:0` sphere layers
+actually paint. A body in
 the 1–3 px glint band is drawn, as an additive sprite, and occludes nothing.
 Radii are `innerBoundRadiusM` (datum + min relief) — under-occluding is the
 safe failure, so a trail only peeks through at the limb instead of vanishing

@@ -10,6 +10,7 @@ import type { AssetSlot } from './AssetSlot';
 import type { SlotDeps } from './SlotDeps';
 import type { DemandCtx } from './DemandCtx';
 import type { Tier } from '../data/Tier';
+import type { VisibilityAddress } from '../animation/VisibilityAddress';
 
 export type AssetWiringRow<T = unknown, R = unknown> = {
   key: AssetKey;
@@ -40,4 +41,13 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
    * skips these; the demand loop still evaluates their `demand`/`req`.
    */
   built?: 'external';
+  /**
+   * The visibility address (and item) this slot's data draws. Its target stays 0 until the
+   * slot has a committed value, and every notification from the slot recomputes it, so a
+   * commit fades the thing in and a `release()` fades it out. Only a slot that holds one
+   * item's whole drawn data gates.
+   */
+  readonly gates?:
+    | VisibilityAddress
+    | { readonly address: VisibilityAddress; readonly item: string };
 };

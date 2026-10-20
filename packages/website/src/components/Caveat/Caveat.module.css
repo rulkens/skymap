@@ -1,0 +1,32 @@
+.root {
+  max-width: 46rem;
+  margin-block: 2.5rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--color-accent);
+
+  & h3 {
+    margin: 0 0 0.75rem;
+  }
+
+  & p {
+    max-width: none;
+  }
+
+  & p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Narrow, as the text it stands in. */
+  @media (max-width: 900px) {
+    max-width: var(--doc-measure);
+  }
+}
+
+/* In a landing page's section the admission stands a section-gap below its claims, and the next group's own gap follows it. */
+.landing {
+  margin-block: 3.5rem 0;
+
+  & h3 {
+    margin-bottom: 1rem;
+  }
+}

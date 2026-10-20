@@ -22,18 +22,11 @@ const ctx = {
   drawCamPos: [EARTH[0], EARTH[1], EARTH[2] + 1.6 * DAY.radiusMpc],
 } as unknown as FrameView;
 
-function makeState(toggleOpacity: number): EngineState {
-  return {
-    subsystems: {
-      fades: { opacityOf: () => toggleOpacity },
-      clipPlayer: { clipOpacityOf: () => 1 },
-    },
-  } as unknown as EngineState;
-}
+const STATE = {} as EngineState;
 
 describe('produceLightTimeCaptions', () => {
-  it('captions carry their sphere’s opacity and none are emitted when the Layer is off', () => {
-    const { labels } = produceLightTimeCaptions(makeState(0.5), ctx);
+  it('captions carry their sphere’s opacity and none are emitted at value 0', () => {
+    const { labels } = produceLightTimeCaptions(STATE, ctx, 0.5);
     expect(labels.map((l) => l.id)).toEqual([HOUR.id, DAY.id]);
     const [hour, day] = labels;
     expect(hour!.fadeAlpha).toBeGreaterThan(0);
@@ -43,6 +36,6 @@ describe('produceLightTimeCaptions', () => {
     const p = day!.worldPos;
     expect(Math.hypot(p[0], p[1], p[2] + 1.6 * DAY.radiusMpc) / DAY.radiusMpc).toBeCloseTo(1, 6);
 
-    expect(produceLightTimeCaptions(makeState(0), ctx).labels).toEqual([]);
+    expect(produceLightTimeCaptions(STATE, ctx, 0).labels).toEqual([]);
   });
 });

@@ -30,11 +30,11 @@ import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../src/@types/data/Tier';
-import type { Vec2 } from '../../src/@types/math/Vec2';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import type { Geometry } from './@types/Geometry';
+import type { MeshOrigin } from './@types/MeshOrigin';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { TIER_LADDER } from '../../src/data/tierLadder';
@@ -88,9 +88,7 @@ export type MeshBuildTarget = {
   readonly bodyFromSource?: Mat3;
   /** Undefined for a floating source; see `meshGroundUpSource`. */
   readonly groundUp?: Vec3;
-  /** Present for a georeferenced source: `enuOffsetM(anchor, site)`, used as
-   *  the recentre origin so the mesh's origin lands on its `SurfaceFixedSite`. */
-  readonly georeferencedCentreM?: Vec2;
+  readonly origin: MeshOrigin;
 };
 
 /**
@@ -342,9 +340,9 @@ function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
  * long thin appendage (the whale's tail) drag the origin — and with it the
  * selection ring, pick sphere and caption anchor it all shares — off the
  * visible mass; weighting by triangle area keeps it on the surface instead.
- * A georeferenced source (`georeferencedCentreM` set) skips this hunt for a
- * mass centre entirely: its origin is already meaningful (the source's real
- * anchor), so the shift is the fixed, precomputed offset onto its site.
+ * A `source` or `georeferenced` origin skips this hunt for a mass centre
+ * entirely: the source origin is already meaningful (a shape model's centre of
+ * mass; a scan's real anchor), so the shift is zero or the fixed offset onto its site.
  *
  * Recentring is also why `groundOffsetM` is measured HERE: after it the origin
  * sits inside the mesh, and this is the last place that knows how far the
@@ -356,8 +354,8 @@ function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
  */
 function mergeGeometry(
   doc: Document,
-  bodyFromSource?: Mat3,
-  georeferencedCentreM?: Vec2,
+  bodyFromSource: Mat3 | undefined,
+  origin: MeshOrigin,
 ): Geometry {
   const prims = listPrimitives(doc);
   const positions: number[] = [];
@@ -421,9 +419,9 @@ function mergeGeometry(
   let cx = 0;
   let cy = 0;
   let cz = 0;
-  if (georeferencedCentreM) {
-    [cx, cy] = georeferencedCentreM;
-  } else {
+  if (origin.kind === 'georeferenced') {
+    [cx, cy] = origin.centreM;
+  } else if (origin.kind === 'surfaceCentroid') {
     let totalArea = 0;
     for (let i = 0; i < indices.length; i += 3) {
       const a = indices[i]! * 3;
@@ -652,7 +650,7 @@ async function bakeTier(
     );
   }
 
-  const merged = mergeGeometry(doc, target.bodyFromSource, target.georeferencedCentreM);
+  const merged = mergeGeometry(doc, target.bodyFromSource, target.origin);
   const geometry = await simplifyTier(target, key, tier, merged);
   const px = tierToTexturePx(tier);
   const stem = basename(meshTierPrefix(key, tier));
@@ -881,16 +879,18 @@ export async function buildMeshes(options: {
 }
 
 /**
- * A georeferenced key's ENU offset from its source anchor to its
- * `SurfaceFixedSite` — undefined for every other key. `meshAnchorSite` is the
- * single place the anchored-site guards live.
+ * A key's origin: a georeferenced key's ENU offset from its source anchor to its
+ * `SurfaceFixedSite`, else the source row's `origin` choice. `meshAnchorSite` is
+ * the single place the anchored-site guards live.
  */
-function georeferencedCentreM(key: string): Vec2 | undefined {
+function meshOrigin(key: string): MeshOrigin {
   const site = meshAnchorSite(key);
-  if (site === undefined) return undefined;
+  if (site === undefined) {
+    return { kind: MESH_SOURCES[key]!.origin === 'source' ? 'source' : 'surfaceCentroid' };
+  }
   const anchor = MESH_SOURCES[key]!.georeferenced!;
   const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildMeshes');
-  return enuOffsetM(anchor, site, host.surface.datumRadiusM);
+  return { kind: 'georeferenced', centreM: enuOffsetM(anchor, site, host.surface.datumRadiusM) };
 }
 
 async function main(): Promise<void> {
@@ -911,7 +911,7 @@ async function main(): Promise<void> {
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
       groundUp: meshGroundUpSource(key),
-      georeferencedCentreM: georeferencedCentreM(key),
+      origin: meshOrigin(key),
     };
   });
   await buildMeshes({

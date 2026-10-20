@@ -28,10 +28,12 @@ import type { AssetKey } from '../../loading/AssetKey';
 import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { SlabRow } from '../frame/SlabRow';
-import type { FadeLayer } from '../../animation/FadeLayer';
+import type { VisibilityEntry } from '../layer/VisibilityEntry';
+import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
-import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { LayerTerrain } from '../layer/LayerTerrain';
+import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
@@ -93,8 +95,8 @@ export type EngineState = {
   /**
    * The composed contributions: core's constants followed by each Layer's, in
    * tuple order, assembled once by `createLayers`. Every runtime reader walks
-   * these rather than `CONTENT_PASSES` / `CORE_COMPUTES` / `ASSET_WIRING` /
-   * `FADE_LAYERS`, which are core's authored halves only. `assetRows` is the
+   * these rather than `CONTENT_PASSES` / `CORE_COMPUTES` / `ASSET_WIRING`,
+   * which are core's authored halves only. `assetRows` is the
    * COMPANION-EXPANDED fold over both halves; `layerSlots` holds the slot each
    * Layer asset row's factory minted, consulted by `slotFor` ahead of core's
    * own homes.
@@ -112,14 +114,20 @@ export type EngineState = {
   /** Every Layer's `slabs`, composed once by `createLayers`;
    * `deriveFrameContext` folds the band-open ones in beside the store's own rows. */
   slabRows: readonly SlabRow[];
-  fadeRows: readonly FadeLayer<unknown>[];
+  /** Every Layer's `visibility`, in composition order, composed once by `createLayers`:
+   * the entries the fade targets are seeded, recomputed and resolved from. */
+  visibilityEntries: readonly VisibilityEntry[];
+  /** The slot behind every gated fade identity, collected once by `wireSlots`. */
+  visibilityGates: VisibilityGates;
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   /** Every Layer's `worldLabels`, in composition order, composed once by
    * `createLayers`; `runLabel3DProducers` walks this. */
   label3DProducers: readonly Label3DProducer[];
-  /** Core's conics then every Layer's `guides.orbitTrails`, composed once by
-   * `createLayers`; `orbitTrailsPass` walks this. */
-  orbitTrailRows: readonly OrbitalElements[];
+  /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade
+   * bound, composed once by `createLayers`; `orbitTrailsPass` walks this. */
+  orbitTrailGroups: readonly GatedOrbitTrailGroup[];
+  /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
+  terrain: LayerTerrain;
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

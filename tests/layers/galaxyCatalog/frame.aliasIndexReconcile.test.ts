@@ -7,6 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
+import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { Source } from '../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -14,8 +15,11 @@ import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@ty
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
+const FADE = makeGalaxyCatalogFade();
 const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 const STATE = {
@@ -24,7 +28,6 @@ const STATE = {
     galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1, items: makeGalaxyCatalogItems() },
   },
   selectionRows: { select: null },
-  subsystems: { fades: { opacityOf: () => 1 } },
 } as unknown as PassState;
 
 // Every other limb of `frame` is inert here (no committed hi-res pair, a
@@ -35,7 +38,7 @@ function makeRuntime(opts: {
 }) {
   const publish = vi.fn();
   const catalogs = new Map<number, GalaxyCatalog>([
-    [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
+    [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
   ]);
   const runtime = {
     hiResFamous: { committed: () => null },
@@ -47,6 +50,9 @@ function makeRuntime(opts: {
       hasFadingContent: () => false,
     },
     catalogs,
+    get records() {
+      return galaxyRecordsOver(catalogs);
+    },
     famousMeta: [],
     get catalogsVersion() {
       return opts.catalogsVersion();
@@ -69,7 +75,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     const { runtime, publish } = makeRuntime({ committed: () => null, catalogsVersion: () => 0 });
     const tick = galaxyCatalogPlanner(runtime);
 
-    for (let i = 0; i < 3; i += 1) tick.plan(SNAPSHOT, VIEWS, STATE);
+    for (let i = 0; i < 3; i += 1) tick.plan(SNAPSHOT, VIEWS, STATE, FADE);
     expect(aliasCalls(publish)).toHaveLength(0);
   });
 
@@ -82,19 +88,19 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     });
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(SNAPSHOT, VIEWS, STATE); // sidecar still loading — no build yet
+    tick.plan(SNAPSHOT, VIEWS, STATE, FADE); // sidecar still loading — no build yet
     expect(aliasCalls(publish)).toHaveLength(0);
 
     // The one bump: the sidecar commits and the catalog it joins against lands.
     committed = { value: new Map([[100n, ['NGC 1']]]) };
     catalogsVersion = 1;
-    tick.plan(SNAPSHOT, VIEWS, STATE);
-    tick.plan(SNAPSHOT, VIEWS, STATE); // same version again — must not re-fire
+    tick.plan(SNAPSHOT, VIEWS, STATE, FADE);
+    tick.plan(SNAPSHOT, VIEWS, STATE, FADE); // same version again — must not re-fire
 
     const calls = aliasCalls(publish);
     expect(calls).toHaveLength(1);
     expect(calls[0]![0]).toEqual({
-      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 }],
+      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade }],
     });
   });
 
@@ -104,7 +110,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
   it('rebuilds and republishes on a second catalogsVersion bump with the sidecar already committed', () => {
     let catalogsVersion = 1;
     const catalogs = new Map<number, GalaxyCatalog>([
-      [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
+      [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
     ]);
     const committed = {
       value: new Map<bigint, readonly string[]>([
@@ -123,6 +129,9 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
         hasFadingContent: () => false,
       },
       catalogs,
+      get records() {
+        return galaxyRecordsOver(catalogs);
+      },
       famousMeta: [],
       get catalogsVersion() {
         return catalogsVersion;
@@ -132,24 +141,24 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     } as unknown as GalaxyCatalogRuntime;
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(SNAPSHOT, VIEWS, STATE);
+    tick.plan(SNAPSHOT, VIEWS, STATE, FADE);
     expect(aliasCalls(publish)).toHaveLength(1);
     expect(aliasCalls(publish)[0]![0]).toEqual({
-      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 }],
+      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade }],
     });
 
     // Tier swap: this source's array is replaced wholesale (100n dropped,
     // 200n gained — the wireGalaxyCatalogSourceSlot commit path), and the
     // commit's `bumpCatalogsVersion()` fires again.
     catalogs.clear();
-    catalogs.set(Source.Glade, { objIDs: new BigUint64Array([200n]) } as unknown as GalaxyCatalog);
+    catalogs.set(Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([200n]) }));
     catalogsVersion = 2;
-    tick.plan(SNAPSHOT, VIEWS, STATE);
+    tick.plan(SNAPSHOT, VIEWS, STATE, FADE);
 
     const calls = aliasCalls(publish);
     expect(calls).toHaveLength(2);
     expect(calls[1]![0]).toEqual({
-      aliasIndex: [{ pgc: 200, names: ['NGC 2'], source: Source.Glade, localIdx: 0 }],
+      aliasIndex: [{ pgc: 200, names: ['NGC 2'], source: Source.Glade }],
     });
   });
 });

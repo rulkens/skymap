@@ -1,14 +1,13 @@
 /**
  * blackHoleMarkerPass — the far-field marker's brightness across the lens band,
- * and the pick stamp that follows the marker OR the caption (P5): inside the
- * band the marker is gone but the caption still invites the click.
+ * and the pick stamp that follows the marker alone: inside the band the caption's
+ * own ink box takes the click (`produceBlackHoleCaptions.test.ts` pins its id).
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { blackHoleMarkerPass } from '../../../../src/layers/blackHoles/passes/blackHoleMarkerPass';
 import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
-import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { Source } from '../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
@@ -62,12 +61,9 @@ function makeView(camPos: Vec3): SlabView {
   };
 }
 
-function makeState(labelEnabled: boolean) {
+function makeState() {
   const drawPoints = vi.fn();
-  const state = {
-    gpu: { bodyPickRenderer: { drawPoints } },
-    settings: { blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled } } } },
-  } as unknown as EngineState;
+  const state = { gpu: { bodyPickRenderer: { drawPoints } } } as unknown as EngineState;
   return { state, drawPoints };
 }
 
@@ -79,9 +75,9 @@ function makePass() {
 
 const PASS_STUB = {} as GPURenderPassEncoder;
 
-function stampedIds(camPos: Vec3, labelEnabled: boolean): number[] {
+function stampedIds(camPos: Vec3): number[] {
   const { pass } = makePass();
-  const { state, drawPoints } = makeState(labelEnabled);
+  const { state, drawPoints } = makeState();
   const ctx = makeCtx(camPos);
   if (!pass.pickEnabled!(state, ctx, makeView(camPos))) return [];
   pass.drawPick!(PASS_STUB, makeView(camPos), ctx, state);
@@ -92,7 +88,7 @@ function stampedIds(camPos: Vec3, labelEnabled: boolean): number[] {
 
 describe('blackHoleMarkerPass', () => {
   it('marker brightness is full far out and zero inside the lens band', () => {
-    const { state } = makeState(true);
+    const { state } = makeState();
     const far = makePass();
     far.pass.draw(PASS_STUB, makeView(FROM_EARTH), makeCtx(FROM_EARTH), state);
     const [, instances, count] = far.markerRenderer.draw.mock.calls[0]!;
@@ -108,12 +104,11 @@ describe('blackHoleMarkerPass', () => {
     expect(near.markerRenderer.draw).not.toHaveBeenCalled();
   });
 
-  it('pick stamp persists inside the band while the caption shows', () => {
-    expect(stampedIds(INSIDE_BAND, true)).toEqual([HOLE_ID]);
-    expect(stampedIds(INSIDE_BAND, false)).toEqual([]);
+  it('a hole inside the lens band with its marker faded is not stamped by the marker pass', () => {
+    expect(stampedIds(INSIDE_BAND)).toEqual([]);
   });
 
-  it('far-field pick follows the marker with the label off', () => {
-    expect(stampedIds(FROM_EARTH, false)).toEqual([HOLE_ID]);
+  it('far-field pick follows the marker', () => {
+    expect(stampedIds(FROM_EARTH)).toEqual([HOLE_ID]);
   });
 });

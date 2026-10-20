@@ -633,7 +633,7 @@ async function captureTake(
   );
 
   // A windowed take (from > 0) opens with the saga's reconstruction fold plus
-  // its FOLD_SETTLE_MS delay: the visibility bridge and label-fade envelope
+  // its FOLD_SETTLE_MS delay: the visibility sync and label-fade envelope
   // animate the folded diff, and the saga holds the first beat until they
   // finish (src/state/tour/foldSettleMs.ts). Burn exactly that much virtual
   // time WITHOUT capturing — grant and discard, no ffmpeg write — so the

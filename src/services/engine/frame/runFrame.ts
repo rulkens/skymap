@@ -38,7 +38,6 @@ import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry'
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
-import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -52,6 +51,7 @@ import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
 import { inputConsumed } from '../../../state/input/inputSlice';
@@ -129,7 +129,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
+    terrainHeightAt: state.terrain.heightAt,
     clipEpoch,
     schemes: deps.controlSchemes,
   });
@@ -230,6 +230,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   snapshot.focusBlend = focusUniforms.blend;
   snapshot.focus = focusUniforms;
+  snapshot.focusPickId = encodeSelectionPick(
+    state.selectionKindRows,
+    state.subsystems.structureFocus.lastFocusRef(),
+  );
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this

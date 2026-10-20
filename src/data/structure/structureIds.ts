@@ -21,13 +21,3 @@ export const STRUCTURE_IDS = STRUCTURE_ENTRIES.map((e) => e.id);
 export const STRUCTURE_ID_CODES: Readonly<Record<StructureId, number>> = Object.fromEntries(
   STRUCTURE_ENTRIES.map((e) => [e.id, e.code]),
 ) as Record<StructureId, number>;
-
-/**
- * Narrow a label-bearing id to StructureId. Lets data-driven callers (e.g. the
- * label-visibility setter) route on a registry field rather than a literal
- * `=== 'famousGalaxy'` compare while keeping the type narrowed for the
- * structure-only fade handles.
- */
-export function isStructureId(id: string): id is StructureId {
-  return (STRUCTURE_IDS as readonly string[]).includes(id);
-}

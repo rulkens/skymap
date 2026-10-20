@@ -12,7 +12,7 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
-import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { MESH_PRESENTATIONS } from '../../../data/bodies/meshPresentations';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
 import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { clampTier } from '../../../utils/math/clampTier';
@@ -31,7 +31,7 @@ import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
 import type { TextureKind } from '../../../@types/data/TextureKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { MeshBody } from '../../../@types/scene/MeshBody';
+import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
@@ -100,7 +100,7 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
  * position comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
  * indirection for a ring-style host.
  */
-function meshBodyRow(body: MeshBody): AssetWiringRow {
+function meshBodyRow(body: MeshPresentation): AssetWiringRow {
   const bodyPos = (simDays: number): Readonly<Vec3> => {
     const state = deriveBodyStates(simDays).get(body.id);
     if (state === undefined) {
@@ -144,5 +144,5 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
 
   // ── Mesh bodies (whale, petunias, …) ─────────────────────────────
-  ...SCENE_MESH_BODIES.map(meshBodyRow),
+  ...MESH_PRESENTATIONS.map(meshBodyRow),
 ];

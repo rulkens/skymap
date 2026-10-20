@@ -37,7 +37,7 @@ import {
 import { surfaceTilesPass } from '../../../../../src/services/engine/frame/passes/surfaceTilesPass';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -187,7 +187,7 @@ function makeCtx(distance: number): FrameView {
     SEEDED_EARTH.positionMpc[2],
   ];
   return {
-    snapshot: { meshBodies: [] },
+    snapshot: { meshBodies: [], sceneBodies: [] },
     cam: { distance, position: drawCamPos, target: SEEDED_EARTH.positionMpc },
     drawCamPos,
     bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
@@ -574,7 +574,7 @@ describe('earthPass.draw', () => {
       SEEDED_EARTH.positionMpc[2],
     ];
     const closeCtx = {
-      snapshot: { meshBodies: [] },
+      snapshot: { meshBodies: [], sceneBodies: [] },
       cam: {
         distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,
@@ -730,7 +730,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
       SEEDED_EARTH.positionMpc[2],
     ];
     return {
-      snapshot: { meshBodies: [] },
+      snapshot: { meshBodies: [], sceneBodies: [] },
       cam: {
         distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,

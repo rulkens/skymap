@@ -34,6 +34,8 @@ import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDe
 import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
@@ -43,10 +45,8 @@ import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeGalaxyCatalogItems } from '../../../fixtures/makeGalaxyCatalogItems';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_FADE_FULL_PX } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_RADIUS_MPC } from '../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
@@ -342,6 +342,12 @@ function makeCam(): OrbitCamera {
 // identity (`FramePlannerResultStore` keys on `planner.name`) — a stub with an empty result is
 // enough to satisfy `runPlanSteps`'s "every plan row names a registered
 // planner" check without dragging in `produceStructureMarkers`'s own state.
+// What `createLayers` gates each pass with: every fade resolves to 1 here.
+const PASS_GATE_STATE = {
+  subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
+  visibilityEntries: APP_VISIBILITY,
+} as unknown as Parameters<typeof gatePassByFade>[1];
+
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
@@ -374,7 +380,7 @@ function makeInput(
   // these fixtures off the density raymarch; the ordering test swaps in a live
   // renderer and the gate test an upsample spy.
   const densityRuntime = {
-    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    renderer: { draw: vi.fn(), hasActiveFields: () => false },
     upsample: { draw: vi.fn(), destroy: vi.fn() },
   } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
@@ -470,7 +476,7 @@ function makeInput(
     bodyPose: () => null,
     slabBodyCandidates: [] as never[],
     meshBodies: [] as never[],
-    positionedStars: [] as never[],
+    sceneBodies: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
     plans: createFramePlannerResultStore(),
     cursorTexPx: null,
@@ -478,6 +484,7 @@ function makeInput(
     simDays: 0,
     altitudeMpc: 0,
     focusBlend: 0,
+    focusPickId: null,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
       apparentRadiusMpc: 1,
@@ -638,9 +645,7 @@ function makeInput(
         subsystems: {
           proceduralDisks: null,
           texturedDisks: null,
-          // filamentsPass.enabled consults the FadeRegistry to keep the
-          // layer alive through fade-out tails. A minimal opacityOf stub
-          // keeps the gate from crashing.
+          // `scheduleSkyCaptures` asks the registry whether any fade is animating.
           fades: { opacityOf: () => 1, isAnyAnimating: () => false },
           clipPlayer: { clipOpacityOf: () => 1 },
         },
@@ -664,7 +669,7 @@ function makeInput(
           milkyWayAggregatePass(milkyWayRuntime),
           milkyWayUpsamplePass(milkyWayRuntime),
           milkyWayPass(milkyWayRuntime),
-        ],
+        ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,
       } as never,

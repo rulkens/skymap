@@ -1,11 +1,33 @@
 import type { DevOverlay } from './@types/DevOverlay';
+import type { OverlayMode } from './@types/OverlayMode';
 import { recall } from './recall';
 import { remember } from './remember';
 
-const MODE_KEY = 'skymap-feedback-on';
+// Whether the overlay is on, kept per tab; the mode is kept per browser, in localStorage, so it outlives the tab.
+const ON_KEY = 'skymap-feedback-on';
+const MODE_KEY = 'skymap-overlay-mode';
 
-let on = recall(MODE_KEY) !== null;
-const listeners: ((on: boolean) => void)[] = [];
+/** Puts `item` first in `list`, so the newest registration is asked first; returns the way to take it out again. */
+function register<T>(list: T[], item: T): () => void {
+  list.unshift(item);
+  return () => {
+    const at = list.indexOf(item);
+    if (at >= 0) list.splice(at, 1);
+  };
+}
+
+/** The mode last used in this browser, Notes when none was stored. */
+function recallMode(): OverlayMode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'marks' ? 'marks' : 'notes';
+  } catch {
+    return 'notes';
+  }
+}
+
+let on = recall(ON_KEY) !== null;
+let mode = recallMode();
+const listeners = new Set<() => void>();
 const escapes: ((e: KeyboardEvent) => boolean)[] = [];
 const presses: ((x: number, y: number) => boolean)[] = [];
 
@@ -14,28 +36,26 @@ export const devOverlay: DevOverlay = {
   setOn(next) {
     if (next === on) return;
     on = next;
-    remember(MODE_KEY, on ? '1' : null);
-    for (const listener of listeners) listener(on);
+    remember(ON_KEY, on ? '1' : null);
+    for (const listener of listeners) listener();
   },
-  subscribe: (listener) => void listeners.push(listener),
-  onEscape: (handler) => void escapes.push(handler),
-  onPress: (handler) => void presses.push(handler),
+  mode: () => mode,
+  setMode(next) {
+    if (next === mode) return;
+    mode = next;
+    try {
+      localStorage.setItem(MODE_KEY, mode);
+    } catch {
+      /* blocked storage: the mode lasts until reload */
+    }
+    for (const listener of listeners) listener();
+  },
+  subscribe(listener) {
+    listeners.add(listener);
+    return () => void listeners.delete(listener);
+  },
+  onEscape: (handler) => register(escapes, handler),
+  escape: (e) => escapes.some((handler) => handler(e)),
+  onPress: (handler) => register(presses, handler),
   press: (x, y) => presses.some((handler) => handler(x, y)),
 };
-
-// Capture phase, so the page's own handlers never see the keys the overlay owns.
-document.addEventListener(
-  'keydown',
-  (e) => {
-    const typing = !!(e.target as HTMLElement | null)?.closest(
-      'input, textarea, select, [contenteditable]',
-    );
-    if (e.key === 'Escape' && on) {
-      e.preventDefault();
-      if (!escapes.some((handler) => handler(e))) devOverlay.setOn(false);
-    } else if (e.key.toLowerCase() === 'f' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      devOverlay.setOn(!on);
-    }
-  },
-  true,
-);

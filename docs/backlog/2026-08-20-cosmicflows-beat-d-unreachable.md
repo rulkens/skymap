@@ -19,7 +19,7 @@ frame either in the harness or in the app.
 
 This was invisible before rung 7 (`decisions.md` #18, D8) migrated
 `milkyWayDisk` off a raw `opacityOf` read onto the clip-aware
-`resolveLayerOpacity` path — before that migration nothing consumed the
+handed-value path (today `resolveVisibilityOpacity`) — before that migration nothing consumed the
 clip factor for this key, so the dead cue had no visible symptom. Two of
 `cosmicFlows`'s three inert-key moments are now live from that migration
 (the pre-roll `fade(['flow'], 0, 0)` load mask and beat A's crossfade);

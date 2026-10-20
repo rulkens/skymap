@@ -10,15 +10,17 @@ import type { OctreeCatalogMeta } from '../../../tools/@types/octree/OctreeCatal
 import type { OctreeObjects } from '../../../tools/@types/octree/OctreeObjects';
 import { decodeOctreeChunk } from '../../../src/data/octree/decodeOctreeChunk';
 import { decodeOctreeIndex } from '../../../src/data/octree/decodeOctreeIndex';
-import { octreeChunkFileName, STAR_COLUMN_SCHEMA } from '../../../src/data/octree/octreeFormat';
+import { octreeChunkFileName } from '../../../src/data/octree/octreeFormat';
 import { chunkOctree } from '../../../tools/octree/chunkOctree';
 import { stratifyOctree } from '../../../tools/octree/stratifyOctree';
 import { writeOctreeCatalog } from '../../../tools/octree/writeOctreeCatalog';
+import { contentHash8 } from '../../../tools/utils/data/contentHash8';
 import {
   makeOctreeBuildInput,
   randomOctreeRecords,
   TEST_STRATIFY,
 } from '../../fixtures/makeOctreeBuildInput';
+import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 
 const GRID = { bits: 6, origin: [0, 0, 0] as [number, number, number], cellEdge: 10 };
 const CAPACITY = 300;
@@ -124,5 +126,13 @@ describe('buildOctreeCatalog → writeOctreeCatalog', () => {
       }
     };
     check(header.chunks, paths.length - 1);
+  });
+
+  // Tasks 2 and 5 reshape the family code around this bake; no baked byte may move. The index
+  // header names every chunk's content hash, so one digest pins every object.
+  it('a seeded star bake keeps its pinned index digest', () => {
+    const dir = tempDir();
+    writeOctreeCatalog(nestedObjects(3), meta(), dir, 'stars');
+    expect(contentHash8(fs.readFileSync(join(dir, 'stars.bin')))).toBe('2a8af3b2');
   });
 });

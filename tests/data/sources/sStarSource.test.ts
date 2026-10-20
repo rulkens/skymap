@@ -19,7 +19,7 @@ import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
 describe('the S-star source row', () => {
   it('seeds a STAR-catalog settings row', () => {
-    // `visibleStars` gates all 39 on `starCatalogs.items.sStar.enabled`. The row
+    // The star show entry gates all 39 on `starCatalogs.items.sStar.enabled`. The row
     // is derived, not authored, so the failure mode is an ABSENT key — an
     // undefined read that throws on the first frame rather than the row missing.
     expect(STAR_CATALOG_IDS).toContain(S_STAR_ENTRY.id);

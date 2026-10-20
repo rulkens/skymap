@@ -28,13 +28,13 @@ export function instantiateLayer<
     computes: layer.computes?.(runtime) ?? [],
     planners: layer.planners?.(runtime) ?? [],
     assets: layer.assets?.(runtime) ?? [],
-    fades: layer.fades?.(runtime) ?? [],
     screenLabels: guides?.screenLabels ?? [],
     worldLabels: guides?.worldLabels ?? [],
-    orbitTrails: guides?.orbitTrails ?? [],
+    orbitTrails: guides?.orbitTrails ? [guides.orbitTrails] : [],
     selection: layer.selection?.(runtime) ?? [],
     search: layer.search?.(runtime),
     sourceCounts: layer.sourceCounts?.(runtime),
+    terrain: layer.terrain?.(runtime),
     destroy: () => layer.destroy(runtime),
   };
 }

@@ -39,7 +39,7 @@ const TOGGLEABLE_SOURCES: readonly SourceType[] = [
 
 type GalaxiesSectionProps = {
   /** Bitmask of currently-visible galaxy catalog sources. */
-  visibleSourceMask: number;
+  sourceMask: number;
   /** Called when the user toggles a single catalog on or off. */
   onToggleSource: (source: SourceType, visible: boolean) => void;
   /**
@@ -86,7 +86,7 @@ type GalaxiesSectionProps = {
  * slider, depth-fade toggle, and density-correction controls.
  */
 function GalaxiesSection({
-  visibleSourceMask,
+  sourceMask,
   onToggleSource,
   sourceCounts,
   pointSize,
@@ -109,7 +109,7 @@ function GalaxiesSection({
   // Tri-state click convention (Windows Explorer / Finder / GitHub file-tree):
   //   "none" → set all on; "all" or "mixed" → clear everything.
   const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
-    (n, s) => (maskHas(visibleSourceMask, s) ? n + 1 : n),
+    (n, s) => (maskHas(sourceMask, s) ? n + 1 : n),
     0,
   );
   const allOn = enabledCount === TOGGLEABLE_SOURCES.length;
@@ -152,7 +152,7 @@ function GalaxiesSection({
                 id={`toggle-source-${s}`}
                 type="checkbox"
                 className={styles.toggle}
-                checked={maskHas(visibleSourceMask, s)}
+                checked={maskHas(sourceMask, s)}
                 onChange={(e) => onToggleSource(s, e.target.checked)}
               />
             </div>

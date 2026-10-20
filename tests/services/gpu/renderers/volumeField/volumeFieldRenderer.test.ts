@@ -135,7 +135,6 @@ describe('createVolumeFieldRenderer draw', () => {
       envelope: { inner: 0.7, outer: 1.2 },
     };
     expect(() => r.upload('dust', fixture(), statics)).not.toThrow();
-    expect(r.listIds()).toContain('dust');
     r.draw(
       makeFakePass(),
       new Float32Array(16) as unknown as Mat4,
@@ -243,6 +242,21 @@ function createdBuffers(device: GPUDevice): { destroy: () => void }[] {
   ).mock.results.map((r) => r.value);
 }
 
+// How many fields one draw raymarches, every field at full settings and opacity.
+function fieldsDrawn(r: ReturnType<typeof createVolumeFieldRenderer>): number {
+  const pass = makeFakePass();
+  r.draw(
+    pass,
+    new Float32Array(16) as unknown as Mat4,
+    [320, 180],
+    1000,
+    [0, 0, 5],
+    () => fullSettings(),
+    () => 1,
+  );
+  return (pass.drawIndexed as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
+}
+
 describe('createVolumeFieldRenderer unload / re-upload', () => {
   it("unload destroys the field's four GPU resources and drops it from the map", () => {
     const device = mockDevice();
@@ -259,7 +273,7 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
     expect(paletteTexture!.destroy).toHaveBeenCalledTimes(1);
     expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
     expect(fadeBuffer!.destroy).toHaveBeenCalledTimes(1);
-    expect(r.listIds()).not.toContain('mcpm');
+    expect(fieldsDrawn(r)).toBe(0);
   });
 
   it("re-uploading the same id destroys the previous field's resources first", () => {
@@ -274,7 +288,7 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
     expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
     expect(fadeBuffer!.destroy).toHaveBeenCalledTimes(1);
     // The replace, not an add: exactly one 'mcpm' entry survives.
-    expect(r.listIds()).toEqual(['mcpm']);
+    expect(fieldsDrawn(r)).toBe(1);
   });
 });
 

@@ -2,19 +2,17 @@
  * makeReconcileEffects — unit tests for the ReconcileEffects factory.
  *
  * Strategy: build a minimal fake EngineState with typed spy subsystems that
- * cover only the slices the closures touch. vi.mock syncVisibilityFades so each
- * closure test stays focused on the factory wiring, not the deeper bridge walk.
+ * cover only the slices the closures touch. vi.mock syncVisibilityTargets so each
+ * closure test stays focused on the factory wiring, not the deeper sync walk.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { makeReconcileEffects } from '../../../../src/services/engine/wiring/makeReconcileEffects';
 
-// Mock the syncVisibilityFades module so the syncFades tests don't need a real
-// FADE_LAYERS walk or a fully populated settings tree.
-vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
-  syncVisibilityFades:
-    vi.fn<(state: unknown, opts: { animate: boolean; only?: readonly string[] }) => void>(),
+// Mock the sync so the syncFades tests don't need a fully populated settings tree.
+vi.mock('../../../../src/services/engine/wiring/syncVisibilityTargets', () => ({
+  syncVisibilityTargets: vi.fn<(state: unknown, overMs?: number) => void>(),
 }));
 
 // Mock the applySwapFormat phase so the forwarding test doesn't need a real
@@ -42,11 +40,13 @@ vi.mock('../../../../src/services/engine/helpers/liveFocusRow', () => ({
   liveFocusRow: vi.fn(() => 'LIVE_FOCUS_ROW'),
 }));
 
-import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { syncVisibilityTargets } from '../../../../src/services/engine/wiring/syncVisibilityTargets';
 import { applySwapFormat } from '../../../../src/services/engine/phases/applySwapFormat';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
 import { liveFocusRow } from '../../../../src/services/engine/helpers/liveFocusRow';
+
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 const CANVAS = {} as HTMLCanvasElement;
 
@@ -54,7 +54,7 @@ const CANVAS = {} as HTMLCanvasElement;
 //
 // Only the slices the closures touch are populated. Everything else is
 // absent; `as unknown as EngineState` bridges the gap (matching the pattern
-// used in syncVisibilityFades.test.ts and other wiring tests).
+// used in the other wiring tests).
 
 function makeState(): {
   state: EngineState;
@@ -69,6 +69,7 @@ function makeState(): {
     booted: false,
     selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
+    terrain: FLAT_TERRAIN,
   } as unknown as EngineState;
 
   return { state, requestRender };
@@ -81,12 +82,12 @@ describe('makeReconcileEffects', () => {
     vi.clearAllMocks();
   });
 
-  it('syncFades() runs a full pass over every row', () => {
+  it('syncFades() recomputes every visibility target', () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);
     effects.syncFades();
-    expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
+    expect(syncVisibilityTargets).toHaveBeenCalledTimes(1);
+    expect(syncVisibilityTargets).toHaveBeenCalledWith(state, undefined);
   });
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {
@@ -118,13 +119,11 @@ describe('makeReconcileEffects', () => {
     );
   });
 
-  it("logCameraState forwards the surfaceTiles subsystem's sub-camera readout when engaged", () => {
-    const getDebugSnapshot = vi.fn(() => ({
-      subCamera: { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
-    }));
+  it("logCameraState forwards the terrain seam's sub-camera readout", () => {
     const { state } = makeState();
-    (state as unknown as { subsystems: { surfaceTiles: unknown } }).subsystems.surfaceTiles = {
-      getDebugSnapshot,
+    state.terrain = {
+      ...FLAT_TERRAIN,
+      subCamera: () => ({ lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 }),
     };
     const effects = makeReconcileEffects(state, CANVAS);
     effects.logCameraState();

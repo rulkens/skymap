@@ -8,8 +8,3 @@ export const selectRoute = createSelector(
   [selectSettings],
   (settings): LightTimeSettings => settings.lightTime,
 );
-
-export const selectLightTimeEnabled = createSelector(
-  [selectRoute],
-  (route: LightTimeSettings): boolean => route.enabled,
-);

@@ -35,7 +35,7 @@ export function starCatalogSourceCounts(
       ...[...runtime.catalogs].map(([source, slot]) =>
         slot.subscribe((state) => {
           emitSeeded();
-          if (state.kind === 'ready') emit({ source, count: state.value.starCount });
+          if (state.kind === 'ready') emit({ source, count: state.value.recordCount });
         }),
       ),
     ];

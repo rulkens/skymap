@@ -34,8 +34,8 @@ This matters for the fix shape, below.
 
 Latent. Both layers gate on apparent size:
 
-- `starSpheresPass` draws only the `spheres` branch of
-  `partitionStarsByResolution` at `STAR_RESOLVE_PX` = 4 px — a second
+- `starSpheresPass` draws only the stars in the resolved branch of
+  `sceneBodyPresentation` (a star resolves at `STAR_RESOLVE_PX` = 4 px) — a second
   simultaneously-resolved scene star needs the camera within roughly an AU of two
   seeded stars at once, which the `SCENE_STARS` roster does not permit.
 - `fieldStarSpherePass` needs the camera within solar-radius resolving range of a
