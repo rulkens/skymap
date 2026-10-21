@@ -437,7 +437,7 @@ once; core's body rows exclude craft.
 **Test:** `a craft alias ranks exactly one palette row` — "HST" ranks one row for Hubble, "Oppy" one for
 Opportunity. **Bug caught:** core's body row and missions' row both survive.
 
-- [ ] Task 8
+- [x] Task 8
 
 ---
 

@@ -20,6 +20,7 @@ import { contactShadowsPass } from './passes/contactShadowsPass';
 import { missionGlintsPass } from './passes/missionGlintsPass';
 import { produceMissionCaptions } from './present/produceMissionCaptions';
 import { craftSelectionRow } from './present/craftSelectionRow';
+import { craftSearch } from './present/craftSearch';
 import { missionsLayerExhibits } from './exhibits/exhibits';
 import { MISSIONS_BODY_ROWS } from './bodies/missionsBodyRows';
 import { MISSIONS_SOURCE_ROWS } from './sources/missionsSourceRows';
@@ -53,6 +54,7 @@ export const missionsLayer = defineLayer({
     ],
   }),
   selection: () => [craftSelectionRow()],
+  search: () => craftSearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'missionTrails', label: 'Mission trails' } },
     {

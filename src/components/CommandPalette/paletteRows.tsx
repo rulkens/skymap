@@ -81,9 +81,9 @@ function namedRowView(m: ScoredRow, keyPrefix: string, testidPrefix: string, id:
 const EARTH_CHIP = <span className={styles.source}>Earth</span>;
 
 /**
- * Shared render for the `place` and `layer` arms: a letter glyph, the first
- * name, the rest as aliases, and an optional source chip. Neither kind has a
- * thumbnail to look up, so the two differ only in that chip.
+ * Shared render for the `place` and `layer` arms: the first name, the rest as
+ * aliases, and an optional source chip. A layer row shows the captured card shot
+ * of its focus id when one exists (the craft keep theirs); a place is a glyph.
  */
 function glyphRowView(
   m: Extract<ScoredRow, { kind: 'place' | 'layer' }>,
@@ -94,11 +94,14 @@ function glyphRowView(
   return {
     key: `${m.kind}:${m.entry.id}`,
     testid: `${m.kind}-row-${m.entry.id}`,
-    leading: (
-      <span className={styles.glyph} aria-hidden="true">
-        {primary[0] ?? '·'}
-      </span>
-    ),
+    leading:
+      m.kind === 'layer' ? (
+        shotOrGlyph(m, primary)
+      ) : (
+        <span className={styles.glyph} aria-hidden="true">
+          {primary[0] ?? '·'}
+        </span>
+      ),
     primary,
     secondary: (
       <>

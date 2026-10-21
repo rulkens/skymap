@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
+import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
@@ -177,6 +178,29 @@ describe('rankPaletteMatches — Layer-published rows', () => {
     );
     expect(rows[0]).toMatchObject({ entry: { id: 'primary' } });
     expect(rows).toHaveLength(51);
+  });
+});
+
+describe('rankPaletteMatches — craft rows', () => {
+  async function craftRows() {
+    const layerRows = [];
+    for await (const rows of craftSearch()) layerRows.push(...rows);
+    return layerRows;
+  }
+
+  it.each([
+    ['HST', 'body-hubble'],
+    ['Oppy', 'body-opportunity'],
+    ['oh no not again', 'body-petunias'],
+  ])('a craft alias ranks exactly one palette row: %s', async (query, id) => {
+    const rows = rankPaletteMatches([], [], [], await craftRows(), query);
+    const hits = rows.filter(
+      (r) =>
+        (r.kind === 'layer' && r.entry.id === id) ||
+        (r.kind === 'body' && `body-${r.body.id}` === id),
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.kind).toBe('layer');
   });
 });
 
