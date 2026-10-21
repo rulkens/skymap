@@ -17,7 +17,8 @@ import { destroy } from './destroy';
 import { missionTrailsPass } from './passes/missionTrailsPass';
 import { missionMeshesPass } from './passes/missionMeshesPass';
 import { contactShadowsPass } from './passes/contactShadowsPass';
-import { missionGlintsPass } from './passes/missionGlintsPass';
+import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
+import { MISSION_CRAFT_IDS } from './present/missionCraftIds';
 import { produceMissionCaptions } from './present/produceMissionCaptions';
 import { craftSelectionRow } from './present/craftSelectionRow';
 import { craftSearch } from './present/craftSearch';
@@ -41,7 +42,7 @@ export const missionsLayer = defineLayer({
     missionTrailsPass(runtime),
     missionMeshesPass,
     contactShadowsPass,
-    missionGlintsPass(runtime),
+    glintsPassOver('mission-glints', MISSION_CRAFT_IDS, runtime.glintRenderer),
   ],
   guides: () => ({
     screenLabels: [

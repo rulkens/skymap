@@ -62,7 +62,7 @@ Staging is sized `roster.size * BODY_GLINT_INSTANCE_FLOATS`, allocated once per 
 
 **Tests:** none new; the existing missions glint tests stay green unchanged (behaviour-neutral).
 
-- [ ] Task 1
+- [x] Task 1
 
 ### Task 2: earthScenes draws Søndermarken; core's roster narrows
 
