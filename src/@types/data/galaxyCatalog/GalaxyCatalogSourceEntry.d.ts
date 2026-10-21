@@ -86,8 +86,11 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly falloffHalfMpc: number;
   /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
   readonly priority: number;
-  /** Present when the source also ships a chunked octree: its per-tier draw budgets and pool slots. */
-  readonly octree?: { readonly budgets: OctreeBudgets };
+  /**
+   * Present when the source also ships a chunked octree: its per-tier draw budgets and pool slots,
+   * and the node-row runs per record run of a resident set, measured, that the pool sizes its rows by.
+   */
+  readonly octree?: { readonly budgets: OctreeBudgets; readonly poolNodesPerRecord: number };
   /** The durable id kind this source's `objIDs` carry; absent when they carry none a URL may name. */
   readonly durableId?: GalaxyDurableIdClaim;
 };

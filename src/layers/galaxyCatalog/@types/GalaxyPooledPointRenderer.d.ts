@@ -29,9 +29,9 @@ export type GalaxyPooledPointRenderer = Omit<
   upload(
     source: SourceType,
     octree: Octree<GalaxyColumns>,
-    slots: number,
+    pool: OctreePoolShape,
     stats: GalaxyPointStats,
-  ): OctreePoolShape;
+  ): void;
   /** Free the source's pool and cut. */
   unload(source: SourceType): void;
   /** Pin the slot table a pick readback resolves against: the one its draw saw. */

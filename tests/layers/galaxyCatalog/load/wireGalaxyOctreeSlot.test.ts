@@ -14,6 +14,7 @@ import { galaxyOctreeFetcher } from '../../../../src/layers/galaxyCatalog/load/g
 import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { octreePoolShape } from '../../../../src/utils/octree/octreePoolShape';
 import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumns';
 import type { GalaxyCatalogSourceType } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
@@ -66,11 +67,7 @@ describe('wireGalaxyOctreeSlot', () => {
       info: new Map(),
     } satisfies GalaxyOctreePayload);
     const renderer = {
-      upload: vi.fn((_s: SourceType, _o: unknown, slots: number) => ({
-        slots,
-        records: slots,
-        maxRun: 1,
-      })),
+      upload: vi.fn(),
       unload: vi.fn(),
       uploadChunk: vi.fn(),
       evictChunk: vi.fn(),
@@ -89,13 +86,14 @@ describe('wireGalaxyOctreeSlot', () => {
     );
 
     await slot.load({ source: Source.Glade, tier: 'medium' });
-    const { slots } = SOURCE_REGISTRY[Source.Glade].octree.budgets.medium;
-    expect(renderer.upload).toHaveBeenCalledWith(Source.Glade, OCTREE, slots, {
+    const { budgets, poolNodesPerRecord } = SOURCE_REGISTRY[Source.Glade].octree;
+    const pool = octreePoolShape(OCTREE, budgets.medium.slots, poolNodesPerRecord);
+    expect(renderer.upload).toHaveBeenCalledWith(Source.Glade, OCTREE, pool, {
       medianAbsMag: -20,
       magOffset: 0.3,
       provenance: { total: 40, estimated: { orientation: 5, size: 6 } },
     });
-    expect(chunkStreams.get(Source.Glade)?.capacity.slots).toBe(slots);
+    expect(chunkStreams.get(Source.Glade)?.capacity.slots).toBe(pool.slots);
     expect(records.get(Source.Glade)?.recordCount).toBe(40);
 
     slot.release();

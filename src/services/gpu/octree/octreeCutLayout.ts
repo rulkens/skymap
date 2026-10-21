@@ -104,7 +104,7 @@ export const VIEW_COUNT_U32_INDEX = 12;
 export const NODE_COUNT_U32_INDEX = 13;
 export const OPACITY_FLOAT_INDEX = 14;
 export const INDEX_NODES_U32_INDEX = 15;
-export const CHUNK_NODE_CAP_U32_INDEX = 16;
+export const NODE_PAGE_ROWS_U32_INDEX = 16;
 export const PLANES_FLOAT_INDEX = 20;
 const CUT_UNIFORM_HEAD_BYTES = PLANES_FLOAT_INDEX * WORD_BYTES;
 export const CUT_UNIFORM_BYTES =
@@ -243,22 +243,16 @@ export function packOctreeCutNodes(
 }
 
 /**
- * `chunkNodeCap` rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase;
- * a top row's parent is its root's pool row.
+ * The chunk's rows; parent and firstRecord pool-absolute from nodeBase/recordBase; a top row's
+ * parent is its root's pool row.
  */
 export function packOctreeChunkNodes(
   chunk: OctreeChunk<{ readonly count: number }>,
   roots: readonly OctreeChunkRoot[],
   pool: { readonly nodeBase: number; readonly recordBase: number },
-  chunkNodeCap: number,
   foldRecords = CUT_FOLD_RECORDS,
 ): Uint32Array {
-  if (chunk.nodes.count > chunkNodeCap) {
-    throw new Error(
-      `octreeCut: chunk of ${chunk.nodes.count} rows exceeds chunkNodeCap ${chunkNodeCap}`,
-    );
-  }
-  const out = new Uint32Array(chunkNodeCap * CUT_NODE_WORDS);
+  const out = new Uint32Array(chunk.nodes.count * CUT_NODE_WORDS);
   const { level, morton } = chunk.nodes;
   const rootRowByKey = new Map(roots.map((r) => [nodeKey(r.level, r.morton), r.rootRow]));
   packRows(
@@ -306,10 +300,10 @@ function parentKey(level: number, morton: number): number {
 /** Throws when the pool would overflow the leaf list's row index or the pick's record index; never clamps. */
 export function checkOctreePoolCaps(
   octree: Octree<{ readonly count: number }>,
-  pool: Pick<OctreePoolShape, 'slots' | 'records'>,
+  pool: Pick<OctreePoolShape, 'records' | 'nodes'>,
 ): void {
-  const rows = octree.nodes.count + pool.slots * octree.chunkNodeCap;
-  const records = octree.records.count + pool.records;
+  const rows = octree.nodes.count + pool.nodes.total;
+  const records = octree.records.count + pool.records.total;
   if (rows >= POOL_NODE_INDEX_LIMIT || records >= POOL_RECORD_INDEX_LIMIT) {
     throw new Error(
       `${octree.family} pool: ${rows} rows or ${records} records overflow the ` +
@@ -321,14 +315,14 @@ export function checkOctreePoolCaps(
 /** Leaf-list entries the pool can ever hold: every own block of the index, and of a full pool at worst. */
 export function leafListCapacity(
   octree: Octree<{ readonly count: number }>,
-  pool: Pick<OctreePoolShape, 'slots' | 'records'>,
+  pool: Pick<OctreePoolShape, 'records' | 'nodes'>,
 ): number {
   let blocks = 0;
   for (let i = 0; i < octree.nodes.count; i++) {
     blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
   }
   // ceil(own / 8) ≤ own / 8 + 1 per row, summed over the pool's records and rows.
-  return blocks + pool.records / (1 << LEAF_BLOCK_SHIFT) + pool.slots * octree.chunkNodeCap;
+  return blocks + pool.records.total / (1 << LEAF_BLOCK_SHIFT) + pool.nodes.total;
 }
 
 /**
@@ -340,7 +334,7 @@ export function leafListCapacity(
 export function writeOctreeCutUniforms(
   out: ArrayBuffer,
   octree: Octree<{ readonly count: number }>,
-  pool: { readonly slots: number },
+  pool: Pick<OctreePoolShape, 'nodes'>,
   camPosMpc: Readonly<Vec3>,
   cut: {
     readonly refineThreshold: number;
@@ -372,9 +366,9 @@ export function writeOctreeCutUniforms(
   const views = cut.planes.length / FLOATS_PER_VIEW;
   const viewCount = views <= CUT_MAX_VIEWS ? views : 0;
   u32[VIEW_COUNT_U32_INDEX] = viewCount;
-  u32[NODE_COUNT_U32_INDEX] = octree.nodes.count + pool.slots * octree.chunkNodeCap;
+  u32[NODE_COUNT_U32_INDEX] = octree.nodes.count + pool.nodes.total;
   u32[INDEX_NODES_U32_INDEX] = octree.nodes.count;
-  u32[CHUNK_NODE_CAP_U32_INDEX] = octree.chunkNodeCap;
+  u32[NODE_PAGE_ROWS_U32_INDEX] = pool.nodes.minRun;
   f32[OPACITY_FLOAT_INDEX] = cut.opacity;
   f32.set(cut.planes.subarray(0, viewCount * FLOATS_PER_VIEW), PLANES_FLOAT_INDEX);
 }

@@ -24,6 +24,7 @@ import type { GalaxyPooledPointRenderer } from '../@types/GalaxyPooledPointRende
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { installOctreePool } from '../../../services/octree/installOctreePool';
 import { octreeChunkPath } from '../../../utils/octree/octreeChunkPath';
+import { octreePoolShape } from '../../../utils/octree/octreePoolShape';
 import { galaxyColumnsOf } from '../../../utils/galaxy/galaxyColumnsOf';
 import { octreeResidency } from '../../../services/octree/octreeResidency';
 import { fetchDataBytes } from '../../../services/loading/fetchDataBytes';
@@ -42,8 +43,8 @@ export function wireGalaxyOctreeSlot(
 ): AssetSlot<GalaxyOctreePayload, GalaxyOctreeReq> {
   const source = entry.code;
   const { binBaseName } = entry;
-  const budgets = (entry as GalaxyCatalogSourceEntry).octree?.budgets;
-  if (budgets === undefined) {
+  const octreeEntry = (entry as GalaxyCatalogSourceEntry).octree;
+  if (octreeEntry === undefined) {
     throw new Error(`wireGalaxyOctreeSlot: ${entry.id} ships no octree`);
   }
   const { pooledPointRenderer: renderer, chunkStreams, records } = galaxy;
@@ -71,7 +72,10 @@ export function wireGalaxyOctreeSlot(
         requestRender: deps.requestRender,
       };
       // The slot's race-check ran just before this call, so `lastRequest()` is this commit's.
-      installOctreePool(host, source, octree, budgets[slot.lastRequest()!.tier].slots, {
+      const { budgets, poolNodesPerRecord } = octreeEntry;
+      const tier = slot.lastRequest()!.tier;
+      const pool = octreePoolShape(octree, budgets[tier].slots, poolNodesPerRecord);
+      installOctreePool(host, source, octree, pool, {
         chunkPath: (ref) => octreeChunkPath('galaxy', binBaseName, ref),
         decodeRecords: galaxyColumnsOf,
       });

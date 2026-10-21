@@ -73,7 +73,7 @@ function chunkBytes(id: number): ArrayBuffer {
 const pathOf = (id: number) => octreeChunkPath('star', 'stars', REFS[id]!);
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** A stream whose fetches wait until the test resolves them by chunk ref; a number is that many 2-record runs. */
+/** A stream whose fetches wait until the test resolves them by chunk ref; a number is that many 2-record, 1-row runs. */
 function harness(slots: number | OctreePoolShape) {
   const pending = new Map<string, (buf: ArrayBuffer | null) => void>();
   const fetchChunk = vi.fn(
@@ -87,7 +87,14 @@ function harness(slots: number | OctreePoolShape) {
       chunkPath: (ref) => octreeChunkPath('star', 'stars', ref),
       decodeRecords: starColumnsOf,
     },
-    pool: typeof slots === 'number' ? { slots, records: 2 * slots, maxRun: 2 } : slots,
+    pool:
+      typeof slots === 'number'
+        ? {
+            slots,
+            records: { total: 2 * slots, minRun: 2, maxRun: 2 },
+            nodes: { total: slots, minRun: 1, maxRun: 1 },
+          }
+        : slots,
     requestRender: () => {},
     upload,
     evict,
@@ -145,8 +152,8 @@ describe('octreeChunkStream', () => {
   it('lands each chunk at its own run start, and evicts for records even with a slot free', async () => {
     const { stream, fetchChunk, upload, evict, land } = harness({
       slots: 3,
-      records: 4,
-      maxRun: 2,
+      records: { total: 4, minRun: 2, maxRun: 2 },
+      nodes: { total: 3, minRun: 1, maxRun: 1 },
     });
     stream.update(
       1,
@@ -164,11 +171,11 @@ describe('octreeChunkStream', () => {
     stream.update(2, [1], [{ chunkRef: 2, priority: 1 }]);
     expect(evict).toHaveBeenCalledWith(0, null);
     await land(2);
-    // [slot, chunk id, run start]
-    expect(upload.mock.calls.map(([slot, chunk, , run]) => [slot, chunk.ref.id, run])).toEqual([
-      [0, 0, 0],
-      [1, 1, 2],
-      [0, 2, 0],
+    // [slot, chunk id, run starts]
+    expect(upload.mock.calls.map(([slot, chunk, , runs]) => [slot, chunk.ref.id, runs])).toEqual([
+      [0, 0, { records: 0, nodes: 0 }],
+      [1, 1, { records: 2, nodes: 1 }],
+      [0, 2, { records: 0, nodes: 0 }],
     ]);
   });
 

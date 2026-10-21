@@ -2,12 +2,27 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createOctreeChunkPool } from '../../../src/services/octree/createOctreeChunkPool';
 
-// Records per key; runs round up to a power of two of at least 1,024.
-const SIZES: Record<string, number> = { a: 1000, b: 1000, c: 2000, d: 4000, e: 1000 };
+// Records and rows per key; record runs round up to a power of two of at least 1,024, row runs of 64.
+const SIZES: Record<string, { records: number; nodes: number }> = {
+  a: { records: 1000, nodes: 10 },
+  b: { records: 1000, nodes: 10 },
+  c: { records: 2000, nodes: 10 },
+  d: { records: 4000, nodes: 10 },
+  e: { records: 1000, nodes: 10 },
+  // Few records, but every row the pool has.
+  f: { records: 10, nodes: 256 },
+};
 
-/** Four chunk slots over 4,096 records: one top run of 4,096. */
+/** Four chunk slots over 4,096 records (one top run) and 256 rows (one top run). */
 function make(slots = 4) {
-  const pool = createOctreeChunkPool({ slots, records: 4096, maxRun: 4096 }, (k) => SIZES[k]!);
+  const pool = createOctreeChunkPool(
+    {
+      slots,
+      records: { total: 4096, minRun: 1024, maxRun: 4096 },
+      nodes: { total: 256, minRun: 64, maxRun: 256 },
+    },
+    (k) => SIZES[k]!,
+  );
   const evicted = vi.fn<(key: string) => void>();
   pool.setEvictHandler(evicted);
   return { pool, evicted };
@@ -16,7 +31,7 @@ function make(slots = 4) {
 describe('createOctreeChunkPool', () => {
   it('places each key in a slot and a run of its own, readable back by the slot', () => {
     const { pool } = make();
-    const runs = ['a', 'c', 'b'].map((k) => pool.runStartOf(pool.allocate(k, 1)!));
+    const runs = ['a', 'c', 'b'].map((k) => pool.runsOf(pool.allocate(k, 1)!).records);
     expect(runs).toEqual([0, 2048, 1024]);
     expect(pool.allocate('a', 2)).toBe(pool.slotOf('a'));
   });
@@ -27,8 +42,16 @@ describe('createOctreeChunkPool', () => {
     pool.allocate('b', 2);
     pool.allocate('c', 3);
     // d needs all 4,096: every older key goes, oldest first.
-    expect(pool.runStartOf(pool.allocate('d', 4)!)).toBe(0);
+    expect(pool.runsOf(pool.allocate('d', 4)!).records).toBe(0);
     expect(evicted.mock.calls.map(([k]) => k)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('places each key in a row run of its own too, and evicts for rows when records are free', () => {
+    const { pool, evicted } = make();
+    expect(['a', 'b'].map((k) => pool.runsOf(pool.allocate(k, 1)!).nodes)).toEqual([0, 64]);
+    // f's 256 rows take the whole row span: both older keys go though records are free.
+    expect(pool.runsOf(pool.allocate('f', 2)!)).toEqual({ records: 0, nodes: 0 });
+    expect(evicted.mock.calls.map(([k]) => k)).toEqual(['a', 'b']);
   });
 
   it('evicts for a slot when records are free but every slot is taken', () => {
@@ -57,7 +80,7 @@ describe('createOctreeChunkPool', () => {
     // Evicting a takes b with it, as a parent chunk takes its children.
     pool.setEvictHandler((k) => k === 'a' && pool.evict('b'));
     pool.evict('c');
-    expect(pool.runStartOf(pool.allocate('d', 3)!)).toBe(0);
+    expect(pool.runsOf(pool.allocate('d', 3)!).records).toBe(0);
     expect(pool.occupiedCount()).toBe(1);
   });
 });

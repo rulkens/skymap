@@ -38,6 +38,10 @@ export const GAIA_STARS_ENTRY = {
     medium: { drawBudget: 1_500_000, slots: 128 },
     large: { drawBudget: 1_500_000, slots: 256 },
   },
+  // Row runs per record run of the resident chunks of stars.e54ab739, at most 0.097 (galactic-centre)
+  // over the perf poses, plus headroom; the whole bake's 0.077 undercounts the row-dense disc chunks
+  // resident together there. Re-measure on a re-bake.
+  poolNodesPerRecord: 0.11,
   // Camera-distance band (parsecs) over which the survey stars crossfade to
   // the procedural Milky-Way cloud. Chosen so the stellar bubble starts
   // fading in while the cloud still dominates the view, reaching full

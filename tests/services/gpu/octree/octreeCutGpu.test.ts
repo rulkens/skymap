@@ -11,7 +11,8 @@ import { Source } from '../../../../src/data/source';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
-const NO_POOL = { slots: 0, records: 0, maxRun: 0 };
+const NO_RUNS = { total: 0, minRun: 1, maxRun: 1 };
+const NO_POOL = { slots: 0, records: NO_RUNS, nodes: NO_RUNS };
 
 const CATALOG = starOctreeFromSkst({
   starCount: 1,

@@ -6,6 +6,7 @@
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { installOctreePool } from '../../../services/octree/installOctreePool';
 import { octreeChunkPath } from '../../../utils/octree/octreeChunkPath';
+import { octreePoolShape } from '../../../utils/octree/octreePoolShape';
 import { starColumnsOf } from '../../../utils/star/starColumnsOf';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Tier } from '../../../@types/data/Tier';
@@ -25,7 +26,9 @@ export function installStarPool(
     throw new Error(`installStarPool: source ${source} is not a streamed star catalog`);
   }
   const { binBaseName } = entry;
-  installOctreePool(host, source, octree, slotsOverride ?? entry.budgets[tier].slots, {
+  const slots = slotsOverride ?? entry.budgets[tier].slots;
+  const pool = octreePoolShape(octree, slots, entry.poolNodesPerRecord);
+  installOctreePool(host, source, octree, pool, {
     chunkPath: (ref) => octreeChunkPath('star', binBaseName, ref),
     decodeRecords: starColumnsOf,
   });

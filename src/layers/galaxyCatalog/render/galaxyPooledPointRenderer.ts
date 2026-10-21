@@ -22,6 +22,7 @@ import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
 import type { OctreeCutInputs } from '../../../@types/octree/OctreeCutInputs';
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
+import type { OctreeChunkRuns } from '../../../@types/octree/OctreeChunkRuns';
 import type { OctreeSlotRun } from '../../../@types/octree/OctreeSlotRun';
 import type { PooledPickSourceDraw } from '../../../@types/rendering/PooledPickSourceDraw';
 import type { GalaxyPooledPointRenderer } from '../@types/GalaxyPooledPointRenderer';
@@ -143,22 +144,21 @@ export function createGalaxyPooledPointRenderer(init: {
   function upload(
     source: SourceType,
     octree: Octree<GalaxyColumns>,
-    slots: number,
+    pool: OctreePoolShape,
     stats: GalaxyPointStats,
-  ): OctreePoolShape {
-    const pool = octreePoolShape(octree, slots);
+  ): void {
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, pool);
     freeBuffers(source);
     const indexRecords = octree.records.count;
     // `createBuffer({size:0})` is forbidden; a degenerate index leaves nothing to draw.
-    if (indexRecords + pool.records === 0) return pool;
+    if (indexRecords + pool.records.total === 0) return;
 
     const packed = new Uint32Array(indexRecords * GALAXY_GPU_RECORD_WORDS);
     packGalaxyGpuRecords(octree.records, octree.columns, packed, 0);
     const recordsBuffer = device.createBuffer({
       label: `galaxy-pooled-records-${source}`,
-      size: (indexRecords + pool.records) * RECORD_BYTES,
+      size: (indexRecords + pool.records.total) * RECORD_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
@@ -219,7 +219,6 @@ export function createGalaxyPooledPointRenderer(init: {
       fadeBuffers,
       bindGroups,
     });
-    return pool;
   }
 
   function unload(source: SourceType): void {
@@ -229,7 +228,7 @@ export function createGalaxyPooledPointRenderer(init: {
     cut.upload(
       source,
       { ...entry.octree, records: { count: 0 } },
-      octreePoolShape(entry.octree, 0),
+      octreePoolShape(entry.octree, 0, 0),
     );
     freeBuffers(source);
   }
@@ -239,10 +238,8 @@ export function createGalaxyPooledPointRenderer(init: {
     hostSlot: number | null,
   ): OctreeChunkHost {
     if (hostSlot === null) return { nodes: octree.nodes, nodeBase: 0 };
-    return {
-      nodes: slotRuns[hostSlot]!.chunk.nodes,
-      nodeBase: octree.nodes.count + hostSlot * octree.chunkNodeCap,
-    };
+    const { chunk, nodeBase } = slotRuns[hostSlot]!;
+    return { nodes: chunk.nodes, nodeBase };
   }
 
   function uploadChunk(
@@ -250,7 +247,7 @@ export function createGalaxyPooledPointRenderer(init: {
     slot: number,
     chunk: OctreeChunk<GalaxyColumns>,
     hostSlot: number | null,
-    runStart: number,
+    runs: OctreeChunkRuns,
   ): void {
     const entry = sources.get(source);
     if (entry === undefined || slot < 0 || slot >= entry.slotRuns.length) {
@@ -260,17 +257,21 @@ export function createGalaxyPooledPointRenderer(init: {
     const packed = new Uint32Array(chunk.records.count * GALAXY_GPU_RECORD_WORDS);
     packGalaxyGpuRecords(chunk.records, octree.columns, packed, 0);
     // The records land before the cut marks the chunk's roots resident.
-    const poolBase = octree.records.count + runStart;
-    device.queue.writeBuffer(entry.recordsBuffer, poolBase * RECORD_BYTES, packed);
-    cut.uploadChunk(source, slot, chunk, hostOf(entry, hostSlot), poolBase);
-    entry.slotRuns[slot] = { chunk, poolBase };
+    const run = {
+      chunk,
+      poolBase: octree.records.count + runs.records,
+      nodeBase: octree.nodes.count + runs.nodes,
+    };
+    device.queue.writeBuffer(entry.recordsBuffer, run.poolBase * RECORD_BYTES, packed);
+    cut.uploadChunk(source, run, hostOf(entry, hostSlot));
+    entry.slotRuns[slot] = run;
   }
 
   function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
     const entry = sources.get(source);
     const run = entry?.slotRuns[slot] ?? null;
     if (entry === undefined || run === null) return;
-    cut.evictChunk(source, slot, run.chunk, hostOf(entry, hostSlot));
+    cut.evictChunk(source, run, hostOf(entry, hostSlot));
     entry.slotRuns[slot] = null;
   }
 

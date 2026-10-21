@@ -28,6 +28,7 @@ const run = (
     },
   } as unknown as OctreeChunk<{ readonly count: number }>,
   poolBase,
+  nodeBase: 0,
 });
 
 // Slot 0 empty; slot 1's 3-record chunk (ordinals 103–105) runs from pool index 164, past slot 2's

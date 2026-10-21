@@ -82,11 +82,13 @@ const ONE_VIEW = Float32Array.from([
   ...Array.from({ length: 5 }, () => [0, 0, 1, 1]).flat(),
 ]);
 
-/** `slots` chunk slots and records to spare: only the slot count binds. */
+/** `slots` chunk slots, and records and rows to spare: only the slot count binds. */
 const slotsOnly = (slots: number): OctreePoolCapacity => ({
   slots,
   records: Infinity,
+  nodes: Infinity,
   runRecords: () => 1,
+  runNodes: () => 1,
 });
 
 const plan = (
@@ -135,12 +137,18 @@ describe('planOctreeChunks', () => {
     // A (run 2) fits; B (run 4) would make 6 of 5, so the set stops there, though E (run 1)
     // would fit: E may root in a chunk the kept set leaves out, which then gets evicted under it.
     const runs: Record<number, number> = { [A]: 2, [B]: 4, [C]: 4, [E]: 1 };
-    const capacity = { slots: 8, records: 5, runRecords: (id: number) => runs[id]! };
+    const capacity = { ...slotsOnly(8), records: 5, runRecords: (id: number) => runs[id]! };
     expect(plan(ONE_VIEW, [], capacity).requests.map((r) => r.chunkRef)).toEqual([A]);
     // A resident chunk's run counts against the records like a wanted one's.
     const held = plan(ONE_VIEW, [A], { ...capacity, records: 3 });
     expect(held.touched).toEqual([A]);
     expect(held.requests).toEqual([]);
+  });
+
+  it("a full pool's rows end the kept set like its records", () => {
+    const runs: Record<number, number> = { [A]: 2, [B]: 4, [C]: 4, [E]: 1 };
+    const capacity = { ...slotsOnly(8), nodes: 5, runNodes: (id: number) => runs[id]! };
+    expect(plan(ONE_VIEW, [], capacity).requests.map((r) => r.chunkRef)).toEqual([A]);
   });
 
   it('planOctreeChunks: with no planes (more than CUT_MAX_VIEWS) nothing is culled', () => {

@@ -14,7 +14,17 @@ import type { StarCatalogRenderer } from '../../../../src/layers/starCatalog/@ty
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
-const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
+// Chunks enough that the pool's slots come out at the knob.
+const fetchSpy = vi.hoisted(() =>
+  vi.fn(async () => ({
+    recordCount: 0,
+    nodes: { count: 0 },
+    chunks: [],
+    chunkCount: 1024,
+    chunkCapacity: 1024,
+    chunkNodeCap: 64,
+  })),
+);
 vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({
   starCatalogFetcher: fetchSpy,
 }));
@@ -22,9 +32,8 @@ vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({
 const POOL_CAP = 256;
 
 function setup(override: { value: number | null }) {
-  const upload = vi.fn<StarCatalogRenderer['upload']>((_s, _o, slots) => {
-    if (slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
-    return { slots: 0, records: 0, maxRun: 0 };
+  const upload = vi.fn<StarCatalogRenderer['upload']>((_s, _o, pool) => {
+    if (pool.slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
   });
   const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
   const host = {
@@ -51,7 +60,7 @@ describe('starCatalogSlot commit', () => {
     await slot.load(REQ);
     override.value = null;
     await slot.load(REQ);
-    expect(upload.mock.calls.map((c) => c[2])).toEqual([384, tierSlots()]);
+    expect(upload.mock.calls.map((c) => c[2].slots)).toEqual([384, tierSlots()]);
   });
 });
 
@@ -61,7 +70,7 @@ describe('resizeStarPools', () => {
     await slot.load(REQ);
     fetchSpy.mockClear();
     expect(resizeStarPools(runtime, 128)).toBeNull();
-    expect(upload.mock.calls.at(-1)![2]).toBe(128);
+    expect(upload.mock.calls.at(-1)![2].slots).toBe(128);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

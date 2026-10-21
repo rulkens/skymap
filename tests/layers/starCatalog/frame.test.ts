@@ -13,6 +13,7 @@ import type { OctreeChunkStream } from '../../../src/@types/octree/OctreeChunkSt
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { OctreePoolShape } from '../../../src/@types/octree/OctreePoolShape';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -267,10 +268,15 @@ describe('starCatalogPlanner', () => {
 
   it('re-installs the pools when the chunk-slots override changes, publishing the outcome', () => {
     const runtime = makeRuntime(true);
-    const octree = {} as Octree<StarColumns>;
-    const upload = vi.fn((_s: number, _o: Octree<StarColumns>, slots: number) => {
-      if (slots > 256) throw new Error('only 256 slots fit');
-      return { slots: 0, records: 0, maxRun: 0 };
+    // Chunks enough that the pool's slots come out at the override.
+    const octree = {
+      chunks: [],
+      chunkCount: 1024,
+      chunkCapacity: 1024,
+      chunkNodeCap: 64,
+    } as unknown as Octree<StarColumns>;
+    const upload = vi.fn((_s: number, _o: Octree<StarColumns>, pool: OctreePoolShape) => {
+      if (pool.slots > 256) throw new Error('only 256 slots fit');
     });
     const publish = vi.fn();
     Object.assign(runtime, {

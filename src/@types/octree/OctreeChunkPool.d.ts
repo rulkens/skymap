@@ -1,15 +1,18 @@
 import type { SlotStore } from '../cache/SlotStore';
+import type { OctreeChunkRuns } from './OctreeChunkRuns';
 
 /**
- * An octree source's chunk residency: each key holds a chunk slot (its node rows) and a record
- * run sized to it. `allocate` evicts least-recently-seen keys until both fit, and refuses (null)
- * once the next in line was seen this frame.
+ * An octree source's chunk residency: each key holds a slot, a record run and a node-row run sized
+ * to it. `allocate` evicts least-recently-seen keys until all three fit, and refuses (null) once
+ * the next in line was seen this frame.
  */
 export type OctreeChunkPool = SlotStore & {
-  /** Free `key`'s slot and run through the evict handler; nothing for an absent key. */
+  /** Free `key`'s slot and runs through the evict handler; nothing for an absent key. */
   evict(key: string): void;
-  /** First record of the run behind an occupied slot, counted from the pool's first chunk record. */
-  runStartOf(slot: number): number;
-  /** The run `records` takes. */
-  runSize(records: number): number;
+  /** Where the runs behind an occupied slot start. */
+  runsOf(slot: number): OctreeChunkRuns;
+  /** The record run `records` takes. */
+  recordRunSize(records: number): number;
+  /** The node-row run `nodes` rows take. */
+  nodeRunSize(nodes: number): number;
 };

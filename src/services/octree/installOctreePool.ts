@@ -1,6 +1,6 @@
 /**
  * installOctreePool — gives a source's loaded octree its chunk pool: uploads the
- * index at the pool size, then replaces the source's chunk stream. Shared by a
+ * index at the pool's size, then replaces the source's chunk stream. Shared by a
  * slot commit (a fresh load) and a resize (the same octree, no refetch).
  * `upload` runs first and throws past the pool caps, so a failure leaves the
  * previous stream drawing.
@@ -10,16 +10,17 @@ import type { Octree } from '../../@types/octree/Octree';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
 import type { OctreeStreamFormat } from '../../@types/octree/OctreeStreamFormat';
+import type { OctreePoolShape } from '../../@types/octree/OctreePoolShape';
 
 export function installOctreePool<C extends { readonly count: number }>(
   host: OctreePoolHost<C>,
   source: SourceType,
   octree: Octree<C>,
-  slots: number,
+  pool: OctreePoolShape,
   format: OctreeStreamFormat<C>,
 ): void {
   const { renderer, chunkStreams, requestRender } = host;
-  const pool = renderer.upload(source, octree, slots);
+  renderer.upload(source, octree, pool);
   chunkStreams.get(source)?.destroy();
   chunkStreams.delete(source);
   if (pool.slots === 0) return;

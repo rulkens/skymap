@@ -20,10 +20,10 @@ import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimes
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
 import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
+import type { OctreeChunkRuns } from '../../../@types/octree/OctreeChunkRuns';
 import type { OctreeSlotRun } from '../../../@types/octree/OctreeSlotRun';
 import { recordOrdinal } from '../../../utils/octree/recordOrdinal';
 import { poolRecordIndex } from '../../../utils/octree/poolRecordIndex';
-import { octreePoolShape } from '../../../utils/octree/octreePoolShape';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
@@ -125,8 +125,7 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  function upload(source: SourceType, octree: Octree<StarColumns>, slots: number): OctreePoolShape {
-    const pool = octreePoolShape(octree, slots);
+  function upload(source: SourceType, octree: Octree<StarColumns>, pool: OctreePoolShape): void {
     // Throws past a pool cap before anything below is created or released.
     cut.upload(source, octree, pool);
     // `createBuffer({size:0})` is forbidden, and a degenerate bake (a `--limit` dev run)
@@ -135,11 +134,11 @@ export function createStarCatalogRenderer(
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
-    if (packed === null) return pool;
+    if (packed === null) return;
 
     const recordsBuffer = device.createBuffer({
       label: `star-catalog-records-${source}`,
-      size: (octree.records.count + pool.records) * GPU_RECORD_BYTES,
+      size: (octree.records.count + pool.records.total) * GPU_RECORD_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
@@ -155,7 +154,6 @@ export function createStarCatalogRenderer(
       recordsBuffer,
       recordsBindGroup,
     });
-    return pool;
   }
 
   function hostOf(
@@ -163,10 +161,8 @@ export function createStarCatalogRenderer(
     hostSlot: number | null,
   ): OctreeChunkHost {
     if (hostSlot === null) return { nodes: octree.nodes, nodeBase: 0 };
-    return {
-      nodes: slotRuns[hostSlot]!.chunk.nodes,
-      nodeBase: octree.nodes.count + hostSlot * octree.chunkNodeCap,
-    };
+    const { chunk, nodeBase } = slotRuns[hostSlot]!;
+    return { nodes: chunk.nodes, nodeBase };
   }
 
   function uploadChunk(
@@ -174,7 +170,7 @@ export function createStarCatalogRenderer(
     slot: number,
     chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
-    runStart: number,
+    runs: OctreeChunkRuns,
   ): void {
     const entry = sources.get(source);
     if (entry === undefined || slot < 0 || slot >= entry.slotRuns.length) {
@@ -183,21 +179,25 @@ export function createStarCatalogRenderer(
     const { octree } = entry;
     const host = hostOf(entry, hostSlot);
     // The records land before the cut marks the chunk's roots resident.
-    const poolBase = octree.records.count + runStart;
+    const run = {
+      chunk,
+      poolBase: octree.records.count + runs.records,
+      nodeBase: octree.nodes.count + runs.nodes,
+    };
     device.queue.writeBuffer(
       entry.recordsBuffer,
-      poolBase * GPU_RECORD_BYTES,
+      run.poolBase * GPU_RECORD_BYTES,
       packStarGpuRecords(chunk.records),
     );
-    cut.uploadChunk(source, slot, chunk, host, poolBase);
-    entry.slotRuns[slot] = { chunk, poolBase };
+    cut.uploadChunk(source, run, host);
+    entry.slotRuns[slot] = run;
   }
 
   function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
     const entry = sources.get(source);
     const run = entry?.slotRuns[slot] ?? null;
     if (entry === undefined || run === null) return;
-    cut.evictChunk(source, slot, run.chunk, hostOf(entry, hostSlot));
+    cut.evictChunk(source, run, hostOf(entry, hostSlot));
     entry.slotRuns[slot] = null;
   }
 

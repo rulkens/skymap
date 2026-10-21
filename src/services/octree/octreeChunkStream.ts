@@ -1,6 +1,6 @@
 /**
  * octreeChunkStream — one octree source's chunks over `createTileStreamSubsystem`
- * and `createOctreeChunkPool` (a slot plus a record run per chunk). Keys are
+ * and `createOctreeChunkPool` (a slot, a record run and a row run per chunk). Keys are
  * `String(chunk id)`. Chunks nest: a chunk's ref is learnt from its parent's header as that object decodes, a landing whose
  * parent was evicted in flight is dropped, and evicting a chunk first evicts
  * its resident descendants, so no root bit is ever written into a recycled
@@ -42,13 +42,13 @@ export function createOctreeChunkStream<C extends { readonly count: number }>(
     parent === null ? null : residents.get(parent)!.slot;
   let epoch = 0;
 
-  const pool = createOctreeChunkPool(deps.pool, (key) => refs[Number(key)]!.records);
+  const pool = createOctreeChunkPool(deps.pool, (key) => refs[Number(key)]!);
   const stream = createTileStreamSubsystem<OctreeChunk<C>, OctreeChunkPool>({
     slots: pool,
     concurrency: OCTREE_CHUNK_CONCURRENCY,
     requestRender: deps.requestRender,
     upload: (_pool, slot, chunk) => {
-      deps.upload(slot, chunk, hostSlotOf(chunk), pool.runStartOf(slot));
+      deps.upload(slot, chunk, hostSlotOf(chunk), pool.runsOf(slot));
       residents.set(chunk.ref.id, { slot, chunk });
       epoch++;
     },
@@ -123,8 +123,10 @@ export function createOctreeChunkStream<C extends { readonly count: number }>(
   return {
     capacity: {
       slots: deps.pool.slots,
-      records: deps.pool.records,
-      runRecords: (id) => pool.runSize(refs[id]!.records),
+      records: deps.pool.records.total,
+      nodes: deps.pool.nodes.total,
+      runRecords: (id) => pool.recordRunSize(refs[id]!.records),
+      runNodes: (id) => pool.nodeRunSize(refs[id]!.nodes),
     },
     update,
     hasFailed: (id) => failed.has(id),

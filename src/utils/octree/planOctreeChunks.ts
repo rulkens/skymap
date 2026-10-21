@@ -6,7 +6,7 @@
  * parent's; so is a row with no chunk root at or below it (`holdsChunkRoot`). A refining chunk root
  * requests its chunk (priority = its best root's proxy) when absent and is touched when resident,
  * so a chunk is only requested under a resident parent; the budget bin it cannot see may decline
- * a fetched chunk (bytes, never correctness). Only the best that fit the pool's slots and records,
+ * a fetched chunk (bytes, never correctness). Only the best that fit the pool's slots, records and rows,
  * resident or not, are kept: the stream stamps touched chunks before allocating, so a weaker touched
  * resident would hold its run against a nearer chunk forever. A child ranks below its parent.
  */
@@ -175,8 +175,8 @@ export function planOctreeChunks(
     }
   }
 
-  // Strongest first, a tie to the resident chunk (no churn between equals); keep while the slots
-  // and records hold out. The first that overflows ends the set, so no child stays kept past a
+  // Strongest first, a tie to the resident chunk (no churn between equals); keep while the slots,
+  // records and rows hold out. The first that overflows ends the set, so no child stays kept past a
   // parent the set left out.
   const ranks = wanted.length + touched.length;
   const idOf = (k: number) => (k < wanted.length ? wanted[k]! : touched[k - wanted.length]!);
@@ -187,11 +187,13 @@ export function planOctreeChunks(
   for (let k = 0; k < ranks; k++) ranked[k] = k;
   ranked.sort((a, b) => proxyOf(b) - proxyOf(a) || b - a);
   let records = 0;
-  let keptCount = 0;
-  for (; keptCount < Math.min(ranks, pool.slots); keptCount++) {
-    records += pool.runRecords(idOf(ranked[keptCount]!));
-    if (records > pool.records) break;
-    keep[idOf(ranked[keptCount]!)] = 1;
+  let rows = 0;
+  for (let k = 0; k < Math.min(ranks, pool.slots); k++) {
+    const id = idOf(ranked[k]!);
+    records += pool.runRecords(id);
+    rows += pool.runNodes(id);
+    if (records > pool.records || rows > pool.nodes) break;
+    keep[id] = 1;
   }
   // Walk order kept: the stream relies on a parent preceding its children.
   const kept = touched.filter((ref) => keep[ref] === 1);
