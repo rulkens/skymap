@@ -2,7 +2,7 @@
 
 A second, user-selectable camera **control scheme** that drives like OpenSpace, so planetarium and OpenSpace operators feel at home. The existing scheme (`skymap`) stays behaviourally unchanged.
 
-Rulings came from the brainstorm of 2026-09-25 → 2026-09-29 (dash asks dHGq, PeRh, 6AXs, plus chat sign-off of design §1–§3 and the `lookOffset` follow-up). They are listed in §2 and are not re-litigated here. The OpenSpace facts are verified against the v0.22.0 source: `src/navigation/orbitalnavigator/{orbitalnavigator,orbitalinputhandler,mousecamerastates}.cpp` and `data/assets/default_keybindings.asset`. Background: [`docs/research/2026-08-24-camera-pivot/openspace-camera-notes.md`](../../research/2026-08-24-camera-pivot/openspace-camera-notes.md).
+Rulings came from the brainstorm of 2026-09-25 → 2026-09-29 (dash asks dHGq, PeRh, 6AXs, plus chat sign-off of design §1–§3 and the `lookOffset` follow-up). They are listed in §2 and are not re-litigated here. The OpenSpace facts are verified against the v0.22.0 source: `src/navigation/orbitalnavigator/{orbitalnavigator,orbitalinputhandler,mousecamerastates}.cpp` and `data/assets/default_keybindings.asset`. Background: [`docs/research/2026-08-24-camera-pivot/openspace-camera-notes.md`](../../../research/2026-08-24-camera-pivot/openspace-camera-notes.md).
 
 ## 1. What this is
 
@@ -28,7 +28,7 @@ Packaging: **two PRs**. PR 1 is the ground preparation (§3): five behaviour-neu
 |---|---|
 | R1 | Purpose: familiarity for OpenSpace operators. Where skymap and OpenSpace differ, the openspace scheme follows OpenSpace unless another ruling says otherwise. |
 | R2 | Architecture: a **separate navigator with its own velocity state**, authored through its own driver rows. The input-mapping-table plus flick-coast alternative was rejected. |
-| R3 | Friction is **true OpenSpace**: `v *= 1 − min(dt / friction, 1)` per frame on axes with friction on. Friction off means the axis never decays and is stopped only by reversing it or by a preempting driver. This **revises grill Q8** ([`globe-camera-pivot-2026-08-24.md`](../../grill-sessions/globe-camera-pivot-2026-08-24.md)), which rejected velocity/friction models, for the openspace scheme only. |
+| R3 | Friction is **true OpenSpace**: `v *= 1 − min(dt / friction, 1)` per frame on axes with friction on. Friction off means the axis never decays and is stopped only by reversing it or by a preempting driver. This **revises grill Q8** ([`globe-camera-pivot-2026-08-24.md`](../../../grill-sessions/globe-camera-pivot-2026-08-24.md)), which rejected velocity/friction models, for the openspace scheme only. |
 | R4 | No WASD fly (OpenSpace ships none). No Z/X sensitivity ramp, no local roll, no `R` idle motion. |
 | R5 | The wheel keeps skymap's zoom in both schemes (OpenSpace's wheel is unused). |
 | R6 | `f` stays focus. Friction toggles live **only** in the settings panel; OpenSpace's F / Shift+F / Ctrl+F are not bound. |
@@ -184,7 +184,7 @@ Friction groups follow the source: OpenSpace's `rotational` toggle gates only or
 
 ## 10. Testing
 
-These are the tests that can catch a real bug nothing else catches ([`testing.md`](../conventions/testing.md)):
+These are the tests that can catch a real bug nothing else catches ([`testing.md`](../../conventions/testing.md)):
 
 - **Navigator (pure):**
   - decay matches the law at several `dt`;

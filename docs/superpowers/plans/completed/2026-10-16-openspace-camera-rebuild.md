@@ -14,7 +14,7 @@
 
 **Source of the carried code:** branch `worktree-openspace-camera-mode-pr2` (HEAD `b6368ded1`, CI green, visual-check fixes in). Read its files with `git show worktree-openspace-camera-mode-pr2:<path>`, and its diff with `git diff origin/main...worktree-openspace-camera-mode-pr2 -- <path>`. Its plan (`docs/superpowers/plans/2026-10-04-openspace-camera-mode.md`) and ledger (`.superpowers/sdd/2026-10-04-openspace-camera-mode/progress.md`) hold the rulings that still apply: friction groups, gain seed, touch binds orbit, the scheme lookup in `stepCameraRuntime`, an orbit tap picks, the uncapped-dt target, the wheel notch on the live register (`navOwns`), and `surfaceOrbitScale`.
 
-**Spec:** [`docs/superpowers/specs/2026-09-29-openspace-camera-mode-design.md`](../specs/2026-09-29-openspace-camera-mode-design.md). The #837 branch's copy (synced to what shipped in `c73483090`) replaces main's in Task 1. Task 4 adds a short section on what changed for #913 and #854.
+**Spec:** [`docs/superpowers/specs/completed/2026-09-29-openspace-camera-mode-design.md`](../../specs/completed/2026-09-29-openspace-camera-mode-design.md). The #837 branch's copy (synced to what shipped in `c73483090`) replaces main's in Task 1. Task 4 adds a short section on what changed for #913 and #854.
 
 ## Rulings made at plan time
 
