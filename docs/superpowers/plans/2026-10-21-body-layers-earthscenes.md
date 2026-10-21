@@ -99,7 +99,7 @@ review: yes
 
 **Done:** `rg CORE_MESH_BODY_IDS src tests` returns nothing.
 
-- [ ] Task 2
+- [x] Task 2
 
 ### Task 3: docs
 

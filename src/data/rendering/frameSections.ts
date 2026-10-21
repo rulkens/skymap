@@ -64,10 +64,10 @@ export const PRELUDE: FrameSection = {
     // The reflection probe of this frame's one subject mesh body, after the sky
     // line so its blit samples a `solarSystem` bake this frame may have written.
     // Its roster is the sky blit plus the subject's HOST body row, and no more:
-    // `mission-meshes` / `core-mesh-bodies` are excluded because the subject
+    // `mission-meshes` / `core-mesh-bodies` / `earth-scene-meshes` are excluded because the subject
     // would draw into its own probe; `star-spheres` / `field-star-sphere` because
     // the Sun stays analytic (a sub-pixel Sun would smear through the prefilter
-    // into a false highlight); `body-glints` / `mission-glints` / `orbit-trails`
+    // into a false highlight); `body-glints` / `mission-glints` / `earth-scene-glints` / `orbit-trails`
     // because none is environment a surface reflects. The NEAR0 roster is empty on
     // purpose — the blit rides COSMO — so a probe face opens two steps, not three. `atmosphere-shell` is excluded
     // because it classifies its rays by a sampled scene depth, which a capture
@@ -208,7 +208,7 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints', 'mission-glints', 'black-hole-marker'],
+      passes: ['body-glints', 'mission-glints', 'earth-scene-glints', 'black-hole-marker'],
       slot: 'POST_LENSING',
     },
     // The near-field foreground bodies (the zoom-to-earth fold), into their own
@@ -232,8 +232,8 @@ export const SCENE: FrameSection = {
     // sphere and only the shells' own fragments are overdrawn — which is also what
     // leaves the mesh's own distance in the depth the aerial line below samples,
     // so a rover silhouetted against Mars sky is fogged at its range, not space's.
-    // `mission-meshes` before `core-mesh-bodies` keeps each row's draw order:
-    // the craft, then Søndermarken and the shape-model moons.
+    // `mission-meshes`, `core-mesh-bodies`, `earth-scene-meshes` keeps each row's draw order:
+    // the craft, the shape-model moons, then Søndermarken.
     {
       kind: 'foreground',
       target: 'foreground:0',
@@ -260,6 +260,7 @@ export const SCENE: FrameSection = {
         { sampleDepth: ['contact-shadows', 'atmosphere-shell'] },
         'mission-meshes',
         'core-mesh-bodies',
+        'earth-scene-meshes',
       ],
     },
     // The aerial-perspective apply, on the enclosing body's own painter row — the
