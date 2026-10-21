@@ -29,7 +29,7 @@ export const cameraControlsSlice = createSlice({
       controls.scheme = controls.scheme === 'skymap' ? 'openspace' : 'skymap';
     },
     setNavFriction: (controls, action: PayloadAction<number>) => {
-      controls.friction = Math.min(Math.max(action.payload, 0), 1);
+      controls.friction = action.payload;
     },
     setFrictionOn: (controls, action: PayloadAction<{ group: FrictionGroup; on: boolean }>) => {
       controls.frictionOn[action.payload.group] = action.payload.on;

@@ -88,8 +88,6 @@ export function replayInput(
   let camera = rootState.camera;
   const actions: UnknownAction[] = [];
   const navSteps: NavStep[] = [];
-  // A navigator row bakes the release on its own edge: last frame's winner, or the
-  // nav drag earlier in this drain whose coast starts this frame.
   let navAuthors = args.navOwns;
   const emit = (action: UnknownAction): void => {
     actions.push(action);

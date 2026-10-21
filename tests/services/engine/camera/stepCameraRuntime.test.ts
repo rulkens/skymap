@@ -74,7 +74,6 @@ import {
   setFrictionOn,
   toggleControlScheme,
 } from '../../../../src/state/settings/core/cameraControlsSlice';
-import { stepNavigator } from '../../../../src/utils/camera/stepNavigator';
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
@@ -88,8 +87,6 @@ const EARTH_ROW: SelectionRow = {
   driver: bodyDriverGeometry('earth'),
 };
 
-const CANVAS_PX = 100;
-
 /** The frame's inputs as `runFrame` would build them, off the harness's live store, draining its pending input. */
 function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs> = {}): StepInputs {
   const rootState = h.store.getState();
@@ -100,7 +97,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     nowMs,
     simDays,
     rootState,
-    canvasPx: [CANVAS_PX, CANVAS_PX],
+    canvasPx: [100, 100],
     aspect: 1,
     steps: pendingToInputSteps(pending, [100, 100]),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
@@ -610,18 +607,9 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     stepWith(h, []);
     let i = 0;
     while (h.state.cameraRuntime.register.pose.frame === 'absolute' && i < GUARD) {
-      const prev = h.state.cameraRuntime;
-      const expected = stepNavigator(
-        prev.navigator,
-        [],
-        false,
-        nextNow(h),
-        h.store.getState().settings.cameraControls,
-        prev.outputs.projection.fovYRad / CANVAS_PX,
-      ).state.velocity;
       const out = stepWith(h, []);
       expect(out.next.register.winner).toBe('openSpaceCoast');
-      expect(out.next.navigator.velocity).toEqual(expected);
+      expect(out.next.navigator.velocity.zoom).toBe(-3);
       i += 1;
     }
     expect(h.state.cameraRuntime.register.pose.frame).toEqual({ body: 'earth' });

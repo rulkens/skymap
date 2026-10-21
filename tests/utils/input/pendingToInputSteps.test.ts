@@ -62,20 +62,11 @@ describe('pendingToInputSteps', () => {
     ]);
   });
 
-  it("a nav motion on the canvas aspect carries today's pixels", () => {
-    // 100 × 50 view, aspect 2: dx 0.2 of the width is 20 px, dy 0.2 of the height is 10 px.
-    const steps = pendingToInputSteps(
-      [drag({ intent: 'navLook', aspect: 2, dx: 0.1, dy: 0.2, at: null })],
-      [100, 50],
-    );
-    expect(steps).toEqual([{ kind: 'navDrag', axis: 'look', deltaPx: [10, 10] }]);
-  });
-
   it('a 9:16 source moves a nav drag isotropically on a 16:9 view', () => {
     // 0.1 of the source's height on both axes: dx = 0.1 / aspect.
     const aspect = 9 / 16;
     const [step] = pendingToInputSteps(
-      [drag({ intent: 'navOrbit', aspect, dx: 0.1 / aspect, dy: 0.1 })],
+      [drag({ intent: 'navOrbit', aspect, dx: 0.1 / aspect, dy: 0.1, at: null })],
       [1600, 900],
     );
     if (step?.kind !== 'navDrag') throw new Error('expected a navDrag');

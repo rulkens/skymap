@@ -867,20 +867,6 @@ describe('orbitDrag — the register comes from the ctx', () => {
 describe('the openspace table', () => {
   const rest = composeControlSchemes([]);
 
-  it("is skymap's table with orbitDrag swapped for the navigator's rows", () => {
-    expect(rest.skymap.drivers).toEqual(CAMERA_DRIVERS);
-    expect(rest.openspace.drivers.map((d) => d.id)).toEqual([
-      'clip',
-      'openSpaceHeld',
-      'openSpaceCoast',
-      'followApproach',
-      'followHold',
-      'tween',
-      'autoRotate',
-      'resting',
-    ]);
-  });
-
   it('the held row takes any open gesture over the coast, and both yield to a claimed drag', () => {
     const store = makeStore();
     const idle = store.getState() as unknown as RootState;

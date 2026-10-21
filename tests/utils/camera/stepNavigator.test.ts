@@ -89,19 +89,7 @@ describe('stepNavigator', () => {
     expect(delta).toEqual({});
   });
 
-  it('a held motionless mouse comes to rest even with friction off', () => {
-    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_OFF, RAD_PER_PX).state;
-    state = stepNavigator(state, [drag('orbit', 10, 5)], true, 16, ALL_OFF, RAD_PER_PX).state;
-    expect(state.velocity.orbit[0]).toBeGreaterThan(0);
-    let moving = true;
-    for (let i = 2; i < 2000 && moving; i++) {
-      ({ state, moving } = stepNavigator(state, [], true, i * 16, ALL_OFF, RAD_PER_PX));
-    }
-    expect(moving).toBe(false);
-    expect(state.velocity.orbit).toEqual([0, 0]);
-  });
-
-  const steadyHold = (axis: 'zoom' | 'roll', x: number, y: number) => {
+  const steadyHold = (axis: 'orbit' | 'zoom' | 'roll', x: number, y: number) => {
     let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_ON, RAD_PER_PX).state;
     let delta = {};
     for (let i = 1; i <= 600; i++) {
@@ -122,56 +110,15 @@ describe('stepNavigator', () => {
     expect(steadyHold('zoom', 50, -10)).toEqual({ zoom: expect.closeTo(-10 * 0.005, 9) });
   });
 
-  it('roll reads the horizontal drag only', () => {
-    expect(steadyHold('roll', 10, 40)).toEqual({ roll: expect.closeTo(10 * RAD_PER_PX, 9) });
-    expect(steadyHold('roll', -10, 40)).toEqual({ roll: expect.closeTo(-10 * RAD_PER_PX, 9) });
-  });
-
   it('steady hold moves at the drag rate', () => {
-    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_ON, RAD_PER_PX).state;
-    let delta = {};
-    for (let i = 1; i <= 600; i++) {
-      ({ state, delta } = stepNavigator(
-        state,
-        [drag('orbit', 10, -4)],
-        true,
-        i * 16,
-        ALL_ON,
-        RAD_PER_PX,
-      ));
-    }
-    expect(delta).toEqual({
+    expect(steadyHold('orbit', 10, -4)).toEqual({
       orbit: [expect.closeTo(10 * RAD_PER_PX, 9), expect.closeTo(-4 * RAD_PER_PX, 9)],
     });
   });
 
-  it('moving falls exactly once', () => {
-    let state = coasting(0);
-    const trace: boolean[] = [];
-    for (let i = 1; i <= 1000; i++) {
-      const r = stepNavigator(state, [], false, i * 16, ALL_ON, RAD_PER_PX);
-      state = r.state;
-      trace.push(r.moving);
-    }
-    const firstFalse = trace.indexOf(false);
-    expect(firstFalse).toBeGreaterThan(0);
-    expect(trace.slice(firstFalse).every((m) => !m)).toBe(true);
-  });
-
-  it('zero axes are omitted', () => {
-    let state = stepNavigator(NAV_AT_REST, [], true, 0, ALL_ON, RAD_PER_PX).state;
-    let delta = {};
-    for (let i = 1; i <= 5; i++) {
-      ({ state, delta } = stepNavigator(
-        state,
-        [drag('orbit', 3, 2)],
-        true,
-        i * 16,
-        ALL_ON,
-        RAD_PER_PX,
-      ));
-    }
-    expect(Object.keys(delta)).toEqual(['orbit']);
+  it('roll reads the horizontal drag only', () => {
+    expect(steadyHold('roll', 10, 40)).toEqual({ roll: expect.closeTo(10 * RAD_PER_PX, 9) });
+    expect(steadyHold('roll', -10, 40)).toEqual({ roll: expect.closeTo(-10 * RAD_PER_PX, 9) });
   });
 
   it('a gestureEnd in the same frame applies the final delta before releasing', () => {

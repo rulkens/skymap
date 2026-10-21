@@ -1,7 +1,4 @@
-import type { NavAxis } from './NavAxis';
-import type { Vec2 } from '../math/Vec2';
+import type { InputStep } from './InputStep';
 
 /** NavStep — the subsequence of the frame's InputSteps the navigator reads. */
-export type NavStep =
-  | { readonly kind: 'navDrag'; readonly axis: NavAxis; readonly deltaPx: Vec2 }
-  | { readonly kind: 'gestureEnd' };
+export type NavStep = Extract<InputStep, { kind: 'navDrag' | 'gestureEnd' }>;

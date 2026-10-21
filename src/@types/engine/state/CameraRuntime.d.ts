@@ -33,8 +33,7 @@ export type CameraRuntime = {
   /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
   readonly gesture: RungMemory;
   readonly tilt: TiltMemory;
-  /** Stepped before the pick, so it lives here and not in a row's `own`; at rest on
-   * every frame neither navigator row (nor an exhibit's drag) authored. */
+  /** Stepped before the pick, so it lives here and not in a row's `own`. */
   readonly navigator: NavigatorState;
   /** The scheme last frame's winner was picked from: a toggled-away row exists
    * only in its own table, which is where its edge commit must look it up. */

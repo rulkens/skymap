@@ -1,8 +1,7 @@
 /**
  * CameraControlsSection — the control-scheme select and, for the OpenSpace
  * scheme only, its friction dials. Props only; `CameraControlsSectionContainer`
- * owns the store reach. "Look & roll" is one toggle because OpenSpace's `roll`
- * friction gates look as well as roll.
+ * owns the store reach.
  */
 
 import { memo } from 'react';
@@ -70,7 +69,6 @@ function CameraControlsSection({
               max={1}
               step={0.05}
               onChange={onFrictionChange}
-              format={(v) => v.toFixed(2)}
             />
           </div>
         </>

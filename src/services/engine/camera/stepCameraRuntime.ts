@@ -349,7 +349,7 @@ export function stepCameraRuntime(
       },
     },
     actions,
-    requestRender: projected.requestRender || navHeld || nav.moving,
+    requestRender: projected.requestRender || nav.moving,
     world: projected.world,
     rootState,
   };
