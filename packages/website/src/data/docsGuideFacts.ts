@@ -30,7 +30,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'zoom-inputs',
     about: 'app',
     text: 'The mouse wheel, a scroll or a pinch on a trackpad and a two-finger pinch on a touch screen move the camera towards its focus or away from it.',
-    source: `${REPO_BLOB}/src/services/input/createCanvasDeviceChannel.ts`,
+    source: `${REPO_BLOB}/src/services/input/createDeviceChannel.ts`,
     sourceLabel: `the pointer and wheel handling, ${IN_REPO}`,
     checked: CHECKED,
   },

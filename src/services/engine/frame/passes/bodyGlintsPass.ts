@@ -9,9 +9,10 @@
  * `texturedBodiesPass` draw the `flat` / `textured` branches of the SAME
  * partition, so a body is a glint XOR a mesh by construction — the interim gap
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew
- * the glint) is closed here. The black holes' far-field markers share this
- * renderer's pipeline but not this pass: they are the blackHoles Layer's
- * `black-hole-marker`.
+ * the glint) is closed here. Core's roster only (`coreSceneBodyPartition`): the
+ * missions craft glint in that Layer's `mission-glints`, and the black holes'
+ * far-field markers in the blackHoles Layer's `black-hole-marker`, each through
+ * its own instance of this renderer's pipeline.
  *
  * ### Brightness = apparent size x albedo x phase, then the cross-fade
  *
@@ -69,8 +70,6 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
-import { NEAR0 } from '../slabs';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
@@ -80,27 +79,21 @@ import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 import { glintBandClass } from '../../../../utils/picking/glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
-import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
-import { fadeBand } from '../../../../utils/math/fadeBand';
-import { regionById } from '../../../../utils/regions/regionById';
-import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
-import { SCALE_FADE_BANDS } from '../../../../data/scaleFadeBands';
+import { bodyGlintBrightnessOf } from '../../../../utils/scene/bodyGlintBrightnessOf';
+import { bodyGlintBackdropFade } from '../../../../utils/scene/bodyGlintBackdropFade';
+import { packBodyGlints } from '../../../../utils/scene/packBodyGlints';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../data/labels/solarSystemLabelMaxDistance';
 import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
-import { MAX_GLINTS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/bodyGlintRenderer';
+import { MAX_GLINTS } from '../../../gpu/renderers/bodies/bodyGlintRenderer';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../../../data/rendering/bodyGlintInstanceFloats';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each glint's 7-float record (camera-relative position +
 // albedo tint + brightness) is rewritten in place before the single draw.
-const staging = new Float32Array(MAX_GLINTS * INSTANCE_FLOATS);
-
-// The scale regime the glints belong to. Both the band's edges (the planet
-// extent) and the distance it keys on come from this one region, so the fade
-// stays attached to the content it dissolves rather than to the render origin.
-const GLINT_BACKDROP_REGION = regionById('solar-system');
+const staging = new Float32Array(MAX_GLINTS * BODY_GLINT_INSTANCE_FLOATS);
 
 /**
  * The one fact "the Earth caption invites a click": the seeded Earth exists AND
@@ -124,22 +117,12 @@ export const bodyGlintsPass: ContentPass = {
     // partition last.
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
-    // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
-    // mirroring `starPointsPass`'s backdrop-dissolve gate (which also empties the
-    // (hdr, NEAR0) step so the executor skips it). Keyed on the camera's distance
-    // from the solar system's own anchor — the eye position (`drawCamPos`), NOT
-    // `cam.distance`, which measures to the orbit TARGET and so read a different
-    // number whenever the camera framed something outside the region.
-    // `bodyGlintBackdrop` completes deep inside `FOREGROUND_MAX_DISTANCE_MPC`, so
-    // this is the binding — and smooth — gate for the glints; without it they draw
-    // at full additive brightness all the way to the coarse gate.
-    const regionDistMpc = regionRelativeDistanceMpc(
-      ctx.drawCamPos,
-      GLINT_BACKDROP_REGION,
-      sceneBodyStates(state, ctx),
-    );
-    if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, regionDistMpc) <= 0) return false;
+    // Once the far dissolve has zeroed, DISABLE the layer rather than pack
+    // invisible points — the "opacity 0 ⇒ no render" house rule, mirroring
+    // `starPointsPass`'s backdrop-dissolve gate (which also empties the (hdr,
+    // NEAR0) step so the executor skips it). The band completes deep inside
+    // `FOREGROUND_MAX_DISTANCE_MPC`, so this is the binding — and smooth — gate.
+    if (bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx)) <= 0) return false;
     return coreSceneBodyPartition(state, ctx).glints.length > 0;
   },
 
@@ -175,55 +158,12 @@ export const bodyGlintsPass: ContentPass = {
     // render origin is the heliocentric [0,0,0].
     const camPos = view.camPos;
 
-    // The far-dissolve alpha for THIS frame — the glint backdrop keyed on the
-    // camera's distance from the solar system's anchor. Per-frame constant (every
-    // glint shares one camera), so it is hoisted OUT of the per-body loop. It
-    // scales every glint's brightness so the whole sub-pixel body field dissolves
-    // as the camera pulls back from the solar system, mirroring
-    // `starPointsPass`'s backdrop fade.
-    const backdropFade = fadeBand(
-      SCALE_FADE_BANDS.bodyGlintBackdrop,
-      regionRelativeDistanceMpc(camPos, GLINT_BACKDROP_REGION, states),
-    );
-
-    // Pack one 7-float record per glint whose brightness survives the phase +
-    // cross-fade, skipping the rest (the opacity-0 house rule). `count` tracks
-    // the packed subset — a skipped body leaves a hole no record fills.
-    let count = 0;
-    for (const body of glints) {
-      if (count >= MAX_GLINTS) break;
-      const positionMpc = states.get(body.id)!.positionMpc;
-      const diameterPx = bodyApparentDiameterPx({
-        positionMpc,
-        radiusM: bodyFootprintRadiusM(body),
-        camPosMpc: camPos,
-        pxPerRad: ctx.drawPxPerRad,
-      });
-      // brightness (size x albedo x phase) x the descent cross-fade band.
-      const raw = bodyGlintBrightness({
-        albedo: body.albedo,
-        positionMpc,
-        camPosMpc: camPos,
-        renderOriginMpc: RENDER_ORIGIN_MPC,
-        apparentDiameterPx: diameterPx,
-      });
-      const brightness = raw * fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx) * backdropFade;
-      if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
-
-      // Camera-relative anchor (pos - camPos), computed in f64 before the
-      // renderer narrows to f32 — narrowing the raw AU-scale anchor would have
-      // already lost the low bits.
-      const base = count * INSTANCE_FLOATS;
-      staging[base + 0] = positionMpc[0] - camPos[0];
-      staging[base + 1] = positionMpc[1] - camPos[1];
-      staging[base + 2] = positionMpc[2] - camPos[2];
-      staging[base + 3] = body.albedo[0];
-      staging[base + 4] = body.albedo[1];
-      staging[base + 5] = body.albedo[2];
-      staging[base + 6] = brightness;
-      count++;
-    }
-
+    const count = packBodyGlints(staging, glints, {
+      states,
+      camPosMpc: camPos,
+      pxPerRad: ctx.drawPxPerRad,
+      backdropFade: bodyGlintBackdropFade(camPos, states),
+    });
     if (count === 0) return;
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
@@ -300,10 +240,7 @@ export const bodyGlintsPass: ContentPass = {
     // EVERY glint and no orphan pick survives on a glint that renders nothing.
     // Within the caption gate the label carries the click regardless, so the skip
     // never fires and this value is inert (see below).
-    const backdropFade = fadeBand(
-      SCALE_FADE_BANDS.bodyGlintBackdrop,
-      regionRelativeDistanceMpc(camPos, GLINT_BACKDROP_REGION, states),
-    );
+    const backdropFade = bodyGlintBackdropFade(camPos, states);
     const pickPoints: BodyGlintPick[] = [];
 
     // Emit the Earth glint stamp with the EARTH priority class (0), the shallowest
@@ -366,16 +303,13 @@ export const bodyGlintsPass: ContentPass = {
         camPosMpc: camPos,
         pxPerRad: ctx.drawPxPerRad,
       });
-      const brightness =
-        bodyGlintBrightness({
-          albedo: body.albedo,
-          positionMpc,
-          camPosMpc: camPos,
-          renderOriginMpc: RENDER_ORIGIN_MPC,
-          apparentDiameterPx: diameterPx,
-        }) *
-        fadeBand(SCALE_FADE_BANDS.bodyGlint, diameterPx) *
-        backdropFade;
+      const brightness = bodyGlintBrightnessOf(
+        body.albedo,
+        positionMpc,
+        camPos,
+        diameterPx,
+        backdropFade,
+      );
       if (
         brightness <= GLINT_MIN_BRIGHTNESS &&
         ctx.cam.distance >= SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC

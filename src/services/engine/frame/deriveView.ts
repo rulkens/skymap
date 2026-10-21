@@ -68,7 +68,7 @@ export function deriveView(
   };
   const gatedRows = visibleSlabBodies({ ...slabGate, rows: slabBodyCandidates });
   // A hosted mesh body owns no slab row — it rides its host's
-  // (`meshBodiesPass`), so the host's roster entry is what keeps it drawable; a
+  // (`drawMeshBodiesOnRow`), so the host's roster entry is what keeps it drawable; a
   // hostless one keys on itself and is already a candidate. From a 400 km
   // orbit Earth's ~70° angular radius takes it out of the frustum gate around
   // 126° off-axis, which would blank a mesh body sitting dead centre. The SAME

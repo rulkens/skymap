@@ -86,6 +86,10 @@ Layer-to-Layer reads.
    two Voyagers. The body Layer's "Mesh bodies" label item and the `mesh-body` source row
    (`data/sources/mesh-body.ts:14`) go. A persisted `mesh-body` label setting is dropped, not
    migrated, so a reader who had muted it sees the craft captions again under the missions switch.
+   Missions' entry carries one "Spacecraft" label item that mutes every craft caption (2026-10-20).
+10. Mesh slots stay with the one core mesh handle, keyed over `MESH_PRESENTATIONS` (which folds every
+    Layer's rows): a slot writes the core handle, which no Layer can reach without widening
+    `LayerCoreDeps` (2026-10-20, revising §3's "mesh slots" for `missions`).
 9. The inside-atmosphere row is declared by the body Layer as a tagged `slabs` row, like the lens row
    (P5). Core keeps no atmosphere code.
 

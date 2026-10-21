@@ -5,6 +5,10 @@
  */
 
 import type { LayerBody } from '../../@types/engine/layer/LayerBody';
+import { MISSIONS_BODY_ROWS } from '../../layers/missions/bodies/missionsBodyRows';
 import { EARTH_SCENES_BODY_ROWS } from '../../layers/earthScenes/bodies/earthScenesBodyRows';
 
-export const LAYER_BODY_ROWS: readonly LayerBody[] = [...EARTH_SCENES_BODY_ROWS];
+export const LAYER_BODY_ROWS: readonly LayerBody[] = [
+  ...MISSIONS_BODY_ROWS,
+  ...EARTH_SCENES_BODY_ROWS,
+];

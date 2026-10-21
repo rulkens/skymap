@@ -34,7 +34,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                                                                                                                                |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                                                                                                                                    |
 | `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                                                                       |
-| `bodies?`       | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types and `src/data` makers only; `data/bodies/layerBodyRows.ts` folds them into the static body tables by import                                                  |
+| `bodies?`       | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types, `src/data` constants and makers, and pure utils; never a body table, `layer.ts` or a pass. `data/bodies/layerBodyRows.ts` folds them by import              |
 | `terrain?`      | `terrain.ts`                                   | Runtime-bound: the ground core's camera reads (`heightAt`, `residentHeightLevelAt`, `subCamera`). One provider per composition, counting core's surface-tile provider (until the body Layer takes it over); boot throws on two |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
@@ -93,5 +93,7 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
 `milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
 settings-only Layer: its `layer.ts` declares the body clusters, while its render
-and load code stay in core. `earthScenes` is a bodies-only Layer (its rows fold into
-the tables; core still draws them).
+and load code stay in core. `missions` draws its craft: the rows live in
+`missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
+through core's one mesh renderer handle. `earthScenes` is a bodies-only Layer (its
+rows fold into the tables; core still draws Søndermarken via `CORE_MESH_BODY_IDS`).

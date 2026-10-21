@@ -1,5 +1,5 @@
 /**
- * A mesh body owns no slab row — it rides its host's (`meshBodiesPass`). So the
+ * A mesh body owns no slab row — it rides its host's (`drawMeshBodiesOnRow`). So the
  * host's roster gate decides whether the mesh body is drawn at all, and from a
  * 400 km orbit Earth's ~70° angular radius puts it outside the frustum gate
  * well before it is behind the eye. This pins the pose where that matters most:

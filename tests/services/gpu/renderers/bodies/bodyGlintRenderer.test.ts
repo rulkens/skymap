@@ -16,8 +16,8 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   createBodyGlintRenderer,
   MAX_GLINTS,
-  INSTANCE_FLOATS,
 } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
+import { BODY_GLINT_INSTANCE_FLOATS as INSTANCE_FLOATS } from '../../../../../src/data/rendering/bodyGlintInstanceFloats';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {

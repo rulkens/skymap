@@ -20,4 +20,6 @@ export type Clip = {
   readonly id: ClipId;
   readonly label: string;
   readonly data: ClipData;
+  /** Kept off user-facing surfaces (the remote menu), as `Tour.dev`; still startable by id. */
+  readonly dev?: boolean;
 };

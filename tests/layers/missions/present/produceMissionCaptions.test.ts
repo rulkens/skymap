@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { MISSION_EMPHASIS_DIM } from '../../../../src/data/missions/missionTrailStyle';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';

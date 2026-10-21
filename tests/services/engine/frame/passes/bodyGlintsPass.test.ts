@@ -22,7 +22,7 @@ import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf
 import { describe, it, expect, vi } from 'vitest';
 
 import { bodyGlintsPass } from '../../../../../src/services/engine/frame/passes/bodyGlintsPass';
-import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
+import { BODY_GLINT_INSTANCE_FLOATS as INSTANCE_FLOATS } from '../../../../../src/data/rendering/bodyGlintInstanceFloats';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { SCALE_FADE_BANDS } from '../../../../../src/data/scaleFadeBands';
