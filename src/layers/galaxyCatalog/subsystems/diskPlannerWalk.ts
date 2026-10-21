@@ -16,12 +16,14 @@
  * (8 px), so it never skips a row EITHER body could use. Apparent-size gating
  * stays in each body's `onRow` (procedural drops px <= 8, textured applies its
  * 24-px gate, famous rows exempt); gating here would braid body policy into the
- * shared loop.
+ * shared loop. The same bound, from a block's box and largest diameter, skips
+ * a whole block before its rows are read.
  */
 
 import { strideWindow } from '../../../utils/render/disk/strideWindow';
 import { maxVisibleCamDistSq } from '../../../utils/render/disk/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../../../utils/render/disk/apparentSizePxAtDistance';
+import { diskBlockBounds } from '../../../utils/render/disk/diskBlockBounds';
 import { PROCEDURAL_DISK_FADE_START_PX } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
@@ -29,6 +31,8 @@ import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVi
 import type { DiskWalkInput } from '../../../@types/engine/subsystems/DiskWalkInput';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { DiskPlannerWalkDeps } from '../../../@types/engine/subsystems/DiskPlannerWalkDeps';
+import type { DiskBlockBounds } from '../../../@types/engine/subsystems/DiskBlockBounds';
+import type { GalaxyColumnBlock } from '../../../@types/data/galaxyCatalog/GalaxyColumnBlock';
 
 /**
  * Per-frame cap on rows past the 8-px bound handed to the two onRow bodies
@@ -54,6 +58,8 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
   // This source's blocks walked this frame: a chunked source's evicted block
   // leaves a cursor (and sticky disks) behind that only this prune removes.
   const visited = new Set<number>();
+  // Each block's box and largest diameter, taken once: a resident block's rows never change.
+  const boundsOf = new WeakMap<GalaxyColumnBlock, DiskBlockBounds>();
 
   function runFrame(
     input: DiskWalkInput,
@@ -88,13 +94,35 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
 
       visited.clear();
       record.forEachResidentBlock((block, ordinalBase) => {
+        let cursor = cursors.get(ordinalBase);
+        let bounds = boundsOf.get(block);
+        if (bounds === undefined) {
+          bounds = diskBlockBounds(block);
+          boundsOf.set(block, bounds);
+        }
+        const bx = Math.max(bounds.minX - cx, cx - bounds.maxX, 0);
+        const by = Math.max(bounds.minY - cy, cy - bounds.maxY, 0);
+        const bz = Math.max(bounds.minZ - cz, cz - bounds.maxZ, 0);
+        const reachSq = Math.min(
+          maxCamDistSqUpper,
+          maxVisibleCamDistSq(PROCEDURAL_DISK_FADE_START_PX, pxPerRad, bounds.maxDiameterKpc),
+        );
+        // Out of reach, no row can draw: purge its sticky disks once and drop its cursor, so it
+        // walks nothing until back in reach, then takes a whole first pass. Not `visited`, so the
+        // prune below never sees it.
+        if (!(bx * bx + by * by + bz * bz <= reachSq)) {
+          if (cursor === undefined) return;
+          cursors.delete(ordinalBase);
+          procedural.beginBlock(source, ordinalBase, ordinalBase + cursor.count, ordinalBase);
+          textured.beginBlock(source, ordinalBase, ordinalBase + cursor.count, ordinalBase);
+          return;
+        }
         visited.add(ordinalBase);
         // Spent: the block keeps its window and its sticky disks for a later frame. Advancing it
         // would starve one window every cycle whenever earlier blocks spend the budget in phase.
         if (acceptedThisFrame >= DISK_ROW_ACCEPT_BUDGET) return;
         const positions = block.positions;
-        let cursor = cursors.get(ordinalBase);
-        // A block's first pass walks all of it, so a landed chunk's disks show on its first frame.
+        // A block's first pass walks all of it, so a landed or returning chunk's disks show at once.
         const firstPass = cursor === undefined;
         if (cursor === undefined) {
           cursor = { next: 0, count: block.count };
