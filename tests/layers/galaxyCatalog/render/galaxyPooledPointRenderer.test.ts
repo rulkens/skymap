@@ -13,6 +13,7 @@ import {
   WORD_BYTES,
 } from '../../../../src/services/gpu/octree/octreeCutLayout';
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
+import { GALAXY_GPU_RECORD_WORDS } from '../../../../src/data/galaxyCatalog/galaxyGpuRecordWords';
 import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyColumns } from '../../../../src/@types/data/galaxyCatalog/GalaxyColumns';
@@ -114,7 +115,7 @@ const chunkOf = (id: number): OctreeChunk<GalaxyColumns> => ({
 const STATS = { magOffset: 0, medianAbsMag: -20 };
 const RECORDS = `galaxy-pooled-records-${Source.Glade}`;
 const NODES = `galaxy-cut-nodes-${Source.Glade}`;
-const RECORD_BYTES = 24;
+const RECORD_BYTES = GALAXY_GPU_RECORD_WORDS * WORD_BYTES;
 
 function makeRenderer() {
   const { device, writes } = recordingDevice();
@@ -198,9 +199,10 @@ describe('galaxyPooledPointRenderer chunk pool', () => {
     const blob = { blobGlowOverlap: 2.5, blobPeakCap: 0.3, blobGain: 0.4 };
     const encoder = pass as unknown as GPURenderPassEncoder;
     renderer.draw(encoder, new Float32Array(16), [800, 600], settings, false, blob);
-    // pooledVertex.wesl's PooledRecordUniforms: gridOriginMpc, absMagQ0, absMagQ1, then these three.
+    // pooledVertex.wesl's PooledRecordUniforms: gridOriginMpc, absMagQ0, absMagQ1, magOffset,
+    // medianAbsMag, then these three.
     const words = writes.find((w) => w.label === `galaxy-pooled-uniform-${Source.Glade}`)!;
-    expect(words.offset).toBe(5 * 4);
+    expect(words.offset).toBe(7 * 4);
     expect([...(words.data as Float32Array)]).toEqual([2.5, Math.fround(0.3), Math.fround(0.4)]);
   });
 });

@@ -1,8 +1,8 @@
 // points/pooledVertex.wesl — the pooled (octree) points pipeline's vertex entry
 // point: an instance finds its record through the cut's draw list (as
-// starCatalog/vertex.wesl does), decodes packGalaxyGpuRecords' six words into
-// the PerVertex the flat pipeline reads from its vertex buffer, and hands it to
-// 'galaxyPointVertex'. A blob then redraws as a box-filling glow ('blobGlow').
+// starCatalog/vertex.wesl does), decodes packGalaxyGpuRecords' wire codes and
+// derives from them (pooledFields.wesl) the PerVertex the flat pipeline reads
+// from its vertex buffer, and hands it to 'galaxyPointVertex'. A blob then redraws as a box-filling glow ('blobGlow').
 // Bindings: @group(0) Uniforms, @group(1) the shared cut, @group(2) records +
 // SourceUniforms + PooledRecordUniforms (fade at binding 3 is fragment-only),
 // @group(3) FocusUniforms. Position is the catalog-frame Mpc value, built from
@@ -14,6 +14,10 @@ import package::galaxyCatalog::points::io::PerVertex;
 import package::galaxyCatalog::points::io::VSOut;
 import package::galaxyCatalog::points::vertexBody::galaxyPointVertex;
 import package::galaxyCatalog::points::vertexBody::galaxyApparentPxRadius;
+import package::galaxyCatalog::points::pooledFields::pooledMagnitude;
+import package::galaxyCatalog::points::pooledFields::pooledPaCosSin;
+import package::galaxyCatalog::points::pooledFields::pooledRadiusMpc;
+import package::galaxyCatalog::points::pooledFields::pooledSbAmp;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::billboard::worldLenToPx;
@@ -31,11 +35,13 @@ import package::octree::cutIo::nodeOwnCount;
 import package::octree::cutIo::leafEntryNode;
 import package::octree::cutIo::leafEntryBlock;
 
-// Per source, written at upload (galaxyPooledPointRenderer.ts). 32 B.
+// Per source, written at upload (galaxyPooledPointRenderer.ts). 48 B.
 struct PooledRecordUniforms {
   gridOriginMpc: vec3<f32>,
   absMagQ0: f32,
   absMagQ1: f32,
+  magOffset: f32,
+  medianAbsMag: f32,
   blobOverlap: f32,
   blobPeakCap: f32,
   blobGain: f32,
@@ -53,17 +59,21 @@ struct PooledRecordUniforms {
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
 // GALAXY_GPU_RECORD_WORDS (src/data/galaxyCatalog/galaxyGpuRecordWords.ts).
-const RECORD_WORDS: u32 = 6u;
+const RECORD_WORDS: u32 = 4u;
 // Reciprocal of 65536 (OFFSET_FRACTION_LEVELS): offset 0..65535 spans one box.
 const OFFSET_SCALE: f32 = 0.0000152587890625;
-// GALAXY_COLUMN_SCHEMA's fixed steps (galaxyOctreeFamily.ts); only absMag's
+// GALAXY_COLUMN_SCHEMA's fixed decodes (galaxyOctreeFamily.ts); only absMag's
 // range is per catalog, so it alone rides PooledRecordUniforms.
 const COLOUR_INDEX_STEP: f32 = 0.00784313725490196;
 const AXIS_RATIO_STEP: f32 = 0.00392156862745098;
+const PA_STEP_DEG: f32 = 0.703125;
+const LOG_SIZE_Q0: f32 = -1.0;
+const LOG_SIZE_STEP: f32 = 0.01568627450980392;
 // The byte-55 angular-weight codec (decodeAngularWeight): code 0 is unweighted.
 const WEIGHT_CODE_UNIT: f32 = 128.0;
 const WEIGHT_CODE_SPAN: f32 = 127.0;
 const FLAG_ORIENTATION_FALLBACK: u32 = 1u;
+const FLAG_DIAMETER_FALLBACK: u32 = 2u;
 const BYTE_MASK: u32 = 0xffu;
 const HALF_MASK: u32 = 0xffffu;
 // The galaxy dot's exp(-4 r^2) over the unit disc, (pi / 4)(1 - e^-4): a member
@@ -125,31 +135,30 @@ fn vs(
   let w1 = records[w + 1u];
   let w2 = records[w + 2u];
   let w3 = records[w + 3u];
-  let w4 = records[w + 4u];
-  let w5 = records[w + 5u];
 
   let offset = vec3<f32>(f32(w0 & HALF_MASK), f32(w0 >> 16u), f32(w1 & HALF_MASK)) * OFFSET_SCALE;
   let cell = nodeMinCells(cutNodes[nodeIdx].grid, vec3<i32>(0), vec3<f32>(0.0));
   let flags = (w2 >> 16u) & BYTE_MASK;
   let axisRatio = f32(w2 & BYTE_MASK) * AXIS_RATIO_STEP;
   let weightCode = (w2 >> 8u) & BYTE_MASK;
-  let magSb = unpack2x16float(w4);
+  let absMag = pooled.absMagQ0 + f32((w1 >> 16u) & BYTE_MASK) * pooled.absMagQ1;
+  let diameterKpc = pow(10.0, LOG_SIZE_Q0 + f32(w3 & BYTE_MASK) * LOG_SIZE_STEP);
 
   var p: PerVertex;
   p.position = pooled.gridOriginMpc + (cell + offset * nodeEdgeCells(bits)) * cut.cellEdgeMpc;
-  p.magnitude = magSb.x;
+  p.magnitude = pooledMagnitude(absMag, length(p.position));
   p.colorIndex = f32(w1 >> 24u) * COLOUR_INDEX_STEP;
   // The sign is the fallback flag, as in the flat slot; a zero ratio stays a round mask.
   p.axisRatio = select(axisRatio, -axisRatio, (flags & FLAG_ORIENTATION_FALLBACK) != 0u);
-  p.paCosSin = unpack2x16float(w3);
-  p.radiusMpc = bitcast<f32>(w5);
+  p.paCosSin = pooledPaCosSin(f32(w2 >> 24u) * PA_STEP_DEG);
+  p.radiusMpc = pooledRadiusMpc(diameterKpc, (flags & FLAG_DIAMETER_FALLBACK) != 0u);
   p.angularWeight = select(
     pow(10.0, (f32(weightCode) - WEIGHT_CODE_UNIT) / WEIGHT_CODE_SPAN),
     1.0,
     weightCode == 0u,
   );
-  p.absMag = pooled.absMagQ0 + f32((w1 >> 16u) & BYTE_MASK) * pooled.absMagQ1;
-  p.sbAmp = magSb.y;
+  p.absMag = absMag;
+  p.sbAmp = pooledSbAmp(absMag - pooled.magOffset, pooled.medianAbsMag, diameterKpc);
 
   var out = galaxyPointVertex(vi, base, p, u, source, focus);
   // A zero tint is a gated mean member: the body's off-screen clip stands. A dim one is

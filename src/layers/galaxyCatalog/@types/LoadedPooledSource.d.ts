@@ -1,5 +1,4 @@
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
-import type { GalaxyPointStats } from '../../../@types/engine/GalaxyPointStats';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 
@@ -7,7 +6,6 @@ import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 export type LoadedPooledSource = {
   octree: Octree<GalaxyColumns>;
   slots: number;
-  stats: GalaxyPointStats;
   /** The chunk each slot holds: the pool index ↔ ordinal map, and a host slot's rows. */
   slotChunks: (OctreeChunk<GalaxyColumns> | null)[];
   /** `slotChunks` at the last pick draw: a readback names what was drawn, not what landed since. */

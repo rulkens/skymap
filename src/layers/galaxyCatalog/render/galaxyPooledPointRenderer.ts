@@ -1,7 +1,7 @@
 /**
  * galaxyPooledPointRenderer — an octree galaxy source as additive point billboards in the
  * galaxy points target, its blobs as box-filling glows through their own fragment (D9).
- * Records are six u32 each (`packGalaxyGpuRecords`), the index's first, then `slots × chunkCapacity`, vertex-pulled
+ * Records are four u32 each (`packGalaxyGpuRecords`), the index's first, then `slots × chunkCapacity`, vertex-pulled
  * through the shared GPU cut (`octreeCutGpu`, labelled 'galaxy-cut') into the same
  * `galaxyPointVertex` body the flat pipeline calls. `@group(2)` is per source and per view
  * slot: its fade buffer is written per view, before one submit (RENDERER.md landmine #1).
@@ -50,13 +50,15 @@ const RECORD_BYTES = GALAXY_GPU_RECORD_WORDS * WORD_BYTES;
 /** `SourceUniforms` (lib/sourceUniforms.wesl), `FadeUniforms` and `PooledRecordUniforms` (pooledVertex.wesl). */
 const SOURCE_UNIFORM_BYTES = 16;
 const FADE_UNIFORM_BYTES = 16;
-const POOLED_UNIFORM_BYTES = 32;
+const POOLED_UNIFORM_BYTES = 48;
 const POOLED_ABS_MAG_Q0_INDEX = 3;
 const POOLED_ABS_MAG_Q1_INDEX = 4;
+const POOLED_MAG_OFFSET_INDEX = 5;
+const POOLED_MEDIAN_ABS_MAG_INDEX = 6;
 // overlap, peak cap, gain: the struct's last three f32, rewritten every draw.
-const POOLED_BLOB_WORDS_INDEX = 5;
+const POOLED_BLOB_WORDS_INDEX = 7;
 const POOLED_BLOB_WORDS = 3;
-const FIXED_STEP_COLUMNS = ['colourIndex', 'axisRatio'] as const;
+const FIXED_DECODE_COLUMNS = ['colourIndex', 'axisRatio', 'pa', 'logSize'] as const;
 const STREAMS: readonly OctreeDrawStream[] = ['leaf', 'aggregate'];
 
 export function createGalaxyPooledPointRenderer(init: {
@@ -151,7 +153,7 @@ export function createGalaxyPooledPointRenderer(init: {
     if (indexRecords + poolSlots * octree.chunkCapacity === 0) return poolSlots;
 
     const packed = new Uint32Array(indexRecords * GALAXY_GPU_RECORD_WORDS);
-    packGalaxyGpuRecords(octree, octree, stats, packed, 0);
+    packGalaxyGpuRecords(octree.records, octree.columns, packed, 0);
     const recordsBuffer = device.createBuffer({
       label: `galaxy-pooled-records-${source}`,
       size: (indexRecords + poolSlots * octree.chunkCapacity) * RECORD_BYTES,
@@ -170,8 +172,8 @@ export function createGalaxyPooledPointRenderer(init: {
 
     const absMag = octree.columns.find((c) => c.id === 'absMag');
     if (absMag === undefined) throw new Error('galaxyPooledPointRenderer: schema lacks absMag');
-    // pooledVertex.wesl hardcodes these two steps (q0 = 0) from the default schema.
-    for (const id of FIXED_STEP_COLUMNS) {
+    // pooledVertex.wesl hardcodes these decodes from the default schema.
+    for (const id of FIXED_DECODE_COLUMNS) {
       const got = octree.columns.find((c) => c.id === id);
       const want = GALAXY_OCTREE_FAMILY.schema.find((c) => c.id === id)!;
       if (got?.q0 !== want.q0 || got.q1 !== want.q1) {
@@ -186,6 +188,8 @@ export function createGalaxyPooledPointRenderer(init: {
     );
     pooledWords[POOLED_ABS_MAG_Q0_INDEX] = absMag.q0;
     pooledWords[POOLED_ABS_MAG_Q1_INDEX] = absMag.q1;
+    pooledWords[POOLED_MAG_OFFSET_INDEX] = stats.magOffset;
+    pooledWords[POOLED_MEDIAN_ABS_MAG_INDEX] = stats.medianAbsMag;
     device.queue.writeBuffer(pooledBuffer, 0, pooledWords);
 
     const fadeBuffers = Array.from({ length: VIEW_SLOT_COUNT }, (_, slot) =>
@@ -206,7 +210,6 @@ export function createGalaxyPooledPointRenderer(init: {
     sources.set(source, {
       octree,
       slots: poolSlots,
-      stats,
       slotChunks: new Array<OctreeChunk<GalaxyColumns> | null>(poolSlots).fill(null),
       pickSlotChunks: new Array<OctreeChunk<GalaxyColumns> | null>(poolSlots).fill(null),
       buffers: [recordsBuffer, sourceBuffer, pooledBuffer, ...fadeBuffers],
@@ -247,9 +250,9 @@ export function createGalaxyPooledPointRenderer(init: {
     if (entry === undefined || slot < 0 || slot >= entry.slots) {
       throw new Error(`galaxyPooledPointRenderer: no slot ${slot} for source ${source}`);
     }
-    const { octree, stats } = entry;
+    const { octree } = entry;
     const packed = new Uint32Array(chunk.records.count * GALAXY_GPU_RECORD_WORDS);
-    packGalaxyGpuRecords(chunk, octree, stats, packed, 0);
+    packGalaxyGpuRecords(chunk.records, octree.columns, packed, 0);
     // The records land before the cut marks the chunk's roots resident.
     const recordBase = octree.records.count + slot * octree.chunkCapacity;
     device.queue.writeBuffer(entry.recordsBuffer, recordBase * RECORD_BYTES, packed);
