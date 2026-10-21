@@ -1,4 +1,4 @@
-/** SAMPLED_BODY_IDS — an array, not a Set: a Layer's label entry claims bodies as a list. */
+/** SAMPLED_BODY_IDS — the craft whose position is a loaded track, so whose presence waits on it. */
 
 import { SAMPLED_BODIES } from './sampledBodies';
 

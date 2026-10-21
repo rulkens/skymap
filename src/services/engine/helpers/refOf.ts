@@ -26,6 +26,7 @@ import type { StructureInfo } from '../../../@types/data/structure/StructureInfo
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
 import type { ZoneOfAvoidanceInfo } from '../../../@types/engine/ZoneOfAvoidanceInfo';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
+import type { CraftInfo } from '../../../@types/engine/CraftInfo';
 import type { StarInfo } from '../../../@types/engine/StarInfo';
 import type { BlackHoleInfo } from '../../../@types/engine/BlackHoleInfo';
 
@@ -35,6 +36,7 @@ const REF_OF: {
   milkyWay: (t: MilkyWayInfo) => SelectionRef;
   zoneOfAvoidance: (t: ZoneOfAvoidanceInfo) => SelectionRef;
   body: (t: BodyInfo) => SelectionRef;
+  craft: (t: CraftInfo) => SelectionRef;
   starCatalog: (t: StarInfo) => SelectionRef;
   blackHole: (t: BlackHoleInfo) => SelectionRef;
 } = {
@@ -49,6 +51,7 @@ const REF_OF: {
   // A displayed body (BodyInfo) maps to its body ref — the seed id is the
   // durable identity the selection slice stores.
   body: (t) => ({ type: 'body', id: t.id }),
+  craft: (t) => ({ type: 'craft', id: t.id }),
   // A star ref is the source + index pair the pick texture packs; the durable
   // seed id (when there is one) rides the row, not the ref.
   starCatalog: (t) => ({ type: 'starCatalog', source: t.source, index: t.index }),

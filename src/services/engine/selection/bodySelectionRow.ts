@@ -1,7 +1,8 @@
 /**
  * bodySelectionRow — scene bodies only: Earth, the planets and the mesh bodies
- * (Sgr A* is the blackHoles Layer's own `blackHole` kind). A star is a `starCatalog` ref wherever it comes from (spec §7), so
- * `body-sirius` no longer decodes. Position is re-derived at `extractRow`'s own
+ * core owns (the craft are the missions Layer's `craft` kind, Sgr A* the
+ * blackHoles Layer's `blackHole` kind). A star is a `starCatalog` ref wherever
+ * it comes from (spec §7), so `body-sirius` no longer decodes. Position is re-derived at `extractRow`'s own
  * `simDays`, never cached.
  */
 
@@ -11,7 +12,7 @@ import { BODY_PICK_ROWS } from '../../../data/bodies/bodyPickRows';
 import { BODY_FOCUS_PREFIX } from '../../url/bodyFocusId';
 import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
-import { isRegistryBodyId } from '../../../utils/scene/isRegistryBodyId';
+import { isCoreBodyId } from '../../../utils/scene/isCoreBodyId';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
@@ -40,11 +41,10 @@ export function bodySelectionRow(): SelectionKindRow<BodyRef> {
       return bodyRowAt(ref.id, deriveBodyStates(simDays).get(ref.id)!.positionMpc);
     },
     focusId: {
-      claims: (id) => id.startsWith(BODY_FOCUS_PREFIX),
-      decode: (id) => {
-        const seedId = id.slice(BODY_FOCUS_PREFIX.length);
-        return isRegistryBodyId(seedId) ? { type: 'body', id: seedId } : null;
-      },
+      // Exact, not the whole prefix: a craft's `body-<id>` is the `craft` kind's claim.
+      claims: (id) =>
+        id.startsWith(BODY_FOCUS_PREFIX) && isCoreBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+      decode: (id) => ({ type: 'body', id: id.slice(BODY_FOCUS_PREFIX.length) }),
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

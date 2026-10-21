@@ -55,7 +55,7 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
 
   // Named sidecar slots (installed by installSlots): the ASSET_WIRING rows
   // with string keys (point rows carry numeric Source keys, included above;
-  // body-texture and mesh-body rows are the keyed families gathered above).
+  // body-texture and mesh body rows are the keyed families gathered above).
   // pgcAlias is lazy but still registered so its eventual load shows in the
   // bar + dev panel. The absence of a cast IS the drift protection: a row key
   // with no matching assetSlots field fails to compile — the `isBodyTextureKey`

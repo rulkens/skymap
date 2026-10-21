@@ -4,7 +4,7 @@
  *
  * Core stores its own slots in structurally different places:
  *
- *   - The keyed body-texture and mesh-body families live in their own maps.
+ *   - The keyed body-texture and mesh body families live in their own maps.
  *   - The auxiliary assets named by `AssetKey` (the cluster catalog, the
  *     body-texture atlas) are named fields on `state.assetSlots`.
  *   - A Layer's own slots (incl. every per-source star/galaxy catalog) live in
@@ -53,7 +53,7 @@ export function slotFor(
       | AssetSlot<unknown, unknown>
       | undefined;
   }
-  // A mesh-body key routes through the keyed `meshBodies` Map, un-prefixed —
+  // A mesh body key routes through the keyed `meshBodies` Map, un-prefixed —
   // the Map itself is keyed by the plain body id, the `mesh:` prefix exists
   // only to keep this branch's `AssetKey` member distinct (see `AssetKey.d.ts`).
   if (isMeshBodyKey(key)) {

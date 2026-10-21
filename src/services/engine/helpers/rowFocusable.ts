@@ -16,6 +16,7 @@ export const ROW_FOCUSABLE: Record<SelectionRow['type'], boolean> = {
   // The band is a line-of-sight effect, not a point — no focus target.
   zoneOfAvoidance: false,
   body: true,
+  craft: true,
   starCatalog: true,
   blackHole: true,
 };

@@ -13,6 +13,7 @@ export const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
   milkyWay: true,
   zoneOfAvoidance: true,
   body: true,
+  craft: true,
   starCatalog: true,
   blackHole: true,
 };

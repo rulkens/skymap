@@ -513,7 +513,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
         does: 'Shows the name of Sagittarius A*.',
       },
-      label('Mesh bodies', 'bodies.items.mesh-body.labelEnabled', 'the spacecraft and the other 3D models'),
+      label('Spacecraft', 'missions.items.craft.labelEnabled', 'the spacecraft and the other 3D models'),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
       label('Globular clusters', 'structures.items.globular-cluster.labelEnabled', 'the globular clusters'),
       {

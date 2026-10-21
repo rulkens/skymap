@@ -244,7 +244,7 @@ temporary core writer would only be thrown away.
 | Tile planner (`runFrame.ts:260-333`)       | `planners`                                                                                                     |
 | Selection, detail card                     | `selection` plus `ui.detailCard`, one selection kind per Layer (`detailCardTable.ts:62` keys cards by kind)    |
 | Search aliases (`bodySearchNames.ts`)      | `search`                                                                                                       |
-| Captions                                   | `guides.screenLabels`, with the claim path (`claimedLabelItemsOf.ts`) as `missions` already uses it           |
+| Captions                                   | `guides.screenLabels`                                                                                          |
 | Source codes                               | `sources`. `mesh-body` (`data/sources/mesh-body.ts:14`) is replaced by a `missions` code (ruling 8). `Source` codes are append-only within the pick encoding's 6-bit code field. |
 | Solar System exhibit                       | `exhibits`                                                                                                     |
 | GPU handle rows                            | deleted from `gpuHandleRegistry.ts`, minted in each Layer's `create`. The mesh, pick, trail and cube-face-blit handles stay core. |
