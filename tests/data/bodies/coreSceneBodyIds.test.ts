@@ -57,7 +57,6 @@ describe('the core, missions and earthScenes rosters', () => {
       const whole = idsOf(
         drawableMeshBodies(STATE, ctx, hostId, bodySlabRosterIds(SCENE_MESH_BODIES)),
       );
-
       const earthScenes = idsOf(drawableMeshBodies(STATE, ctx, hostId, EARTH_SCENE_BODY_IDS));
 
       expect(missions).toContain(cameraAt);
@@ -65,15 +64,6 @@ describe('the core, missions and earthScenes rosters', () => {
       expect(sorted([...core, ...missions, ...earthScenes])).toEqual(sorted(whole));
     },
   );
-
-  it('core draws no earthScenes body and earthScenes draws only its own', () => {
-    const ctx = ctxAt(STATES.get('earth')!.positionMpc, 1e12);
-    const core = idsOf(drawableMeshBodies(STATE, ctx, 'earth', CORE_SCENE_BODY_IDS));
-    const earthScenes = idsOf(drawableMeshBodies(STATE, ctx, 'earth', EARTH_SCENE_BODY_IDS));
-
-    expect(earthScenes).toEqual(['soendermarken']);
-    expect(core).not.toContain('soendermarken');
-  });
 
   it('every sub-pixel scene body glints in exactly one glint pass', () => {
     const fiveAu: Vec3 = [5 * SCALE_UNITS.AU_TO_MPC, 0, 0];

@@ -9,6 +9,7 @@ import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySla
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -17,6 +18,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
+import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -135,6 +137,19 @@ const planetAt = (id: string, radiusM: number, distanceM: number): PositionedSce
   } satisfies PlanetBody,
   positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
 });
+const meshAt = (id: string, radiusM: number, distanceM: number): PositionedSceneBody => ({
+  body: {
+    id,
+    label: id,
+    boundingRadiusM: radiusM,
+    albedo: [0.5, 0.5, 0.5],
+    meshKey: `${id}-mesh`,
+    standoffRadii: 2,
+    resolvePx: 3,
+  } satisfies MeshBody,
+  positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
+});
+
 /** The frame's mesh bodies are the meshes given; `sceneBodies` may hold more. Planet ids are
  *  `SCENE_PLANETS` ids, so core counts them as its own. */
 function partition(
@@ -207,6 +222,37 @@ describe('sceneBodyPartition routing', () => {
     const loading = partition([phobos], () => false);
     expect(loading.flat).toEqual([phobos.body]);
     expect(loading.meshes).toEqual([]);
+  });
+
+  // earthScenes' roster holds the MeshBody; core's holds none, so these run on that roster.
+  const earthSceneRouting = (scene: PositionedSceneBody, resident: boolean) => {
+    const state = {
+      gpu: { meshBodyRenderer: { hasMesh: () => resident } },
+    } as unknown as PassState;
+    const ctx = {
+      snapshot: { meshBodies: [scene.body], sceneBodies: [scene] },
+      drawCamPos: CAM,
+      drawPxPerRad: PX_PER_RAD,
+    } as unknown as FrameView;
+    return sceneBodyPartition(state, ctx, EARTH_SCENE_BODY_IDS, () => false);
+  };
+
+  it('routes a resolved MeshBody to meshes, never textured or flat', () => {
+    const { meshes, flat, textured, glints } = earthSceneRouting(
+      meshAt('soendermarken', 160, CLOSE(160)),
+      true,
+    );
+    expect(idsOf(meshes)).toEqual(['soendermarken']);
+    expect([...flat, ...textured, ...glints]).toEqual([]);
+  });
+
+  // A mesh body has no sphere to fall back to: drawing one would be a wrong shape.
+  it('drops a resolved MeshBody whose mesh is not resident from every branch', () => {
+    const { meshes, flat, textured, glints } = earthSceneRouting(
+      meshAt('soendermarken', 160, CLOSE(160)),
+      false,
+    );
+    expect([...meshes, ...flat, ...textured, ...glints]).toEqual([]);
   });
 
   it("takes only core's own bodies", () => {
