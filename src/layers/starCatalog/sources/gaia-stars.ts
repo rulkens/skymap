@@ -32,11 +32,11 @@ export const GAIA_STARS_ENTRY = {
   // (near-)all leaves when the camera is close. Starting values (grill Q9), raised
   // alongside `REFINE_ANGULAR_THRESHOLD`'s tightening (0.3 → 0.05): a lower
   // threshold refines more nodes at a given distance, so it wants more
-  // headroom.
+  // headroom. Each tier's pool holds `poolRecords` records, 8 B each.
   budgets: {
-    small: { drawBudget: 1_500_000, slots: 64 },
-    medium: { drawBudget: 1_500_000, slots: 128 },
-    large: { drawBudget: 1_500_000, slots: 256 },
+    small: { drawBudget: 1_500_000, poolRecords: 2_097_152 },
+    medium: { drawBudget: 1_500_000, poolRecords: 4_194_304 },
+    large: { drawBudget: 1_500_000, poolRecords: 8_388_608 },
   },
   // Row runs per record run of the resident chunks of stars.e54ab739, at most 0.097 (galactic-centre)
   // over the perf poses, plus headroom; the whole bake's 0.077 undercounts the row-dense disc chunks

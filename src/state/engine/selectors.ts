@@ -138,8 +138,8 @@ export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMeta
   selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
 
 /** Why the Debug panel's last star chunk-pool resize failed, or null. */
-export const selectStarChunkSlotsError = (state: RootState): string | null =>
-  selectEngineFacts(state).starCatalog?.chunkSlotsError ?? null;
+export const selectStarPoolRecordsError = (state: RootState): string | null =>
+  selectEngineFacts(state).starCatalog?.poolRecordsError ?? null;
 
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no

@@ -1,6 +1,6 @@
 /**
  * wireGalaxyOctreeSlot — one octree galaxy source's slot, built by `create` for a row that
- * ships an octree. Commit installs the index's chunk pool at the committed tier's slots (a
+ * ships an octree. Commit installs the index's chunk pool at the committed tier's records (a
  * tier change reloads the slot in place and re-installs) and sets the source's record
  * source; release drops the stream, the GPU pool and that record source.
  */
@@ -74,7 +74,7 @@ export function wireGalaxyOctreeSlot(
       // The slot's race-check ran just before this call, so `lastRequest()` is this commit's.
       const { budgets, poolNodesPerRecord } = octreeEntry;
       const tier = slot.lastRequest()!.tier;
-      const pool = octreePoolShape(octree, budgets[tier].slots, poolNodesPerRecord);
+      const pool = octreePoolShape(octree, budgets[tier].poolRecords, poolNodesPerRecord);
       installOctreePool(host, source, octree, pool, {
         chunkPath: (ref) => octreeChunkPath('galaxy', binBaseName, ref),
         decodeRecords: galaxyColumnsOf,

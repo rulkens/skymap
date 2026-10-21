@@ -117,7 +117,7 @@ const chunkOf = (id: number): OctreeChunk<GalaxyColumns> => ({
 
 const STATS = { magOffset: 0, medianAbsMag: -20 };
 // Two 8-record chunks' worth: 16 records in runs of 8, 16 rows in runs of 4.
-const POOL = octreePoolShape(OCTREE, 2, 1);
+const POOL = octreePoolShape(OCTREE, 16, 1);
 const RECORDS = `galaxy-pooled-records-${Source.Glade}`;
 const NODES = `galaxy-cut-nodes-${Source.Glade}`;
 const RECORD_BYTES = GALAXY_GPU_RECORD_WORDS * WORD_BYTES;

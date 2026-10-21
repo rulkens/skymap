@@ -19,15 +19,15 @@ export function installStarPool(
   source: SourceType,
   octree: Octree<StarColumns>,
   tier: Tier,
-  slotsOverride: number | null,
+  poolRecordsOverride: number | null,
 ): void {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
     throw new Error(`installStarPool: source ${source} is not a streamed star catalog`);
   }
   const { binBaseName } = entry;
-  const slots = slotsOverride ?? entry.budgets[tier].slots;
-  const pool = octreePoolShape(octree, slots, entry.poolNodesPerRecord);
+  const poolRecords = poolRecordsOverride ?? entry.budgets[tier].poolRecords;
+  const pool = octreePoolShape(octree, poolRecords, entry.poolNodesPerRecord);
   installOctreePool(host, source, octree, pool, {
     chunkPath: (ref) => octreeChunkPath('star', binBaseName, ref),
     decodeRecords: starColumnsOf,

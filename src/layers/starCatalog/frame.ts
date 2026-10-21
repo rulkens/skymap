@@ -26,16 +26,16 @@ export function starCatalogPlanner(
 ): Extract<FrameContentPlanner<void, 'starCatalog'>, { scope: 'once' }> {
   const driver = createOctreeFrameDriver<StarColumns>(OCTREE_PLAN_INTERVAL_FRAMES);
   // The debug chunk-pool size last applied; a change re-installs the pools from the loaded octrees.
-  let appliedSlots: number | null = null;
+  let appliedPoolRecords: number | null = null;
   return {
     name: 'star-catalog',
     scope: 'once',
     fade: 'starCatalog',
     plan(_snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState, fade) {
-      const slotsOverride = state.settings.starCatalogs.chunkSlotsOverride;
-      if (slotsOverride !== appliedSlots) {
-        appliedSlots = slotsOverride;
-        runtime.publish({ chunkSlotsError: resizeStarPools(runtime, slotsOverride) });
+      const { poolRecordsOverride } = state.settings.starCatalogs;
+      if (poolRecordsOverride !== appliedPoolRecords) {
+        appliedPoolRecords = poolRecordsOverride;
+        runtime.publish({ poolRecordsError: resizeStarPools(runtime, poolRecordsOverride) });
         driver.reset(); // the new streams know nothing of the last plan
       }
       const inputs = starCutInputs(runtime, state.settings.starCatalogs, fade, views);

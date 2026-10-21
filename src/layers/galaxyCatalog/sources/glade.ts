@@ -35,13 +35,13 @@ export const GLADE_ENTRY = {
   falloffHalfMpc: 1000,
   priority: 62,
   durableId: { prefix: 'pgc', rank: 0 },
-  // `slots` buys records for that many largest chunks (32,768 × 16 B ≈ 0.5 MB each); chunks
-  // take power-of-two runs, so 64 hold the ~170 a full orbit at 700 Mpc wants (octreePoolShape).
+  // The chunk pool's records, 16 B each (Medium 32 MiB); chunks take power-of-two runs, so Medium
+  // holds the ~170 a full orbit at 700 Mpc wants (octreePoolShape).
   octree: {
     budgets: {
-      small: { drawBudget: 600_000, slots: 32 },
-      medium: { drawBudget: 1_000_000, slots: 64 },
-      large: { drawBudget: 1_700_000, slots: 128 },
+      small: { drawBudget: 600_000, poolRecords: 1_048_576 },
+      medium: { drawBudget: 1_000_000, poolRecords: 2_097_152 },
+      large: { drawBudget: 1_700_000, poolRecords: 4_194_304 },
     },
     // Row runs per record run of the resident chunks of glade.a887a216, at most 0.16 (orbiting at
     // 700 Mpc) over the perf poses, plus headroom; the whole bake's 0.325 is its many small fringe

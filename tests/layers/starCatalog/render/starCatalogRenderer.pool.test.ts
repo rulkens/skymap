@@ -182,9 +182,9 @@ const rootWords = (row: number) => [
   [NODES, row * ROW_BYTES + NODE_REFINE_DELTA_WORD * WORD_BYTES],
 ];
 const word = (w: Write) => (w.data as Uint32Array)[0]!;
-/** `slots` 50-record chunks' worth: records in runs of 64; 7-row chunks' rows in runs of 8, two per slot. */
-const poolOf = (octree: Octree<StarColumns>, slots: number) =>
-  octreePoolShape(octree, slots, 1 / 4);
+/** `records` in runs of 64 for 50-record chunks, and a quarter as many rows in runs of 8 for 7-row ones. */
+const poolOf = (octree: Octree<StarColumns>, records: number) =>
+  octreePoolShape(octree, records, 1 / 4);
 /** Chunk 1's runs: the second record run (64) and the second row run (8). */
 const SECOND = { records: 64, nodes: 8 };
 
@@ -195,7 +195,7 @@ describe('starCatalogRenderer chunk pool', () => {
     createStarCatalogRenderer(device, 'rgba16float').upload(
       Source.GaiaStars,
       octree,
-      poolOf(octree, 2),
+      poolOf(octree, 128),
     );
     // 128 records × 1/4 = 32 rows; one u32 per 8-row page.
     expect(sizeOf(NODES)).toBe((10 + 32) * 24);
@@ -208,7 +208,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     const octree = octreeOf({ chunkCapacity: 2 ** 25 });
-    expect(() => renderer.upload(Source.GaiaStars, octree, poolOf(octree, 3))).toThrow(
+    expect(() => renderer.upload(Source.GaiaStars, octree, poolOf(octree, 3 * 2 ** 25))).toThrow(
       /record index/,
     );
     expect([...renderer.loadedCatalogs()]).toEqual([]);
@@ -218,7 +218,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const { device, sizeOf, encoder } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     const octree = octreeOf({ chunks: 0 });
-    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 256));
+    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 256 * 64));
     expect(sizeOf(NODES)).toBe(10 * 24);
     expect(sizeOf(RECORDS)).toBe(100 * 8);
     renderer.setFrameCut(frame(0), true);
@@ -230,7 +230,7 @@ describe('starCatalogRenderer chunk pool', () => {
   it("uploadChunk writes the rows and records at its runs before the root's resident bit; evictChunk clears the bit first", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 2));
+    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 128));
     const nodeBase = 10 + 8;
     const recordBase = 100 + 64;
 
@@ -290,7 +290,7 @@ describe('starCatalogRenderer chunk pool', () => {
       records: columns(5),
       chunks: [],
     };
-    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 2));
+    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 128));
 
     writes.length = 0;
     renderer.uploadChunk(Source.GaiaStars, 0, chunk, null, { records: 0, nodes: 0 });
@@ -324,7 +324,7 @@ describe('starCatalogRenderer chunk pool', () => {
   it('a slot evicted and refilled between the pick draw and its readback resolves to the star that was drawn', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 2));
+    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 128));
     renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, SECOND);
     renderer.snapshotPickSlots();
 
@@ -350,7 +350,7 @@ describe('starCatalogRenderer chunk pool', () => {
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 2));
+    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 128));
     renderer.setFrameCut(frame(0), true);
     renderer.drawCut(
       {
@@ -439,7 +439,7 @@ describe('starCatalogRenderer chunk pool', () => {
       records: columns(3),
       chunks: [],
     };
-    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 2));
+    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 128));
     renderer.uploadChunk(Source.GaiaStars, 1, parent, null, SECOND);
 
     writes.length = 0;

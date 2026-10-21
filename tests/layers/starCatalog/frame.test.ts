@@ -88,7 +88,7 @@ const STATE = {
       refineThreshold: 0.05,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
-      chunkSlotsOverride: null,
+      poolRecordsOverride: null,
     },
   },
 } as unknown as PassState;
@@ -266,9 +266,9 @@ describe('starCatalogPlanner', () => {
     });
   });
 
-  it('re-installs the pools when the chunk-slots override changes, publishing the outcome', () => {
+  it('re-installs the pools when the pool-records override changes, publishing the outcome', () => {
     const runtime = makeRuntime(true);
-    // Chunks enough that the pool's slots come out at the override.
+    // Chunks enough that the pool's records come out at the override.
     const octree = {
       chunks: [],
       chunkCount: 1024,
@@ -276,7 +276,7 @@ describe('starCatalogPlanner', () => {
       chunkNodeCap: 64,
     } as unknown as Octree<StarColumns>;
     const upload = vi.fn((_s: number, _o: Octree<StarColumns>, pool: OctreePoolShape) => {
-      if (pool.slots > 256) throw new Error('only 256 slots fit');
+      if (pool.records.total > 262_144) throw new Error('only 262,144 records fit');
     });
     const publish = vi.fn();
     Object.assign(runtime, {
@@ -299,23 +299,23 @@ describe('starCatalogPlanner', () => {
     });
     Object.assign(runtime.renderer, { upload });
     const planner = starCatalogPlanner(runtime);
-    const plan = (chunkSlotsOverride: number | null) =>
+    const plan = (poolRecordsOverride: number | null) =>
       planner.plan(
         SNAPSHOT,
         [makeView(camAtPc(MID_BAND_PC), 0)],
         {
-          settings: { starCatalogs: { ...STATE.settings.starCatalogs, chunkSlotsOverride } },
+          settings: { starCatalogs: { ...STATE.settings.starCatalogs, poolRecordsOverride } },
         } as unknown as PassState,
         ALL_ON,
       );
 
     plan(null);
     expect(publish).not.toHaveBeenCalled();
-    plan(512);
-    expect(publish).toHaveBeenLastCalledWith({ chunkSlotsError: 'only 256 slots fit' });
-    plan(512);
+    plan(524_288);
+    expect(publish).toHaveBeenLastCalledWith({ poolRecordsError: 'only 262,144 records fit' });
+    plan(524_288);
     expect(publish).toHaveBeenCalledTimes(1);
-    plan(128);
-    expect(publish).toHaveBeenLastCalledWith({ chunkSlotsError: null });
+    plan(131_072);
+    expect(publish).toHaveBeenLastCalledWith({ poolRecordsError: null });
   });
 });

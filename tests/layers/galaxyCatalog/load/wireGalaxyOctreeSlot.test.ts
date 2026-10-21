@@ -87,7 +87,7 @@ describe('wireGalaxyOctreeSlot', () => {
 
     await slot.load({ source: Source.Glade, tier: 'medium' });
     const { budgets, poolNodesPerRecord } = SOURCE_REGISTRY[Source.Glade].octree;
-    const pool = octreePoolShape(OCTREE, budgets.medium.slots, poolNodesPerRecord);
+    const pool = octreePoolShape(OCTREE, budgets.medium.poolRecords, poolNodesPerRecord);
     expect(renderer.upload).toHaveBeenCalledWith(Source.Glade, OCTREE, pool, {
       medianAbsMag: -20,
       magOffset: 0.3,
