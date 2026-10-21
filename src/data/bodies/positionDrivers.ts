@@ -10,7 +10,7 @@
 
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
-import { SAMPLED_BODIES } from '../missions/spacecraftBodies';
+import { SAMPLED_BODIES } from './sampledBodies';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
 import type { PositionDriver } from '../../@types/scene/PositionDriver';
 

@@ -1,19 +1,20 @@
 /**
- * contactShadowsPass — each seated mesh body's baked contact shadow, projected
+ * contactShadowsPass — each seated craft's baked contact shadow (the rovers), projected
  * as a box decal onto whatever the row's depth holds (the terrain). It reads
  * the depth its step declared (`view.sampledDepth`), and only when its OWN row
  * wrote it — a `{ sample }` step's passes never see a stranger's terrain.
- * Poses as in `meshBodiesPass`.
+ * Poses as in `drawMeshBodiesOnRow`.
  */
 
-import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { MESH_ASSETS } from '../../../../data/bodies/meshAssets.generated';
-import { composeContactDecalMatrices } from '../../../../utils/camera/composeContactDecalMatrices';
-import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { packContactShadowUniforms } from '../../../../utils/gpu/packContactShadowUniforms';
-import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
-import { drawableMeshBodies } from '../drawableMeshBodies';
-import { sceneBodyStates } from '../sceneBodyStates';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
+import { composeContactDecalMatrices } from '../../../utils/camera/composeContactDecalMatrices';
+import { narrowMat4 } from '../../../utils/math/narrowMat4';
+import { packContactShadowUniforms } from '../../../utils/gpu/packContactShadowUniforms';
+import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
+import { drawableMeshBodies } from '../../../services/engine/frame/drawableMeshBodies';
+import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
+import { MISSION_CRAFT_IDS } from '../present/missionCraftIds';
 
 export const contactShadowsPass: ContentPass = {
   name: 'contact-shadows',
@@ -25,7 +26,7 @@ export const contactShadowsPass: ContentPass = {
   enabled(state, ctx, view) {
     if (view.sampledDepth?.row !== view.slab) return false;
     if (view.slab.frame.kind !== 'body-m') return false;
-    return drawableMeshBodies(state, ctx, view.slab.frame.hostId).some(
+    return drawableMeshBodies(state, ctx, view.slab.frame.hostId, MISSION_CRAFT_IDS).some(
       (body) => MESH_ASSETS[body.meshKey]?.contactDecal !== undefined,
     );
   },
@@ -41,7 +42,7 @@ export const contactShadowsPass: ContentPass = {
     if (hostPose === null) return;
     const depthView = view.sampledDepth!.view;
 
-    for (const body of drawableMeshBodies(state, ctx, hostId)) {
+    for (const body of drawableMeshBodies(state, ctx, hostId, MISSION_CRAFT_IDS)) {
       const decal = MESH_ASSETS[body.meshKey]?.contactDecal;
       if (decal === undefined) continue;
       const { posM, rotM } = bodyStateInHostFrame(bodyStates.get(body.id)!, hostState);

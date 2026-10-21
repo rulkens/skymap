@@ -1,7 +1,7 @@
 // Data only: `appVisibility.ts` derives core's address types from this.
 
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
-import { SAMPLED_BODY_IDS } from '../../data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../data/bodies/sampledBodyIds';
 
 export const missionsVisibility = [
   { key: 'missionTrails' },

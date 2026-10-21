@@ -163,19 +163,23 @@ raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` 
    symlink, so every rebake is invisible until you run it against main's tree:
    `npx tsx -e "import { buildDataManifest } from './tools/deploy/buildDataManifest.ts'; buildDataManifest('<main>/public/data');"`
    then hard-refresh.
-7. **Seed** — `src/data/bodies/sceneMeshBodies.ts`: `{ id, label, meshKey }`.
-   `standoffRadii` only when a boom or array sets the bounding sphere; no
-   `captionRevealM` for a real object.
-8. **Driver** — `src/data/bodies/orbitalElements.ts` (`probe()` / `orbiter()`
-   row + a `palette.ts` tint, comment naming the Horizons epoch) **or**
-   `src/data/bodies/surfaceFixedSites.ts` (`altitudeM: groundOffsetM('<key>')`,
-   `seat: 'resting'` for a lander or rover set down on the terrain — `'anchored'`
-   is for a georeferenced scan that carries its own height; host must be an
-   IAU-pole body in `SCENE_CELESTIAL_BODIES`).
-9. **Rotation** — `src/data/bodies/rotationElements.ts`: one row per the arm
-   chosen. On the `iau-pole` arm the row's pole IS body +Z, so aiming the
-   boresight (+X) somewhere means putting the pole PERPENDICULAR to it and
-   phasing with W₀ — `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`.
+7. **Craft row** — ONE file in `src/layers/missions/bodies/<id>.ts` exporting a
+   `LayerBody`, plus one entry in `MISSIONS_BODY_ROWS`
+   (`missionsBodyRows.ts`). `body` is the seed via `meshBody({ id, label,
+   meshKey })`; `standoffRadii` only when a boom or array sets the bounding
+   sphere; no `captionRevealM` for a real object. Rows never import a body
+   table (module-init cycle); import only types, makers and constants.
+8. **Position** — the row's `position`, one of: `kind: 'orbit'` (`orbiter()` /
+   `probe()` elements, a `palette.ts` tint, comment naming the Horizons epoch),
+   `kind: 'sampled'` (a tabulated trajectory), or `kind: 'site'` (`altitudeM:
+   meshGroundOffsetM('<key>')`, `seat: 'resting'` for a lander or rover set down
+   on the terrain — `'anchored'` is for a georeferenced scan that carries its own
+   height; `hostId` must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
+9. **Rotation** — the row's optional `rotation`, one per the arm chosen. On the
+   `iau-pole` arm the row's pole IS body +Z, so aiming the boresight (+X)
+   somewhere means putting the pole PERPENDICULAR to it and phasing with W₀ —
+   `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`. A surface site
+   uses `{ kind: 'surfaceLocked', id, headingDeg }`.
 10. **Names + facts** — `bodySearchNames.ts` `AUTHORED` (designations and
     nicknames a reader types), `data/seeds/planet_facts.seed.json` (id,
     `wikiTitle`, `description`; `yearLength`/`distance`/`dayLength` as the

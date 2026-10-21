@@ -4,6 +4,8 @@ import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { coreSceneBodyPartition } from '../../../../src/services/engine/frame/coreSceneBodyPartition';
+import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
+import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -13,7 +15,7 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { SCENE_BODY_CAPTION_LABEL } from '../../../../src/data/labels/sceneBodyCaptionLabel';
 import { claimedLabelItemsOf } from '../../../../src/utils/visibility/claimedLabelItemsOf';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -80,7 +82,8 @@ const viewAt = (simDays: number) =>
 
 const drawnIds = (simDays: number): string[] => {
   const view = viewAt(simDays);
-  const { glints, meshes } = coreSceneBodyPartition(STATE as never, view);
+  const roster = bodySlabRosterIds(view.snapshot.meshBodies);
+  const { glints, meshes } = sceneBodyPartition(STATE as never, view, roster, () => false);
   return [...glints, ...meshes].map((body) => body.id);
 };
 // Core captions every body but the sampled craft, which the missions Layer claims and captions.
@@ -191,7 +194,7 @@ describe('sceneBodyPartition routing', () => {
       planetAt('mars', 3390000, CLOSE(3390000)), // resolved, registry
       planetAt('titan', 2575000, CLOSE(2575000)), // resolved, not registry
       planetAt('jupiter', 69911000, AU_M), // sub-pixel glint
-      meshAt('whale', 6.8, CLOSE(6.8)), // resolved mesh
+      meshAt('soendermarken', 160, CLOSE(160)), // resolved mesh
     ];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     const all = idsOf([...glints, ...flat, ...textured, ...meshes]);
@@ -218,16 +221,16 @@ describe('sceneBodyPartition routing', () => {
   });
 
   it('routes a sub-3px body, planet or mesh, to glints', () => {
-    const bodies = [planetAt('jupiter', 69911000, AU_M), meshAt('whale', 6.8, AU_M)];
+    const bodies = [planetAt('jupiter', 69911000, AU_M), meshAt('soendermarken', 160, AU_M)];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     expect(glints).toEqual(bodiesOf(bodies));
     expect([...flat, ...textured, ...meshes]).toEqual([]);
   });
 
   it('routes a resolved MeshBody to meshes, never textured or flat', () => {
-    const whale = meshAt('whale', 6.8, CLOSE(6.8));
-    const { meshes, flat, textured, glints } = partition([whale], () => true);
-    expect(idsOf(meshes)).toEqual(['whale']);
+    const scene = meshAt('soendermarken', 160, CLOSE(160));
+    const { meshes, flat, textured, glints } = partition([scene], () => true);
+    expect(idsOf(meshes)).toEqual(['soendermarken']);
     expect([...flat, ...textured, ...glints]).toEqual([]);
   });
 
@@ -240,10 +243,10 @@ describe('sceneBodyPartition routing', () => {
     expect(loading.meshes).toEqual([]);
   });
 
-  // A mission mesh has no sphere to fall back to: drawing one would be a wrong shape.
+  // A mesh body has no sphere to fall back to: drawing one would be a wrong shape.
   it('drops a resolved MeshBody whose mesh is not resident from every branch', () => {
-    const whale = meshAt('whale', 6.8, CLOSE(6.8));
-    const { meshes, flat, textured, glints } = partition([whale], () => false);
+    const scene = meshAt('soendermarken', 160, CLOSE(160));
+    const { meshes, flat, textured, glints } = partition([scene], () => false);
     expect([...meshes, ...flat, ...textured, ...glints]).toEqual([]);
   });
 

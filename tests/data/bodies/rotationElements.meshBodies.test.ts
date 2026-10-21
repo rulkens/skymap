@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import { MESH_BODY_PERIOD_DAYS } from '../../../src/data/bodies/orbitalElements';
+import { HITCHHIKER_ORBIT_PERIOD_DAYS } from '../../../src/data/missions/hitchhikerOrbit';
 
 // The whale's rotation row and its orbit row are one physical claim written
 // twice, and every part of the chain that could slip a sign is invisible in the
@@ -40,7 +40,7 @@ function dot(a: readonly number[], b: readonly number[]): number {
 
 describe('the whale is orbit-locked', () => {
   it.each([0, 0.25, 0.37, 0.5])('flies head-first, belly to Earth at %s of an orbit', (phase) => {
-    const simDays = CONST_J2000 + phase * MESH_BODY_PERIOD_DAYS;
+    const simDays = CONST_J2000 + phase * HITCHHIKER_ORBIT_PERIOD_DAYS;
     const orientation = deriveBodyStates(simDays).get('whale')!.orientation;
     const radialOut = normalize(geocentricMpc(simDays));
     const before = geocentricMpc(simDays - SECOND_IN_DAYS);

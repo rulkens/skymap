@@ -49,7 +49,7 @@ Licence check still owed for JAXA (Ryugu) and ESA/LAM (67P, Lutetia, Šteins).
   about 50 million years." Deimos — "The smaller, outer moon of Mars, about 15 km
   across. A thick blanket of dust fills its craters, so it looks smoother than Phobos."
 - **Mars eclipse on mesh moons:** a self-hosted mesh moon draws unshadowed
-  (`meshBodiesPass` skips the umbra when `hostId === body.id`); the sphere path
+  (`drawMeshBodiesOnRow` skips the umbra when `hostId === body.id`); the sphere path
   had no eclipse either, but the mesh path could take Mars as the occluder.
 - **Seed albedo twice:** `importMesh.py` repeats the `scenePlanets.ts` seed
   albedos with no guard against drift.
