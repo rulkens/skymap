@@ -54,6 +54,16 @@ Decided at plan time (each simpler than the spec text; the reviewer checks again
 - **D9. Blobs draw as a star-style box-filling glow in the galaxy points pass** (user ruling 2026-10-20, replacing "plain
   brighter billboard"): radius = the node's projected edge × an overlap factor, peak = the subtree's summed light over
   that area with a cap, as `starCatalog/vertex.wesl:222-251`; no separate low-res target unless the perf gate asks.
+- **D10. The GPU derives the point fields** (user ruling 2026-10-21, superseding the 24-byte record in Task 9): the
+  record carries only the wire codes (16 B, four words) and `points/pooledFields.wesl` is `derivePointRecord`'s WGSL
+  twin, pinned by `tests/services/gpu/shaders/pooledFields.parity.test.ts`. A chunk landing's pack is bit-copies
+  (~11 ms → ~0.07 ms per chunk).
+- **D11. Chunk pools hold variable-size runs** (user rulings 2026-10-21, both octrees): buddy allocators over the record
+  and node buffers replace the fixed `chunkCapacity` stride; a chunk's record and node bases come from its runs. Each
+  tier's budget is `poolRecords`, a record count (was `slots`); rows are sized as records × `poolNodesPerRecord`
+  (GLADE 0.2, Gaia 0.11, measured, re-measure after a re-bake).
+- **D12. The disk walk skips a block no galaxy in it can reach 8 px from**, judged once per block from its box and
+  largest diameter (`diskBlockBounds`); a block leaving reach purges its sticky disks as an evicted block does.
 
 ## Global constraints
 
@@ -532,8 +542,10 @@ then without `--dry`. Grep for the old name.
 
 - [ ] Tune `GLADE_STRATIFY.mLim`, `refineThreshold` and the three budgets so the zoomed-out survey pose draws about the
       medium tier's point count before any chunk loads, and the large budget holds under the pick cap
-      (`indexRecords + slots·chunkCapacity < 2²⁶`).
-- [ ] Re-bake. Record the values and the per-pose draw counts in the ledger.
+      (`indexRecords + poolRecords < 2²⁶`). Swept 2026-10-21: mLim −6 (the brightest value the 32,768-record index
+      and 8,192-record dense-cell caps accept), thr 0.16; the two draw-count targets cannot be met (index cap; thr
+      0.16 refines nothing below level 8 at full-survey) and await the user's ruling.
+- [x] Re-bake. Record the values and the per-pose draw counts in the ledger.
 
 ### Task 13: A/B and perf gate (controller, with the user)
 
