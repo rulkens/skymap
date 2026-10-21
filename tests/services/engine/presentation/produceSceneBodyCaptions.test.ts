@@ -32,7 +32,6 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
@@ -48,8 +47,8 @@ import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCata
 // this file's anchors match the producer's internal `sceneBodyStates` read.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const BASE = [
-  ...sceneBodyLabels(J2000_STATES, new Set()),
-  ...SCENE_MESH_BODIES.map((b) => meshBodyCaption(b, J2000_STATES.get(b.id)!.positionMpc, null)),
+  ...sceneBodyLabels(J2000_STATES),
+  ...SCENE_MESH_BODIES.map((b) => meshBodyCaption(b, J2000_STATES.get(b.id)!.positionMpc, 0)),
 ];
 
 const EARTH_LABEL_ID = 'sceneBody-earth';
@@ -131,8 +130,6 @@ function makeState(): EngineState {
         },
       },
     },
-    // The composed entries core derives the claimed bodies from.
-    visibilityEntries: APP_VISIBILITY,
   } as unknown as EngineState;
 }
 

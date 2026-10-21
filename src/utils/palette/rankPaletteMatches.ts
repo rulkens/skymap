@@ -16,7 +16,6 @@ import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { isCoreBodyId } from '../scene/isCoreBodyId';
-import { isRegistryBodyId } from '../scene/isRegistryBodyId';
 import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
@@ -73,9 +72,7 @@ export function rankPaletteMatches(
   // readers, so the body rows are narrowed to the ids a body source actually
   // seeds and core owns (the craft are the missions Layer's own palette rows);
   // the stars get their own rows below, carrying star identity.
-  const bodyScored: ScoredRow[] = SCENE_BODIES.filter(
-    (body) => isRegistryBodyId(body.id) && isCoreBodyId(body.id),
-  )
+  const bodyScored: ScoredRow[] = SCENE_BODIES.filter((body) => isCoreBodyId(body.id))
     .map<ScoredRow>((body) => {
       const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
       const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);

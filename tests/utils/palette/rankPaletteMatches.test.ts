@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
 import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
-import { actionForRow } from '../../../src/utils/palette/actionForRow';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -28,17 +27,6 @@ const COMA: StructureSearchEntry = {
 
 function alias(names: readonly string[], pgc: number): AliasIndexEntry {
   return { pgc, names, source: Source.Glade };
-}
-
-function structure(name: string, abell: string | null, idx: number): StructureSearchEntry {
-  return {
-    id: `cluster-bulk-x${idx}`,
-    name,
-    category: 'galaxy-cluster',
-    abell,
-    description: '',
-    featured: false,
-  };
 }
 
 describe('rankPaletteMatches', () => {

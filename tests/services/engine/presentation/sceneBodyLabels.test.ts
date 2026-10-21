@@ -10,23 +10,14 @@ import { compressBrightness } from '../../../../src/utils/color/compressBrightne
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
-const NO_CLAIMS: ReadonlySet<string> = new Set();
 
 describe('sceneBodyLabels', () => {
-  const labels = sceneBodyLabels(J2000_STATES, NO_CLAIMS);
+  const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per scene body nobody claims (Earth + planets, no mesh body)', () => {
+  it('emits one label per scene body (Earth + planets, no mesh body)', () => {
     // The seeded stars, the Sun and the craft are not captioned here: they
     // caption from their Layer's own producer, and an anchored scan is ground.
     expect(labels).toHaveLength(1 + SCENE_PLANETS.length);
-  });
-
-  it('skips every body the claimed set holds, Earth and planets included', () => {
-    const claimed = new Set(['earth', 'mars']);
-    const ids = sceneBodyLabels(J2000_STATES, claimed).map((label) => label.id);
-    expect(ids).not.toContain('sceneBody-earth');
-    expect(ids).not.toContain('sceneBody-mars');
-    expect(ids).toContain('sceneBody-venus');
   });
 
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {
@@ -41,7 +32,7 @@ describe('sceneBodyLabels', () => {
     // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
     // to the new world position — the label FOLLOWS the body.
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
-    const laterLabels = sceneBodyLabels(laterStates, NO_CLAIMS);
+    const laterLabels = sceneBodyLabels(laterStates);
 
     const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
     const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;

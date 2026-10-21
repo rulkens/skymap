@@ -9,12 +9,10 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { MISSION_CRAFT_IDS } from './missionCraftIds';
+import { CRAFT_ORDER } from './craftOrder';
 import { craftPickId } from './craftPickId';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
-
-// `craftPickId` packs an index into this same order.
-const CRAFT_ORDER = [...MISSION_CRAFT_IDS];
 
 export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
   return {

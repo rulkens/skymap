@@ -6,9 +6,7 @@
 
 import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
-import { MISSION_CRAFT_IDS } from './missionCraftIds';
-
-const CRAFT_ORDER = [...MISSION_CRAFT_IDS];
+import { CRAFT_ORDER } from './craftOrder';
 
 export function craftPickId(bodyId: string): number | null {
   const index = CRAFT_ORDER.indexOf(bodyId);

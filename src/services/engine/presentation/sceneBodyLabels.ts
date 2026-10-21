@@ -1,6 +1,6 @@
 /**
  * sceneBodyLabels — name captions for the true-scale foreground bodies core
- * captions: Earth and the planets, minus any body a Layer's label entry claims.
+ * captions: Earth and the planets.
  * No mesh body: the craft caption through the missions Layer's
  * `produceMissionCaptions`, and an anchored scan is ground, so it goes
  * uncaptioned. The seeded stars, the Sun and the Galactic Centre are not scene
@@ -69,23 +69,16 @@ const PLANET_TINT_GAMMA = 0.3;
  * reference, so a fresh instant is the only thing that rebuilds the captions
  * (see `labelsNearPass`'s memo).
  */
-export function sceneBodyLabels(
-  bodyStates: ReadonlyMap<string, BodyState>,
-  claimed: ReadonlySet<string>,
-): ForegroundCaption[] {
+export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
-    ...(claimed.has(SCENE_EARTH.id)
-      ? []
-      : [
-          bodyCaption(
-            SCENE_EARTH,
-            bodyFootprintRadiusM(SCENE_EARTH),
-            bodyStates.get(SCENE_EARTH.id)!.positionMpc,
-            EARTH_TINT,
-            'earth',
-          ),
-        ]),
-    ...SCENE_PLANETS.filter((planet) => !claimed.has(planet.id)).map((planet) =>
+    bodyCaption(
+      SCENE_EARTH,
+      bodyFootprintRadiusM(SCENE_EARTH),
+      bodyStates.get(SCENE_EARTH.id)!.positionMpc,
+      EARTH_TINT,
+      'earth',
+    ),
+    ...SCENE_PLANETS.map((planet) =>
       bodyCaption(
         planet,
         bodyFootprintRadiusM(planet),

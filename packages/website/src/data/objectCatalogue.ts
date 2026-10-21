@@ -181,7 +181,7 @@ const missionIds = new Set(
 );
 const models = SCENE_MESH_BODIES.map((body) => {
   const id = `${BODY_FOCUS_PREFIX}${body.id}`;
-  const names = CRAFT_SEARCH_NAMES.get(body.id) ?? BODY_SEARCH_NAMES.get(body.id) ?? [];
+  const names = CRAFT_SEARCH_NAMES.get(body.id) ?? [];
   return focusRow({
     name: body.label,
     kind: missionIds.has(id) ? 'spacecraft' : 'model',

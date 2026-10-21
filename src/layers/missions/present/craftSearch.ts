@@ -12,7 +12,7 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import type { LayerSearchEntry } from '../../../@types/engine/layer/LayerSearchEntry';
 
 const ALIASES: Readonly<Record<string, readonly string[]>> = {
-  petunias: ['petunias', 'bowl of petunias', 'oh no not again'],
+  petunias: ['petunias', 'oh no not again'],
   voyager1: ['Voyager'],
   voyager2: ['Voyager'],
   hubble: ['HST', 'Hubble Space Telescope'],

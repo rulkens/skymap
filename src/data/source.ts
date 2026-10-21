@@ -237,8 +237,8 @@ export const Source = {
    * The missions Layer's craft (the Voyagers, Hubble, the rovers, the whale and
    * the petunias): one code for all of them, its pick index running over
    * `MISSION_CRAFT_IDS`. Pickable: `mission-meshes` and the craft captions stamp
-   * it, and the `craft` selection kind resolves it. Value 32, renamed from the
-   * retired core mesh body row, which no `.bin` or URL ever persisted.
+   * it, and the `craft` selection kind resolves it. Value 32 stays
+   * stable: it is baked into pick words.
    */
   Craft: 32,
   /**

@@ -1,7 +1,7 @@
 /**
  * loadEnvBrdfLut — fetches the committed split-sum environment BRDF
  * (`public/lut/envBrdf.{json,bin}`, baked by `tools/lut/buildEnvBrdfLut.ts`)
- * and uploads it as the texture the mesh body shader samples at
+ * and uploads it as the texture the shader for mesh bodies samples at
  * (NoV, roughness).
  *
  * A relative URL, like the MSDF font atlases: the LUT rides the static shell

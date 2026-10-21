@@ -15,7 +15,7 @@ import { bodyCaption } from './bodyCaption';
 export function meshBodyCaption(
   body: MeshBody,
   positionMpc: Readonly<Vec3>,
-  pickId: number | null,
+  pickId: number,
 ): ForegroundCaption {
   // A baked `albedo` is a mean over the whole surface — dark skin, or
   // (petunias) an atlas averaging in black gaps — far below a planet's, so it
@@ -26,7 +26,7 @@ export function meshBodyCaption(
     positionMpc,
     scaleToUnitMax(body.albedo),
     'meshBody',
-    pickId ?? undefined,
+    pickId,
   );
   // The seed's reveal distance becomes alpha 1 at it and 0 at twice it; the ×2
   // is the one place the band's width lives, so a seed tune stays one number.

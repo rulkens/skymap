@@ -158,7 +158,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // settings/fade graph this harness has no use for) projected through
   // `near0LabelProjection`'s rebased vp — the pair `labelsNearPass`, the
   // leader line and `labelPickQuads` all consume.
-  const caption = meshBodyCaption(body, bodyState.positionMpc, null);
+  const caption = meshBodyCaption(body, bodyState.positionMpc, 0);
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
     caption.worldPos[1] - ctx.drawCamPos[1],

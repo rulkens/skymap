@@ -4,7 +4,7 @@
  * its mission timeline kind. It owns the nine craft body rows, their registry row and the `craft`
  * selection kind with its pick code, and draws them: meshes through core's one mesh handle (the
  * slots stay core's), the rovers' contact shadows, and glints through its own glint renderer.
- * A craft's InfoCard is the body card, so a craft reads as it did before the kind split.
+ * A craft's InfoCard is the body card.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';

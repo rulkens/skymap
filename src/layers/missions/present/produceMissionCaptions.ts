@@ -35,7 +35,7 @@ export const produceMissionCaptions: LayerScreenLabel<'missions'>['produceLabels
     ({ body, sampled }) =>
       composeForegroundCaption(
         composeCtx,
-        meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id)),
+        meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id)!),
         fade[CRAFT_ENTRY.id]! * (sampled ? emphasisDim(emphasis, body.id) : 1),
       ),
   );
