@@ -1,10 +1,10 @@
 # Task 4: Public posts (HN, Bluesky, Reddit)
 
-> **Status:** drafts live locally on the maintainer's machine under `posts-and-emails/` (gitignored 2026-05-06 — they carry personal voice samples and recipient strategy that don't belong in the public repo). This file is the task-level summary only.
+> **Status:** drafts live in the maintainer's private `skymap-private` repo under `outreach/posts-and-emails/` (moved there 2026-10-21 — they carry personal voice samples and recipient strategy that don't belong in the public repo), beside the daily Bluesky queue in `outreach/bluesky/`. This file is the task-level summary only.
 
 Three audiences, three angles, stepped rhythm so a single dud doesn't cap exposure: HN first (best window: weekday afternoon CET ≈ weekday morning US east coast), Bluesky two hours later (#astrodataviz crowd is largely Europe + east-coast US, ~early evening CET), then Reddit over the next 1-2 days. Don't ship them simultaneously — a high-traction Show HN gives you a link to reference in subsequent posts.
 
-## Per-item files (gitignored, local-only)
+## Per-item files (in `skymap-private/outreach/`)
 
 - `posts-and-emails/hn-show.md` — Show HN.
 - `posts-and-emails/bluesky-thread.md` — 4-part thread (#astrodataviz / #astronomy / #webgpu).

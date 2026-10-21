@@ -1,6 +1,6 @@
 # Task 5: Targeted academic outreach (cold emails)
 
-> **Status:** drafts live locally on the maintainer's machine under `posts-and-emails/` (gitignored 2026-05-06 — they carry recipient names, addresses, and personal cold-email strategy that don't belong in the public repo). This file is the task-level summary only.
+> **Status:** drafts live in the maintainer's private `skymap-private` repo under `outreach/posts-and-emails/` and `outreach/emails/` (moved there 2026-10-21 — they carry recipient names, addresses, and personal cold-email strategy that don't belong in the public repo). This file is the task-level summary only.
 
 After Show HN lands (or doesn't), send a customised cold email to each contact. Wait until Task 4 has at least one piece of traction to reference — even a Show HN with 30 points is a real warm-opener. If HN was a complete dud, lead with the live demo and Zenodo DOI instead.
 

@@ -44,7 +44,7 @@ Subagent sweep, 2026-09-17, `main` @ `845720549`. Unverified; open the cited fil
 - `public/images/famous/` (82), `famous-curated/` (80), `famous-thumb/` (72) — curated galaxy WebPs usable as editorial imagery (mind the three `"license": "unknown"` entries, see 02).
 - **Copy:** `README.md` (hero blurb, "The zoom" narrative, 12-bullet Highlights, gallery captions, data-source tables, "How it works", "Direction"); `public/llms.txt` (a 40-line elevator pitch + use-case list — close to a landing-page skeleton); `CONTRIBUTING.md`; `docs/science.md`, `docs/RENDERER.md`, `docs/DATA.md`, `ATTRIBUTIONS.md`.
 - **JOSS paper draft:** `docs/superpowers/plans/2026-05-05-outreach-and-promotion/task-3-joss-paper.md` — a complete ~1000-word `paper.md` + inline `paper.bib`. `paper/` was never written out. Stale against v0.5.0 (says 48-byte format and three catalogs; reality is 64-byte SKMP v9 and ~9 sources).
-- **Outreach posts** in `.../2026-05-05-outreach-and-promotion/posts-and-emails/`: `hn-show.md` (title + ~250-word origin story — good "why I built this" copy), Bluesky threads, four subreddit drafts, four academic emails.
+- **Outreach posts** in the private `skymap-private` repo, `outreach/posts-and-emails/`: `hn-show.md` (title + ~250-word origin story — good "why I built this" copy), Bluesky threads, four subreddit drafts, four academic emails.
 
 ## 5. Analytics and SEO
 

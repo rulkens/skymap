@@ -63,7 +63,7 @@ Done: Show HN (2026-05-06, soft), Bluesky thread (2026-05-07), r/dataisbeautiful
 
 ## Task 5: Academic emails — re-gated onto Task 3 + traffic stat
 
-- [x] Drafts exist locally under `posts-and-emails/` with concept DOI `10.5281/zenodo.20037028`.
+- [x] Drafts exist in the private `skymap-private` repo under `outreach/posts-and-emails/` with concept DOI `10.5281/zenodo.20037028`.
 - [ ] Refresh opener to lead with **80–100 visitors/day** + live demo (+ "JOSS submitted" once Task 3 lands).
 - [ ] Confirm address — Email 2 GLADE / Gergely Dálya (current institution).
 - [ ] Confirm address — Email 4 CDS / Thomas Boch + Pierre Fernique.
