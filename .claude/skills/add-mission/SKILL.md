@@ -218,7 +218,7 @@ worktree dev server that symlinks `public/data`.
 | `bodyFromSource` must have det +1        | A mirror turns the model inside out; cycle axes, never flip one                                                                |
 | A hostless body costs a slab row         | A `focusId: 'sun'` mesh body grows `BODY_SLAB_CAPACITY`; an Earth/Mars orbiter rides its host                                  |
 | Mesh bodies draw no orbit trail          | By design (`trailElements.ts`); an orbiter shows only the moving mesh                                                          |
-| All mesh captions share one label toggle | `src/data/sources/mesh-body.ts` is one row; per-body muting is a separate change                                               |
+| All craft captions share one label toggle | The missions `craft` registry row is the one "Spacecraft" item; per-craft muting is a separate change                         |
 | `meshBody()` throws on a missing asset   | Seed rows land only after step 6; a seed without a bake breaks every import                                                    |
 | Prebake is not CI                        | Blender output is gitignored; deploy re-bakes on main, so the download and the `.blend` must exist there too                   |
 | `import-mesh` overwrites the `.blend`    | Every hand edit goes; the README's edit list is what lets them be redone                                                       |

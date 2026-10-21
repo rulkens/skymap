@@ -1,5 +1,5 @@
 /**
- * meshVertexSlots — the mesh-body vertex layout: one buffer slot per
+ * meshVertexSlots — the mesh body vertex layout: one buffer slot per
  * de-interleaved attribute array, in `@location` order.
  *
  * `decodeMesh` unpacks the file's quantised v3 streams into the float32 SoA arrays

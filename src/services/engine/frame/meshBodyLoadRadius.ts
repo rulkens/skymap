@@ -1,5 +1,5 @@
 /**
- * meshBodyLoadRadius — the per-mesh-body camera distance (Mpc) at which a
+ * meshBodyLoadRadius — the per-mesh body camera distance (Mpc) at which a
  * `.mesh` asset is demanded: 1e5 BODY RADII, one order above the planets'
  * 1e4. At 1e4 a ~10 m body like the whale would demand inside 100 km, past
  * the 3 px partition boundary; 1e5 puts the edge at ~1000 km, well outside

@@ -389,7 +389,7 @@ export function isCoreBodyId(id: string): boolean;     // earth, planets, CORE_M
 - `body-<id> is claimed by exactly one kind for every scene body` — `composeSelectionRows.resolveFocusId`
   never throws over all `SCENE_BODIES` ids. **Bug caught:** an overlapping claim throws on every craft deep link.
 
-- [ ] Task 6
+- [x] Task 6
 
 ### Task 7: ruling 8, the craft captions under missions (one commit with Task 6)
 
@@ -420,7 +420,7 @@ that item, and passes `craftPickId(id)` to `meshBodyCaption`; `emphasisDim` appl
 **Done:** Labels & Guides lists "Spacecraft" and no "Mesh bodies"; `docsReference.test.ts` passes;
 `grep -rn "mesh-body" src packages/website/src` returns nothing.
 
-- [ ] Task 7
+- [x] Task 7
 
 ### Task 8: palette search from missions
 

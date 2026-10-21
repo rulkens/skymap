@@ -34,7 +34,7 @@ export function installSlots(
     // Every per-source catalog self-installs elsewhere (galaxy points in
     // wireSlots, star catalogs onto the Layer's own runtime) — never here.
     if (typeof key === 'number') continue;
-    // Body-texture and mesh-body family keys are `built: 'external'` (minted
+    // Body-texture and mesh body family keys are `built: 'external'` (minted
     // in wireSlots into their own keyed maps), so the construction pass never
     // hands them here — the guards are a defensive skip that also narrows
     // `key` off the family members so the named-field index below typechecks.

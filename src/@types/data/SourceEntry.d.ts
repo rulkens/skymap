@@ -9,14 +9,15 @@ import type { BodySourceEntry } from './body/BodySourceEntry';
 import type { StarCatalogSourceEntry } from './starCatalog/StarCatalogSourceEntry';
 import type { BlackHoleSourceEntry } from './blackHole/BlackHoleSourceEntry';
 import type { ZoneOfAvoidanceSourceEntry } from './zoneOfAvoidance/ZoneOfAvoidanceSourceEntry';
+import type { CraftSourceEntry } from './craft/CraftSourceEntry';
 
 /**
  * One row of the SOURCE_REGISTRY — discriminated by the `type` field
- * across eleven kinds: per-point galaxy catalogs, marker-ring structures, the
+ * across twelve kinds: per-point galaxy catalogs, marker-ring structures, the
  * filament skeleton, the constellation figures, scalar-volume cubes, the
  * Milky-Way disk overlay, the peculiar-velocity flow field, star catalogs
  * (the survey-wide Gaia bin and the curated famous-star map), near-field
- * bodies (Earth, the Solar-System planets, the Sun), black holes, and the
+ * bodies (Earth, the Solar-System planets), the craft, black holes, and the
  * zone-of-avoidance guide band.
  */
 export type SourceEntry =
@@ -29,5 +30,6 @@ export type SourceEntry =
   | FlowSourceEntry
   | StarCatalogSourceEntry
   | BodySourceEntry
+  | CraftSourceEntry
   | BlackHoleSourceEntry
   | ZoneOfAvoidanceSourceEntry;

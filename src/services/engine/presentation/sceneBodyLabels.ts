@@ -1,19 +1,19 @@
 /**
  * sceneBodyLabels — name captions for the true-scale foreground bodies core
- * captions: Earth, the planets and the mesh bodies, minus any body a Layer
- * claims (a Layer that claims a body captions it: the sampled craft through the
- * missions Layer's `produceMissionCaptions`). The seeded stars, the Sun and the
- * Galactic Centre are not scene bodies here, and caption through their Layers.
+ * captions: Earth and the planets, minus any body a Layer's label entry claims.
+ * No mesh body: the craft caption through the missions Layer's
+ * `produceMissionCaptions`, and an anchored scan is ground, so it goes
+ * uncaptioned. The seeded stars, the Sun and the Galactic Centre are not scene
+ * bodies here, and caption through their Layers.
  *
  * The scene bodies render true-scale in the foreground/HDR passes, so at
  * almost every zoom level they are sub-pixel and impossible to locate by
  * eye. These labels anchor a name to each body's world position, giving
  * the descent toward the solar system something to aim at.
  *
- * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS` +
- * `SCENE_MESH_BODIES`), each tinted by its own authored colour: a planet's or
- * mesh body's brightened `albedo`, and a fixed tint for Earth, which carries a texture
- * instead of a colour. Deriving the tints from the body records keeps this
+ * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS`), each tinted by
+ * its own authored colour: a planet's brightened `albedo`, and a fixed tint for
+ * Earth, which carries a texture instead of a colour. Deriving the tints from the body records keeps this
  * file free of a parallel colour table that would drift from the seeds.
  *
  * ### Why the foreground projection, not the main one
@@ -37,16 +37,12 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ForegroundCaption } from './foregroundCaption';
-import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
-import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
-import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
 import { compressBrightness } from '../../../utils/color/compressBrightness';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
-import { meshBodyCaption } from '../../../utils/labels/meshBodyCaption';
 
 /**
  * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
@@ -75,7 +71,6 @@ const PLANET_TINT_GAMMA = 0.3;
  */
 export function sceneBodyLabels(
   bodyStates: ReadonlyMap<string, BodyState>,
-  simDays: number,
   claimed: ReadonlySet<string>,
 ): ForegroundCaption[] {
   return [
@@ -99,13 +94,5 @@ export function sceneBodyLabels(
         'planet',
       ),
     ),
-    // An anchored scan is ground, not an object on it, so it goes uncaptioned
-    // (and unpicked, see drawMeshBodyPicksOnRow).
-    ...SCENE_MESH_BODIES.filter(
-      (body) =>
-        !ANCHORED_MESH_BODY_IDS.has(body.id) &&
-        !claimed.has(body.id) &&
-        spacecraftPresent(body.id, simDays),
-    ).map((body) => meshBodyCaption(body, bodyStates.get(body.id)!.positionMpc)),
   ];
 }

@@ -1,7 +1,7 @@
 /**
- * produceSceneBodyCaptions — `Label2DProducer` candidate math for Earth, the
- * planets and the mesh bodies `sceneBodyLabels` keeps (the stars, the Sun and
- * every body a Layer's label entry claims caption through that Layer's producer,
+ * produceSceneBodyCaptions — `Label2DProducer` candidate math for Earth and the
+ * planets `sceneBodyLabels` keeps (the stars, the Sun, the craft and every body
+ * a Layer's label entry claims caption through that Layer's producer,
  * sharing the per-caption compose `composeForegroundCaption`). Declutter, envelope and lift run in
  * `label2DDirector`; every candidate emits even at target 0 (a dropped id eases out instead of popping).
  */
@@ -15,7 +15,6 @@ import { sceneBodyLabels } from './sceneBodyLabels';
 import { SCENE_BODY_CAPTION_LABEL } from '../../../data/labels/sceneBodyCaptionLabel';
 import { EARTH_ENTRY } from '../../../data/sources/earth';
 import { PLANET_ENTRY } from '../../../data/sources/planet';
-import { MESH_BODY_ENTRY } from '../../../data/sources/mesh-body';
 import { claimedLabelItemsOf } from '../../../utils/visibility/claimedLabelItemsOf';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
@@ -25,7 +24,7 @@ import { composeForegroundCaption } from '../../../utils/labels/composeForegroun
 // the source entry the kind's bodies caption under.
 const BODY_CAPTION_ITEM: Readonly<
   Partial<Record<CaptionKind, LabelItemOf<typeof SCENE_BODY_CAPTION_LABEL>>>
-> = { earth: EARTH_ENTRY.id, planet: PLANET_ENTRY.id, meshBody: MESH_BODY_ENTRY.id };
+> = { earth: EARTH_ENTRY.id, planet: PLANET_ENTRY.id };
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.
@@ -35,11 +34,10 @@ let cachedLabels: ReturnType<typeof sceneBodyLabels> = [];
 
 function baseLabelsFor(
   bodyStates: ReadonlyMap<string, BodyState>,
-  simDays: number,
   claimed: ReadonlySet<string>,
 ): ReturnType<typeof sceneBodyLabels> {
   if (bodyStates !== cachedStates || claimed !== cachedClaimed) {
-    cachedLabels = sceneBodyLabels(bodyStates, simDays, claimed);
+    cachedLabels = sceneBodyLabels(bodyStates, claimed);
     cachedStates = bodyStates;
     cachedClaimed = claimed;
   }
@@ -62,12 +60,8 @@ export const produceSceneBodyCaptions: LayerScreenLabel<
   typeof SCENE_BODY_CAPTION_LABEL
 >['produceLabels'] = (state, ctx, fade) => {
   const composeCtx = captionComposeContextOf(state, ctx);
-  const labels = baseLabelsFor(
-    sceneBodyStates(state, ctx),
-    ctx.snapshot.simDays,
-    claimedBy(state.visibilityEntries),
-  ).map((label) =>
-    composeForegroundCaption(composeCtx, label, fade[BODY_CAPTION_ITEM[label.kind]!]),
+  const labels = baseLabelsFor(sceneBodyStates(state, ctx), claimedBy(state.visibilityEntries)).map(
+    (label) => composeForegroundCaption(composeCtx, label, fade[BODY_CAPTION_ITEM[label.kind]!]),
   );
 
   return { labels, awake: false };
