@@ -107,7 +107,7 @@ review: yes
 "core still draws Søndermarken" note), `docs/RENDERER.md` (pass list, if it names `core-mesh-bodies`
 or the glint passes), spec §3 untouched.
 
-- [ ] Task 3
+- [x] Task 3
 
 ---
 
