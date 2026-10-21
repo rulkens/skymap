@@ -9,6 +9,7 @@ import { DEV_PORTS } from './tools/utils/io/devPorts.ts';
 import { distDir } from './tools/utils/io/distDir.ts';
 import { readCertPair } from './tools/utils/serve/readCertPair.ts';
 import { inlineEntryCssPlugin } from './tools/utils/vite/inlineEntryCssPlugin.ts';
+import { remoteRelayPlugin } from './tools/utils/vite/remoteRelayPlugin.ts';
 import { minifyStaticWgslPlugin } from './tools/utils/wgsl/minifyStaticWgslPlugin.ts';
 
 // ── Opt-in LAN HTTPS for on-device (iPad/iPhone) testing ────────────────────
@@ -67,6 +68,7 @@ export default defineConfig(({ command }) => ({
     minifyStaticWgslPlugin(),
     react(),
     inlineEntryCssPlugin(),
+    remoteRelayPlugin(),
   ],
   server: { port: DEV_PORTS.main, ...lanHttpsServer() },
   // Dev only: a built bundle must not carry this machine's absolute path.
@@ -74,5 +76,14 @@ export default defineConfig(({ command }) => ({
     __SKYMAP_PROJECT_ROOT__: JSON.stringify(command === 'serve' ? import.meta.dirname : ''),
   },
   assetsInclude: ['**/*.wgsl'],
-  build: { outDir: distDir, license: { fileName: 'third-party-licenses.md' } },
+  build: {
+    outDir: distDir,
+    license: { fileName: 'third-party-licenses.md' },
+    rollupOptions: {
+      input: {
+        main: join(import.meta.dirname, 'index.html'),
+        remote: join(import.meta.dirname, 'remote.html'),
+      },
+    },
+  },
 }));
