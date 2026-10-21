@@ -19,18 +19,18 @@ export function installOctreePool<C extends { readonly count: number }>(
   format: OctreeStreamFormat<C>,
 ): void {
   const { renderer, chunkStreams, requestRender } = host;
-  const poolSlots = renderer.upload(source, octree, slots);
+  const pool = renderer.upload(source, octree, slots);
   chunkStreams.get(source)?.destroy();
   chunkStreams.delete(source);
-  if (poolSlots === 0) return;
+  if (pool.slots === 0) return;
   chunkStreams.set(
     source,
     createOctreeChunkStream({
       octree,
       format,
-      slots: poolSlots,
+      pool,
       requestRender,
-      upload: (s, chunk, h) => renderer.uploadChunk(source, s, chunk, h),
+      upload: (s, chunk, h, run) => renderer.uploadChunk(source, s, chunk, h, run),
       evict: (s, h) => renderer.evictChunk(source, s, h),
     }),
   );

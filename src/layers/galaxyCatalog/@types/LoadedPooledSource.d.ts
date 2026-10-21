@@ -1,15 +1,14 @@
 import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
 import type { Octree } from '../../../@types/octree/Octree';
-import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
+import type { OctreeSlotRun } from '../../../@types/octree/OctreeSlotRun';
 
 /** One octree source's pool as `galaxyPooledPointRenderer` holds it. */
 export type LoadedPooledSource = {
   octree: Octree<GalaxyColumns>;
-  slots: number;
-  /** The chunk each slot holds: the pool index ↔ ordinal map, and a host slot's rows. */
-  slotChunks: (OctreeChunk<GalaxyColumns> | null)[];
-  /** `slotChunks` at the last pick draw: a readback names what was drawn, not what landed since. */
-  pickSlotChunks: (OctreeChunk<GalaxyColumns> | null)[];
+  /** The chunk and record run each slot holds: the pool index ↔ ordinal map, and a host slot's rows. */
+  slotRuns: (OctreeSlotRun<GalaxyColumns> | null)[];
+  /** `slotRuns` at the last pick draw: a readback names what was drawn, not what landed since. */
+  pickSlotRuns: (OctreeSlotRun<GalaxyColumns> | null)[];
   buffers: GPUBuffer[];
   recordsBuffer: GPUBuffer;
   /** PooledRecordUniforms: the decode constants, then the blob words each draw rewrites. */

@@ -13,23 +13,26 @@ import type { StarCutInputs } from './StarCutInputs';
 import type { StarCatalogCutDrawArgs } from './StarCatalogCutDrawArgs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
 
 export type StarCatalogRenderer = Renderer & {
   /**
    * Commit one catalog's index to pool-sized per-source GPU buffers, replacing any earlier
-   * upload; `min(slots, octree.chunkCount)` chunk slots follow the index, and that pool
-   * size is returned for the chunk stream to match.
+   * upload; the pool `octreePoolShape` makes of `slots` follows the index, and is returned
+   * for the chunk stream to match.
    */
-  upload(source: SourceType, octree: Octree<StarColumns>, slots: number): number;
+  upload(source: SourceType, octree: Octree<StarColumns>, slots: number): OctreePoolShape;
   /**
-   * Land a chunk in a slot: its records and rows, then every root's resident bit, written in
-   * the rows of `hostSlot` (its parent's slot; null when the index holds its roots).
+   * Land a chunk in a slot: its records at `runStart` past the index's and its rows, then every
+   * root's resident bit, written in the rows of `hostSlot` (its parent's slot; null when the
+   * index holds its roots).
    */
   uploadChunk(
     source: SourceType,
     slot: number,
     chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
+    runStart: number,
   ): void;
   /** Free a slot: every root of its chunk stops refining, then the slot's row count is cleared. */
   evictChunk(source: SourceType, slot: number, hostSlot: number | null): void;

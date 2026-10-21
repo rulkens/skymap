@@ -188,15 +188,16 @@ describe('starCatalogRenderer chunk pool', () => {
     createStarCatalogRenderer(device, 'rgba16float').upload(Source.GaiaStars, octreeOf(), 2);
     expect(sizeOf(NODES)).toBe((10 + 14) * 24);
     expect(sizeOf(OPACITY)).toBe(24 * 2 * 4);
-    expect(sizeOf(RECORDS)).toBe((100 + 100) * 8);
+    // Two 50-record capacities run in 64s.
+    expect(sizeOf(RECORDS)).toBe((100 + 128) * 8);
   });
 
-  it('upload throws naming the slot count that fits when the record cap is exceeded', () => {
+  it('upload throws when the record cap is exceeded', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     expect(() =>
       renderer.upload(Source.GaiaStars, octreeOf({ chunkCapacity: 2 ** 25 }), 3),
-    ).toThrow(/1 slot/);
+    ).toThrow(/record index/);
     expect([...renderer.loadedCatalogs()]).toEqual([]);
   });
 
@@ -217,10 +218,10 @@ describe('starCatalogRenderer chunk pool', () => {
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     renderer.upload(Source.GaiaStars, octreeOf(), 2);
     const nodeBase = 10 + 1 * 7;
-    const recordBase = 100 + 1 * 50;
+    const recordBase = 100 + 64;
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, 64);
     const landed = writes.map((w) => [w.label, w.offset, w.bytes]);
     expect(landed).toEqual([
       [RECORDS, recordBase * 8, 3 * 8],
@@ -277,7 +278,7 @@ describe('starCatalogRenderer chunk pool', () => {
     renderer.upload(Source.GaiaStars, octree, 2);
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 0, chunk, null);
+    renderer.uploadChunk(Source.GaiaStars, 0, chunk, null, 0);
     expect(writes.map((w) => [w.label, w.offset])).toEqual([
       [RECORDS, 100 * 8],
       [NODES, 10 * ROW_BYTES],
@@ -309,7 +310,7 @@ describe('starCatalogRenderer chunk pool', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
     renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, 64);
     renderer.snapshotPickSlots();
 
     renderer.evictChunk(Source.GaiaStars, 1, null);
@@ -322,12 +323,13 @@ describe('starCatalogRenderer chunk pool', () => {
         nodes: { ...CHUNK.nodes, morton: Uint32Array.of(16) },
       },
       null,
+      64,
     );
     // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
-    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
+    expect(renderer.recordOrdinal(Source.GaiaStars, 166)).toBe(105);
     // The inverse reads the live table: chunk 1 has left it, chunk 2 holds slot 1.
     expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 108)).toBe(152);
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 108)).toBe(166);
   });
 
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {
@@ -358,7 +360,7 @@ describe('starCatalogRenderer chunk pool', () => {
     );
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, 64);
     const at = (10 + 7) * OPACITY_CHANNELS * 4;
     const zeroed = writes.filter((w) => w.label.startsWith('star-cut-opacity-'));
     expect(zeroed.map((w) => [w.label, w.offset])).toEqual([
@@ -423,10 +425,10 @@ describe('starCatalogRenderer chunk pool', () => {
       chunks: [],
     };
     renderer.upload(Source.GaiaStars, octree, 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, parent, null);
+    renderer.uploadChunk(Source.GaiaStars, 1, parent, null, 64);
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 0, child, 1);
+    renderer.uploadChunk(Source.GaiaStars, 0, child, 1, 0);
     // The parent's row sits in slot 1: pool row 2 + 1·7; the child's own row in slot 0, row 2.
     const parentRow = 2 + 1 * 7;
     expect(writes.slice(-2).map((w) => [w.label, w.offset])).toEqual(rootWords(parentRow));

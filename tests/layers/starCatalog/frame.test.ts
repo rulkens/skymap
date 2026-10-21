@@ -270,7 +270,7 @@ describe('starCatalogPlanner', () => {
     const octree = {} as Octree<StarColumns>;
     const upload = vi.fn((_s: number, _o: Octree<StarColumns>, slots: number) => {
       if (slots > 256) throw new Error('only 256 slots fit');
-      return 0;
+      return { slots: 0, records: 0, maxRun: 0 };
     });
     const publish = vi.fn();
     Object.assign(runtime, {

@@ -66,7 +66,11 @@ describe('wireGalaxyOctreeSlot', () => {
       info: new Map(),
     } satisfies GalaxyOctreePayload);
     const renderer = {
-      upload: vi.fn((_s: SourceType, _o: unknown, slots: number) => slots),
+      upload: vi.fn((_s: SourceType, _o: unknown, slots: number) => ({
+        slots,
+        records: slots,
+        maxRun: 1,
+      })),
       unload: vi.fn(),
       uploadChunk: vi.fn(),
       evictChunk: vi.fn(),
@@ -91,7 +95,7 @@ describe('wireGalaxyOctreeSlot', () => {
       magOffset: 0.3,
       provenance: { total: 40, estimated: { orientation: 5, size: 6 } },
     });
-    expect(chunkStreams.get(Source.Glade)?.slots).toBe(slots);
+    expect(chunkStreams.get(Source.Glade)?.capacity.slots).toBe(slots);
     expect(records.get(Source.Glade)?.recordCount).toBe(40);
 
     slot.release();

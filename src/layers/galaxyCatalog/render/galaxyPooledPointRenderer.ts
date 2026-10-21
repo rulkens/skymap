@@ -1,7 +1,7 @@
 /**
  * galaxyPooledPointRenderer — an octree galaxy source as additive point billboards in the
  * galaxy points target, its blobs as box-filling glows through their own fragment (D9).
- * Records are four u32 each (`packGalaxyGpuRecords`), the index's first, then `slots × chunkCapacity`, vertex-pulled
+ * Records are four u32 each (`packGalaxyGpuRecords`), the index's first, then each chunk's run, vertex-pulled
  * through the shared GPU cut (`octreeCutGpu`, labelled 'galaxy-cut') into the same
  * `galaxyPointVertex` body the flat pipeline calls. `@group(2)` is per source and per view
  * slot: its fade buffer is written per view, before one submit (RENDERER.md landmine #1).
@@ -21,7 +21,8 @@ import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
 import type { OctreeCutInputs } from '../../../@types/octree/OctreeCutInputs';
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
-import type { OctreePoolLayout } from '../../../@types/octree/OctreePoolLayout';
+import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
+import type { OctreeSlotRun } from '../../../@types/octree/OctreeSlotRun';
 import type { PooledPickSourceDraw } from '../../../@types/rendering/PooledPickSourceDraw';
 import type { GalaxyPooledPointRenderer } from '../@types/GalaxyPooledPointRenderer';
 import type { LoadedPooledSource } from '../@types/LoadedPooledSource';
@@ -43,6 +44,7 @@ import {
 import { packGalaxyGpuRecords } from '../../../utils/galaxy/packGalaxyGpuRecords';
 import { recordOrdinal } from '../../../utils/octree/recordOrdinal';
 import { poolRecordIndex } from '../../../utils/octree/poolRecordIndex';
+import { octreePoolShape } from '../../../utils/octree/octreePoolShape';
 import { packGalaxyPointUniforms } from './packGalaxyPointUniforms';
 import { UNIFORM_BYTES } from './galaxyPointVertexLayout';
 
@@ -143,20 +145,20 @@ export function createGalaxyPooledPointRenderer(init: {
     octree: Octree<GalaxyColumns>,
     slots: number,
     stats: GalaxyPointStats,
-  ): number {
-    const poolSlots = Math.min(slots, octree.chunkCount);
+  ): OctreePoolShape {
+    const pool = octreePoolShape(octree, slots);
     // Throws past a pool cap before anything below is created or released.
-    cut.upload(source, octree, poolSlots);
+    cut.upload(source, octree, pool);
     freeBuffers(source);
     const indexRecords = octree.records.count;
     // `createBuffer({size:0})` is forbidden; a degenerate index leaves nothing to draw.
-    if (indexRecords + poolSlots * octree.chunkCapacity === 0) return poolSlots;
+    if (indexRecords + pool.records === 0) return pool;
 
     const packed = new Uint32Array(indexRecords * GALAXY_GPU_RECORD_WORDS);
     packGalaxyGpuRecords(octree.records, octree.columns, packed, 0);
     const recordsBuffer = device.createBuffer({
       label: `galaxy-pooled-records-${source}`,
-      size: (indexRecords + poolSlots * octree.chunkCapacity) * RECORD_BYTES,
+      size: (indexRecords + pool.records) * RECORD_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
@@ -209,33 +211,36 @@ export function createGalaxyPooledPointRenderer(init: {
     );
     sources.set(source, {
       octree,
-      slots: poolSlots,
-      slotChunks: new Array<OctreeChunk<GalaxyColumns> | null>(poolSlots).fill(null),
-      pickSlotChunks: new Array<OctreeChunk<GalaxyColumns> | null>(poolSlots).fill(null),
+      slotRuns: new Array<OctreeSlotRun<GalaxyColumns> | null>(pool.slots).fill(null),
+      pickSlotRuns: new Array<OctreeSlotRun<GalaxyColumns> | null>(pool.slots).fill(null),
       buffers: [recordsBuffer, sourceBuffer, pooledBuffer, ...fadeBuffers],
       recordsBuffer,
       pooledBuffer,
       fadeBuffers,
       bindGroups,
     });
-    return poolSlots;
+    return pool;
   }
 
   function unload(source: SourceType): void {
     const entry = sources.get(source);
     if (entry === undefined) return;
     // An octree with no records is the cut's release.
-    cut.upload(source, { ...entry.octree, records: { count: 0 } }, 0);
+    cut.upload(
+      source,
+      { ...entry.octree, records: { count: 0 } },
+      octreePoolShape(entry.octree, 0),
+    );
     freeBuffers(source);
   }
 
   function hostOf(
-    { octree, slotChunks }: LoadedPooledSource,
+    { octree, slotRuns }: LoadedPooledSource,
     hostSlot: number | null,
   ): OctreeChunkHost {
     if (hostSlot === null) return { nodes: octree.nodes, nodeBase: 0 };
     return {
-      nodes: slotChunks[hostSlot]!.nodes,
+      nodes: slotRuns[hostSlot]!.chunk.nodes,
       nodeBase: octree.nodes.count + hostSlot * octree.chunkNodeCap,
     };
   }
@@ -245,53 +250,46 @@ export function createGalaxyPooledPointRenderer(init: {
     slot: number,
     chunk: OctreeChunk<GalaxyColumns>,
     hostSlot: number | null,
+    runStart: number,
   ): void {
     const entry = sources.get(source);
-    if (entry === undefined || slot < 0 || slot >= entry.slots) {
+    if (entry === undefined || slot < 0 || slot >= entry.slotRuns.length) {
       throw new Error(`galaxyPooledPointRenderer: no slot ${slot} for source ${source}`);
     }
     const { octree } = entry;
     const packed = new Uint32Array(chunk.records.count * GALAXY_GPU_RECORD_WORDS);
     packGalaxyGpuRecords(chunk.records, octree.columns, packed, 0);
     // The records land before the cut marks the chunk's roots resident.
-    const recordBase = octree.records.count + slot * octree.chunkCapacity;
-    device.queue.writeBuffer(entry.recordsBuffer, recordBase * RECORD_BYTES, packed);
-    cut.uploadChunk(source, slot, chunk, hostOf(entry, hostSlot));
-    entry.slotChunks[slot] = chunk;
+    const poolBase = octree.records.count + runStart;
+    device.queue.writeBuffer(entry.recordsBuffer, poolBase * RECORD_BYTES, packed);
+    cut.uploadChunk(source, slot, chunk, hostOf(entry, hostSlot), poolBase);
+    entry.slotRuns[slot] = { chunk, poolBase };
   }
 
   function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
     const entry = sources.get(source);
-    const chunk = entry?.slotChunks[slot] ?? null;
-    if (entry === undefined || chunk === null) return;
-    cut.evictChunk(source, slot, chunk, hostOf(entry, hostSlot));
-    entry.slotChunks[slot] = null;
+    const run = entry?.slotRuns[slot] ?? null;
+    if (entry === undefined || run === null) return;
+    cut.evictChunk(source, slot, run.chunk, hostOf(entry, hostSlot));
+    entry.slotRuns[slot] = null;
   }
 
   function snapshotPickSlots(): void {
     for (const entry of sources.values()) {
-      entry.slotChunks.forEach((chunk, slot) => (entry.pickSlotChunks[slot] = chunk));
+      entry.slotRuns.forEach((run, slot) => (entry.pickSlotRuns[slot] = run));
     }
   }
-
-  const refsOf = (chunks: readonly (OctreeChunk<GalaxyColumns> | null)[]) =>
-    chunks.map((chunk) => chunk?.ref ?? null);
-  const layoutOf = ({ octree, slots }: LoadedPooledSource): OctreePoolLayout => ({
-    indexRecords: octree.records.count,
-    chunkCapacity: octree.chunkCapacity,
-    slots,
-  });
 
   function recordOrdinalOf(source: SourceType, poolIndex: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
-    return recordOrdinal(layoutOf(entry), refsOf(entry.pickSlotChunks), poolIndex);
+    return recordOrdinal(entry.octree.records.count, entry.pickSlotRuns, poolIndex);
   }
 
   function poolRecordIndexOf(source: SourceType, ordinal: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
-    return poolRecordIndex(layoutOf(entry), refsOf(entry.slotChunks), ordinal);
+    return poolRecordIndex(entry.octree.records.count, entry.slotRuns, ordinal);
   }
 
   function draw(

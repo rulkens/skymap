@@ -16,6 +16,7 @@ import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
 import type { ColumnId } from '../../../src/@types/octree/ColumnId';
 import type { OctreeRawColumn } from '../../../tools/@types/octree/OctreeRawColumn';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import type { OctreePoolShape } from '../../../src/@types/octree/OctreePoolShape';
 import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 
 /** Chunks 0–2 are rooted in the index; 3 in chunk 0's row, 4 in chunk 3's. Two records each. */
@@ -72,8 +73,8 @@ function chunkBytes(id: number): ArrayBuffer {
 const pathOf = (id: number) => octreeChunkPath('star', 'stars', REFS[id]!);
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** A stream whose fetches wait until the test resolves them by chunk ref. */
-function harness(slots: number) {
+/** A stream whose fetches wait until the test resolves them by chunk ref; a number is that many 2-record runs. */
+function harness(slots: number | OctreePoolShape) {
   const pending = new Map<string, (buf: ArrayBuffer | null) => void>();
   const fetchChunk = vi.fn(
     (path: string) => new Promise<ArrayBuffer | null>((resolve) => pending.set(path, resolve)),
@@ -86,7 +87,7 @@ function harness(slots: number) {
       chunkPath: (ref) => octreeChunkPath('star', 'stars', ref),
       decodeRecords: starColumnsOf,
     },
-    slots,
+    pool: typeof slots === 'number' ? { slots, records: 2 * slots, maxRun: 2 } : slots,
     requestRender: () => {},
     upload,
     evict,
@@ -139,6 +140,36 @@ describe('octreeChunkStream', () => {
     expect(evict).toHaveBeenCalledWith(0, null);
     expect(stream.epoch()).toBe(2);
     expect(stream.resident(0)).toBeNull();
+  });
+
+  it('lands each chunk at its own run start, and evicts for records even with a slot free', async () => {
+    const { stream, fetchChunk, upload, evict, land } = harness({
+      slots: 3,
+      records: 4,
+      maxRun: 2,
+    });
+    stream.update(
+      1,
+      [],
+      [
+        { chunkRef: 0, priority: 3 },
+        { chunkRef: 1, priority: 2 },
+        { chunkRef: 2, priority: 1 },
+      ],
+    );
+    // The records hold two runs: chunk 2 is refused while both were planned this frame.
+    expect(fetchChunk).toHaveBeenCalledTimes(2);
+    await land(0);
+    await land(1);
+    stream.update(2, [1], [{ chunkRef: 2, priority: 1 }]);
+    expect(evict).toHaveBeenCalledWith(0, null);
+    await land(2);
+    // [slot, chunk id, run start]
+    expect(upload.mock.calls.map(([slot, chunk, , run]) => [slot, chunk.ref.id, run])).toEqual([
+      [0, 0, 0],
+      [1, 1, 2],
+      [0, 2, 0],
+    ]);
   });
 
   it('a failed fetch marks the chunk failed and never re-enqueues it', async () => {

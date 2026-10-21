@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { createGalaxyPooledPointRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPooledPointRenderer';
 import {
+  NODE_FIRST_RECORD_WORD,
   CUT_NODE_WORDS,
   NODE_BITS_WORD,
   NODE_RESIDENT_BIT,
@@ -84,7 +85,8 @@ const row = (count: number, ownCount: number[], chunkRef: number[], level: numbe
 const OCTREE: Octree<GalaxyColumns> = {
   family: 'galaxy',
   grid: { bits: 4, origin: [10, 10, 10], cellEdge: 1 },
-  recordCount: 100,
+  // The index's 12 and the chunks' 5 each: the mean chunk the pool's slots are sized by.
+  recordCount: 22,
   columns: GALAXY_COLUMN_SCHEMA,
   nodes: row(3, [3, 3, 3], [0, 1, NO_CHUNK_REF], [1, 1, 2]),
   records: columns(12),
@@ -144,21 +146,24 @@ describe('galaxyPooledPointRenderer chunk pool', () => {
     ).toThrow(/colourIndex/);
   });
 
-  it("the pooled renderer writes a chunk's records at the slot's pool offset and evicts them", () => {
+  it("the pooled renderer writes a chunk's records at its run's pool offset, whatever its slot, and evicts them", () => {
     const { renderer, writes } = makeRenderer();
     writes.length = 0;
-    renderer.uploadChunk(Source.Glade, 1, chunkOf(1), null);
+    // Slot 1, run start 0: the records follow the index's 12 directly.
+    renderer.uploadChunk(Source.Glade, 1, chunkOf(1), null, 0);
     const rootBits = 1 * CUT_NODE_WORDS * WORD_BYTES + NODE_BITS_WORD * WORD_BYTES;
     const records = writes.findIndex((w) => w.label === RECORDS);
     const resident = writes.findIndex((w) => w.label === NODES && w.offset === rootBits);
-    expect(writes[records]).toMatchObject({
-      offset: (12 + 1 * 8) * RECORD_BYTES,
-      bytes: 5 * RECORD_BYTES,
-    });
+    expect(writes[records]).toMatchObject({ offset: 12 * RECORD_BYTES, bytes: 5 * RECORD_BYTES });
+    // The cut reads the same base: slot 1's first row (3 index rows + 1 × 4) names record 12.
+    const rows = writes.find(
+      (w) => w.label === NODES && w.offset === (3 + 4) * CUT_NODE_WORDS * WORD_BYTES,
+    )!;
+    expect((rows.data as Uint32Array)[NODE_FIRST_RECORD_WORD]).toBe(12);
     // A root marked resident over records not yet written would draw the slot's last occupant.
     expect(records).toBeLessThan(resident);
     expect((writes[resident]!.data as Uint32Array)[0]! & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
-    expect(renderer.poolRecordIndex(Source.Glade, 17 + 2)).toBe(12 + 8 + 2);
+    expect(renderer.poolRecordIndex(Source.Glade, 17 + 2)).toBe(12 + 2);
 
     writes.length = 0;
     renderer.evictChunk(Source.Glade, 1, null);
@@ -169,11 +174,11 @@ describe('galaxyPooledPointRenderer chunk pool', () => {
 
   it('recordOrdinal reads the pick snapshot, poolRecordIndex the live slots', () => {
     const { renderer } = makeRenderer();
-    renderer.uploadChunk(Source.Glade, 1, chunkOf(0), null);
+    renderer.uploadChunk(Source.Glade, 1, chunkOf(0), null, 8);
     renderer.snapshotPickSlots();
     // Chunk 0 leaves slot 1 and chunk 1 takes it between the pick draw and its readback.
     renderer.evictChunk(Source.Glade, 1, null);
-    renderer.uploadChunk(Source.Glade, 1, chunkOf(1), null);
+    renderer.uploadChunk(Source.Glade, 1, chunkOf(1), null, 8);
 
     // Pool row 12 + 8 + 2 as drawn held chunk 0's third record (ordinal 12 + 2).
     expect(renderer.recordOrdinal(Source.Glade, 22)).toBe(14);

@@ -65,7 +65,7 @@ export function createOctreeFrameDriver<C extends { readonly count: number }>(
               cut,
               stream.resident,
               stream.hasFailed,
-              stream.slots,
+              stream.capacity,
             );
             stream.update(frameIndex, touched, requests);
             wantedChunks ||= requests.length > 0;

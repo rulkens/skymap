@@ -5,6 +5,7 @@ import type { SourceType } from '../../../src/@types/data/SourceType';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeChunkStream } from '../../../src/@types/octree/OctreeChunkStream';
 import type { OctreePoolHost } from '../../../src/@types/octree/OctreePoolHost';
+import type { OctreePoolShape } from '../../../src/@types/octree/OctreePoolShape';
 
 type Records = { readonly count: number };
 
@@ -13,7 +14,7 @@ const FORMAT = { chunkPath: () => 'unused', decodeRecords: (): Records => ({ cou
 // A degenerate bake (a `--limit` dev run): no index records, no chunks.
 const EMPTY = { chunks: [], chunkCount: 0, records: { count: 0 } } as unknown as Octree<Records>;
 
-function hostWith(upload: () => number, previous: OctreeChunkStream<Records>) {
+function hostWith(upload: () => OctreePoolShape, previous: OctreeChunkStream<Records>) {
   const host: OctreePoolHost<Records> = {
     renderer: { upload, uploadChunk: vi.fn(), evictChunk: vi.fn() },
     chunkStreams: new Map([[SOURCE, previous]]),
@@ -25,7 +26,9 @@ function hostWith(upload: () => number, previous: OctreeChunkStream<Records>) {
 describe('installOctreePool', () => {
   it('a zero-chunk index installs no stream and replaces the previous one', () => {
     const destroy = vi.fn();
-    const host = hostWith(() => 0, { destroy } as unknown as OctreeChunkStream<Records>);
+    const host = hostWith(() => ({ slots: 0, records: 0, maxRun: 0 }), {
+      destroy,
+    } as unknown as OctreeChunkStream<Records>);
 
     installOctreePool(host, SOURCE, EMPTY, 8, FORMAT);
 

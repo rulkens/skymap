@@ -2,12 +2,13 @@
 
 import type { Octree } from './Octree';
 import type { OctreeCutState } from './OctreeCutState';
+import type { OctreePoolShape } from './OctreePoolShape';
 
 export type OctreeCutSource = {
   readonly octree: Octree<{ readonly count: number }>;
-  /** Chunk slots in the pool; 0 when the index has no chunks. */
-  readonly slots: number;
-  /** `indexNodes + slots·chunkNodeCap` rows. */
+  /** Chunk slots and records past the index; zero when the index has no chunks. */
+  readonly pool: OctreePoolShape;
+  /** `indexNodes + pool.slots·chunkNodeCap` rows. */
   readonly nodes: GPUBuffer;
   /** One u32 per slot: the resident chunk's row count, 0 when empty (`cut.wesl` skips the rest). */
   readonly slotRows: GPUBuffer;

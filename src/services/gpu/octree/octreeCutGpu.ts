@@ -19,6 +19,7 @@ import type { OctreeCutSourceInput } from '../../../@types/octree/OctreeCutSourc
 import type { OctreeCutDraw } from '../../../@types/octree/OctreeCutDraw';
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
+import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import cutCode from '../shaders/octree/cut.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -136,7 +137,7 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
   function createState(
     label: string,
     octree: Octree<{ readonly count: number }>,
-    slots: number,
+    pool: OctreePoolShape,
     nodes: GPUBuffer,
     slotRows: GPUBuffer,
   ): OctreeCutState {
@@ -146,9 +147,9 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
         size: Math.max(1, words) * WORD_BYTES,
         usage,
       });
-    const rows = poolRows(octree, slots);
+    const rows = poolRows(octree, pool.slots);
     const opacity = make('opacity', rows * OPACITY_CHANNELS, STORAGE | GPUBufferUsage.COPY_DST);
-    const leafList = make('leaf-list', leafListCapacity(octree, slots), STORAGE);
+    const leafList = make('leaf-list', leafListCapacity(octree, pool), STORAGE);
     const aggList = make('agg-list', rows, STORAGE);
     const draws = make(
       'draws',
@@ -220,9 +221,10 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
   function upload(
     source: SourceType,
     octree: Octree<{ readonly count: number }>,
-    slots: number,
+    pool: OctreePoolShape,
   ): void {
-    if (octree.records.count > 0) checkOctreePoolCaps(octree, slots);
+    if (octree.records.count > 0) checkOctreePoolCaps(octree, pool);
+    const { slots } = pool;
     const packed = octree.records.count === 0 ? null : packOctreeCutNodes(octree);
     release(source);
     if (packed === null) return;
@@ -239,17 +241,17 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
     });
     sources.set(source, {
       octree,
-      slots,
+      pool,
       nodes,
       slotRows,
-      live: createState(`${source}`, octree, slots, nodes, slotRows),
+      live: createState(`${source}`, octree, pool, nodes, slotRows),
       capture: null,
     });
   }
 
   function slotOf(source: SourceType, slot: number): OctreeCutSource {
     const entry = sources.get(source);
-    if (entry === undefined || slot < 0 || slot >= entry.slots) {
+    if (entry === undefined || slot < 0 || slot >= entry.pool.slots) {
       throw new Error(`octreeCut: no slot ${slot} for source ${source}`);
     }
     return entry;
@@ -280,6 +282,7 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
     slot: number,
     chunk: OctreeChunk<{ readonly count: number }>,
     host: OctreeChunkHost,
+    recordBase: number,
   ): void {
     const entry = slotOf(source, slot);
     const { octree } = entry;
@@ -289,12 +292,7 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
       rootRow: host.nodeBase + row,
     }));
     const nodeBase = octree.nodes.count + slot * octree.chunkNodeCap;
-    const rows = packOctreeChunkNodes(
-      chunk,
-      roots,
-      { nodeBase, recordBase: octree.records.count + slot * octree.chunkCapacity },
-      octree.chunkNodeCap,
-    );
+    const rows = packOctreeChunkNodes(chunk, roots, { nodeBase, recordBase }, octree.chunkNodeCap);
     // Rows and fades first, every root's resident bit last: no frame refines a
     // root over another chunk's rows.
     device.queue.writeBuffer(entry.nodes, nodeBase * CUT_NODE_WORDS * WORD_BYTES, rows);
@@ -330,7 +328,7 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
   /** Write one cut's uniforms and, unless `pass` is null, record its three dispatches into it. */
   function dispatch(
     pass: GPUComputePassEncoder | null,
-    { octree, slots }: OctreeCutSource,
+    { octree, pool: { slots } }: OctreeCutSource,
     state: OctreeCutState,
     inputs: OctreeCutInputs,
     row: OctreeCutSourceInput,
@@ -410,7 +408,7 @@ export function createOctreeCutGpu(device: GPUDevice, cutLabel: string): OctreeC
       entry.capture ??= createState(
         `${row.source}-capture`,
         entry.octree,
-        entry.slots,
+        entry.pool,
         entry.nodes,
         entry.slotRows,
       );

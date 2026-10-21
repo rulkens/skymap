@@ -9,6 +9,7 @@ import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeChunkRoot } from '../../../@types/octree/OctreeChunkRoot';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
+import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
 import { OCTREE_FAMILIES } from '../../../data/octree/octreeFamilies';
 import {
   LEVEL_KEY_STRIDE,
@@ -302,37 +303,32 @@ function parentKey(level: number, morton: number): number {
   return nodeKey(level + 1, Math.floor(morton / 2 ** OCTANT_BITS));
 }
 
-/** Throws, naming the largest slot count that fits, when `slots` would overflow a pool cap; never clamps. */
+/** Throws when the pool would overflow the leaf list's row index or the pick's record index; never clamps. */
 export function checkOctreePoolCaps(
   octree: Octree<{ readonly count: number }>,
-  slots: number,
+  pool: Pick<OctreePoolShape, 'slots' | 'records'>,
 ): void {
-  const fit = (index: number, stride: number, limit: number) =>
-    stride === 0 ? Infinity : Math.floor((limit - 1 - index) / stride);
-  const fits = Math.min(
-    fit(octree.nodes.count, octree.chunkNodeCap, POOL_NODE_INDEX_LIMIT),
-    fit(octree.records.count, octree.chunkCapacity, POOL_RECORD_INDEX_LIMIT),
-  );
-  if (slots > fits) {
-    const n = Math.max(0, fits);
+  const rows = octree.nodes.count + pool.slots * octree.chunkNodeCap;
+  const records = octree.records.count + pool.records;
+  if (rows >= POOL_NODE_INDEX_LIMIT || records >= POOL_RECORD_INDEX_LIMIT) {
     throw new Error(
-      `${octree.family} pool: ${slots} slots overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit row or ` +
-        `${SELECTION_SOURCE_SHIFT}-bit record index; only ${n} slot${n === 1 ? '' : 's'} fit`,
+      `${octree.family} pool: ${rows} rows or ${records} records overflow the ` +
+        `${LEAF_BLOCK_INDEX_SHIFT}-bit row or ${SELECTION_SOURCE_SHIFT}-bit record index`,
     );
   }
 }
 
-/** Leaf-list entries the pool can ever hold: every own block of the index, and of every slot at worst. */
+/** Leaf-list entries the pool can ever hold: every own block of the index, and of a full pool at worst. */
 export function leafListCapacity(
   octree: Octree<{ readonly count: number }>,
-  slots: number,
+  pool: Pick<OctreePoolShape, 'slots' | 'records'>,
 ): number {
   let blocks = 0;
   for (let i = 0; i < octree.nodes.count; i++) {
     blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
   }
-  // ceil(own / 8) ≤ own / 8 + 1 per row, summed over a chunk's records and rows.
-  return blocks + slots * (octree.chunkCapacity / (1 << LEAF_BLOCK_SHIFT) + octree.chunkNodeCap);
+  // ceil(own / 8) ≤ own / 8 + 1 per row, summed over the pool's records and rows.
+  return blocks + pool.records / (1 << LEAF_BLOCK_SHIFT) + pool.slots * octree.chunkNodeCap;
 }
 
 /**

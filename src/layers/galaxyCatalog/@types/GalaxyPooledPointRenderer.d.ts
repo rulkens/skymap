@@ -14,6 +14,7 @@ import type { GalaxyBlobTuningKey } from './GalaxyBlobTuningKey';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeCutInputs } from '../../../@types/octree/OctreeCutInputs';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
+import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
 import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
 import type { GalaxyPooledPickLayouts } from '../../../@types/rendering/GalaxyPooledPickLayouts';
 import type { PooledPickSourceDraw } from '../../../@types/rendering/PooledPickSourceDraw';
@@ -30,7 +31,7 @@ export type GalaxyPooledPointRenderer = Omit<
     octree: Octree<GalaxyColumns>,
     slots: number,
     stats: GalaxyPointStats,
-  ): number;
+  ): OctreePoolShape;
   /** Free the source's pool and cut. */
   unload(source: SourceType): void;
   /** Pin the slot table a pick readback resolves against: the one its draw saw. */

@@ -1,51 +1,68 @@
 import { describe, expect, it } from 'vitest';
 
-import type { OctreeChunkRef } from '../../../src/@types/octree/OctreeChunkRef';
-import type { OctreePoolLayout } from '../../../src/@types/octree/OctreePoolLayout';
+import type { OctreeChunk } from '../../../src/@types/octree/OctreeChunk';
+import type { OctreeSlotRun } from '../../../src/@types/octree/OctreeSlotRun';
 import { poolRecordIndex } from '../../../src/utils/octree/poolRecordIndex';
 import { recordOrdinal } from '../../../src/utils/octree/recordOrdinal';
 
-const ref = (id: number, recordBase: number, records: number): OctreeChunkRef => ({
-  id,
-  level: 1,
-  morton: id,
-  hash: 'h',
-  roots: [],
-  bytes: 0,
-  recordBase,
-  records,
-  nodes: 1,
+const INDEX_RECORDS = 100;
+
+/** A chunk of `records` catalog ordinals from `recordBase`, its run starting at pool index `poolBase`. */
+const run = (
+  id: number,
+  recordBase: number,
+  records: number,
+  poolBase: number,
+): OctreeSlotRun<{ readonly count: number }> => ({
+  chunk: {
+    ref: {
+      id,
+      level: 1,
+      morton: id,
+      hash: 'h',
+      roots: [],
+      bytes: 0,
+      recordBase,
+      records,
+      nodes: 1,
+    },
+  } as unknown as OctreeChunk<{ readonly count: number }>,
+  poolBase,
 });
 
-// 100 index records, then two slots of 50: slot 0 empty, slot 1 holds a 3-record chunk based at 103.
-const LAYOUT: OctreePoolLayout = { indexRecords: 100, chunkCapacity: 50, slots: 2 };
-const SLOTS = [null, ref(1, 103, 3)];
+// Slot 0 empty; slot 1's 3-record chunk (ordinals 103–105) runs from pool index 164, past slot 2's
+// 50-record chunk (ordinals 200–249) at pool index 100: a slot's run is wherever it was allocated.
+const SLOTS = [null, run(1, 103, 3, 164), run(2, 200, 50, 100)];
 
 describe('recordOrdinal', () => {
-  it('maps an index record to itself and a resident chunk record to its record base + local', () => {
-    expect(recordOrdinal(LAYOUT, SLOTS, 42)).toBe(42);
-    expect(recordOrdinal(LAYOUT, SLOTS, 152)).toBe(105);
+  it("maps an index record to itself and a chunk record through its own slot's run", () => {
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 42)).toBe(42);
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 166)).toBe(105);
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 100)).toBe(200);
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 149)).toBe(249);
   });
 
-  it("returns null past a chunk's own record count and for an empty slot", () => {
-    expect(recordOrdinal(LAYOUT, SLOTS, 153)).toBeNull();
-    expect(recordOrdinal(LAYOUT, SLOTS, 100)).toBeNull();
-    expect(recordOrdinal(LAYOUT, SLOTS, 100 + 2 * 50)).toBeNull();
+  it("returns null in a run's padding past its chunk and in a run nothing holds", () => {
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 167)).toBeNull();
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 150)).toBeNull();
+    expect(recordOrdinal(INDEX_RECORDS, SLOTS, 1000)).toBeNull();
   });
 });
 
 describe('poolRecordIndex', () => {
   it('inverts recordOrdinal for every resident record', () => {
-    const slots = [ref(0, 100, 5), ref(1, 105, 50)];
-    const layout = { ...LAYOUT, slots: slots.length };
-    for (let pool = 0; pool < layout.indexRecords + layout.slots * layout.chunkCapacity; pool++) {
-      const ordinal = recordOrdinal(layout, slots, pool);
-      if (ordinal !== null) expect(poolRecordIndex(layout, slots, ordinal)).toBe(pool);
+    let checked = 0;
+    for (let pool = 0; pool < 300; pool++) {
+      const ordinal = recordOrdinal(INDEX_RECORDS, SLOTS, pool);
+      if (ordinal === null) continue;
+      expect(poolRecordIndex(INDEX_RECORDS, SLOTS, ordinal)).toBe(pool);
+      checked++;
     }
+    expect(checked).toBe(INDEX_RECORDS + 3 + 50);
   });
 
   it('returns null for an ordinal whose chunk is not resident', () => {
-    expect(poolRecordIndex(LAYOUT, SLOTS, 105)).toBe(152);
-    expect(poolRecordIndex(LAYOUT, [null, null], 105)).toBeNull();
+    expect(poolRecordIndex(INDEX_RECORDS, SLOTS, 105)).toBe(166);
+    expect(poolRecordIndex(INDEX_RECORDS, [null, null], 105)).toBeNull();
   });
 });

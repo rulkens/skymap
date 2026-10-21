@@ -19,9 +19,11 @@ import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreeChunkHost } from '../../../@types/octree/OctreeChunkHost';
-import type { OctreePoolLayout } from '../../../@types/octree/OctreePoolLayout';
+import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
+import type { OctreeSlotRun } from '../../../@types/octree/OctreeSlotRun';
 import { recordOrdinal } from '../../../utils/octree/recordOrdinal';
 import { poolRecordIndex } from '../../../utils/octree/poolRecordIndex';
+import { octreePoolShape } from '../../../utils/octree/octreePoolShape';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
@@ -47,11 +49,10 @@ const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 /** One committed catalog's GPU records + the octree kept for the layer. */
 type LoadedStarSource = {
   octree: Octree<StarColumns>;
-  slots: number;
-  /** The chunk each slot holds: the pick's pool index ↔ ordinal map, and a host slot's rows. */
-  slotChunks: (OctreeChunk<StarColumns> | null)[];
-  /** `slotChunks` at the last pick draw: a readback names what was drawn, not what landed since. */
-  pickSlotChunks: (OctreeChunk<StarColumns> | null)[];
+  /** The chunk and record run each slot holds: the pick's pool index ↔ ordinal map, and a host slot's rows. */
+  slotRuns: (OctreeSlotRun<StarColumns> | null)[];
+  /** `slotRuns` at the last pick draw: a readback names what was drawn, not what landed since. */
+  pickSlotRuns: (OctreeSlotRun<StarColumns> | null)[];
   /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
@@ -124,21 +125,21 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  function upload(source: SourceType, octree: Octree<StarColumns>, slots: number): number {
-    const poolSlots = Math.min(slots, octree.chunkCount);
+  function upload(source: SourceType, octree: Octree<StarColumns>, slots: number): OctreePoolShape {
+    const pool = octreePoolShape(octree, slots);
     // Throws past a pool cap before anything below is created or released.
-    cut.upload(source, octree, poolSlots);
+    cut.upload(source, octree, pool);
     // `createBuffer({size:0})` is forbidden, and a degenerate bake (a `--limit` dev run)
     // can leave no records.
     const packed = octree.records.count === 0 ? null : packStarGpuRecords(octree.records);
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
-    if (packed === null) return poolSlots;
+    if (packed === null) return pool;
 
     const recordsBuffer = device.createBuffer({
       label: `star-catalog-records-${source}`,
-      size: (octree.records.count + poolSlots * octree.chunkCapacity) * GPU_RECORD_BYTES,
+      size: (octree.records.count + pool.records) * GPU_RECORD_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
@@ -149,22 +150,21 @@ export function createStarCatalogRenderer(
     });
     sources.set(source, {
       octree,
-      slots: poolSlots,
-      slotChunks: new Array<OctreeChunk<StarColumns> | null>(poolSlots).fill(null),
-      pickSlotChunks: new Array<OctreeChunk<StarColumns> | null>(poolSlots).fill(null),
+      slotRuns: new Array<OctreeSlotRun<StarColumns> | null>(pool.slots).fill(null),
+      pickSlotRuns: new Array<OctreeSlotRun<StarColumns> | null>(pool.slots).fill(null),
       recordsBuffer,
       recordsBindGroup,
     });
-    return poolSlots;
+    return pool;
   }
 
   function hostOf(
-    { octree, slotChunks }: LoadedStarSource,
+    { octree, slotRuns }: LoadedStarSource,
     hostSlot: number | null,
   ): OctreeChunkHost {
     if (hostSlot === null) return { nodes: octree.nodes, nodeBase: 0 };
     return {
-      nodes: slotChunks[hostSlot]!.nodes,
+      nodes: slotRuns[hostSlot]!.chunk.nodes,
       nodeBase: octree.nodes.count + hostSlot * octree.chunkNodeCap,
     };
   }
@@ -174,56 +174,49 @@ export function createStarCatalogRenderer(
     slot: number,
     chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
+    runStart: number,
   ): void {
     const entry = sources.get(source);
-    if (entry === undefined || slot < 0 || slot >= entry.slots) {
+    if (entry === undefined || slot < 0 || slot >= entry.slotRuns.length) {
       throw new Error(`starCatalogRenderer: no slot ${slot} for source ${source}`);
     }
     const { octree } = entry;
     const host = hostOf(entry, hostSlot);
     // The records land before the cut marks the chunk's roots resident.
-    const recordBase = octree.records.count + slot * octree.chunkCapacity;
+    const poolBase = octree.records.count + runStart;
     device.queue.writeBuffer(
       entry.recordsBuffer,
-      recordBase * GPU_RECORD_BYTES,
+      poolBase * GPU_RECORD_BYTES,
       packStarGpuRecords(chunk.records),
     );
-    cut.uploadChunk(source, slot, chunk, host);
-    entry.slotChunks[slot] = chunk;
+    cut.uploadChunk(source, slot, chunk, host, poolBase);
+    entry.slotRuns[slot] = { chunk, poolBase };
   }
 
   function evictChunk(source: SourceType, slot: number, hostSlot: number | null): void {
     const entry = sources.get(source);
-    const chunk = entry?.slotChunks[slot] ?? null;
-    if (entry === undefined || chunk === null) return;
-    cut.evictChunk(source, slot, chunk, hostOf(entry, hostSlot));
-    entry.slotChunks[slot] = null;
+    const run = entry?.slotRuns[slot] ?? null;
+    if (entry === undefined || run === null) return;
+    cut.evictChunk(source, slot, run.chunk, hostOf(entry, hostSlot));
+    entry.slotRuns[slot] = null;
   }
 
   function snapshotPickSlots(): void {
     for (const entry of sources.values()) {
-      entry.slotChunks.forEach((chunk, slot) => (entry.pickSlotChunks[slot] = chunk));
+      entry.slotRuns.forEach((run, slot) => (entry.pickSlotRuns[slot] = run));
     }
   }
-
-  const refsOf = (chunks: readonly (OctreeChunk<StarColumns> | null)[]) =>
-    chunks.map((chunk) => chunk?.ref ?? null);
-  const layoutOf = ({ octree, slots }: LoadedStarSource): OctreePoolLayout => ({
-    indexRecords: octree.records.count,
-    chunkCapacity: octree.chunkCapacity,
-    slots,
-  });
 
   function recordOrdinalOf(source: SourceType, poolIndex: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
-    return recordOrdinal(layoutOf(entry), refsOf(entry.pickSlotChunks), poolIndex);
+    return recordOrdinal(entry.octree.records.count, entry.pickSlotRuns, poolIndex);
   }
 
   function poolRecordIndexOf(source: SourceType, ordinal: number): number | null {
     const entry = sources.get(source);
     if (entry === undefined || !Number.isInteger(ordinal) || ordinal < 0) return null;
-    return poolRecordIndex(layoutOf(entry), refsOf(entry.slotChunks), ordinal);
+    return poolRecordIndex(entry.octree.records.count, entry.slotRuns, ordinal);
   }
 
   function* loadedCatalogs(): IterableIterator<{

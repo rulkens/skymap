@@ -11,21 +11,30 @@ import type { OctreeChunkHost } from './OctreeChunkHost';
 import type { OctreeDrawStream } from './OctreeDrawStream';
 import type { OctreeCutInputs } from './OctreeCutInputs';
 import type { OctreeCutDraw } from './OctreeCutDraw';
+import type { OctreePoolShape } from './OctreePoolShape';
 
 export type OctreeCutGpu = {
   /** `@group(1)` of `vertex.wesl`'s pipelines. */
   readonly drawBgl: GPUBindGroupLayout;
   /**
-   * Build a source's pool-sized buffers (index rows, then `slots` chunk slots);
+   * Build a source's pool-sized buffers (index rows, then `pool.slots` chunk slots);
    * an empty octree releases them. Throws, creating nothing, past a pool cap.
    */
-  upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void;
-  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
+  upload(
+    source: SourceType,
+    octree: Octree<{ readonly count: number }>,
+    pool: OctreePoolShape,
+  ): void;
+  /**
+   * Write a landed chunk's rows into `slot`, their `firstRecord` from `recordBase` (its run's
+   * pool-absolute start), zero its fades, then mark its roots resident.
+   */
   uploadChunk(
     source: SourceType,
     slot: number,
     chunk: OctreeChunk<{ readonly count: number }>,
     host: OctreeChunkHost,
+    recordBase: number,
   ): void;
   /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
   evictChunk(

@@ -13,6 +13,7 @@ import type { OctreeNodeTable } from '../../../src/@types/octree/OctreeNodeTable
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeCutSpec } from '../../../src/@types/octree/OctreeCutSpec';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import type { OctreePoolCapacity } from '../../../src/@types/octree/OctreePoolCapacity';
 
 // Rows (level, morton) ascending: A, B, C, E, D at level 4, then the root.
 const MORTONS = [0, 1, 2, 4, 7];
@@ -81,10 +82,17 @@ const ONE_VIEW = Float32Array.from([
   ...Array.from({ length: 5 }, () => [0, 0, 1, 1]).flat(),
 ]);
 
+/** `slots` chunk slots and records to spare: only the slot count binds. */
+const slotsOnly = (slots: number): OctreePoolCapacity => ({
+  slots,
+  records: Infinity,
+  runRecords: () => 1,
+});
+
 const plan = (
   planes: Float32Array,
   resident: readonly number[],
-  limit = 8,
+  limit: number | OctreePoolCapacity = 8,
   failed: readonly number[] = [],
 ) =>
   planOctreeChunks(
@@ -92,7 +100,7 @@ const plan = (
     cut(planes),
     (ref) => (resident.includes(ref) ? EMPTY_CHUNK : null),
     (ref) => failed.includes(ref),
-    limit,
+    typeof limit === 'number' ? slotsOnly(limit) : limit,
   );
 
 describe('planOctreeChunks', () => {
@@ -123,6 +131,18 @@ describe('planOctreeChunks', () => {
     expect(requests).toEqual([]);
   });
 
+  it("a full pool's records end the kept set at the first chunk that overflows them, not past it", () => {
+    // A (run 2) fits; B (run 4) would make 6 of 5, so the set stops there, though E (run 1)
+    // would fit: E may root in a chunk the kept set leaves out, which then gets evicted under it.
+    const runs: Record<number, number> = { [A]: 2, [B]: 4, [C]: 4, [E]: 1 };
+    const capacity = { slots: 8, records: 5, runRecords: (id: number) => runs[id]! };
+    expect(plan(ONE_VIEW, [], capacity).requests.map((r) => r.chunkRef)).toEqual([A]);
+    // A resident chunk's run counts against the records like a wanted one's.
+    const held = plan(ONE_VIEW, [A], { ...capacity, records: 3 });
+    expect(held.touched).toEqual([A]);
+    expect(held.requests).toEqual([]);
+  });
+
   it('planOctreeChunks: with no planes (more than CUT_MAX_VIEWS) nothing is culled', () => {
     const { requests } = plan(new Float32Array(0), [A]);
     expect(requests.map((r) => r.chunkRef).sort()).toEqual([B, C, E]);
@@ -146,7 +166,7 @@ describe('planOctreeChunks', () => {
       cut(new Float32Array(0)),
       () => null,
       () => false,
-      8,
+      slotsOnly(8),
     );
     expect(requests.map((r) => r.chunkRef).sort()).toEqual([A, B, C]);
     expect(requests.find((r) => r.chunkRef === B)!.priority).toBeCloseTo(256 / 260, 6);
@@ -166,7 +186,7 @@ describe('planOctreeChunks', () => {
       cut(ONE_VIEW),
       (ref) => (ref === A ? chunkA : null),
       () => false,
-      8,
+      slotsOnly(8),
     );
     expect(touched).toEqual([A]);
     expect(requests.map((r) => r.chunkRef)).toEqual([B, 5, E]);
@@ -181,7 +201,7 @@ describe('planOctreeChunks', () => {
       cut(ONE_VIEW),
       (ref) => (ref === A ? leafChunk : null),
       () => false,
-      8,
+      slotsOnly(8),
     );
     expect(touched).toEqual([A]);
     expect(requests.map((r) => r.chunkRef)).toEqual([B, E]);

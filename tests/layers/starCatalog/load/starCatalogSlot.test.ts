@@ -24,7 +24,7 @@ const POOL_CAP = 256;
 function setup(override: { value: number | null }) {
   const upload = vi.fn<StarCatalogRenderer['upload']>((_s, _o, slots) => {
     if (slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
-    return 0;
+    return { slots: 0, records: 0, maxRun: 0 };
   });
   const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
   const host = {

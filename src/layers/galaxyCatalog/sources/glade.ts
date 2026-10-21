@@ -35,8 +35,8 @@ export const GLADE_ENTRY = {
   falloffHalfMpc: 1000,
   priority: 62,
   durableId: { prefix: 'pgc', rank: 0 },
-  // At 700 Mpc the eye wants ~370 chunks, but 128 hold 99% of the galaxies they draw
-  // (64: 78%, 32: 50%); a slot costs chunkCapacity × 24 B ≈ 0.8 MB of GPU memory.
+  // `slots` buys records for that many largest chunks (32,768 × 16 B ≈ 0.5 MB each); chunks
+  // take power-of-two runs, so 64 hold the ~170 a full orbit at 700 Mpc wants (octreePoolShape).
   octree: {
     budgets: {
       small: { drawBudget: 600_000, slots: 32 },
