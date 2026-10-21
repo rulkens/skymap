@@ -95,10 +95,9 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
   },
 
   /**
-   * The whale and the petunias. They ride the planets' presentation partition
-   * and sit in Earth orbit, so they take the planets' row wholesale — same
-   * reach. Both bodies share the one registry row, hence one shared caption
-   * toggle.
+   * The craft. They ride the planets' presentation partition and sit among the
+   * planets, so they take the planets' row wholesale — same reach. One registry
+   * row (`craft`) is their one shared caption toggle.
    */
   meshBody: { fadeTarget: SOLAR_SYSTEM_REACH },
 

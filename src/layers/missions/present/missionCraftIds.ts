@@ -2,7 +2,7 @@ import { MISSIONS_BODY_ROWS } from '../bodies/missionsBodyRows';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 
 /**
- * The craft missions draws: its rows' mesh-body ids. Presence needs no filter here, since the
+ * The craft missions draws: the ids of its rows' mesh bodies. Presence needs no filter here, since the
  * frame's scene bodies hold only present craft.
  */
 export const MISSION_CRAFT_IDS: ReadonlySet<string> = new Set(

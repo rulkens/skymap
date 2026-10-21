@@ -36,7 +36,7 @@ export function logCameraState(
   if (
     pivotMpc !== null &&
     focusRow !== null &&
-    (focusRow.type === 'body' || focusRow.type === 'starCatalog')
+    (focusRow.type === 'body' || focusRow.type === 'craft' || focusRow.type === 'starCatalog')
   ) {
     // Measured from world positions directly, not `cam.distance` (target-to-
     // camera, which a follow-pan offset can pull away from the body's center)

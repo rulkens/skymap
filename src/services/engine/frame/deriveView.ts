@@ -96,7 +96,7 @@ export function deriveView(
   // Host body id → the mesh bodies riding its slab row (spec's fifth
   // `SceneBody` arm), each resolved into the host's own frame — the SAME
   // `bodyStates` snapshot `bodyPose` reads above, so this can never disagree
-  // with a slab row's own pose. Hosts with no mesh-body attachment (every
+  // with a slab row's own pose. Hosts with no mesh body attachment (every
   // body but Earth, today) get no map entry, and `deriveSlabs` reads a
   // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
   const attachedBodiesByHostId = new Map<string, readonly HostFrameSphere[]>();

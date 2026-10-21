@@ -31,7 +31,7 @@ export type BodyStore = {
   readonly earth: EarthBody | null;
   /** Replace the planet list wholesale. */
   setPlanets(p: readonly PlanetBody[]): void;
-  /** Replace the mesh-body list wholesale. */
+  /** Replace the mesh body list wholesale. */
   setMeshBodies(m: readonly MeshBody[]): void;
   /** Install (or clear, with `null`) the Earth record. */
   setEarth(e: EarthBody | null): void;

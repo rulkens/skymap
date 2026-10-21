@@ -275,7 +275,7 @@ export function createEngine(
     // `initGpu` already assigned them.
     assetSlots: {
       bodyTextures: new Map(),
-      // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
+      // Keyed mesh body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
       meshBodies: new Map(),
       // One boot fetch seeding every body's placeholder, so no body ever draws

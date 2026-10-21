@@ -10,6 +10,11 @@ import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import { selectionToFocusId } from '../../../src/services/url/focusUrl';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
+import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { craftSelectionRow } from '../../../src/layers/missions/present/craftSelectionRow';
+import type { CraftInfo } from '../../../src/@types/engine/CraftInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
@@ -72,6 +77,23 @@ describe('URL_HASH_FOR', () => {
     const id = URL_HASH_FOR.body(moon);
     expect(id).toBe('body-moon');
     expect(resolver.resolveFocusId(id as string)).toEqual({ type: 'body', id: 'moon' });
+  });
+
+  it('#focus=body-<id> round-trips for a craft, to the craft kind', () => {
+    // Craft deep links keep the body prefix; only the craft row may claim them back.
+    const hubble: CraftInfo = {
+      type: 'craft',
+      id: 'hubble',
+      label: 'Hubble',
+      positionMpc: [1e-6, 2e-6, 3e-6],
+    };
+    const resolver = composeSelectionRows(
+      () => [...coreSelectionRows(), craftSelectionRow()],
+      () => ALL_KINDS_ENABLED,
+    );
+    const id = URL_HASH_FOR.craft(hubble);
+    expect(id).toBe('body-hubble');
+    expect(resolver.resolveFocusId(id as string)).toEqual({ type: 'craft', id: 'hubble' });
   });
 
   it('#focus=star-<seedId> round-trips for a seeded star', () => {

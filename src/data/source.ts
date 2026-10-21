@@ -234,12 +234,13 @@ export const Source = {
    */
   McpmWorkbench: 31,
   /**
-   * Mesh-drawn scene bodies (the whale and the basket of petunias) — one code
-   * for the pair, since one registry row governs both. Pickable: the mesh pass
-   * stamps this code into the pick texture itself rather than borrowing a star
-   * layer's, so it spends a pick code. Appended at 32.
+   * The missions Layer's craft (the Voyagers, Hubble, the rovers, the whale and
+   * the petunias): one code for all of them, its pick index running over
+   * `MISSION_CRAFT_IDS`. Pickable: `mission-meshes` and the craft captions stamp
+   * it, and the `craft` selection kind resolves it. Value 32 stays
+   * stable: it is baked into pick words.
    */
-  MeshBody: 32,
+  Craft: 32,
   /**
    * Milky Way structure markers — parsec-scale places inside our own galaxy,
    * drawn by the NEAR0 marker pass. Same encoding as GalaxyCluster; seed-only. Appended

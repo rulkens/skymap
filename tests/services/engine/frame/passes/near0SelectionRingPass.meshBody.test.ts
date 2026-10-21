@@ -27,7 +27,7 @@ import { bodyRelativePose } from '../../../../../src/services/engine/camera/body
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
 import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import { sceneBodyLabels } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
+import { meshBodyCaption } from '../../../../../src/utils/labels/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -127,7 +127,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   } as unknown as FrameView;
 
   const row = {
-    type: 'body',
+    type: 'craft',
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
@@ -153,14 +153,12 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;
   const ringCall = ringDraw.mock.calls[0];
 
-  // The caption's own seam: `sceneBodyLabels`'s world position made
-  // camera-relative (`produceSceneBodyCaptions`'s two lines, which need the
+  // The caption's own seam: `meshBodyCaption`'s world position made
+  // camera-relative (`produceMissionCaptions`'s compose, which needs the
   // settings/fade graph this harness has no use for) projected through
   // `near0LabelProjection`'s rebased vp — the pair `labelsNearPass`, the
   // leader line and `labelPickQuads` all consume.
-  const caption = sceneBodyLabels(states, SIM_DAYS, new Set()).find(
-    (l) => l.id === `sceneBody-${bodyId}`,
-  )!;
+  const caption = meshBodyCaption(body, bodyState.positionMpc, 0);
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
     caption.worldPos[1] - ctx.drawCamPos[1],

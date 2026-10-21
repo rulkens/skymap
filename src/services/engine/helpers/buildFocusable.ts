@@ -66,6 +66,7 @@ const BUILD_FOCUSABLE: {
   milkyWay: () => MILKY_WAY_INFO,
   zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,
   body: ({ driver: _driver, ...info }) => info,
+  craft: ({ driver: _driver, ...info }) => info,
   starCatalog: (row, famousStarsMeta): StarInfo => {
     const [x, y, z] = row.positionMpc;
     const distancePc = Math.hypot(x, y, z) / SCALE_UNITS.PC_TO_MPC;

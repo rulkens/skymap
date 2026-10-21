@@ -4,6 +4,11 @@
  */
 
 import { CORE_SCENE_BODY_IDS } from '../../../../data/bodies/coreSceneBodyIds';
+import { sceneBodyPickId } from '../../../../utils/picking/sceneBodyPickId';
 import { meshBodiesPassOver } from '../meshBodiesPassOver';
 
-export const coreMeshBodiesPass = meshBodiesPassOver('core-mesh-bodies', CORE_SCENE_BODY_IDS);
+export const coreMeshBodiesPass = meshBodiesPassOver(
+  'core-mesh-bodies',
+  CORE_SCENE_BODY_IDS,
+  sceneBodyPickId,
+);
