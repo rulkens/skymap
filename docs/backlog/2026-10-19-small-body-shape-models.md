@@ -1,4 +1,4 @@
-# Small bodies as mission shape-model meshes (phases 2–4)
+# Small bodies as mission shape-model meshes (phases 3–4)
 
 Phase 1 (Phobos + Deimos as meshes) shipped in #926/#927 (spec under
 `docs/superpowers/specs/completed/`); this file holds its leftovers and the
@@ -58,9 +58,8 @@ Licence check still owed for JAXA (Ryugu) and ESA/LAM (67P, Lutetia, Šteins).
 
 ## Phases
 
-2. **Vesta, Ceres, Bennu** — colour + relief; heliocentric orbits via `probe()`-style
-   SBDB elements; IAU rotation rows; prime meridian of each model frame verified
-   against W0 (Vesta's Claudia vs IAU-2015 frames are the known trap).
+2. **Vesta, Ceres, Bennu** — picked up: [spec](../superpowers/specs/2026-10-21-small-bodies-phase2-design.md)
+   (its sources supersede the Bennu, Vesta and Ceres rows of the table above).
 3. **Eros, Ryugu, Itokawa, Lutetia, Šteins, Tempel 1, 67P, Arrokoth,
    Donaldjohanson, Hyperion** — catalogue scale, non-star-shaped bake, and how a
    user finds a 500 m body (labels, palette, camera approach, body facts).
