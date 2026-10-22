@@ -8,12 +8,15 @@
 
 import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 
-import type { EngineState } from '../../@types/engine/state/EngineState';
+import type { PassState } from '../../@types/engine/frame/PassState';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { Tier } from '../../@types/data/Tier';
 
-export function bodySurfaceTier(state: EngineState, bodyId: BodyId): Tier {
+export function bodySurfaceTier(
+  state: Pick<PassState, 'assetSlots' | 'tier'>,
+  bodyId: BodyId,
+): Tier {
   const slot = state.assetSlots.bodyTextures.get(
     bodyTextureSlotKey(bodyId as BodyTextureId, 'surface'),
   );

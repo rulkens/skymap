@@ -84,7 +84,7 @@ export function planSurfaceTiles(
 - `a disengaged frame returns an empty cut` — after an engaged frame, a view set with no tiling
   slab yields `[]`. **Bug caught:** a stale cut survives a pull-back.
 
-- [ ] Task 2
+- [x] Task 2
 
 ---
 

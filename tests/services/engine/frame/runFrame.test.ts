@@ -1103,7 +1103,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        earthTiles: null,
+        surfaceTiles: null,
         structureFocus: {
           update: vi.fn(),
           produceFocusUniforms: vi.fn(() => ({
