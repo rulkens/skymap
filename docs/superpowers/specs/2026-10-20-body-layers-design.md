@@ -284,9 +284,19 @@ debug overlay that shows it is on; the section moves to the body Layer's `ui` `d
 it with a selector. The store-boundary rule holds (React reads the store, never the engine); cost is
 one dispatch per 250 ms while debugging.
 
-To verify before ruling: the snapshot's size and serializability (RTK's dev checks run on every
-dispatch); what gates "the overlay is on" (`selectDebugOverlays` or the DebugPanel being open); and
-whether `engine.debug.surfaceTiles` then deletes outright. The widening alternatives are a canvas
+Checked (2026-10-22):
+
+- The snapshot is small plain data (`SurfaceTileDebugSnapshot.d.ts`: counts, ≤ one row per level,
+  ≤ 16 key strings, `subCamera`), so it passes RTK's serializable check as is.
+- The gate is `selectDebugPanelOpen` (`App.tsx:52,118` mounts the panel on it); the Layer reads it
+  through `LayerCoreDeps.store`.
+- A second section has the same need: `TerrainPickMarkerTuningSectionContainer` reads
+  `engineHandleRef` → `debug.cameraDebug` for the terrain-pick marker, which also moves to `body`. P7
+  covers both.
+- `surfaceTileTerrain.ts:12` reads `getDebugSnapshot().subCamera` for the terrain seam; that read
+  moves with the subsystem and is not the panel's.
+- `engine.debug.surfaceTiles` (`engine.ts:504-505`, `EngineDebugHandle.d.ts:55`) deletes once the
+  section reads the store. The widening alternatives are a canvas
 view for once-scope planners (every planner's signature) and props on `LayerUiSection` (the whole
 engine handle to every Layer's debug UI).
 
