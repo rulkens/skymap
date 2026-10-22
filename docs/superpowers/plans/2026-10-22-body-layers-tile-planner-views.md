@@ -155,17 +155,17 @@ export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pu
 
 - **Home (R1).** The passes read tile state through `PassState` (`surfaceTilesPass.ts:58,114,131-132`,
   `terrainPickMarkerPass.ts:39,72`), which names `subsystems` (`PassState.d.ts:12-23`). The runtime
-  lives at `state.subsystems.surfaceTiles = { shell, runtime }`: no `PassState` widening, and the body
+  lives at `state.subsystems.surfaceTiles = { stream, runtime }` (named after `OctreeChunkStream` and `tileStreamSubsystem`, user 2026-10-22): no `PassState` widening, and the body
   PR moves the pair into the body Layer's runtime unchanged.
 - **Two assignments (R2).** The terrain seam is read before tile planning (`stepCameraRuntime` at
-  `runFrame.ts:122`, `frameContext.ts:98`; planning at `:243`). Shell events fold at the frame head;
+  `runFrame.ts:122`, `frameContext.ts:98`; planning at `:243`). Stream events fold at the frame head;
   the step runs at the planning point. One assignment at the planning point would leave the camera
   floor a frame behind the drawn terrain.
-- **Upload stays in the shell (R3).** Routing ImageBitmaps through the step would hold GPU payloads in
+- **Upload stays in the stream (R3).** Routing ImageBitmaps through the step would hold GPU payloads in
   the runtime for a frame and duplicate `upload()`'s `slotOf` re-check, the eviction-mid-fetch guard
-  (`tileStreamSubsystem.ts:65-81`). The shell uploads on fetch completion as today and reports events.
+  (`tileStreamSubsystem.ts:65-81`). The stream uploads on fetch completion as today and reports events.
 - `frameCounter` (the atlas LRU clock, `surfaceTileSubsystem.ts:152`) is the atlas's resource and stays
-  in the shell, with `destroyed` and both streams and atlases.
+  in the stream, with `destroyed` and both streams and atlases.
 
 ### Task 4: tile state as plain data, a pure fold and a pure step (P8a)
 
@@ -185,8 +185,8 @@ extracted to `src/utils/surfaceTiles/derivePlannerParams.ts`; tests under
 | --- | --- |
 | `manifest: { bodyId; status: 'pending' \| 'loaded' \| 'failed'; value } \| null` | `:109-111` |
 | `params: { bodyId; baseLevel; params } \| null` | `paramsState` `:116-120` |
-| `engaged: { bodyId; slotsPerRow } \| null` | `atlas.bodyId`/`.slotsPerRow` `:126-131` (atlases stay in the shell) |
-| `albedo`, `height: ReadonlyMap<string, ResidentTile>` | `:136-137`; `ResidentTile` gains `atlasUvOrigin`/`atlasUvScale`, stamped by the shell at upload |
+| `engaged: { bodyId; slotsPerRow } \| null` | `atlas.bodyId`/`.slotsPerRow` `:126-131` (atlases stay in the stream) |
+| `albedo`, `height: ReadonlyMap<string, ResidentTile>` | `:136-137`; `ResidentTile` gains `atlasUvOrigin`/`atlasUvScale`, stamped by the stream at upload |
 | `pending: ReadonlyMap<string, { z; product }>` | `pendingLevelOf` `:142`, widened to height; the wake vote replaces `inFlightCount()` `:533` |
 | `failed: ReadonlySet<string>` | the stream's `failedKeys` as the planner reads them (`:355`) |
 | `lastEngaged` | `:146-150`; `droppedAllocations` arrives by event |
@@ -265,38 +265,38 @@ export function stepSurfaceTiles(prev: SurfaceTileRuntime, inputs: SurfaceTileSt
 
 - [ ] Task 4
 
-### Task 5: a shell runs the effects, reads become selectors, the imperative API goes (P8b)
+### Task 5: a stream runs the effects, reads become selectors, the imperative API goes (P8b)
 
 review: yes
 
-**Files:** `surfaceTileSubsystem.ts` → `surfaceTileShell.ts` (`npm run move-files`, then
-`createSurfaceTileSubsystem` → `createSurfaceTileShell` via `npm run refactor`);
-`SurfaceTileSubsystem.d.ts` → `SurfaceTileShell.d.ts` + `SurfaceTiles.d.ts`;
+**Files:** `surfaceTileSubsystem.ts` → `surfaceTileStream.ts` (`npm run move-files`, then
+`createSurfaceTileSubsystem` → `createSurfaceTileStream` via `npm run refactor`);
+`SurfaceTileSubsystem.d.ts` → `SurfaceTileStream.d.ts` + `SurfaceTiles.d.ts`;
 `EngineSubsystemHandles.d.ts:39`, `wireSlots.ts:95`, `engine.ts:61,213,437-438,504-505`; `runFrame.ts`;
 the `surfaceTilePlanner/` files; `surfaceTilesPass.ts`, `terrainPickMarkerPass.ts`,
-`surfaceTileTerrain.ts`; tests (`surfaceTileShell.test.ts`, `planSurfaceTiles.test.ts`, `runFrame.test.ts`).
+`surfaceTileTerrain.ts`; tests (`surfaceTileStream.test.ts`, `planSurfaceTiles.test.ts`, `runFrame.test.ts`).
 
 ```ts
-export type SurfaceTileShell = Destroyable & {
+export type SurfaceTileStream = Destroyable & {
   run(effects: readonly SurfaceTileEffect[]): void;  // synchronous, in order
   drainEvents(): readonly SurfaceTileEvent[];         // arrival order; empties the queue
   getAtlasView(): GPUTextureView | null;
   getHeightAtlasView(): GPUTextureView | null;
 };
-export type SurfaceTiles = Destroyable & { readonly shell: SurfaceTileShell; runtime: SurfaceTileRuntime };
+export type SurfaceTiles = Destroyable & { readonly stream: SurfaceTileStream; runtime: SurfaceTileRuntime };
 export function planSurfaceTiles(prev: SurfaceTileRuntime, views: readonly FrameView[],
   committedTier: (bodyId: SurfaceTileBodyId) => Tier): { readonly next: SurfaceTileRuntime;
   readonly effects: readonly SurfaceTileEffect[]; readonly result: PlannerResult<readonly SurfaceCutTile[]> };
 ```
 
 - `runFrame`: at the head, before `stepCameraRuntime`,
-  `tiles.runtime = foldSurfaceTileEvents(tiles.runtime, tiles.shell.drainEvents())`; at the planning
-  point, `tiles.runtime = next; tiles.shell.run(effects)`.
-- Shell: uploads on fetch completion, queues `tileLoaded` (`readyAtMs`, uv from `slots.slotUv`);
+  `tiles.runtime = foldSurfaceTileEvents(tiles.runtime, tiles.stream.drainEvents())`; at the planning
+  point, `tiles.runtime = next; tiles.stream.run(effects)`.
+- Stream: uploads on fetch completion, queues `tileLoaded` (`readyAtMs`, uv from `slots.slotUv`);
   `upload()` null → `tileDeclined`; evict handlers → `tileEvicted`; `allocate()` null → `tileDropped`;
   null fetch → `tileFailed`; manifest fetch → `manifestLoaded`; a destroyed or released stream queues
   nothing (`tileStreamSubsystem.ts:90-93`).
-- Deleted from the shell: `plannerParams`, `update`, `residentSlot`, `terrainHeightAt`,
+- Deleted from the stream: `plannerParams`, `update`, `residentSlot`, `terrainHeightAt`,
   `residentHeightLevelAt`, `setLastCut`/`getLastCut`, `engagedBodyId`, `release`, `isAnimating`,
   `getDebugSnapshot`. Passes read `tiles.runtime.cut` and `terrainHeightOf(tiles.runtime, …)`;
   `surfaceTileTerrain` reads the runtime through the selectors (`LayerTerrain` unchanged);
@@ -309,7 +309,7 @@ export function planSurfaceTiles(prev: SurfaceTileRuntime, views: readonly Frame
   the camera floor a frame behind the drawn terrain.
 - `an upload into a recycled slot reports declined, never loaded`. **Bug caught:** the cut names a slot
   holding another tile.
-- `a released shell reports nothing from fetches still in flight` (and closes the bitmap). **Bug
+- `a released stream reports nothing from fetches still in flight` (and closes the bitmap). **Bug
   caught:** Earth residency repopulating after a switch to Mars, or leaked bitmaps.
 - `touch runs before any allocate in one demand`. **Bug caught:** the eviction cascade (`:335-341`).
 - Port `planSurfaceTiles.test.ts` to a runtime; its three bug names stand.
