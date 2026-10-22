@@ -95,5 +95,6 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 settings-only Layer: its `layer.ts` declares the body clusters, while its render
 and load code stay in core. `missions` draws its craft: the rows live in
 `missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
-through core's one mesh renderer handle. `earthScenes` is a bodies-only Layer (its
-rows fold into the tables; core still draws Søndermarken via `CORE_MESH_BODY_IDS`).
+through core's one mesh renderer handle. `earthScenes` declares the Earth scene rows (they
+fold into the tables) and draws Søndermarken: its mesh through core's one mesh handle, its
+glint through its own renderer.

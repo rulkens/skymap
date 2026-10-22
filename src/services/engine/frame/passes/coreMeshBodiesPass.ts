@@ -1,6 +1,6 @@
 /**
- * coreMeshBodiesPass — core's own bodies (Søndermarken, the shape-model moons) as lit meshes on
- * their host's body-m row.
+ * coreMeshBodiesPass — core's own bodies (the shape-model moons) as lit meshes on their host's
+ * body-m row.
  */
 
 import { CORE_SCENE_BODY_IDS } from '../../../../data/bodies/coreSceneBodyIds';

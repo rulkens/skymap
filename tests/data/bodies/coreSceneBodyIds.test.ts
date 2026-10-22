@@ -1,6 +1,6 @@
 /**
- * Core's roster and the missions craft roster split the body-slab roster between two mesh
- * passes and two glint passes. A body in both draws twice (z-fighting, or a double-bright
+ * Core's, the missions craft and the earthScenes rosters split the body-slab roster between three
+ * mesh passes and three glint passes. A body in both draws twice (z-fighting, or a double-bright
  * glint); a body in neither vanishes.
  */
 
@@ -13,6 +13,7 @@ import { coreSceneBodyPartition } from '../../../src/services/engine/frame/coreS
 import { drawableMeshBodies } from '../../../src/services/engine/frame/drawableMeshBodies';
 import { sceneBodyPartition } from '../../../src/services/engine/frame/sceneBodyPartition';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { EARTH_SCENE_BODY_IDS } from '../../../src/data/bodies/earthSceneBodyIds';
 import { MISSION_CRAFT_IDS } from '../../../src/layers/missions/present/missionCraftIds';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
@@ -42,7 +43,7 @@ function ctxAt(camPosMpc: Readonly<Vec3>, pxPerRad: number): FrameView {
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((body) => body.id);
 const sorted = (ids: readonly string[]) => [...ids].sort();
 
-describe('the core and missions rosters', () => {
+describe('the core, missions and earthScenes rosters', () => {
   // A telephoto pxPerRad resolves every body on the row, so each one reaches a mesh pass.
   it.each([
     ['mars', 'curiosity'],
@@ -56,10 +57,11 @@ describe('the core and missions rosters', () => {
       const whole = idsOf(
         drawableMeshBodies(STATE, ctx, hostId, bodySlabRosterIds(SCENE_MESH_BODIES)),
       );
+      const earthScenes = idsOf(drawableMeshBodies(STATE, ctx, hostId, EARTH_SCENE_BODY_IDS));
 
       expect(missions).toContain(cameraAt);
       expect(core.filter((id) => missions.includes(id))).toEqual([]);
-      expect(sorted([...core, ...missions])).toEqual(sorted(whole));
+      expect(sorted([...core, ...missions, ...earthScenes])).toEqual(sorted(whole));
     },
   );
 
@@ -68,12 +70,15 @@ describe('the core and missions rosters', () => {
     const ctx = ctxAt(fiveAu, 1000);
     const core = idsOf(coreSceneBodyPartition(STATE, ctx).glints);
     const missions = idsOf(sceneBodyPartition(STATE, ctx, MISSION_CRAFT_IDS, () => false).glints);
+    const earthScenes = idsOf(
+      sceneBodyPartition(STATE, ctx, EARTH_SCENE_BODY_IDS, () => false).glints,
+    );
     const whole = idsOf(
       sceneBodyPartition(STATE, ctx, bodySlabRosterIds(SCENE_MESH_BODIES), () => false).glints,
     );
 
     expect(missions.length).toBeGreaterThan(0);
     expect(core.filter((id) => missions.includes(id))).toEqual([]);
-    expect(sorted([...core, ...missions])).toEqual(sorted(whole));
+    expect(sorted([...core, ...missions, ...earthScenes])).toEqual(sorted(whole));
   });
 });

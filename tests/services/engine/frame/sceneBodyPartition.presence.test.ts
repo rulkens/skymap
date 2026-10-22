@@ -9,6 +9,7 @@ import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySla
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -181,7 +182,7 @@ describe('sceneBodyPartition routing', () => {
       planetAt('mars', 3390000, CLOSE(3390000)), // resolved, registry
       planetAt('titan', 2575000, CLOSE(2575000)), // resolved, not registry
       planetAt('jupiter', 69911000, AU_M), // sub-pixel glint
-      meshAt('soendermarken', 160, CLOSE(160)), // resolved mesh
+      planetAt('phobos', 11000, 55000), // resolved shape-model mesh
     ];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     const all = idsOf([...glints, ...flat, ...textured, ...meshes]);
@@ -207,18 +208,11 @@ describe('sceneBodyPartition routing', () => {
     expect(glints).toEqual([]);
   });
 
-  it('routes a sub-3px body, planet or mesh, to glints', () => {
-    const bodies = [planetAt('jupiter', 69911000, AU_M), meshAt('soendermarken', 160, AU_M)];
+  it('routes a sub-3px body, planet or shape-model moon, to glints', () => {
+    const bodies = [planetAt('jupiter', 69911000, AU_M), planetAt('phobos', 11000, AU_M)];
     const { glints, flat, textured, meshes } = partition(bodies, () => true);
     expect(glints).toEqual(bodiesOf(bodies));
     expect([...flat, ...textured, ...meshes]).toEqual([]);
-  });
-
-  it('routes a resolved MeshBody to meshes, never textured or flat', () => {
-    const scene = meshAt('soendermarken', 160, CLOSE(160));
-    const { meshes, flat, textured, glints } = partition([scene], () => true);
-    expect(idsOf(meshes)).toEqual(['soendermarken']);
-    expect([...flat, ...textured, ...glints]).toEqual([]);
   });
 
   // A moon drawn from a shape model keeps its sphere until the mesh decodes.
@@ -230,10 +224,34 @@ describe('sceneBodyPartition routing', () => {
     expect(loading.meshes).toEqual([]);
   });
 
+  // earthScenes' roster holds the MeshBody; core's holds none, so these run on that roster.
+  const earthSceneRouting = (scene: PositionedSceneBody, resident: boolean) => {
+    const state = {
+      gpu: { meshBodyRenderer: { hasMesh: () => resident } },
+    } as unknown as PassState;
+    const ctx = {
+      snapshot: { meshBodies: [scene.body], sceneBodies: [scene] },
+      drawCamPos: CAM,
+      drawPxPerRad: PX_PER_RAD,
+    } as unknown as FrameView;
+    return sceneBodyPartition(state, ctx, EARTH_SCENE_BODY_IDS, () => false);
+  };
+
+  it('routes a resolved MeshBody to meshes, never textured or flat', () => {
+    const { meshes, flat, textured, glints } = earthSceneRouting(
+      meshAt('soendermarken', 160, CLOSE(160)),
+      true,
+    );
+    expect(idsOf(meshes)).toEqual(['soendermarken']);
+    expect([...flat, ...textured, ...glints]).toEqual([]);
+  });
+
   // A mesh body has no sphere to fall back to: drawing one would be a wrong shape.
   it('drops a resolved MeshBody whose mesh is not resident from every branch', () => {
-    const scene = meshAt('soendermarken', 160, CLOSE(160));
-    const { meshes, flat, textured, glints } = partition([scene], () => false);
+    const { meshes, flat, textured, glints } = earthSceneRouting(
+      meshAt('soendermarken', 160, CLOSE(160)),
+      false,
+    );
     expect([...meshes, ...flat, ...textured, ...glints]).toEqual([]);
   });
 
