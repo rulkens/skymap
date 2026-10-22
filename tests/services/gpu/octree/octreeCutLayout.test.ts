@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CAM_CELL_INT_INDEX,
   CAM_FRAC_FLOAT_INDEX,
-  CHUNK_NODE_CAP_U32_INDEX,
+  NODE_PAGE_ROWS_U32_INDEX,
   INDEX_NODES_U32_INDEX,
   NODE_COUNT_U32_INDEX,
   NODE_GRID_WORD,
@@ -22,6 +22,8 @@ import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSks
 import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+
+const NO_POOL = { nodes: { total: 0, minRun: 1, maxRun: 1 } };
 
 // Two level-0 leaves under one level-1 aggregate root. Morton puts x on the
 // lowest bit: leaves 8 and 9 sit at x cells 2 and 3, their parent (morton 1,
@@ -65,11 +67,11 @@ describe('writeOctreeCutUniforms', () => {
 
   it('splits the camera into a whole cell and a [0,1) fraction, below zero too', () => {
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    writeOctreeCutUniforms(buf, CATALOG, { slots: 0 }, camAtPc(-25), cut); // -2.5 cells
+    writeOctreeCutUniforms(buf, CATALOG, NO_POOL, camAtPc(-25), cut); // -2.5 cells
     expect(new Int32Array(buf)[CAM_CELL_INT_INDEX]).toBe(-3);
     expect(new Float32Array(buf)[CAM_FRAC_FLOAT_INDEX]).toBeCloseTo(0.5, 6);
 
-    writeOctreeCutUniforms(buf, CATALOG, { slots: 0 }, camAtPc(37), cut); // 3.7 cells
+    writeOctreeCutUniforms(buf, CATALOG, NO_POOL, camAtPc(37), cut); // 3.7 cells
     expect(new Int32Array(buf)[CAM_CELL_INT_INDEX]).toBe(3);
     expect(new Float32Array(buf)[CAM_FRAC_FLOAT_INDEX]).toBeCloseTo(0.7, 6);
   });
@@ -77,21 +79,26 @@ describe('writeOctreeCutUniforms', () => {
   it('writes 0 views when more than CUT_MAX_VIEWS are asked for', () => {
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
     const planes = new Float32Array((CUT_MAX_VIEWS + 1) * FLOATS_PER_VIEW);
-    writeOctreeCutUniforms(buf, CATALOG, { slots: 0 }, camAtPc(0), {
+    writeOctreeCutUniforms(buf, CATALOG, NO_POOL, camAtPc(0), {
       ...cut,
       planes,
     });
     expect(new Uint32Array(buf)[VIEW_COUNT_U32_INDEX]).toBe(0);
   });
 
-  it('counts the pool rows and names the index and slot row stride', () => {
+  it('counts the pool rows and names the index rows and the row page', () => {
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    const octree = { ...CATALOG, chunkNodeCap: 7 };
-    writeOctreeCutUniforms(buf, octree, { slots: 2 }, camAtPc(0), cut);
+    writeOctreeCutUniforms(
+      buf,
+      CATALOG,
+      { nodes: { total: 16, minRun: 4, maxRun: 8 } },
+      camAtPc(0),
+      cut,
+    );
     const u32 = new Uint32Array(buf);
-    expect(u32[NODE_COUNT_U32_INDEX]).toBe(3 + 2 * 7);
+    expect(u32[NODE_COUNT_U32_INDEX]).toBe(3 + 16);
     expect(u32[INDEX_NODES_U32_INDEX]).toBe(3);
-    expect(u32[CHUNK_NODE_CAP_U32_INDEX]).toBe(7);
+    expect(u32[NODE_PAGE_ROWS_U32_INDEX]).toBe(4);
   });
 });
 
@@ -131,7 +138,7 @@ describe('packOctreeChunkNodes', () => {
       chunks: [],
     };
     const root = { level: 2, morton: 0, rootRow: 7 };
-    const words = packOctreeChunkNodes(chunk, [root], { nodeBase: 40, recordBase: 1000 }, 6, 0);
+    const words = packOctreeChunkNodes(chunk, [root], { nodeBase: 40, recordBase: 1000 }, 0);
     // Words: grid, firstRecord, bits (level | blob 16 | resident 32 | own << 8), blobCount,
     // parent, refineDelta.
     expect([...words]).toEqual([
@@ -139,7 +146,6 @@ describe('packOctreeChunkNodes', () => {
       ...[1, 1003, 32 | (2 << 8), 0, 42, 0],
       ...[0, 1005, 1 | 16 | 32 | (1 << 8), 5, 7, 3 + 2 - 1],
       ...[2, 1007, 1 | 32 | (4 << 8), 0, 7, 0],
-      ...new Array(2 * CUT_NODE_WORDS).fill(0),
     ]);
     expect(chunkRootRefineDeltas(chunk, [root], 0)).toEqual([1 + 1 + 4 - 1]);
   });

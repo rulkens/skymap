@@ -15,17 +15,22 @@ import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { GalaxyColumns } from '../../@types/data/galaxyCatalog/GalaxyColumns';
+import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 
-import { createGalaxyPointRenderer } from './render/galaxyPointRenderer';
+import { createGalaxyFlatPointRenderer } from './render/galaxyFlatPointRenderer';
+import { createGalaxyPooledPointRenderer } from './render/galaxyPooledPointRenderer';
 import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
 import { wireImpostorSubsystems } from './load/wireImpostorSubsystems';
 import { wireGalaxyCatalogSourceSlot } from './load/wireGalaxyCatalogSourceSlot';
+import { wireGalaxyOctreeSlot } from './load/wireGalaxyOctreeSlot';
 import { createFamousGalaxiesMetaSlot } from './load/famousGalaxiesMetaSlot';
 import { createPgcAliasSlot } from './load/pgcAliasSlot';
 import { wireHiResFamousSlot } from './load/wireHiResFamousSlot';
@@ -41,12 +46,22 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   // Same pattern: bumped by every point-slot commit (wireGalaxyCatalogSourceSlot),
   // read by `frame`'s reconciles through the getter below.
   let catalogsVersion = 0;
+  const bumpCatalogsVersion = () => {
+    catalogsVersion += 1;
+  };
+  const chunkStreams = new Map<SourceType, OctreeChunkStream<GalaxyColumns>>();
 
-  const pointRenderer = createGalaxyPointRenderer({
+  const pointRenderer = createGalaxyFlatPointRenderer({
     device,
     targetFormat: HDR_TARGET_FORMAT,
     fadeBgl: deps.fadeBgl,
     sourceBgl: deps.sourceBgl,
+    focusBgl: deps.focusBgl,
+  });
+
+  const pooledPointRenderer = createGalaxyPooledPointRenderer({
+    device,
+    targetFormat: HDR_TARGET_FORMAT,
     focusBgl: deps.focusBgl,
   });
 
@@ -72,6 +87,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     deps.focusBgl,
     deps.focusUniform.bindGroup,
     SLAB_REVERSED_Z[COSMO]!,
+    pooledPointRenderer.pickLayouts,
   );
 
   const { galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk } = wireImpostorSubsystems({
@@ -88,9 +104,20 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
         catalogs,
         records,
         famousMeta: () => famousMeta,
-        bumpCatalogsVersion: () => {
-          catalogsVersion += 1;
-        },
+        bumpCatalogsVersion,
+      }),
+    ]),
+  );
+  const octreePoints = new Map(
+    GALAXY_CATALOG_SOURCES.filter(
+      (code) => (SOURCE_REGISTRY[code] as GalaxyCatalogSourceEntry).octree !== undefined,
+    ).map((code) => [
+      code,
+      wireGalaxyOctreeSlot(SOURCE_REGISTRY[code], deps, {
+        pooledPointRenderer,
+        chunkStreams,
+        records,
+        bumpCatalogsVersion,
       }),
     ]),
   );
@@ -116,12 +143,16 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     get catalogsVersion() {
       return catalogsVersion;
     },
+    residencyVersion: 0,
     publish: deps.publish,
     points,
+    octreePoints,
+    chunkStreams,
     famousGalaxiesMeta,
     pgcAlias,
     hiResFamous,
     pointRenderer,
+    pooledPointRenderer,
     pickRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,

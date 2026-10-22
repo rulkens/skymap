@@ -5,7 +5,7 @@
  *
  * Hook order: per source, `beginBlock` then `onRow`* once per resident block,
  * then one `endSource`; then one `endFrame`. Sticky maps key by record ordinal,
- * which survives a block's eviction where a block-local row index would not.
+ * which stays one record's across blocks where a block-local row index would not.
  *
  * `onRow` takes loose scalars, never a per-row object: it is the innermost hot
  * call (~300k/frame) and must not allocate. The walk calls the two visitors at
@@ -20,7 +20,8 @@ export type DiskRowVisitor = {
   onSourceHidden(source: SourceType): void;
   /**
    * Before a block's row loop → purgeStrideWindow(stickyMap, windowStart, windowEnd),
-   * both ordinals; a row's ordinal is `ordinalBase + i`.
+   * both ordinals; a row's ordinal is `ordinalBase + i`. An evicted block gets one call
+   * over its whole range and no rows, so its sticky disks leave with it.
    */
   beginBlock(source: SourceType, windowStart: number, windowEnd: number, ordinalBase: number): void;
   /** One surviving row `i` of `block`; geometry (camDist, px) already computed by the walk. */

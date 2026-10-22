@@ -31,7 +31,7 @@ describe('StarCatalogTuningSectionContainer', () => {
     },
   );
 
-  it('the chunk-slots picker writes the override, and "Tier default" clears it', () => {
+  it('the pool-records picker writes the override, and "Tier default" clears it', () => {
     const { store } = createAppStore();
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
@@ -39,15 +39,15 @@ describe('StarCatalogTuningSectionContainer', () => {
       wrapper,
     });
     const select = container.querySelector<HTMLSelectElement>('select')!;
-    fireEvent.change(select, { target: { value: '384' } });
-    expect(selectStarCatalogs(store.getState()).chunkSlotsOverride).toBe(384);
+    fireEvent.change(select, { target: { value: '12582912' } });
+    expect(selectStarCatalogs(store.getState()).poolRecordsOverride).toBe(12_582_912);
     fireEvent.change(select, { target: { value: '' } });
-    expect(selectStarCatalogs(store.getState()).chunkSlotsOverride).toBeNull();
+    expect(selectStarCatalogs(store.getState()).poolRecordsOverride).toBeNull();
   });
 
   it('shows a refused pool size under the picker and drops it once a valid size lands', () => {
     const { store } = createAppStore();
-    const facts = { famousStarsMeta: [], chunkSlotsError: null };
+    const facts = { famousStarsMeta: [], poolRecordsError: null };
     store.dispatch(layerFactsSeeded({ layer: 'starCatalog', facts }));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
@@ -56,9 +56,9 @@ describe('StarCatalogTuningSectionContainer', () => {
     });
     expect(container.querySelector('[role="alert"]')).toBeNull();
 
-    const report = (chunkSlotsError: string | null) =>
+    const report = (poolRecordsError: string | null) =>
       act(() => {
-        store.dispatch(factsReported({ layer: 'starCatalog', patch: { chunkSlotsError } }));
+        store.dispatch(factsReported({ layer: 'starCatalog', patch: { poolRecordsError } }));
       });
     report('star pool: 512 slots overflow the row index; only 384 slots fit');
     expect(container.querySelector('[role="alert"]')!.textContent).toContain('only 384 slots fit');

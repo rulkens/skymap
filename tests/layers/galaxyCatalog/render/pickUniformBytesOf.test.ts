@@ -5,7 +5,7 @@
  * three pick-specific fields the pick renderer used to override post-upload —
  * the none-selection sentinel (byte 80), the `+PICK_PADDING_PX` point size
  * (byte 88), and `pickPass = 1` (byte 168). This test proves the consolidation
- * is BEHAVIOUR-NEUTRAL: it reconstructs exactly the bytes the OLD `drawPoints`
+ * is BEHAVIOUR-NEUTRAL: it reconstructs exactly the bytes the OLD `drawFlatPoints`
  * ended up with (a visual pack + those three overrides applied on top) and
  * asserts the helper's output matches byte-for-byte. Because the reconstruction
  * mirrors the old override end-state at the same offsets, the uploaded pick
@@ -73,8 +73,8 @@ const STATE = {
 } as unknown as EngineState;
 
 describe('pickUniformBytesOf', () => {
-  it('matches the OLD drawPoints end-state byte-for-byte (behaviour-neutral consolidation)', () => {
-    // Reconstruct exactly what the OLD `drawPoints` uploaded: a visual pack
+  it('matches the OLD drawFlatPoints end-state byte-for-byte (behaviour-neutral consolidation)', () => {
+    // Reconstruct exactly what the OLD `drawFlatPoints` uploaded: a visual pack
     // (unpadded size, an arbitrary non-sentinel selectedPacked, pickPass 0)
     // followed by the three post-upload overrides it applied on top — sentinel
     // at byte 80, padded size at byte 88, pickPass=1 at byte 168. This is the
@@ -95,7 +95,7 @@ describe('pickUniformBytesOf', () => {
       pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
     }); // pickPass defaults to 0 — the override below sets it to 1
-    // The three overrides the old `drawPoints` applied after uploading, at the
+    // The three overrides the old `drawFlatPoints` applied after uploading, at the
     // same offsets and with the same integer/float encodings.
     new Uint32Array(expected)[SELECTED_PACKED_BYTE_OFFSET / 4] = SELECTION_NONE_SENTINEL;
     new Float32Array(expected)[POINT_SIZE_BYTE_OFFSET / 4] =

@@ -13,13 +13,14 @@ import type { OctreeChunkStream } from '../../../src/@types/octree/OctreeChunkSt
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { OctreePoolShape } from '../../../src/@types/octree/OctreePoolShape';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
-import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/data/starPlanIntervalFrames';
+import { OCTREE_PLAN_INTERVAL_FRAMES } from '../../../src/data/octree/octreePlanIntervalFrames';
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/octree/octreeNodeFade';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
 
@@ -87,7 +88,7 @@ const STATE = {
       refineThreshold: 0.05,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
-      chunkSlotsOverride: null,
+      poolRecordsOverride: null,
     },
   },
 } as unknown as PassState;
@@ -177,7 +178,7 @@ describe('starCatalogPlanner', () => {
       expect(plan(11 * NODE_FADE_MS)).toBe(false);
     });
 
-    it('plans on a first cut, then only every STAR_PLAN_INTERVAL_FRAMES while a chunk is in flight or the eye moves, and once at rest', () => {
+    it('plans on a first cut, then only every OCTREE_PLAN_INTERVAL_FRAMES while a chunk is in flight or the eye moves, and once at rest', () => {
       const { stream, counters } = stubStream();
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const frame = (t: number) =>
@@ -193,9 +194,9 @@ describe('starCatalogPlanner', () => {
       counters.inFlight = 1;
       frame(10); // the interval since the first walk has long passed
       expect(walks).toHaveBeenCalledTimes(2);
-      for (let i = 11; i < 10 + STAR_PLAN_INTERVAL_FRAMES; i++) frame(i);
+      for (let i = 11; i < 10 + OCTREE_PLAN_INTERVAL_FRAMES; i++) frame(i);
       expect(walks).toHaveBeenCalledTimes(2);
-      frame(10 + STAR_PLAN_INTERVAL_FRAMES);
+      frame(10 + OCTREE_PLAN_INTERVAL_FRAMES);
       expect(walks).toHaveBeenCalledTimes(3);
       expect(stream.update).toHaveBeenCalledTimes(3);
 
@@ -204,10 +205,10 @@ describe('starCatalogPlanner', () => {
       walks.mockClear();
       const at = (xPc: number, t: number) =>
         planner.plan(SNAPSHOT, [makeView(camAtPc(xPc), t)], STATE, ALL_ON);
-      for (let i = 0; i < 2 * STAR_PLAN_INTERVAL_FRAMES; i++) at(MID_BAND_PC + 10 * i, 101 + i);
+      for (let i = 0; i < 2 * OCTREE_PLAN_INTERVAL_FRAMES; i++) at(MID_BAND_PC + 10 * i, 101 + i);
       expect(walks).toHaveBeenCalledTimes(2); // moving: on the first move, then one interval on
-      const restPc = MID_BAND_PC + 10 * (2 * STAR_PLAN_INTERVAL_FRAMES - 1);
-      for (let i = 0; i < STAR_PLAN_INTERVAL_FRAMES; i++) at(restPc, 200 + i);
+      const restPc = MID_BAND_PC + 10 * (2 * OCTREE_PLAN_INTERVAL_FRAMES - 1);
+      for (let i = 0; i < OCTREE_PLAN_INTERVAL_FRAMES; i++) at(restPc, 200 + i);
       expect(walks).toHaveBeenCalledTimes(3); // stopped past the last plan's pose: one plan at rest
     });
 
@@ -265,12 +266,17 @@ describe('starCatalogPlanner', () => {
     });
   });
 
-  it('re-installs the pools when the chunk-slots override changes, publishing the outcome', () => {
+  it('re-installs the pools when the pool-records override changes, publishing the outcome', () => {
     const runtime = makeRuntime(true);
-    const octree = {} as Octree<StarColumns>;
-    const upload = vi.fn((_s: number, _o: Octree<StarColumns>, slots: number) => {
-      if (slots > 256) throw new Error('only 256 slots fit');
-      return 0;
+    // Chunks enough that the pool's records come out at the override.
+    const octree = {
+      chunks: [],
+      chunkCount: 1024,
+      chunkCapacity: 1024,
+      chunkNodeCap: 64,
+    } as unknown as Octree<StarColumns>;
+    const upload = vi.fn((_s: number, _o: Octree<StarColumns>, pool: OctreePoolShape) => {
+      if (pool.records.total > 262_144) throw new Error('only 262,144 records fit');
     });
     const publish = vi.fn();
     Object.assign(runtime, {
@@ -293,23 +299,23 @@ describe('starCatalogPlanner', () => {
     });
     Object.assign(runtime.renderer, { upload });
     const planner = starCatalogPlanner(runtime);
-    const plan = (chunkSlotsOverride: number | null) =>
+    const plan = (poolRecordsOverride: number | null) =>
       planner.plan(
         SNAPSHOT,
         [makeView(camAtPc(MID_BAND_PC), 0)],
         {
-          settings: { starCatalogs: { ...STATE.settings.starCatalogs, chunkSlotsOverride } },
+          settings: { starCatalogs: { ...STATE.settings.starCatalogs, poolRecordsOverride } },
         } as unknown as PassState,
         ALL_ON,
       );
 
     plan(null);
     expect(publish).not.toHaveBeenCalled();
-    plan(512);
-    expect(publish).toHaveBeenLastCalledWith({ chunkSlotsError: 'only 256 slots fit' });
-    plan(512);
+    plan(524_288);
+    expect(publish).toHaveBeenLastCalledWith({ poolRecordsError: 'only 262,144 records fit' });
+    plan(524_288);
     expect(publish).toHaveBeenCalledTimes(1);
-    plan(128);
-    expect(publish).toHaveBeenLastCalledWith({ chunkSlotsError: null });
+    plan(131_072);
+    expect(publish).toHaveBeenLastCalledWith({ poolRecordsError: null });
   });
 });

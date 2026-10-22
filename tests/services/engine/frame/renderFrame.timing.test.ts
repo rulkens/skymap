@@ -44,6 +44,7 @@ import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlo
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
+import { idleGalaxyOctree } from '../../../fixtures/idleGalaxyOctree';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //
@@ -438,6 +439,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         ...CONTENT_PASSES,
         galaxyPointSpritesPass({
           pointRenderer: galaxyPointRenderer,
+          ...idleGalaxyOctree(),
         } as unknown as GalaxyCatalogRuntime),
         cosmicWebDensityPass(densityRuntime),
         cosmicWebDensityUpsamplePass(densityRuntime),

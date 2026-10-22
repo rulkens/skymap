@@ -39,6 +39,8 @@ import {
 } from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
+import { GALAXY_COLUMN_SCHEMA } from '../../../../src/data/octree/galaxyOctreeFamily';
+import { GALAXY_GPU_RECORD_WORDS } from '../../../../src/data/galaxyCatalog/galaxyGpuRecordWords';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -383,5 +385,46 @@ describe('Terrain-RGB height code parity (heightTileFormat.ts ↔ surfaceTile/la
   ])("lattice.wesl's %s equals the TS export", (name, tsValue) => {
     const file = 'src/services/gpu/shaders/bodies/surfaceTile/lattice.wesl';
     expect(readWeslConst(file, name), `${file}: ${name}`).toBe(tsValue);
+  });
+});
+
+/**
+ * The pooled galaxy vertex decodes the four-word record itself: a drift in the
+ * stride shears every record, and in a decode rescales every colour, axis ratio,
+ * position angle or size.
+ * Only absMag's range is per catalog, and it rides a uniform instead.
+ */
+describe('pooled galaxy record parity (galaxyOctreeFamily.ts ↔ points/pooledVertex.wesl)', () => {
+  const file = 'src/services/gpu/shaders/galaxyCatalog/points/pooledVertex.wesl';
+  const step = (id: string) => GALAXY_COLUMN_SCHEMA.find((c) => c.id === id)!.q1;
+  it('RECORD_WORDS equals GALAXY_GPU_RECORD_WORDS', () => {
+    expect(readWeslConst(file, 'RECORD_WORDS')).toBe(GALAXY_GPU_RECORD_WORDS);
+  });
+  // galaxyPooledPointRenderer writes these f32 indices: the blob three at 7, every draw.
+  it('PooledRecordUniforms holds its fields in the order the renderer writes them', () => {
+    const text = readFileSync(join(process.cwd(), file), 'utf-8');
+    const body = /struct PooledRecordUniforms \{([^}]*)\}/.exec(text)![1]!;
+    expect([...body.matchAll(/(\w+):/g)].map((m) => m[1])).toEqual([
+      'gridOriginMpc',
+      'absMagQ0',
+      'absMagQ1',
+      'magOffset',
+      'medianAbsMag',
+      'blobOverlap',
+      'blobPeakCap',
+      'blobGain',
+    ]);
+  });
+  it.each([
+    ['COLOUR_INDEX_STEP', 'colourIndex'],
+    ['AXIS_RATIO_STEP', 'axisRatio'],
+    ['PA_STEP_DEG', 'pa'],
+    ['LOG_SIZE_STEP', 'logSize'],
+  ])('%s equals the %s column step', (name, id) => {
+    expect(readWeslConst(file, name)).toBeCloseTo(step(id), 12);
+  });
+  it('LOG_SIZE_Q0 equals the logSize column origin', () => {
+    const q0 = GALAXY_COLUMN_SCHEMA.find((c) => c.id === 'logSize')!.q0;
+    expect(readWeslConst(file, 'LOG_SIZE_Q0')).toBe(q0);
   });
 });

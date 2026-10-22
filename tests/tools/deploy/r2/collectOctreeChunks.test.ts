@@ -9,6 +9,7 @@ import { join, relative } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { ColumnId } from '../../../../src/@types/octree/ColumnId';
 import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 import { collectOctreeChunks } from '../../../../tools/deploy/r2/collectOctreeChunks';
 import { chunkOctree } from '../../../../tools/octree/chunkOctree';
@@ -77,6 +78,45 @@ describe('collectOctreeChunks', () => {
       expect(fs.existsSync(localPath)).toBe(true);
       expect(`data/star-catalog/v2/${relative(epochDir, localPath)}`).toBe(r2Key);
     }
+  });
+
+  it("a galaxy catalog collects each chunk with its info sibling; the star catalog's list is unchanged", () => {
+    const dataDir = tempDataDir();
+    const epochDir = join(dataDir, 'galaxy-octree/v1');
+    writeOctreeCatalog(
+      chunkOctree(
+        stratifyOctree(makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [4, 14]), GRID)),
+        CAPACITY,
+        40,
+      ),
+      {
+        family: 'galaxy',
+        grid: GRID,
+        stratify: TEST_STRATIFY,
+        schema: STAR_COLUMN_SCHEMA,
+        stats: { recordCount: N },
+      },
+      epochDir,
+      'glade',
+      {
+        schema: [{ id: 'specZ', store: 'f32', q0: 0, q1: 1 }],
+        columns: new Map<ColumnId, Float32Array>([['specZ', new Float32Array(N)]]),
+      },
+    );
+    const hashed = `glade.${contentHash8(fs.readFileSync(join(epochDir, 'glade.bin')))}.bin`;
+    fs.renameSync(join(epochDir, 'glade.bin'), join(epochDir, hashed));
+    fs.writeFileSync(
+      join(dataDir, 'manifest.json'),
+      JSON.stringify({ 'galaxy-octree/v1/glade.bin': `galaxy-octree/v1/${hashed}` }),
+    );
+
+    const uploads = collectOctreeChunks(dataDir, { family: 'galaxy', name: 'glade' });
+
+    const baked = fs.readdirSync(join(epochDir, 'glade'));
+    expect(baked.some((f) => f.includes('.info.'))).toBe(true);
+    expect(uploads.map((u) => u.r2Key).sort()).toEqual(
+      baked.map((name) => `data/galaxy-octree/v1/glade/${name}`).sort(),
+    );
   });
 
   it('returns [] without an index', () => {

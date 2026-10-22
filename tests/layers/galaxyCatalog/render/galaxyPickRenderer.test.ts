@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGalaxyPickRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer';
 import { UNIFORM_BYTES } from '../../../../src/layers/galaxyCatalog/render/galaxyPointVertexLayout';
 import { Source } from '../../../../src/data/sources';
+import type { GalaxyPooledPickLayouts } from '../../../../src/@types/rendering/GalaxyPooledPickLayouts';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
 // about which buffer was targeted and at which byte offset.  `createBuffer`
@@ -66,7 +67,9 @@ function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
 
-// A minimal dummy uniform bytes buffer for drawPoints calls.
+const POOLED_LAYOUTS = { drawBgl: {}, recordsBgl: {} } as GalaxyPooledPickLayouts;
+
+// A minimal dummy uniform bytes buffer for drawFlatPoints calls.
 function makeUniformBytes(): ArrayBuffer {
   return new ArrayBuffer(UNIFORM_BYTES);
 }
@@ -82,8 +85,8 @@ function makeStubPass() {
 }
 
 describe('createGalaxyPickRenderer', () => {
-  it('drawPoints uploads the caller bytes VERBATIM to its OWN buffer — no post-upload patching', () => {
-    // drawPoints is the point-pick draw surface: it uploads the caller's
+  it('drawFlatPoints uploads the caller bytes VERBATIM to its OWN buffer — no post-upload patching', () => {
+    // drawFlatPoints is the point-pick draw surface: it uploads the caller's
     // already-pick-shaped uniform bytes to the renderer's OWN pickUniformBuffer
     // and does nothing else to it. The pick byte-shaping (sentinel, padded
     // size, pickPass=1) lives in `pickUniformBytesOf`, so there are NO
@@ -98,6 +101,7 @@ describe('createGalaxyPickRenderer', () => {
       makeStubFocusBgl(),
       {} as unknown as GPUBindGroup,
       false,
+      POOLED_LAYOUTS,
     );
 
     const ownPickBuffer = getOwnPickBuffer();
@@ -106,7 +110,7 @@ describe('createGalaxyPickRenderer', () => {
     writeBufferCalls.length = 0; // clear construction calls
 
     const uniformBytes = makeUniformBytes();
-    galaxyPickRenderer.drawPoints(
+    galaxyPickRenderer.drawFlatPoints(
       makeStubPass(),
       [
         {
@@ -138,7 +142,7 @@ describe('createGalaxyPickRenderer', () => {
     //
     // The contract, asserted below:
     //   1. Pass a single canonical sourceBgl to the renderer.
-    //   2. Call `drawPoints` with two distinct sourceBuffers.
+    //   2. Call `drawFlatPoints` with two distinct sourceBuffers.
     //   3. Every @group(2) `createBindGroup` call uses that canonical
     //      sourceBgl — never a per-pipeline auto-derived layout.
 
@@ -178,6 +182,7 @@ describe('createGalaxyPickRenderer', () => {
       canonicalFocusBgl,
       {} as unknown as GPUBindGroup,
       false,
+      POOLED_LAYOUTS,
     );
 
     const sourceBufA = { __source: 'A' } as unknown as GPUBuffer;
@@ -188,7 +193,7 @@ describe('createGalaxyPickRenderer', () => {
     // Reset call capture after construction (constructors build their own bind groups).
     createBindGroupCalls.length = 0;
 
-    galaxyPickRenderer.drawPoints(
+    galaxyPickRenderer.drawFlatPoints(
       makeStubPass(),
       [
         { source: Source.SDSS, vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },

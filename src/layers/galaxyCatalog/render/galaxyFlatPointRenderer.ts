@@ -85,7 +85,7 @@ import type { BuildRunner } from '../@types/BuildRunner';
  *                           between tests, so an override installed for one
  *                           case silently governs the next.
  */
-export function createGalaxyPointRenderer(init: {
+export function createGalaxyFlatPointRenderer(init: {
   device: GPUDevice;
   targetFormat: GPUTextureFormat;
   fadeBgl: FadeUniformsBgl;
@@ -278,7 +278,7 @@ export function createGalaxyPointRenderer(init: {
   }
 
   const renderer: GalaxyPointRenderer = {
-    label: 'galaxyPointRenderer',
+    label: 'galaxyFlatPointRenderer',
     upload: store.upload,
     unload: store.unload,
     totalCount: store.totalCount,

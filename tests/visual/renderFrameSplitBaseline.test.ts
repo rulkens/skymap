@@ -47,6 +47,7 @@ import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types
 import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
+import { idleGalaxyOctree } from '../fixtures/idleGalaxyOctree';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -404,6 +405,7 @@ describe('renderFrame visual baseline', () => {
     // renderers and planner stubs ride it instead of `state.gpu`/`state.subsystems`.
     const galaxyRuntime = {
       pointRenderer: galaxyPointRenderer,
+      ...idleGalaxyOctree(),
       proceduralDiskRenderer,
       texturedDiskRenderer,
       proceduralDisks: proceduralDisksSubsystem,

@@ -23,6 +23,8 @@ export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   readonly binBaseName: string;
   /** Per-tier limits: the cut's draw budget and the octree pool's slots. */
   readonly budgets: OctreeBudgets;
+  /** Node-row runs per record run of a resident set, measured: the pool sizes its rows by it. */
+  readonly poolNodesPerRecord: number;
   /** Camera-distance crossfade band to the procedural MW cloud, parsecs. */
   readonly crossfadePc: { readonly inner: number; readonly outer: number };
 };

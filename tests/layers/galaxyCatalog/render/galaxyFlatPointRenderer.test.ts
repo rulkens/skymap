@@ -11,7 +11,7 @@
  *
  * ### Why a stub `GPUDevice`
  *
- * `createGalaxyPointRenderer`'s constructor calls real WebGPU APIs
+ * `createGalaxyFlatPointRenderer`'s constructor calls real WebGPU APIs
  * (`createShaderModule`, `createRenderPipeline`, `createBuffer`, …) that
  * only exist on a live device. The stub's `createBuffer` returns a sentinel
  * (no VRAM) and the pipeline factories return just enough shape for
@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createGalaxyPointRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer';
+import { createGalaxyFlatPointRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyFlatPointRenderer';
 import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { VIEW_SLOT_COUNT } from '../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
@@ -109,7 +109,7 @@ function makeStubDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-// Stub BGLs — createGalaxyPointRenderer requires fadeBgl + sourceBgl +
+// Stub BGLs — createGalaxyFlatPointRenderer requires fadeBgl + sourceBgl +
 // focusBgl as canonical shared layouts. These stubs satisfy the branded
 // opaque-newtype shape structurally.
 function makeStubFadeBgl() {
@@ -182,7 +182,7 @@ describe('GalaxyPointRenderer.destroy', () => {
   it('releases each per-source buffer + fade ring', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createGalaxyPointRenderer({
+    const renderer = createGalaxyFlatPointRenderer({
       device,
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -215,7 +215,7 @@ describe('GalaxyPointRenderer.destroy', () => {
   });
 
   it('clears the galaxyCatalogs map', async () => {
-    const renderer = createGalaxyPointRenderer({
+    const renderer = createGalaxyFlatPointRenderer({
       device: makeStubDevice(),
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),
@@ -239,7 +239,7 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
     // contribution, so the per-source loop drops the draw call entirely when
     // the fadeOpacityOf callback resolves to exactly 0 (a fade reaches 0
     // continuously before the skip engages, so no pop is possible).
-    const renderer = createGalaxyPointRenderer({
+    const renderer = createGalaxyFlatPointRenderer({
       device: makeStubDevice(),
       targetFormat: 'bgra8unorm',
       fadeBgl: makeStubFadeBgl(),
@@ -292,7 +292,7 @@ describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
   it('two draw() calls with different viewSlot land their @group(0) uniform and fade writes in different buffers', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createGalaxyPointRenderer({
+    const renderer = createGalaxyFlatPointRenderer({
       device,
       targetFormat: 'rgba16float',
       fadeBgl: makeStubFadeBgl(),

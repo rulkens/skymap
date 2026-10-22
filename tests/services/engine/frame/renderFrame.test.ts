@@ -53,6 +53,7 @@ import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum'
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { idleGalaxyOctree } from '../../../fixtures/idleGalaxyOctree';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -373,6 +374,7 @@ function makeInput(
   // these fixtures on the point + milky-way ordering they assert.
   const galaxyRuntime = {
     pointRenderer: galaxyPointRenderer,
+    ...idleGalaxyOctree(),
     proceduralDisks: { lastOutput: { instances: [] } },
     texturedDisks: { lastOutput: { disks: [] } },
   } as unknown as GalaxyCatalogRuntime;

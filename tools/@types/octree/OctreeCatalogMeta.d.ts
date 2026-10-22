@@ -11,4 +11,6 @@ export type OctreeCatalogMeta = {
   readonly stratify: OctreeStratify;
   readonly schema: readonly ColumnSchema[];
   readonly stats: OctreeIndexHeader['stats'];
+  readonly pgcShards?: OctreeIndexHeader['pgcShards'];
+  readonly namedPgcs?: OctreeIndexHeader['namedPgcs'];
 };

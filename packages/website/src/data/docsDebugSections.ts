@@ -79,6 +79,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/milkyWay/ui/MilkyWayTuningSection.tsx',
   },
   {
+    heading: 'Galaxy octree blobs',
+    shows:
+      'With GLADE in the octree format: how much light a glow standing for many far galaxies gives, how far past its box the glow spreads, and a cap on how bright a glow may be.',
+    file: 'src/layers/galaxyCatalog/ui/GalaxyBlobTuningSectionContainer.tsx',
+  },
+  {
     heading: 'Star catalog tuning',
     shows:
       'How far away stars are still drawn one by one (Detail), how wide the glow of a distant region spreads, the exposure at the near, middle and far camera distances, and a cap on how bright a glow may be. A picker sets the size of the pool of star chunks held in memory; a size the device cannot hold is refused and the reason is shown under it.',

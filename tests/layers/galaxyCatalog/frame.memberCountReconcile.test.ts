@@ -20,6 +20,7 @@ import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFr
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
+import { idleGalaxyOctree } from '../../fixtures/idleGalaxyOctree';
 
 /** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */
 const CLUSTER: SelectionRow = {
@@ -74,6 +75,7 @@ function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
     hiResFamous: { committed: () => null },
+    ...idleGalaxyOctree(),
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: {
@@ -143,6 +145,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const publish = vi.fn();
     const runtime = {
       hiResFamous: { committed: () => null },
+      ...idleGalaxyOctree(),
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
       texturedDisks: {

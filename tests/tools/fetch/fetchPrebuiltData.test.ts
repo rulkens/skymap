@@ -8,6 +8,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { ColumnId } from '../../../src/@types/octree/ColumnId';
 import { STAR_COLUMN_SCHEMA } from '../../../src/data/octree/starOctreeFamily';
 import { octreeChunkPaths } from '../../../tools/fetch/fetchPrebuiltData';
 import { chunkOctree } from '../../../tools/octree/chunkOctree';
@@ -79,5 +80,41 @@ describe('octreeChunkPaths', () => {
     expect(chunkReads.length).toBe(baked.length);
     expect(chunkReads.every((r) => r.ranged)).toBe(true);
     expect(fs.readdirSync(local)).toEqual([]);
+  });
+
+  it("adds each chunk's info sibling for a catalog whose index has a chunkDirectory", async () => {
+    const local = fs.mkdtempSync(join(tmpdir(), 'fetch-local-'));
+    dirs.push(local);
+    const epochDir = join(local, 'galaxy-octree/v1');
+    writeOctreeCatalog(
+      chunkOctree(
+        stratifyOctree(makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [4, 14]), GRID)),
+        CAPACITY,
+        40,
+      ),
+      {
+        family: 'galaxy',
+        grid: GRID,
+        stratify: TEST_STRATIFY,
+        schema: STAR_COLUMN_SCHEMA,
+        stats: { recordCount: N },
+      },
+      epochDir,
+      'glade',
+      {
+        schema: [{ id: 'specZ', store: 'f32', q0: 0, q1: 1 }],
+        columns: new Map<ColumnId, Float32Array>([['specZ', new Float32Array(N)]]),
+      },
+    );
+
+    const paths = await octreeChunkPaths(
+      HOST,
+      local,
+      { family: 'galaxy', name: 'glade' },
+      'galaxy-octree/v1/glade.bin',
+    );
+
+    const baked = fs.readdirSync(join(epochDir, 'glade'));
+    expect(paths.sort()).toEqual(baked.map((name) => `galaxy-octree/v1/glade/${name}`).sort());
   });
 });

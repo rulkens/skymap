@@ -3,7 +3,7 @@
  * budget: the tables are the source of truth shared with the WGSL).
  *
  * The per-instance vertex record and the pick uniform buffer must agree across
- * `galaxyPointRenderer`'s packing, the `galaxyPickRenderer` pipeline and the
+ * `galaxyFlatPointRenderer`'s packing, the `galaxyPickRenderer` pipeline and the
  * `points/*.wesl` shaders: a mismatch either fails pipeline creation or silently
  * reads garbage. Neutral home so neither renderer owns the truth.
  *

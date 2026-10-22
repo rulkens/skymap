@@ -11,6 +11,9 @@ import { Source } from '../../../../src/data/source';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
+const NO_RUNS = { total: 0, minRun: 1, maxRun: 1 };
+const NO_POOL = { slots: 0, records: NO_RUNS, nodes: NO_RUNS };
+
 const CATALOG = starOctreeFromSkst({
   starCount: 1,
   nodeCount: 1,
@@ -80,8 +83,8 @@ function setup() {
     end: vi.fn(),
   };
   const encoder = { beginComputePass: vi.fn(() => pass) } as unknown as GPUCommandEncoder;
-  const gpu = createOctreeCutGpu(device as unknown as GPUDevice);
-  gpu.upload(Source.GaiaStars, CATALOG, 0);
+  const gpu = createOctreeCutGpu(device as unknown as GPUDevice, 'star-cut');
+  gpu.upload(Source.GaiaStars, CATALOG, NO_POOL);
   const encode = (nowMs: number, recut = true) =>
     gpu.encode(encoder, frame(nowMs), recut, () => ({}));
   return { gpu, device, encoder, pass, encode, fadeSteps };
@@ -136,7 +139,7 @@ describe('octreeCutGpu lifecycle', () => {
     encode(0);
     expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).not.toBeNull();
 
-    gpu.upload(Source.GaiaStars, EMPTY, 0);
+    gpu.upload(Source.GaiaStars, EMPTY, NO_POOL);
     expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).toBeNull();
     const passesBefore = vi.mocked(encoder.beginComputePass).mock.calls.length;
     encode(16);

@@ -14,4 +14,6 @@ export type OctreeChunkObject = {
   readonly recordBase: number;
   readonly nodes: OctreeNodeTable;
   readonly columns: ReadonlyMap<ColumnId, Float32Array>;
+  /** Per record, in the object's record order: its input row, or `NO_SOURCE_ROW` for a blob. */
+  readonly sourceRows: Uint32Array;
 };

@@ -9,5 +9,5 @@ import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMeta
 export type StarCatalogFacts = {
   readonly famousStarsMeta: readonly FamousStarMetaEntry[];
   /** Why the last chunk-pool resize failed (names the largest count that fits); null once one succeeds. */
-  readonly chunkSlotsError: string | null;
+  readonly poolRecordsError: string | null;
 };
