@@ -9,11 +9,13 @@ import FeatureFilm from '../../components/FeatureFilm/FeatureFilm.tsx';
 import FeatureSection from '../../components/FeatureSection/FeatureSection.tsx';
 import Figure from '../../components/Figure/Figure.tsx';
 import Phone3D from '../../components/Phone3D/Phone3D.tsx';
+import PictureBand from '../../components/PictureBand/PictureBand.tsx';
 import SectionHead from '../../components/SectionHead/SectionHead.tsx';
 import Shot from '../../components/Shot/Shot.tsx';
+import ShotCaption from '../../components/ShotCaption/ShotCaption.tsx';
 import { siteShot } from '../../data/siteShot';
-import a11y from '../../styles/a11y.module.css';
 import layout from '../../styles/layout.module.css';
+import text from '../../styles/type.module.css';
 
 export const part = `${layout.wrap} ${layout.section}`;
 // The large visual takes seven of the page grid's twelve columns; a small still is 16rem, a disc's picture 8rem.
@@ -21,7 +23,11 @@ export const big = '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)';
 export const small = '16rem';
 export const disc = '8rem';
 
-<h1 class={a11y.unseen}>Features</h1>
+<PictureBand id="galaxies-measured" gap="none" eager>
+  <h1>What Skymap shows</h1>
+  <p class={text.say}>Places from Earth to the cosmic web, a clock you can set, every size of screen, and a link to every view.</p>
+  <ShotCaption id="galaxies-measured" showDrawn={false} />
+</PictureBand>
 
 <div class={part}>
   <SectionHead title="Places">
