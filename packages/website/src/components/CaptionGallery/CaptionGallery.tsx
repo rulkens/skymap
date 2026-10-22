@@ -17,7 +17,9 @@ import changing from '../PictureBand/viewChange.module.css';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './CaptionGallery.module.css';
 
-function CaptionGallery() {
+type CaptionGalleryProps = { showDrawn?: boolean };
+
+function CaptionGallery({ showDrawn = true }: CaptionGalleryProps) {
   const { views, at, live, byReader, choose, marksRef } = useGalleryState();
   const marks = useRef<(HTMLButtonElement | null)[]>([]);
   const last = views.length - 1;
@@ -62,7 +64,7 @@ function CaptionGallery() {
             key={view.id}
             className={cx(changing.view, (live ? i !== at : i !== 0) && changing.away)}
           >
-            <ShotCaption id={view.id} />
+            <ShotCaption id={view.id} showDrawn={showDrawn} />
           </div>
         ))}
       </div>
