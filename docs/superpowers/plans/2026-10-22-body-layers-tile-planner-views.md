@@ -95,22 +95,24 @@ three things, each with a renderer-free source:
 
 | Reads | For | Source instead |
 | --- | --- | --- |
-| a tiling host's `body-m` slab exists | the body is on screen | the frame's resolved scene bodies (`sceneBodyPresentation`, present, not sub-pixel, inside `FOREGROUND_MAX_DISTANCE_MPC`) ∩ `SURFACE_TILE_REGISTRY` |
+| a tiling host's `body-m` slab exists | the body is on screen | the view's body-row roster `deriveSlabs` is fed (`visibleBodyRows`: `visibleSlabBodies` over `snapshot.slabBodyCandidates` plus the mesh-host re-admission, extracted from `deriveView` and shared) ∩ `SURFACE_TILE_REGISTRY`, inside `FOREGROUND_MAX_DISTANCE_MPC` (user, 2026-10-22: `sceneBodyPresentation` has no Earth, a 3 px resolve floor and no frustum cull, so it disagrees) |
 | `view.slab.vp` → `composeBodySlabMvp` | each view's body-local frustum (f64) | `FrameView.bodyPose(bodyId)` + `FrameView.frustum` + `viewportPx` |
 | `prepareBodySurfaceFrame`'s memo | one derivation shared with `earthPass` | none: one compose per view per frame |
 
-**Files:** `src/services/engine/frame/planSurfaceTiles.ts`; create a pure engaged-body chooser and a
-per-view tile-camera adapter (one symbol per file, `src/utils/surfaceTiles/` for pure helpers, the
-adapter beside `planSurfaceTiles` if it reads `FrameView`); a `TileCamera` type under `src/@types/`
-if `cutSurfaceTiles`' existing view input type doesn't already serve; delete `TilingSlab.d.ts` if it
-goes unused; tests.
+**Files:** every planner file in one folder, `src/services/engine/frame/surfaceTilePlanner/`
+(user, 2026-10-22): `planSurfaceTiles`, `planSurfaceCut`, `releaseTilesPastRadius` (moved via
+`npm run move-files`), and the new `engagedTileBody` and `tileCamerasOf`; tests mirror under
+`tests/services/engine/frame/surfaceTilePlanner/`, and the folder joins the frame-file purity sweep.
+`src/services/engine/frame/visibleBodyRows.ts` (not planner-only: `deriveView` calls it too) with a
+`BodyRowGate` type; a `TileCamera` type, which `cutSurfaceTiles`' view input now names; delete
+`TilingSlab.d.ts`; tests.
 
 **Contract:**
 
 ```ts
 export function tileCamerasOf(views: readonly FrameView[], bodyId: SurfaceTileBodyId,
   radiusM: number): readonly { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[];
-export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pure over the frame's scene bodies
+export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pure over the view's body-row roster
 ```
 
 - **Narrow input (user, 2026-10-22).** The planner takes no `PassState`:
@@ -119,13 +121,13 @@ export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pu
   export function planSurfaceTiles(
     tiles: SurfaceTileSubsystem,
     views: readonly FrameView[],
-    committedTier: (bodyId: SurfaceTileBodyId) => QualityTier,
+    committedTier: (bodyId: SurfaceTileBodyId) => Tier,
   ): PlannerResult<readonly SurfaceCutTile[]>;
   ```
 
   `datumRadiusM`/`reliefM` come from the static body tables by id; body positions for the release
-  check from `deriveBodyStates(view.snapshot.simDays)` (what `sceneBodyStates` does, without its
-  unused `state`); the committed tier is the one runtime fact. `runFrame` passes
+  check from `view.snapshot.bodyStates` (the frame's one `deriveBodyStates` sample, which is what
+  `sceneBodyStates` returns, without its unused `state`); the committed tier is the one runtime fact. `runFrame` passes
   `(id) => bodySurfaceTier(state, id)`. Its helpers (`planSurfaceCut`, `releaseTilesPastRadius`)
   narrow the same way.
 - `cutSurfaceTiles` keeps its input; the planner feeds it the adapter's cameras and the first view's
@@ -147,7 +149,7 @@ export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pu
   `FOREGROUND_MAX_DISTANCE_MPC` edges. **Bug caught:** tiles plan for a body the renderer culled, or
   stop for one it draws.
 
-- [ ] Task 3
+- [x] Task 3
 
 ---
 

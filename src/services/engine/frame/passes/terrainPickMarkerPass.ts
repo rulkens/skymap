@@ -58,7 +58,7 @@ export const terrainPickMarkerPass: ContentPass = {
     const arm: BodyFixedPose = {
       // `in` gates membership above but does not narrow the KEY, so this
       // states what that check just proved — the same assertion
-      // `planSurfaceTiles` makes.
+      // `engagedTileBody` makes.
       bodyId: bodyId as BodyId,
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [eyeM[0], eyeM[1], eyeM[2]],

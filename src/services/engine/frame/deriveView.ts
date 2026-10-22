@@ -23,11 +23,9 @@ import { starSphereRangeM } from '../../../utils/star/starSphereRangeM';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
-import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
-import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { viewBodyPose } from '../camera/viewBodyPose';
 import { deriveSlabs } from './slabs';
-import { visibleSlabBodies } from './visibleSlabBodies';
+import { visibleBodyRows } from './visibleBodyRows';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { near0SphereBodies } from './near0SphereBodies';
 
@@ -59,31 +57,12 @@ export function deriveView(
   // for a symmetric frustum.
   const pxPerRad = sizePx.height / (frustum.tanUp - frustum.tanDown);
 
-  const slabGate = {
-    bodyStates,
+  const visibleRows = visibleBodyRows(snapshot, {
     camPosMpc: drawCamPos,
     camForwardMpc: viewForward,
     frustum,
     pxPerRad,
-  };
-  const gatedRows = visibleSlabBodies({ ...slabGate, rows: slabBodyCandidates });
-  // A hosted mesh body owns no slab row — it rides its host's
-  // (`drawMeshBodiesOnRow`), so the host's roster entry is what keeps it drawable; a
-  // hostless one keys on itself and is already a candidate. From a 400 km
-  // orbit Earth's ~70° angular radius takes it out of the frustum gate around
-  // 126° off-axis, which would blank a mesh body sitting dead centre. The SAME
-  // gate run over the mesh bodies re-admits their hosts, so there is one cull
-  // applied twice rather than two culls to keep in step. The body rides along
-  // on the row so the surviving rows can name their hosts.
-  const meshHostIds = new Set(
-    visibleSlabBodies({
-      ...slabGate,
-      rows: meshBodies.map((body) => ({ ...bodySlabRowOf(body), body })),
-    }).map((row) => meshBodySlabHostId(row.body.id)),
-  );
-  const visibleRows = gatedRows.concat(
-    slabBodyCandidates.filter((row) => meshHostIds.has(row.anchorId) && !gatedRows.includes(row)),
-  );
+  });
 
   // Both providers' output turned and offset alike, so a body arm stays
   // metre-native; unconditional because an identity turn and a zero offset are

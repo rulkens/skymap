@@ -3,11 +3,9 @@
  * past the engaged body that its globe texture has unloaded too.
  */
 
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/SurfaceTileSubsystem';
-import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
-import { sceneBodyStates } from './sceneBodyStates';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
+import type { SurfaceTileSubsystem } from '../../../../@types/engine/subsystems/SurfaceTileSubsystem';
+import { pastTextureReleaseRadius } from '../pastTextureReleaseRadius';
 
 // A pull-back keeps the tile atlases (~324 MB) for a quick re-engage; past twice
 // the body's texture load radius its globe map unloads too, and so do they.
@@ -15,12 +13,11 @@ import { sceneBodyStates } from './sceneBodyStates';
 export function releaseTilesPastRadius(
   tiles: SurfaceTileSubsystem,
   views: readonly FrameView[],
-  state: PassState,
 ): void {
   const engagedTileBody = tiles.engagedBodyId();
   const poseView = views[0];
   if (engagedTileBody === null || poseView === undefined) return;
-  const body = sceneBodyStates(state, poseView).get(engagedTileBody);
+  const body = poseView.snapshot.bodyStates.get(engagedTileBody);
   if (
     body !== undefined &&
     pastTextureReleaseRadius(engagedTileBody, poseView.drawCamPos, body.positionMpc)
