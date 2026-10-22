@@ -230,8 +230,17 @@ export function stepSurfaceTiles(prev: SurfaceTileRuntime, inputs: SurfaceTileSt
   `lastEngaged` is null and residency is kept; (5) demand: misses (in none of residency, `pending`,
   `failed`) join `pending`; one `demand` effect (after `engage` on the first), `touch` = every requested
   slot-holding non-failed key in request order, `fetch` = misses largest first (today's two-pass,
-  `:335-426`); (6) the release verdict clears residency, `pending`, `failed`, `lastEngaged` and keeps
-  `manifest`/`params` (`:301-309`). A `frame: null` step clears `lastEngaged` (R5).
+  `:335-426`); (6) one release verdict (R4, user 2026-10-22: switch and distance, never visibility alone):
+  release when the engaged body is not this frame's body, or when the camera is farther than
+  `TILE_RELEASE_RADII × datumRadiusM` from it. Today the atlases ride the globe texture's gate (2 ×
+  10⁴ radii, `bodyTextureLoadRadius.ts`; ~0.85 AU for Earth, where it is ~0.1 px) though tiles only
+  engage close in; the user ruled that wrong (2026-10-22). `TILE_RELEASE_RADII` is a named constant in
+  `surfaceTileParams.ts`, set to twice the farthest distance at which tiles engage (measured at the
+  widest frustum and largest viewport the app allows, per tiling body; the plan task records the
+  method and numbers), so the factor 2 is the hysteresis against edge thrash. The step input
+  `pastReleaseRadius` becomes `camDistanceM: (bodyId) => number`; `releaseTilesPastRadius.ts` and the
+  atlases' use of `pastTextureReleaseRadius` delete. Visibility alone never releases. Release clears residency, `pending`, `failed`,
+  `lastEngaged` and keeps `manifest`/`params` (`:301-309`). A `frame: null` step clears `lastEngaged` (R5).
 - **Selectors:** `residentSlotOf` (`:440-461`), `terrainHeightOf`/`residentHeightLevelOf` (`:469-528`),
   `subCameraOf` (O(1); today the seam builds the whole snapshot, `surfaceTileTerrain.ts:12`),
   `surfaceTilesAwake` (`manifest?.status === 'pending' || pending.size > 0`), `surfaceTileDebugOf`
