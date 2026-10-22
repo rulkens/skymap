@@ -167,6 +167,28 @@ export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pu
 - `frameCounter` (the atlas LRU clock, `surfaceTileSubsystem.ts:152`) is the atlas's resource and stays
   in the stream, with `destroyed` and both streams and atlases.
 
+**R5 (user, 2026-10-22): position facts and plan facts split.** `lastEngaged` (`:146-150`) braids
+where the camera is over the body (`subCameraDirLocal`, a position fact true whichever way you look)
+with what this frame planned (request count, `zWin`, misses, drops). Standing on the surface and
+looking up must not change the camera's position or the "over Copenhagen" readout; the camera's
+ground clamp already reads only params + residency (`terrainHeightAt`, `:504`). So the step takes two
+inputs, and the runtime two fields, replacing `lastEngaged`:
+
+```ts
+// SurfaceTileStepInputs — position facts from FrameView.bodyPose, no visibility gate
+readonly over: { readonly bodyId: SurfaceTileBodyId; readonly camPosLocalM: Readonly<Vec3>;
+  readonly distanceM: number } | null;   // nearest tiling body within TILE_RELEASE_RADII
+// view facts, only when some view shows the body (visibleBodyRows)
+readonly frame: { readonly baseLevel: number; readonly cameras: readonly TileCamera[] } | null;
+// runtime
+subCamera: { lonDeg: number; latDeg: number; coveredMaxLevel: number } | null;   // from `over`
+lastPlan: { requestCount: number; zWin: number; misses: number; droppedAllocations: number } | null; // from `frame`
+```
+
+The distance gate (R4) reads `over.distanceM` (`camDistanceM` goes); `frame === null` empties the
+cut and `lastPlan`, never `subCamera`. Wherever the step and the table below say `lastEngaged` or
+`frame.bodyId`/`camPosLocalM`, read `lastPlan` and `over`.
+
 ### Task 4: tile state as plain data, a pure fold and a pure step (P8a)
 
 review: yes
