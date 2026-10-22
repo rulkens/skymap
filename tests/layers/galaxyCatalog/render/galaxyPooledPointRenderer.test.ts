@@ -206,7 +206,7 @@ describe('galaxyPooledPointRenderer chunk pool', () => {
     } as unknown as GalaxyPointDrawSettings;
     const blob = { blobGlowOverlap: 2.5, blobPeakCap: 0.3, blobGain: 0.4 };
     const encoder = pass as unknown as GPURenderPassEncoder;
-    renderer.draw(encoder, new Float32Array(16), [800, 600], settings, false, blob);
+    renderer.draw(encoder, new Float32Array(16), [800, 600], settings, false, 'aggregate', blob);
     // pooledVertex.wesl's PooledRecordUniforms: gridOriginMpc, absMagQ0, absMagQ1, magOffset,
     // medianAbsMag, then these three.
     const words = writes.find((w) => w.label === `galaxy-pooled-uniform-${Source.Glade}`)!;

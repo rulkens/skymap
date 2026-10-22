@@ -226,7 +226,7 @@ describe('galaxyPointSpritesPass.drawPick', () => {
 });
 
 describe('galaxyPointSpritesPass with an octree source', () => {
-  it('the sprites pass draws flat and pooled sources, each faded by its own source', () => {
+  it('the sprites pass draws flat sources and pooled leaves, each faded by its own source', () => {
     const { state, runtime, drawSpy } = makeStateWithRenderer({
       selection: {
         select: { type: 'galaxyCatalog', source: Source.Glade, index: 7 } as SelectionRef,
@@ -263,6 +263,8 @@ describe('galaxyPointSpritesPass with an octree source', () => {
     expect(pooled.selectedPacked).toBe(packSelection(Source.Glade, 1234));
     expect(flat.selectedPacked).toBe(packSelection(Source.Glade, 7));
     expect(pooledDraw.mock.calls[0]![4]).toBe(false);
+    // The blobs are the aggregates pass's: drawing them here too would double their glow.
+    expect(pooledDraw.mock.calls[0]![5]).toBe('leaf');
 
     pass.drawPick!(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state, fade);
     expect(pooledPick.mock.calls[0]![1]).toEqual([Source.Glade]);

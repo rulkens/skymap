@@ -60,7 +60,7 @@ export const PRELUDE: FrameSection = {
     {
       kind: 'capture',
       captures: ['sgrAStar', 'solarSystem'],
-      cosmoPasses: ['point-sprites', 'textured-disks'],
+      cosmoPasses: ['point-sprites', 'galaxy-aggregates', 'textured-disks'],
       near0Passes: ['star-aggregates', 'star-catalog'],
       bodyPasses: [],
     },
@@ -120,6 +120,7 @@ export const SCENE: FrameSection = {
       slab: COSMO,
       passes: [
         'point-sprites',
+        'galaxy-aggregates',
         'procedural-disks',
         'textured-disks',
         'cosmic-web-filaments',

@@ -13,6 +13,7 @@ import type { GalaxyCatalogSettings } from '../../../@types/settings/GalaxyCatal
 import type { GalaxyBlobTuningKey } from './GalaxyBlobTuningKey';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeCutInputs } from '../../../@types/octree/OctreeCutInputs';
+import type { OctreeDrawStream } from '../../../@types/octree/OctreeDrawStream';
 import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 import type { OctreePoolShape } from '../../../@types/octree/OctreePoolShape';
 import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
@@ -43,13 +44,14 @@ export type GalaxyPooledPointRenderer = Omit<
   /** This frame's cut inputs (or none), and whether the cut is re-taken or only re-uniformed. */
   setFrameCut(inputs: OctreeCutInputs | null, recut: boolean): void;
   encodeCut(encoder: GPUCommandEncoder, claimTimestampWrites: ClaimTimestampWrites): void;
-  /** Both streams of every frame-cut source, each faded by its own source; a capture face reads the capture cut. */
+  /** One stream of every frame-cut source, each faded by its own source; a capture face reads the capture cut. */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
     settings: GalaxyPointDrawSettings,
     capture: boolean,
+    stream: OctreeDrawStream,
     blob: Pick<GalaxyCatalogSettings, GalaxyBlobTuningKey>,
   ): void;
   /** The live leaf draws of the frame-cut sources `include` keeps (blobs are not galaxies). */

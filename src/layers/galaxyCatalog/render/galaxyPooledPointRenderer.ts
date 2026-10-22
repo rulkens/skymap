@@ -62,7 +62,6 @@ const POOLED_MEDIAN_ABS_MAG_INDEX = 6;
 const POOLED_BLOB_WORDS_INDEX = 7;
 const POOLED_BLOB_WORDS = 3;
 const FIXED_DECODE_COLUMNS = ['colourIndex', 'axisRatio', 'pa', 'logSize'] as const;
-const STREAMS: readonly OctreeDrawStream[] = ['leaf', 'aggregate'];
 
 export function createGalaxyPooledPointRenderer(init: {
   device: GPUDevice;
@@ -93,7 +92,7 @@ export function createGalaxyPooledPointRenderer(init: {
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ],
   });
-  // One layout for both streams' pipelines, so the bind groups set once survive the switch.
+  // One layout for both streams' pipelines: each stream's pass binds the same groups.
   const layout = device.createPipelineLayout({
     label: 'galaxy-pooled-points-pipeline-layout',
     bindGroupLayouts: [uniformsBgl, cut.drawBgl, recordsBgl, focusBgl],
@@ -299,6 +298,7 @@ export function createGalaxyPooledPointRenderer(init: {
     viewportPx: Vec2,
     settings: GalaxyPointDrawSettings,
     capture: boolean,
+    stream: OctreeDrawStream,
     blob: Pick<GalaxyCatalogSettings, GalaxyBlobTuningKey>,
   ): void {
     if (frameCut === null) return;
@@ -318,15 +318,15 @@ export function createGalaxyPooledPointRenderer(init: {
       }
       fadeScratch[0] = opacity;
       device.queue.writeBuffer(entry.fadeBuffers[viewSlot]!, 0, fadeScratch);
-      device.queue.writeBuffer(entry.pooledBuffer, POOLED_BLOB_WORDS_INDEX * 4, blobScratch);
-      pass.setBindGroup(2, entry.bindGroups[viewSlot]!);
-      for (const stream of STREAMS) {
-        const cutDraw = cut.drawOf(source, stream, capture);
-        if (cutDraw === null) continue;
-        pass.setPipeline(pipelines[stream]);
-        pass.setBindGroup(1, cutDraw.bindGroup);
-        pass.drawIndirect(cutDraw.indirect, cutDraw.indirectOffset);
+      if (stream === 'aggregate') {
+        device.queue.writeBuffer(entry.pooledBuffer, POOLED_BLOB_WORDS_INDEX * 4, blobScratch);
       }
+      pass.setBindGroup(2, entry.bindGroups[viewSlot]!);
+      const cutDraw = cut.drawOf(source, stream, capture);
+      if (cutDraw === null) continue;
+      pass.setPipeline(pipelines[stream]);
+      pass.setBindGroup(1, cutDraw.bindGroup);
+      pass.drawIndirect(cutDraw.indirect, cutDraw.indirectOffset);
     }
   }
 

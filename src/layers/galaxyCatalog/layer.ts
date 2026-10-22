@@ -16,6 +16,7 @@ import { galaxyCatalogPlanner } from './frame';
 import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
 import { galaxyCatalogSourceCounts } from './load/galaxyCatalogSourceCounts';
 import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
+import { galaxyAggregatesPass } from './passes/galaxyAggregatesPass';
 import { galaxyCutCompute } from './computes/galaxyCutCompute';
 import { proceduralDisksPass } from './passes/proceduralDisksPass';
 import { texturedDisksPass } from './passes/texturedDisksPass';
@@ -41,6 +42,7 @@ export const galaxyCatalogLayer = defineLayer({
   destroy,
   passes: (runtime) => [
     galaxyPointSpritesPass(runtime),
+    galaxyAggregatesPass(runtime),
     proceduralDisksPass(runtime),
     texturedDisksPass(runtime),
   ],

@@ -1,24 +1,21 @@
 /**
  * galaxyPointSpritesPass — every loaded galaxy from every visible source as an
  * instanced additive billboard in the HDR target; the headline content layer.
- * Flat sources draw first, then the octree sources through their frame cut.
- * Core skips the pass when every catalog's handed value is 0; within it, the
- * renderer's own loop skips a source at exactly 0 opacity, which is what keeps
- * a hidden catalog or a completed deep-zoom band from rasterizing millions of
- * alpha-0 instances.
+ * Flat sources draw first, then the octree sources' leaves through their frame
+ * cut; their blobs are `galaxyAggregatesPass`. Core skips the pass when every
+ * catalog's handed value is 0; within it, the renderer's own loop skips a source
+ * at exactly 0 opacity, which is what keeps a hidden catalog or a completed
+ * deep-zoom band from rasterizing millions of alpha-0 instances.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
-import {
-  PROCEDURAL_DISK_FADE_START_PX,
-  PROCEDURAL_DISK_FADE_END_PX,
-} from '../../../data/galaxyLodBands';
+import { galaxyPointDrawSettingsOf } from '../render/galaxyPointDrawSettingsOf';
+import { pooledSelectedPackedOf } from '../render/pooledSelectedPackedOf';
 
 export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPass<'survey'> {
   return {
@@ -29,58 +26,24 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
     enabled: () => true,
 
     draw(pass, view, ctx, state, fade) {
-      const { drawPxPerRad } = ctx;
-
       // The shader compares a packed `(sourceCode << 26u) | instance_index` per
       // vertex; structure targets light no galaxy halo, so they take the sentinel.
       const select = state.selection.select;
-      const selected = select !== null && select.type === 'galaxyCatalog' ? select : null;
       const selectedPacked =
-        selected !== null
-          ? packSelection(selected.source, selected.index)
+        select !== null && select.type === 'galaxyCatalog'
+          ? packSelection(select.source, select.index)
           : SELECTION_NONE_SENTINEL;
-
-      const settings: GalaxyPointDrawSettings = {
-        viewSlot: ctx.viewSlot,
-        pointSizePx: state.settings.galaxyCatalogs.sizePx,
-        brightness: state.settings.galaxyCatalogs.brightness,
-        selectedPacked,
-        camPosWorld: view.camPos,
-        pxPerRad: drawPxPerRad,
-        provenance: state.settings.galaxyCatalogs.provenance,
-        biasMode: state.settings.bias.mode,
-        absMagLimit: state.settings.bias.absMagLimit,
-        depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
-        sbScale: state.settings.galaxyCatalogs.sbScale,
-        sbMax: state.settings.galaxyCatalogs.sbMax,
-        falloffStrength: state.settings.galaxyCatalogs.falloffStrength,
-        // Same apparent-pixel band the procedural-disk layer fades IN over, from
-        // one source of truth: drift between them re-creates the double-bright donut.
-        pxFadeStart: PROCEDURAL_DISK_FADE_START_PX,
-        pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
-        // @group(3): the engine owns one focus buffer, written once per frame in
-        // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
-        focusBindGroup: state.gpu.focusUniform!.bindGroup,
-        fadeOpacityOf: (source: SourceType) => fade[galaxyCatalogIdOf(source)],
-      };
+      const settings = galaxyPointDrawSettingsOf(view, ctx, state, fade, selectedPacked);
       runtime.pointRenderer.draw(pass, view.vp, view.viewportPx, settings);
 
-      // An octree source's halo names a pool row, which its ordinal maps to only while resident.
       const pooled = runtime.pooledPointRenderer;
-      const pooledIndex =
-        selected === null ? null : pooled.poolRecordIndex(selected.source, selected.index);
       pooled.draw(
         pass,
         view.vp,
         view.viewportPx,
-        {
-          ...settings,
-          selectedPacked:
-            selected === null || pooledIndex === null
-              ? SELECTION_NONE_SENTINEL
-              : packSelection(selected.source, pooledIndex),
-        },
+        { ...settings, selectedPacked: pooledSelectedPackedOf(pooled, select) },
         ctx.viewKind === 'capture',
+        'leaf',
         state.settings.galaxyCatalogs,
       );
     },

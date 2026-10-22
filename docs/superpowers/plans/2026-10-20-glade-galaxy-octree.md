@@ -54,6 +54,8 @@ Decided at plan time (each simpler than the spec text; the reviewer checks again
 - **D9. Blobs draw as a star-style box-filling glow in the galaxy points pass** (user ruling 2026-10-20, replacing "plain
   brighter billboard"): radius = the node's projected edge × an overlap factor, peak = the subtree's summed light over
   that area with a cap, as `starCatalog/vertex.wesl:222-251`; no separate low-res target unless the perf gate asks.
+  They draw in their own `galaxy-aggregates` pass beside `point-sprites` (user ruling 2026-10-22), so GPU timings bill
+  them on their own row as `star-aggregates` does; same hdr·COSMO step, so the merged strategy encodes one render pass.
 - **D10. The GPU derives the point fields** (user ruling 2026-10-21, superseding the 24-byte record in Task 9): the
   record carries only the wire codes (16 B, four words) and `points/pooledFields.wesl` is `derivePointRecord`'s WGSL
   twin, pinned by `tests/services/gpu/shaders/pooledFields.parity.test.ts`. A chunk landing's pack is bit-copies
@@ -460,7 +462,7 @@ then without `--dry`. Grep for the old name.
     at `(index records + slot·chunkCapacity)·24`, `evictChunk`).
   - It keeps a pick-slot snapshot like `starCatalogRenderer.ts:217-223` and exposes
     `recordOrdinal(source, pickIndex)` / `poolRecordIndex(source, ordinal)` over `recordOrdinal`/`poolRecordIndex`.
-  - It draws both streams (`drawOf(source, 'leaf' | 'aggregate')`) with `drawIndirect` into the galaxy points target (D9).
+  - It draws one stream per call (`drawOf(source, 'leaf' | 'aggregate')`) with `drawIndirect` into the galaxy points target (D9).
 - **Slot:**
   - `wireGalaxyOctreeSlot(entry, deps, host)` builds an `AssetSlot<Octree<GalaxyColumns>, GalaxyOctreeReq>`.
   - Its fetcher loads the index and the index info object through `dataUrl(octreeIndexPath('galaxy', 'glade'))`.
