@@ -18,13 +18,12 @@ import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const VIEWPORT: Vec2 = [100, 100];
 const FOV = Math.PI / 2;
@@ -43,7 +42,12 @@ function basisAt(psi: number, theta: number): Mat3 {
 }
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
-  return { bodyId: 'earth', anchorLocalM: [0, 0, 0], eyeRelAnchorM: eyeM, basisLocal };
+  return {
+    bodyId: asSceneBodyId('earth'),
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: eyeM,
+    basisLocal,
+  };
 }
 
 function zoomOut(): InputStep {
@@ -88,8 +92,8 @@ describe('north-up toggle', () => {
 
   it('off: the world arm holds the roll verbatim', () => {
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
-    const earth = bodies.get('earth')!;
+    const bodies = deriveBodyStates(CONST_J2000);
+    const earth = bodies.get(asSceneBodyId('earth'))!;
     const poseAtHR = (hr: number): CameraPose => ({
       target: [earth.positionMpc[0]!, earth.positionMpc[1]!, earth.positionMpc[2]!],
       yaw: 0.7,

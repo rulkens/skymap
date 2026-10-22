@@ -23,6 +23,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -54,8 +55,8 @@ const STATE = {
 describe('deriveFrameContext — a host carrying an on-screen mesh body', () => {
   it('keeps Earth in the slab table with the petunias filling the view and Earth behind the eye', () => {
     const states = deriveBodyStates(CONST_J2000);
-    const petunias = states.get('petunias')!.positionMpc;
-    const earth = states.get('earth')!.positionMpc;
+    const petunias = states.get(asSceneBodyId('petunias'))!.positionMpc;
+    const earth = states.get(asSceneBodyId('earth'))!.positionMpc;
     // Radially outward from Earth: aiming along it puts Earth ~180° off-axis
     // while the petunias sit dead centre at the eye's standoff.
     const outward = normalize3([

@@ -23,19 +23,20 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
-import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
 import type { FrameOf } from '../../../../../src/@types/camera/FrameOf';
 import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
 import type { SitePose } from '../../../../../src/@types/camera/SitePose';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../../src/utils/scene/asSurfaceSiteId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
-const SITE_ID = 'curiosity' as BodySourceId;
+const BODIES = deriveBodyStates(CONST_J2000);
+const SITE_ID = asSurfaceSiteId('curiosity');
 const SITE_FRAME: FrameOf['site'] = { site: SITE_ID };
-const MARS_FRAME: FrameOf['body'] = { body: 'mars' as BodySourceId };
+const MARS_FRAME: FrameOf['body'] = { body: asSceneBodyId('mars') };
 const SITE = findByIdOrThrow(SURFACE_FIXED_SITES, SITE_ID, 'siteRung.test');
 const ROVER = findByIdOrThrow(SCENE_MESH_BODIES, SITE_ID, 'siteRung.test');
 const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'siteRung.test').surface
@@ -44,7 +45,7 @@ const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'siteRung.test'
 const SITE_GROUND_R_M = siteGroundRadiusM(SITE, MARS_R_M);
 const ROW = CAMERA_RUNGS.site;
 
-function ctxFor(focusBodyId: BodySourceId | null): RungCtx {
+function ctxFor(focusBodyId: SceneBodyId | null): RungCtx {
   return {
     bodies: BODIES,
     poseBasis: B,
@@ -147,6 +148,6 @@ describe('the site rung in the ladder', () => {
   it('an orbit-driven mesh body never engages the site rung', () => {
     // The non-goal (§1), enforced by the driver kind rather than by a list:
     // Voyager 1 is metres across and would be well inside the band.
-    expect(ROW.engage(armAt(INSIDE), ctxFor('voyager1' as BodySourceId))).toBeNull();
+    expect(ROW.engage(armAt(INSIDE), ctxFor(asSceneBodyId('voyager1')))).toBeNull();
   });
 });

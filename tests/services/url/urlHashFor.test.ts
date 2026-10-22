@@ -22,6 +22,7 @@ import type { StarInfo } from '../../../src/@types/engine/StarInfo';
 import type { BlackHoleInfo } from '../../../src/@types/engine/BlackHoleInfo';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 function makeGalaxy(source: number): GalaxyInfo {
   return {
@@ -69,7 +70,7 @@ describe('URL_HASH_FOR', () => {
     // against the body seed tables (no loaded catalog needed).
     const moon: BodyInfo = {
       type: 'body',
-      id: 'moon',
+      id: asSceneBodyId('moon'),
       label: 'Moon',
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
@@ -83,7 +84,7 @@ describe('URL_HASH_FOR', () => {
     // Craft deep links keep the body prefix; only the craft row may claim them back.
     const hubble: CraftInfo = {
       type: 'craft',
-      id: 'hubble',
+      id: asSceneBodyId('hubble'),
       label: 'Hubble',
       positionMpc: [1e-6, 2e-6, 3e-6],
     };

@@ -15,7 +15,6 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -31,9 +30,9 @@ const MOVED_ON_SIM_DAYS = RENDERED_SIM_DAYS + 30;
 // resolved target must sit exactly one body radius from the body's centre.
 const ALTITUDE_M = 1e6;
 const EARTH_ARM: FramedCameraPose = {
-  frame: { body: SCENE_EARTH.id as BodySourceId },
+  frame: { body: SCENE_EARTH.id },
   pose: {
-    bodyId: SCENE_EARTH.id as BodySourceId,
+    bodyId: SCENE_EARTH.id,
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [SCENE_EARTH.surface.datumRadiusM + ALTITUDE_M, 0, 0],
     // right | up | forward as columns: right × up = forward = −x.

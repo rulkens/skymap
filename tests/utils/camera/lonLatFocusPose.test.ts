@@ -12,11 +12,11 @@ import { eyeFrameOf } from '../../../src/utils/camera/eyeFrameOf';
 import { directionToLonLatDeg } from '../../../src/utils/geo/directionToLonLatDeg';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { BODY_LOCAL_FRAME } from '../../../src/data/camera/bodyLocalFrame';
-import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { LonLatDeg } from '../../../src/@types/scene/LonLatDeg';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
-const EARTH = 'earth' as BodySourceId;
+const EARTH = asSceneBodyId('earth');
 const RADIUS_M = 6_371_000;
 
 const points: LonLatDeg[] = [

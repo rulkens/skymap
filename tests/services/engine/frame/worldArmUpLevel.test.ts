@@ -29,13 +29,12 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000);
 const RUNG_CTX = {
   bodies: BODIES,
   poseBasis: B,
@@ -44,8 +43,8 @@ const RUNG_CTX = {
 };
 
 const OPPORTUNITY = {
-  frame: { site: 'opportunity' as BodySourceId },
-  pose: { siteId: 'opportunity' as BodySourceId, headingRad: 0.4, elevationRad: 0.5, rangeM: 60 },
+  frame: { site: asSurfaceSiteId('opportunity') },
+  pose: { siteId: asSurfaceSiteId('opportunity'), headingRad: 0.4, elevationRad: 0.5, rangeM: 60 },
 };
 
 /** The drawn screen-up's tilt off the selected frame's pole, in degrees. */

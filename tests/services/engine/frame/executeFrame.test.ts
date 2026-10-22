@@ -31,9 +31,9 @@ import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimi
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // ── Encoder / pass recorder ──────────────────────────────────────────────────
 //
@@ -250,7 +250,7 @@ function makeCtx(): FrameView {
 function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
-    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: bodyId as BodySourceId } }),
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: asSceneBodyId(bodyId) } }),
   );
   return { ...base, slabs: [...base.slabs, ...bodySlabs] };
 }

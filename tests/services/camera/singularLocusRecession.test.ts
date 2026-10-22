@@ -19,19 +19,18 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const VIEWPORT: Vec2 = [100, 100];
 const FOV = Math.PI / 2;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
-const EARTH = BODIES.get('earth')!;
+const BODIES = deriveBodyStates(CONST_J2000);
+const EARTH = BODIES.get(asSceneBodyId('earth'))!;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 
 /** Scene up 0.41 rad off the pole; standpoint midway ON the arc — the locus. */
@@ -102,7 +101,7 @@ describe('singular-locus recession (round 7)', () => {
       // inside the 0.2/0.4 band's floor.
       const startHR = 0.05;
       let pose: BodyFixedPose = {
-        bodyId: 'earth',
+        bodyId: asSceneBodyId('earth'),
         anchorLocalM: [0, 0, 0],
         eyeRelAnchorM: [LU[0] * (1 + startHR), LU[1] * (1 + startHR), LU[2] * (1 + startHR)],
         basisLocal: arcBasis(LU),
@@ -178,7 +177,7 @@ describe('singular-locus recession (round 7)', () => {
       b[8],
     ] as Mat3;
     let pose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [LU[0] * (1 + hrInside), LU[1] * (1 + hrInside), LU[2] * (1 + hrInside)],
       basisLocal: sceneSideBasis,

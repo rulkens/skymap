@@ -24,6 +24,7 @@ import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 const STATES = deriveBodyStates(CONST_J2000);
@@ -55,7 +56,7 @@ function makeCtx(
   offsetKm: number,
   sceneBodies: readonly PositionedSceneBody[] = EVERY_BODY,
 ): FrameView {
-  const p = STATES.get(bodyId)!.positionMpc;
+  const p = STATES.get(asSceneBodyId(bodyId))!.positionMpc;
   const drawCamPos: Vec3 = [p[0] + offsetKm * KM_TO_MPC, p[1], p[2]];
   return {
     snapshot: { simDays: CONST_J2000, meshBodies: SCENE_MESH_BODIES, sceneBodies },

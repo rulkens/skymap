@@ -58,9 +58,10 @@ import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum'
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
-const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
 // The handed value is full: this fixture is about the ill-conditioned-projection regression, not the fade channels.
 const STAR_FADE = { sun: 1, famousStar: 1 };
 

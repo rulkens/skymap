@@ -60,8 +60,7 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
-import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -186,7 +185,7 @@ describe('arrivalSaga', () => {
     for (const action of arrival) sim.store.dispatch(action);
 
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
+    const bodies = deriveBodyStates(CONST_J2000);
     const shown = () =>
       foldToWorld(sim.state.cameraRuntime.outputs.displayed, {
         bodies,
@@ -260,7 +259,7 @@ describe('arrivalSaga', () => {
     h.boot();
     await flush();
 
-    const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get('mars')!.positionMpc;
+    const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get(asSceneBodyId('mars'))!.positionMpc;
     const target = worldArmOf(h.store.getState().camera.base).target;
     for (const axis of [0, 1, 2]) expect(target[axis]).toBeCloseTo(marsAtT[axis]!, 12);
     expect(h.status()).toEqual({ status: 'arrived' });

@@ -49,15 +49,16 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
-const EARTH = BODIES.get('earth')! as BodyState;
-const MARS = BODIES.get('mars')! as BodyState;
+const EARTH = BODIES.get(asSceneBodyId('earth'))! as BodyState;
+const MARS = BODIES.get(asSceneBodyId('mars'))! as BodyState;
 // The outer bound, matching cameraDrivers'/focusFraming's own read of
 // bodyFootprintRadiusM — not the datum, which F2's Earth relief now diverges
 // from by 0.14%.
@@ -203,7 +204,7 @@ const MARS_R = MARS_ROW.surface.datumRadiusM;
 const MARS_R_MPC = bodyFootprintRadiusM(MARS_ROW) * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const RUNG_CTX = {
-  bodies: BODIES as ReadonlyMap<BodySourceId, BodyState>,
+  bodies: BODIES,
   poseBasis: B,
   upBasis: B,
   terrainHeightAt: datumOnlyTerrainHeight,
@@ -217,7 +218,7 @@ function metresBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 
 /** Curiosity's world position (Mpc) for the bodies a fixture is driven with. */
 function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
-  const driver = positionDriverById('curiosity' as BodySourceId);
+  const driver = positionDriverById(asSceneBodyId('curiosity'));
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
   const p = sitePointBodyFixed(driver, siteGroundRadiusM(driver, MARS_R));
   const mars = bodies.get('mars')!;
@@ -248,9 +249,9 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
       absoluteArm(
         foldToWorld(
           {
-            frame: { site: 'opportunity' as BodySourceId },
+            frame: { site: asSurfaceSiteId('opportunity') },
             pose: {
-              siteId: 'opportunity' as BodySourceId,
+              siteId: asSurfaceSiteId('opportunity'),
               headingRad: 0.4,
               elevationRad: 0.5,
               rangeM: 60,
@@ -311,9 +312,9 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
       absoluteArm(
         foldToWorld(
           {
-            frame: { site: 'curiosity' as BodySourceId },
+            frame: { site: asSurfaceSiteId('curiosity') },
             pose: {
-              siteId: 'curiosity' as BodySourceId,
+              siteId: asSurfaceSiteId('curiosity'),
               headingRad: 0.4,
               elevationRad: 0.5,
               rangeM: 60,
@@ -343,9 +344,9 @@ describe('focusing the host from a rover site (adverse 10)', () => {
       absoluteArm(
         foldToWorld(
           {
-            frame: { site: 'curiosity' as BodySourceId },
+            frame: { site: asSurfaceSiteId('curiosity') },
             pose: {
-              siteId: 'curiosity' as BodySourceId,
+              siteId: asSurfaceSiteId('curiosity'),
               headingRad: 0.4,
               elevationRad: 0.5,
               rangeM,

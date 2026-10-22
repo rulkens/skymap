@@ -22,6 +22,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
@@ -111,7 +112,8 @@ describe('produceMissionCaptions', () => {
   it("emphasising Voyager 1 dims Voyager 2's caption and leaves Hubble's at full alpha", () => {
     loadTracks();
     // RENDER_ORIGIN_MPC is the Sun, so the craft's position is its caption anchor.
-    const camPos = deriveBodyStates(CONST_J2000).get('voyager2')!.positionMpc as Vec3;
+    const camPos = deriveBodyStates(CONST_J2000).get(asSceneBodyId('voyager2'))!
+      .positionMpc as Vec3;
     const ctx = makeCtx(camPos, 1e-9);
     const state = makeState();
     const before = produceMissionCaptions(state, ctx, CRAFT_ON).labels;

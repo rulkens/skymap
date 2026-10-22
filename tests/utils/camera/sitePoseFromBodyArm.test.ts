@@ -11,14 +11,15 @@ import { sitePointBodyFixed } from '../../../src/utils/camera/sitePointBodyFixed
 import { sitePoseFromBodyArm } from '../../../src/utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../src/utils/camera/sitePoseToBodyArm';
 import { SITE_RUNG } from '../../../src/data/camera/siteRung';
-import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 const ROVER: MeshBody = {
-  id: 'fixture-rover',
+  id: asSceneBodyId('fixture-rover'),
   label: 'Fixture rover',
   resolvePx: 3,
   boundingRadiusM: 2.479,
@@ -33,8 +34,8 @@ const RELEASE_EDGE_M = 80 * ROVER.boundingRadiusM;
 
 function site(latDeg: number, lonDeg: number): SurfaceFixedSite {
   return {
-    id: 'fixture-rover',
-    hostId: 'fixture-host',
+    id: asSurfaceSiteId('fixture-rover'),
+    hostId: asSceneBodyId('fixture-host'),
     latDeg,
     lonDeg,
     altitudeM: 1.7,
@@ -47,7 +48,7 @@ const SITES = [site(90, 0), site(0, 0), site(-4.59, 137.44)];
 const POSES: readonly SitePose[] = [
   // Elevation at the floor, range at the floor.
   {
-    siteId: 'fixture-rover' as BodySourceId,
+    siteId: asSurfaceSiteId('fixture-rover'),
     headingRad: 0.7,
     elevationRad: Math.asin(
       (SITE_RUNG.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / RANGE_FLOOR_M,
@@ -56,12 +57,12 @@ const POSES: readonly SitePose[] = [
   },
   // Elevation at the ceiling, range at the release edge.
   {
-    siteId: 'fixture-rover' as BodySourceId,
+    siteId: asSurfaceSiteId('fixture-rover'),
     headingRad: -2.5,
     elevationRad: SITE_RUNG.elevationCeilRad,
     rangeM: RELEASE_EDGE_M,
   },
-  { siteId: 'fixture-rover' as BodySourceId, headingRad: 3.0, elevationRad: 0.5, rangeM: 50 },
+  { siteId: asSurfaceSiteId('fixture-rover'), headingRad: 3.0, elevationRad: 0.5, rangeM: 50 },
 ];
 
 function expectRoundTrip(s: SurfaceFixedSite, hostRadiusM: number, pose: SitePose): void {
@@ -80,8 +81,8 @@ describe('sitePoseFromBodyArm', () => {
   it('a site on a non-Mars host round-trips identically', () => {
     // A 1 km host: nothing in the conversions may be Mars-typed or Mars-scaled.
     const tiny: SurfaceFixedSite = {
-      id: 'fixture-rover',
-      hostId: 'tiny-host',
+      id: asSurfaceSiteId('fixture-rover'),
+      hostId: asSceneBodyId('tiny-host'),
       latDeg: 61,
       lonDeg: -21,
       altitudeM: 0.5,
@@ -142,7 +143,7 @@ describe('sitePoseFromBodyArm', () => {
         (i) => RANGE_M * frame.localUp[i]! + offsetM * frame.east[i]!,
       ) as Vec3;
       return sitePoseFromBodyArm(
-        { bodyId: 'fixture-host' as BodySourceId, anchorLocalM: p, eyeRelAnchorM, basisLocal },
+        { bodyId: asSceneBodyId('fixture-host'), anchorLocalM: p, eyeRelAnchorM, basisLocal },
         s,
         HOST_RADIUS_M,
         ROVER,

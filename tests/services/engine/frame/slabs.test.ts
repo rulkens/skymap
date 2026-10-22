@@ -47,6 +47,7 @@ import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustumPerspectiveF64';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 function makeCam(distance: number): OrbitCamera {
   return createOrbitCamera({
@@ -70,7 +71,7 @@ const NO_POSE: BodyPoseProvider = () => null;
 
 function makePlanet(overrides: Partial<PlanetBody> = {}): PlanetBody {
   return {
-    id: 'test-planet',
+    id: asSceneBodyId('test-planet'),
     label: 'Test Planet',
     resolvePx: 3,
     surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
@@ -213,9 +214,9 @@ describe('deriveSlabs', () => {
   });
 
   it('emits one body row per visible body, back-to-front', () => {
-    const far = makePlanet({ id: 'body-far' });
-    const mid = makePlanet({ id: 'body-mid' });
-    const near = makePlanet({ id: 'body-near' });
+    const far = makePlanet({ id: asSceneBodyId('body-far') });
+    const mid = makePlanet({ id: asSceneBodyId('body-mid') });
+    const near = makePlanet({ id: asSceneBodyId('body-near') });
 
     const poseByBody = new Map<string, BodyRelativePose>([
       ['body-far', { eyeRelBodyM: [1e10, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
@@ -243,14 +244,14 @@ describe('deriveSlabs', () => {
   });
 
   it('drops a body whose pose is null this frame (culled)', () => {
-    const body = makePlanet({ id: 'culled-body' });
+    const body = makePlanet({ id: asSceneBodyId('culled-body') });
     const slabs = deriveSlabs(baseInput({ pose: NO_POSE, visibleRows: [body].map(bodySlabRowOf) }));
     expect(slabs).toHaveLength(2);
   });
 
   it('brackets a body row around its drawn radius — dM=1e9 m, rMaxM=1e5 m', () => {
     const body = makePlanet({
-      id: 'bracket-body',
+      id: asSceneBodyId('bracket-body'),
       surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
     });
     // ON-AXIS: eyeRelBodyM points along -forward ([0,0,1]), so viewZ === dM
@@ -285,7 +286,10 @@ describe('deriveSlabs', () => {
     // matrix from the same util this test rebuilds by hand for the body row
     // (no shared "foreground" util exists for body rows, so the lookAt and
     // projection are inlined here).
-    const body = makePlanet({ id: 'flip-body', surface: { datumRadiusM: 1e5, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('flip-body'),
+      surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
+    });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -323,7 +327,10 @@ describe('deriveSlabs', () => {
     const thetaRad = (33.8 * Math.PI) / 180;
     const radiusM = 58_232_000;
     const ringOuterM = 140_220_000;
-    const body = makePlanet({ id: 'saturn', surface: { datumRadiusM: radiusM, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('saturn'),
+      surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
+    });
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     // forward=[0,0,-1]; bodyRelEye = dM*(cosθ·forward + sinθ·right) =
     // [dM sinθ, 0, -dM cosθ]. eyeRelBodyM = -bodyRelEye (bodyRelativePose.ts:
@@ -362,7 +369,7 @@ describe('deriveSlabs', () => {
     const thetaRad = (20 * Math.PI) / 180;
     const radiusM = 5e6;
     const body = makePlanet({
-      id: 'ringless-off-axis-body',
+      id: asSceneBodyId('ringless-off-axis-body'),
       surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     });
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
@@ -382,7 +389,7 @@ describe('deriveSlabs', () => {
 
   it("floors a body row's near plane at MIN_NEAR_M when the camera is inside the drawn radius", () => {
     const body = makePlanet({
-      id: 'inside-body',
+      id: asSceneBodyId('inside-body'),
       surface: { datumRadiusM: 1000, reliefM: [0, 0] },
     });
     const pose: BodyPoseProvider = () => ({
@@ -404,7 +411,10 @@ describe('deriveSlabs', () => {
     // a naive `max(dM - rMaxM, MIN_NEAR_M)` formula would collapse near to 1e-6 m.
     const radiusM = 6.371e6;
     const dM = 6.449e6; // altitude = dM - radiusM = 78,000 m
-    const body = makePlanet({ id: 'earth', surface: { datumRadiusM: radiusM, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('earth'),
+      surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
+    });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [dM, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -476,7 +486,10 @@ describe('deriveSlabs', () => {
   });
 
   it("builds a body row's vp about the eye — RTC-native, no translation, body centre projects to screen centre", () => {
-    const body = makePlanet({ id: 'eye-body', surface: { datumRadiusM: 1e5, reliefM: [0, 0] } });
+    const body = makePlanet({
+      id: asSceneBodyId('eye-body'),
+      surface: { datumRadiusM: 1e5, reliefM: [0, 0] },
+    });
     // right=[1,0,0], up=[0,1,0], forward=[0,0,-1] — an orthonormal basis
     // satisfying right×up=−forward (this codebase's camera-basis handedness,
     // per `imagePlaneBasis`), with the camera looking straight down −Z.
@@ -528,7 +541,7 @@ describe('bodySlabRow attachedBodies widening', () => {
 
   function hostRow(attachedBodies?: Parameters<typeof bodySlabRow>[0]['attachedBodies']) {
     const body = makePlanet({
-      id: 'host-body',
+      id: asSceneBodyId('host-body'),
       surface: { datumRadiusM: HOST_RADIUS_M, reliefM: [0, 0] },
     });
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM: EYE_REL_BODY_M, basisM: BASIS_M });
@@ -572,8 +585,8 @@ describe('slabName', () => {
 
 describe('foregroundChainOrder', () => {
   it('sorts NEAR0 and body rows back-to-front, excluding COSMO', () => {
-    const far = makePlanet({ id: 'body-far' });
-    const near = makePlanet({ id: 'body-near' });
+    const far = makePlanet({ id: asSceneBodyId('body-far') });
+    const near = makePlanet({ id: asSceneBodyId('body-near') });
     const poseByBody = new Map<string, BodyRelativePose>([
       ['body-far', { eyeRelBodyM: [1e10, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
       ['body-near', { eyeRelBodyM: [1e6, 0, 0], basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
@@ -597,7 +610,7 @@ describe('foregroundChainOrder', () => {
     // the Milky Way impostor — are pickable with no sphere backing them, and
     // must not claim the frontmost hit). Reading a null range as "distance 0"
     // would sort it nearest, which is the regression this pins.
-    const body = makePlanet({ id: 'body-near' });
+    const body = makePlanet({ id: asSceneBodyId('body-near') });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [1e6, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -610,11 +623,11 @@ describe('foregroundChainOrder', () => {
 
   it('the body the camera is inside is the last foreground chain row', () => {
     const deeplyInside = makePlanet({
-      id: 'deeply-inside',
+      id: asSceneBodyId('deeply-inside'),
       surface: { datumRadiusM: 1e7, reliefM: [0, 0] },
     });
     const barelyInside = makePlanet({
-      id: 'barely-inside',
+      id: asSceneBodyId('barely-inside'),
       surface: { datumRadiusM: 1.1e6, reliefM: [0, 0] },
     });
     const poseByBody = new Map<string, BodyRelativePose>([

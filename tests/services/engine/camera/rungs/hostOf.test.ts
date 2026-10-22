@@ -7,17 +7,19 @@ import { describe, it, expect } from 'vitest';
 
 import { hostOf } from '../../../../../src/services/engine/camera/rungs/hostOf';
 import { hostOrThrow } from '../../../../../src/services/engine/camera/rungs/hostOrThrow';
-import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
 import type { RungBasisCtx } from '../../../../../src/@types/camera/RungBasisCtx';
 import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
+import type { PlaceId } from '../../../../../src/@types/scene/PlaceId';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-const EARTH: PoseFrame = { body: 'earth' };
+const EARTH: PoseFrame = { body: asSceneBodyId('earth') };
 
-function ctxWith(bodies: ReadonlyMap<BodySourceId, BodyState>): RungBasisCtx {
+function ctxWith(bodies: ReadonlyMap<SceneBodyId | PlaceId, BodyState>): RungBasisCtx {
   return {
     bodies,
     poseBasis: IDENTITY,

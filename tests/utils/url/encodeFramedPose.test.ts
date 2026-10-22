@@ -2,14 +2,15 @@ import { describe, it, expect } from 'vitest';
 
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
-import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 describe('encodeFramedPose', () => {
   it('serializes a body arm as the b-tagged, comma-joined form', () => {
     const arm: FramedCameraPose = {
-      frame: { body: 'earth' },
+      frame: { body: asSceneBodyId('earth') },
       pose: {
-        bodyId: 'earth',
+        bodyId: asSceneBodyId('earth'),
         anchorLocalM: [1, 2, 3],
         eyeRelAnchorM: [4, 5, 6],
         basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -20,8 +21,13 @@ describe('encodeFramedPose', () => {
 
   it('serializes a site arm as the s-tagged form', () => {
     const site: FramedCameraPose = {
-      frame: { site: 'curiosity' as BodySourceId },
-      pose: { siteId: 'curiosity' as BodySourceId, headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
+      frame: { site: asSurfaceSiteId('curiosity') },
+      pose: {
+        siteId: asSurfaceSiteId('curiosity'),
+        headingRad: 1.2,
+        elevationRad: 0.3,
+        rangeM: 12.5,
+      },
     };
     expect(encodeFramedPose(site)).toBe('s,curiosity,1.2,0.3,12.5');
   });

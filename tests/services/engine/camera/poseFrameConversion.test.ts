@@ -30,7 +30,8 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Provider A's floor: the world arm stores the eye as `target + distance·dir`
 // in Mpc at heliocentric magnitude, where one f64 ulp ≈ 25 µm. The conversion's
@@ -103,7 +104,7 @@ function expectVec3Near(actual: Vec3, expected: Vec3, tol: number, label: string
 }
 
 type Fixture = {
-  readonly bodyId: BodySourceId;
+  readonly bodyId: SceneBodyId;
   readonly positionMpc: Vec3;
   readonly orientation: Mat3;
   readonly poseBasis: Mat3;
@@ -128,7 +129,7 @@ const UP_FRAME: Mat3 = multiply3x3(rotYMat3(-1.05), rotXMat3(0.85));
 // orbit pose can carry the forward axis.
 const FIXTURES: readonly Fixture[] = [
   {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     positionMpc: [AU, 0, 0],
     orientation: IDENTITY,
     poseBasis: IDENTITY,
@@ -142,7 +143,7 @@ const FIXTURES: readonly Fixture[] = [
     },
   },
   {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     positionMpc: [0.6 * AU, 0.8 * AU, 0.1 * AU],
     orientation: TILTED_POLE,
     poseBasis: POSE_FRAME,
@@ -156,7 +157,7 @@ const FIXTURES: readonly Fixture[] = [
     },
   },
   {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     positionMpc: [0.6 * AU, 0.8 * AU, 0.1 * AU],
     orientation: TILTED_POLE,
     poseBasis: POSE_FRAME,
@@ -175,7 +176,7 @@ const FIXTURES: readonly Fixture[] = [
   {
     // Nothing is Earth-typed: the same conversion at a moon's radius. The id is
     // carried, never interpreted, so any registry body id serves.
-    bodyId: 'planet',
+    bodyId: asSceneBodyId('planet'),
     positionMpc: [AU, m(3.8e8), 0],
     orientation: TILTED_POLE,
     poseBasis: POSE_FRAME,
@@ -271,7 +272,7 @@ describe('poseFrameConversion', () => {
       distance: m(1.0e6),
     };
     const back = toWorldArm(
-      toBodyArm(pose, IDENTITY, IDENTITY, 'earth', state),
+      toBodyArm(pose, IDENTITY, IDENTITY, asSceneBodyId('earth'), state),
       state,
       IDENTITY,
       IDENTITY,
@@ -302,7 +303,7 @@ describe('poseFrameConversion', () => {
     const { right, up } = imagePlaneBasis(forward, 0, [0, 1, 0]);
     const back = toWorldArm(
       {
-        bodyId: 'earth',
+        bodyId: asSceneBodyId('earth'),
         anchorLocalM: [0, 0, 0],
         eyeRelAnchorM: [0, 0, EARTH_RADIUS_M],
         basisLocal: mat3FromColumns(right, up, forward),
@@ -356,7 +357,13 @@ describe('poseFrameConversion', () => {
     };
     updatePosition(cam);
 
-    const arm = toBodyArm(pose, POSE_FRAME, UP_FRAME, 'earth', bodyState([0, 0, 0], IDENTITY));
+    const arm = toBodyArm(
+      pose,
+      POSE_FRAME,
+      UP_FRAME,
+      asSceneBodyId('earth'),
+      bodyState([0, 0, 0], IDENTITY),
+    );
     expect(arm.eyeRelAnchorM).toEqual(cam.position.map((c) => c * SCALE_UNITS.MPC_TO_M));
     // …and this file's own hand-rolled twin of that decode, so a fixture-side
     // convention slip cannot cancel a module-side one.
@@ -426,7 +433,7 @@ function limbPose(tiltRad: number): BodyFixedPose {
   const forward: Vec3 = [Math.sin(tiltRad), 0, -Math.cos(tiltRad)];
   const { right, up } = imagePlaneBasis(forward, LIMB_ROLL_RAD, [0, 1, 0]);
   return {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [0, 0, LIMB_EYE_M],
     basisLocal: mat3FromColumns(right, up, forward),

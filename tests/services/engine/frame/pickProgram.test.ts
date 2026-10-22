@@ -41,7 +41,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ function makeCtx(): FrameView {
 function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
-    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: bodyId as BodySourceId } }),
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: asSceneBodyId(bodyId) } }),
   );
   return { ...base, slabs: [...base.slabs, ...bodySlabs] };
 }
@@ -887,7 +887,7 @@ describe('createPickProgram', () => {
       const base = makeCtx(); // NEAR0 distanceRangeM[0] = 0.01 Mpc (in metres)
       const nearBody = makeSlab({
         index: 2,
-        frame: { kind: 'body-m', hostId: 'mars' as BodySourceId },
+        frame: { kind: 'body-m', hostId: asSceneBodyId('mars') },
         // Genuinely nearer than NEAR0's bracket above.
         distanceRangeM: [0.0001 * SCALE_UNITS.MPC_TO_M, 0.0005 * SCALE_UNITS.MPC_TO_M],
       });
@@ -957,7 +957,7 @@ describe('createPickProgram', () => {
       // must not let NEAR0 sort as nearest again.
       const base = makeCtx();
       const unresolvedNear0 = { ...base.slabs[0]!, distanceRangeM: null };
-      const body = makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'mars' as BodySourceId } });
+      const body = makeSlab({ index: 2, frame: { kind: 'body-m', hostId: asSceneBodyId('mars') } });
       vi.mocked(pickFrameContext).mockReturnValue({
         ...base,
         slabs: [unresolvedNear0, base.slabs[1]!, body],

@@ -41,6 +41,7 @@ vi.mock('../../../../src/utils/camera/bodySlabCamLocal', () => ({
 }));
 
 import { encodeAtmosphereAerialPerspective } from '../../../../src/services/engine/frame/encodeAtmosphereAerialPerspective';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // atmosphereDrawList reads live body positions off this per-frame snapshot
 // (unmocked — its own cull math is covered elsewhere); stub it to the fixture's
@@ -88,7 +89,7 @@ function makeBodyPose(): BodyPoseProvider {
  *  invariant), so indexing `ctx.slabs` by that field lands on this row. */
 function makeCtx(withEarthSlab: boolean): FrameView {
   const slabs = withEarthSlab
-    ? [makeSlab({ index: 0, frame: { kind: 'body-m', hostId: 'earth' } })]
+    ? [makeSlab({ index: 0, frame: { kind: 'body-m', hostId: asSceneBodyId('earth') } })]
     : [];
   return {
     bodyPose: makeBodyPose(),
