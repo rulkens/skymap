@@ -86,6 +86,69 @@ export function planSurfaceTiles(
 
 - [x] Task 2
 
+### Task 3: tile planning reads no slab (user, 2026-10-22)
+
+review: yes
+
+The planner must not depend on the renderer's slab partition. Today it reads a `body-m` slab for
+three things, each with a renderer-free source:
+
+| Reads | For | Source instead |
+| --- | --- | --- |
+| a tiling host's `body-m` slab exists | the body is on screen | the frame's resolved scene bodies (`sceneBodyPresentation`, present, not sub-pixel, inside `FOREGROUND_MAX_DISTANCE_MPC`) ∩ `SURFACE_TILE_REGISTRY` |
+| `view.slab.vp` → `composeBodySlabMvp` | each view's body-local frustum (f64) | `FrameView.bodyPose(bodyId)` + `FrameView.frustum` + `viewportPx` |
+| `prepareBodySurfaceFrame`'s memo | one derivation shared with `earthPass` | none: one compose per view per frame |
+
+**Files:** `src/services/engine/frame/planSurfaceTiles.ts`; create a pure engaged-body chooser and a
+per-view tile-camera adapter (one symbol per file, `src/utils/surfaceTiles/` for pure helpers, the
+adapter beside `planSurfaceTiles` if it reads `FrameView`); a `TileCamera` type under `src/@types/`
+if `cutSurfaceTiles`' existing view input type doesn't already serve; delete `TilingSlab.d.ts` if it
+goes unused; tests.
+
+**Contract:**
+
+```ts
+export function tileCamerasOf(views: readonly FrameView[], bodyId: SurfaceTileBodyId,
+  radiusM: number): readonly { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[];
+export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pure over the frame's scene bodies
+```
+
+- **Narrow input (user, 2026-10-22).** The planner takes no `PassState`:
+
+  ```ts
+  export function planSurfaceTiles(
+    tiles: SurfaceTileSubsystem,
+    views: readonly FrameView[],
+    committedTier: (bodyId: SurfaceTileBodyId) => QualityTier,
+  ): PlannerResult<readonly SurfaceCutTile[]>;
+  ```
+
+  `datumRadiusM`/`reliefM` come from the static body tables by id; body positions for the release
+  check from `deriveBodyStates(view.snapshot.simDays)` (what `sceneBodyStates` does, without its
+  unused `state`); the committed tier is the one runtime fact. `runFrame` passes
+  `(id) => bodySurfaceTier(state, id)`. Its helpers (`planSurfaceCut`, `releaseTilesPastRadius`)
+  narrow the same way.
+- `cutSurfaceTiles` keeps its input; the planner feeds it the adapter's cameras and the first view's
+  `bodyPose(bodyId).eyeRelBodyM`.
+- `prepareBodySurfaceFrame` and `SlabView` no longer appear in tile planning; the drawing passes keep
+  them.
+- Verify, don't assume: (a) whether `cutSurfaceTiles` culls on the near/far planes (the slab vp's
+  depth band) or only on the side planes and horizon; the planner frustum must cull no fewer tiles
+  than the slab's in any mono pose; (b) that `engagedTileBody` agrees with "a tiling host has a
+  `body-m` slab" for every tiling body over the sub-pixel and distance edges. If either fails, STOP
+  and report with the evidence.
+
+**Tests:**
+
+- `the planner frustum culls as the slab frustum does` — for Earth at street level, orbit and limb
+  poses, the tile-camera `viewProjLocal` yields the same `cutSurfaceTiles` cut as the slab-built
+  matrix. **Bug caught:** a basis or f32 slip in the adapter plans tiles for the wrong patch.
+- `engages exactly the tiling bodies that get a body slab` — over poses across the sub-pixel and
+  `FOREGROUND_MAX_DISTANCE_MPC` edges. **Bug caught:** tiles plan for a body the renderer culled, or
+  stop for one it draws.
+
+- [ ] Task 3
+
 ---
 
 ## Definition of Done
