@@ -1,0 +1,44 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem 3rem;
+  --film-width: min(100%, 21rem);
+  --phone-width: 12.5rem;
+
+  & > :first-child {
+    flex: 0 1 21rem;
+  }
+}
+
+/* Where the remote's drag pad is on its picture, as shares of the screen. */
+.pad {
+  position: absolute;
+  top: 6.1%;
+  left: 4.1%;
+  width: 91.8%;
+  height: 40.2%;
+  container-type: inline-size;
+}
+
+/* A third of the pad's width each way; the film turns the scene to the right while `--turn` is below one half. */
+.finger {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--phone-width) * 0.12);
+  aspect-ratio: 1;
+  border: 2px solid rgb(255 255 255 / 0.7);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.3);
+  box-shadow: 0 0 0 0.5rem rgb(255 255 255 / 0.08);
+  translate: -50% -50%;
+  transform: translateX(calc(sin(var(--turn, 0) * 1turn) * 33cqw));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finger {
+    display: none;
+  }
+}

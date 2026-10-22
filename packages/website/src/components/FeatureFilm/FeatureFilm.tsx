@@ -6,6 +6,7 @@
  * no film, so no button.
  */
 import { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 
 import { SITE_LOOPS } from '../../data/siteLoops.ts';
 import { cx } from '../../utils/cx.ts';
@@ -15,9 +16,15 @@ import DiscFilm from '../DiscFilm/DiscFilm.tsx';
 import Icon from '../Icon/Icon.tsx';
 import styles from './FeatureFilm.module.css';
 
-type FeatureFilmProps = { film: string; sizes: string; wide?: boolean };
+type FeatureFilmProps = {
+  film: string;
+  sizes: string;
+  wide?: boolean;
+  /** The element that gets the film's `--turn`, where a neighbour moves with it. */
+  turnOn?: RefObject<HTMLElement | null>;
+};
 
-function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
+function FeatureFilm({ film, sizes, wide = false, turnOn }: FeatureFilmProps) {
   const [ready, setReady] = useState(false);
   const [wanted, setWanted] = useState(false);
   const [seen, setSeen] = useState(false);
@@ -46,6 +53,7 @@ function FeatureFilm({ film, sizes, wide = false }: FeatureFilmProps) {
         playing={wanted && seen}
         screenRef={screen}
         wide={wide}
+        turnOn={turnOn}
       >
         {ready && wide && (
           <button

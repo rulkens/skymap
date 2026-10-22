@@ -2,16 +2,18 @@
  * Phone3D — a phone drawn in CSS around one manifest picture of the app on a phone. The case is a stack
  * of slices behind the front, so its edge shows depth once the phone is turned. It rests at a fixed tilt;
  * phoneTurn.client.ts turns it a little toward the pointer where there is one and motion is welcome.
- * The host sets its width with `--phone-width`.
+ * The host sets its width with `--phone-width`; `children` lie over the screen.
  */
+import type { ReactNode } from 'react';
+
 import Shot from '../Shot/Shot.tsx';
 import styles from './Phone3D.module.css';
 
-type Phone3DProps = { shot: string; alt?: string };
+type Phone3DProps = { shot: string; alt?: string; children?: ReactNode };
 
 const SLICES = 9;
 
-function Phone3D({ shot, alt }: Phone3DProps) {
+function Phone3D({ shot, alt, children }: Phone3DProps) {
   return (
     <div className={styles.root} data-phone3d>
       <div className={styles.case}>
@@ -21,6 +23,7 @@ function Phone3D({ shot, alt }: Phone3DProps) {
         <div className={styles.front}>
           <div className={styles.screen}>
             <Shot id={shot} sizes="15rem" alt={alt} />
+            {children}
           </div>
           <span className={styles.island} />
         </div>

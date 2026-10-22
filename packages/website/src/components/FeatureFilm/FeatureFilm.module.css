@@ -4,7 +4,7 @@
 }
 
 .film {
-  width: 9rem;
+  width: var(--film-width, 9rem);
   padding: 0.5rem;
 }
 
