@@ -6,21 +6,20 @@ job: "What can Skymap do, and where is each thing explained?"
 
 import AddressStrip from '../../components/AddressStrip/AddressStrip.tsx';
 import FeatureFilm from '../../components/FeatureFilm/FeatureFilm.tsx';
+import FeatureGallery from '../../components/FeatureGallery/FeatureGallery.tsx';
 import FeatureSection from '../../components/FeatureSection/FeatureSection.tsx';
 import Figure from '../../components/Figure/Figure.tsx';
 import Phone3D from '../../components/Phone3D/Phone3D.tsx';
 import PictureBand from '../../components/PictureBand/PictureBand.tsx';
 import SectionHead from '../../components/SectionHead/SectionHead.tsx';
-import Shot from '../../components/Shot/Shot.tsx';
 import ShotCaption from '../../components/ShotCaption/ShotCaption.tsx';
 import { siteShot } from '../../data/siteShot';
 import layout from '../../styles/layout.module.css';
 import text from '../../styles/type.module.css';
 
 export const part = `${layout.wrap} ${layout.section}`;
-// The large visual takes seven of the page grid's twelve columns; a small still is 16rem, a disc's picture 8rem.
+// The large visual takes seven of the page grid's twelve columns; a disc's picture 8rem.
 export const big = '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)';
-export const small = '16rem';
 export const disc = '8rem';
 
 <PictureBand id="galaxies-measured" gap="none" eager>
@@ -33,14 +32,9 @@ export const disc = '8rem';
   <SectionHead title="Places" />
 </div>
 
-<FeatureSection title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around">
-  <Figure id="earth-terminator" sizes={big} showDrawn={false} />
-  <Shot slot="small" id="lead-park" sizes={small} />
-</FeatureSection>
+<FeatureGallery title="Earth in 3D" line="A globe with satellite imagery that you can fly down to, as far as aerial photographs of a park in Copenhagen." href="/docs/guide/moving/" label="Moving around" views={['earth-terminator', 'lead-park']} sizes={big} client:visible />
 
-<FeatureSection side="left" title="The Solar System" line="The planets and their moons on their orbits, where they are at the date on the clock." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons">
-  <Figure id="saturn" sizes={big} showDrawn={false} />
-</FeatureSection>
+<FeatureGallery side="left" title="The Solar System" line="The planets and their moons on their orbits, where they are at the date on the clock." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons" views={['saturn', 'data-io', 'data-pluto']} sizes={big} client:visible />
 
 <FeatureSection title="Missions" line="Spacecraft where they are at the date on the clock, and rovers on the ground on Mars." href="/docs/start/scene/#spacecraft" label="Spacecraft">
   <Figure id="data-perseverance" sizes={big} showDrawn={false} />
