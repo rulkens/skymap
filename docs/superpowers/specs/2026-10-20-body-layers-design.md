@@ -241,7 +241,10 @@ temporary core writer would only be thrown away.
 > `FOREGROUND_MAX_DISTANCE_MPC`, a pose and the sub-pixel cull, which a band does not carry; and core's
 > `bodyDrawRadiusM.ts:21-24` reads `ATMOSPHERE_PARAMS`. P5's shape is re-ruled before the body PR.
 
-### P6. The tile planner reads the rig views, not the canvas (own prep PR)
+**Packaging (user, 2026-10-22):** P6, P8 and P7 ship together as one prep PR, before the body PR,
+each as its own commits.
+
+### P6. The tile planner reads the rig views, not the canvas
 
 Ruling (user, 2026-10-22): the body PR ends with a lean core, holding no body code that is not
 shared. The surface-tile subsystem therefore moves (ruling 6), and its planner becomes a body
@@ -263,13 +266,57 @@ The prep removes the canvas from tile planning, with no contract change:
   (`engine.ts:299` is `planners: []`), and adding one for a single interim row would be thrown away.
 - `prepareBodySurfaceFrame` leaves `earthPass.ts` (a pass file exporting a second symbol, read by the
   planner, `surfaceTilesPass` and the old `surfaceTilesEngaged` gate) for its own file.
+- **No slab, no `PassState` (user, 2026-10-22).** Tile planning reads no slab: a slab is the
+  renderer's depth partition. The engaged body comes from `visibleBodyRows(snapshot, gate)`, the
+  visible-body cull extracted from `deriveView` (`visibleSlabBodies` over `slabBodyCandidates`, plus the
+  mesh-host re-admission), which `deriveView` and the chooser both call, so one rule decides "on
+  screen" for slabs and tiles alike. Each view's body-local frustum is built from
+  `FrameView.bodyPose` and `FrameView.frustum` in f64; `cutSurfaceTiles` reads only the x, y and w
+  rows of that matrix, so the slab's near/far band never mattered (verified). The signature is
+  `planSurfaceTiles(tiles, views, committedTier)`: surface radii and relief come from the static body
+  tables, positions from `view.snapshot.simDays`, and the committed globe tier is the one runtime fact.
+  The planner files sit together in `src/services/engine/frame/surfaceTilePlanner/`.
 
-Left for the body PR: the cut travels as the planner's value (`snapshot.plans`), deleting the
-subsystem's `setLastCut`/`getLastCut` hand-off, once the planner is a registered row; and the move
-of the plan from `runFrame`'s position into the frame program's plan phase (the plan verifies no
-reader between the two depends on this frame's cut or fetch queue).
+Left for the body PR: the cut travels as the planner's value (`snapshot.plans`) once the planner is
+a registered row (P8 already moves it out of the subsystem's `setLastCut`/`getLastCut`), and the plan
+moves from `runFrame`'s position into the frame program's plan phase (the plan verifies no reader
+between the two depends on this frame's cut or fetch queue).
 
-### P7. The surface-tile debug readout publishes through `facts` (next)
+### P8. Tile state is one reducer-shaped runtime
+
+Ruling (user, 2026-10-22): state the planner needs lives in one central place, changed by
+reducer-shaped logic, at no per-frame cost. Today it is closure state in `surfaceTileSubsystem.ts`
+(631 lines): `manifestBodyId`/`manifestPending`/`manifest` (`:109-111`), `paramsState` (`:116`), the
+albedo and height residency maps (`:136-137`), `pendingLevelOf` (`:142`), `lastEngaged` (`:146`),
+`frameCounter` (`:152`) and `lastCut` (`:158`), changed through `update`, `release`, `setLastCut` and
+read through `residentSlot`, `plannerParams`, `isAnimating`, `getDebugSnapshot`, `terrainHeightAt` and
+`residentHeightLevelAt`.
+
+The precedent is the camera: `state.cameraRuntime` is plain data, `stepCameraRuntime(prev, inputs)`
+returns `{ next, actions }` (`stepCameraRuntime.ts`), `runFrame` makes the one assignment, and
+unchanged groups come back by identity. P8 gives tiles the same shape:
+
+```ts
+type SurfaceTileRuntime = { engaged; manifest; params; residency; heightResidency; pending; cut; … };
+stepSurfaceTiles(prev, { cameras, committedTier, events }) → { next, effects };
+// events: tile loaded / failed / evicted, manifest loaded (from the effect shell)
+// effects: fetch(key, priority), upload(key → slot), release atlas
+```
+
+- The GPU atlases and the fetch queue are resources, not state: a thin effect shell runs the effects
+  and turns completions into the next frame's events. `tileStreamSubsystem` and `TextureAtlas` are
+  shared with the galaxy stream and stay core.
+- Reads become pure functions of the runtime: residency lookup for the cut, the terrain seam's height
+  queries, the wake vote, and the debug snapshot (which makes P7 a selector).
+- Cost: a quiet frame returns `prev` by identity; while streaming, events batch per frame, so the
+  residency map is copied at most once a frame (≤ ~1,000 entries, tens of µs).
+- Home: `EngineState` until the body PR, then the body Layer's runtime.
+
+The plan prices the risks: GPU upload ordering against the cut that names a slot, LRU eviction
+mid-fetch (`tileStreamSubsystem.ts` header: `upload()` is the single writer of loaded keys), and the
+terrain seam reading residency between steps.
+
+### P7. The surface-tile debug readout publishes through `facts`
 
 The DebugPanel's surface-tile section (`SurfaceTileAtlasSectionContainer.tsx`, 53 lines, plus
 `DebugPanel/SurfaceTileAtlasSection.tsx`, 211) polls `engineHandleRef.current.debug.surfaceTiles()`
@@ -296,9 +343,11 @@ Checked (2026-10-22):
 - `surfaceTileTerrain.ts:12` reads `getDebugSnapshot().subCamera` for the terrain seam; that read
   moves with the subsystem and is not the panel's.
 - `engine.debug.surfaceTiles` (`engine.ts:504-505`, `EngineDebugHandle.d.ts:55`) deletes once the
-  section reads the store. The widening alternatives are a canvas
-view for once-scope planners (every planner's signature) and props on `LayerUiSection` (the whole
-engine handle to every Layer's debug UI).
+  section reads the store.
+- After P8 the snapshot is a pure selector over `SurfaceTileRuntime`.
+
+The widening alternative was props on `LayerUiSection`, handing the whole engine handle to every
+Layer's debug UI.
 
 ### Growth, per touchpoint
 
