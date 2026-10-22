@@ -6,7 +6,6 @@
  */
 
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -18,12 +17,13 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { bodyRelativePose } from './bodyRelativePose';
 import { toBodyArm } from './poseFrameConversion';
 import { hostOrThrow } from './rungs/hostOrThrow';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
 export function toBodyFixedChannels(
   pose: CameraPose,
   bodyId: SceneBodyId,
-  bodies: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
+  bodies: ReadonlyMap<PositionedId, BodyState>,
   basis: Readonly<Mat3>,
 ): CameraPose {
   const bodyState = hostOrThrow(

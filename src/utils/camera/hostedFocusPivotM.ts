@@ -11,10 +11,10 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { positionDriverById } from '../../data/bodies/positionDrivers';
 import { siteGroundRadiusM } from './siteGroundRadiusM';
 import { sitePointBodyFixed } from './sitePointBodyFixed';
-import type { PlaceId } from '../../@types/scene/PlaceId';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export function hostedFocusPivotM(
-  focusBodyId: SceneBodyId | PlaceId | null,
+  focusBodyId: PositionedId | null,
   hostId: SceneBodyId,
   hostRadiusM: number,
 ): Vec3 | null {

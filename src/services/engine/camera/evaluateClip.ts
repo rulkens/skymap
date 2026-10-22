@@ -95,8 +95,6 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipFrameOptions } from '../../../@types/animation/ClipFrameOptions';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
-import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { PoseFrame } from '../../../@types/camera/PoseFrame';
@@ -116,6 +114,7 @@ import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHe
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
 import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -521,7 +520,7 @@ function legIndexAt(legs: readonly FrameLeg[], t: number): number {
 }
 
 type FrameDeps = {
-  readonly bodies: ReadonlyMap<SceneBodyId | PlaceId, BodyState>;
+  readonly bodies: ReadonlyMap<PositionedId, BodyState>;
   /** The clip's own steady basis — its absolute angles were authored through it. */
   readonly basis: Mat3;
   /** Memo owner: the leg-start conversion is captured once per playback. */

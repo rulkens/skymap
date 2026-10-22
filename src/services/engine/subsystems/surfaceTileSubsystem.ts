@@ -56,6 +56,7 @@ import {
 } from '../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 import { isSurfaceTileBodyId } from '../../../utils/surfaceTiles/isSurfaceTileBodyId';
+import { surfaceTileSpecOf } from '../../../utils/surfaceTiles/surfaceTileSpecOf';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 /** Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`), so
@@ -217,10 +218,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   }
 
   function plannerParams(bodyId: SceneBodyId, baseLevel: number): SurfaceTilePlannerParams | null {
-    if (!isSurfaceTileBodyId(bodyId)) return null;
-    // A tagged literal cannot index; widening to the plain key can.
-    const key: SurfaceTileBodyId = bodyId;
-    const spec = SURFACE_TILE_REGISTRY[key];
+    const spec = surfaceTileSpecOf(bodyId);
+    if (spec === null) return null;
     // A different body than the one whose manifest is loaded/loading —
     // supersede it. `manifestBodyId` is checked again inside the `.then`,
     // so a fetch superseded by ANOTHER body switch never writes a stale

@@ -19,6 +19,11 @@ import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
 const isCraftId = (id: string): id is SceneBodyId => isSceneBodyId(id) && MISSION_CRAFT_IDS.has(id);
 
 export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
+  const decode = (id: string): Extract<SelectionRef, { type: 'craft' }> | null => {
+    if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
+    const craftId = id.slice(BODY_FOCUS_PREFIX.length);
+    return isCraftId(craftId) ? { type: 'craft', id: craftId } : null;
+  };
   return {
     type: 'craft',
     pickSources: [Source.Craft],
@@ -33,12 +38,8 @@ export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { ty
       return { ...row, type: 'craft' };
     },
     focusId: {
-      claims: (id) =>
-        id.startsWith(BODY_FOCUS_PREFIX) && isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),
-      decode: (id) => {
-        const craftId = id.slice(BODY_FOCUS_PREFIX.length);
-        return isCraftId(craftId) ? { type: 'craft', id: craftId } : null;
-      },
+      claims: (id) => decode(id) !== null,
+      decode,
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

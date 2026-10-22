@@ -40,7 +40,6 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../../../../@types/rendering/PlanetRenderer';
-import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import {
   BODY_SPHERE_RINGS,
@@ -50,6 +49,7 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/planet/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/planet/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 /**
  * Float32 slots in the one-instance record: four `vec4<f32>` MVP columns (16)
@@ -189,11 +189,11 @@ export function createPlanetRenderer(
   // `draw` once per row, all inside one submit (see the module header's
   // writeBuffer-vs-submit note). A body-m row draws exactly one planet, so
   // each buffer is a fixed one-instance allocation, created once and reused.
-  const bodies = new Map<SlabHostId, GPUBuffer>();
+  const bodies = new Map<PositionedId, GPUBuffer>();
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, hostId: SlabHostId, instance: Float32Array): void {
+  function draw(pass: GPURenderPassEncoder, hostId: PositionedId, instance: Float32Array): void {
     let buffer = bodies.get(hostId);
     if (buffer === undefined) {
       buffer = device.createBuffer({

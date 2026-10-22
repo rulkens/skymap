@@ -6,8 +6,6 @@
  * maps through; `aspect` is the backing store's, which only changes on a resize.
  */
 
-import type { SceneBodyId } from '../../scene/SceneBodyId';
-import type { PlaceId } from '../../scene/PlaceId';
 import type { BodyState } from '../../scene/BodyState';
 import type { CameraDriver } from './CameraDriver';
 import type { CameraState } from '../../camera/CameraState';
@@ -16,6 +14,7 @@ import type { InputStep } from '../../camera/InputStep';
 import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
 import type { RootState } from '../../../store/types';
+import type { PositionedId } from '../../scene/PositionedId';
 
 export type StepInputs = {
   readonly nowMs: number;
@@ -25,7 +24,7 @@ export type StepInputs = {
   /** `canvas.width / canvas.height` after `resizeCanvasToDisplay`. */
   readonly aspect: number;
   readonly steps: readonly InputStep[];
-  readonly bodies: ReadonlyMap<SceneBodyId | PlaceId, BodyState>;
+  readonly bodies: ReadonlyMap<PositionedId, BodyState>;
   /** `SurfaceTileSubsystem.terrainHeightAt` bound by `runFrame`, or a `() =>
    *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;

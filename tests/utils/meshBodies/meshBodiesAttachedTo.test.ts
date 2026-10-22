@@ -26,6 +26,7 @@ vi.mock('../../../src/data/bodies/sceneMeshBodies', () => ({
 }));
 
 import { meshBodiesAttachedTo } from '../../../src/utils/meshBodies/meshBodiesAttachedTo';
+import type { PositionedId } from '../../../src/@types/scene/PositionedId';
 
 describe('meshBodiesAttachedTo', () => {
   it('returns the mesh bodies whose focus matches the host id', () => {

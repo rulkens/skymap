@@ -4,10 +4,9 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
-import type { SceneBodyId } from './SceneBodyId';
-import type { PlaceId } from './PlaceId';
+import type { PositionedId } from './PositionedId';
 
 export type AnchorBody = {
-  readonly id: SceneBodyId | PlaceId;
+  readonly id: PositionedId;
   readonly positionMpc: Vec3; // absolute heliocentric, f64-valued
 };

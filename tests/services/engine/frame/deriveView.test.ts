@@ -32,7 +32,6 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
-import type { SlabHostId } from '../../../../src/@types/engine/frame/SlabHostId';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
@@ -46,6 +45,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
 // Roll and a rotated orientation basis keep every lookAt element off ±0, so the
 // pin below compares real values rather than the sign of a zero.
@@ -792,7 +792,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
     // cast is the one every body anchor takes (`bodySlabRowOf`).
     const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
     const layerRow: SlabRow = {
-      anchorId: 'sun' as SlabHostId,
+      anchorId: 'sun' as PositionedId,
       drawRadiusM: () => SUN_OUTER_M,
       footprintRadiusM: SUN_OUTER_M,
       source: 'foreground',

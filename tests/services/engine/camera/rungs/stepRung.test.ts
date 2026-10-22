@@ -26,8 +26,8 @@ import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
-import type { PlaceId } from '../../../../../src/@types/scene/PlaceId';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import type { PositionedId } from '../../../../../src/@types/scene/PositionedId';
 
 const EARTH_RADIUS_M = 6371000;
 const DEIMOS_RADIUS_M = 6000;
@@ -80,7 +80,7 @@ function bodyArm(
 }
 
 function ctxFor(
-  bodies: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
+  bodies: ReadonlyMap<PositionedId, BodyState>,
   focusBodyId: SceneBodyId | null,
 ): RungCtx {
   return {
@@ -98,7 +98,7 @@ function ctxFor(
 
 describe('stepRung', () => {
   it('engages the nearest body below the engage threshold', () => {
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const next = stepRung(
@@ -109,7 +109,7 @@ describe('stepRung', () => {
   });
 
   it('holds the world arm above the engage threshold', () => {
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const next = stepRung(
@@ -121,7 +121,7 @@ describe('stepRung', () => {
 
   it('holds an engaged body arm until disengage, from both directions', () => {
     const { engageHR, disengageHR } = TUNING;
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const current = { body: asSceneBodyId('earth') };
@@ -151,7 +151,7 @@ describe('stepRung', () => {
     // in the engage cell's inputs names which body is focused, so an
     // unfocused flyby past the nearer body still engages it.
     const eyeMpc: Vec3 = [m(MOON_RADIUS_M * (1 + TUNING.engageHR * 0.5)), 0, 0];
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
       [asSceneBodyId('moon'), bodyStateAtOrigin()],
     ]);
@@ -160,7 +160,7 @@ describe('stepRung', () => {
   });
 
   it('is body-blind: a small moon engages at its own engage threshold', () => {
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('deimos'), bodyStateAtOrigin()],
       // Earth present but far away — its own h/R stays huge, so if the
       // predicate ever floored the threshold to Earth's radius the small
@@ -175,7 +175,7 @@ describe('stepRung', () => {
   });
 
   it('a focus on a DIFFERENT body releases the engaged arm at any altitude (round 10)', () => {
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const current = { body: asSceneBodyId('earth') };
@@ -193,7 +193,7 @@ describe('stepRung', () => {
   it('focusing the engaged body itself is a no-op', () => {
     // Mutation guard: with the condition inverted, every re-focus of the
     // engaged body would pop the camera to the world arm.
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const current = { body: asSceneBodyId('earth') };
@@ -211,7 +211,7 @@ describe('stepRung', () => {
     // range; if the engage side ignored the focus, the fold would engage on
     // frame N+1 and release again on N+2, committing a flip every frame
     // until the follow ease escapes the band.
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const eye = eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.5);
@@ -235,7 +235,7 @@ describe('stepRung', () => {
     const site = sitePointBodyFixed(curiosity, siteGroundRadiusM(curiosity, marsRadiusM));
     const mag = Math.hypot(site[0], site[1], site[2]);
     const up: Vec3 = [site[0] / mag, site[1] / mag, site[2] / mag];
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('mars'), bodyStateAtOrigin()],
     ]);
     const current = { body: asSceneBodyId('mars') };
@@ -252,7 +252,7 @@ describe('stepRung', () => {
     // the scene — so the surface arm engaged beside a boom and the orbit drag
     // snapped to surface damping.
     const petunias = findByIdOrThrow(SCENE_MESH_BODIES, 'petunias', 'test');
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('petunias'), bodyStateAtOrigin()],
     ]);
     const insideM = m(petunias.boundingRadiusM * 0.5);
@@ -262,7 +262,7 @@ describe('stepRung', () => {
   });
 
   it('stepRung moves at most one rung per call', () => {
-    const bodyStates = new Map<SceneBodyId | PlaceId, BodyState>([
+    const bodyStates = new Map<PositionedId, BodyState>([
       [asSceneBodyId('earth'), bodyStateAtOrigin()],
     ]);
     const world = worldArm(eyeAt(EARTH_RADIUS_M, TUNING.engageHR * 0.1));

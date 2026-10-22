@@ -30,8 +30,7 @@ import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
-import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { PlaceId } from '../../../@types/scene/PlaceId';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -44,10 +43,10 @@ const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 // passes and a paused clock re-reads it every frame, so a one-deep cache makes
 // both free; a new instant, or a track arriving on a paused clock, recomputes.
 let cache:
-  | { simDays: number; version: number; states: ReadonlyMap<SceneBodyId | PlaceId, BodyState> }
+  | { simDays: number; version: number; states: ReadonlyMap<PositionedId, BodyState> }
   | undefined;
 
-export function deriveBodyStates(simDays: number): ReadonlyMap<SceneBodyId | PlaceId, BodyState> {
+export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, BodyState> {
   const version = trajectoryRegistry.version();
   if (cache !== undefined && simDays === cache.simDays && version === cache.version) {
     return cache.states;
@@ -55,8 +54,8 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<SceneBodyId | Pla
 
   // Phase 1 — positions only, so phase 2 can orient a body against where the
   // *other* bodies ended up rather than against iteration order.
-  const positions = new Map<SceneBodyId | PlaceId, Vec3>();
-  const orbits = new Map<SceneBodyId | PlaceId, OrbitalElements>();
+  const positions = new Map<PositionedId, Vec3>();
+  const orbits = new Map<PositionedId, OrbitalElements>();
 
   // 1a — the roots: position authored, not orbited, so no orbit. The authored
   // position is shared by reference rather than copied: it is never mutated,
@@ -110,7 +109,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<SceneBodyId | Pla
 
   // Phase 2 — orientations over the finished position map. Anchors go through
   // `orientationForBody` too, so the rotation-row gate stays one gate.
-  const states = new Map<SceneBodyId | PlaceId, BodyState>();
+  const states = new Map<PositionedId, BodyState>();
   for (const [id, positionMpc] of positions) {
     states.set(id, {
       positionMpc,

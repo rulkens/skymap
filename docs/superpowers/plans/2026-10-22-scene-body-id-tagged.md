@@ -102,7 +102,7 @@ then Task 3 moves the scene uses off it.
 wrong-domain comments (`SimBodyId.ts`, `earthPass.test.ts`, `stepRung.test.ts`,
 `planetRenderer.test.ts`, `frameContext.test.ts`, `bodyRung.test.ts`).
 
-`BODY_IDS` (`src/data/bodies/bodyIds.ts`) stays: `tools/utils/capture/labelDeclutterActions.ts`
+`BODY_SOURCE_IDS` (`src/data/bodies/bodySourceIds.ts`) stays: `tools/utils/capture/labelDeclutterActions.ts`
 reads it to switch every body label off, so it is not dead.
 
 ## Definition of Done

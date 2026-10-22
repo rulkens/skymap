@@ -23,9 +23,9 @@ import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
 import { isSiteArm } from './isSiteArm';
 import { refoldTo } from './refoldTo';
-import type { PlaceId } from '../../../../@types/scene/PlaceId';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
-function siteRowOf(id: SceneBodyId | PlaceId): SurfaceFixedSite | null {
+function siteRowOf(id: PositionedId): SurfaceFixedSite | null {
   const driver = positionDriverById(id);
   return driver.kind === 'surfaceFixed' ? driver : null;
 }

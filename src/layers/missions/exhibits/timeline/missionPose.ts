@@ -57,9 +57,7 @@ export function missionPose(
 ): DriverOutput<MissionCameraMemory> {
   // The exhibit's snapshot always sets the craft before this row can win.
   const craftId = ctx.state.settings.missions.craft;
-  // A settings value is a raw string, so it is checked before it keys anything.
-  if (craftId === null || !isSceneBodyId(craftId))
-    return { pose: ctx.state.camera.base, memory: mem };
+  if (craftId === null) return { pose: ctx.state.camera.base, memory: mem };
   const mission: MissionCourse = { craftId, stops: stopsOf(data, craftId), cruise: data.cruise };
   const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
@@ -191,6 +189,6 @@ export function missionPose(
         distance: frame.distance * offsets.zoom,
       },
     },
-    pivotBody: craftId,
+    pivotBody: isSceneBodyId(craftId) ? craftId : undefined,
   };
 }

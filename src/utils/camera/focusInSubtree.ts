@@ -6,11 +6,8 @@
 
 import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import { surfaceFixedChain } from './surfaceFixedChain';
-import type { PlaceId } from '../../@types/scene/PlaceId';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
-export function focusInSubtree(
-  focusId: SceneBodyId | PlaceId | null,
-  rungId: SceneBodyId,
-): boolean {
+export function focusInSubtree(focusId: PositionedId | null, rungId: SceneBodyId): boolean {
   return focusId === null || surfaceFixedChain(focusId).includes(rungId);
 }

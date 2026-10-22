@@ -6,15 +6,14 @@
  * of the row and never resolve a focus id against a body table.
  */
 
-import type { SceneBodyId } from '../../scene/SceneBodyId';
-import type { PlaceId } from '../../scene/PlaceId';
+import type { PositionedId } from '../../scene/PositionedId';
 export type DriverGeometry = {
   /**
-   * `deriveBodyStates` key — a `SlabHostId` where a slab row names one. Null
+   * `deriveBodyStates` key — a `PositionedId` where a slab row names one. Null
    * when the focus has no table row to pose from (a survey star), which is what
    * every "does this focus drive the camera's target" gate reads.
    */
-  readonly poseId: SceneBodyId | PlaceId | null;
+  readonly poseId: PositionedId | null;
   /** Pivot floor for a groundless driver: a mesh hull, a hole's horizon. */
   readonly boundingRadiusM: number;
   /** Framing distance, halo radius, approach distance. */

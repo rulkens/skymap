@@ -14,8 +14,7 @@ import { SAMPLED_BODIES } from './sampledBodies';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
 import type { PositionDriver } from '../../@types/scene/PositionDriver';
 import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
-import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
-import type { PlaceId } from '../../@types/scene/PlaceId';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export const POSITION_DRIVERS: readonly PositionDriver[] = [
   ...SCENE_ANCHORS.map(
@@ -46,7 +45,7 @@ export function positionDriverById(id: string): PositionDriver {
  * The body this one hangs off: an orbit's focus, a sampled craft's Sun, a site's host. Anchors hang
  * off nothing. Not `utils/bodyTextures/hostBodyId`, which resolves a TEXTURE key's host.
  */
-export function bodyHostId(id: string): SceneBodyId | PlaceId | null {
+export function bodyHostId(id: string): PositionedId | null {
   const driver = positionDriverById(id);
   switch (driver.kind) {
     case 'anchor':

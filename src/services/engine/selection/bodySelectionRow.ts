@@ -26,6 +26,12 @@ const BODY_SOURCE_CODES: readonly SourceType[] = SOURCE_ENTRIES.filter(
 ).map((e) => e.code as SourceType);
 
 export function bodySelectionRow(): SelectionKindRow<BodyRef> {
+  // Exact, not the whole prefix: a craft's `body-<id>` is the `craft` kind's claim.
+  const decode = (id: string): BodyRef | null => {
+    if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
+    const bodyId = id.slice(BODY_FOCUS_PREFIX.length);
+    return isCoreBodyId(bodyId) ? { type: 'body', id: bodyId } : null;
+  };
   return {
     type: 'body',
     pickSources: BODY_SOURCE_CODES,
@@ -41,13 +47,8 @@ export function bodySelectionRow(): SelectionKindRow<BodyRef> {
       return bodyRowAt(ref.id, deriveBodyStates(simDays).get(ref.id)!.positionMpc);
     },
     focusId: {
-      // Exact, not the whole prefix: a craft's `body-<id>` is the `craft` kind's claim.
-      claims: (id) =>
-        id.startsWith(BODY_FOCUS_PREFIX) && isCoreBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-      decode: (id) => {
-        const bodyId = id.slice(BODY_FOCUS_PREFIX.length);
-        return isCoreBodyId(bodyId) ? { type: 'body', id: bodyId } : null;
-      },
+      claims: (id) => decode(id) !== null,
+      decode,
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

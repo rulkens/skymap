@@ -101,7 +101,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`createTieredScfdFetcher` factory** `ready` — the dust Layer reuses or lifts `cosmicWebDensityFetcher` rather than hand-copying a fourth tiered-SCFD fetcher.
 - [ ] **Body-arm entry doesn't adopt the arriving pose's tilt** `deferred` — disengage can pop up to 37°. → [details](backlog/2026-09-11-camera-arm-entry-adopts-arriving-tilt.md)
 - [ ] **World-arm wheel burst has no per-frame turn clamp** `awaiting-decision` — a 20-notch burst can roll 115° in one frame. → [details](backlog/2026-09-11-camera-absolute-arm-wheel-burst-unclamped.md)
-- [ ] **`deriveBodyStates`' key type is a pre-existing lie (14 casts)** `needs-design` — callers cast to an unrelated `BodyId` union. → [details](backlog/2026-09-11-derive-body-states-scene-body-id-type.md)
 - [ ] **Frame-tagged clip keyframes have no per-endpoint authoring validation** `needs-design` — a straddling channel tween silently freezes. → [details](backlog/2026-09-11-clip-per-endpoint-tag-authoring-validation.md)
 - [ ] **f32 half-ulp sightline nudge at the body-arm flip** `needs-verification` — ~4 mas, in two narrow `h/R` windows. → [details](backlog/2026-09-11-camera-f32-half-ulp-sightline-nudge-at-arm-flip.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)

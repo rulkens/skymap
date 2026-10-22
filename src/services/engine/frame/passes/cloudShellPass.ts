@@ -63,7 +63,6 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { EarthBody } from '../../../../@types/scene/EarthBody';
-import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
@@ -78,6 +77,7 @@ import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { sceneBodyStates } from '../sceneBodyStates';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 /** The Earth body, its resolved descent-fade multiplier, and whether the camera
  *  sits inside the shell radius this frame (Task 10: `cloudShellRenderer.draw`
@@ -101,7 +101,7 @@ type CloudShellDraw = {
 function cloudShellDraw(
   state: PassState,
   ctx: FrameView,
-  bodyId: SlabHostId,
+  bodyId: PositionedId,
 ): CloudShellDraw | null {
   const earth = state.data.bodies.earth;
   if (earth === null || earth.id !== bodyId) return null;

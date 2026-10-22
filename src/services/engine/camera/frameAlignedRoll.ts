@@ -9,8 +9,6 @@
  * ALTITUDE, so no pose ratio recovers it), and with `rideBoundRad` bounds one notch's turn.
  */
 
-import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraTuning } from '../../../@types/camera/CameraTuning';
@@ -28,6 +26,7 @@ import { normalize3 } from '../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { wrapRad } from '../../../utils/math/wrapRad';
 import { nearestBodyHR } from './nearestBodyHR';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /**
  * The field-defined roll target at this pose; `null` when no target exists
@@ -39,7 +38,7 @@ import { nearestBodyHR } from './nearestBodyHR';
  */
 export function bandRollTarget(
   pose: CameraPose,
-  bodyStates: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
+  bodyStates: ReadonlyMap<PositionedId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   tuning: CameraTuning,
@@ -68,7 +67,7 @@ export function bandRollTarget(
 export function frameAlignedRoll(
   prePose: CameraPose,
   postPose: CameraPose,
-  bodyStates: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
+  bodyStates: ReadonlyMap<PositionedId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   logZoom: number,

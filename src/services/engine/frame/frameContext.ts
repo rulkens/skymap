@@ -33,6 +33,7 @@ import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function deriveFrameContext(
   state: EngineState,

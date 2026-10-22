@@ -9,10 +9,10 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { hOverR } from './hOverR';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 type Nearest = {
   readonly bodyId: SceneBodyId;
@@ -22,7 +22,7 @@ type Nearest = {
 
 export function nearestBodyHR(
   eyeMpc: Readonly<Vec3>,
-  bodyStates: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
+  bodyStates: ReadonlyMap<PositionedId, BodyState>,
 ): Nearest | null {
   let nearest: Nearest | null = null;
   for (const body of SCENE_CELESTIAL_BODIES) {
