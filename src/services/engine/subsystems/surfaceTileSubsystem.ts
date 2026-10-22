@@ -151,11 +151,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
   let frameCounter = 0;
 
-  // This frame's (or the last engaged frame's) `cutSurfaceTiles` cut, for
+  // This frame's `cutSurfaceTiles` cut, for
   // `earthPass.draw` to read — the "compute in runFrame, consume in draw"
   // seam `plannerParams`/`update` already use, one field further. Written
-  // unconditionally by `runFrame`'s tile-planning block (empty on a
-  // disengaged frame), so a stale cut can never survive a camera pull-back.
+  // unconditionally by `runFrame` from `planSurfaceTiles`.
   let lastCut: readonly SurfaceCutTile[] = [];
 
   let destroyed = false;

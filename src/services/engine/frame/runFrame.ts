@@ -239,9 +239,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
   }
 
-  // `setLastCut` runs unconditionally (the plan's cut is empty when disengaged)
-  // so a tier swap in flight or a pull-back draws nothing stale rather than
-  // last frame's cut.
   const surfaceTiles = state.subsystems.surfaceTiles;
   let surfaceTilesAnimating = false;
   if (surfaceTiles !== null) {

@@ -98,9 +98,11 @@ describe('planSurfaceTiles', () => {
     expect(tiles.update).not.toHaveBeenCalled();
   });
 
-  it('a disengaged frame returns an empty cut', () => {
-    const { subsystem } = makeTiles(false);
-    expect(planSurfaceTiles(subsystem, [makeView(true)], STATE).value).toBe(CUT);
-    expect(planSurfaceTiles(subsystem, [makeView(false)], STATE).value).toEqual([]);
+  it('plans nothing beyond the foreground distance', () => {
+    const { tiles, subsystem } = makeTiles(false);
+    const far = makeView(true);
+    (far.cam as { distance: number }).distance = FOREGROUND_MAX_DISTANCE_MPC;
+    expect(planSurfaceTiles(subsystem, [far], STATE).value).toEqual([]);
+    expect(tiles.update).not.toHaveBeenCalled();
   });
 });

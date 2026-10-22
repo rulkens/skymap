@@ -257,12 +257,12 @@ The prep removes the canvas from tile planning, with no contract change:
   face or eye, which is what those rigs draw.
 - Gate, pose, cut, release and the wake vote all read `views`; the LOD camera position is the first
   engaged view's (every view shares the frame camera; an XR eye differs by centimetres).
-- The planning is one function with the planner's own shape, `(snapshot, views, state)` returning
-  the cut plus the `awake` vote (`PlannerResult`), called from `runFrame` at today's point, so the
-  body PR registers it as a Layer `planners` row unchanged. Core has no planner list
+- The planning is one function, `planSurfaceTiles(tiles, views, state)`, returning the cut plus the
+  `awake` vote (`PlannerResult`), called from `runFrame` at today's point; the body PR's planner row
+  is a one-line closure over its runtime's subsystem. Core has no planner list
   (`engine.ts:299` is `planners: []`), and adding one for a single interim row would be thrown away.
 - `prepareBodySurfaceFrame` leaves `earthPass.ts` (a pass file exporting a second symbol, read by the
-  planner, `surfaceTilesPass` and `surfaceTilesEngaged`) for its own file.
+  planner, `surfaceTilesPass` and the old `surfaceTilesEngaged` gate) for its own file.
 
 Left for the body PR: the cut travels as the planner's value (`snapshot.plans`), deleting the
 subsystem's `setLastCut`/`getLastCut` hand-off, once the planner is a registered row; and the move

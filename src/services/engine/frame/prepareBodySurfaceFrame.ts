@@ -9,7 +9,7 @@ const preparedByCtx = new WeakMap<FrameView, Map<SlabHostId, PreparedBodySurface
 
 /**
  * One body-slab-row derivation, shared by `draw`, `drawPick`, and
- * `runFrame`'s tile planner. Memoised per `(ctx, bodyId)`, so whichever call
+ * `planSurfaceTiles`. Memoised per `(ctx, bodyId)`, so whichever call
  * site reaches it first in a frame does the work and the rest read the cache —
  * keyed on `bodyId`, not just `ctx`, because a single ctx serves every
  * body-slab row and a `ctx`-only memo would return Earth's frame for any other
