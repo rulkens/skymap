@@ -6,19 +6,19 @@
  * a second copy would let them disagree about what a rover hangs from.
  */
 
-import type { BodySourceId } from '../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import { positionDriverById } from '../../data/bodies/positionDrivers';
+import type { PlaceId } from '../../@types/scene/PlaceId';
 
-export function surfaceFixedChain(id: BodySourceId | null): readonly BodySourceId[] {
+export function surfaceFixedChain(
+  id: SceneBodyId | PlaceId | null,
+): readonly (SceneBodyId | PlaceId)[] {
   if (id === null) return [];
-  const chain: BodySourceId[] = [id];
+  const chain: (SceneBodyId | PlaceId)[] = [id];
   let driver = positionDriverById(id);
   while (driver.kind === 'surfaceFixed') {
-    // `SurfaceFixedSite.hostId` is typed `string`; every id it carries is a
-    // roster body by construction (`positionDriverById` throws otherwise).
-    const host = driver.hostId as BodySourceId;
-    chain.push(host);
-    driver = positionDriverById(host);
+    chain.push(driver.hostId);
+    driver = positionDriverById(driver.hostId);
   }
   return chain;
 }

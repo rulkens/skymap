@@ -1,10 +1,10 @@
-import type { BodySourceId } from '../data/body/BodySourceId';
+import type { SceneBodyId } from '../scene/SceneBodyId';
 import type { BodyState } from '../scene/BodyState';
 import type { GroundRadiusLookup } from './GroundRadiusLookup';
 
 /** The body a rung is currently anchored to, resolved for this frame. */
 export type HostBody = {
-  readonly id: BodySourceId;
+  readonly id: SceneBodyId;
   readonly state: BodyState;
   /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull; the h/R bands read it. */
   readonly radiusM: number;

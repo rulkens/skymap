@@ -1,6 +1,7 @@
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
+import type { SceneBodyId } from '../scene/SceneBodyId';
 
 /**
  * SelectionRef — the identity Intent for a selectable thing. The single
@@ -25,8 +26,8 @@ export type SelectionRef =
   | { readonly type: 'structure'; readonly id: string }
   | { readonly type: 'milkyWay' }
   | { readonly type: 'zoneOfAvoidance' }
-  | { readonly type: 'body'; readonly id: string }
-  | { readonly type: 'craft'; readonly id: string }
+  | { readonly type: 'body'; readonly id: SceneBodyId }
+  | { readonly type: 'craft'; readonly id: SceneBodyId }
   // One arm for all four star catalogs, the pair the pick texture already packs:
   // `index` is the bin-stable global record index for the Gaia survey (tier-
   // scoped, so a stale index after a tier swap warns+nulls rather than

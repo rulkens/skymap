@@ -6,7 +6,7 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { BodySourceId } from '../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import type { SitePose } from '../../@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
@@ -34,7 +34,7 @@ export function sitePoseFromBodyArm(
   const right = [arm.basisLocal[0], arm.basisLocal[1], arm.basisLocal[2]] as const;
   return clampedSitePose(
     {
-      siteId: site.id as BodySourceId,
+      siteId: site.id,
       // `canonicalBasisAt(frame, heading + π, …)` leaves right at
       // `sin(heading)·north − cos(heading)·east`, whatever the tilt.
       headingRad: Math.atan2(dot3(right, north), -dot3(right, east)),

@@ -9,7 +9,8 @@
  * ALTITUDE, so no pose ratio recovers it), and with `rideBoundRad` bounds one notch's turn.
  */
 
-import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
+import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraTuning } from '../../../@types/camera/CameraTuning';
@@ -38,7 +39,7 @@ import { nearestBodyHR } from './nearestBodyHR';
  */
 export function bandRollTarget(
   pose: CameraPose,
-  bodyStates: ReadonlyMap<BodySourceId, BodyState>,
+  bodyStates: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   tuning: CameraTuning,
@@ -67,7 +68,7 @@ export function bandRollTarget(
 export function frameAlignedRoll(
   prePose: CameraPose,
   postPose: CameraPose,
-  bodyStates: ReadonlyMap<BodySourceId, BodyState>,
+  bodyStates: ReadonlyMap<SceneBodyId | PlaceId, BodyState>,
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   logZoom: number,

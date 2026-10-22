@@ -10,7 +10,7 @@
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -58,7 +58,7 @@ export function atmosphereDrawList(
     // The body-slab pose seam `deriveSlabs` built this body's row from. Every
     // derived field below hangs off it, so a poseless body is no entry at all —
     // which is what lets the bake read an entry's fields unguarded.
-    const pose = ctx.bodyPose(body.id as BodySourceId);
+    const pose = ctx.bodyPose(body.id);
     if (pose === null) continue;
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, atmosphereTopM);

@@ -28,14 +28,16 @@ import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
-import type { BodySourceId } from '../../@types/data/body/BodySourceId';
+import type { PlaceId } from '../../@types/scene/PlaceId';
 import type { BodyState } from '../../@types/scene/BodyState';
 import type { SagaContext } from '../../store/types';
+import { isSceneBodyId } from '../../utils/scene/isSceneBodyId';
 
 export function* watchFlyToLonLatSaga() {
   yield* takeLatest(flyToLonLat, function* (action) {
     const { lonDeg, latDeg, altKm, headingRad } = action.payload;
-    const body = action.payload.body ?? (SCENE_EARTH.id as BodySourceId);
+    const body = action.payload.body ?? SCENE_EARTH.id;
+    if (!isSceneBodyId(body)) return;
     const durationMs = action.payload.durationMs ?? FLY_TO_LON_LAT_TWEEN_MS;
 
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
@@ -52,7 +54,7 @@ export function* watchFlyToLonLatSaga() {
     // kilometres underground. Only a frame of slack survives this (the tween can
     // end no sooner than the first frame past `durationMs`).
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now() + durationMs);
-    const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodySourceId, BodyState>;
+    const bodies = deriveBodyStates(simDays);
     // No terrain lookup reaches a saga (SagaContext carries none): a lon/lat fly-to
     // over hilly terrain lands `rangeM` above the datum, not the ground under it.
     const host = hostOf(

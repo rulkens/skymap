@@ -20,7 +20,6 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { CelestialBody } from '../../../../@types/scene/CelestialBody';
-import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../@types/math/Vec3';

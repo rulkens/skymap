@@ -6,7 +6,7 @@
  * place whatever the blackHoles Layer seats on it.
  */
 
-import type { BodySourceId } from '../../data/body/BodySourceId';
+import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { PlaceId } from '../../scene/PlaceId';
 
-export type SlabHostId = BodySourceId | PlaceId;
+export type SlabHostId = SceneBodyId | PlaceId;

@@ -12,6 +12,7 @@ import { CONST_J2000 } from '../../time/constJ2000';
 import { planeFrameFromPole } from '../orbitPlaneFrames';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 const DAYS_PER_JULIAN_CENTURY = 36_525;
 
@@ -43,8 +44,8 @@ export function orbiter(spec: {
   const daysToJ2000 = CONST_J2000 - spec.epochJd;
 
   return {
-    id: spec.id,
-    focusId: spec.focusId,
+    id: asSceneBodyId(spec.id),
+    focusId: asSceneBodyId(spec.focusId),
     semiMajorMpc: spec.semiMajorKm * SCALE_UNITS.KM_TO_MPC,
     eccentricity: spec.eccentricity,
     inclinationRad: degToRad(spec.inclinationDeg),

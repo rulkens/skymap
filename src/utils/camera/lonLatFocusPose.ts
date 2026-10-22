@@ -1,5 +1,5 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { BodySourceId } from '../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
@@ -16,7 +16,7 @@ import { lonLatDegToDirection } from '../geo/lonLatDegToDirection';
  */
 export function lonLatFocusPose(
   point: LonLatDeg,
-  bodyId: BodySourceId,
+  bodyId: SceneBodyId,
   bodyRadiusM: number,
   rangeM: number,
   headingRad: number,

@@ -18,9 +18,8 @@
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
-import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
-import type { SurfaceTileSpec } from '../../../@types/data/SurfaceTileSpec';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
 import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
 import type { SurfaceTilePlan } from '../../../@types/scene/SurfaceTilePlan';
@@ -56,6 +55,7 @@ import {
   HEIGHT_ATLAS_SLOTS_PER_ROW,
 } from '../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
+import { isSurfaceTileBodyId } from '../../../utils/surfaceTiles/isSurfaceTileBodyId';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 /** Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`), so
@@ -106,7 +106,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // Which body's manifest is requested/pending/loaded. Re-fetched only when
   // `plannerParams` is asked about a DIFFERENT body than this one — a tier
   // change alone (same body) reuses the manifest already on hand.
-  let manifestBodyId: BodySourceId | null = null;
+  let manifestBodyId: SceneBodyId | null = null;
   let manifestPending = false;
   let manifest: SurfaceTileManifest | null = null;
 
@@ -114,7 +114,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // `bodyId`/`baseLevel`/`params` can never describe different requests (see
   // its doc comment).
   let paramsState: {
-    readonly bodyId: BodySourceId;
+    readonly bodyId: SceneBodyId;
     readonly baseLevel: number;
     readonly params: SurfaceTilePlannerParams | null;
   } | null = null;
@@ -127,7 +127,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     readonly stream: TileStreamSubsystem<ImageBitmap, TextureAtlas>;
     readonly heightStream: TileStreamSubsystem<HeightTileImage, TextureAtlas>;
     readonly slotsPerRow: number;
-    readonly bodyId: BodySourceId;
+    readonly bodyId: SceneBodyId & SurfaceTileBodyId;
   } | null = null;
 
   // One map per product rather than one keyed by the (already
@@ -208,7 +208,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
   /** The one writer of `paramsState`, so `bodyId`/`baseLevel`/`params` can't
    *  describe different requests. */
-  function refreshParams(bodyId: BodySourceId, baseLevel: number): void {
+  function refreshParams(bodyId: SceneBodyId, baseLevel: number): void {
     paramsState = {
       bodyId,
       baseLevel,
@@ -216,12 +216,11 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     };
   }
 
-  function plannerParams(bodyId: BodySourceId, baseLevel: number): SurfaceTilePlannerParams | null {
-    // Cast: the registry's own declaration stays a literal (`as const
-    // satisfies`) so a body-name typo there is a compile error, but that
-    // makes it non-indexable by the wider `BodyId` a caller carries.
-    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodySourceId, SurfaceTileSpec>>)[bodyId];
-    if (spec === undefined) return null;
+  function plannerParams(bodyId: SceneBodyId, baseLevel: number): SurfaceTilePlannerParams | null {
+    if (!isSurfaceTileBodyId(bodyId)) return null;
+    // A tagged literal cannot index; widening to the plain key can.
+    const key: SurfaceTileBodyId = bodyId;
+    const spec = SURFACE_TILE_REGISTRY[key];
     // A different body than the one whose manifest is loaded/loading —
     // supersede it. `manifestBodyId` is checked again inside the `.then`,
     // so a fetch superseded by ANOTHER body switch never writes a stale
@@ -255,7 +254,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * never again per engagement — `slotSide` comes from the manifest's tile
    * edge, so a re-bake at a different edge stays a data change.
    */
-  function engage(tilePx: number, bodyId: BodySourceId): NonNullable<typeof atlas> {
+  function engage(
+    tilePx: number,
+    bodyId: SceneBodyId & SurfaceTileBodyId,
+  ): NonNullable<typeof atlas> {
     const slotsPerRow = SURFACE_TILE_ATLAS_SIDE / tilePx;
     const created = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
       slots: new TextureAtlas(device, {
@@ -309,7 +311,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     lastEngaged = null;
   }
 
-  function update(input: { readonly bodyId: BodySourceId; readonly plan: SurfaceTilePlan }): void {
+  function update(input: { readonly bodyId: SceneBodyId; readonly plan: SurfaceTilePlan }): void {
     if (destroyed) return;
     const { bodyId, plan } = input;
     // A different body than the one currently engaged (§ one engaged) —
@@ -321,7 +323,13 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     // derives params from a non-null manifest — reasserting it here keeps
     // the tile prefix a read of the manifest rather than a second copy that
     // could go stale.
-    if (active === null || manifest === null || manifestBodyId !== bodyId) return;
+    if (
+      active === null ||
+      manifest === null ||
+      manifestBodyId !== bodyId ||
+      !isSurfaceTileBodyId(bodyId)
+    )
+      return;
     const prefix = manifest.prefix;
 
     if (!(plan.zWin > active.baseLevel)) {
@@ -468,7 +476,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * to, so it must miss rather than read this one's.
    */
   function heightQueryAt(
-    bodyId: BodySourceId,
+    bodyId: SceneBodyId,
     dirBodyFixed: Readonly<Vec3>,
   ): {
     readonly deepestLevel: number;
@@ -502,7 +510,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   }
 
   /** `terrainHeightM` composed with this subsystem's own residency (F3a). */
-  function terrainHeightAt(bodyId: BodySourceId, dirBodyFixed: Readonly<Vec3>): number {
+  function terrainHeightAt(bodyId: SceneBodyId, dirBodyFixed: Readonly<Vec3>): number {
     const query = heightQueryAt(bodyId, dirBodyFixed);
     if (query === null) return 0;
     return terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, query.resident);
@@ -514,7 +522,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * instrumented lookup rather than a second address derivation, so the level
    * reported is by construction the one the height came from.
    */
-  function residentHeightLevelAt(bodyId: BodySourceId, dirBodyFixed: Readonly<Vec3>): number | null {
+  function residentHeightLevelAt(bodyId: SceneBodyId, dirBodyFixed: Readonly<Vec3>): number | null {
     const query = heightQueryAt(bodyId, dirBodyFixed);
     if (query === null) return null;
     let level: number | null = null;
@@ -580,10 +588,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
     return {
       engaged: true,
-      // Only reachable via `engage()`, called from `update()` after
-      // `plannerParams` already matched `bodyId` against a registry row —
-      // narrower than `BodyId` for real, not just by assertion.
-      bodyId: atlas.bodyId as SurfaceTileBodyId,
+      bodyId: atlas.bodyId,
       capacity: atlas.slotsPerRow * atlas.slotsPerRow,
       used: atlas.stream.occupiedCount(),
       height: {
@@ -619,7 +624,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     },
     getLastCut: () => lastCut,
     // `runFrame` feeds `update` only `SURFACE_TILE_REGISTRY` hosts.
-    engagedBodyId: () => (atlas?.bodyId ?? null) as SurfaceTileBodyId | null,
+    engagedBodyId: () => atlas?.bodyId ?? null,
     release: standDown,
     getAtlasView: () => atlas?.stream.slots.getTextureView() ?? null,
     getHeightAtlasView: () => atlas?.heightStream.slots.getTextureView() ?? null,

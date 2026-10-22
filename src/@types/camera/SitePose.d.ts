@@ -4,10 +4,10 @@
  * `SURFACE_FIXED_SITES` row id and its `PositionDriver` id.
  */
 
-import type { BodySourceId } from '../data/body/BodySourceId';
+import type { SurfaceSiteId } from '../scene/SurfaceSiteId';
 
 export type SitePose = {
-  readonly siteId: BodySourceId;
+  readonly siteId: SurfaceSiteId;
   /** Azimuth of the EYE as seen from the site, radians, north → east. */
   readonly headingRad: number;
   /** Elevation of the eye above the site's tangent plane, radians. */

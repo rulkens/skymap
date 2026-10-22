@@ -13,6 +13,7 @@ import type { OrientationFrameId } from '../../camera/OrientationFrameId';
 import type { RungMemory } from '../../camera/RungMemory';
 import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
+import type { SceneBodyId } from '../../scene/SceneBodyId';
 
 export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
@@ -34,6 +35,6 @@ export type CameraRuntime = {
   /** Each row's private memory, as its `pose` last returned it; core never reads or drops it. */
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
   /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
-  readonly pivotBody: string | null;
+  readonly pivotBody: SceneBodyId | null;
   readonly outputs: FrameOutputs;
 };

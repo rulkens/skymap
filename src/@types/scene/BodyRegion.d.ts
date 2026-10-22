@@ -7,11 +7,13 @@
  */
 
 import type { BodyRegionId } from '../data/BodyRegionId';
+import type { SceneBodyId } from './SceneBodyId';
+import type { PlaceId } from './PlaceId';
 
 export type BodyRegion = {
   readonly id: BodyRegionId;
   readonly label: string; // human-readable; the palette category chip reads this
-  readonly anchorId: string;
-  readonly memberIds: readonly string[]; // total + disjoint over SCENE_BODIES
+  readonly anchorId: SceneBodyId | PlaceId;
+  readonly memberIds: readonly (SceneBodyId | PlaceId)[]; // total + disjoint over SCENE_BODIES
   readonly extentMpc: number; // DERIVED max |member − anchor|, never authored; 0 when empty
 };

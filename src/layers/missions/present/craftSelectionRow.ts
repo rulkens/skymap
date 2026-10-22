@@ -13,6 +13,10 @@ import { CRAFT_ORDER } from './craftOrder';
 import { craftPickId } from './craftPickId';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
+import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
+
+const isCraftId = (id: string): id is SceneBodyId => isSceneBodyId(id) && MISSION_CRAFT_IDS.has(id);
 
 export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { type: 'craft' }>> {
   return {
@@ -30,9 +34,11 @@ export function craftSelectionRow(): SelectionKindRow<Extract<SelectionRef, { ty
     },
     focusId: {
       claims: (id) =>
-        id.startsWith(BODY_FOCUS_PREFIX) &&
-        MISSION_CRAFT_IDS.has(id.slice(BODY_FOCUS_PREFIX.length)),
-      decode: (id) => ({ type: 'craft', id: id.slice(BODY_FOCUS_PREFIX.length) }),
+        id.startsWith(BODY_FOCUS_PREFIX) && isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),
+      decode: (id) => {
+        const craftId = id.slice(BODY_FOCUS_PREFIX.length);
+        return isCraftId(craftId) ? { type: 'craft', id: craftId } : null;
+      },
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

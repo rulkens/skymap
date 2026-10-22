@@ -14,6 +14,7 @@ import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { bodySlabFlooredPick } from '../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from './sceneBodyStates';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
 export function drawMeshBodyPicksOnRow(
   pass: GPURenderPassEncoder,
@@ -21,7 +22,7 @@ export function drawMeshBodyPicksOnRow(
   ctx: FrameView,
   state: PassState,
   bodies: readonly MeshPresentation[],
-  pickIdOf: (bodyId: string) => number | null,
+  pickIdOf: (bodyId: SceneBodyId) => number | null,
 ): void {
   const pickRenderer = state.gpu.bodyPickRenderer;
   if (pickRenderer === null || view.slab.frame.kind !== 'body-m' || bodies.length === 0) return;

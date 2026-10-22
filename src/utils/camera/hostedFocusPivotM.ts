@@ -6,15 +6,16 @@
  * drag turns the arm rigidly.
  */
 
-import type { BodySourceId } from '../../@types/data/body/BodySourceId';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { positionDriverById } from '../../data/bodies/positionDrivers';
 import { siteGroundRadiusM } from './siteGroundRadiusM';
 import { sitePointBodyFixed } from './sitePointBodyFixed';
+import type { PlaceId } from '../../@types/scene/PlaceId';
 
 export function hostedFocusPivotM(
-  focusBodyId: BodySourceId | null,
-  hostId: BodySourceId,
+  focusBodyId: SceneBodyId | PlaceId | null,
+  hostId: SceneBodyId,
   hostRadiusM: number,
 ): Vec3 | null {
   if (focusBodyId === null || focusBodyId === hostId) return null;

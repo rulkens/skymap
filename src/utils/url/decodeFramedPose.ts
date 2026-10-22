@@ -7,7 +7,6 @@
  */
 
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import { isRegistryBodyId } from '../scene/isRegistryBodyId';
 import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
 import { parseFiniteNumbers } from './parseFiniteNumbers';
@@ -24,9 +23,9 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
     const n = parseFiniteNumbers(fields.slice(2));
     if (n === null) return null;
     return {
-      frame: { body: bodyId as BodySourceId },
+      frame: { body: bodyId },
       pose: {
-        bodyId: bodyId as BodySourceId,
+        bodyId,
         anchorLocalM: [n[0]!, n[1]!, n[2]!],
         eyeRelAnchorM: [n[3]!, n[4]!, n[5]!],
         basisLocal: [n[6]!, n[7]!, n[8]!, n[9]!, n[10]!, n[11]!, n[12]!, n[13]!, n[14]!],
@@ -43,8 +42,8 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
     // `rangeM` is a real metre distance, not `clampDistance`'s Mpc floor.
     if (n[2]! <= 0) return null;
     return {
-      frame: { site: siteId as BodySourceId },
-      pose: { siteId: siteId as BodySourceId, headingRad: n[0]!, elevationRad: n[1]!, rangeM: n[2]! },
+      frame: { site: siteId },
+      pose: { siteId, headingRad: n[0]!, elevationRad: n[1]!, rangeM: n[2]! },
     };
   }
 

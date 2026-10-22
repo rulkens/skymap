@@ -9,7 +9,6 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { FrameContextInput } from '../../../@types/engine/frame/FrameContextInput';
-import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
@@ -92,7 +91,7 @@ export function deriveFrameContext(
   // asserted — `assembleOrbitCamera` always sets them, optional only on
   // `OrbitCameraInit`.
   const armBasisCtx = {
-    bodies: bodyStates as ReadonlyMap<BodySourceId, BodyState>,
+    bodies: bodyStates,
     poseBasis: cam.poseBasis,
     upBasis: cam.upBasis,
     terrainHeightAt: state.terrain.heightAt,
@@ -101,11 +100,11 @@ export function deriveFrameContext(
   // UN-turned: `deriveView` turns this provider's output through `viewBodyPose`
   // so a body arm stays metre-native in every view.
   const bodyPose: BodyPoseProvider = (bodyId) => {
-    if (!isWorldArm(arm) && armHost?.id === bodyId) {
+    if (!isWorldArm(arm) && armHost !== null && armHost.id === bodyId) {
       // A rung BELOW its host (a site on its planet) folds up to the host's own
       // arm first — by reference when the arm already is one, so the body arm's
       // path is unchanged and neither crosses the Mpc seam.
-      const onHost = refoldTo(arm, { body: bodyId }, armBasisCtx);
+      const onHost = refoldTo(arm, { body: armHost.id }, armBasisCtx);
       if (isBodyArm(onHost)) return poseFromBodyArm(onHost.pose);
     }
     const bodyState = bodyStates.get(bodyId);
