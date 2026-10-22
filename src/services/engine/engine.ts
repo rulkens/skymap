@@ -44,7 +44,6 @@ import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
-import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 

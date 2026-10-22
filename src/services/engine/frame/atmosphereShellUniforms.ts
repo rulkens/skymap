@@ -7,7 +7,6 @@
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';

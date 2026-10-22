@@ -12,7 +12,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
 import type { Vec2 } from '../../../@types/math/Vec2';

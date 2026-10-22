@@ -28,8 +28,6 @@ import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
-import type { PlaceId } from '../../@types/scene/PlaceId';
-import type { BodyState } from '../../@types/scene/BodyState';
 import type { SagaContext } from '../../store/types';
 import { isSceneBodyId } from '../../utils/scene/isSceneBodyId';
 

@@ -6,7 +6,6 @@
  * the app does on load.
  */
 
-import type { BodyState } from '../../@types/scene/BodyState';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Mat3 } from '../../@types/math/Mat3';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';

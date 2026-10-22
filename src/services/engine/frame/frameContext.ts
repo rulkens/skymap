@@ -10,7 +10,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { FrameContextInput } from '../../../@types/engine/frame/FrameContextInput';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { FadeIdentity } from '../../../@types/animation/FadeIdentity';
 import type { PositionedSceneBody } from '../../../@types/engine/frame/PositionedSceneBody';

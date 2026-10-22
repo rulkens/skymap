@@ -6,7 +6,6 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import type { SitePose } from '../../@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
