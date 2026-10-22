@@ -39,6 +39,8 @@ export type SiteShotSettings = {
   debugPanel?: true;
   /** With `ui`: headings of the app's panels to click before the shot, in order (`Settings` itself where the panel starts folded). */
   open?: readonly string[];
+  /** With `query: 'dome'`: the dome opens with `?remote`, and the picture is a phone's remote page paired to it, not the dome. */
+  remote?: true;
   /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */
   crop?: { left: number; top: number; width: number; height: number };
   /** Extra time before the shot: streamed surface imagery arrives after the app reports settled. */

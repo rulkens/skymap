@@ -19,6 +19,7 @@ import { readCanvas } from '../utils/shot/readCanvas';
 import { SHOT_ENCODING } from './shotEncoding';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
 import { openSiteShot } from './utils/openSiteShot';
+import { shootPairedRemote } from './utils/shootPairedRemote';
 
 const MASTERS_DIR = 'data/shots/site';
 const OUT_DIR = 'packages/website/src/assets/shots';
@@ -84,12 +85,16 @@ try {
         }
         if (shot.settings?.minimalUi) await page.addStyleTag({ content: MINIMAL_UI_CSS });
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
-        writeFileSync(
-          master,
-          shot.settings?.ui
-            ? await page.screenshot({ type: 'png' })
-            : await readCanvas(page, 'png'),
-        );
+        if (shot.settings?.remote) {
+          writeFileSync(master, await shootPairedRemote(page, base!, shot));
+        } else {
+          writeFileSync(
+            master,
+            shot.settings?.ui
+              ? await page.screenshot({ type: 'png' })
+              : await readCanvas(page, 'png'),
+          );
+        }
       } catch (err) {
         failed = true;
         console.error(`${shot.id}: ${err instanceof Error ? err.message : String(err)}`);

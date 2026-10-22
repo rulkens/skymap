@@ -299,6 +299,17 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'The app on a phone: Saturn and its rings among the stars, with its name in a card above the bottom bar.',
   },
   {
+    id: 'features-remote',
+    link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
+    query: 'dome',
+    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
+    size: { width: 390, height: 844 },
+    dpr: 3,
+    widths: [780],
+    title: 'The remote on a phone',
+    alt: 'The remote page on a phone: it reads Connected with Earth as the focused object, above a drag pad, buttons, search and tour lists.',
+  },
+  {
     id: 'features-time-jupiter',
     link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.45,4.2e-14,0`,
     settings: { hideStructures: true, hideLabels: true, keepBodyLabels: true, settleMs: 4000 },
