@@ -53,8 +53,7 @@
     --cols: 7;
   }
 
-  /* Counted across the page, part headings between them or not, so the sides swap at every section. */
-  .root:nth-child(even of .root) {
+  .left {
     & .words {
       grid-column: 8 / -1;
     }
