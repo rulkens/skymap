@@ -10,7 +10,7 @@ const STEERING = 'The scene and exhibits';
  * when that table gains or loses a key these rows do not have. The other rows
  * are read from handlers the app does not export as data: the search
  * (usePaletteSearch.ts), the date box, the welcome screen, and every pointer,
- * wheel and touch handler (createCanvasDeviceChannel.ts, recognize.ts,
+ * wheel and touch handler (createDeviceChannel.ts, recognize.ts,
  * controlBindings.ts). "Anywhere" and "The scene and exhibits" are defined on
  * the page.
  */

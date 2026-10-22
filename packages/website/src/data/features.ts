@@ -1,7 +1,6 @@
 import type { FeatureGroup } from '../@types/FeatureGroup';
 
 const SCENE = '/docs/start/scene/';
-const MOVING = '/docs/guide/moving/';
 const FINDING = '/docs/guide/finding/';
 const TIME = '/docs/guide/time/';
 const TOURS = '/docs/guide/tours/';
@@ -75,32 +74,6 @@ export const FEATURE_GROUPS: readonly FeatureGroup[] = [
       { name: 'Filaments', line: 'lines traced along the cosmic web, off at first', doc: `${SCENE}#filaments-and-the-cosmic-web` },
       { name: 'Flow ribbons', line: 'the motion of galaxies apart from the expansion, off at first', doc: `${SCENE}#filaments-and-the-cosmic-web` },
       { name: 'Edge of the observable universe', line: 'a sphere at the distance light has had time to reach us from', doc: `${SCENE}#the-edge-of-the-observable-universe` },
-    ],
-  },
-  {
-    id: 'moving',
-    title: 'Moving around',
-    line: 'The camera turns about one object at a time. The same controls work from the ground to the whole map.',
-    shot: 'guide-surface',
-    film: 'place-moon',
-    filmSays: 'The camera going once round the Moon.',
-    items: [
-      { name: 'Turn', line: 'a drag turns the view about the object in focus', doc: `${MOVING}#look-around-an-object` },
-      { name: 'Zoom', line: 'the wheel, a two-finger scroll or a pinch, at every scale', doc: `${MOVING}#zoom-in-and-out` },
-      { name: 'Fly to an object', line: 'a double-click or double-tap, or F for the selected object', doc: `${MOVING}#go-somewhere-else` },
-      { name: 'Follow', line: 'the camera travels with a planet, moon or spacecraft as the clock runs', doc: `${MOVING}#go-somewhere-else` },
-      { name: 'Slide sideways', line: 'a right-button drag moves the point the camera turns about', doc: `${MOVING}#slide-the-view-sideways` },
-      { name: 'Surface controls', line: 'near the ground a drag slides the ground, and the wheel zooms to the pointer', doc: `${MOVING}#fly-low-over-a-surface` },
-      { name: 'Tilt', line: 'near a surface a right-button drag tilts the view towards the horizon', doc: `${MOVING}#fly-low-over-a-surface` },
-      { name: 'Ground', line: 'the camera stops above the ground and cannot pass through it', doc: `${MOVING}#fly-low-over-a-surface` },
-      { name: 'Site view', line: 'near a rover or the park, every drag turns the camera round the site', doc: `${MOVING}#fly-low-over-a-surface` },
-      { name: 'Home', line: 'H, E or the Home button flies back to the sunlit side of Earth', doc: `${MOVING}#go-home` },
-      { name: 'Auto-rotate', line: 'a button that turns the camera slowly round the focus', doc: `${MOVING}#look-around-an-object` },
-      { name: 'Which way is up', line: 'level with the solar system, Earth’s equator, the Milky Way or the superclusters', doc: `${SETTINGS}#change-which-way-is-up` },
-      { name: 'Field of view', line: 'a slider from a narrow lens to a wide one', doc: `${ALL_SETTINGS}#display` },
-      { name: 'Touch', line: 'one finger turns, two fingers zoom, a double tap flies', doc: `${MOVING}#on-a-touch-screen` },
-      { name: 'Hide the interface', line: 'Tab hides every panel and button, and brings them back', doc: `${CONTROLS}#interface` },
-      { name: 'Navigation panel', line: 'the basic controls, listed on screen', doc: `${CONTROLS}#where-a-control-applies` },
     ],
   },
   {

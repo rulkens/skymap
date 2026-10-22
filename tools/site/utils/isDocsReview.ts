@@ -5,7 +5,7 @@ const STATES = ['cut', 'keep', 'rewrite', 'good'];
 /** Whether a body is a review the endpoint may store; the cutter writes these by hand, so it is strict about the shape. */
 export function isDocsReview(value: unknown): value is DocsReview {
   const review = value as DocsReview | null;
-  if (typeof review?.page !== 'string' || typeof review.job !== 'string') return false;
+  if (typeof review?.page !== 'string') return false;
   if (typeof review.words?.before !== 'number' || !Number.isFinite(review.words.before))
     return false;
   if (!Array.isArray(review.marks)) return false;

@@ -83,7 +83,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
     id: 'render-star-tree',
     about: 'app',
     text: 'The stars are sorted into an octree stored as one index and about a thousand chunk files. Only the chunks near the camera are held, in a fixed pool of slots. Every few frames the app chooses which boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one, or one whose chunk has not arrived yet, draws a single glow with the summed light of everything inside it.',
-    source: `${REPO_BLOB}/src/services/gpu/shaders/starCatalog/cut.wesl`,
+    source: `${REPO_BLOB}/src/services/gpu/shaders/octree/cut.wesl`,
     sourceLabel: `the choice of star boxes, ${IN_REPO}`,
     checked: CHECKED,
   },

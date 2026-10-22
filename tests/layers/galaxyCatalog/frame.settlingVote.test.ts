@@ -24,6 +24,7 @@ function makeRuntime(fading: boolean) {
   return {
     hiResFamous: { committed: () => null },
     catalogs: new Map(),
+    records: new Map(),
     famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },

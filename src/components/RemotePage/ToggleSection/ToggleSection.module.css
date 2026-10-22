@@ -1,0 +1,18 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: 44px;
+  font-size: var(--font-size-input);
+}
+
+.box {
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--color-accent);
+}
+
+.box:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

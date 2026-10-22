@@ -22,10 +22,10 @@ import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf
 import { describe, it, expect, vi } from 'vitest';
 
 import { bodyGlintsPass } from '../../../../../src/services/engine/frame/passes/bodyGlintsPass';
-import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
-import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { BODY_GLINT_INSTANCE_FLOATS as INSTANCE_FLOATS } from '../../../../../src/data/rendering/bodyGlintInstanceFloats';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/data/labels/solarSystemLabelMaxDistance';
+import { SCALE_FADE_BANDS } from '../../../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
@@ -211,7 +211,7 @@ describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
     // `FOREGROUND_MAX_DISTANCE_MPC` gate — deep in Milky-Way framing, where all ~22
     // collapse onto one bright dot. The `bodyGlintBackdrop` far-dissolve fixes it:
     // once the band zeroes, the layer must LEAVE the pass plan (opacity 0 ⇒ no
-    // render), exactly as `starPointsPass` does with `starBackdrop`.
+    // render), exactly as `starPointsPass` does with its backdrop dissolve.
     const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
     const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → band in (0,1)
     const dGone = backdrop.goneAt * 2; // past goneAt → band 0

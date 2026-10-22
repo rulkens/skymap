@@ -7,7 +7,7 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { positionDriverById } from '../../../data/bodies/positionDrivers';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';
 import { findByIdOrThrow } from '../../object/findByIdOrThrow';
 import { orbitRowPlacement } from '../../orbit/orbitRowPlacement';

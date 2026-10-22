@@ -10,10 +10,11 @@ import {
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
-import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+import type { OctreeResidency } from '../../../../src/@types/octree/OctreeResidency';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 /** No chunk resident: a v1 catalog has none. */
-const NONE: StarResidency = residencyOf();
+const NONE: OctreeResidency<StarColumns> = residencyOf();
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs, so the reconstructions below are hand-computable in the same frame.
@@ -60,7 +61,7 @@ async function densePlusSparseCatalog() {
 describe('resolveStarRecord', () => {
   it('round-trips a packed leaf star position within quantisation', async () => {
     const cat = await densePlusSparseCatalog();
-    expect(cat.starCount).toBe(STAR_LEAF_CAPACITY + 5); // 69 real-star records
+    expect(cat.recordCount).toBe(STAR_LEAF_CAPACITY + 5); // 69 real-star records
 
     // ── A star in the DENSE level-0 leaf: exact reconstruction ──────────────
     // recordIndex 3 = the 4th dense star (s=3), stored in cell 0 (grid origin)
@@ -99,9 +100,9 @@ describe('resolveStarRecord', () => {
 
   it('returns null for an out-of-range record index', async () => {
     const cat = await densePlusSparseCatalog();
-    // starCount marks the end of the real-star region; the aggregate records
+    // recordCount marks the end of the real-star region; the aggregate records
     // beyond it are never pick targets.
-    expect(resolveStarRecord(cat, NONE, cat.starCount)).toBeNull();
+    expect(resolveStarRecord(cat, NONE, cat.recordCount)).toBeNull();
     expect(resolveStarRecord(cat, NONE, 10_000)).toBeNull();
   });
 

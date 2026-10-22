@@ -35,7 +35,7 @@
  * and resized in lockstep with its colour texture. The depth texture is also
  * `TEXTURE_BINDING`, so any `{ sample }` step (`executeFrame`) can bind it as
  * a texture and hand it to its passes as `view.sampledDepth` — today that is
- * `contactShadowsPass` alone, reading its OWN row's depth (it compares
+ * the missions Layer's `contactShadowsPass` alone, reading its OWN row's depth (it compares
  * `sampledDepth.row` against its slab before drawing): each painter-chain row
  * clears its own depth (spec §7.3), so the buffer never holds more than the
  * last-cleared row and can't back a cross-row occlusion test. The caption

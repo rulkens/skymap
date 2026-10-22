@@ -19,6 +19,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // The epoch the "last frame" drew at, and where the clock has since moved to —
 // a month apart, so Earth has travelled ~1e4 body radii between them.
@@ -43,6 +44,7 @@ const EARTH_ARM: FramedCameraPose = {
 function makeState(): EngineState {
   return {
     settings: { orientation: 'ecliptic' },
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: EARTH_ARM },
       outputs: {

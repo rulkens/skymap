@@ -1,21 +1,22 @@
 /**
- * installStarPool — gives a source's loaded octree its chunk pool: uploads the
- * index at the pool size, then replaces the source's chunk stream. Shared by a
- * slot commit (a fresh load) and a resize (the same octree, no refetch).
- * `upload` runs first and throws past the pool caps, so a failure leaves the
- * previous stream drawing.
+ * installStarPool — the star layer's side of `installOctreePool`: resolves the
+ * registry row once, so the shared runtime never reads the registry, and hands
+ * it the pool size and the star chunk format.
  */
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { createStarChunkStream } from './starChunkStream';
-import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import { installOctreePool } from '../../../services/octree/installOctreePool';
+import { octreeChunkPath } from '../../../utils/octree/octreeChunkPath';
+import { starColumnsOf } from '../../../utils/star/starColumnsOf';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Tier } from '../../../@types/data/Tier';
-import type { StarPoolHost } from '../@types/StarPoolHost';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { Octree } from '../../../@types/octree/Octree';
+import type { OctreePoolHost } from '../../../@types/octree/OctreePoolHost';
 
 export function installStarPool(
-  host: StarPoolHost,
+  host: OctreePoolHost<StarColumns>,
   source: SourceType,
-  octree: StarOctree,
+  octree: Octree<StarColumns>,
   tier: Tier,
   slotsOverride: number | null,
 ): void {
@@ -23,20 +24,9 @@ export function installStarPool(
   if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
     throw new Error(`installStarPool: source ${source} is not a streamed star catalog`);
   }
-  const { renderer, chunkStreams, requestRender } = host;
-  const slots = renderer.upload(source, octree, slotsOverride ?? entry.budgets[tier].slots);
-  chunkStreams.get(source)?.destroy();
-  chunkStreams.delete(source);
-  if (slots === 0) return;
-  chunkStreams.set(
-    source,
-    createStarChunkStream({
-      octree,
-      binBaseName: entry.binBaseName,
-      slots,
-      requestRender,
-      upload: (s, chunk, h) => renderer.uploadChunk(source, s, chunk, h),
-      evict: (s, h) => renderer.evictChunk(source, s, h),
-    }),
-  );
+  const { binBaseName } = entry;
+  installOctreePool(host, source, octree, slotsOverride ?? entry.budgets[tier].slots, {
+    chunkPath: (ref) => octreeChunkPath('star', binBaseName, ref),
+    decodeRecords: starColumnsOf,
+  });
 }

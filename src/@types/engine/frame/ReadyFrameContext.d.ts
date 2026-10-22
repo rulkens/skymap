@@ -55,7 +55,7 @@ export type ReadyFrameContext = {
    * (`visibleSlabBodies`), it never re-assembles it.
    */
   slabBodyCandidates: readonly SlabRow[];
-  /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
+  /** The full mesh body roster — a view runs the SAME gate over it to re-admit
    *  the hosts of mesh bodies riding someone else's slab row. */
   meshBodies: readonly MeshBody[];
   /** Every admitted scene body but Earth (its own renderer), at this frame's

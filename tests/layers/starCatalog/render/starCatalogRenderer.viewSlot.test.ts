@@ -13,12 +13,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/render/starCatalogRenderer';
 import { Source } from '../../../../src/data/sources';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 // The cut's own GPU resources are not under test; stub it to always have a list.
-vi.mock('../../../../src/layers/starCatalog/render/starCutGpu', () => ({
-  createStarCutGpu: () => ({
+vi.mock('../../../../src/services/gpu/octree/octreeCutGpu', () => ({
+  createOctreeCutGpu: () => ({
     drawBgl: {},
     upload: vi.fn(),
     drawOf: () => ({ bindGroup: {}, indirect: {}, indirectOffset: 0 }),
@@ -52,7 +53,7 @@ const CATALOG = {
   chunks: [],
   chunkCount: 0,
   chunkCapacity: 0,
-} as unknown as StarOctree;
+} as unknown as Octree<StarColumns>;
 
 function args(viewSlot: number): StarCatalogCutDrawArgs {
   return {

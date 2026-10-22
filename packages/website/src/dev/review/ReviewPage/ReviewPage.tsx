@@ -18,6 +18,7 @@ import { useDevOverlayOn } from '../../overlay/useDevOverlayOn';
 import { useDevOverlayPress } from '../../overlay/useDevOverlayPress';
 import { useListener } from '../../overlay/useListener';
 import type { ChipMade } from '../@types/ChipMade';
+import type { JobMeta } from '../@types/JobMeta';
 import type { ReviewOpen } from '../@types/ReviewOpen';
 import type { ReviewReveal } from '../@types/ReviewReveal';
 import type { ReviewSection } from '../@types/ReviewSection';
@@ -26,6 +27,7 @@ import { flashMark } from '../flashMark';
 import { itemKey } from '../itemKey';
 import { ownerMark } from '../ownerMark';
 import { sectionText } from '../sectionText';
+import { saveJob } from '../saveJob';
 import { setNote } from '../setNote';
 import { useApplyPoll } from '../useApplyPoll';
 import { usePageChrome } from '../usePageChrome';
@@ -58,14 +60,21 @@ function claimKeysIntro(): boolean {
 const marksOf = (section: ReviewSection): DocsReviewMark[] =>
   section.items.flatMap((item) => (item.kind === 'mark' ? [item.mark] : []));
 
-type ReviewPageProps = { article: Element; url: string; first: DocsReview };
+type ReviewPageProps = {
+  article: Element;
+  url: string;
+  first: DocsReview;
+  job: JobMeta | undefined;
+};
 
-function ReviewPage({ article, url, first }: ReviewPageProps) {
+function ReviewPage({ article, url, first, job }: ReviewPageProps) {
   const active = useDevOverlayOn();
   const marking = useDevOverlayMode() === 'marks';
   const { review, change, adopt, saveFlag } = useReviewFile(url, first);
   const [hiding, setHiding] = useState(() => recall(HIDE_KEY) === '1');
-  const [marksShown, setMarksShown] = useState(false);
+  // Marks mode is for reading the marks, so they show there; M still toggles them in either mode.
+  const [marksShown, setMarksShown] = useState(marking);
+  useEffect(() => setMarksShown(marking), [marking]);
   const [help, setHelp] = useState<{ focus: boolean } | null>(null);
   const [open, setOpen] = useState<ReviewOpen | null>(null);
   const [reveal, setReveal] = useState<ReviewReveal>();
@@ -300,8 +309,8 @@ function ReviewPage({ article, url, first }: ReviewPageProps) {
         onToggle={(s) => (open?.target === s.heading ? closePanel() : openPanel(s.heading))}
       />
       <ReviewBar
-        job={review.job}
-        onJob={(job) => change((r) => ({ ...r, job }))}
+        job={job}
+        onJob={(text) => saveJob(review.page, text).catch((e: unknown) => console.error(e))}
         words={{ before, after: wordsAfter(live, before) }}
         counts={{
           cut: count('cut'),

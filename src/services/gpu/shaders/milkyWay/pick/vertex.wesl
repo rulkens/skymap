@@ -1,31 +1,16 @@
-// milkyWay/pick/vertex.wesl — screen-aligned billboard at the galactic
-// centre for the Milky-Way pick path.
+// milkyWay/pick/vertex.wesl — screen-aligned billboard at the galactic centre
+// for the Milky-Way pick path. One instance, six vertices.
 //
-// One instance, six vertices.  The billboard is SCREEN-aligned and sized
-// IN-SHADER from the shared camera uniforms: the world radius
-// 'mw.radiusMpc' (the rendered star/dust cloud's physical radius, not
-// the larger selection ring) is projected to apparent pixels with the
-// SAME derivation points/vertex.wesl applies per galaxy —
+// Sized in-shader from the shared camera uniforms with the SAME derivation as
+// points/vertexBody.wesl: halfExtentPx = max(mw.minSizePx, radiusMpc / dist *
+// pxPerRad), using the rendered cloud's radius (not the larger selection ring).
+// Computing it here keeps the hit target agreeing with the rendered frame; the
+// CPU keeps only the visibility gate. 'mw.minSizePx' is a static scene constant,
+// so the hit target does not follow the galaxy size slider.
 //
-//   apparentPxRadius = (radiusMpc / distance(camPosWorld, centre)) * pxPerRad
-//   halfExtentPx     = max(mw.minSizePx, apparentPxRadius)
-//
-// Computing the size here rather than on the CPU means the hit target
-// can never disagree with the rendered frame: the @group(0) bytes are
-// packed at pick time from the slab view, and the camera facts this
-// projection reads (camPosWorld, pxPerRad) are the same ones that sized
-// the glow the user sees.  The CPU keeps only the visibility gate — the
-// pick program's 'enabled' filter, i.e. 'milkyWayPass.enabled' against the
-// pick-time camera.  The floor 'mw.minSizePx' is a scene constant in the
-// static @group(2) uniform, so the MW's hit target does not follow the
-// galaxy size slider.
-//
-// The packed pick identity is composed in the vertex stage (mirroring
-// points/vertex.wesl's 'packSelection(source.sourceCode, ii)') and
-// forwarded flat-interpolated to the fragment, which writes it verbatim.
-// The MW carries no per-record localIdx, so it is always 0; the vertex
-// adds PICK_SENTINEL_OFFSET here so the cleared-to-zero pick texture
-// stays distinguishable from a real (code, 0) hit.
+// The packed pick identity is composed here and forwarded flat to the fragment.
+// The MW has no localIdx (always 0), so PICK_SENTINEL_OFFSET is added to keep
+// it distinct from the cleared-to-zero pick texture.
 
 import package::milkyWay::pick::io::Uniforms;
 import package::milkyWay::pick::io::MilkyWayPickUniforms;
@@ -37,14 +22,10 @@ import package::lib::selectionEncoding::packSelection;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
-// @group(0) Uniforms — the 96-byte camera image pickMilkyWay packs and
-// binds from its own buffer; see io.wesl for the byte layout.
+// 96-byte camera image packed by pickMilkyWay; byte layout in io.wesl.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-// @group(2) MilkyWayPickUniforms — world centre + source code + disc
-// world radius + apparent-size floor, all written once at construction
-// (the uniform is fully static; the apparent size is derived above from
-// @group(0)).
+// Fully static, written once at construction.
 @group(2) @binding(0) var<uniform> mw: MilkyWayPickUniforms;
 
 @vertex
@@ -52,10 +33,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let centerClip = worldToClip(u.cam, mw.centerWorld);
   let corner = quadCorner(vi);
 
-  // Apparent on-screen radius of the disc — same formula as the points
-  // shader's apparent-size billboard.  Guard the distance against 0 so
-  // a camera parked exactly on the centre doesn't divide by zero (same
-  // 0.001 floor points/vertex.wesl uses).
+  // 0.001 distance floor, as in points/vertexBody.wesl.
   let toCenter = mw.centerWorld - u.camPosWorld;
   let safeDist = max(length(toCenter), 0.001);
   let apparentPxRadius = (mw.radiusMpc / safeDist) * u.pxPerRad;
@@ -64,21 +42,14 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let offset = expandBillboardScreen(u.cam, centerClip, halfExtentPx, corner);
 
   var out: VsOut;
-  // The impostor is the ULTIMATE pick fallback (header 'lib/pickDepthBands'):
-  // its true depth would let it beat a forced-far survey star, but by IMPORTANCE
-  // the galaxy backdrop must sit behind everything. So instead of passing depth
-  // through we FORCE the lowest band, 'z = w * PICK_BAND_BACKDROP_EPS'.
-  // That band has the SMALLEST eps of the three, hence the SMALLEST z/w, so it
-  // LOSES the 'greater' test to every star band — an overlapping resolvable Gaia
-  // dot now wins the click over the galaxy. It still stays just above the 0.0
-  // clear (positive z/w) so the billboard survives the clip test. Only X/Y take
-  // the billboard offset; w passes through so the perspective divide lands the
-  // band correctly.
+  // The impostor is the ultimate pick fallback ('lib/pickDepthBands'): true
+  // depth could beat a forced-far survey star, so force the lowest band,
+  // 'z = w * PICK_BAND_BACKDROP_EPS'. Smallest eps means smallest z/w, so it
+  // loses the 'greater' test to every star band, yet stays above the 0.0 clear
+  // so it survives clipping.
   let bandZ = centerClip.w * PICK_BAND_BACKDROP_EPS;
   out.pos = vec4<f32>(centerClip.xy + offset, bandZ, centerClip.w);
   out.uv = corner;
-  // MW localIdx is always 0; add PICK_SENTINEL_OFFSET here — the
-  // fragment writes this value verbatim.
   out.packedPick = packSelection(mw.sourceCode, 0u) + PICK_SENTINEL_OFFSET;
   return out;
 }

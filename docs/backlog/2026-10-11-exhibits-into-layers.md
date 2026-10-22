@@ -5,7 +5,8 @@ already moved into the `missions` Layer there.
 
 ## Problem
 
-Five exhibits are still core rows in `src/data/exhibits/exhibitRegistry.ts`, and each is about one
+Four exhibits are still core rows (Solar System moves into `body` with the body-Layers effort,
+`specs/2026-10-20-body-layers-design.md`) in `src/data/exhibits/exhibitRegistry.ts`, and each is about one
 Layer's content. With the `exhibits` Layer member from #854, an exhibit should live with the Layer
 it shows. Core's registry then holds only exhibits with no single home, or none at all.
 
@@ -16,7 +17,6 @@ it shows. Core's registry then holds only exhibits with no single home, or none 
 | Cosmic Flows | `cosmicFlows.ts` | `flow` | Turns on `flow` and the Milky Way marker |
 | Zone of Avoidance | `zoneOfAvoidance.ts` | `zoneOfAvoidance` | Turns on the band and the Milky Way marker |
 | Cosmic Web | `cosmicWeb.ts` | `cosmicWebDensity` | Its subject is the `polyphorm-2mrs` volume. `cosmicWebFilaments` is the other candidate |
-| Solar System | `solarSystem.ts` | `body` | Turns on orbit trails; the body Layer is still forming (see "Seeded stars still live in the body tables") |
 | Observable Universe | `observableUniverse.ts` | none obvious | Spans the galaxy catalogs; could stay core |
 
 ## Open questions

@@ -1,8 +1,9 @@
 /**
  * produceSceneBodyCaptions — candidate math for the true-scale foreground
- * bodies core owns (Earth, the planets, the mesh bodies), read beside the
- * blackHoles Layer's Galactic Centre caption where a case needs a control
- * whose reach is not the solar system's. The seeded
+ * bodies core captions (Earth, the planets), read beside the missions Layer's
+ * craft captions where a case needs a mesh body, and the blackHoles Layer's
+ * Galactic Centre caption where a case needs a control whose reach is not the
+ * solar system's. The seeded
  * stars and the Sun moved to the star Layer's `produceStarCaptions` —
  * `produceStarCaptions.test.ts` covers their kind routing, pick ids and
  * clip-channel split; the shared fade-band / occlusion / registry-ramp
@@ -21,17 +22,16 @@ import { describe, it, expect } from 'vitest';
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { fadeBand } from '../../../../src/utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
+import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
@@ -46,7 +46,10 @@ import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCata
 // The producer binds its caption epoch to `ctx.simDays`; pin it at J2000 so
 // this file's anchors match the producer's internal `sceneBodyStates` read.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
-const BASE = sceneBodyLabels(J2000_STATES, CONST_J2000, new Set());
+const BASE = [
+  ...sceneBodyLabels(J2000_STATES),
+  ...SCENE_MESH_BODIES.map((b) => meshBodyCaption(b, J2000_STATES.get(b.id)!.positionMpc, 0)),
+];
 
 const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
@@ -98,10 +101,7 @@ function fadeOf(
   const named: Record<string, boolean> = typeof bodyLabels === 'boolean' ? {} : bodyLabels;
   const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
   return Object.fromEntries(
-    ['earth', 'planet', 'mesh-body'].map((item) => [
-      item,
-      over[item] ?? ((named[item] ?? unnamed) ? 1 : 0),
-    ]),
+    ['earth', 'planet'].map((item) => [item, over[item] ?? ((named[item] ?? unnamed) ? 1 : 0)]),
   );
 }
 
@@ -120,6 +120,7 @@ function makeState(): EngineState {
       },
     },
     settings: {
+      missions: { craft: null },
       starCatalogs: {
         enabled: true,
         items: {
@@ -129,13 +130,19 @@ function makeState(): EngineState {
         },
       },
     },
-    // The composed entries core derives the claimed bodies from.
-    visibilityEntries: APP_VISIBILITY,
   } as unknown as EngineState;
 }
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
   return labels.find((l) => l.id === id)?.fadeAlpha;
+}
+
+/** Core's captions and the craft's, from the missions Layer's producer, every item on. */
+function captionsAt(ctx: FrameView): readonly Label2D[] {
+  return [
+    ...produceSceneBodyCaptions(makeState(), ctx, fadeOf()).labels,
+    ...produceMissionCaptions(makeState(), ctx, { craft: 1 }).labels,
+  ];
 }
 
 /** The Galactic Centre caption, from its own Layer's producer. */
@@ -208,19 +215,9 @@ describe('produceSceneBodyCaptions', () => {
     ];
 
     // At the mesh body's own 2-radii standoff — the pose an approach parks at.
-    expect(
-      fadeAlphaOf(
-        produceSceneBodyCaptions(makeState(), makeCtx(camAt(2)), fadeOf()).labels,
-        PETUNIAS_LABEL_ID,
-      ),
-    ).toBe(0);
+    expect(fadeAlphaOf(captionsAt(makeCtx(camAt(2))), PETUNIAS_LABEL_ID)).toBe(0);
     // Backed off, the same caption is untouched by the rule.
-    expect(
-      fadeAlphaOf(
-        produceSceneBodyCaptions(makeState(), makeCtx(camAt(100)), fadeOf()).labels,
-        PETUNIAS_LABEL_ID,
-      ),
-    ).toBe(1);
+    expect(fadeAlphaOf(captionsAt(makeCtx(camAt(100))), PETUNIAS_LABEL_ID)).toBe(1);
   });
 
   it('holds a seeded reveal caption dark until the approach, leaving an unbanded one lit', () => {
@@ -236,8 +233,7 @@ describe('produceSceneBodyCaptions', () => {
       SCENE_MESH_BODIES.find((b) => b.id === 'petunias')!.captionRevealM! * SCALE_UNITS.M_TO_MPC;
     const ctxAt = (distMpc: number): FrameView =>
       makeCtx([pot.worldPos[0] + distMpc, pot.worldPos[1], pot.worldPos[2]]);
-    const labelsAt = (distMpc: number): readonly Label2D[] =>
-      produceSceneBodyCaptions(makeState(), ctxAt(distMpc), fadeOf()).labels;
+    const labelsAt = (distMpc: number): readonly Label2D[] => captionsAt(ctxAt(distMpc));
 
     // Past twice the reveal distance the pot's name is gone; at it, full.
     expect(fadeAlphaOf(labelsAt(3 * revealMpc), PETUNIAS_LABEL_ID)).toBe(0);
@@ -297,10 +293,7 @@ describe('produceSceneBodyCaptions', () => {
     } as unknown as FrameView;
 
     const out = produceConstellationCaptions(runtime)({} as EngineState, ctx, layerFade);
-    const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(
-      fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc) * layerFade,
-    );
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(layerFade);
   });
 });
 
@@ -327,9 +320,7 @@ describe('produceSceneBodyCaptions occlude weight', () => {
   }
 
   function occludeWeightOf(camPos: Vec3, id: string): number | undefined {
-    return produceSceneBodyCaptions(makeState(), makeCtx(camPos), fadeOf()).labels.find(
-      (l) => l.id === id,
-    )?.occludeWeight;
+    return captionsAt(makeCtx(camPos)).find((l) => l.id === id)?.occludeWeight;
   }
 
   it('exempts a caption whose subject floats in FRONT of Earth', () => {

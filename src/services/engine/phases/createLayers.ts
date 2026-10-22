@@ -4,7 +4,7 @@
  * then composes each instance's contributions onto core's `state.passes` /
  * `.computes` / `.assetRows` / `.visibilityEntries` / `.layerSlots` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
- * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
+ * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
  */
 
 import { put } from 'typed-redux-saga';
@@ -18,6 +18,8 @@ import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
+import { composeTerrain } from '../layer/composeTerrain';
+import { surfaceTileTerrain } from '../../../utils/surfaceTiles/surfaceTileTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -34,6 +36,7 @@ import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { gateComputeByFade } from '../layer/gateComputeByFade';
 import { gateLabelProducer } from '../layer/gateLabelProducer';
+import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
@@ -197,10 +200,18 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.label3DProducers = instances.flatMap((instance) =>
     instance.worldLabels.map(gateWorldLabelProducer),
   );
-  state.orbitTrailRows = [
-    ...CORE_TRAIL_ELEMENTS,
+  state.orbitTrailGroups = [
+    { show: 'orbitTrails' as const, rows: CORE_TRAIL_ELEMENTS },
     ...instances.flatMap((instance) => instance.orbitTrails),
-  ];
+  ].map((group) => gateOrbitTrailGroup(group, state));
+  // Core keeps the slot until body Layers can reach the tile subsystem; the
+  // body move deletes this row, and the two-provider throw catches a half-done move.
+  state.terrain = composeTerrain([
+    { name: 'core:surfaceTiles', terrain: surfaceTileTerrain(state.subsystems) },
+    ...instances.flatMap((instance) =>
+      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
+    ),
+  ]);
 
   // Two directors, each owning one slab's screen-space projection — a
   // producer names the slab whose director it registers on (`LayerGuides`'s

@@ -1,7 +1,7 @@
 /**
  * meshBodySlabHostId — the body-slab row a mesh-drawn body draws in. A body that
  * owns a row (a celestial body drawn from a shape model) draws in its own. Any
- * other rides its position driver's host (`meshBodiesPass`, the way `ringsPass`
+ * other rides its position driver's host (`drawMeshBodiesOnRow`, the way `ringsPass`
  * rides Saturn's) when that host owns a row; one hanging off something rowless —
  * the Sun, or nothing at all — hosts itself and gets a row of its own.
  *

@@ -7,13 +7,15 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { DocsReviewApplied } from '../../../../../../tools/site/@types/DocsReviewApplied';
 import type { DocsReviewApply } from '../../../../../../tools/site/@types/DocsReviewApply';
+import type { JobMeta } from '../@types/JobMeta';
 import type { ReviewCounts } from '../@types/ReviewCounts';
 import ApplyConfirm from '../ApplyConfirm/ApplyConfirm.tsx';
 import ModeSwitch from '../ModeSwitch/ModeSwitch.tsx';
 import styles from './ReviewBar.module.css';
 
 type ReviewBarProps = {
-  job: string;
+  /** The page's job, or undefined for a page that has none to show. */
+  job: JobMeta | undefined;
   onJob: (job: string) => void;
   words: { before: number; after: number };
   counts: Omit<ReviewCounts, 'notes'>;
@@ -58,10 +60,10 @@ function ReviewBar({
 }: ReviewBarProps) {
   const bar = useRef<HTMLDivElement>(null);
   const applyButton = useRef<HTMLButtonElement>(null);
-  const [draft, setDraft] = useState(job);
+  const [draft, setDraft] = useState(job?.text ?? '');
   const [confirming, setConfirming] = useState(false);
 
-  useEffect(() => setDraft(job), [job]);
+  useEffect(() => setDraft(job?.text ?? ''), [job?.text]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -84,15 +86,19 @@ function ReviewBar({
     <div ref={bar} className={styles.root} data-overlay-ui="" data-review-bar="">
       <strong className={styles.name}>Review</strong>
       <ModeSwitch />
-      <input
-        className={styles.job}
-        value={draft}
-        placeholder="The question a reader comes to this page with"
-        aria-label="The question a reader comes to this page with"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => draft !== job && onJob(draft)}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      />
+      {job && (
+        <input
+          className={styles.job}
+          value={draft}
+          readOnly={job.setIn !== undefined}
+          placeholder="The question a reader comes to this page with"
+          aria-label="The question a reader comes to this page with"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => draft !== job.text && onJob(draft)}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+      )}
+      {job?.setIn && <span className={styles.dim}>set in {job.setIn}</span>}
       <span className={styles.words}>
         {words.before} → {words.after} words
       </span>

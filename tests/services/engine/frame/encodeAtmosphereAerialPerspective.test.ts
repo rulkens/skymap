@@ -17,7 +17,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

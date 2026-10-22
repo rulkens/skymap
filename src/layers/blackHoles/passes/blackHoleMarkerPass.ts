@@ -17,9 +17,9 @@ import { BLACK_HOLES } from '../data/blackHoles';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { INSTANCE_FLOATS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { blackHoleAnchorId } from '../present/blackHoleAnchorId';
@@ -28,7 +28,7 @@ import { blackHolePickable } from '../present/blackHolePickable';
 
 export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
   // Reused across frames: the hot path allocates nothing.
-  const staging = new Float32Array(BLACK_HOLES.length * INSTANCE_FLOATS);
+  const staging = new Float32Array(BLACK_HOLES.length * BODY_GLINT_INSTANCE_FLOATS);
 
   return {
     name: 'black-hole-marker',
@@ -54,7 +54,7 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
         const brightness = blackHoleMarkerBrightness(row, camPos, states);
         if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
         const positionMpc = states.get(blackHoleAnchorId(row))!.positionMpc;
-        const base = count * INSTANCE_FLOATS;
+        const base = count * BODY_GLINT_INSTANCE_FLOATS;
         staging[base + 0] = positionMpc[0] - camPos[0];
         staging[base + 1] = positionMpc[1] - camPos[1];
         staging[base + 2] = positionMpc[2] - camPos[2];

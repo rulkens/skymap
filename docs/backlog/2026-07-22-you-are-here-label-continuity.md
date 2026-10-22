@@ -29,4 +29,4 @@ The "You are here" label marks our location in the Milky Way, but it vanishes as
 ## Related
 
 - Home-button retarget to Earth (same "where is home" story): BACKLOG UI & UX.
-- Scale-fade bands: `src/services/engine/presentation/scaleFadeBands.ts` (descent thresholds intentionally separate — memory `project_scale_fade_bands`).
+- Scale-fade bands: `src/data/scaleFadeBands.ts` (descent thresholds intentionally separate — memory `project_scale_fade_bands`).

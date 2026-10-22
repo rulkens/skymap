@@ -12,6 +12,7 @@ const LABEL_BEARING_STAR_CATALOG_IDS = STAR_CATALOG_SOURCE_ROWS.map(([, entry]) 
   .map((entry) => entry.id);
 
 export const starCatalogVisibility = [
+  { key: 'sStarTrails' },
   {
     key: 'starCatalog',
     cluster: 'starCatalogs',

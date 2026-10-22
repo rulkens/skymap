@@ -36,7 +36,8 @@
   cursor: pointer;
 }
 
-.showing .cut {
+.showing .cut,
+.showing .cutSection {
   opacity: 0.45;
   text-decoration: line-through;
 }
