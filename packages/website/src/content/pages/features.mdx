@@ -11,6 +11,7 @@ import FeaturesHero from '../../components/FeaturesHero/FeaturesHero.tsx';
 import FeatureSection from '../../components/FeatureSection/FeatureSection.tsx';
 import Figure from '../../components/Figure/Figure.tsx';
 import Phone3D from '../../components/Phone3D/Phone3D.tsx';
+import RemoteDemo from '../../components/RemoteDemo/RemoteDemo.tsx';
 import SectionHead from '../../components/SectionHead/SectionHead.tsx';
 import { siteShot } from '../../data/siteShot';
 import layout from '../../styles/layout.module.css';
@@ -67,8 +68,8 @@ export const disc = '8rem';
   <Figure id="features-card" sizes={big} showDrawn={false} />
 </FeatureSection>
 
-<FeatureSection title="Domes" line="A fisheye picture for a planetarium dome, from the live app or as a rendered film." href="/domes/" label="Domes and museums">
-  <Figure id="dome-earth" sizes={big} showDrawn={false} disc />
+<FeatureSection title="Domes" line="A fisheye picture for a planetarium dome, from the live app or as a rendered film. Steer it from a phone." href="/domes/" label="Domes and museums">
+  <RemoteDemo sizes="21rem" client:visible />
 </FeatureSection>
 
 <FeatureSection side="left" level={2} title="Deep linking" line="Every named object in Skymap has a unique link that you can share with friends, colleagues or on social media." href="/docs/guide/sharing/" label="Sharing a view">
