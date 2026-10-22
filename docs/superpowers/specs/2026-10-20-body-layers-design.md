@@ -241,8 +241,9 @@ temporary core writer would only be thrown away.
 > `FOREGROUND_MAX_DISTANCE_MPC`, a pose and the sub-pixel cull, which a band does not carry; and core's
 > `bodyDrawRadiusM.ts:21-24` reads `ATMOSPHERE_PARAMS`. P5's shape is re-ruled before the body PR.
 
-**Packaging (user, 2026-10-22):** P6, P8 and P7 ship together as one prep PR, before the body PR,
-each as its own commits.
+**Packaging (user, 2026-10-22):** P6 and P8 ship together as one prep PR, before the body PR, each as
+its own commits. P7 lands in the body PR (R6): until the body Layer owns the tiles, any store writer
+for the readout would be deleted one PR later.
 
 ### P6. The tile planner reads the rig views, not the canvas
 
@@ -282,39 +283,26 @@ a registered row (P8 already moves it out of the subsystem's `setLastCut`/`getLa
 moves from `runFrame`'s position into the frame program's plan phase (the plan verifies no reader
 between the two depends on this frame's cut or fetch queue).
 
-### P8. Tile state is one reducer-shaped runtime
+### P8. One owner per tile fact, in the octree's shape
 
-Ruling (user, 2026-10-22): state the planner needs lives in one central place, changed by
-reducer-shaped logic, at no per-frame cost. Today it is closure state in `surfaceTileSubsystem.ts`
-(631 lines): `manifestBodyId`/`manifestPending`/`manifest` (`:109-111`), `paramsState` (`:116`), the
-albedo and height residency maps (`:136-137`), `pendingLevelOf` (`:142`), `lastEngaged` (`:146`),
-`frameCounter` (`:152`) and `lastCut` (`:158`), changed through `update`, `release`, `setLastCut` and
-read through `residentSlot`, `plannerParams`, `isAnimating`, `getDebugSnapshot`, `terrainHeightAt` and
-`residentHeightLevelAt`.
+Ruling (user, 2026-10-22): state the planner needs lives in one central place, every decision is a
+pure function, and nothing is duplicated. Today `surfaceTileSubsystem.ts` (631 lines) braids the
+stream's resources (manifest, atlases, LRU, key → slot, in-flight, failed) with the planner's decisions
+(engage gate, touch-then-allocate, body-switch release, `lastEngaged`, `lastCut`). A first draft moved
+residency into a plain-data runtime synced from the atlas by events and a fold; the user ruled it
+complected (two owners of the same facts).
 
-The precedent is the camera: `state.cameraRuntime` is plain data, `stepCameraRuntime(prev, inputs)`
-returns `{ next, actions }` (`stepCameraRuntime.ts`), `runFrame` makes the one assignment, and
-unchanged groups come back by identity. P8 gives tiles the same shape:
-
-```ts
-type SurfaceTileRuntime = { engaged; manifest; params; residency; heightResidency; pending; cut; … };
-stepSurfaceTiles(prev, { cameras, committedTier, events }) → { next, effects };
-// events: tile loaded / failed / evicted, manifest loaded (from the effect shell)
-// effects: fetch(key, priority), upload(key → slot), release atlas
-```
-
-- The GPU atlases and the fetch queue are resources, not state: a thin effect shell runs the effects
-  and turns completions into the next frame's events. `tileStreamSubsystem` and `TextureAtlas` are
-  shared with the galaxy stream and stay core.
-- Reads become pure functions of the runtime: residency lookup for the cut, the terrain seam's height
-  queries, the wake vote, and the debug snapshot (which makes P7 a selector).
-- Cost: a quiet frame returns `prev` by identity; while streaming, events batch per frame, so the
-  residency map is copied at most once a frame (≤ ~1,000 entries, tens of µs).
-- Home: `EngineState` until the body PR, then the body Layer's runtime.
-
-The plan prices the risks: GPU upload ordering against the cut that names a slot, LRU eviction
-mid-fetch (`tileStreamSubsystem.ts` header: `upload()` is the single writer of loaded keys), and the
-terrain seam reading residency between steps.
+The shape is the star octree's (`planOctreeChunks` + `OctreeChunkStream`): `SurfaceTileStream` is the
+sole owner of residency and exposes a read-only `SurfaceTileResidency`; a pure
+`planSurfaceTiles(views, over, residency, committedTier)` returns the frame's `SurfaceTilePlan` (cut,
+touched, requests, manifest request, engage/keep/release verdict, `lastPlan`, `subCamera`, wake vote);
+`runFrame` stores the plan at `state.subsystems.surfaceTiles.plan` and calls `stream.apply(plan)`.
+Residency stays live (updated at upload, as today), so the camera reads a landed height tile the next
+frame. Position facts (`over`: nearest tiling body, camera position, distance) and view facts
+(`frame`: cameras, base level) are separate inputs, so looking up at street level keeps the position
+readout. Atlases release on a body switch or past `TILE_RELEASE_RADII` (twice the measured farthest
+engage distance), never on visibility alone. The plan: `plans/2026-10-22-body-layers-tile-planner-views.md`
+Tasks 4–5.
 
 ### P7. The surface-tile debug readout publishes through `facts`
 
@@ -344,7 +332,9 @@ Checked (2026-10-22):
   moves with the subsystem and is not the panel's.
 - `engine.debug.surfaceTiles` (`engine.ts:504-505`, `EngineDebugHandle.d.ts:55`) deletes once the
   section reads the store.
-- After P8 the snapshot is a pure selector over `SurfaceTileRuntime`.
+- After P8 the snapshot composes `SurfaceTileStream.debugStats()` (residency counts) with the frame's
+  `SurfaceTilePlan` (`lastPlan`, cut count, `subCamera`). It is ≤ ~1 KB of plain JSON; building it
+  scans resident tiles (≤ ~1,280), so it is published only while the DebugPanel is open, throttled.
 
 The widening alternative was props on `LayerUiSection`, handing the whole engine handle to every
 Layer's debug UI.

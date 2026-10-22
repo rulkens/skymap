@@ -151,210 +151,153 @@ export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null; // pu
 
 - [x] Task 3
 
-### P8 planning findings (2026-10-22; rulings R1–R6 asked, recommended options written in)
+### P8: one owner per fact, in the octree's shape (user, 2026-10-22)
 
-- **Home (R1).** The passes read tile state through `PassState` (`surfaceTilesPass.ts:58,114,131-132`,
-  `terrainPickMarkerPass.ts:39,72`), which names `subsystems` (`PassState.d.ts:12-23`). The runtime
-  lives at `state.subsystems.surfaceTiles = { stream, runtime }` (named after `OctreeChunkStream` and `tileStreamSubsystem`, user 2026-10-22): no `PassState` widening, and the body
-  PR moves the pair into the body Layer's runtime unchanged.
-- **Two assignments (R2).** The terrain seam is read before tile planning (`stepCameraRuntime` at
-  `runFrame.ts:122`, `frameContext.ts:98`; planning at `:243`). Stream events fold at the frame head;
-  the step runs at the planning point. One assignment at the planning point would leave the camera
-  floor a frame behind the drawn terrain.
-- **Upload stays in the stream (R3).** Routing ImageBitmaps through the step would hold GPU payloads in
-  the runtime for a frame and duplicate `upload()`'s `slotOf` re-check, the eviction-mid-fetch guard
-  (`tileStreamSubsystem.ts:65-81`). The stream uploads on fetch completion as today and reports events.
-- `frameCounter` (the atlas LRU clock, `surfaceTileSubsystem.ts:152`) is the atlas's resource and stays
-  in the stream, with `destroyed` and both streams and atlases.
+A first draft (plain-data runtime + fold + step + effects/events) gave tile residency two owners: the
+GPU atlas, which must own key → slot and the LRU because it allocates real texture slots, and a
+plain-data copy kept in sync by 7 event kinds, 4 effect kinds, a fold and two assignments per frame.
+The user ruled it complected and chose the octree's shape (`planOctreeChunks` + `OctreeChunkStream`,
+`src/layers/starCatalog/frame.ts:73-100`): **the stream is the sole owner of residency; the planner is
+pure and owns every decision; the planner's output is the frame's tile plan.**
 
-**R5 (user, 2026-10-22): position facts and plan facts split.** `lastEngaged` (`:146-150`) braids
-where the camera is over the body (`subCameraDirLocal`, a position fact true whichever way you look)
-with what this frame planned (request count, `zWin`, misses, drops). Standing on the surface and
-looking up must not change the camera's position or the "over Copenhagen" readout; the camera's
-ground clamp already reads only params + residency (`terrainHeightAt`, `:504`). So the step takes two
-inputs, and the runtime two fields, replacing `lastEngaged`:
+| Fact | Owner | Written |
+| --- | --- | --- |
+| manifest, atlases, LRU, key → slot, in-flight, failed | `SurfaceTileStream` | at fetch/upload/evict (live, as today and as the octree) |
+| which body, engage/keep/release, cut, touched/requests, `lastPlan`, `subCamera`, wake vote | `planSurfaceTiles` (pure) | once per frame, as its result |
+| the frame's tile plan the passes and the seam read | `state.subsystems.surfaceTiles.plan` | by `runFrame`, once per frame |
 
-```ts
-// SurfaceTileStepInputs — position facts from FrameView.bodyPose, no visibility gate
-readonly over: { readonly bodyId: SurfaceTileBodyId; readonly camPosLocalM: Readonly<Vec3>;
-  readonly distanceM: number } | null;   // nearest tiling body within TILE_RELEASE_RADII
-// view facts, only when some view shows the body (visibleBodyRows)
-readonly frame: { readonly baseLevel: number; readonly cameras: readonly TileCamera[] } | null;
-// runtime
-subCamera: { lonDeg: number; latDeg: number; coveredMaxLevel: number } | null;   // from `over`
-lastPlan: { requestCount: number; zWin: number; misses: number; droppedAllocations: number } | null; // from `frame`
-```
+Rulings that stand: R1 (under `subsystems`, now `{ stream, plan }`); R3 (the stream uploads); R4
+(release on a body switch or past `TILE_RELEASE_RADII`); R5 (`over` position facts vs `frame` view
+facts; `subCamera` from `over`, `lastPlan` from `frame`); R6 (P7 in the body PR). R2 dissolves: residency
+stays live, updated at upload, so the camera reads a landed height tile next frame with no fold.
 
-The distance gate (R4) reads `over.distanceM` (`camDistanceM` goes); `frame === null` empties the
-cut and `lastPlan`, never `subCamera`. Wherever the step and the table below say `lastEngaged` or
-`frame.bodyId`/`camPosLocalM`, read `lastPlan` and `over`.
-
-### Task 4: tile state as plain data, a pure fold and a pure step (P8a)
+### Task 4: the pure tile planner owns every decision (P8a)
 
 review: yes
 
-**Files:** `src/@types/engine/state/SurfaceTileRuntime.d.ts`;
-`src/@types/engine/surfaceTiles/{SurfaceTileEvent,SurfaceTileEffect,SurfaceTileStepInputs}.d.ts`;
-`src/services/engine/surfaceTiles/{foldSurfaceTileEvents,stepSurfaceTiles,emptySurfaceTileRuntime}.ts`
-and one file per selector (`residentSlotOf`, `terrainHeightOf`, `residentHeightLevelOf`, `subCameraOf`,
-`surfaceTilesAwake`, `surfaceTileDebugOf`); `derivePlannerParams` (`surfaceTileSubsystem.ts:173-206`)
-extracted to `src/utils/surfaceTiles/derivePlannerParams.ts`; tests under
-`tests/services/engine/surfaceTiles/`. Nothing in the engine calls these until Task 5.
+**Files:** `src/@types/engine/surfaceTiles/{SurfaceTileResidency,SurfaceTilePlan,SurfaceTileOver,SurfaceTileVerdict}.d.ts`
+(create); `src/services/engine/frame/surfaceTilePlanner/` (the pure planner and its helpers, one symbol per
+file); `derivePlannerParams` (`surfaceTileSubsystem.ts:173-206`) extracted to
+`src/utils/surfaceTiles/derivePlannerParams.ts` via `npm run refactor`; tests mirrored. Not wired until Task 5.
 
-**Runtime fields** (each replaces closure state in `surfaceTileSubsystem.ts`):
-
-| Field | Replaces |
-| --- | --- |
-| `manifest: { bodyId; status: 'pending' \| 'loaded' \| 'failed'; value } \| null` | `:109-111` |
-| `params: { bodyId; baseLevel; params } \| null` | `paramsState` `:116-120` |
-| `engaged: { bodyId; slotsPerRow } \| null` | `atlas.bodyId`/`.slotsPerRow` `:126-131` (atlases stay in the stream) |
-| `albedo`, `height: ReadonlyMap<string, ResidentTile>` | `:136-137`; `ResidentTile` gains `atlasUvOrigin`/`atlasUvScale`, stamped by the stream at upload |
-| `pending: ReadonlyMap<string, { z; product }>` | `pendingLevelOf` `:142`, widened to height; the wake vote replaces `inFlightCount()` `:533` |
-| `failed: ReadonlySet<string>` | the stream's `failedKeys` as the planner reads them (`:355`) |
-| `lastEngaged` | `:146-150`; `droppedAllocations` arrives by event |
-| `cut: readonly SurfaceCutTile[]` | `lastCut` `:158` |
+**Contract:**
 
 ```ts
-export type SurfaceTileEvent =
-  | { kind: 'manifestLoaded'; bodyId: SurfaceTileBodyId; manifest: SurfaceTileManifest | null } // null: 404
-  | { kind: 'tileLoaded'; bodyId: SurfaceTileBodyId; key: string; resident: ResidentTile }
-  | { kind: 'tileFailed' | 'tileDeclined' | 'tileDropped' | 'tileEvicted';
-      bodyId: SurfaceTileBodyId; key: string; product: SurfaceTileProduct };
-// declined: payload landed after its slot was recycled; dropped: allocate refused (atlas full)
-
-export type SurfaceTileEffect =
-  | { kind: 'fetchManifest'; bodyId: SurfaceTileBodyId; manifestKey: string }
-  | { kind: 'engage'; bodyId: SurfaceTileBodyId; tilePx: number } // allocate both atlases
-  | { kind: 'release' }                                              // stand down
-  | { kind: 'demand'; touch: readonly string[];
-      fetch: readonly { key: string; tile: SurfaceTileId; prefix: string; priority: number }[] };
-
-export type SurfaceTileStepInputs = {
-  /** null: no view engages a tiling body (or its pose is null). */
-  readonly frame: { readonly bodyId: SurfaceTileBodyId; readonly baseLevel: number;
-    readonly camPosLocalM: Readonly<Vec3>; readonly cameras: readonly TileCamera[] } | null;
-  readonly pastReleaseRadius: (bodyId: SurfaceTileBodyId) => boolean;
+/** The stream's read side, handed to the planner, the passes and the terrain seam. Read-only. */
+export type SurfaceTileResidency = {
+  manifest(bodyId: SurfaceTileBodyId): { status: 'absent' | 'pending' | 'loaded' | 'failed';
+    value: SurfaceTileManifest | null };
+  residentSlot(tile: SurfaceTileId): ResidentSlot | null;   // today's :440-461 answer
+  hasFailed(key: string): boolean;
+  inFlightCount(): number;
+  engagedBodyId(): SurfaceTileBodyId | null;               // whose atlases are allocated
 };
-export function foldSurfaceTileEvents(prev: SurfaceTileRuntime,
-  events: readonly SurfaceTileEvent[]): SurfaceTileRuntime;
-export function stepSurfaceTiles(prev: SurfaceTileRuntime, inputs: SurfaceTileStepInputs):
-  { readonly next: SurfaceTileRuntime; readonly effects: readonly SurfaceTileEffect[] };
+export type SurfaceTileVerdict = 'keep' | { engage: SurfaceTileBodyId; tilePx: number } | 'release';
+export type SurfaceTilePlan = {
+  readonly cut: readonly SurfaceCutTile[];
+  readonly touched: readonly string[];                      // resident keys this frame wants, request order
+  readonly requests: readonly SurfaceTileRequest[];          // misses, largest on screen first
+  readonly wantManifest: SurfaceTileBodyId | null;
+  readonly verdict: SurfaceTileVerdict;
+  readonly lastPlan: { requestCount; zWin; misses } | null;  // from `frame`; null when nothing planned
+  readonly subCamera: { lonDeg; latDeg; coveredMaxLevel } | null;  // from `over`; survives looking up
+  readonly awake: boolean;                                   // manifest pending or fetches in flight
+};
+export function planSurfaceTiles(
+  views: readonly FrameView[],
+  over: SurfaceTileOver | null,          // nearest tiling body within TILE_RELEASE_RADII: id, camPosLocalM, distanceM
+  residency: SurfaceTileResidency,
+  committedTier: (bodyId: SurfaceTileBodyId) => Tier,
+): SurfaceTilePlan;
 ```
 
-- **Fold:** events in arrival order; a tile event for a body other than `engaged.bodyId`, or a
-  `manifestLoaded` for a body other than `manifest.bodyId` (`:233-239`), is dropped; no events returns
-  `prev`; each map is copied at most once per fold.
-- **Step**, in today's order: (1) manifest: a new body sets `pending`, nulls `params`, emits
-  `fetchManifest`, and emits `release` for a different engaged body at once (R4: today the release
-  waits for the new manifest, `:316`; nothing draws in between); (2) params re-derived only when
-  `manifest` or `baseLevel` changes; (3) cut via `cutSurfaceTiles` with
-  `residentSlot: (t) => residentSlotOf(prev, t)`; (4) engaged iff `plan.zWin > baseLevel`, else
-  `lastEngaged` is null and residency is kept; (5) demand: misses (in none of residency, `pending`,
-  `failed`) join `pending`; one `demand` effect (after `engage` on the first), `touch` = every requested
-  slot-holding non-failed key in request order, `fetch` = misses largest first (today's two-pass,
-  `:335-426`); (6) one release verdict (R4, user 2026-10-22: switch and distance, never visibility alone):
-  release when the engaged body is not this frame's body, or when the camera is farther than
-  `TILE_RELEASE_RADII × datumRadiusM` from it. Today the atlases ride the globe texture's gate (2 ×
-  10⁴ radii, `bodyTextureLoadRadius.ts`; ~0.85 AU for Earth, where it is ~0.1 px) though tiles only
-  engage close in; the user ruled that wrong (2026-10-22). `TILE_RELEASE_RADII` is a named constant in
-  `surfaceTileParams.ts`, set to twice the farthest distance at which tiles engage (measured at the
-  widest frustum and largest viewport the app allows, per tiling body; the plan task records the
-  method and numbers), so the factor 2 is the hysteresis against edge thrash. The step input
-  `pastReleaseRadius` becomes `camDistanceM: (bodyId) => number`; `releaseTilesPastRadius.ts` and the
-  atlases' use of `pastTextureReleaseRadius` delete. Visibility alone never releases. Release clears residency, `pending`, `failed`,
-  `lastEngaged` and keeps `manifest`/`params` (`:301-309`). A `frame: null` step clears `lastEngaged` (R5).
-- **Selectors:** `residentSlotOf` (`:440-461`), `terrainHeightOf`/`residentHeightLevelOf` (`:469-528`),
-  `subCameraOf` (O(1); today the seam builds the whole snapshot, `surfaceTileTerrain.ts:12`),
-  `surfaceTilesAwake` (`manifest?.status === 'pending' || pending.size > 0`), `surfaceTileDebugOf`
-  (`:538-598`; `cutCount` is this frame's `cut.length`; `EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT` moves beside it).
+- Decisions moved out of `update()` (`surfaceTileSubsystem.ts:311-436`) into the planner: the engage
+  gate (`plan.zWin > baseLevel`), the touch-then-allocate split (`touched` vs `requests`; the stream
+  applies touches first, as `OctreeChunkStream.update` does), misses (not resident, not failed, not in
+  flight), the manifest request, and the verdict (R4: release on a body switch or past
+  `TILE_RELEASE_RADII`, never on visibility alone).
+- `TILE_RELEASE_RADII` in `surfaceTileParams.ts`: twice the farthest measured engage distance (widest
+  frustum, largest viewport, per tiling body); the task records method and numbers.
+  `releaseTilesPastRadius.ts` and the atlases' use of `pastTextureReleaseRadius` delete.
+- `over` comes from `FrameView.bodyPose` with no visibility gate; `frame` (cameras, base level) only when
+  `visibleBodyRows` shows the body. Looking up at street level: `over` and `subCamera` unchanged, cut
+  and `lastPlan` empty.
 
-**Tests:**
+**Tests** (a plain-object `SurfaceTileResidency`, no GPU or fetch fakes):
 
-- `a cut never names a slot after its tile was evicted` — fold `[tileLoaded K@S, tileEvicted K,
-  tileLoaded K2@S]`, step a frame covering K: K's leaf resolves to its ancestor, never slot S. **Bug
-  caught:** out-of-order folding or slot-keyed residency draws K2's pixels as K.
-- `a tile evicted mid-fetch leaves nothing pending and is asked for again` — **Bug caught:** K pending
-  forever (the loop never sleeps), or never refetched.
-- `a superseded manifest never lands` — Earth frame, Mars frame, fold `manifestLoaded(earth)`: `params`
-  null, awake, no `demand`. **Bug caught:** Mars tiles requested under Earth's prefix.
-- `a pull-back empties the cut but keeps residency` — **Bug caught:** a stale cut after pull-back, or a
-  refetch storm on return.
-- `a quiet frame returns prev by identity` — empty fold, idle disengaged step, engaged step with no
-  misses keep identities. **Bug caught:** per-frame map copies.
-- Port the logic cases of `surfaceTileSubsystem.test.ts` (manifest validation, base level, engage gate,
-  `readyAtMs`, height 0 for a non-engaged body, debug snapshot) as step/selector tests; Task 5 deletes
-  the originals.
+- `looking up at street level keeps the position readout and plans nothing` — `over` set, no view shows
+  Earth: `subCamera` is Copenhagen, `cut`/`requests`/`lastPlan` empty, verdict `keep`. **Bug caught:**
+  the readout or the atlases follow the view instead of the position.
+- `a body switch releases at once; distance releases past TILE_RELEASE_RADII; off-screen never does`.
+  **Bug caught:** atlases held to 0.85 AU, or dropped on a turn of the head.
+- `touched lists every resident requested key before any request` (near-full residency). **Bug caught:**
+  the eviction cascade (`:335-341`).
+- `a failed or in-flight key is never requested again` and `no manifest yet → wantManifest, empty cut,
+  awake`. **Bug caught:** refetch storms; Mars tiles under Earth's prefix.
+- Port the decision cases of `surfaceTileSubsystem.test.ts` (engage gate, base level, params) here.
 
 - [ ] Task 4
 
-### Task 5: a stream runs the effects, reads become selectors, the imperative API goes (P8b)
+### Task 5: the subsystem becomes `SurfaceTileStream`; `runFrame` applies the plan (P8b)
 
 review: yes
 
 **Files:** `surfaceTileSubsystem.ts` → `surfaceTileStream.ts` (`npm run move-files`, then
-`createSurfaceTileSubsystem` → `createSurfaceTileStream` via `npm run refactor`);
-`SurfaceTileSubsystem.d.ts` → `SurfaceTileStream.d.ts` + `SurfaceTiles.d.ts`;
-`EngineSubsystemHandles.d.ts:39`, `wireSlots.ts:95`, `engine.ts:61,213,437-438,504-505`; `runFrame.ts`;
-the `surfaceTilePlanner/` files; `surfaceTilesPass.ts`, `terrainPickMarkerPass.ts`,
-`surfaceTileTerrain.ts`; tests (`surfaceTileStream.test.ts`, `planSurfaceTiles.test.ts`, `runFrame.test.ts`).
+`createSurfaceTileSubsystem` → `createSurfaceTileStream` via `npm run refactor`); its type →
+`SurfaceTileStream.d.ts`; `EngineSubsystemHandles.d.ts:39` → `surfaceTiles: { stream; plan } | null`;
+`wireSlots.ts:95`; `engine.ts` (init, destroy, debug handle); `runFrame.ts`; `surfaceTilesPass.ts`,
+`terrainPickMarkerPass.ts`, `surfaceTileTerrain.ts`; tests.
 
 ```ts
 export type SurfaceTileStream = Destroyable & {
-  run(effects: readonly SurfaceTileEffect[]): void;  // synchronous, in order
-  drainEvents(): readonly SurfaceTileEvent[];         // arrival order; empties the queue
+  readonly residency: SurfaceTileResidency;
+  /** Like OctreeChunkStream.update: manifest request, verdict, then touches before allocations. */
+  apply(plan: SurfaceTilePlan, frame: number): void;
+  heightAt(bodyId: SurfaceTileBodyId, dirBodyFixed: Readonly<Vec3>): number;   // today's :504
+  residentHeightLevelAt(bodyId: SurfaceTileBodyId, dir: Readonly<Vec3>): number | null; // :516
   getAtlasView(): GPUTextureView | null;
   getHeightAtlasView(): GPUTextureView | null;
+  debugStats(): Omit<SurfaceTileDebugSnapshot, 'plan' | 'subCamera'>;  // residency counts only
 };
-export type SurfaceTiles = Destroyable & { readonly stream: SurfaceTileStream; runtime: SurfaceTileRuntime };
-export function planSurfaceTiles(prev: SurfaceTileRuntime, views: readonly FrameView[],
-  committedTier: (bodyId: SurfaceTileBodyId) => Tier): { readonly next: SurfaceTileRuntime;
-  readonly effects: readonly SurfaceTileEffect[]; readonly result: PlannerResult<readonly SurfaceCutTile[]> };
 ```
 
-- `runFrame`: at the head, before `stepCameraRuntime`,
-  `tiles.runtime = foldSurfaceTileEvents(tiles.runtime, tiles.stream.drainEvents())`; at the planning
-  point, `tiles.runtime = next; tiles.stream.run(effects)`.
-- Stream: uploads on fetch completion, queues `tileLoaded` (`readyAtMs`, uv from `slots.slotUv`);
-  `upload()` null → `tileDeclined`; evict handlers → `tileEvicted`; `allocate()` null → `tileDropped`;
-  null fetch → `tileFailed`; manifest fetch → `manifestLoaded`; a destroyed or released stream queues
-  nothing (`tileStreamSubsystem.ts:90-93`).
-- Deleted from the stream: `plannerParams`, `update`, `residentSlot`, `terrainHeightAt`,
-  `residentHeightLevelAt`, `setLastCut`/`getLastCut`, `engagedBodyId`, `release`, `isAnimating`,
-  `getDebugSnapshot`. Passes read `tiles.runtime.cut` and `terrainHeightOf(tiles.runtime, …)`;
-  `surfaceTileTerrain` reads the runtime through the selectors (`LayerTerrain` unchanged);
-  `engine.debug.surfaceTiles` returns `surfaceTileDebugOf(runtime)` until P7.
-- Contract widenings: none. Anything needing the runtime other than through `state.subsystems` is a STOP.
+- `runFrame`, at today's planning point: `const plan = planSurfaceTiles(views, over, tiles.stream.residency,
+  committedTier); tiles.plan = plan; tiles.stream.apply(plan, frameIndex);` and the wake vote reads
+  `plan.awake`. One writer of `tiles.plan` per frame.
+- Deleted from the subsystem: `plannerParams`, `update`, `setLastCut`/`getLastCut`, `release`,
+  `isAnimating`, `getDebugSnapshot` (the debug handle composes `stream.debugStats()` with
+  `tiles.plan.lastPlan`, `cut.length` and `subCamera` until P7).
+- Passes read `tiles.plan.cut` and the stream's atlas views; the terrain seam reads `stream.heightAt`,
+  `stream.residentHeightLevelAt` and `tiles.plan.subCamera` (`LayerTerrain` unchanged).
+- Contract widenings: none.
 
 **Tests:**
 
-- `heights that land between frames reach the camera that frame` (`runFrame.test.ts`). **Bug caught:**
-  the camera floor a frame behind the drawn terrain.
-- `an upload into a recycled slot reports declined, never loaded`. **Bug caught:** the cut names a slot
-  holding another tile.
-- `a released stream reports nothing from fetches still in flight` (and closes the bitmap). **Bug
-  caught:** Earth residency repopulating after a switch to Mars, or leaked bitmaps.
-- `touch runs before any allocate in one demand`. **Bug caught:** the eviction cascade (`:335-341`).
-- Port `planSurfaceTiles.test.ts` to a runtime; its three bug names stand.
+- `apply touches every listed key before allocating any request` (fake atlas near full). **Bug caught:**
+  a resident tile this frame needs evicted for a miss.
+- `an upload into a recycled slot is dropped and never reported resident`. **Bug caught:** the cut names a
+  slot holding another tile.
+- `release frees both atlases and ignores fetches still in flight` (bitmaps closed). **Bug caught:** Earth
+  tiles repopulating after a switch to Mars, or leaked bitmaps.
+- Port the stream cases of `surfaceTileSubsystem.test.ts`; port `planSurfaceTiles.test.ts` to the new
+  signature.
 
 - [ ] Task 5
 
-**P8 perf estimate and ruling.** Worst pose: Earth at street level, mono, streaming (4 fetches in
-flight, both atlases near full: 256 albedo + 1,024 height slots, `surfaceTileParams.ts:31,40,45`).
-`cutSurfaceTiles` is unchanged and dominant. Added on a streaming frame: the fold copies each touched
-product map once (≤ 1,280 entries, ~30–60 µs), the step copies `pending` only on frames with misses;
-`surfaceTilePath` runs once per request instead of twice. ≤ ~0.1 ms desktop, ~0.3 ms phone, only while
-tiles land; a quiet frame costs 0. `subCameraOf` drops from O(resident) to O(1). **Ruling: no perf gate.**
+**P8 perf estimate and ruling.** Same work as today, moved: `cutSurfaceTiles` dominant and unchanged; the
+decisions run once per frame either way; no map copies, no event queue; `subCamera` drops from an
+O(resident) scan to O(1). **Ruling: no perf gate.**
 
-**Known risks:** off-frame readers (`liveWorldPose`, `engine.ts:530-532`; the debug handle) see
-residency as of the last fold, not the instant a tile lands; the runtime's `failed` set mirrors the
-stream's `failedKeys` (both cleared only on eviction; a second clear path in the stream would make them
-drift); porting the 873-line `surfaceTileSubsystem.test.ts` is most of the effort.
+**Known risks:** the planner reads live residency, so a tile landing between `planSurfaceTiles` and
+`apply` in the same task cannot happen (both run synchronously in `runFrame`); `apply` must re-check a
+key's slot at upload (today's `tileStreamSubsystem.ts:64-80` guard, unchanged); porting the 873-line
+`surfaceTileSubsystem.test.ts` splits between Tasks 4 and 5.
 
 ### P7 placement (R6)
 
-No clean interim writer exists while core owns the runtime: a core fact (field, action, selector) or
-core dispatching into the body Layer's facts would both be deleted one PR later. After Task 4 the
-snapshot is a pure selector, so P7 is small. Recommended: P7 lands in the body PR (its tile planner
+No clean interim writer exists while core owns the tiles: a core fact (field, action, selector) or
+core dispatching into the body Layer's facts would both be deleted one PR later. **Ruled (user,
+2026-10-22): P7 lands in the body PR** (its tile planner row
 publishes `facts.surfaceTileDebug` throttled to 250 ms while `selectDebugPanelOpen`; the two debug
 sections move into `src/layers/body/`; `engine.debug.surfaceTiles` and the panel's poll delete).
 
