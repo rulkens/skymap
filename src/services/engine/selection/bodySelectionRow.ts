@@ -17,7 +17,7 @@ import { deriveBodyStates } from '../frame/deriveBodyStates';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 
 type BodyRef = Extract<SelectionRef, { type: 'body' }>;
 
@@ -31,7 +31,7 @@ export function bodySelectionRow(): SelectionKindRow<BodyRef> {
     pickSources: BODY_SOURCE_CODES,
     resolvePick: (entry, pick) => {
       if (entry.type !== 'body') return null;
-      const seeds = BODY_PICK_ROWS[entry.id as BodyId];
+      const seeds = BODY_PICK_ROWS[entry.id as BodySourceId];
       const body = seeds[pick.localIdx];
       return body ? { type: 'body', id: body.id } : null;
     },

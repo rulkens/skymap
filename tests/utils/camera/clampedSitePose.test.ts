@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { clampedSitePose } from '../../../src/utils/camera/clampedSitePose';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 
 const BODY: MeshBody = {
   id: 'fixture',
@@ -22,7 +22,7 @@ const BODY: MeshBody = {
 };
 
 const POSE: SitePose = {
-  siteId: 'curiosity' as BodyId,
+  siteId: 'curiosity' as BodySourceId,
   headingRad: 0.4,
   elevationRad: 0,
   rangeM: 10,

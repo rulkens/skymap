@@ -21,7 +21,7 @@ import { makeSlab } from '../../fixtures/makeSlab';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
@@ -55,7 +55,7 @@ function makeCtx(distanceMpc: number): FrameView {
     snapshot: { simDays: CONST_J2000 },
     cam: { distance: distanceMpc, position: camPosMpc, target: EARTH_STATE.positionMpc },
     drawCamPos: camPosMpc,
-    bodyPose: (bodyId: BodyId) =>
+    bodyPose: (bodyId: BodySourceId) =>
       bodyId === 'earth'
         ? bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: EARTH_STATE })
         : null,

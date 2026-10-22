@@ -11,7 +11,7 @@ import { cameraDebugSnapshotOf } from '../../../../src/services/engine/camera/ca
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
@@ -36,7 +36,7 @@ const LIVE_TIME: TimeState = {
 };
 
 const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
-const bodyId = (id: string): BodyId => id as BodyId;
+const bodyId = (id: string): BodySourceId => id as BodySourceId;
 
 /** Eye placed via a zero-distance pose; forward is degenerate on purpose —
  * these tests pin the regime/epoch fields, not the orientation pipeline. */
@@ -81,7 +81,7 @@ function absoluteFramed(): FramedCameraPose {
   return { frame: 'absolute', pose: ABSOLUTE_POSE };
 }
 
-function bodyFramed(id: BodyId, anchorLocalM: Vec3, eyeRelAnchorM: Vec3): FramedCameraPose {
+function bodyFramed(id: BodySourceId, anchorLocalM: Vec3, eyeRelAnchorM: Vec3): FramedCameraPose {
   const pose: BodyFixedPose = { bodyId: id, anchorLocalM, eyeRelAnchorM, basisLocal: IDENTITY };
   return { frame: { body: id }, pose };
 }

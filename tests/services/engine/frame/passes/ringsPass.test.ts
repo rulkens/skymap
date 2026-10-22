@@ -28,7 +28,7 @@ import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -122,7 +122,7 @@ function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   } as unknown as FrameView;
 }
 
-function makeBodyView(bodyId: BodyId): SlabView {
+function makeBodyView(bodyId: BodySourceId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
@@ -161,7 +161,7 @@ function makeRendererSpy() {
 describe('ringsPass.enabled', () => {
   it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
     const state = makeState(null, [], []);
-    expect(ringsPass.enabled(state, CTX_STUB, makeBodyView('saturn' as BodyId))).toBe(false);
+    expect(ringsPass.enabled(state, CTX_STUB, makeBodyView('saturn' as BodySourceId))).toBe(false);
   });
 
   it('is false beyond the foreground gate even with a resident resolved ring', () => {
@@ -170,21 +170,21 @@ describe('ringsPass.enabled', () => {
       ringsPass.enabled(
         state,
         makeCtx(FOREGROUND_MAX_DISTANCE_MPC),
-        makeBodyView('saturn' as BodyId),
+        makeBodyView('saturn' as BodySourceId),
       ),
     ).toBe(false);
   });
 
   it('is false when the ring strip is NOT resident', () => {
     const state = makeState(makeRendererSpy(), [saturnBody()], []);
-    expect(ringsPass.enabled(state, makeCtx(), makeBodyView('saturn' as BodyId))).toBe(false);
+    expect(ringsPass.enabled(state, makeCtx(), makeBodyView('saturn' as BodySourceId))).toBe(false);
   });
 
   it('draws only for a body with a ring row: false for earth, true for saturn', () => {
     const state = makeState(makeRendererSpy(), [earthBody(), saturnBody()], ['saturn-ring']);
     const ctx = makeCtx();
-    expect(ringsPass.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(false);
-    expect(ringsPass.enabled(state, ctx, makeBodyView('saturn' as BodyId))).toBe(true);
+    expect(ringsPass.enabled(state, ctx, makeBodyView('earth' as BodySourceId))).toBe(false);
+    expect(ringsPass.enabled(state, ctx, makeBodyView('saturn' as BodySourceId))).toBe(true);
   });
 });
 
@@ -194,8 +194,8 @@ describe('ringsPass.draw', () => {
     const state = makeState(renderer, [earthBody(), saturnBody()], ['saturn-ring']);
     const ctx = makeCtx();
 
-    ringsPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), ctx, state);
-    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), ctx, state);
+    ringsPass.draw(PASS_STUB, makeBodyView('earth' as BodySourceId), ctx, state);
+    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodySourceId), ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
@@ -204,7 +204,7 @@ describe('ringsPass.draw', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
     const renderer = makeRendererSpy();
-    const view = makeBodyView('saturn' as BodyId);
+    const view = makeBodyView('saturn' as BodySourceId);
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
@@ -224,7 +224,7 @@ describe('ringsPass.draw', () => {
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), makeCtx(), state);
+    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodySourceId), makeCtx(), state);
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
@@ -242,7 +242,7 @@ describe('ringsPass.draw', () => {
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), makeCtx(), state);
+    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodySourceId), makeCtx(), state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [pass, u] = renderer.draw.mock.calls[0]!;

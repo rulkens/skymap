@@ -19,7 +19,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
@@ -30,7 +30,7 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 const VIEWPORT: Vec2 = [100, 100];
 const FOV = Math.PI / 2;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
 const EARTH = BODIES.get('earth')!;
 const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 

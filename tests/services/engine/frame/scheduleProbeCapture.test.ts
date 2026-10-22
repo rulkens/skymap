@@ -28,7 +28,7 @@ import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -83,7 +83,7 @@ function faceCtxWithMarsRow(face: CubeFace): FrameView {
 }
 
 function marsSlab(index: number) {
-  return makeSlab({ index, frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
+  return makeSlab({ index, frame: { kind: 'body-m', hostId: 'mars' as BodySourceId } });
 }
 
 /** `faceViewSpec` is real here — a mocked `deriveView` recovers the face it
@@ -203,7 +203,7 @@ describe('scheduleProbeCapture', () => {
           slabs: [
             makeSlab(),
             makeSlab({ index: 1 }),
-            makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'voyager1' as BodyId } }),
+            makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'voyager1' as BodySourceId } }),
           ],
         }) as unknown as FrameView,
     );

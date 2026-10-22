@@ -18,7 +18,7 @@
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { SurfaceTileSpec } from '../../../@types/data/SurfaceTileSpec';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
@@ -106,7 +106,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // Which body's manifest is requested/pending/loaded. Re-fetched only when
   // `plannerParams` is asked about a DIFFERENT body than this one — a tier
   // change alone (same body) reuses the manifest already on hand.
-  let manifestBodyId: BodyId | null = null;
+  let manifestBodyId: BodySourceId | null = null;
   let manifestPending = false;
   let manifest: SurfaceTileManifest | null = null;
 
@@ -114,7 +114,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // `bodyId`/`baseLevel`/`params` can never describe different requests (see
   // its doc comment).
   let paramsState: {
-    readonly bodyId: BodyId;
+    readonly bodyId: BodySourceId;
     readonly baseLevel: number;
     readonly params: SurfaceTilePlannerParams | null;
   } | null = null;
@@ -127,7 +127,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     readonly stream: TileStreamSubsystem<ImageBitmap, TextureAtlas>;
     readonly heightStream: TileStreamSubsystem<HeightTileImage, TextureAtlas>;
     readonly slotsPerRow: number;
-    readonly bodyId: BodyId;
+    readonly bodyId: BodySourceId;
   } | null = null;
 
   // One map per product rather than one keyed by the (already
@@ -208,7 +208,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
   /** The one writer of `paramsState`, so `bodyId`/`baseLevel`/`params` can't
    *  describe different requests. */
-  function refreshParams(bodyId: BodyId, baseLevel: number): void {
+  function refreshParams(bodyId: BodySourceId, baseLevel: number): void {
     paramsState = {
       bodyId,
       baseLevel,
@@ -216,11 +216,11 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     };
   }
 
-  function plannerParams(bodyId: BodyId, baseLevel: number): SurfaceTilePlannerParams | null {
+  function plannerParams(bodyId: BodySourceId, baseLevel: number): SurfaceTilePlannerParams | null {
     // Cast: the registry's own declaration stays a literal (`as const
     // satisfies`) so a body-name typo there is a compile error, but that
     // makes it non-indexable by the wider `BodyId` a caller carries.
-    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[bodyId];
+    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodySourceId, SurfaceTileSpec>>)[bodyId];
     if (spec === undefined) return null;
     // A different body than the one whose manifest is loaded/loading —
     // supersede it. `manifestBodyId` is checked again inside the `.then`,
@@ -255,7 +255,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * never again per engagement — `slotSide` comes from the manifest's tile
    * edge, so a re-bake at a different edge stays a data change.
    */
-  function engage(tilePx: number, bodyId: BodyId): NonNullable<typeof atlas> {
+  function engage(tilePx: number, bodyId: BodySourceId): NonNullable<typeof atlas> {
     const slotsPerRow = SURFACE_TILE_ATLAS_SIDE / tilePx;
     const created = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
       slots: new TextureAtlas(device, {
@@ -309,7 +309,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     lastEngaged = null;
   }
 
-  function update(input: { readonly bodyId: BodyId; readonly plan: SurfaceTilePlan }): void {
+  function update(input: { readonly bodyId: BodySourceId; readonly plan: SurfaceTilePlan }): void {
     if (destroyed) return;
     const { bodyId, plan } = input;
     // A different body than the one currently engaged (§ one engaged) —
@@ -468,7 +468,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * to, so it must miss rather than read this one's.
    */
   function heightQueryAt(
-    bodyId: BodyId,
+    bodyId: BodySourceId,
     dirBodyFixed: Readonly<Vec3>,
   ): {
     readonly deepestLevel: number;
@@ -502,7 +502,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   }
 
   /** `terrainHeightM` composed with this subsystem's own residency (F3a). */
-  function terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number {
+  function terrainHeightAt(bodyId: BodySourceId, dirBodyFixed: Readonly<Vec3>): number {
     const query = heightQueryAt(bodyId, dirBodyFixed);
     if (query === null) return 0;
     return terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, query.resident);
@@ -514,7 +514,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * instrumented lookup rather than a second address derivation, so the level
    * reported is by construction the one the height came from.
    */
-  function residentHeightLevelAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number | null {
+  function residentHeightLevelAt(bodyId: BodySourceId, dirBodyFixed: Readonly<Vec3>): number | null {
     const query = heightQueryAt(bodyId, dirBodyFixed);
     if (query === null) return null;
     let level: number | null = null;

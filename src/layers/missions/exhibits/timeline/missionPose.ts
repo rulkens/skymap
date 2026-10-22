@@ -8,7 +8,7 @@
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
 
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { CameraPose } from '../../../../@types/camera/CameraPose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { DriverCtx } from '../../../../@types/engine/camera/DriverCtx';
@@ -62,7 +62,7 @@ export function missionPose(
   const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
   const { fovYRad, aspect } = ctx.projection;
-  const positionOf = (id: string) => ctx.bodies.get(id as BodyId)?.positionMpc;
+  const positionOf = (id: string) => ctx.bodies.get(id as BodySourceId)?.positionMpc;
   // A new aim token also restarts the epoch these times are on; an easing one keeps the offsets.
   const sameAim = own !== null && own.aim === token;
   const prev = sameAim ? own.view : null;

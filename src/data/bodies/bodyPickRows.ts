@@ -8,9 +8,9 @@
 
 import { SCENE_EARTH } from './sceneEarth';
 import { SCENE_PLANETS } from './scenePlanets';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 
-export const BODY_PICK_ROWS: Readonly<Record<BodyId, readonly { readonly id: string }[]>> = {
+export const BODY_PICK_ROWS: Readonly<Record<BodySourceId, readonly { readonly id: string }[]>> = {
   earth: [SCENE_EARTH],
   planet: SCENE_PLANETS,
 };

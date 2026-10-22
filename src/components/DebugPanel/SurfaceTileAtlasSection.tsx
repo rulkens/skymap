@@ -19,7 +19,7 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDebugSnapshot';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { FLY_TO_PRESETS } from '../../data/debug/flyToPresets';
 import { parseLonLatInput } from '../../utils/geo/parseLonLatInput';
@@ -32,7 +32,7 @@ export type SurfaceTileAtlasSectionProps = {
   /** Fly-to-coordinates debug instrument, from the engine handle's
    *  `debug.flyToLonLat`. `body` omitted keeps `flyToLonLatActions`'s own
    *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
-  flyToLonLat: (lonDeg: number, latDeg: number, body?: BodyId, altKm?: number) => void;
+  flyToLonLat: (lonDeg: number, latDeg: number, body?: BodySourceId, altKm?: number) => void;
   readonly overlays: Record<DebugOverlayKey, boolean>;
   readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
 };
@@ -71,7 +71,7 @@ function SurfaceTileAtlasSection({
     if (point === null) return;
     // `BodyId` is the body SOURCE-row union, not the scene ids; the saga
     // resolves any scene id, so the cast only widens the declared type.
-    flyToLonLat(point.lonDeg, point.latDeg, (snap.bodyId ?? undefined) as BodyId | undefined);
+    flyToLonLat(point.lonDeg, point.latDeg, (snap.bodyId ?? undefined) as BodySourceId | undefined);
   }
 
   // A landmark is a place, so it carries its own body — Everest's degrees on
@@ -90,7 +90,7 @@ function SurfaceTileAtlasSection({
               preset.latDeg,
               // Same widening cast as `handleFlyToSubmit`: `SurfaceTileBodyId`
               // isn't assignable to `BodyId`, the saga resolves either way.
-              preset.body as BodyId,
+              preset.body as BodySourceId,
               preset.altKm,
             )
           }

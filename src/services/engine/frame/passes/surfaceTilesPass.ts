@@ -17,7 +17,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';

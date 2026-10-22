@@ -8,7 +8,7 @@
  * slope over two seconds of poll jitter is the floor (I4).
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDebugSnapshot } from '../../../@types/camera/CameraDebugSnapshot';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -44,7 +44,7 @@ export function cameraDebugSnapshotOf(input: {
   readonly poseBasis: Readonly<Mat3>;
   readonly upBasis: Readonly<Mat3>;
   readonly orientationFrame: string;
-  readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
+  readonly bodyStates: ReadonlyMap<BodySourceId, BodyState>;
   readonly lastRenderedSimDays: number;
   readonly liveSimDays: number;
   readonly time: TimeState;

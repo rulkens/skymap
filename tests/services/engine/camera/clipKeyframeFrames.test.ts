@@ -30,7 +30,7 @@ import { clipStarted } from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -46,8 +46,8 @@ vi.mock('../../../../src/services/engine/camera/toBodyFixedChannels', async (imp
 });
 import { toBodyFixedChannels } from '../../../../src/services/engine/camera/toBodyFixedChannels';
 
-const EARTH = { body: 'earth' as BodyId };
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const EARTH = { body: 'earth' as BodySourceId };
+const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
 const BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const START: CameraPose = { target: [0, 0, 0], yaw: 0.5, pitch: 0.2, distance: 10 };
 const CTX = {
@@ -161,7 +161,7 @@ describe('frame-tagged keyframes', () => {
 
   it('absolute → body → absolute keeps the eye and the aim', () => {
     const pose: CameraPose = {
-      target: BODIES.get('earth' as BodyId)!.positionMpc,
+      target: BODIES.get('earth' as BodySourceId)!.positionMpc,
       yaw: 0.9,
       pitch: -0.3,
       distance: 3e-10,
@@ -179,7 +179,7 @@ describe('frame-tagged keyframes', () => {
   });
 
   it('a clip leg tagged { site } evaluates in the site rung, tweening from its converted start', () => {
-    const CURIOSITY = { site: 'curiosity' as BodyId };
+    const CURIOSITY = { site: 'curiosity' as BodySourceId };
     const HEADING_RAD = 0.7;
     const ELEVATION_RAD = 0.2;
     const RANGE_M = 12;

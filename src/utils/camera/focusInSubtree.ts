@@ -4,9 +4,9 @@
  * constrains no rung, hence null ⇒ true.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import { surfaceFixedChain } from './surfaceFixedChain';
 
-export function focusInSubtree(focusId: BodyId | null, rungId: BodyId): boolean {
+export function focusInSubtree(focusId: BodySourceId | null, rungId: BodySourceId): boolean {
   return focusId === null || surfaceFixedChain(focusId).includes(rungId);
 }

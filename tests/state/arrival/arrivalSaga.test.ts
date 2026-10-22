@@ -60,7 +60,7 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -186,7 +186,7 @@ describe('arrivalSaga', () => {
     for (const action of arrival) sim.store.dispatch(action);
 
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
     const shown = () =>
       foldToWorld(sim.state.cameraRuntime.outputs.displayed, {
         bodies,

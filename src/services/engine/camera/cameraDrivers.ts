@@ -10,7 +10,7 @@
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverActivity } from '../../../@types/engine/camera/DriverActivity';
@@ -206,7 +206,7 @@ function framedClipArm(
   evaluated: FramedClipPose,
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
-  bodies: ReadonlyMap<BodyId, BodyState>,
+  bodies: ReadonlyMap<BodySourceId, BodyState>,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading

@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 
 import { sitePointBodyFixed } from '../../../src/utils/camera/sitePointBodyFixed';
 import { sitePoseToBodyArm } from '../../../src/utils/camera/sitePoseToBodyArm';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
 
 const SITE: SurfaceFixedSite = {
@@ -23,7 +23,7 @@ const SITE: SurfaceFixedSite = {
 describe('sitePoseToBodyArm', () => {
   it('anchors the body arm at the site', () => {
     const arm = sitePoseToBodyArm(
-      { siteId: 'fixture-rover' as BodyId, headingRad: 1.2, elevationRad: 0.4, rangeM: 37 },
+      { siteId: 'fixture-rover' as BodySourceId, headingRad: 1.2, elevationRad: 0.4, rangeM: 37 },
       SITE,
       1000,
     );

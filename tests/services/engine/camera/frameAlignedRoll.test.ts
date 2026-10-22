@@ -25,14 +25,14 @@ import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { orbitAnglesLookingAlong } from '../../../../src/utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
 const EARTH = BODIES.get('earth')!;
 // Every step here is one deltaY-100 mouse notch — the calibration point, where
 // the per-log-zoom settle spends the ruled 25 % / 0.1 rad.

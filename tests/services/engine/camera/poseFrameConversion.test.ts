@@ -30,7 +30,7 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 
 // Provider A's floor: the world arm stores the eye as `target + distance·dir`
 // in Mpc at heliocentric magnitude, where one f64 ulp ≈ 25 µm. The conversion's
@@ -103,7 +103,7 @@ function expectVec3Near(actual: Vec3, expected: Vec3, tol: number, label: string
 }
 
 type Fixture = {
-  readonly bodyId: BodyId;
+  readonly bodyId: BodySourceId;
   readonly positionMpc: Vec3;
   readonly orientation: Mat3;
   readonly poseBasis: Mat3;

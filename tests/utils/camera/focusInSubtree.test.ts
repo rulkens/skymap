@@ -7,9 +7,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { focusInSubtree } from '../../../src/utils/camera/focusInSubtree';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 
-const id = (name: string): BodyId => name as BodyId;
+const id = (name: string): BodySourceId => name as BodySourceId;
 
 describe('focusInSubtree', () => {
   it('a rover keeps its host planet', () => {

@@ -11,7 +11,7 @@
 
 import type { UnknownAction } from '@reduxjs/toolkit';
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
@@ -102,7 +102,7 @@ export function stepCameraRuntime(
   const focus = stored.selectionRows.focus;
   // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
   // wheel floors at the hull's standoff, not the surfaceless floor hundreds of km out.
-  const stand = prev.pivotBody === null ? undefined : bodies.get(prev.pivotBody as BodyId);
+  const stand = prev.pivotBody === null ? undefined : bodies.get(prev.pivotBody as BodySourceId);
   const pivotRow = stand ? bodyRowAt(prev.pivotBody!, stand.positionMpc) : focus;
   const lastWinnerRidesWheel = ridesWheelTarget(drivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
@@ -125,7 +125,7 @@ export function stepCameraRuntime(
   const rungFields = {
     bodies,
     poseBasis,
-    focusBodyId: (selectionDriver(focus)?.poseId ?? null) as BodyId | null,
+    focusBodyId: (selectionDriver(focus)?.poseId ?? null) as BodySourceId | null,
     pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
     fovYRad: projection.fovYRad,

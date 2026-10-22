@@ -9,7 +9,7 @@
  * roll — there is no fifth channel to carry it.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -18,7 +18,7 @@ import { imagePlaneBasis } from './imagePlaneBasis';
 import { mat3FromColumns } from '../math/mat3FromColumns';
 import { yawPitchToDir } from './yawPitchToDir';
 
-export function decodeBodyFixedChannels(channels: CameraPose, bodyId: BodyId): BodyFixedPose {
+export function decodeBodyFixedChannels(channels: CameraPose, bodyId: BodySourceId): BodyFixedPose {
   const { target, distance } = channels;
   const arm = yawPitchToDir(channels.yaw, channels.pitch);
   const eyeLocalM: Vec3 = [

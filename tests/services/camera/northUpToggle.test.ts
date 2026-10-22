@@ -18,7 +18,7 @@ import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
@@ -88,7 +88,7 @@ describe('north-up toggle', () => {
 
   it('off: the world arm holds the roll verbatim', () => {
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+    const bodies = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
     const earth = bodies.get('earth')!;
     const poseAtHR = (hr: number): CameraPose => ({
       target: [earth.positionMpc[0]!, earth.positionMpc[1]!, earth.positionMpc[2]!],

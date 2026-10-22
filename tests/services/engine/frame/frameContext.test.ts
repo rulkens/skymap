@@ -43,7 +43,7 @@ import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -360,7 +360,7 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
     // level narrower than the closed `BodyId` union the seam's public surface
     // exposes — the same cast `slabs.ts`/`liveWorldPose.ts` use at this
     // boundary (see their headers).
-    const actualMars = ctx.bodyPose('mars' as BodyId);
+    const actualMars = ctx.bodyPose('mars' as BodySourceId);
     expect(actualMars).not.toBeNull();
     if (actualMars === null) return;
     // Provider A's own derivation, called directly — not a floor comparison:

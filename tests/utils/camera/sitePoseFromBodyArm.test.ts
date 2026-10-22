@@ -11,7 +11,7 @@ import { sitePointBodyFixed } from '../../../src/utils/camera/sitePointBodyFixed
 import { sitePoseFromBodyArm } from '../../../src/utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../src/utils/camera/sitePoseToBodyArm';
 import { SITE_RUNG } from '../../../src/data/camera/siteRung';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
@@ -47,7 +47,7 @@ const SITES = [site(90, 0), site(0, 0), site(-4.59, 137.44)];
 const POSES: readonly SitePose[] = [
   // Elevation at the floor, range at the floor.
   {
-    siteId: 'fixture-rover' as BodyId,
+    siteId: 'fixture-rover' as BodySourceId,
     headingRad: 0.7,
     elevationRad: Math.asin(
       (SITE_RUNG.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / RANGE_FLOOR_M,
@@ -56,12 +56,12 @@ const POSES: readonly SitePose[] = [
   },
   // Elevation at the ceiling, range at the release edge.
   {
-    siteId: 'fixture-rover' as BodyId,
+    siteId: 'fixture-rover' as BodySourceId,
     headingRad: -2.5,
     elevationRad: SITE_RUNG.elevationCeilRad,
     rangeM: RELEASE_EDGE_M,
   },
-  { siteId: 'fixture-rover' as BodyId, headingRad: 3.0, elevationRad: 0.5, rangeM: 50 },
+  { siteId: 'fixture-rover' as BodySourceId, headingRad: 3.0, elevationRad: 0.5, rangeM: 50 },
 ];
 
 function expectRoundTrip(s: SurfaceFixedSite, hostRadiusM: number, pose: SitePose): void {
@@ -142,7 +142,7 @@ describe('sitePoseFromBodyArm', () => {
         (i) => RANGE_M * frame.localUp[i]! + offsetM * frame.east[i]!,
       ) as Vec3;
       return sitePoseFromBodyArm(
-        { bodyId: 'fixture-host' as BodyId, anchorLocalM: p, eyeRelAnchorM, basisLocal },
+        { bodyId: 'fixture-host' as BodySourceId, anchorLocalM: p, eyeRelAnchorM, basisLocal },
         s,
         HOST_RADIUS_M,
         ROVER,

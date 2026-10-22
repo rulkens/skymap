@@ -59,7 +59,7 @@ import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/help
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
@@ -221,7 +221,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   // builds a body-m row's frame.
   const slab: Slab = makeSlab({
     vp: f64Vp,
-    frame: { kind: 'body-m', hostId: bodyId as BodyId },
+    frame: { kind: 'body-m', hostId: bodyId as BodySourceId },
   });
   return {
     slab,

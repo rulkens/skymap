@@ -49,7 +49,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -203,7 +203,7 @@ const MARS_R = MARS_ROW.surface.datumRadiusM;
 const MARS_R_MPC = bodyFootprintRadiusM(MARS_ROW) * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const RUNG_CTX = {
-  bodies: BODIES as ReadonlyMap<BodyId, BodyState>,
+  bodies: BODIES as ReadonlyMap<BodySourceId, BodyState>,
   poseBasis: B,
   upBasis: B,
   terrainHeightAt: datumOnlyTerrainHeight,
@@ -217,7 +217,7 @@ function metresBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 
 /** Curiosity's world position (Mpc) for the bodies a fixture is driven with. */
 function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
-  const driver = positionDriverById('curiosity' as BodyId);
+  const driver = positionDriverById('curiosity' as BodySourceId);
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
   const p = sitePointBodyFixed(driver, siteGroundRadiusM(driver, MARS_R));
   const mars = bodies.get('mars')!;
@@ -248,9 +248,9 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
       absoluteArm(
         foldToWorld(
           {
-            frame: { site: 'opportunity' as BodyId },
+            frame: { site: 'opportunity' as BodySourceId },
             pose: {
-              siteId: 'opportunity' as BodyId,
+              siteId: 'opportunity' as BodySourceId,
               headingRad: 0.4,
               elevationRad: 0.5,
               rangeM: 60,
@@ -311,9 +311,9 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
       absoluteArm(
         foldToWorld(
           {
-            frame: { site: 'curiosity' as BodyId },
+            frame: { site: 'curiosity' as BodySourceId },
             pose: {
-              siteId: 'curiosity' as BodyId,
+              siteId: 'curiosity' as BodySourceId,
               headingRad: 0.4,
               elevationRad: 0.5,
               rangeM: 60,
@@ -343,9 +343,9 @@ describe('focusing the host from a rover site (adverse 10)', () => {
       absoluteArm(
         foldToWorld(
           {
-            frame: { site: 'curiosity' as BodyId },
+            frame: { site: 'curiosity' as BodySourceId },
             pose: {
-              siteId: 'curiosity' as BodyId,
+              siteId: 'curiosity' as BodySourceId,
               headingRad: 0.4,
               elevationRad: 0.5,
               rangeM,

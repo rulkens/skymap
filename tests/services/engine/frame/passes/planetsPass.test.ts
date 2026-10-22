@@ -31,7 +31,7 @@ import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -120,7 +120,7 @@ function makeCtx(state: EngineState, distance = FOREGROUND_MAX_DISTANCE_MPC / 2)
   } as unknown as FrameView;
 }
 
-function makeBodyView(bodyId: BodyId): SlabView {
+function makeBodyView(bodyId: BodySourceId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
@@ -162,21 +162,21 @@ function makePartitionFixtureState(): EngineState {
 describe('planetsPass.enabled', () => {
   it('is false while planetRenderer is null (bare ctx short-circuits)', () => {
     const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
-    expect(planetsPass.enabled(state, CTX_STUB, makeBodyView('mercury' as BodyId))).toBe(false);
+    expect(planetsPass.enabled(state, CTX_STUB, makeBodyView('mercury' as BodySourceId))).toBe(false);
   });
 
   it('is false beyond the foreground gate even for a flat body', () => {
     const state = makePartitionFixtureState();
     const farCtx = makeCtx(state, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planetsPass.enabled(state, farCtx, makeBodyView('mercury' as BodyId))).toBe(false);
+    expect(planetsPass.enabled(state, farCtx, makeBodyView('mercury' as BodySourceId))).toBe(false);
   });
 
   it('is true for the flat-branch row, false for the textured and glint rows', () => {
     const state = makePartitionFixtureState();
     const ctx = makeCtx(state);
-    expect(planetsPass.enabled(state, ctx, makeBodyView('mercury' as BodyId))).toBe(true);
-    expect(planetsPass.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(false);
-    expect(planetsPass.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
+    expect(planetsPass.enabled(state, ctx, makeBodyView('mercury' as BodySourceId))).toBe(true);
+    expect(planetsPass.enabled(state, ctx, makeBodyView('mars' as BodySourceId))).toBe(false);
+    expect(planetsPass.enabled(state, ctx, makeBodyView('moon' as BodySourceId))).toBe(false);
   });
 });
 
@@ -186,11 +186,11 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
     const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
     const ctx = makeCtx(state);
 
-    planetsPass.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state); // textured row
-    planetsPass.draw(PASS_STUB, makeBodyView('moon' as BodyId), ctx, state); // glint row
+    planetsPass.draw(PASS_STUB, makeBodyView('mars' as BodySourceId), ctx, state); // textured row
+    planetsPass.draw(PASS_STUB, makeBodyView('moon' as BodySourceId), ctx, state); // glint row
     expect(renderer.draw).not.toHaveBeenCalled();
 
-    planetsPass.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat row
+    planetsPass.draw(PASS_STUB, makeBodyView('mercury' as BodySourceId), ctx, state); // flat row
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     expect(renderer.draw.mock.calls[0]![1]).toBe('mercury'); // this row's bodyId
   });
@@ -208,7 +208,7 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
     const drawnByPlanets = new Set<string>();
     const drawnByTextured = new Set<string>();
     for (const id of ['mercury', 'mars', 'moon']) {
-      const view = makeBodyView(id as BodyId);
+      const view = makeBodyView(id as BodySourceId);
 
       const beforeP = planetsRenderer.draw.mock.calls.length;
       planetsPass.draw(PASS_STUB, view, ctx, state);
@@ -234,7 +234,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     const state = makePartitionFixtureState();
     const renderer = state.gpu.planetRenderer as unknown as ReturnType<typeof makeRendererSpy>;
     const ctx = makeCtx(state);
-    const view = makeBodyView('mercury' as BodyId);
+    const view = makeBodyView('mercury' as BodySourceId);
     const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
 
     planetsPass.draw(PASS_STUB, view, ctx, state);
@@ -261,7 +261,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     const ctx = makeCtx(state);
     const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
 
-    planetsPass.draw(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
+    planetsPass.draw(PASS_STUB, makeBodyView('mercury' as BodySourceId), ctx, state);
 
     const [, bodyId, staging] = renderer.draw.mock.calls[0]!;
     expect(bodyId).toBe('mercury');
@@ -290,7 +290,7 @@ describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)',
   it('is true for the textured row even though enabled (flat-only) is false there', () => {
     const state = makePartitionFixtureState();
     const ctx = makeCtx(state);
-    const view = makeBodyView('mars' as BodyId);
+    const view = makeBodyView('mars' as BodySourceId);
     expect(planetsPass.enabled(state, ctx, view)).toBe(false);
     expect(planetsPass.pickEnabled!(state, ctx, view)).toBe(true);
   });
@@ -298,13 +298,13 @@ describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)',
   it('is false for the glint row (neither flat nor textured)', () => {
     const state = makePartitionFixtureState();
     const ctx = makeCtx(state);
-    expect(planetsPass.pickEnabled!(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
+    expect(planetsPass.pickEnabled!(state, ctx, makeBodyView('moon' as BodySourceId))).toBe(false);
   });
 
   it('is false beyond the foreground gate even for a textured row', () => {
     const state = makePartitionFixtureState();
     const farCtx = makeCtx(state, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planetsPass.pickEnabled!(state, farCtx, makeBodyView('mars' as BodyId))).toBe(false);
+    expect(planetsPass.pickEnabled!(state, farCtx, makeBodyView('mars' as BodySourceId))).toBe(false);
   });
 });
 
@@ -326,9 +326,9 @@ describe('planetsPass.drawPick', () => {
     } as unknown as EngineState;
     const ctx = makeCtx(state);
 
-    planetsPass.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state); // flat
-    planetsPass.drawPick!(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state); // textured
-    planetsPass.drawPick!(PASS_STUB, makeBodyView('moon' as BodyId), ctx, state); // glint
+    planetsPass.drawPick!(PASS_STUB, makeBodyView('mercury' as BodySourceId), ctx, state); // flat
+    planetsPass.drawPick!(PASS_STUB, makeBodyView('mars' as BodySourceId), ctx, state); // textured
+    planetsPass.drawPick!(PASS_STUB, makeBodyView('moon' as BodySourceId), ctx, state); // glint
     expect(pickRenderer.drawSphere).toHaveBeenCalledTimes(2);
   });
 
@@ -360,7 +360,7 @@ describe('planetsPass.drawPick', () => {
       drawPxPerRad: pxPerRad,
     };
 
-    planetsPass.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), ctx, state);
+    planetsPass.drawPick!(PASS_STUB, makeBodyView('mercury' as BodySourceId), ctx, state);
 
     expect(mvpMock).toHaveBeenCalledTimes(1);
     const radiusArg = mvpMock.mock.calls[0]![2] as number;

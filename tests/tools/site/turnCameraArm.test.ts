@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import { turnCameraArm } from '../../../tools/site/utils/turnCameraArm';
 
-const ROVER = 'perseverance' as BodyId;
+const ROVER = 'perseverance' as BodySourceId;
 
 describe('turnCameraArm', () => {
   it('turns a world pose by its yaw and a site pose by its heading, and leaves the rest alone', () => {

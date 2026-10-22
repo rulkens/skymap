@@ -11,7 +11,7 @@ import { sampledDepthBinding } from '../../../../src/services/engine/frame/sampl
 import { makeSlab } from '../../../fixtures/makeSlab';
 
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 
 const FAR_DEPTH_VIEW = { label: 'far-placeholder' } as unknown as GPUTextureView;
 const ROW_DEPTH_VIEW = { label: 'foreground:0-depth' } as unknown as GPUTextureView;
@@ -37,7 +37,7 @@ describe('sampledDepthBinding', () => {
   it('binds the far placeholder, not the real view, when the row cannot be unprojected', () => {
     // A body the pose provider cannot place (here: 'mars') — sampledDepthKmFrame
     // returns null, and the placeholder rule must still route the view.
-    const row = makeSlab({ frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
+    const row = makeSlab({ frame: { kind: 'body-m', hostId: 'mars' as BodySourceId } });
     const binding = sampledDepthBinding(
       { view: ROW_DEPTH_VIEW, row },
       RESOLVES_EVERY_BODY,

@@ -62,7 +62,7 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';

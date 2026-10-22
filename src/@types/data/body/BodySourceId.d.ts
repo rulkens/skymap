@@ -8,4 +8,4 @@ type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
  * widens the union automatically. The runtime iterable companion is
  * `BODY_IDS` in `data/bodies/bodyIds`.
  */
-export type BodyId = Extract<AnyEntry, { readonly type: 'body' }>['id'];
+export type BodySourceId = Extract<AnyEntry, { readonly type: 'body' }>['id'];

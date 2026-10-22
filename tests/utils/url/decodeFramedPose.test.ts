@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { decodeFramedPose } from '../../../src/utils/url/decodeFramedPose';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 
 // The Everest body arm from a real `l`-key dump (earth-everest.json).
@@ -22,8 +22,8 @@ const EVEREST_ARM: FramedCameraPose = {
 };
 
 const SITE_ARM: FramedCameraPose = {
-  frame: { site: 'curiosity' as BodyId },
-  pose: { siteId: 'curiosity' as BodyId, headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
+  frame: { site: 'curiosity' as BodySourceId },
+  pose: { siteId: 'curiosity' as BodySourceId, headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
 };
 
 const WORLD_ARM: FramedCameraPose = {

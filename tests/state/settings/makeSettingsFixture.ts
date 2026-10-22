@@ -79,7 +79,7 @@ import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/Gal
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
@@ -136,7 +136,7 @@ export function makeSettingsFixture(
     bodies: {
       items: Object.fromEntries(
         BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-      ) as Record<BodyId, BodyItemSettings>,
+      ) as Record<BodySourceId, BodyItemSettings>,
     },
     cosmicWebDensity: { ...volumesInitialState, items: { ...volumesInitialState.items } },
     flow: { ...flowInitialState },

@@ -34,7 +34,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { earthArm } from '../../../fixtures/earthArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
@@ -46,7 +46,7 @@ import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDri
 import { ridesWheelTarget } from '../../../../src/services/engine/camera/ridesWheelTarget';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
 const B = ORIENTATION_FRAMES.ecliptic;
 
 function makeStore() {
@@ -73,7 +73,7 @@ function ctxOf(
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
-      focusBodyId: focus?.type === 'body' ? (focus.id as BodyId) : null,
+      focusBodyId: focus?.type === 'body' ? (focus.id as BodySourceId) : null,
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
       fovYRad: Math.PI / 3,

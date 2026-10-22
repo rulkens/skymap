@@ -29,14 +29,14 @@ import {
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 
 type BufferDesc = { label?: string; size: number };
 
 // Test-fixture body ids, cast the same way the real caller's do (`body.id as
 // BodyId` in slabs.ts) — this suite only cares that distinct ids get distinct
 // buffers, not that these particular names are registered ones.
-const id = (name: string): BodyId => name as BodyId;
+const id = (name: string): BodySourceId => name as BodySourceId;
 
 function mockDevice(opts?: {
   renderPipelines?: GPURenderPipelineDescriptor[];

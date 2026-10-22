@@ -19,7 +19,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 afterEach(() => {
@@ -106,11 +106,11 @@ describe('CameraStateSection', () => {
     const siteSnap: CameraDebugSnapshot = {
       ...SNAP,
       framed: {
-        frame: { site: 'curiosity' as BodyId },
-        pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+        frame: { site: 'curiosity' as BodySourceId },
+        pose: { siteId: 'curiosity' as BodySourceId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
       },
       sitePose: {
-        siteId: 'curiosity' as BodyId,
+        siteId: 'curiosity' as BodySourceId,
         headingRad: 0.7,
         elevationRad: 0.2,
         rangeM: 12,

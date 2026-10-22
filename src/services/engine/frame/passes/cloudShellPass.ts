@@ -63,7 +63,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { EarthBody } from '../../../../@types/scene/EarthBody';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';

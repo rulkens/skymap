@@ -10,13 +10,13 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../src/data/camera/cameraTuning';
 import { EMPTY_TILT_MEMORY } from '../../../../../src/data/camera/emptyTiltMemory';
 import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
 const EARTH = BODIES.get('earth')!;
 const CTX: RungCtx = {
   bodies: BODIES,

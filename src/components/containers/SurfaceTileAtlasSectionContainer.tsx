@@ -14,7 +14,7 @@ import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { selectDebugOverlays } from '../../state/settings/selectors';
 import { setDebugOverlay } from '../../state/settings/core/debugSlice';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 
 export type SurfaceTileAtlasSectionContainerProps = {
@@ -29,7 +29,7 @@ function SurfaceTileAtlasSectionContainer({
   const onFlyToLonLat = useCallback(
     // `altKm` omitted keeps the camera's current altitude — what the text box
     // wants (fly there, stay as high as I am); the landmark buttons pass one.
-    (lonDeg: number, latDeg: number, body?: BodyId, altKm?: number) =>
+    (lonDeg: number, latDeg: number, body?: BodySourceId, altKm?: number) =>
       dispatch(flyToLonLat({ lonDeg, latDeg, body, altKm })),
     [dispatch],
   );

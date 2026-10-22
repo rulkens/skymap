@@ -16,7 +16,7 @@ import type { SurfaceTilePlannerParams } from '../../scene/SurfaceTilePlannerPar
 import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnapshot';
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { BodyId } from '../../data/body/BodyId';
+import type { BodySourceId } from '../../data/body/BodySourceId';
 import type { SurfaceTileBodyId } from '../../data/SurfaceTileBodyId';
 import type { Vec3 } from '../../math/Vec3';
 
@@ -29,7 +29,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * caller's — this subsystem no longer derives it from a `Tier`, since which
    * function does that is body-specific (`baseLevelForTier` today).
    */
-  plannerParams(bodyId: BodyId, baseLevel: number): SurfaceTilePlannerParams | null;
+  plannerParams(bodyId: BodySourceId, baseLevel: number): SurfaceTilePlannerParams | null;
 
   /**
    * Drive one frame's fetch demand; call every frame the body's layer draws.
@@ -39,7 +39,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * Engaged: LRU-touches every planned tile largest-first, enqueues anything
    * missing — allocating the atlas on first engage.
    */
-  update(input: { readonly bodyId: BodyId; readonly plan: SurfaceTilePlan }): void;
+  update(input: { readonly bodyId: BodySourceId; readonly plan: SurfaceTilePlan }): void;
 
   /**
    * Resolve one exact tile's atlas residency, or `null` if it is not
@@ -66,7 +66,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * a body other than the one currently ENGAGED (§ one engaged): body-generic
    * by construction, so a new body is a registry row away, not a second query.
    */
-  terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number;
+  terrainHeightAt(bodyId: BodySourceId, dirBodyFixed: Readonly<Vec3>): number;
 
   /**
    * The pyramid level `terrainHeightAt`'s ancestor climb actually resolved
@@ -75,7 +75,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * cannot tell "sea level" from "no tile": the floor can stand on a level
    * several coarser than the albedo on screen, and this is what shows it.
    */
-  residentHeightLevelAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number | null;
+  residentHeightLevelAt(bodyId: BodySourceId, dirBodyFixed: Readonly<Vec3>): number | null;
 
   /**
    * Store this frame's `cutSurfaceTiles` cut for `earthPass.draw` to read —

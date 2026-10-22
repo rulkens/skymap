@@ -30,7 +30,7 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { AtmosphereShellDepth } from '../../../../../src/@types/rendering/AtmosphereShellDepth';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
@@ -143,7 +143,7 @@ const ROW_DEPTH_VIEW = { label: 'foreground:0-depth' } as unknown as GPUTextureV
 
 const CTX_STUB = {} as FrameView;
 
-function makeBodyView(bodyId: BodyId): SlabView {
+function makeBodyView(bodyId: BodySourceId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
@@ -168,9 +168,9 @@ describe('atmosphereShellPass.enabled', () => {
   it('is true for earth’s and mars’s own body-m rows, false for the moon’s (no ATMOSPHERE_PARAMS row)', () => {
     const state = makeState({ draw: vi.fn() });
     const ctx = makeCtx();
-    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(true);
-    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(true);
-    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
+    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('earth' as BodySourceId))).toBe(true);
+    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('mars' as BodySourceId))).toBe(true);
+    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('moon' as BodySourceId))).toBe(false);
   });
 
   it('is false for a camera the shell encloses — that row is aerialPerspectivePass’s', () => {
@@ -179,7 +179,7 @@ describe('atmosphereShellPass.enabled', () => {
     camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL_INSIDE);
     try {
       const state = makeState({ draw: vi.fn() });
-      expect(atmosphereShellPass.enabled(state, makeCtx(), makeBodyView('earth' as BodyId))).toBe(
+      expect(atmosphereShellPass.enabled(state, makeCtx(), makeBodyView('earth' as BodySourceId))).toBe(
         false,
       );
     } finally {
@@ -189,7 +189,7 @@ describe('atmosphereShellPass.enabled', () => {
 
   it('is false while the atmosphereShellRenderer handle is null, even for a bare ctx (handle short-circuits first)', () => {
     const state = makeState(null);
-    expect(atmosphereShellPass.enabled(state, CTX_STUB, makeBodyView('earth' as BodyId))).toBe(
+    expect(atmosphereShellPass.enabled(state, CTX_STUB, makeBodyView('earth' as BodySourceId))).toBe(
       false,
     );
   });
@@ -202,7 +202,7 @@ describe('atmosphereShellPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const state = makeState({ draw: drawSpy });
     const ctx = makeCtx();
-    const view = makeBodyView('earth' as BodyId);
+    const view = makeBodyView('earth' as BodySourceId);
 
     atmosphereShellPass.draw(PASS_STUB, view, ctx, state);
 
@@ -229,9 +229,9 @@ describe('atmosphereShellPass.draw', () => {
     const state = makeState({ draw: drawSpy });
     const ctx = makeCtx();
 
-    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), ctx, state);
-    atmosphereShellPass.draw(PASS_STUB, makeBodyView('mars' as BodyId), ctx, state);
-    atmosphereShellPass.draw(PASS_STUB, makeBodyView('moon' as BodyId), ctx, state);
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodySourceId), ctx, state);
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('mars' as BodySourceId), ctx, state);
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('moon' as BodySourceId), ctx, state);
 
     // Exactly two draws — the Moon's row (no ATMOSPHERE_PARAMS entry) is a no-op.
     expect(drawSpy).toHaveBeenCalledTimes(2);
@@ -259,7 +259,7 @@ describe('atmosphereShellPass.draw', () => {
     // at a distance that is right in km and wrong by a factor of the radius.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const state = makeState({ draw: drawSpy });
-    const view = makeBodyView('mars' as BodyId);
+    const view = makeBodyView('mars' as BodySourceId);
 
     atmosphereShellPass.draw(
       PASS_STUB,
@@ -282,7 +282,7 @@ describe('atmosphereShellPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const state = makeState({ draw: drawSpy });
 
-    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), makeCtx(), state);
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodySourceId), makeCtx(), state);
 
     const depth = drawSpy.mock.calls[0]![3] as AtmosphereShellDepth;
     expect(depth.frame).toBeNull();

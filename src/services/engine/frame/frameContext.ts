@@ -9,7 +9,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { FrameContextInput } from '../../../@types/engine/frame/FrameContextInput';
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
@@ -92,7 +92,7 @@ export function deriveFrameContext(
   // asserted — `assembleOrbitCamera` always sets them, optional only on
   // `OrbitCameraInit`.
   const armBasisCtx = {
-    bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
+    bodies: bodyStates as ReadonlyMap<BodySourceId, BodyState>,
     poseBasis: cam.poseBasis,
     upBasis: cam.upBasis,
     terrainHeightAt: state.terrain.heightAt,

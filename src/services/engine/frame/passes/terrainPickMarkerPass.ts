@@ -9,7 +9,7 @@
  */
 
 import type { BodyFixedPose } from '../../../../@types/camera/BodyFixedPose';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
@@ -59,7 +59,7 @@ export const terrainPickMarkerPass: ContentPass = {
       // `in` gates membership above but does not narrow the KEY, so this
       // states what that check just proved — the same assertion
       // `runFrame`'s tile-planning predicate makes.
-      bodyId: bodyId as BodyId,
+      bodyId: bodyId as BodySourceId,
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [eyeM[0], eyeM[1], eyeM[2]],
       basisLocal: [...pose.basisM],

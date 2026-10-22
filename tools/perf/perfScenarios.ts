@@ -37,7 +37,7 @@
  */
 
 import { absoluteArm } from '../../src/utils/camera/absoluteArm';
-import type { BodyId } from '../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../src/@types/data/body/BodySourceId';
 import type { PerfPose } from '../../src/@types/perf/PerfPose';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 
@@ -66,7 +66,7 @@ const SGR_A_STAR_TARGET: Vec3 = [-0.0004469860712, -0.007138118108, -0.003965748
 // `BodyId` is the settings-group union ('planet', 'earth', …), coarser than the
 // scene body ids a body arm names, so the cast is the same one `decodeFramedPose`
 // makes when it parses a `#pose=` body arm.
-const MARS = 'mars' as BodyId;
+const MARS = 'mars' as BodySourceId;
 
 export const PERF_SCENARIOS: readonly PerfScenario[] = [
   {

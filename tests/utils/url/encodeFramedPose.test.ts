@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 
 describe('encodeFramedPose', () => {
   it('serializes a body arm as the b-tagged, comma-joined form', () => {
@@ -20,8 +20,8 @@ describe('encodeFramedPose', () => {
 
   it('serializes a site arm as the s-tagged form', () => {
     const site: FramedCameraPose = {
-      frame: { site: 'curiosity' as BodyId },
-      pose: { siteId: 'curiosity' as BodyId, headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
+      frame: { site: 'curiosity' as BodySourceId },
+      pose: { siteId: 'curiosity' as BodySourceId, headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
     };
     expect(encodeFramedPose(site)).toBe('s,curiosity,1.2,0.3,12.5');
   });

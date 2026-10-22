@@ -54,7 +54,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -62,7 +62,7 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCamer
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH: BodyState = deriveBodyStates(CONST_J2000).get('earth')!;
-const EARTH_ARM = { body: 'earth' as BodyId };
+const EARTH_ARM = { body: 'earth' as BodySourceId };
 // The ladder's fastest detent, ~3.16e8 s/s — three decades past the spec's
 // literal 10^6x, so a Clock leak this size cannot hide inside float noise.
 const FASTEST_RATE_INDEX = RATE_LADDER.length - 1;

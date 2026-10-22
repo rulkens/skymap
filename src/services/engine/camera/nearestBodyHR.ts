@@ -8,24 +8,24 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { hOverR } from './hOverR';
 
 type Nearest = {
-  readonly bodyId: BodyId;
+  readonly bodyId: BodySourceId;
   readonly bodyState: BodyState;
   readonly hr: number;
 };
 
 export function nearestBodyHR(
   eyeMpc: Readonly<Vec3>,
-  bodyStates: ReadonlyMap<BodyId, BodyState>,
+  bodyStates: ReadonlyMap<BodySourceId, BodyState>,
 ): Nearest | null {
   let nearest: Nearest | null = null;
   for (const body of SCENE_CELESTIAL_BODIES) {
-    const bodyId = body.id as BodyId;
+    const bodyId = body.id as BodySourceId;
     const bodyState = bodyStates.get(bodyId);
     if (bodyState === undefined) continue;
     const hr = hOverR(eyeMpc, bodyState, body.surface.datumRadiusM);

@@ -3,7 +3,7 @@
  * module constant, so a driver sees the frame ONLY through this bag.
  */
 
-import type { BodyId } from '../../data/body/BodyId';
+import type { BodySourceId } from '../../data/body/BodySourceId';
 import type { BodyState } from '../../scene/BodyState';
 import type { CameraPose } from '../../camera/CameraPose';
 import type { CameraProjection } from '../../camera/CameraProjection';
@@ -38,7 +38,7 @@ export type DriverCtx = {
   readonly simDays: number;
   readonly projection: CameraProjection;
   /** This instant's body states — a frame-tagged keyframe converts through them. */
-  readonly bodies: ReadonlyMap<BodyId, BodyState>;
+  readonly bodies: ReadonlyMap<BodySourceId, BodyState>;
   /** Mpc; null on a frame with no swallowed wheel notch. */
   readonly followDistanceTarget: number | null;
 };

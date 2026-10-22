@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { nudgedSitePose } from '../../../src/utils/camera/nudgedSitePose';
 import { steppedSitePose } from '../../../src/utils/camera/steppedSitePose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
 
@@ -18,7 +18,7 @@ const ROVER: MeshBody = {
 const VIEWPORT = [800, 600] as const;
 const FOV = 0.8;
 const POSE: SitePose = {
-  siteId: 'fixture-rover' as BodyId,
+  siteId: 'fixture-rover' as BodySourceId,
   headingRad: 0,
   elevationRad: 0.4,
   rangeM: 50,

@@ -42,7 +42,7 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { SimBodyId } from '../../../helpers/camera/SimBodyId';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 
 // Past the flight, then a further stretch the result must survive unchanged.
@@ -93,7 +93,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
  *  paused clock every case but the moving-body one runs on. */
 function standpoint(h: CameraSimHarness, id: SimBodyId, bodyState = h.bodies.get(id)!) {
   const basis = ORIENTATION_FRAMES[h.store.getState().settings.orientation];
-  const arm = toBodyArm(liveWorldPose(h.state), basis, basis, id as BodyId, bodyState);
+  const arm = toBodyArm(liveWorldPose(h.state), basis, basis, id as BodySourceId, bodyState);
   const eyeM = bodyFixedEyeM(arm);
   return {
     ...directionToLonLatDeg(normalize3(eyeM)),
@@ -171,7 +171,7 @@ describe('flyToLonLat through the frame loop', () => {
     const footprintM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const framingM =
       bodyFocusDistance(footprintM * SCALE_UNITS.M_TO_MPC, Math.PI / 3) / SCALE_UNITS.M_TO_MPC;
-    flyAndHold(h, () => fly({ body: 'mars' as BodyId, lonDeg: 137, latDeg: -5 }), 'mars', {
+    flyAndHold(h, () => fly({ body: 'mars' as BodySourceId, lonDeg: 137, latDeg: -5 }), 'mars', {
       lonDeg: 137,
       latDeg: -5,
       altM: framingM - h.radiusM('mars'),

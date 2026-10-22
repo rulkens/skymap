@@ -46,7 +46,7 @@ import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTi
 import type { SurfaceTilePlan } from '../../../../src/@types/scene/SurfaceTilePlan';
 import type { SurfaceCutTile } from '../../../../src/@types/scene/SurfaceCutTile';
 import type { Tier } from '../../../../src/@types/data/Tier';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import {
   createSurfaceTileSubsystem,
   EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
@@ -306,7 +306,7 @@ describe('surfaceTileSubsystem body switch', () => {
     expect(subsystem.residentSlot(TILE)).not.toBeNull();
     vi.mocked(fetchSurfaceTileManifest).mockClear();
 
-    const mars = 'mars' as BodyId;
+    const mars = 'mars' as BodySourceId;
     subsystem.plannerParams(mars, baseLevelForTier('mars', 'large'));
     subsystem.update({ bodyId: mars, plan: ENGAGED });
 

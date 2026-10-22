@@ -4,7 +4,7 @@
  * which keeps the remembered tilt alive across a world → body → site descent.
  */
 
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import type { MeshBody } from '../../../../@types/scene/MeshBody';
 import type { SurfaceFixedSite } from '../../../../@types/scene/SurfaceFixedSite';
@@ -24,20 +24,20 @@ import { hostOrThrow } from './hostOrThrow';
 import { isSiteArm } from './isSiteArm';
 import { refoldTo } from './refoldTo';
 
-function siteRowOf(id: BodyId): SurfaceFixedSite | null {
+function siteRowOf(id: BodySourceId): SurfaceFixedSite | null {
   const driver = positionDriverById(id);
   return driver.kind === 'surfaceFixed' ? driver : null;
 }
 
 /** A frame is only ever entered for a site `engage` resolved, so a miss is unreachable. */
-function siteRowOrThrow(id: BodyId): SurfaceFixedSite {
+function siteRowOrThrow(id: BodySourceId): SurfaceFixedSite {
   const site = siteRowOf(id);
   if (site === null) throw new Error(`siteRung: body '${id}' has no surfaceFixed driver`);
   return site;
 }
 
 /** The bounding sphere the band and the floors are rated in — the SCENE seed's, never the bake's. */
-function meshBodyOf(id: BodyId): MeshBody {
+function meshBodyOf(id: BodySourceId): MeshBody {
   return findByIdOrThrow(SCENE_MESH_BODIES, id, 'siteRung');
 }
 
@@ -76,7 +76,7 @@ export const siteRung: ClimbRow<'site'> = {
   host(frame, ctx) {
     const site = siteRowOf(frame.site);
     if (site === null) return null;
-    return hostOf({ body: site.hostId as BodyId }, ctx);
+    return hostOf({ body: site.hostId as BodySourceId }, ctx);
   },
 
   step(memory, tilt, framed, input, ctx) {

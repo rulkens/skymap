@@ -12,7 +12,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 
 const EARTH_RADIUS_M = 6_371_000;
 const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
@@ -192,8 +192,8 @@ describe('logCameraState', () => {
       far: 100,
     });
     const siteArm: FramedCameraPose = {
-      frame: { site: 'curiosity' as BodyId },
-      pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+      frame: { site: 'curiosity' as BodySourceId },
+      pose: { siteId: 'curiosity' as BodySourceId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
     };
 
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, siteArm);

@@ -40,7 +40,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -633,7 +633,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     );
     expect(Array.from(view.vp).every(Number.isFinite)).toBe(true);
     expect(Array.from(view.slabs[0]!.vp).every(Number.isFinite)).toBe(true);
-    const { basisM } = view.bodyPose('voyager1' as BodyId)!;
+    const { basisM } = view.bodyPose('voyager1' as BodySourceId)!;
     expect(basisM[6]).toBeCloseTo(0, 9);
     expect(basisM[7]).toBeCloseTo(0, 9);
     expect(basisM[8]).toBeCloseTo(1, 9);

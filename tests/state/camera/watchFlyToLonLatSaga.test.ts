@@ -21,7 +21,7 @@ import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const BODIES = deriveBodyStates(CONST_J2000);
@@ -69,7 +69,7 @@ describe('watchFlyToLonLatSaga', () => {
   });
 
   it('over another body: focuses it first, then tweens to its centre', () => {
-    const puts = run({ body: 'mars' as BodyId, lonDeg: 0, latDeg: 0, durationMs: 250 });
+    const puts = run({ body: 'mars' as BodySourceId, lonDeg: 0, latDeg: 0, durationMs: 250 });
     expect(puts[0]).toEqual(updateSelectionFocus({ type: 'body', id: 'mars' }));
     const tween = tweenOf(puts[1]);
     expect(tween.to.target).toEqual([...BODIES.get('mars')!.positionMpc]);

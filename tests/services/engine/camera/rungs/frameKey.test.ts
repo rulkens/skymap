@@ -9,9 +9,9 @@ import { describe, it, expect } from 'vitest';
 import { frameKey } from '../../../../../src/services/engine/camera/rungs/frameKey';
 import { sameFrame } from '../../../../../src/services/engine/camera/rungs/sameFrame';
 import type { PoseFrame } from '../../../../../src/@types/camera/PoseFrame';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../../src/@types/data/body/BodySourceId';
 
-const bodyId = (id: string): BodyId => id as BodyId;
+const bodyId = (id: string): BodySourceId => id as BodySourceId;
 
 describe('frameKey', () => {
   it('prefixes a body frame and leaves the world arm bare', () => {

@@ -9,11 +9,11 @@
 import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../@types/data/body/BodySourceId';
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { Tier } from '../../@types/data/Tier';
 
-export function bodySurfaceTier(state: EngineState, bodyId: BodyId): Tier {
+export function bodySurfaceTier(state: EngineState, bodyId: BodySourceId): Tier {
   const slot = state.assetSlots.bodyTextures.get(
     bodyTextureSlotKey(bodyId as BodyTextureId, 'surface'),
   );

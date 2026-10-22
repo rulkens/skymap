@@ -58,14 +58,14 @@ import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../src/@types/data/body/BodySourceId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodySourceId, BodyState>;
 const EARTH = BODIES.get('earth')!;
 const EARTH_ROW: SelectionRow = {
   type: 'body',
@@ -88,7 +88,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     canvasPx: [100, 100],
     aspect: 1,
     steps: pendingToInputSteps(pending, [100, 100]),
-    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodySourceId, BodyState>,
     // No fixture here engages a real atlas, so the datum-only stub matches
     // production's own `?? 0` miss (F3a, spec §8.3).
     terrainHeightAt: () => 0,

@@ -95,7 +95,7 @@ import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipFrameOptions } from '../../../@types/animation/ClipFrameOptions';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../@types/data/body/BodySourceId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { PoseFrame } from '../../../@types/camera/PoseFrame';
@@ -520,7 +520,7 @@ function legIndexAt(legs: readonly FrameLeg[], t: number): number {
 }
 
 type FrameDeps = {
-  readonly bodies: ReadonlyMap<BodyId, BodyState>;
+  readonly bodies: ReadonlyMap<BodySourceId, BodyState>;
   /** The clip's own steady basis — its absolute angles were authored through it. */
   readonly basis: Mat3;
   /** Memo owner: the leg-start conversion is captured once per playback. */
