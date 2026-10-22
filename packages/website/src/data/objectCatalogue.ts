@@ -16,6 +16,7 @@ import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { buildStaticAnchorStructures } from '../../../../src/layers/structure/load/buildStaticAnchorStructures';
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
+import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/present/craftSearch';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
 import { encodeStarFocusId } from '../../../../src/services/url/encodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
@@ -180,7 +181,7 @@ const missionIds = new Set(
 );
 const models = SCENE_MESH_BODIES.map((body) => {
   const id = `${BODY_FOCUS_PREFIX}${body.id}`;
-  const names = BODY_SEARCH_NAMES.get(body.id) ?? [];
+  const names = CRAFT_SEARCH_NAMES.get(body.id) ?? [];
   return focusRow({
     name: body.label,
     kind: missionIds.has(id) ? 'spacecraft' : 'model',

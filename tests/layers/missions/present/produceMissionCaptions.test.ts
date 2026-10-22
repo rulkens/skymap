@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
+import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missionCraftIds';
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
-import { SAMPLED_BODY_IDS } from '../../../../src/data/missions/sampledBodyIds';
+import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { MISSION_EMPHASIS_DIM } from '../../../../src/data/missions/missionTrailStyle';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
@@ -11,9 +12,9 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMeshBodyIds';
-import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
+import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -63,9 +64,10 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-// The values core hands: every craft, and every caption category, at full opacity.
-const CRAFT_FADE = Object.fromEntries(SAMPLED_BODY_IDS.map((id) => [id, 1]));
-const BODY_FADE = { earth: 1, planet: 1, 'mesh-body': 1 };
+// The values core hands each label entry: the one Spacecraft item, and every body category.
+const CRAFT_ON = { craft: 1 };
+const CRAFT_OFF = { craft: 0 };
+const BODY_FADE = { earth: 1, planet: 1 };
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
   return labels.find((l) => l.id === id)?.fadeAlpha;
@@ -85,56 +87,66 @@ function loadTracks(): void {
 }
 
 const idsOf = (out: { labels: readonly Label2D[] }): string[] => out.labels.map((l) => l.id);
+const captionIds = (ids: Iterable<string>): string[] => [...ids].map((id) => `sceneBody-${id}`);
+// The rovers are not yet on Mars at J2000, so they are absent here.
+const presentCraftCaptions = (): string[] =>
+  captionIds([...MISSION_CRAFT_IDS].filter((id) => spacecraftPresent(id, CONST_J2000)));
 
 describe('produceMissionCaptions', () => {
-  it('each claimed body is captioned once, by its claimant', () => {
+  it('each craft is captioned once, by missions', () => {
     const ctx = makeCtx([0, 0, 0], 1e-9);
-    expect(idsOf(produceMissionCaptions(makeState(), ctx, CRAFT_FADE))).toEqual([]);
+    const before = idsOf(produceMissionCaptions(makeState(), ctx, CRAFT_ON));
+    expect(before).toEqual(presentCraftCaptions());
+    expect(before).toContain('sceneBody-hubble');
+    expect(before).not.toContain('sceneBody-voyager1');
 
     loadTracks();
+    const after = idsOf(produceMissionCaptions(makeState(), ctx, CRAFT_ON));
+    expect(after).toEqual(presentCraftCaptions());
+    for (const id of SAMPLED_BODY_IDS) expect(after).toContain(`sceneBody-${id}`);
     const core = idsOf(produceSceneBodyCaptions(makeState(), ctx, BODY_FADE));
-    for (const id of SAMPLED_BODY_IDS) expect(core).not.toContain(`sceneBody-${id}`);
-    // Earth's category id is also its body id: it is core's own item, never a claim.
-    expect(core).toContain('sceneBody-earth');
-    // The claim set unions every label entry's items; none may equal an unclaimed body's id.
-    const sampled = new Set<string>(SAMPLED_BODY_IDS);
-    const unclaimedMesh = SCENE_MESH_BODIES.filter(
-      (b) =>
-        !sampled.has(b.id) &&
-        !ANCHORED_MESH_BODY_IDS.has(b.id) &&
-        spacecraftPresent(b.id, CONST_J2000),
-    );
-    expect(unclaimedMesh.length).toBeGreaterThan(0);
-    for (const body of [...SCENE_PLANETS, ...unclaimedMesh]) {
-      expect(core).toContain(`sceneBody-${body.id}`);
-    }
-    expect(idsOf(produceMissionCaptions(makeState(), ctx, CRAFT_FADE))).toEqual([
-      'sceneBody-voyager1',
-      'sceneBody-voyager2',
-    ]);
+    expect(core).toEqual(captionIds([SCENE_EARTH.id, ...SCENE_PLANETS.map((p) => p.id)]));
   });
 
-  it('dims only the non-emphasised sampled craft, on a state the memo already saw', () => {
+  it("emphasising Voyager 1 dims Voyager 2's caption and leaves Hubble's at full alpha", () => {
     loadTracks();
     // RENDER_ORIGIN_MPC is the Sun, so the craft's position is its caption anchor.
     const camPos = deriveBodyStates(CONST_J2000).get('voyager2')!.positionMpc as Vec3;
     const ctx = makeCtx(camPos, 1e-9);
     const state = makeState();
-    const full = fadeAlphaOf(
-      produceMissionCaptions(state, ctx, CRAFT_FADE).labels,
-      'sceneBody-voyager2',
-    )!;
-    expect(full).toBeGreaterThan(0);
+    const before = produceMissionCaptions(state, ctx, CRAFT_ON).labels;
+    expect(fadeAlphaOf(before, 'sceneBody-voyager2')).toBeGreaterThan(0);
+    expect(fadeAlphaOf(before, 'sceneBody-hubble')).toBeGreaterThan(0);
 
     // Same bodyStates identity (paused clock), so only a read outside any memo shows the change.
     (state.settings as { missions: { craft: string | null } }).missions.craft = 'voyager1';
-    const out = produceMissionCaptions(state, ctx, CRAFT_FADE).labels;
-    expect(fadeAlphaOf(out, 'sceneBody-voyager2')).toBeCloseTo(full * MISSION_EMPHASIS_DIM);
-    expect(fadeAlphaOf(out, 'sceneBody-voyager1')).toBe(
-      fadeAlphaOf(
-        produceMissionCaptions(makeState(), ctx, CRAFT_FADE).labels,
-        'sceneBody-voyager1',
-      ),
+    const after = produceMissionCaptions(state, ctx, CRAFT_ON).labels;
+    expect(fadeAlphaOf(after, 'sceneBody-voyager2')).toBeCloseTo(
+      fadeAlphaOf(before, 'sceneBody-voyager2')! * MISSION_EMPHASIS_DIM,
     );
+    expect(fadeAlphaOf(after, 'sceneBody-voyager1')).toBe(
+      fadeAlphaOf(before, 'sceneBody-voyager1'),
+    );
+    expect(fadeAlphaOf(after, 'sceneBody-hubble')).toBe(fadeAlphaOf(before, 'sceneBody-hubble'));
+  });
+
+  it('captions a craft by name, its albedo lifted to full brightness', () => {
+    const body = SCENE_MESH_BODIES.find((b) => b.id === 'whale')!;
+    const out = produceMissionCaptions(makeState(), makeCtx([0, 0, 0], 1e-9), CRAFT_ON).labels;
+    const label = out.find((l) => l.id === 'sceneBody-whale')!;
+    expect(label.text).toBe(body.label);
+    expect(label.color).toEqual([...scaleToUnitMax(body.albedo), 1]);
+  });
+
+  it('unchecking Spacecraft hides every craft caption and nothing else', () => {
+    loadTracks();
+    const ctx = makeCtx([0, 0, 0], 1e-9);
+    const off = produceMissionCaptions(makeState(), ctx, CRAFT_OFF).labels;
+    expect(off.map((l) => l.id)).toEqual(presentCraftCaptions());
+    expect(off.map((l) => l.id)).toContain('sceneBody-hubble');
+    expect(off.every((l) => l.fadeAlpha === 0)).toBe(true);
+
+    const core = produceSceneBodyCaptions(makeState(), ctx, BODY_FADE).labels;
+    expect(fadeAlphaOf(core, 'sceneBody-mars')).toBeGreaterThan(0);
   });
 });

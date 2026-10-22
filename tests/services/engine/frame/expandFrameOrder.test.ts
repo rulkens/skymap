@@ -115,6 +115,8 @@ describe('expandFrameOrder', () => {
       'structure-markers-near',
       'constellations',
       'body-glints',
+      'mission-glints',
+      'earth-scene-glints',
       'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
@@ -369,7 +371,11 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       (step) => step.kind === 'render' && step.target === 'foreground:0',
     );
     expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
-    expect(namesOf(steps[first + 2])).toEqual(['mesh-bodies']);
+    expect(namesOf(steps[first + 2])).toEqual([
+      'mission-meshes',
+      'core-mesh-bodies',
+      'earth-scene-meshes',
+    ]);
   });
 
   it('refuses a body roster with a second marker', () => {

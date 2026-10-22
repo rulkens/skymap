@@ -29,7 +29,6 @@ import { refoldTo } from '../camera/rungs/refoldTo';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
-import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
@@ -96,7 +95,7 @@ export function deriveFrameContext(
     bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
     poseBasis: cam.poseBasis,
     upBasis: cam.upBasis,
-    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
+    terrainHeightAt: state.terrain.heightAt,
   };
   const armHost = hostOf(arm.frame, armBasisCtx);
   // UN-turned: `deriveView` turns this provider's output through `viewBodyPose`

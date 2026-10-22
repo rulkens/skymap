@@ -513,7 +513,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
         does: 'Shows the name of Sagittarius A*.',
       },
-      label('Mesh bodies', 'bodies.items.mesh-body.labelEnabled', 'the spacecraft and the other 3D models'),
+      label('Spacecraft', 'missions.items.craft.labelEnabled', 'the spacecraft and the other 3D models'),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
       label('Globular clusters', 'structures.items.globular-cluster.labelEnabled', 'the globular clusters'),
       {
@@ -522,6 +522,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
+      {
+        name: 'S-star trails',
+        control: 'switch',
+        does: 'Shows the orbits of the S-stars, the stars that circle Sagittarius A* at the centre of the Milky Way, as lines.',
+        values: SWITCH,
+        first: ON,
+        state: 'sStarTrails.enabled',
+        firstValue: true,
+      },
       {
         name: 'Mission trails',
         control: 'switch',

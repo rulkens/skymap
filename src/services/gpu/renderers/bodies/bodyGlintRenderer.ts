@@ -57,6 +57,7 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
+import { BODY_GLINT_INSTANCE_FLOATS } from '../../../../data/rendering/bodyGlintInstanceFloats';
 
 // Headroom past today's exact seed count, so a new SCENE_PLANETS entry can
 // still land without touching this file.
@@ -71,21 +72,14 @@ const GLINT_CAPACITY_MARGIN = 4;
  * inside this cap. Mirrors `SLAB_ROW_CEILING`'s derivation in
  * `timing/slabRowCeiling.ts` — sized off the registries, not a hand-picked
  * number that silently goes stale as the seed tables grow. The pack loop in
- * `bodyGlintsPass` `break`s on `count >= MAX_GLINTS` with no error, so zero
+ * `packBodyGlints` stops at the staging buffer's capacity with no error, so zero
  * margin would let the next seeded body silently starve a glint — see "Why
  * draw takes the batch" above, its instance buffer is a single
  * fixed-capacity allocation.
  */
 export const MAX_GLINTS = SCENE_PLANETS.length + GLINT_CAPACITY_MARGIN;
 
-/**
- * Per-glint instance record: position (f32x3) + colour (f32x3) + brightness
- * (f32) = 7 floats, 28 bytes. Must stay byte-exact with the attribute
- * declarations in `bodyGlint/vertex.wesl` (locations 0/1/2 at offsets 0/12/24)
- * — the vertex-stride keep-rule.
- */
-export const INSTANCE_FLOATS = 7;
-const STRIDE = INSTANCE_FLOATS * 4; // 28 bytes
+const STRIDE = BODY_GLINT_INSTANCE_FLOATS * 4; // 28 bytes
 
 export function createBodyGlintRenderer(
   device: GPUDevice,
@@ -195,7 +189,7 @@ export function createBodyGlintRenderer(
 
     // One upload of exactly the first `n` records (typed-array overload takes
     // the data offset + size in ELEMENTS, not bytes).
-    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, n * INSTANCE_FLOATS);
+    device.queue.writeBuffer(instanceBuffer, 0, instances, 0, n * BODY_GLINT_INSTANCE_FLOATS);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);

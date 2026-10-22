@@ -2,7 +2,7 @@
  * `Source` enum + `SOURCE_REGISTRY`.
  *
  * The registry of every data source skymap loads, keyed by `Source` code;
- * see `SourceEntry.d.ts` for the eleven `type` kinds it discriminates over.
+ * see `SourceEntry.d.ts` for the twelve `type` kinds it discriminates over.
  * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`,
  * or under `layers/<name>/sources/` once that family is a formed Layer.
  */
@@ -22,7 +22,7 @@ import { MILKY_WAY_SOURCE_ROWS } from '../layers/milkyWay/sources/milkyWaySource
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
-import { MESH_BODY_ENTRY } from './sources/mesh-body';
+import { MISSIONS_SOURCE_ROWS } from '../layers/missions/sources/missionsSourceRows';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
 import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
 import { BLACK_HOLE_SOURCE_ROWS } from '../layers/blackHoles/sources/blackHoleSourceRows';
@@ -64,7 +64,6 @@ export { Source } from './source';
 const UNFORMED_SOURCE_REGISTRY = {
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
-  [Source.MeshBody]: MESH_BODY_ENTRY,
 } as const;
 
 export const SOURCE_REGISTRY = {
@@ -78,6 +77,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
   ...sourceRecordOf(COSMIC_WEB_DENSITY_SOURCE_ROWS),
   ...sourceRecordOf(BLACK_HOLE_SOURCE_ROWS),
+  ...sourceRecordOf(MISSIONS_SOURCE_ROWS),
   ...sourceRecordOf(STRUCTURE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's

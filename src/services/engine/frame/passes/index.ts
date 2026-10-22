@@ -15,11 +15,10 @@ import { clipPathDebugPass } from './clipPathDebugPass';
 import { earthPass } from './earthPass';
 import { surfaceTilesPass } from './surfaceTilesPass';
 import { terrainPickMarkerPass } from './terrainPickMarkerPass';
-import { contactShadowsPass } from './contactShadowsPass';
 import { cloudShellPass } from './cloudShellPass';
 import { planetsPass } from './planetsPass';
 import { texturedBodiesPass } from './texturedBodiesPass';
-import { meshBodiesPass } from './meshBodiesPass';
+import { coreMeshBodiesPass } from './coreMeshBodiesPass';
 import { ringsPass } from './ringsPass';
 import { bodyGlintsPass } from './bodyGlintsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
@@ -44,11 +43,10 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   earthPass,
   surfaceTilesPass,
   terrainPickMarkerPass,
-  contactShadowsPass,
   cloudShellPass,
   planetsPass,
   texturedBodiesPass,
-  meshBodiesPass,
+  coreMeshBodiesPass,
   ringsPass,
   labelsNearPass,
   clipPathDebugPass,

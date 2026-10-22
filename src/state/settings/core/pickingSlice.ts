@@ -15,6 +15,7 @@ export const pickingInitialState: PickingSettings = {
     milkyWay: true,
     zoneOfAvoidance: true,
     body: true,
+    craft: true,
     starCatalog: true,
     blackHole: true,
   },
