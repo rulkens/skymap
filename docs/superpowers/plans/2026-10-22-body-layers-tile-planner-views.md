@@ -44,7 +44,7 @@ search walks every face's slabs (6 × a handful). Net zero for mono, < 0.01 ms f
 If `earthPass.ts` is on the frame-file purity allow-list (`tests/services/engine/frame/frameFilePurity.test.ts`)
 for this export, remove it from the list.
 
-- [ ] Task 1
+- [x] Task 1
 
 ### Task 2: one tile-planning function over the rig views
 

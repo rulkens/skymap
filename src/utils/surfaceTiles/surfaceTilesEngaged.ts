@@ -2,7 +2,7 @@ import type { PassState } from '../../@types/engine/frame/PassState';
 import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../@types/engine/frame/SlabView';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../data/rendering/foregroundMaxDistance';
-import { prepareBodySurfaceFrame } from '../../services/engine/frame/passes/earthPass';
+import { prepareBodySurfaceFrame } from '../../services/engine/frame/prepareBodySurfaceFrame';
 
 /**
  * surfaceTilesEngaged — the tile planner's gate, body-generic where

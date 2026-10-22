@@ -30,10 +30,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  earthPass,
-  prepareBodySurfaceFrame,
-} from '../../../../../src/services/engine/frame/passes/earthPass';
+import { earthPass } from '../../../../../src/services/engine/frame/passes/earthPass';
 import { surfaceTilesPass } from '../../../../../src/services/engine/frame/passes/surfaceTilesPass';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
@@ -83,6 +80,7 @@ vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { prepareBodySurfaceFrame } from '../../../../../src/services/engine/frame/prepareBodySurfaceFrame';
 
 // The layer reads each body's live position/orientation from the per-frame
 // body-state snapshot (keyed by id). Stub it to a map built from
