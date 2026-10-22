@@ -45,7 +45,13 @@ export function isSurfaceTileBodyId(id: SceneBodyId): id is SceneBodyId & Surfac
   generated star rows) stay `string`; the maker stamps.
 - `AnchorBody.id` and `OrbitalElements.focusId` are `SceneBodyId | PlaceId`: the Galactic Centre
   anchor is a place, so `deriveBodyStates` returns `ReadonlyMap<SceneBodyId | PlaceId, BodyState>`
-  and its readers take that key. `RungCtx.focusBodyId` and `SlabHostId` are `SceneBodyId | PlaceId`.
+  and its readers take that key. `RungCtx.focusBodyId`, `DriverGeometry.poseId`, `TiltMemory.hostId`,
+  `BodyRegion` ids and `SlabHostId` are `SceneBodyId | PlaceId`.
+- The id rides through to the readers that key the map: `SelectionRef`'s `body`/`craft` arms,
+  `BodyInfo.id`, `MeshPresentation.id`, `CameraRuntime.pivotBody` and `DriverOutput.pivotBody` are
+  `SceneBodyId`. Internal lookup tables keyed by a raw string say so (`new Map<string, …>`).
+- `FlyToLonLatPayload.body` stays a raw `string` (a DebugPanel field, an injected dispatch); the
+  saga checks it with `isSceneBodyId`, so the DebugPanel needs no cast.
 
 ## Tasks
 
@@ -79,9 +85,11 @@ then Task 3 moves the scene uses off it.
 `src/components/DebugPanel/SurfaceTileAtlasSection.tsx` + container,
 `src/services/engine/subsystems/surfaceTileSubsystem.ts`, guards above + tests. `review: yes`.
 
-- [ ] Test `decodeFramedPose rejects an unknown body id` (`#pose=b,bogus,…` → `null`): catches a
-      deep link that names no body being decoded into a pose the rung then throws on.
-- [ ] Test `isSceneBodyId` accepts `'mars'` and rejects `'bogus'`.
+- [x] `#pose=b,<unknown>,…` → `null`: already pinned by `decodeFramedPose.test.ts`'s
+      `rejects a body id no body source seeds, a star id included`; the guards are now type
+      predicates, so the decoder needs no cast after them.
+- [x] Test `isSceneBodyId` rejects `'galactic-centre'` and `'bogus'`: catches a membership set
+      built from the body-state keys, which would admit a place as a body.
 
 ### Task 5: test cast sweep
 
@@ -89,10 +97,13 @@ then Task 3 moves the scene uses off it.
 
 ### Task 6: deletions
 
-**Files:** `src/data/bodies/bodyIds.ts` (delete; the one test reader gets a fixture), unused
+**Files:** unused
 `BodyId` imports in `surfaceTilesPass.ts`, `cloudShellPass.ts`, `earthPass.ts`, `ringsPass.ts`,
 wrong-domain comments (`SimBodyId.ts`, `earthPass.test.ts`, `stepRung.test.ts`,
-`planetRenderer.test.ts`, `planSurfaceCut.ts`).
+`planetRenderer.test.ts`, `frameContext.test.ts`, `bodyRung.test.ts`).
+
+`BODY_IDS` (`src/data/bodies/bodyIds.ts`) stays: `tools/utils/capture/labelDeclutterActions.ts`
+reads it to switch every body label off, so it is not dead.
 
 ## Definition of Done
 
@@ -100,5 +111,6 @@ wrong-domain comments (`SimBodyId.ts`, `earthPass.test.ts`, `stepRung.test.ts`,
   stamp helper.
 - `deriveBodyStates` is read with no cast anywhere.
 - `#pose=b,bogus,…` decodes to `null`.
-- Out of scope: tagging `RotationElements.id`, `MeshPresentation.id`, pick-row ids; a closed
-  union of scene ids.
+- Out of scope: tagging `RotationElements.id`, `SampledTrack.id`, `BodySpec` and other authoring
+  seeds; the `as BodySourceId` casts on a source entry's id (`bodySelectionRow`,
+  `sceneBodyPickId`); a closed union of scene ids.
