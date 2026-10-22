@@ -17,6 +17,8 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
   { id: 'place-sgr-a', shot: 'place-sgr-a', motion: 'orbit', seconds: 5 },
   { id: 'place-andromeda', shot: 'place-andromeda', motion: 'orbit', seconds: 5 },
   { id: 'place-virgo', shot: 'place-virgo', motion: { swayDeg: 12 }, seconds: 5 },
+  // The Features page's Domes film: the dome swings as a horizontal drag on the phone remote would turn it.
+  { id: 'features-dome-remote', shot: 'dome-earth', motion: { swayDeg: 25 }, seconds: 6, width: 480 },
   // The Features page's clock films. No short span brings all four moons back, so Jupiter's jumps where it repeats.
   {
     id: 'features-time-jupiter',
