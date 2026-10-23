@@ -48,7 +48,7 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
     shot: 'features-time-moon',
     motion: { clockDays: 27.321661, orbitTurns: 1 },
     seconds: 5,
-    width: 640,
+    width: 960,
   },
   // Twenty years: Voyager 1 jumps back to where it began where the film repeats.
   {

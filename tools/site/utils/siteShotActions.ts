@@ -9,6 +9,7 @@ import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity
 import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
 import { setBiasMode } from '../../../src/layers/galaxyCatalog/state/bias/slice';
+import { setStarCatalogEnabled } from '../../../src/layers/starCatalog/state/starCatalogs/slice';
 import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import {
   setStructureItemEnabled,
@@ -53,6 +54,7 @@ export function siteShotActions({
       ),
     );
   }
+  if (settings.hideStars) actions.push(setStarCatalogEnabled(false));
   if (settings.hideCosmicWeb) actions.push(setCosmicWebDensityEnabled(false));
   if (settings.hideZoneOfAvoidance) actions.push(setZoneOfAvoidanceEnabled(false));
   if (settings.filaments) actions.push(setCosmicWebFilamentsEnabled(true));

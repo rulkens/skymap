@@ -14,6 +14,8 @@ export type SiteShotSettings = {
   hideStructures?: true;
   /** The survey point clouds off; galaxy photographs stay. */
   hideGalaxyField?: true;
+  /** The star catalogues off, for a picture whose subject is not the sky behind it. */
+  hideStars?: true;
   hideCosmicWeb?: true;
   hideZoneOfAvoidance?: true;
   /** The traced filament skeleton on (off by default in the app). */
