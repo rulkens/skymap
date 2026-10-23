@@ -8,10 +8,11 @@ import Classroom from '../../components/Classroom/Classroom.tsx';
 import Closing from '../../components/Closing/Closing.tsx';
 import Credits from '../../components/Credits/Credits.tsx';
 import Dome from '../../components/Dome/Dome.tsx';
+import FeatureSection from '../../components/FeatureSection/FeatureSection.tsx';
 import Flight from '../../components/Flight/Flight.tsx';
-import FullFigure from '../../components/FullFigure/FullFigure.tsx';
 import Honesty from '../../components/Honesty/Honesty.tsx';
 import Lead from '../../components/Lead/Lead.tsx';
+import Phone3D from '../../components/Phone3D/Phone3D.tsx';
 import Places from '../../components/Places/Places.tsx';
 import { placeLines } from '../../components/Places/placeLines.ts';
 import Tour from '../../components/Tour/Tour.tsx';
@@ -24,7 +25,9 @@ export const section = `${layout.wrap} ${layout.section}`;
 <Flight stops={props.stops} videoUrl={props.videoUrl} client:load />
 <Places lines={placeLines()} client:visible />
 <Lead client:visible />
-<FullFigure id="hubble" tall="hubble-portrait" />
+<FeatureSection level={2} title="On a phone" line="Skymap runs in a phone’s browser, with nothing to install, and you move around with your fingers." href="/features/" label="Features">
+  <Phone3D shot="features-phone" />
+</FeatureSection>
 <Tour />
 <Classroom />
 <Dome />

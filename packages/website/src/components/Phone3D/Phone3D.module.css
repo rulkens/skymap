@@ -1,0 +1,54 @@
+.root {
+  --radius: calc(var(--phone-width, 15rem) * 0.15);
+  --bezel: calc(var(--phone-width, 15rem) * 0.035);
+  width: var(--phone-width, 15rem);
+  perspective: 1400px;
+}
+
+/* `--turn-x` and `--turn-y`: the pointer's offset from the phone's middle in its widths and heights, held to ±1. */
+.case {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(-18deg + var(--turn-x, 0) * 22deg))
+    rotateX(calc(6deg - var(--turn-y, 0) * 12deg));
+  transition: transform 0.25s ease-out;
+}
+
+.slice {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #3a3d44, #16171a 60%);
+}
+
+.front {
+  position: relative;
+  padding: var(--bezel);
+  border-radius: var(--radius);
+  background: #0b0c0e;
+  box-shadow: inset 0 0 0 1.5px #4a4d55;
+  transform: translateZ(1px);
+}
+
+.screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - var(--bezel));
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 40%);
+  }
+}
+
+.island {
+  position: absolute;
+  top: calc(var(--bezel) * 1.25);
+  left: 34%;
+  width: 32%;
+  aspect-ratio: 3.7;
+  border-radius: 999px;
+  background: #000;
+}

@@ -7,7 +7,9 @@
  * brighter than the page's body text. It lays itself out by the room it is
  * given: stacked under a narrow picture, in two columns under a wide one.
  * `label` gives the words for a picture that is not in the manifest and is
- * not a view of the app: it has no address to open.
+ * not a view of the app: it has no address to open. `showDrawn={false}` leaves
+ * out the data-and-drawing note, for a page that sets the picture as a plain
+ * illustration.
  */
 import type { SiteShot } from '../../@types/SiteShot';
 import { appLink } from '../../data/appLink.ts';
@@ -20,15 +22,17 @@ type ShotCaptionProps = {
   id?: string;
   label?: Pick<SiteShot, 'title' | 'caption' | 'credit'>;
   open?: boolean;
+  showDrawn?: boolean;
 };
 
-function ShotCaption({ id, label, open = true }: ShotCaptionProps) {
+function ShotCaption({ id, label, open = true, showDrawn = true }: ShotCaptionProps) {
   const row = id === undefined ? undefined : siteShot(id);
   const shot: Pick<SiteShot, 'title' | 'caption' | 'drawn' | 'credit'> | undefined = row ?? label;
   if (!shot) throw new Error('ShotCaption needs the id of a shot or a label');
   // The view a manifest picture was taken at, where the label is to open it.
   const view = row && open ? row : undefined;
-  const notes = Boolean(shot.drawn || shot.credit);
+  const drawn = showDrawn ? shot.drawn : undefined;
+  const notes = Boolean(drawn || shot.credit);
   return (
     <div className={styles.root}>
       <div className={styles.plate}>
@@ -38,10 +42,10 @@ function ShotCaption({ id, label, open = true }: ShotCaptionProps) {
         </p>
         {notes && (
           <div className={styles.notes}>
-            {shot.drawn && (
+            {drawn && (
               <dl>
                 <dt>Data and drawing</dt>
-                <dd>{shot.drawn}</dd>
+                <dd>{drawn}</dd>
               </dl>
             )}
             {shot.credit && (
