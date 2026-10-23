@@ -1,6 +1,7 @@
 /*
- * RemoteDemo — the Domes section's picture: a film of a dome swinging round Earth beside a phone showing the
- * paired remote, with a finger on its drag pad that moves left and right as the film swings. The finger is
+ * RemoteDemo — the Domes section's picture: a film of a dome swinging round Earth with a phone showing the
+ * paired remote over its bottom right (below it where narrow), and a finger on the phone's drag pad that
+ * moves left and right as the film swings. The finger is
  * placed from the film's own `--turn` (see DiscFilm), so it cannot drift from the picture. The film's first
  * half turns the scene to the right, so that is when the finger goes right. Where the film does not play the
  * finger is hidden and the phone is a still.
@@ -18,11 +19,13 @@ function RemoteDemo({ sizes }: RemoteDemoProps) {
   return (
     <div ref={root} className={styles.root}>
       <FeatureFilm film="features-dome-remote" sizes={sizes} turnOn={root} />
-      <Phone3D shot="features-remote">
-        <span className={styles.pad} aria-hidden="true">
-          <span className={styles.finger} />
-        </span>
-      </Phone3D>
+      <div className={styles.phone}>
+        <Phone3D shot="features-remote">
+          <span className={styles.pad} aria-hidden="true">
+            <span className={styles.finger} />
+          </span>
+        </Phone3D>
+      </div>
     </div>
   );
 }

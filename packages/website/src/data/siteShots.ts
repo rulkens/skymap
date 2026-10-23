@@ -302,7 +302,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'features-remote',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
     query: 'dome',
-    settings: { ...SUBJECT, remote: true, settleMs: 4000 },
+    settings: { ...SUBJECT, remote: true, searchFor: 'Earth', settleMs: 4000 },
     size: { width: 390, height: 844 },
     dpr: 3,
     widths: [780],

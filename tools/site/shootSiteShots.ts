@@ -73,7 +73,7 @@ try {
         await openSiteShot(page, base!, shot);
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
-        if (shot.settings?.searchFor !== undefined) {
+        if (shot.settings?.searchFor !== undefined && !shot.settings.remote) {
           await page.keyboard.press('/');
           await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
           await page.waitForTimeout(RESULTS_SETTLE_MS);
