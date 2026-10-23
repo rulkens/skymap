@@ -236,7 +236,27 @@ export function planSurfaceTiles(
   awake`. **Bug caught:** refetch storms; Mars tiles under Earth's prefix.
 - Port the decision cases of `surfaceTileSubsystem.test.ts` (engage gate, base level, params) here.
 
-- [ ] Task 4
+**Record (2026-10-23).**
+
+- `TILE_RELEASE_RADII` = 2110 for Earth and Mars. Method: a throwaway script swept the eye outward
+  (×1.02 steps from 1.01 R) through the real `cutSurfaceTiles` + `tileCamerasOf` under a whole-globe
+  band, over sub-camera latitudes 0–89°, every tier, FOV 0.5°–100° and viewports up to 8192², and
+  kept the farthest distance with `zWin > baseLevel`. The farthest engage is at the NARROWEST lens,
+  not the widest (more pixels per radian): small tier (base z2), FOV 0.5° (the slider's minimum),
+  8192 px (WebGPU's baseline canvas edge) = 1054.3 R; 527 R at the 4096² dome take, 559 R on an 8K
+  display, 4.4 R at 60° on 4096², 2.3 R at 100°. Scale-free in radii, so Earth and Mars measure
+  alike. A release radius below the farthest engage would engage and release on alternate frames.
+- The planner keys on one body: `over` (nearest tiling body in reach, `surfaceTileOverOf`), so the
+  nearest wins when several are visible; the views only gate the cut (`tileBodiesInView`). It
+  engages only the body `over` names, so no lens can engage past the release radius.
+- Off-plan: `SurfaceTileResidency.isInFlight(key)` (a key in flight holds a slot the stream must
+  touch; misses exclude it); `SurfaceTileOver` carries no `distanceM` (it is `|camPosLocalM|`);
+  the walk's demand type `scene/SurfaceTilePlan` renamed `SurfaceTileDemand` (the incumbent yields
+  the name); the live path's `planSurfaceTiles` renamed `driveSurfaceTileSubsystem` until Task 5
+  deletes it with `planSurfaceCut`, `engagedTileBody` and `releaseTilesPastRadius` (still live, so
+  kept here); `ResidentSlot` extracted from the subsystem type for the residency to share.
+
+- [x] Task 4
 
 ### Task 5: the subsystem becomes `SurfaceTileStream`; `runFrame` applies the plan (P8b)
 
@@ -279,8 +299,8 @@ export type SurfaceTileStream = Destroyable & {
   slot holding another tile.
 - `release frees both atlases and ignores fetches still in flight` (bitmaps closed). **Bug caught:** Earth
   tiles repopulating after a switch to Mars, or leaked bitmaps.
-- Port the stream cases of `surfaceTileSubsystem.test.ts`; port `planSurfaceTiles.test.ts` to the new
-  signature.
+- Port the stream cases of `surfaceTileSubsystem.test.ts`; delete `driveSurfaceTileSubsystem.ts` and its
+  test with the live path's helpers.
 
 - [ ] Task 5
 

@@ -18,11 +18,11 @@
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { ResidentSlot } from '../../../@types/engine/surfaceTiles/ResidentSlot';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
-import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
-import type { SurfaceTilePlan } from '../../../@types/scene/SurfaceTilePlan';
+import type { SurfaceTileDemand } from '../../../@types/scene/SurfaceTileDemand';
 import type { SurfaceTilePlannerParams } from '../../../@types/scene/SurfaceTilePlannerParams';
 import type { SurfaceTileRequest } from '../../../@types/scene/SurfaceTileRequest';
 import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
@@ -38,7 +38,6 @@ import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { surfaceTileBandFromBounds } from '../../../utils/surfaceTiles/surfaceTileBandFromBounds';
 import { surfaceTilePath } from '../../../utils/surfaceTiles/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../../../utils/network/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
@@ -49,14 +48,13 @@ import { terrainHeightM } from '../../../utils/surfaceTiles/terrainHeightM';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_CONCURRENCY,
-  SURFACE_TILE_LOD_BIAS,
-  SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
 } from '../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 import { isSurfaceTileBodyId } from '../../../utils/surfaceTiles/isSurfaceTileBodyId';
 import { surfaceTileSpecOf } from '../../../utils/surfaceTiles/surfaceTileSpecOf';
+import { derivePlannerParams } from '../../../utils/surfaceTiles/derivePlannerParams';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 /** Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`), so
@@ -155,56 +153,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // This frame's `cutSurfaceTiles` cut, for
   // `earthPass.draw` to read — the "compute in runFrame, consume in draw"
   // seam `plannerParams`/`update` already use, one field further. Written
-  // unconditionally by `runFrame` from `planSurfaceTiles`.
+  // unconditionally by `runFrame` from `driveSurfaceTileSubsystem`.
   let lastCut: readonly SurfaceCutTile[] = [];
 
   let destroyed = false;
-
-  /**
-   * Turn a fetched manifest plus the caller's base level into planner
-   * inputs, or null if the bake is one this build cannot address — every
-   * rejection degrades to base-only, cheaper to reason about than silently
-   * adapting to wrong pixels. `tilePx` is a validated ASSERTION:
-   * `residentSlot` derives the atlas's `slotsPerRow` from
-   * `SURFACE_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
-   * the shipped 512 px edge. `baseLevel` arrives already resolved — WHICH
-   * function turns a tier into a level is body-specific (`baseLevelForTier`
-   * today), so this generic subsystem no longer calls one itself.
-   */
-  function derivePlannerParams(
-    fetched: SurfaceTileManifest,
-    baseLevel: number,
-  ): SurfaceTilePlannerParams | null {
-    if (fetched.bands.length === 0) return null;
-    const tilePx = fetched.tilePx ?? SURFACE_TILE_PX;
-    if (tilePx !== SURFACE_TILE_PX) return null;
-    const bands: SurfaceTileBand[] = [];
-    for (const band of fetched.bands) {
-      // Not baked for the albedo product (e.g. a height-only row, once those
-      // exist) — this planner only ever requests albedo tiles. Not baked for
-      // height either: height inherits from the deepest resident ancestor
-      // (R14), but a band missing its own height coverage would still 404
-      // every height request in its range — wasted fetches that never land.
-      if (band?.builtFrom?.albedo === undefined || band?.builtFrom?.height === undefined) continue;
-      // A structurally-wrong manifest entry (missing/malformed `bounds`)
-      // degrades by skipping it, matching this function's whole stance —
-      // never throw out of `refreshParams` over one bad band.
-      if (typeof band?.bounds?.west !== 'number') continue;
-      // Deeper of the band's own min and base+1: at/above base would
-      // re-download detail the whole-globe base already delivers.
-      const min = Math.max(band.min, baseLevel + 1);
-      // A band clamped past its own depth at this base level bakes nothing usable.
-      if (!(band.max >= min)) continue;
-      bands.push(surfaceTileBandFromBounds(band.bounds, min, band.max));
-    }
-    if (bands.length === 0) return null;
-    return {
-      tilePx,
-      baseLevel,
-      bands,
-      lodBias: SURFACE_TILE_LOD_BIAS,
-    };
-  }
 
   /** The one writer of `paramsState`, so `bodyId`/`baseLevel`/`params` can't
    *  describe different requests. */
@@ -309,7 +261,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     lastEngaged = null;
   }
 
-  function update(input: { readonly bodyId: SceneBodyId; readonly plan: SurfaceTilePlan }): void {
+  function update(input: { readonly bodyId: SceneBodyId; readonly plan: SurfaceTileDemand }): void {
     if (destroyed) return;
     const { bodyId, plan } = input;
     // A different body than the one currently engaged (§ one engaged) —
@@ -444,13 +396,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * walks ancestors through. Reuses `TextureAtlas.slotUv` (via the stream's
    * `slots`) rather than re-deriving the slot-rect math.
    */
-  function residentSlot(tile: SurfaceTileId): {
-    slot: number;
-    atlasUvOrigin: readonly [number, number];
-    atlasUvScale: readonly [number, number];
-    readyAtMs: number;
-    subtreeRangeM: readonly [number, number] | null;
-  } | null {
+  function residentSlot(tile: SurfaceTileId): ResidentSlot | null {
     if (manifest === null || atlas === null) return null;
     const key = surfaceTilePath(tile, manifest.prefix);
     const isHeight = tile.product === 'height';

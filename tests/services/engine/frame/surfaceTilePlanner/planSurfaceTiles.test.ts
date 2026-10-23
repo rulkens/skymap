@@ -1,80 +1,280 @@
 /**
- * planSurfaceTiles — the tile planner reads the rig's views, not the canvas
- * alone, and votes awake on frames where nothing can engage yet.
+ * planSurfaceTiles — every tile decision against a plain-object residency:
+ * position keeps the atlases and the readout, the views only gate the cut,
+ * and the touched/requested split never lets a miss evict a tile in use.
+ * The walk is stubbed to a chosen demand; its geometry has its own tests.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { planSurfaceTiles } from '../../../../../src/services/engine/frame/surfaceTilePlanner/planSurfaceTiles';
-import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
-import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
-import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
-import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
-import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { SurfaceTileSubsystem } from '../../../../../src/@types/engine/subsystems/SurfaceTileSubsystem';
+import type { SurfaceTileDemand } from '../../../../../src/@types/scene/SurfaceTileDemand';
 import type { SurfaceCutTile } from '../../../../../src/@types/scene/SurfaceCutTile';
+import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
+import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileResidency } from '../../../../../src/@types/engine/surfaceTiles/SurfaceTileResidency';
+import type { SurfaceTileOver } from '../../../../../src/@types/engine/surfaceTiles/SurfaceTileOver';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-const CUT: readonly SurfaceCutTile[] = [{ marker: 'cut' } as unknown as SurfaceCutTile];
-
+const walk = vi.hoisted(() => {
+  const state: { demand: SurfaceTileDemand | null; calls: number } = { demand: null, calls: 0 };
+  return state;
+});
+const CUT: readonly SurfaceCutTile[] = [];
 vi.mock('../../../../../src/utils/surfaceTiles/cutSurfaceTiles', () => ({
-  cutSurfaceTiles: () => ({ cut: CUT, requests: [] }),
+  cutSurfaceTiles: () => {
+    walk.calls++;
+    return { cut: CUT, requests: walk.demand };
+  },
 }));
 
-const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
-const COMMITTED_TIER = () => 'small' as const;
+import { planSurfaceTiles } from '../../../../../src/services/engine/frame/surfaceTilePlanner/planSurfaceTiles';
+import { tileBodiesInView } from '../../../../../src/services/engine/frame/surfaceTilePlanner/tileBodiesInView';
+import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { baseLevelForTier } from '../../../../../src/utils/surfaceTiles/baseLevelForTier';
+import { surfaceTilePath } from '../../../../../src/utils/surfaceTiles/surfaceTilePath';
+import { isSurfaceTileBodyId } from '../../../../../src/utils/surfaceTiles/isSurfaceTileBodyId';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 
-/** Three Earth radii out, looking at Earth (`seesEarth`) or straight away from it. */
-function makeView(seesEarth: boolean, distanceMpc = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
-  const d = 3 * 6.371e6 * SCALE_UNITS.M_TO_MPC;
+function tileBody(id: string) {
+  const bodyId = asSceneBodyId(id);
+  if (!isSurfaceTileBodyId(bodyId)) throw new Error(`${id} has no surface tiles`);
+  return bodyId;
+}
+const EARTH = tileBody('earth');
+const MARS = tileBody('mars');
+const RADIUS_M = { earth: 6.371e6, mars: 3.39e6 };
+const STATES = deriveBodyStates(CONST_J2000);
+const LARGE = () => 'large' as const;
+const BASE = baseLevelForTier('earth', 'large');
+const DEEPEST = 19;
+
+const PROVENANCE = { sourceId: 'test', attribution: 'test', vintage: 'test' };
+function manifestOf(prefix: string): SurfaceTileManifest {
+  return {
+    prefix,
+    tilePx: 512,
+    bands: [
+      {
+        bounds: { west: -180, south: -90, east: 180, north: 90 },
+        min: 1,
+        max: DEEPEST,
+        builtFrom: { albedo: PROVENANCE, height: PROVENANCE },
+      },
+    ],
+  };
+}
+const MANIFESTS = { earth: manifestOf('earth-tiles/v8'), mars: manifestOf('mars-tiles/v2') };
+
+const SLOT = {
+  slot: 0,
+  atlasUvOrigin: [0, 0],
+  atlasUvScale: [1, 1],
+  readyAtMs: 0,
+  subtreeRangeM: null,
+} as const;
+
+function residency(over: Partial<SurfaceTileResidency> = {}): SurfaceTileResidency {
+  return {
+    manifest: (bodyId) => ({ status: 'loaded', value: MANIFESTS[bodyId] }),
+    residentSlot: () => null,
+    isInFlight: () => false,
+    hasFailed: () => false,
+    inFlightCount: () => 0,
+    engagedBodyId: () => EARTH,
+    ...over,
+  };
+}
+
+/** The eye `radii` body radii out along `dir`, looking at the body or away from it. */
+function viewNear(bodyId: 'earth' | 'mars', radii: number, sees: boolean, dir: Vec3 = [1, 0, 0]) {
+  const body = STATES.get(asSceneBodyId(bodyId))!.positionMpc;
+  const d = radii * RADIUS_M[bodyId] * SCALE_UNITS.M_TO_MPC;
   return frameViewsAt({
-    eyeMpc: [EARTH[0] + d, EARTH[1], EARTH[2]],
-    forward: seesEarth ? [-1, 0, 0] : [1, 0, 0],
-    distanceMpc,
+    eyeMpc: [body[0] + dir[0] * d, body[1] + dir[1] * d, body[2] + dir[2] * d],
+    forward: sees ? [-dir[0], -dir[1], -dir[2]] : dir,
+    distanceMpc: 1e-12,
   })[0]!;
 }
+const SEES_EARTH = viewNear('earth', 3, true);
+const SEES_MARS = viewNear('mars', 3, true);
+const LOOKS_AWAY = viewNear('earth', 3, false);
 
-function makeTiles(animating: boolean) {
-  const tiles = {
-    plannerParams: vi.fn(() => ({})),
-    update: vi.fn(),
-    release: vi.fn(),
-    residentSlot: vi.fn(),
-    engagedBodyId: vi.fn(() => null),
-    isAnimating: vi.fn(() => animating),
+const overBody = (bodyId: typeof EARTH, camPosLocalM: Vec3 = [3e7, 0, 0]): SurfaceTileOver => ({
+  bodyId,
+  camPosLocalM,
+});
+const tile = (x: number, product: SurfaceTileId['product'] = 'albedo'): SurfaceTileId => ({
+  product,
+  z: BASE + 1,
+  x,
+  y: 0,
+});
+const earthKey = (t: SurfaceTileId) => surfaceTilePath(t, MANIFESTS.earth.prefix);
+function engagedDemand(tiles: readonly SurfaceTileId[]): SurfaceTileDemand {
+  return {
+    zWin: BASE + 1,
+    requests: tiles.map((t, i) => ({ tile: t, screenPx: 1000 - i })),
+    subCameraDirLocal: [1, 0, 0],
   };
-  return { tiles, subsystem: tiles as unknown as SurfaceTileSubsystem };
 }
 
+beforeEach(() => {
+  walk.demand = engagedDemand([tile(0)]);
+  walk.calls = 0;
+});
+
 describe('planSurfaceTiles', () => {
-  it('engages a tiling body seen only by a later view', () => {
-    const { tiles, subsystem } = makeTiles(false);
-    const result = planSurfaceTiles(subsystem, [makeView(false), makeView(true)], COMMITTED_TIER);
-    expect(result.value).toBe(CUT);
-    expect(tiles.update).toHaveBeenCalledTimes(1);
-    expect(tiles.update.mock.calls[0]![0].bodyId).toBe('earth');
+  it('looking up at street level keeps the position readout and plans nothing', () => {
+    // Bug caught: the readout or the atlases follow the view instead of the position.
+    const latRad = (55.68 * Math.PI) / 180;
+    const lonRad = (12.57 * Math.PI) / 180;
+    const up: Vec3 = [
+      Math.cos(latRad) * Math.cos(lonRad),
+      Math.cos(latRad) * Math.sin(lonRad),
+      Math.sin(latRad),
+    ];
+    const streetM = RADIUS_M.earth + 2;
+    // At street level the atmosphere keeps Earth's row in every view, so a view
+    // that shows no Earth at all stands in for the walk culling every tile.
+    expect(tileBodiesInView(LOOKS_AWAY)).toEqual([]);
+
+    const plan = planSurfaceTiles(
+      [LOOKS_AWAY],
+      overBody(EARTH, [up[0] * streetM, up[1] * streetM, up[2] * streetM]),
+      residency(),
+      LARGE,
+    );
+
+    expect(plan.subCamera?.lonDeg).toBeCloseTo(12.57, 9);
+    expect(plan.subCamera?.latDeg).toBeCloseTo(55.68, 9);
+    expect(plan.subCamera?.coveredMaxLevel).toBe(DEEPEST);
+    expect(plan.cut).toEqual([]);
+    expect(plan.requests).toEqual([]);
+    expect(plan.touched).toEqual([]);
+    expect(plan.lastPlan).toBeNull();
+    expect(plan.verdict).toBe('keep');
   });
 
-  it('votes awake while the manifest loads, even disengaged', () => {
-    const { tiles, subsystem } = makeTiles(true);
-    const result = planSurfaceTiles(subsystem, [makeView(false), makeView(false)], COMMITTED_TIER);
-    expect(result.awake).toBe(true);
-    expect(result.value).toEqual([]);
-    expect(tiles.update).not.toHaveBeenCalled();
+  it('a body switch releases at once; distance releases past TILE_RELEASE_RADII; off-screen never does', () => {
+    // Bug caught: atlases held long after leaving, or dropped on a turn of the head.
+    expect(planSurfaceTiles([SEES_EARTH], overBody(MARS), residency(), LARGE).verdict).toBe(
+      'release',
+    );
+    expect(planSurfaceTiles([SEES_EARTH], null, residency(), LARGE).verdict).toBe('release');
+    expect(planSurfaceTiles([LOOKS_AWAY], overBody(EARTH), residency(), LARGE).verdict).toBe(
+      'keep',
+    );
+    const none = residency({ engagedBodyId: () => null });
+    expect(planSurfaceTiles([SEES_EARTH], null, none, LARGE).verdict).toBe('keep');
   });
 
-  it('plans nothing beyond the foreground distance', () => {
-    const { tiles, subsystem } = makeTiles(false);
-    const far = makeView(true, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planSurfaceTiles(subsystem, [far], COMMITTED_TIER).value).toEqual([]);
-    expect(tiles.update).not.toHaveBeenCalled();
+  it('touched lists every resident requested key before any request', () => {
+    // Bug caught: a miss allocated while a resident it shares the plan with still
+    // carries last frame's LRU stamp evicts it, and the next one after it.
+    const tiles = [tile(0), tile(1), tile(2), tile(3), tile(4, 'height'), tile(5, 'height')];
+    walk.demand = engagedDemand(tiles);
+    const resident = new Set([0, 2, 4]);
+
+    const plan = planSurfaceTiles(
+      [SEES_EARTH],
+      overBody(EARTH),
+      residency({ residentSlot: (t) => (resident.has(t.x) ? SLOT : null) }),
+      LARGE,
+    );
+
+    expect(plan.touched).toEqual([tiles[0]!, tiles[2]!, tiles[4]!].map(earthKey));
+    expect(plan.requests.map((r) => r.tile)).toEqual([tiles[1], tiles[3], tiles[5]]);
+    expect(plan.verdict).toBe('keep');
+    expect(plan.cut).toBe(CUT);
   });
 
-  it('plans nothing while the engaged body has no pose', () => {
-    const { tiles, subsystem } = makeTiles(false);
-    const poseless = { ...makeView(true), bodyPose: () => null };
-    expect(planSurfaceTiles(subsystem, [poseless], COMMITTED_TIER).value).toEqual([]);
-    expect(tiles.update).not.toHaveBeenCalled();
+  it('a failed or in-flight key is never requested again', () => {
+    // Bug caught: a refetch storm on a 404, or a second fetch of a tile on its way.
+    const tiles = [tile(0), tile(1), tile(2)];
+    walk.demand = engagedDemand(tiles);
+    const plan = planSurfaceTiles(
+      [SEES_EARTH],
+      overBody(EARTH),
+      residency({
+        hasFailed: (key) => key === earthKey(tiles[0]!),
+        isInFlight: (key) => key === earthKey(tiles[1]!),
+      }),
+      LARGE,
+    );
+
+    expect(plan.requests.map((r) => r.tile)).toEqual([tiles[2]]);
+    // In flight holds a slot the stream must stamp; failed holds nothing worth one.
+    expect(plan.touched).toEqual([earthKey(tiles[1]!)]);
+    expect(plan.lastPlan).toEqual({ requestCount: 3, zWin: BASE + 1, misses: 3 });
+  });
+
+  it('asks for a missing manifest and plans nothing until it lands; never re-asks after a 404', () => {
+    // Bug caught: a frame that sleeps mid-fetch, or a manifest 404 refetched forever.
+    const absent = residency({
+      manifest: () => ({ status: 'absent', value: null }),
+      engagedBodyId: () => null,
+    });
+    const plan = planSurfaceTiles([SEES_EARTH], overBody(EARTH), absent, LARGE);
+    expect(plan.wantManifest).toBe('earth');
+    expect(plan.cut).toEqual([]);
+    expect(plan.awake).toBe(true);
+    expect(walk.calls).toBe(0);
+
+    const pending = residency({ manifest: () => ({ status: 'pending', value: null }) });
+    const whilePending = planSurfaceTiles([SEES_EARTH], overBody(EARTH), pending, LARGE);
+    expect(whilePending.wantManifest).toBeNull();
+    expect(whilePending.awake).toBe(true);
+
+    const failed = residency({ manifest: () => ({ status: 'failed', value: null }) });
+    const afterFailure = planSurfaceTiles([SEES_EARTH], overBody(EARTH), failed, LARGE);
+    expect(afterFailure.wantManifest).toBeNull();
+    expect(afterFailure.awake).toBe(false);
+  });
+
+  it("never reads another body's atlas: a switch engages with every tile a miss", () => {
+    // Bug caught: Earth's resident slots drawn as Mars tiles, under Mars's ids.
+    const failedKeys: string[] = [];
+    walk.demand = engagedDemand([tile(0), tile(1)]);
+    const plan = planSurfaceTiles(
+      [SEES_MARS],
+      overBody(MARS),
+      residency({
+        residentSlot: () => SLOT,
+        hasFailed: (key) => {
+          failedKeys.push(key);
+          return false;
+        },
+      }),
+      LARGE,
+    );
+
+    expect(plan.verdict).toEqual({ engage: 'mars', tilePx: 512 });
+    expect(plan.touched).toEqual([]);
+    expect(plan.requests).toHaveLength(2);
+    expect(failedKeys.every((key) => key.startsWith('mars-tiles/v2/'))).toBe(true);
+  });
+
+  it('engages on the very demand a finer-tiered session stands down on', () => {
+    // Bug caught: a base level fixed at the largest tier's leaves a default
+    // `medium` session on z3 ground while the screen wants z5.
+    walk.demand = { ...engagedDemand([tile(0)]), zWin: BASE };
+    const fresh = residency({ engagedBodyId: () => null });
+
+    const medium = planSurfaceTiles([SEES_EARTH], overBody(EARTH), fresh, () => 'medium');
+    expect(medium.verdict).toEqual({ engage: 'earth', tilePx: 512 });
+    expect(medium.lastPlan).not.toBeNull();
+
+    const large = planSurfaceTiles([SEES_EARTH], overBody(EARTH), fresh, LARGE);
+    expect(large.verdict).toBe('keep');
+    expect(large.lastPlan).toBeNull();
+    expect(large.requests).toEqual([]);
+  });
+
+  it('stays awake while fetches are in flight, over nothing', () => {
+    const plan = planSurfaceTiles([LOOKS_AWAY], null, residency({ inFlightCount: () => 1 }), LARGE);
+    expect(plan.awake).toBe(true);
   });
 });

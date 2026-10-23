@@ -1,6 +1,6 @@
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
 import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
-import type { SurfaceTilePlan } from '../../@types/scene/SurfaceTilePlan';
+import type { SurfaceTileDemand } from '../../@types/scene/SurfaceTileDemand';
 import type { SurfaceTileRequest } from '../../@types/scene/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../../@types/scene/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../@types/scene/ResolvedTileResidency';
@@ -73,7 +73,7 @@ export function cutSurfaceTiles(input: {
   readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
 }): {
   readonly cut: readonly SurfaceCutTile[];
-  readonly requests: SurfaceTilePlan;
+  readonly requests: SurfaceTileDemand;
 } {
   const {
     camPosLocalM,

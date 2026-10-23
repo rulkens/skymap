@@ -11,6 +11,7 @@
  * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */
 
+import type { SurfaceTileBodyId } from '../../@types/data/SurfaceTileBodyId';
 import { HEIGHT_POSTS_PER_TILE } from '../scene/heightTileFormat';
 
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is
@@ -89,3 +90,18 @@ export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
  * `surfaceTile/surfaceLighting.wesl`'s dual-sample mix.
  */
 export const SURFACE_TILE_CROSSFADE_MS = 400;
+
+/**
+ * Body radii from a tiling body's centre past which its tile atlases release:
+ * twice the farthest eye distance at which the engage gate (`zWin > baseLevel`)
+ * holds, so no allowed lens can engage tiles the same frame would release.
+ * Measured by sweeping the eye outward through `cutSurfaceTiles` under a
+ * whole-globe band at the small tier (base z2, the farthest-engaging), over
+ * sub-camera latitudes 0–89°: 1054 R at the slider's narrowest FOV (0.5°) on
+ * WebGPU's 8192 px baseline canvas edge (527 R on the 4096 px dome take, 2.3 R
+ * at 100°). In radii the gate is scale-free, so Earth and Mars measure alike.
+ */
+export const TILE_RELEASE_RADII = {
+  earth: 2110,
+  mars: 2110,
+} as const satisfies Record<SurfaceTileBodyId, number>;

@@ -25,7 +25,7 @@ import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
-import { planSurfaceTiles } from './surfaceTilePlanner/planSurfaceTiles';
+import { driveSurfaceTileSubsystem } from './surfaceTilePlanner/driveSurfaceTileSubsystem';
 import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -241,7 +241,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const surfaceTiles = state.subsystems.surfaceTiles;
   let surfaceTilesAnimating = false;
   if (surfaceTiles !== null) {
-    const tilePlan = planSurfaceTiles(surfaceTiles, views, (bodyId) =>
+    const tilePlan = driveSurfaceTileSubsystem(surfaceTiles, views, (bodyId) =>
       bodySurfaceTier(state, bodyId),
     );
     surfaceTiles.setLastCut(tilePlan.value);

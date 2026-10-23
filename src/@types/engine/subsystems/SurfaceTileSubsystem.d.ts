@@ -11,7 +11,8 @@
  */
 
 import type { SurfaceTileId } from '../../data/SurfaceTileId';
-import type { SurfaceTilePlan } from '../../scene/SurfaceTilePlan';
+import type { ResidentSlot } from '../surfaceTiles/ResidentSlot';
+import type { SurfaceTileDemand } from '../../scene/SurfaceTileDemand';
 import type { SurfaceTilePlannerParams } from '../../scene/SurfaceTilePlannerParams';
 import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnapshot';
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
@@ -39,7 +40,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * Engaged: LRU-touches every planned tile largest-first, enqueues anything
    * missing — allocating the atlas on first engage.
    */
-  update(input: { readonly bodyId: SceneBodyId; readonly plan: SurfaceTilePlan }): void;
+  update(input: { readonly bodyId: SceneBodyId; readonly plan: SurfaceTileDemand }): void;
 
   /**
    * Resolve one exact tile's atlas residency, or `null` if it is not
@@ -47,18 +48,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * per candidate tile — keyed the same `surfaceTilePath(tile, prefix)` way
    * the internal `resident` map is.
    */
-  residentSlot(tile: SurfaceTileId): {
-    readonly slot: number;
-    readonly atlasUvOrigin: readonly [number, number];
-    readonly atlasUvScale: readonly [number, number];
-    /** `performance.now()` (REAL time) stamped when this slot's bitmap
-     *  uploaded — see `SurfaceCutTile.albedo.readyAtMs`. */
-    readonly readyAtMs: number;
-    /** HEIGHT only: the `SHGT` chunk's `subtreeMin/MaxM` (metres), which
-     *  bound every descendant of this tile — the walk's frustum-cull
-     *  headroom for displaced geometry. Null for albedo. */
-    readonly subtreeRangeM: readonly [number, number] | null;
-  } | null;
+  residentSlot(tile: SurfaceTileId): ResidentSlot | null;
 
   /**
    * Terrain height (metres above the datum) under a body-fixed direction —
