@@ -5,7 +5,6 @@ job: "What can Skymap do, and where is each thing explained?"
 ---
 
 import AddressStrip from '../../components/AddressStrip/AddressStrip.tsx';
-import FeatureFilm from '../../components/FeatureFilm/FeatureFilm.tsx';
 import FeatureGallery from '../../components/FeatureGallery/FeatureGallery.tsx';
 import FeaturesHero from '../../components/FeaturesHero/FeaturesHero.tsx';
 import FeatureSection from '../../components/FeatureSection/FeatureSection.tsx';
@@ -17,9 +16,8 @@ import { siteShot } from '../../data/siteShot';
 import layout from '../../styles/layout.module.css';
 
 export const part = `${layout.wrap} ${layout.section}`;
-// The large visual takes seven of the page grid's twelve columns; a disc's picture 8rem.
+// The large visual takes seven of the page grid's twelve columns.
 export const big = '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)';
-export const disc = '8rem';
 
 <FeaturesHero client:visible />
 
@@ -43,10 +41,7 @@ export const disc = '8rem';
   </SectionHead>
 </div>
 
-<FeatureSection side="left" title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time">
-  <FeatureFilm film="features-time-jupiter" sizes={big} wide client:visible />
-  <FeatureFilm slot="small" film="features-time-earth" sizes={disc} client:visible />
-</FeatureSection>
+<FeatureGallery side="left" title="Time" line="Planets and moons move along their orbits, Earth turns from day to night, and spacecraft move along their paths." href="/docs/guide/time/" label="Time" films={['features-time-jupiter', 'features-time-earth', 'features-time-seasons', 'features-time-moon', 'features-time-voyager', 'features-time-planets']} sizes={big} client:visible />
 
 <div class={part}>
   <SectionHead title="Screens of all sizes">
