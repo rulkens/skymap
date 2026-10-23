@@ -18,6 +18,7 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const FORWARD_X: Vec3 = [1, 0, 0];
@@ -49,14 +50,14 @@ describe('visibleSlabBodies', () => {
     // (≈0.972px, just under the 1px floor) and 3.2e22 (≈1.037px, just over
     // it) — see the task-4 report for that derivation.
     const belowFloor: PlanetBody = {
-      id: 'below',
+      id: asSceneBodyId('below'),
       label: 'Below floor',
       resolvePx: 3,
       surface: { datumRadiusM: 3e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
     const aboveFloor: PlanetBody = {
-      id: 'above',
+      id: asSceneBodyId('above'),
       label: 'Above floor',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22 / PROXY_SCALE, reliefM: [0, 0] },
@@ -81,13 +82,13 @@ describe('visibleSlabBodies', () => {
 
   it('includes earth alongside surviving planets, and drops a body missing a bodyState', () => {
     const earth = {
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       surface: { datumRadiusM: 6.371e6, reliefM: [0, 0] as const },
       resolvePx: 3,
     };
     const orphan: PlanetBody = {
-      id: 'orphan',
+      id: asSceneBodyId('orphan'),
       label: 'Orphan',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
@@ -140,7 +141,7 @@ describe('visibleSlabBodies', () => {
     // radius negligible (≈0.06°) so these cases isolate the frustum test from
     // the sub-pixel one.
     const wideBody: PlanetBody = {
-      id: 'wide',
+      id: asSceneBodyId('wide'),
       label: 'Wide body',
       resolvePx: 3,
       surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
@@ -183,7 +184,7 @@ describe('visibleSlabBodies', () => {
       // invert for the datum.
       const datumRadiusM = rEffM / 1.05;
       const straddling: PlanetBody = {
-        id: 'straddling',
+        id: asSceneBodyId('straddling'),
         label: 'Straddling',
         resolvePx: 3,
         surface: { datumRadiusM, reliefM: [0, 0] },

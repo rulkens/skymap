@@ -18,6 +18,7 @@ import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
 import type { SlabRow } from './SlabRow';
+import type { PositionedId } from '../../scene/PositionedId';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -34,10 +35,8 @@ export type ReadyFrameContext = {
    * This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes
    * one deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call
    * this frame returns this SAME Map by reference — no second cache, no drift.
-   * Keyed by the raw orbital-element id string, one level wider than `BodyId`
-   * — the boundary `slabs.ts`/`liveWorldPose.ts` already cast at.
    */
-  bodyStates: ReadonlyMap<string, BodyState>;
+  bodyStates: ReadonlyMap<PositionedId, BodyState>;
   /**
    * The UN-turned pose provider (spec §5's provider seam), built once here so
    * a body-slab layer's own `bodyRelativePose` read can never drift from the

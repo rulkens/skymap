@@ -14,10 +14,11 @@
 import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
 import type { BodySpec } from '../../../@types/scene/BodySpec';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 export function heliocentricPlanet(spec: BodySpec): PlanetBody {
   return {
-    id: spec.id,
+    id: asSceneBodyId(spec.id),
     label: spec.label,
     surface: { datumRadiusM: spec.datumRadiusM, reliefM: spec.reliefM ?? [0, 0] },
     albedo: spec.albedo,

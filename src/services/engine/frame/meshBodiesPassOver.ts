@@ -8,11 +8,12 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import { drawableMeshBodies } from './drawableMeshBodies';
 import { drawMeshBodiesOnRow } from './drawMeshBodiesOnRow';
 import { drawMeshBodyPicksOnRow } from './drawMeshBodyPicksOnRow';
+import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
 export function meshBodiesPassOver(
   name: string,
   roster: ReadonlySet<string>,
-  pickIdOf: (bodyId: string) => number | null,
+  pickIdOf: (bodyId: SceneBodyId) => number | null,
 ): ContentPass {
   return {
     name,

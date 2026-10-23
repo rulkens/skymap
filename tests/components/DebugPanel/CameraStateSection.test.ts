@@ -19,8 +19,8 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 afterEach(() => {
   delete (navigator as { clipboard?: unknown }).clipboard;
@@ -106,11 +106,16 @@ describe('CameraStateSection', () => {
     const siteSnap: CameraDebugSnapshot = {
       ...SNAP,
       framed: {
-        frame: { site: 'curiosity' as BodyId },
-        pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+        frame: { site: asSurfaceSiteId('curiosity') },
+        pose: {
+          siteId: asSurfaceSiteId('curiosity'),
+          headingRad: 0.7,
+          elevationRad: 0.2,
+          rangeM: 12,
+        },
       },
       sitePose: {
-        siteId: 'curiosity' as BodyId,
+        siteId: asSurfaceSiteId('curiosity'),
         headingRad: 0.7,
         elevationRad: 0.2,
         rangeM: 12,

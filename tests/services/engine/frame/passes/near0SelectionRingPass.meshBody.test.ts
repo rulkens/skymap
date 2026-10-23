@@ -40,6 +40,7 @@ import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -61,9 +62,9 @@ function clipOf(m: Float32Array, p: Readonly<Vec3>): [number, number, number, nu
 function drawAt(bodyId: string, radiiFromCentre: number) {
   const states = deriveBodyStates(SIM_DAYS);
   const body = SCENE_MESH_BODIES.find((b) => b.id === bodyId)!;
-  const bodyState = states.get(bodyId)!;
+  const bodyState = states.get(asSceneBodyId(bodyId))!;
   const earth = SCENE_BODIES.find((b) => b.id === 'earth')!;
-  const earthState = states.get('earth')!;
+  const earthState = states.get(asSceneBodyId('earth'))!;
 
   const cam = createOrbitCamera({
     target: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],

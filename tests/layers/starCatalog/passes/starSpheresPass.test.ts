@@ -54,6 +54,7 @@ vi.mock('../../../../src/utils/camera/composeBodyMvp', () => ({
   composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../src/utils/camera/composeBodyMvp';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -246,7 +247,7 @@ describe('starSpheresPass.draw', () => {
 
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(
-      deriveBodyStates(CONST_J2000).get('sirius')!.positionMpc,
+      deriveBodyStates(CONST_J2000).get(asSceneBodyId('sirius'))!.positionMpc,
     );
   });
 

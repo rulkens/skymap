@@ -21,14 +21,15 @@ import { makeSlab } from '../../fixtures/makeSlab';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../src/@types/scene/SceneBodyId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
-const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 
 /** A body-m SlabView for Earth — the only seeded `SURFACE_TILE_REGISTRY` row. */
 const EARTH_VIEW: SlabView = {
-  slab: makeSlab({ frame: { kind: 'body-m', hostId: 'earth' } }),
+  slab: makeSlab({ frame: { kind: 'body-m', hostId: asSceneBodyId('earth') } }),
   vp: new Float32Array(16),
   camPos: [0, 0, 5],
   viewportPx: [1280, 720],
@@ -55,7 +56,7 @@ function makeCtx(distanceMpc: number): FrameView {
     snapshot: { simDays: CONST_J2000 },
     cam: { distance: distanceMpc, position: camPosMpc, target: EARTH_STATE.positionMpc },
     drawCamPos: camPosMpc,
-    bodyPose: (bodyId: BodyId) =>
+    bodyPose: (bodyId: SceneBodyId) =>
       bodyId === 'earth'
         ? bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: EARTH_STATE })
         : null,

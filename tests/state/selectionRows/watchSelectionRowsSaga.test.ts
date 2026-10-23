@@ -56,6 +56,7 @@ import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/Galax
 import type { Octree } from '../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../src/utils/star/starOctreeFromSkst';
 import type { StarColumns } from '../../../src/@types/data/starCatalog/StarColumns';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -259,12 +260,12 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(setSimDays({ simDays: SIM_DAYS, nowMs: 0 }));
     store.dispatch(pause({ nowMs: 0 }));
 
-    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
 
     const row = store.getState()[selectionRowsRoute].focus;
-    const expectedPos = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
-    const j2000Pos = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const expectedPos = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
+    const j2000Pos = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     expect(row).toMatchObject({ type: 'body', id: 'earth', positionMpc: [...expectedPos] });
     expect((row as { positionMpc: number[] }).positionMpc).not.toEqual([...j2000Pos]);
   });

@@ -8,7 +8,6 @@
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
 
-import type { BodyId } from '../../../../@types/data/body/BodyId';
 import type { CameraPose } from '../../../../@types/camera/CameraPose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { DriverCtx } from '../../../../@types/engine/camera/DriverCtx';
@@ -36,6 +35,7 @@ import { sphereFitDistance } from '../../../../utils/camera/sphereFitDistance';
 import { lerpVec3 } from '../../../../utils/math/lerpVec3';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { smoothstep } from '../../../../utils/math/smoothstep';
+import { isSceneBodyId } from '../../../../utils/scene/isSceneBodyId';
 
 /** One craft's stops per timeline, by identity: rebuilt only when the data or the craft changes. */
 const STOPS = new WeakMap<MissionTimeline, Map<string, MissionCourse['stops']>>();
@@ -62,7 +62,8 @@ export function missionPose(
   const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
   const { fovYRad, aspect } = ctx.projection;
-  const positionOf = (id: string) => ctx.bodies.get(id as BodyId)?.positionMpc;
+  const positionOf = (id: string) =>
+    isSceneBodyId(id) ? ctx.bodies.get(id)?.positionMpc : undefined;
   // A new aim token also restarts the epoch these times are on; an easing one keeps the offsets.
   const sameAim = own !== null && own.aim === token;
   const prev = sameAim ? own.view : null;
@@ -188,6 +189,6 @@ export function missionPose(
         distance: frame.distance * offsets.zoom,
       },
     },
-    pivotBody: craftId,
+    pivotBody: isSceneBodyId(craftId) ? craftId : undefined,
   };
 }

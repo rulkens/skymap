@@ -5,11 +5,12 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { compressBrightness } from '../../../../src/utils/color/compressBrightness';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The caller passes the per-frame body snapshot; these tests use the J2000
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
-const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
 
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
@@ -37,7 +38,7 @@ describe('sceneBodyLabels', () => {
     const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
     const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;
     // RENDER_ORIGIN is the Sun, so worldPos == the snapshot position exactly.
-    expect(earthLater.worldPos).toEqual([...laterStates.get('earth')!.positionMpc]);
+    expect(earthLater.worldPos).toEqual([...laterStates.get(asSceneBodyId('earth'))!.positionMpc]);
     expect(earthLater.worldPos).not.toEqual(earthNow.worldPos);
   });
 

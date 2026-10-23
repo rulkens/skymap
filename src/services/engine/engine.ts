@@ -44,8 +44,6 @@ import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 
@@ -511,7 +509,7 @@ export function createEngine(
         const rootState = store.getState();
         const time = selectTimeState(rootState);
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
-        const bodyStates = deriveBodyStates(outputs.simDays) as ReadonlyMap<BodyId, BodyState>;
+        const bodyStates = deriveBodyStates(outputs.simDays);
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
           renderedPose: outputs.displayed,

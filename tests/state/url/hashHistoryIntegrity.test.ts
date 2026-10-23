@@ -85,12 +85,13 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 /** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
 const EARTH_ARM: FramedCameraPose = {
-  frame: { body: 'earth' },
+  frame: { body: asSceneBodyId('earth') },
   pose: {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [1000, 2000, 3000],
     basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],

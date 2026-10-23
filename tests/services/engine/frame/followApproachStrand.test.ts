@@ -28,8 +28,9 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-const SATURN = deriveBodyStates(CONST_J2000).get('saturn')! as BodyState;
+const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as BodyState;
 
 /** Turn the spin pill on at the store's own rate (the UI's only lever). */
 function spinOn(h: CameraSimHarness): void {

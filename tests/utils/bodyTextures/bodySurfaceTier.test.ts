@@ -21,6 +21,7 @@ import { bodySurfaceTier } from '../../../src/utils/bodyTextures/bodySurfaceTier
 import { bodyTextureSlotKey } from '../../../src/utils/bodyTextures/bodyTextureSlotKey';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { Tier } from '../../../src/@types/data/Tier';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 /** An engine state whose `earth:surface` slot is in `kind` holding a request for
  *  `requestTier`, with a committed request of `committedTier` (defaults to
@@ -59,7 +60,7 @@ describe('bodySurfaceTier', () => {
           tier: 'large',
           slot: { kind: 'ready', requestTier: 'medium', committedTier: 'medium' },
         }),
-        'earth',
+        asSceneBodyId('earth'),
       ),
     ).toBe('medium');
   });
@@ -69,11 +70,11 @@ describe('bodySurfaceTier', () => {
     // whole-globe image whose level can be named, so the answer is the one that
     // is arriving. `lastRequest()` alone would be read as gospel here, which is
     // the requested tier again by a longer route.
-    expect(bodySurfaceTier(stateWith({ tier: 'small' }), 'earth')).toBe('small');
+    expect(bodySurfaceTier(stateWith({ tier: 'small' }), asSceneBodyId('earth'))).toBe('small');
     expect(
       bodySurfaceTier(
         stateWith({ tier: 'small', slot: { kind: 'loading', requestTier: 'large' } }),
-        'earth',
+        asSceneBodyId('earth'),
       ),
     ).toBe('small');
   });
@@ -89,7 +90,7 @@ describe('bodySurfaceTier', () => {
           tier: 'large',
           slot: { kind: 'loading', requestTier: 'large', committedTier: 'medium' },
         }),
-        'earth',
+        asSceneBodyId('earth'),
       ),
     ).toBe('medium');
   });

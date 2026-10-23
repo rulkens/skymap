@@ -11,13 +11,14 @@ import { cameraDebugSnapshotOf } from '../../../../src/services/engine/camera/ca
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { TimeState } from '../../../../src/@types/time/TimeState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const EARTH_RADIUS_M = 6371000;
 const MOON_RADIUS_M = 1737000;
@@ -36,7 +37,6 @@ const LIVE_TIME: TimeState = {
 };
 
 const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
-const bodyId = (id: string): BodyId => id as BodyId;
 
 /** Eye placed via a zero-distance pose; forward is degenerate on purpose —
  * these tests pin the regime/epoch fields, not the orientation pipeline. */
@@ -81,7 +81,7 @@ function absoluteFramed(): FramedCameraPose {
   return { frame: 'absolute', pose: ABSOLUTE_POSE };
 }
 
-function bodyFramed(id: BodyId, anchorLocalM: Vec3, eyeRelAnchorM: Vec3): FramedCameraPose {
+function bodyFramed(id: SceneBodyId, anchorLocalM: Vec3, eyeRelAnchorM: Vec3): FramedCameraPose {
   const pose: BodyFixedPose = { bodyId: id, anchorLocalM, eyeRelAnchorM, basisLocal: IDENTITY };
   return { frame: { body: id }, pose };
 }
@@ -91,11 +91,11 @@ describe('cameraDebugSnapshotOf', () => {
   // arms on the same body are distinct objects.
   it('reports no mismatch when stored and rendered agree on the same body', () => {
     const snap = cameraDebugSnapshotOf({
-      storedFrame: { body: bodyId('earth') },
-      renderedPose: bodyFramed(bodyId('earth'), [0, 0, 0], [1, 0, 0]),
+      storedFrame: { body: asSceneBodyId('earth') },
+      renderedPose: bodyFramed(asSceneBodyId('earth'), [0, 0, 0], [1, 0, 0]),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 0.5)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,
@@ -110,7 +110,7 @@ describe('cameraDebugSnapshotOf', () => {
       renderedPose: absoluteFramed(),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100 + 0.5 / 86_400,
       time: LIVE_TIME,
@@ -125,7 +125,7 @@ describe('cameraDebugSnapshotOf', () => {
       renderedPose: absoluteFramed(),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100 + 10 / 86_400,
       time: LIVE_TIME,
@@ -139,13 +139,13 @@ describe('cameraDebugSnapshotOf', () => {
     // Moon is nearer in h/R (0.5 R vs Earth's 1.0 R), but Earth is the
     // stored regime — the engaged body always wins over "nearest".
     const snap = cameraDebugSnapshotOf({
-      storedFrame: { body: bodyId('earth') },
-      renderedPose: bodyFramed(bodyId('earth'), [0, 0, 0], [m(EARTH_RADIUS_M * 2), 0, 0]),
+      storedFrame: { body: asSceneBodyId('earth') },
+      renderedPose: bodyFramed(asSceneBodyId('earth'), [0, 0, 0], [m(EARTH_RADIUS_M * 2), 0, 0]),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 1.0)),
       bodyStates: new Map([
-        [bodyId('earth'), bodyState([0, 0, 0])],
-        [bodyId('moon'), bodyState([m(MOON_RADIUS_M * -1.5), 0, 0])],
+        [asSceneBodyId('earth'), bodyState([0, 0, 0])],
+        [asSceneBodyId('moon'), bodyState([m(MOON_RADIUS_M * -1.5), 0, 0])],
       ]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
@@ -163,12 +163,12 @@ describe('cameraDebugSnapshotOf', () => {
     // the same eye-to-datum number regardless of what is drawn underneath.
     const TERRAIN_M = 1500;
     const snap = cameraDebugSnapshotOf({
-      storedFrame: { body: bodyId('earth') },
-      renderedPose: bodyFramed(bodyId('earth'), [0, 0, 0], [m(EARTH_RADIUS_M * 2), 0, 0]),
+      storedFrame: { body: asSceneBodyId('earth') },
+      renderedPose: bodyFramed(asSceneBodyId('earth'), [0, 0, 0], [m(EARTH_RADIUS_M * 2), 0, 0]),
       ...SNAP_COMMON,
       terrainHeightAt: () => TERRAIN_M,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 1.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,
@@ -184,8 +184,8 @@ describe('cameraDebugSnapshotOf', () => {
       ...SNAP_COMMON,
       worldPose: poseWithEye([m(MOON_RADIUS_M * 1.5), 0, 0]),
       bodyStates: new Map([
-        [bodyId('earth'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
-        [bodyId('moon'), bodyState([0, 0, 0])],
+        [asSceneBodyId('earth'), bodyState([m(EARTH_RADIUS_M * 5), 0, 0])],
+        [asSceneBodyId('moon'), bodyState([0, 0, 0])],
       ]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
@@ -197,11 +197,11 @@ describe('cameraDebugSnapshotOf', () => {
 
   it('carries anchor/eye readout only on a body-arm rendered pose', () => {
     const withBody = cameraDebugSnapshotOf({
-      storedFrame: { body: bodyId('earth') },
-      renderedPose: bodyFramed(bodyId('earth'), [1000, 2000, 3000], [3, 4, 0]),
+      storedFrame: { body: asSceneBodyId('earth') },
+      renderedPose: bodyFramed(asSceneBodyId('earth'), [1000, 2000, 3000], [3, 4, 0]),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 1.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,
@@ -215,7 +215,7 @@ describe('cameraDebugSnapshotOf', () => {
       renderedPose: absoluteFramed(),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,
@@ -243,7 +243,7 @@ describe('cameraDebugSnapshotOf', () => {
       renderedPose: absoluteFramed(),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100.25,
       time: fastTime,
@@ -258,7 +258,7 @@ describe('cameraDebugSnapshotOf', () => {
       renderedPose: absoluteFramed(),
       ...SNAP_COMMON,
       worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 2.0)),
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 110,
       time: fastTime,
@@ -278,7 +278,7 @@ describe('cameraDebugSnapshotOf', () => {
       ...SNAP_COMMON,
       // A REAL pose (non-degenerate forward): eye out on +x looking at the body.
       worldPose: { target: [0, 0, 0], yaw: Math.PI / 2, pitch: 0, distance: eye[0], roll: 0.3 },
-      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      bodyStates: new Map([[asSceneBodyId('earth'), bodyState([0, 0, 0])]]),
       lastRenderedSimDays: 100,
       liveSimDays: 100,
       time: LIVE_TIME,

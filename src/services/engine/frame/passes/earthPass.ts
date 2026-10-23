@@ -20,8 +20,6 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { CelestialBody } from '../../../../@types/scene/CelestialBody';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
-import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -41,13 +39,14 @@ import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanc
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from '../sceneBodyStates';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 /**
  * The registry record for `bodyId`, searched across every store the body-slab
  * layers can seed a row from. Mirrors `sceneBodyStates`' own null-safety
  * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
-function sceneBodyForId(state: PassState, bodyId: SlabHostId): CelestialBody | null {
+function sceneBodyForId(state: PassState, bodyId: PositionedId): CelestialBody | null {
   const { earth, planets } = state.data.bodies;
   if (earth !== null && earth.id === bodyId) return earth;
   return planets.find((p) => p.id === bodyId) ?? null;
@@ -73,7 +72,7 @@ type PreparedBodySurfaceFrame = {
   readonly camLocal: Vec3;
 };
 
-const preparedByCtx = new WeakMap<FrameView, Map<SlabHostId, PreparedBodySurfaceFrame | null>>();
+const preparedByCtx = new WeakMap<FrameView, Map<PositionedId, PreparedBodySurfaceFrame | null>>();
 
 export function prepareBodySurfaceFrame(
   state: PassState,
@@ -99,7 +98,7 @@ function computeBodySurfaceFrame(
   state: PassState,
   ctx: FrameView,
   view: SlabView,
-  bodyId: SlabHostId,
+  bodyId: PositionedId,
 ): PreparedBodySurfaceFrame | null {
   const body = sceneBodyForId(state, bodyId);
   if (body === null) return null;

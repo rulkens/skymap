@@ -142,7 +142,7 @@ const labels = new Map<string, string>(
   ),
 );
 const orbitOf = new Map(ORBITAL_ELEMENTS.map((row) => [row.id, row.focusId]));
-const hostOf = new Map(SURFACE_FIXED_SITES.map((site) => [site.id, site.hostId as string]));
+const hostOf = new Map<string, string>(SURFACE_FIXED_SITES.map((site) => [site.id, site.hostId]));
 
 // The bodies with an orbit, in the orbit table's order: the planets outwards, then each planet's moons.
 const orbiting = ORBITAL_ELEMENTS.flatMap((orbit) => {

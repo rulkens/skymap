@@ -7,7 +7,6 @@
  * are the whole gate.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
 import type { SceneBody } from '../../@types/scene/SceneBody';
 import type { SlabRow } from '../../@types/engine/frame/SlabRow';
 import { bodyDrawRadiusM } from './bodyDrawRadiusM';
@@ -15,7 +14,7 @@ import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
 
 export function bodySlabRowOf(body: SceneBody): SlabRow {
   return {
-    anchorId: body.id as BodyId,
+    anchorId: body.id,
     drawRadiusM: () => bodyDrawRadiusM(body),
     footprintRadiusM: bodyFootprintRadiusM(body),
     source: 'foreground',

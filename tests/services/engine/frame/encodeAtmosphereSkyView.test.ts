@@ -38,6 +38,7 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The bake resolves each body's live position/orientation from the per-frame
 // body-state snapshot (keyed by id, via `atmosphereDrawList`) for `sunDirLocal`
@@ -67,7 +68,7 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
 // the real J2000 ones; refs stay stable across the mock + the recompute).
 type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededEarth = {
   ...SCENE_EARTH,
   positionMpc: EARTH_STATE.positionMpc,

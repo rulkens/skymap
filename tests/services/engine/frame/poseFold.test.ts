@@ -107,17 +107,18 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const SIM = CONST_J2000;
-const EARTH: BodyState = deriveBodyStates(SIM).get('earth')!;
-const EARTH_ARM = { body: 'earth' as BodyId };
+const EARTH: BodyState = deriveBodyStates(SIM).get(asSceneBodyId('earth'))!;
+const EARTH_ARM = { body: asSceneBodyId('earth') };
 
 /** Eye, sightline and screen-up — the three quantities §4 rules continuous. */
 function renderedCamera(pose: CameraPose) {
@@ -192,11 +193,11 @@ function rangeOf(framed: FramedCameraPose): number {
  * fresh at a flip is eye-preserving by construction and hides them).
  */
 function parkAtCuriositySite(h: ReturnType<typeof makeHarness>): void {
-  const site = { site: 'curiosity' as BodyId } as const;
+  const site = { site: asSurfaceSiteId('curiosity') } as const;
   const parked = foldToWorld(
     { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 2e5 } },
     {
-      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      bodies: deriveBodyStates(SIM),
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
@@ -538,7 +539,7 @@ describe('runFrame — the regime fold', () => {
     // whose stated job is to keep exactly that tilt alive.
     const h = makeHarness();
     h.seedPose(absoluteArm(poseAtHR(h.bodies.get('mars')!, h.radiusM('mars'), 2)));
-    const seeded = { hostId: 'mars' as BodyId, rememberedTiltRad: 0.8 };
+    const seeded = { hostId: asSceneBodyId('mars'), rememberedTiltRad: 0.8 };
     h.state.cameraRuntime = { ...h.state.cameraRuntime, tilt: seeded };
     h.focus('curiosity');
 
@@ -561,9 +562,9 @@ describe('runFrame — the regime fold', () => {
     const roverR = findByIdOrThrow(SCENE_MESH_BODIES, 'curiosity', 'poseFold').boundingRadiusM;
     const RANGE_M = 150;
     h.seedPose({
-      frame: { site: 'curiosity' as BodyId },
+      frame: { site: asSurfaceSiteId('curiosity') },
       pose: {
-        siteId: 'curiosity' as BodyId,
+        siteId: asSurfaceSiteId('curiosity'),
         headingRad: 0.4,
         elevationRad: Math.asin((SITE_RUNG.eyeFloorBoundingRadii * roverR) / RANGE_M),
         rangeM: RANGE_M,
@@ -724,11 +725,11 @@ describe('runFrame — the regime fold', () => {
     // went absolute → site:curiosity → body:mars in three frames, skipping a
     // rung on the way down and climbing back on the next frame.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    const SITE = { site: 'curiosity' as BodyId };
+    const SITE = { site: asSurfaceSiteId('curiosity') };
     const near = foldToWorld(
       { frame: SITE, pose: { siteId: SITE.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 3e5 } },
       {
-        bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+        bodies: deriveBodyStates(SIM),
         poseBasis: B,
         upBasis: B,
         terrainHeightAt: datumOnlyTerrainHeight,
@@ -851,9 +852,9 @@ describe('runFrame — the regime fold', () => {
     // arrival is still the rover's own framing distance, not the site band it
     // fell through on the way.
     const h = makeHarness();
-    const site = { site: 'curiosity' as BodyId } as const;
+    const site = { site: asSurfaceSiteId('curiosity') } as const;
     const ctx = {
-      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      bodies: deriveBodyStates(SIM),
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,

@@ -8,7 +8,7 @@
  * build it here. This IS the engine's boot value (`INITIAL_SETTINGS`) plus
  * overrides, not an independent mirror: each Layer cluster spreads that
  * slice's own production `initialState`, with item rows re-DERIVED from
- * `GALAXY_CATALOG_IDS` / `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`.
+ * `GALAXY_CATALOG_IDS` / `STAR_CATALOG_IDS` / `BODY_SOURCE_IDS` / `STRUCTURE_IDS`.
  * Deriving the item keys (rather than hand-listing them) means adding a
  * catalog or category can't silently leave the fixture stale.
  *
@@ -25,7 +25,7 @@
 
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
-import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
+import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import {
   DEFAULT_ALIGN_SEC,
@@ -80,7 +80,7 @@ import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/Gal
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
 import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
@@ -137,8 +137,8 @@ export function makeSettingsFixture(
     },
     bodies: {
       items: Object.fromEntries(
-        BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-      ) as Record<BodyId, BodyItemSettings>,
+        BODY_SOURCE_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<BodySourceId, BodyItemSettings>,
     },
     cosmicWebDensity: { ...volumesInitialState, items: { ...volumesInitialState.items } },
     flow: { ...flowInitialState },

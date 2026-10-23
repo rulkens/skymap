@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { followedBodyHome } from '../../../src/utils/scene/followedBodyHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('followedBodyHome', () => {
   it('followedBodyHome returns the target for a body the sim clock propagates', () => {
@@ -19,6 +20,6 @@ describe('followedBodyHome', () => {
   });
 
   it('followedBodyHome throws for a static anchor body', () => {
-    expect(() => followedBodyHome({ type: 'body', id: 'sun' })).toThrow();
+    expect(() => followedBodyHome({ type: 'body', id: asSceneBodyId('sun') })).toThrow();
   });
 });

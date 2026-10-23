@@ -1,7 +1,7 @@
 import { SOURCE_ENTRIES } from '../sourceEntries';
 
 /**
- * BODY_IDS — the body-only id list, the tight key domain for
+ * BODY_SOURCE_IDS — the body-only id list, the tight key domain for
  * `settings.bodies.items`.
  *
  * `SOURCE_IDS` spans every registry kind, so keying a body-items record by it
@@ -11,4 +11,4 @@ import { SOURCE_ENTRIES } from '../sourceEntries';
  * source-code order; it is purely iteration order, since per-body state comes
  * from the keyed `items` record, not list position.
  */
-export const BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => e.id);
+export const BODY_SOURCE_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body').map((e) => e.id);

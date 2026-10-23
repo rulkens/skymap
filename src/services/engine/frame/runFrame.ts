@@ -11,9 +11,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
 import type { Vec2 } from '../../../@types/math/Vec2';
@@ -113,7 +111,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
   // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+  const bodyStates = deriveBodyStates(simDays);
 
   const {
     next,

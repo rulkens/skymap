@@ -59,7 +59,6 @@ import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/help
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
@@ -83,6 +82,7 @@ vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The layer reads each body's live position/orientation from the per-frame
 // body-state snapshot (keyed by id). Stub it to a map built from
@@ -112,13 +112,13 @@ function toBodyState(b: SeededBody): BodyState {
 // Fixtures pairing each body's identity record with its real J2000 state —
 // position + orientation are sourced from deriveBodyStates so the values are
 // the real ones and the refs stay stable across the assertions.
-const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
   positionMpc: EARTH_STATE.positionMpc,
   orientation: EARTH_STATE.orientation,
 };
-const MARS_STATE = deriveBodyStates(CONST_J2000).get('mars')!;
+const MARS_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('mars'))!;
 const SEEDED_MARS: SeededBody = {
   ...SCENE_PLANETS.find((p) => p.id === 'mars')!,
   positionMpc: MARS_STATE.positionMpc,
@@ -215,13 +215,9 @@ const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  // `BodyId` is the coarse source-registry category set ('earth' | 'planet' |
-  // …), not per-planet ids — `bodySlabRow` (slabs.ts) already force-casts a
-  // SceneBody's real string id ('mars', 'venus', …) the same way when it
-  // builds a body-m row's frame.
   const slab: Slab = makeSlab({
     vp: f64Vp,
-    frame: { kind: 'body-m', hostId: bodyId as BodyId },
+    frame: { kind: 'body-m', hostId: asSceneBodyId(bodyId) },
   });
   return {
     slab,

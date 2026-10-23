@@ -7,8 +7,9 @@
 
 import { BODY_PICK_ROWS } from '../../data/bodies/bodyPickRows';
 import { EARTH_SCENE_BODY_IDS } from '../../data/bodies/earthSceneBodyIds';
+import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 
-export function isCoreBodyId(id: string): boolean {
+export function isCoreBodyId(id: string): id is SceneBodyId {
   return (
     Object.values(BODY_PICK_ROWS).some((seeds) => seeds.some((seed) => seed.id === id)) ||
     EARTH_SCENE_BODY_IDS.has(id)

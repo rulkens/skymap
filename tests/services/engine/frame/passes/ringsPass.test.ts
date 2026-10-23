@@ -28,7 +28,7 @@ import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -48,6 +48,7 @@ vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
@@ -78,7 +79,7 @@ function saturnBody(): SeededPlanet {
   const radiusM = 58_232_000;
   const distanceM = radiusM * 5;
   return {
-    id: SATURN_RING.bodyId,
+    id: asSceneBodyId(SATURN_RING.bodyId),
     label: 'Saturn',
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
     resolvePx: 3,
@@ -91,7 +92,7 @@ function saturnBody(): SeededPlanet {
 /** A ringless body, e.g. Earth, for the "no ring row" branch of the gate. */
 function earthBody(): SeededPlanet {
   return {
-    id: 'earth',
+    id: asSceneBodyId('earth'),
     label: 'Earth',
     positionMpc: [1, 0, 0],
     resolvePx: 3,
@@ -122,7 +123,7 @@ function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   } as unknown as FrameView;
 }
 
-function makeBodyView(bodyId: BodyId): SlabView {
+function makeBodyView(bodyId: SceneBodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
@@ -161,7 +162,7 @@ function makeRendererSpy() {
 describe('ringsPass.enabled', () => {
   it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
     const state = makeState(null, [], []);
-    expect(ringsPass.enabled(state, CTX_STUB, makeBodyView('saturn' as BodyId))).toBe(false);
+    expect(ringsPass.enabled(state, CTX_STUB, makeBodyView(asSceneBodyId('saturn')))).toBe(false);
   });
 
   it('is false beyond the foreground gate even with a resident resolved ring', () => {
@@ -170,21 +171,21 @@ describe('ringsPass.enabled', () => {
       ringsPass.enabled(
         state,
         makeCtx(FOREGROUND_MAX_DISTANCE_MPC),
-        makeBodyView('saturn' as BodyId),
+        makeBodyView(asSceneBodyId('saturn')),
       ),
     ).toBe(false);
   });
 
   it('is false when the ring strip is NOT resident', () => {
     const state = makeState(makeRendererSpy(), [saturnBody()], []);
-    expect(ringsPass.enabled(state, makeCtx(), makeBodyView('saturn' as BodyId))).toBe(false);
+    expect(ringsPass.enabled(state, makeCtx(), makeBodyView(asSceneBodyId('saturn')))).toBe(false);
   });
 
   it('draws only for a body with a ring row: false for earth, true for saturn', () => {
     const state = makeState(makeRendererSpy(), [earthBody(), saturnBody()], ['saturn-ring']);
     const ctx = makeCtx();
-    expect(ringsPass.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(false);
-    expect(ringsPass.enabled(state, ctx, makeBodyView('saturn' as BodyId))).toBe(true);
+    expect(ringsPass.enabled(state, ctx, makeBodyView(asSceneBodyId('earth')))).toBe(false);
+    expect(ringsPass.enabled(state, ctx, makeBodyView(asSceneBodyId('saturn')))).toBe(true);
   });
 });
 
@@ -194,8 +195,8 @@ describe('ringsPass.draw', () => {
     const state = makeState(renderer, [earthBody(), saturnBody()], ['saturn-ring']);
     const ctx = makeCtx();
 
-    ringsPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), ctx, state);
-    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), ctx, state);
+    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('earth')), ctx, state);
+    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
@@ -204,7 +205,7 @@ describe('ringsPass.draw', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
     const renderer = makeRendererSpy();
-    const view = makeBodyView('saturn' as BodyId);
+    const view = makeBodyView(asSceneBodyId('saturn'));
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
@@ -224,7 +225,7 @@ describe('ringsPass.draw', () => {
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), makeCtx(), state);
+    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), makeCtx(), state);
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
@@ -242,7 +243,7 @@ describe('ringsPass.draw', () => {
     const saturn = saturnBody();
     const state = makeState(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, makeBodyView('saturn' as BodyId), makeCtx(), state);
+    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), makeCtx(), state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [pass, u] = renderer.draw.mock.calls[0]!;

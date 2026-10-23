@@ -10,6 +10,7 @@ import { setSimDays } from '../../src/state/time/timeSlice';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
 import { bodyDriverGeometry } from '../../src/utils/scene/bodyDriverGeometry';
 import type { ToggleRow } from '../../src/@types/settings/ToggleRow';
+import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 
 const NO_ROWS: readonly ToggleRow[] = [];
 
@@ -46,7 +47,7 @@ describe('selectDomeStatus', () => {
         slot: 'focus',
         row: {
           type: 'body',
-          id: 'earth',
+          id: asSceneBodyId('earth'),
           label: 'Earth',
           positionMpc: [0, 0, 0],
           driver: bodyDriverGeometry('earth'),

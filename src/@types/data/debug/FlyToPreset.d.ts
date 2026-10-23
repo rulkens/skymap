@@ -8,7 +8,7 @@ export type FlyToPreset = {
   readonly label: string;
   /** Which body it is ON — not whichever the section happens to be reporting.
    *  A landmark is a place, and flying to Everest's degrees on Mars lands in
-   *  Amazonis Planitia. Narrower than `BodyId` on purpose: a landmark only
+   *  Amazonis Planitia. Narrower than `SceneBodyId` on purpose: a landmark only
    *  reads as one where tiles are baked. */
   readonly body: SurfaceTileBodyId;
   readonly lonDeg: number;
