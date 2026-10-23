@@ -42,6 +42,9 @@ vi.mock('../../../src/components/containers/DisplaySectionContainer', () => ({
 vi.mock('../../../src/components/containers/EarthSectionContainer', () => ({
   default: () => <div data-testid="earth-section" />,
 }));
+vi.mock('../../../src/components/containers/CameraControlsSectionContainer', () => ({
+  default: () => <div data-testid="camera-controls-section" />,
+}));
 
 import { SettingsPanel } from '../../../src/components/SettingsPanel/SettingsPanel';
 

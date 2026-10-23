@@ -408,7 +408,11 @@ describe('commitOnEdge — clip deactivation', () => {
     );
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     expect(
-      pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
+      pickWinner(drivers, store.getState(), {
+        approachDone: false,
+        dragClaimed: false,
+        navMoving: false,
+      }).id,
     ).toBe('orbitDrag');
 
     store.dispatch(
@@ -418,7 +422,11 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     expect(
-      pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
+      pickWinner(drivers, store.getState(), {
+        approachDone: false,
+        dragClaimed: false,
+        navMoving: false,
+      }).id,
     ).toBe('clip');
   });
 });
