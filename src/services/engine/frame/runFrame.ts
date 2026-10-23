@@ -131,7 +131,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     bodies: bodyStates,
     terrainHeightAt: state.terrain.heightAt,
     clipEpoch,
-    drivers: deps.controlSchemes.skymap.drivers,
+    schemes: deps.controlSchemes,
   });
   // The runtime is installed BEFORE any action reaches the store (ruled): a
   // listener fired by a commit sees this frame's register, not last frame's.
@@ -375,7 +375,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // pre-render snapshot.
       layersAwake: snapshot.plans.awake,
     },
-    deps.controlSchemes.skymap.drivers,
+    deps.controlSchemes[next.scheme].drivers,
   );
 
   if (keepTicking) {
