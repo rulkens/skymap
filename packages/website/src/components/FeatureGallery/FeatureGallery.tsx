@@ -4,15 +4,20 @@
  * itself every 9 s, waits while the reader is at the thumbnails, and fetches a later view only once warmed.
  * Each picture opens its own view in the app; only the current one can be reached, as the others sit
  * under `visibility: hidden`. Before the page's script runs the first view and its label stand.
+ * With `films` (loop ids) each view is that loop's wide film in place of its picture: only the current
+ * one plays, a later one is fetched once it first becomes current, and the thumbnails and labels are
+ * those of the loop's still.
  */
 import type { KeyboardEvent } from 'react';
 import { useCallback, useRef } from 'react';
 
 import { appLink } from '../../data/appLink.ts';
+import { siteLoop } from '../../data/siteLoop.ts';
 import { siteShot } from '../../data/siteShot.ts';
 import { cx } from '../../utils/cx.ts';
 import { galleryKeyTarget } from '../../utils/galleryKeyTarget.ts';
 import { wrapIndex } from '../../utils/wrapIndex.ts';
+import FeatureFilm from '../FeatureFilm/FeatureFilm.tsx';
 import FeatureSection from '../FeatureSection/FeatureSection.tsx';
 import { useGallery } from '../PictureBand/useGallery.ts';
 import changing from '../PictureBand/viewChange.module.css';
@@ -27,14 +32,17 @@ type FeatureGalleryProps = {
   label: string;
   side?: 'left' | 'right';
   // Shot ids from data/siteShots.ts, the first one standing before the script runs.
-  views: readonly string[];
+  views?: readonly string[];
+  // Or loop ids from data/siteLoops.ts, shown as films.
+  films?: readonly string[];
   // How wide the large picture is drawn (the page's `big`).
   sizes: string;
 };
 
 const THUMB_SIZES = '6rem';
 
-function FeatureGallery({ views, sizes, ...section }: FeatureGalleryProps) {
+function FeatureGallery({ views: pictures, films, sizes, ...section }: FeatureGalleryProps) {
+  const views = films?.map((id) => siteLoop(id).shot) ?? pictures!;
   const gallery = useGallery(views.map((id) => ({ id })));
   const { at, live, byReader, choose, marksRef, layers, warmed } = gallery;
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -103,12 +111,23 @@ function FeatureGallery({ views, sizes, ...section }: FeatureGalleryProps) {
                     !warmed(i) && styles.cold,
                   )}
                 >
-                  <a
-                    href={appLink(shot.link, shot.query)}
-                    aria-label={`Open ${shot.title} in the app`}
-                  >
-                    <Shot id={id} sizes={sizes} alt="" eager={i > 0 && warmed(i)} />
-                  </a>
+                  {films ? (
+                    <FeatureFilm
+                      film={films[i]!}
+                      sizes={sizes}
+                      wide
+                      active={current(i)}
+                      href={appLink(shot.link, shot.query)}
+                      linkLabel={`Open ${shot.title} in the app`}
+                    />
+                  ) : (
+                    <a
+                      href={appLink(shot.link, shot.query)}
+                      aria-label={`Open ${shot.title} in the app`}
+                    >
+                      <Shot id={id} sizes={sizes} alt="" eager={i > 0 && warmed(i)} />
+                    </a>
+                  )}
                 </div>
               );
             })}
