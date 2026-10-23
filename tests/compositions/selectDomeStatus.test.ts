@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { selectDomeStatus } from '../../src/compositions/selectDomeStatus';
 import { stateAfter } from '../fixtures/stateAfter';
+import { setControlScheme } from '../../src/state/settings/core/cameraControlsSlice';
 import { setSelectionRow } from '../../src/state/selectionRows/selectionRowsSlice';
 import { takeoverStarted } from '../../src/state/takeover/takeoverActions';
 import { beatChanged, setPaused } from '../../src/state/tour/tourSlice';
@@ -13,6 +14,12 @@ import type { ToggleRow } from '../../src/@types/settings/ToggleRow';
 const NO_ROWS: readonly ToggleRow[] = [];
 
 describe('selectDomeStatus', () => {
+  it('reports the camera scheme', () => {
+    expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).controls.scheme).toBe('skymap');
+    const state = stateAfter(setControlScheme('openspace'));
+    expect(selectDomeStatus(state, NO_ROWS, 0).controls.scheme).toBe('openspace');
+  });
+
   it('reports no tour when none runs', () => {
     expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).tour).toBeNull();
     const clip = stateAfter(takeoverStarted({ kind: 'clip', id: 'flyout' }));

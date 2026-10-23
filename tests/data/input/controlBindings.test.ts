@@ -22,7 +22,8 @@ describe('CONTROL_BINDINGS.openspace', () => {
     ['alt wins over shift', { alt: true, shift: true }, 'navZoom'],
     ['touch', { pointerType: 'touch' }, 'navOrbit'],
     ['pen', { pointerType: 'pen' }, 'navOrbit'],
-    ['touch ignores modifiers', { pointerType: 'touch', shift: true }, 'navOrbit'],
+    ['touch with shift', { pointerType: 'touch', shift: true }, 'navRoll'],
+    ['touch with ctrl', { pointerType: 'touch', ctrl: true }, 'navLook'],
   ])('%s binds %s', (_name, over, intent) => {
     expect(bindPress(CONTROL_BINDINGS.openspace, press(over))).toBe(intent);
   });

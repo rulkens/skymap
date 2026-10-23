@@ -9,6 +9,7 @@ const status: DomeMessage = {
     focus: { id: 'body-earth' },
     tour: { id: 'grandTour', beatIndex: 2, beatCount: 9, paused: false },
     time: { simDays: 9400.5, rateIndex: 3, direction: -1, paused: true, mode: 'manual' },
+    controls: { scheme: 'skymap' },
     toggles: [{ id: 'labels', label: 'Labels', enabled: true }],
   },
 };

@@ -6,6 +6,7 @@
  * home, but a remote must still see what is focused.
  */
 
+import { selectCameraControls } from '../state/settings/selectors';
 import { selectFocusedFocusable } from '../state/selection/selectors';
 import { selectTakeoverSource } from '../state/takeover/selectors';
 import { selectTimeState } from '../state/time/selectors';
@@ -43,6 +44,7 @@ export function selectDomeStatus(
       paused: time.paused,
       mode: time.mode,
     },
+    controls: { scheme: selectCameraControls(state).scheme },
     toggles: toggleRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
   };
 }
