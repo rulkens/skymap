@@ -106,20 +106,43 @@ describe('RemotePage', () => {
     expect(screen.getByText('Dome not there')).toBeTruthy();
   });
 
-  it('axis chips show only under openspace, and the chosen axis rides the press', () => {
+  it('hold buttons show only under openspace, and a held axis rides the next press only', () => {
     const { container } = render(<RemotePage />);
     sendStatus();
-    expect(screen.queryByRole('radio', { name: 'Look' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hold to look around' })).toBeNull();
     sendStatus('openspace');
-    fireEvent.click(screen.getByRole('radio', { name: 'Look' }));
+    const look = screen.getByRole('button', { name: 'Hold to look around' });
     const pad = container.querySelector('[class*="pad"]')!;
+    const downs = (): { mods: { ctrl: boolean } }[] =>
+      messages('device')
+        .map((m) => m.event as { kind: string; mods: { ctrl: boolean } })
+        .filter((e) => e.kind === 'down');
+    fireEvent.pointerDown(look, { pointerId: 2 });
+    expect(look.getAttribute('aria-pressed')).toBe('true');
     fireEvent.pointerDown(pad, { pointerId: 1, clientX: 1, clientY: 1 });
-    const downs = messages('device')
-      .map((m) => m.event as { kind: string; mods?: { ctrl: boolean } })
-      .filter((e) => e.kind === 'down');
-    expect(downs[0]!.mods!.ctrl).toBe(true);
+    expect(downs()).toHaveLength(1);
+    expect(downs()[0]!.mods.ctrl).toBe(true);
+    fireEvent.pointerUp(pad, { pointerId: 1 });
+    fireEvent.pointerUp(look, { pointerId: 2 });
+    expect(look.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.pointerDown(pad, { pointerId: 3, clientX: 1, clientY: 1 });
+    expect(downs()).toHaveLength(2);
+    expect(downs()[1]!.mods.ctrl).toBe(false);
     sendStatus();
-    expect(screen.queryByRole('radio', { name: 'Look' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hold to look around' })).toBeNull();
+  });
+
+  it('a cancelled button press returns to orbit, and the button alone emits no device event', () => {
+    render(<RemotePage />);
+    sendStatus('openspace');
+    const before = messages('device').length;
+    const roll = screen.getByRole('button', { name: 'Hold to roll' });
+    fireEvent.pointerDown(roll, { pointerId: 2 });
+    fireEvent.pointerMove(roll, { pointerId: 2, clientX: 40, clientY: 40 });
+    expect(roll.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.pointerCancel(roll, { pointerId: 2 });
+    expect(roll.getAttribute('aria-pressed')).toBe('false');
+    expect(messages('device').slice(before)).toEqual([]);
   });
 
   it('the scheme switch sends controlSchemeSet', () => {

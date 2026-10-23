@@ -9,7 +9,7 @@ import { focusNameFrom } from '../../utils/remote/focusNameFrom';
 import { useRemoteLink } from './useRemoteLink';
 import JoinField from './JoinField/JoinField';
 import SchemeSwitch from './SchemeSwitch/SchemeSwitch';
-import AxisChips from './AxisChips/AxisChips';
+import AxisHoldButtons from './AxisHoldButtons/AxisHoldButtons';
 import Trackpad from './Trackpad/Trackpad';
 import SearchSection from './SearchSection/SearchSection';
 import TourSection from './TourSection/TourSection';
@@ -62,8 +62,9 @@ function RemotePage() {
           onChange={(next) => sendCommand({ name: 'controlSchemeSet', payload: { scheme: next } })}
         />
       )}
-      {openspace && <AxisChips axis={axis} onChange={setAxis} />}
-      <Trackpad onEvent={sendDevice} axis={openspace ? axis : null} />
+      <Trackpad onEvent={sendDevice} axis={openspace ? axis : null}>
+        {openspace && <AxisHoldButtons axis={axis} onChange={setAxis} />}
+      </Trackpad>
       <div className={styles.homeRow}>
         <button
           type="button"

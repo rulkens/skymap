@@ -1,0 +1,34 @@
+.root {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Held by a thumb: the browser must not turn the press into a scroll, a text selection or a callout menu. */
+.button {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  color: var(--color-fg-dim);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+
+/* A thicker border as well as the fill, so the state is not colour alone. */
+.active {
+  background: var(--color-accent-gradient-edge);
+  border: 3px solid var(--color-accent);
+  color: var(--color-accent);
+}
