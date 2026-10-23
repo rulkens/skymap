@@ -14,6 +14,7 @@ const status: DomeStatus = {
   focus: null,
   tour: { id: 'grandTour', beatIndex: 2, beatCount: 9, paused: true },
   time: { simDays: 2_451_545, rateIndex: 3, direction: 1, paused: false, mode: 'manual' },
+  controls: { scheme: 'skymap' },
   toggles: [{ id: 'constellations', label: 'Constellations', enabled: false }],
 };
 
@@ -65,7 +66,10 @@ const menu = {
   clips: [{ id: 'flyout', label: 'Fly to Horizon' }],
 };
 const sendMenu = (): void => act(() => deliver(JSON.stringify({ kind: 'menu', menu })));
-const sendStatus = (): void => act(() => deliver(JSON.stringify({ kind: 'status', status })));
+const sendStatus = (scheme: 'skymap' | 'openspace' = 'skymap'): void =>
+  act(() =>
+    deliver(JSON.stringify({ kind: 'status', status: { ...status, controls: { scheme } } })),
+  );
 const messages = (kind: string): Record<string, unknown>[] =>
   sent.map((s) => JSON.parse(s)).filter((m) => m.kind === kind);
 const commands = (): unknown[] => messages('command').map((m) => m.command);
@@ -100,6 +104,32 @@ describe('RemotePage', () => {
     expect(screen.getByText('Connected')).toBeTruthy();
     act(() => void vi.advanceTimersByTime(3000));
     expect(screen.getByText('Dome not there')).toBeTruthy();
+  });
+
+  it('axis chips show only under openspace, and the chosen axis rides the press', () => {
+    const { container } = render(<RemotePage />);
+    sendStatus();
+    expect(screen.queryByRole('radio', { name: 'Look' })).toBeNull();
+    sendStatus('openspace');
+    fireEvent.click(screen.getByRole('radio', { name: 'Look' }));
+    const pad = container.querySelector('[class*="pad"]')!;
+    fireEvent.pointerDown(pad, { pointerId: 1, clientX: 1, clientY: 1 });
+    const downs = messages('device')
+      .map((m) => m.event as { kind: string; mods?: { ctrl: boolean } })
+      .filter((e) => e.kind === 'down');
+    expect(downs[0]!.mods!.ctrl).toBe(true);
+    sendStatus();
+    expect(screen.queryByRole('radio', { name: 'Look' })).toBeNull();
+  });
+
+  it('the scheme switch sends controlSchemeSet', () => {
+    render(<RemotePage />);
+    sendStatus();
+    fireEvent.click(screen.getByRole('radio', { name: 'OpenSpace' }));
+    expect(commands()).toContainEqual({
+      name: 'controlSchemeSet',
+      payload: { scheme: 'openspace' },
+    });
   });
 
   it('toggling a row sends toggleSet', () => {

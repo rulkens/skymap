@@ -8,13 +8,13 @@ export const CONTROL_BINDINGS: Readonly<Record<ControlSchemeId, BindingTable>> =
     [{ pointerType: 'mouse', button: 2 }, 'pan'],
     [{}, 'orbit'],
   ],
-  // OpenSpace's mapping; touch and pen fall through to orbit, and a second finger pinches in the recognizer.
+  // OpenSpace's mapping; touch and pen reach the modifier rows (the remote stamps them), else fall to orbit, and a second finger pinches in the recognizer.
   openspace: [
     [{ pointerType: 'mouse', button: 2 }, 'navZoom'],
     [{ pointerType: 'mouse', button: 1 }, 'navRoll'],
-    [{ pointerType: 'mouse', alt: true }, 'navZoom'],
-    [{ pointerType: 'mouse', shift: true }, 'navRoll'],
-    [{ pointerType: 'mouse', ctrl: true }, 'navLook'],
+    [{ alt: true }, 'navZoom'],
+    [{ shift: true }, 'navRoll'],
+    [{ ctrl: true }, 'navLook'],
     [{}, 'navOrbit'],
   ],
 };
