@@ -146,14 +146,6 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         backlog: 'Dome output-space overlays: labels plus pixel floors in fisheye pixels',
       },
       {
-        id: 'openspace-controls',
-        title: 'Controls like OpenSpace',
-        text: 'A second set of mouse controls that behaves as OpenSpace does, for people who run a planetarium with it. The groundwork is in the app.',
-        state: 'in progress',
-        spec: `${SPECS}/2026-09-29-openspace-camera-mode-design.md`,
-        built: 'src/services/engine/camera/composeControlSchemes.ts',
-      },
-      {
         id: 'structure-shapes',
         title: 'Superclusters with their own shape',
         text: 'A supercluster or a wall picked out by its real extent.',
