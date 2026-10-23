@@ -1,0 +1,17 @@
+.root {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0 var(--space-8);
+}
+
+.segment {
+  text-align: center;
+}
+
+/* Fill plus weight and a thicker outline, so the choice survives without colour vision. */
+.selected {
+  background: var(--color-accent-gradient-edge);
+  border: 2px solid var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 700;
+}
