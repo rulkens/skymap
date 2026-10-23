@@ -13,6 +13,8 @@ const DATA_WIDTHS = [1280, 640];
 const NOON = 't=2026-10-05T12:00:00Z';
 // Late morning in Copenhagen at midsummer, the time the park's other pictures are taken at.
 const PARK_TIME = 't=2026-06-21T11:00:00Z';
+// The Time films: stills 960 wide like the films, and 480 for a thumbnail.
+const TIME_WIDTHS = [960, 480];
 const JUPITER = 'focus=body-jupiter&t=2033-03-14T21:00:00Z';
 // Lesson cards sit two to a row: 1120 covers a 2x desktop column, 640 a small tablet, and 320 the 88 px picture a phone's row has.
 const CARD = { width: 800, height: 600 };
@@ -323,10 +325,50 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'features-time-earth',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,6.5e-16,0`,
     settings: SUBJECT,
-    size: THUMB,
-    widths: THUMB_WIDTHS,
+    size: WIDE,
+    widths: TIME_WIDTHS,
     title: 'Earth over one day',
     alt: 'Earth turning under a fixed line between day and night.',
+  },
+  // Looking down on the north pole from above the ecliptic: the Sun's light crosses the hemisphere through the year. A year is 120 frames of three turns of Earth each, so the globe does not turn between frames.
+  {
+    id: 'features-time-seasons',
+    link: 't=2026-03-20T12:00:00Z&focus=body-earth&pose=a,0,0,0,3.14159,1.0,6.5e-16,0',
+    settings: SUBJECT,
+    size: WIDE,
+    widths: TIME_WIDTHS,
+    title: 'Earth over one year',
+    caption: 'The Sun’s light covers more of the northern hemisphere in summer than in winter.',
+    alt: 'Earth seen from above its north pole, the Sun’s light covering a different part of the hemisphere as the year goes on.',
+  },
+  // At full Moon, the camera on the Earth side of it: the film turns the camera round the Moon once, so it keeps facing Earth.
+  {
+    id: 'features-time-moon',
+    link: 't=2026-10-26T04:00:00Z&focus=body-moon&pose=a,0,0,0,5.288,0,1.6e-16,0',
+    settings: SUBJECT,
+    size: WIDE,
+    widths: TIME_WIDTHS,
+    title: 'The Moon over one month',
+    caption: 'The Moon as seen from Earth, from full through new and back to full.',
+    alt: 'The full Moon, its near side lit by the Sun.',
+  },
+  {
+    id: 'features-time-voyager',
+    link: 't=2006-01-01T00:00:00Z&focus=body-sun&pose=a,0,0,0,4.468,0.9,1.3e-9,0',
+    settings: { hideLabels: true, keepBodyLabels: true, hideStructures: true, missionTrails: true },
+    size: WIDE,
+    widths: TIME_WIDTHS,
+    title: 'Voyager 1 over twenty years',
+    alt: 'The Sun with the planets’ orbits at its centre and Voyager 1 far out to one side.',
+  },
+  {
+    id: 'features-time-planets',
+    link: 't=2026-01-01T00:00:00Z&focus=body-sun&pose=a,0,0,0,0,1.0,4.7e-11,0',
+    settings: { hideLabels: true, keepBodyLabels: true, hideStructures: true },
+    size: WIDE,
+    widths: TIME_WIDTHS,
+    title: 'The planets round the Sun over eight years',
+    alt: 'The Sun seen from above with the planets from Mercury to Jupiter on their orbits.',
   },
   // The Features page's slideshows. The three bodies are whole discs on stars; the surface rows are in Earth's own frame (`b`).
   {
