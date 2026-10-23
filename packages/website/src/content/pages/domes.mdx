@@ -47,7 +47,7 @@ export const STEPS = [
 
 <DiscBand id="dome-earth">
   <h1>Domes and museums</h1>
-  <p>We can do three things for a dome or a gallery: a <a href={sitePath('/docs/guide/screens-and-domes/#dome-mode')}>live fisheye picture</a> from the app, a <a href={sitePath('/docs/guide/screens-and-domes/#live-or-as-a-film')}>rendered film</a>, or a screen built around <a href={sitePath('/docs/guide/tours/#what-an-exhibit-is')}>one exhibit</a>.</p>
+  <p>Skymap is made to be projected on a dome. We support 4K output (depending on the specs of your projection system) and can pre-render videos of any size.</p>
   <ObjLink hang href="#contact">How to reach us</ObjLink>
   <p slot="note" class={text.small}>This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames are 4,096.</p>
 </DiscBand>
@@ -73,7 +73,7 @@ export const STEPS = [
     <ViewLink slot="link" hang href={appLink(siteShot('tour-cosmic-web').link)}>Start the tour</ViewLink>
   </Offer>
 
-  <Offer title="A build for one exhibit or kiosk">
+  <Offer title="A build for an exhibit or kiosk">
     <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
     <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
     <Fragment slot="today">{`${fact('exhibits').text} ${fact('kiosk-planned').text}`}</Fragment>
