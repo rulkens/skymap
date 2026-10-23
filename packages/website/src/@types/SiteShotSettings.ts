@@ -18,6 +18,8 @@ export type SiteShotSettings = {
   hideZoneOfAvoidance?: true;
   /** The traced filament skeleton on (off by default in the app). */
   filaments?: true;
+  /** The DESI wedge catalogue on (off by default in the app). */
+  desiWedge?: true;
   /** The constellation figures and their names on (off by default in the app). */
   constellations?: true;
   /** The galaxy flow ribbons on (off by default in the app). */

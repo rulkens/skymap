@@ -62,6 +62,7 @@ export function siteShotActions({
     );
   }
   if (settings.flow) actions.push(setFlowEnabled(true));
+  if (settings.desiWedge) actions.push(setGalaxyCatalogVisible({ id: 'desiWedge', enabled: true }));
   if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
   if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));
   // The new size's files load after this; the row's `settleMs` is the wait for them.
