@@ -98,6 +98,7 @@ function FeatureGallery({ views: pictures, films, sizes, ...section }: FeatureGa
           <div className={styles.frame}>
             {views.map((id, i) => {
               const shot = siteShot(id);
+              const href = appLink(shot.link, shot.query);
               return (
                 <div
                   key={id}
@@ -117,14 +118,11 @@ function FeatureGallery({ views: pictures, films, sizes, ...section }: FeatureGa
                       sizes={sizes}
                       wide
                       active={current(i)}
-                      href={appLink(shot.link, shot.query)}
+                      href={href}
                       linkLabel={`Open ${shot.title} in the app`}
                     />
                   ) : (
-                    <a
-                      href={appLink(shot.link, shot.query)}
-                      aria-label={`Open ${shot.title} in the app`}
-                    >
+                    <a href={href} aria-label={`Open ${shot.title} in the app`}>
                       <Shot id={id} sizes={sizes} alt="" eager={i > 0 && warmed(i)} />
                     </a>
                   )}
