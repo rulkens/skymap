@@ -11,6 +11,7 @@ import Figure from '../../components/Figure/Figure.tsx';
 import ObjLink from '../../components/ObjLink/ObjLink.tsx';
 import Offer from '../../components/Offer/Offer.tsx';
 import Remark from '../../components/Remark/Remark.tsx';
+import RemoteDemo from '../../components/RemoteDemo/RemoteDemo.tsx';
 import SectionHead from '../../components/SectionHead/SectionHead.tsx';
 import Step from '../../components/Step/Step.tsx';
 import Steps from '../../components/Steps/Steps.tsx';
@@ -61,7 +62,7 @@ export const STEPS = [
     <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc open={false} />
     <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
     <Fragment slot="today">{`${fact('dome-rig').text} ${fact('dome-tilt').text}`}</Fragment>
-    <Fragment slot="work">Another tilt, labels or captions on the dome, and control without a mouse. Skymap gives one disc: dividing it between projectors is the job of your dome system.</Fragment>
+    <Fragment slot="work">Another tilt, and labels or captions on the dome. Skymap gives one disc: dividing it between projectors is the job of your dome system.</Fragment>
     <ViewLink slot="link" hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>Open this view in dome mode</ViewLink>
   </Offer>
 
@@ -80,6 +81,28 @@ export const STEPS = [
     <Fragment slot="work">A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor walks away is the planned kiosk mode, and we would build it for the first venue that needs it.</Fragment>
     <ObjLink slot="link" hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes</ObjLink>
   </Offer>
+</section>
+
+<section class={section} id="remote">
+  <SectionHead title="Steer the dome from a phone">
+    <p>A phone or a laptop in the room drives the live fisheye, so the person presenting can stand with the audience.</p>
+  </SectionHead>
+  <Columns count={2}>
+    <div>
+      <h3>Pair it</h3>
+      <p class={text.small}>The dome shows a QR code and a room code. Scan the QR code with a phone on the same network, or open the address shown under it.</p>
+      <h3>Fly with your finger</h3>
+      <p class={text.small}>Drag to orbit, pinch to zoom. From the phone you can also search for an object, start a tour or an exhibit, set the time and switch labels on and off.</p>
+      <h3>More than one phone</h3>
+      <p class={text.small}>Add a phone shows the code on the dome again, so a second person can join.</p>
+      <h3>Where it runs</h3>
+      <p class={text.small}>The phone and the dome talk through the computer that runs Skymap for your dome, so it works wherever the dome runs Skymap itself.</p>
+    </div>
+    {/* The island's wrapper takes no box, so the column is this div's. */}
+    <div>
+      <RemoteDemo sizes="(max-width: 900px) 100vw, 36rem" client:visible />
+    </div>
+  </Columns>
 </section>
 
 <section class={section} id="honest">
