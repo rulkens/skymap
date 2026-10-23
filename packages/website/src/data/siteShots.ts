@@ -354,7 +354,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'features-time-voyager',
-    link: 't=2006-01-01T00:00:00Z&focus=body-sun&pose=a,0,0,0,4.468,0.9,1.3e-9,0',
+    link: 't=2006-01-01T00:00:00Z&focus=star-sun&pose=a,0,0,0,4.468,0.9,1.3e-9,0',
     settings: { hideLabels: true, keepBodyLabels: true, hideStructures: true, missionTrails: true },
     size: WIDE,
     widths: TIME_WIDTHS,
@@ -363,7 +363,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'features-time-planets',
-    link: 't=2026-01-01T00:00:00Z&focus=body-sun&pose=a,0,0,0,0,1.0,4.7e-11,0',
+    link: 't=2026-01-01T00:00:00Z&focus=star-sun&pose=a,0,0,0,0,1.0,4.7e-11,0',
     settings: { hideLabels: true, keepBodyLabels: true, hideStructures: true },
     size: WIDE,
     widths: TIME_WIDTHS,
