@@ -43,7 +43,7 @@ vi.mock('../../../../src/utils/network/fetchHeightTile', () => ({
 }));
 
 import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
-import type { SurfaceTilePlan } from '../../../../src/@types/scene/SurfaceTilePlan';
+import type { SurfaceTileDemand } from '../../../../src/@types/scene/SurfaceTileDemand';
 import type { SurfaceCutTile } from '../../../../src/@types/scene/SurfaceCutTile';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import {
@@ -234,15 +234,15 @@ const TILE = { product: 'albedo', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 const HEIGHT_TILE = { product: 'height', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 // Sub-camera on the prime meridian/equator — an arbitrary but exactly
 // predictable direction (lonDeg 0, latDeg 0) for the debug-snapshot test below.
-const SUB_CAMERA_EQUATOR_PRIME: SurfaceTilePlan['subCameraDirLocal'] = [1, 0, 0];
-const ENGAGED: SurfaceTilePlan = {
+const SUB_CAMERA_EQUATOR_PRIME: SurfaceTileDemand['subCameraDirLocal'] = [1, 0, 0];
+const ENGAGED: SurfaceTileDemand = {
   zWin: MIN_TILE_LEVEL,
   requests: [{ tile: TILE, screenPx: SURFACE_TILE_PX }],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
 /** The shape the two-product walk emits: every tile requested in both
  *  products at the same (z, x, y). */
-const BOTH_PRODUCTS: SurfaceTilePlan = {
+const BOTH_PRODUCTS: SurfaceTileDemand = {
   zWin: MIN_TILE_LEVEL,
   requests: [
     { tile: TILE, screenPx: SURFACE_TILE_PX },
@@ -254,7 +254,7 @@ const BOTH_PRODUCTS: SurfaceTilePlan = {
  *  texture already carries, so there is nothing a tile could add — and one level
  *  MORE than a `medium` session's base carries, which is what the engage-gate
  *  test below turns on. */
-const DISENGAGED: SurfaceTilePlan = {
+const DISENGAGED: SurfaceTileDemand = {
   zWin: BASE_LEVEL,
   requests: [],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
@@ -291,7 +291,7 @@ async function engagedSubsystem(close: () => void = () => {}) {
  * `tier`. The atlas is allocated by the first ENGAGED frame and by nothing
  * else, so `getAtlasView()` going non-null IS the gate's answer.
  */
-async function engagesAt(plan: SurfaceTilePlan, tier: Tier): Promise<boolean> {
+async function engagesAt(plan: SurfaceTileDemand, tier: Tier): Promise<boolean> {
   vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
   const subsystem = createSurfaceTileSubsystem({
     device: recordingDevice(),
@@ -846,7 +846,7 @@ describe('surfaceTileSubsystem full-atlas allocation', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const resident = fillingRequests();
-    const fillPlan: SurfaceTilePlan = {
+    const fillPlan: SurfaceTileDemand = {
       zWin: MIN_TILE_LEVEL,
       requests: resident,
       subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
@@ -862,7 +862,7 @@ describe('surfaceTileSubsystem full-atlas allocation', () => {
     // screenPx) — the priority order that let a single evicting pass reach
     // it before the plan's own residents.
     const newTile = { product: 'albedo', z: MIN_TILE_LEVEL, x: 99, y: 99 } as const;
-    const nextPlan: SurfaceTilePlan = {
+    const nextPlan: SurfaceTileDemand = {
       zWin: MIN_TILE_LEVEL,
       requests: [{ tile: newTile, screenPx: SLOT_COUNT + 1 }, ...resident],
       subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,

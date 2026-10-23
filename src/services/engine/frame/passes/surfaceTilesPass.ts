@@ -30,7 +30,7 @@ import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
-import { prepareBodySurfaceFrame } from './earthPass';
+import { prepareBodySurfaceFrame } from '../prepareBodySurfaceFrame';
 import { surfaceTileSpecOf } from '../../../../utils/surfaceTiles/surfaceTileSpecOf';
 
 export const surfaceTilesPass: ContentPass = {

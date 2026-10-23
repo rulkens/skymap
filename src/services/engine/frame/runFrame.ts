@@ -10,10 +10,6 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
-import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
-import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
-import type { Slab } from '../../../@types/engine/frame/Slab';
-import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -29,13 +25,8 @@ import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
+import { driveSurfaceTileSubsystem } from './surfaceTilePlanner/driveSurfaceTileSubsystem';
 import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
-import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
-import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
-import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { prepareBodySurfaceFrame } from './passes/earthPass';
-import { slabViewOf } from './slabs';
-import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -47,7 +38,6 @@ import { selectTimeState, selectIsLiveTicking } from '../../../state/time/select
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { pastTextureReleaseRadius } from './pastTextureReleaseRadius';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
@@ -248,86 +238,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
   }
 
-  // The tile planner keys off the ENGAGED body's own slab row (no row =
-  // already culled, and membership in the registry is the "this body
-  // tiles" predicate — never a literal bodyId), so tiles and layer never
-  // disagree about whether that body is on screen. A slab exists only for a
-  // body `sceneBodyPartition` actually iterated, so its presence already
-  // implies the body itself is seeded; no separate null check needed.
   const surfaceTiles = state.subsystems.surfaceTiles;
-  const surfaceTileSlab = canvas.slabs.find(
-    (
-      slab,
-    ): slab is Slab & {
-      frame: Extract<SlabFrame, { kind: 'body-m' }> & { hostId: SurfaceTileBodyId };
-    } => slab.frame.kind === 'body-m' && slab.frame.hostId in SURFACE_TILE_REGISTRY,
-  );
-  if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
-    const bodyId = surfaceTileSlab.frame.hostId;
-    // The same slab view `earthPass.draw` samples into.
-    const surfaceTilesView = slabViewOf(canvas, surfaceTileSlab.index);
-    if (surfaceTilesEngaged(state, canvas, surfaceTilesView)) {
-      // The tier off the COMMITTED texture slot, so a swap in flight cannot make
-      // the planner believe in detail that is not on the GPU yet.
-      const baseLevel = baseLevelForTier(bodyId, bodySurfaceTier(state, bodyId));
-      const params = surfaceTiles.plannerParams(bodyId, baseLevel);
-      // `setLastCut` runs unconditionally so a tier swap in flight draws
-      // nothing stale rather than last frame's cut.
-      let cut: readonly SurfaceCutTile[] = [];
-      if (params !== null) {
-        const prepared = prepareBodySurfaceFrame(state, canvas, surfaceTilesView);
-        if (prepared !== null) {
-          // Each view's own body slab vp AND viewport (mono: `canvas`'s, the
-          // memo hit above), so one cut and one fetch queue cover every view
-          // the frame draws — an XR eye sized differently than the main view
-          // scales its own NDC against its own target, not a shared one.
-          const rigViews: { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[] = [];
-          for (const view of views) {
-            const slab = view.slabs.find(
-              (s) => s.frame.kind === 'body-m' && s.frame.hostId === bodyId,
-            );
-            if (slab === undefined) continue;
-            const viewSlabView = slabViewOf(view, slab.index);
-            const viewPrepared = prepareBodySurfaceFrame(state, view, viewSlabView);
-            if (viewPrepared !== null)
-              rigViews.push({
-                viewProjLocal: viewPrepared.mvpLocal,
-                viewportPx: viewSlabView.viewportPx,
-              });
-          }
-          // One walk yields both the draw cut and the fetch requests.
-          const result = cutSurfaceTiles({
-            ...params,
-            camPosLocalM: prepared.pose.eyeRelBodyM,
-            views: rigViews,
-            radiusM: prepared.radiusM,
-            reliefM: prepared.body.surface.reliefM,
-            residentSlot: surfaceTiles.residentSlot,
-          });
-          cut = result.cut;
-          surfaceTiles.update({ bodyId, plan: result.requests });
-        }
-      }
-      surfaceTiles.setLastCut(cut);
-    }
+  let surfaceTilesAnimating = false;
+  if (surfaceTiles !== null) {
+    const tilePlan = driveSurfaceTileSubsystem(surfaceTiles, views, (bodyId) =>
+      bodySurfaceTier(state, bodyId),
+    );
+    surfaceTiles.setLastCut(tilePlan.value);
+    surfaceTilesAnimating = tilePlan.awake;
   }
-  // A pull-back keeps the tile atlases (~324 MB) for a quick re-engage; past twice
-  // the body's texture load radius its globe map unloads too, and so do they.
-  const engagedTileBody = surfaceTiles?.engagedBodyId() ?? null;
-  if (engagedTileBody !== null) {
-    const body = sceneBodyStates(state, canvas).get(engagedTileBody);
-    if (
-      body !== undefined &&
-      pastTextureReleaseRadius(engagedTileBody, canvas.drawCamPos, body.positionMpc)
-    ) {
-      surfaceTiles!.release();
-    }
-  }
-
-  // Outside the gate: `isAnimating()` is true while the manifest is in flight,
-  // before the layer can engage — voting only on engaged frames would sleep
-  // the loop mid-fetch.
-  const surfaceTilesAnimating = surfaceTiles?.isAnimating() ?? false;
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`

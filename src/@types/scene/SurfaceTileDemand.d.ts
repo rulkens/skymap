@@ -2,14 +2,14 @@ import type { SurfaceTileRequest } from './SurfaceTileRequest';
 import type { Vec3 } from '../math/Vec3';
 
 /**
- * SurfaceTilePlan — one frame's fetch demand: which tiles the walk wants
+ * SurfaceTileDemand — one frame's fetch demand: which tiles the walk wants
  * resident, and the finest level it reached. This IS `cutSurfaceTiles`'s
  * `requests` product; `surfaceTileSubsystem.update({ plan, nowMs })` drives
  * its fetch loop off exactly this shape. Reshaped in Task 5: the page-table
  * window (`winX0`/`winY0`) this plan used to carry died with the page table
  * it sized.
  */
-export type SurfaceTilePlan = {
+export type SurfaceTileDemand = {
   /** Finest level any leaf uses — what `update()`'s engage gate compares
    *  against `baseLevel`. */
   readonly zWin: number;
