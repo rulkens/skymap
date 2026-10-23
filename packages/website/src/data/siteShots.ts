@@ -444,6 +444,18 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A glowing cloud of points in two fans, with dark gaps between them.',
   },
   {
+    id: 'features-voyager1',
+    link: 'focus=body-voyager1&t=2026-09-18T12:56:32Z&pose=a,0,0,0,3.8408163993487223,-0.6565563346622649,3.4e-22,0',
+    settings: { ...SUBJECT, settleMs: 3000 },
+    size: WIDE,
+    widths: [1920, 1280, 640],
+    title: 'Voyager 1',
+    caption: 'Where it was on 18 September 2026.',
+    drawn: 'The spacecraft is a 3D model; its position is computed from tracking data.',
+    alt: 'A white dish antenna with a boom and instruments, seen at an angle against a field of stars.',
+    credit: 'Model: NASA / Michael D. Carbajal',
+  },
+  {
     id: 'features-everest',
     link: 't=2026-10-05T04:30:00Z&pose=b,earth,0,0,0,302785.014,5636306.94,2977231.53,-0.998560172,0.0536431140,-3.46944695e-18,0.0455859563,0.848577142,0.527104122,-0.0282755065,-0.526345182,0.849800709',
     settings: { ...SUBJECT, settleMs: 12000 },

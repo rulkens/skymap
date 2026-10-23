@@ -31,9 +31,7 @@ export const disc = '8rem';
 
 <FeatureGallery side="left" title="The Solar System" line="Explore the planets, moons and other objects of interest in the solar system." href="/docs/start/scene/#planets-and-their-moons" label="Planets and their moons" views={['saturn', 'features-jupiter', 'features-mars', 'features-moon', 'data-io', 'data-pluto']} sizes={big} client:visible />
 
-<FeatureSection title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft">
-  <Figure id="data-perseverance" sizes={big} showDrawn={false} />
-</FeatureSection>
+<FeatureGallery title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft" views={['features-voyager1', 'hubble', 'data-perseverance', 'data-spirit']} sizes={big} client:visible />
 
 <FeatureSection side="left" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way">
   <Figure id="features-constellations" sizes={big} showDrawn={false} />
