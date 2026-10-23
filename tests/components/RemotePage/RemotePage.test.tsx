@@ -98,12 +98,14 @@ describe('RemotePage', () => {
     expect(screen.getByRole('button', { name: 'The Long Way Out' })).toBeTruthy();
   });
 
-  it('three seconds without a status shows dome not there', () => {
+  it('three seconds without a status shows dome not there, with a way back to the code', () => {
     render(<RemotePage />);
     sendStatus();
     expect(screen.getByText('Connected')).toBeTruthy();
     act(() => void vi.advanceTimersByTime(3000));
     expect(screen.getByText('Dome not there')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Change code' }));
+    expect(screen.getByLabelText(/Room code/)).toBeTruthy();
   });
 
   it('hold buttons show only under openspace, and a held axis rides the next press only', () => {
@@ -179,6 +181,8 @@ describe('RemotePage', () => {
     // Two remotes in one room, both on their first non-empty search: the relay hands each the other's results.
     const pageA = within(render(<RemotePage />).container);
     const pageB = within(render(<RemotePage />).container);
+    // Search waits for the dome's first status.
+    act(() => delivers.forEach((listener) => listener(JSON.stringify({ kind: 'status', status }))));
     for (const page of [pageA, pageB]) {
       fireEvent.change(page.getByRole('searchbox'), { target: { value: 'andro' } });
     }
