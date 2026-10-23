@@ -1,0 +1,22 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin: 0 var(--space-8) var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xl);
+}
+
+.text {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: var(--font-size-input);
+  line-height: var(--line-height-base);
+}
+
+.code {
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-accent);
+}
