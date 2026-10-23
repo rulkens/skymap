@@ -33,9 +33,7 @@ export const disc = '8rem';
 
 <FeatureGallery title="Missions" line="We have been exploring space for decades. Skymap shows several of the missions, as 3D models and in an exhibit on the Voyagers." href="/docs/start/scene/#spacecraft" label="Spacecraft" views={['features-voyager1', 'hubble', 'data-perseverance', 'data-spirit']} sizes={big} client:visible />
 
-<FeatureSection side="left" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way">
-  <Figure id="features-constellations" sizes={big} showDrawn={false} />
-</FeatureSection>
+<FeatureGallery side="left" title="The Milky Way" line="Stars from the catalogues, the constellations, and a model of our galaxy seen from outside." href="/docs/start/scene/#the-milky-way" label="The Milky Way" views={['render-milky-way', 'render-stars', 'features-s-stars', 'render-black-hole', 'features-pleiades', 'features-constellations']} sizes={big} client:visible />
 
 <FeatureSection title="The cosmic web and deep space" line="Galaxies from the surveys, the filaments between them, and the flow of galaxies towards the Great Attractor." href="/docs/start/scene/#filaments-and-the-cosmic-web" label="Filaments and the cosmic web">
   <Figure id="features-flow" sizes={big} showDrawn={false} />
@@ -70,7 +68,7 @@ export const disc = '8rem';
   <RemoteDemo sizes="21rem" client:visible />
 </FeatureSection>
 
-<FeatureSection side="left" level={2} title="Deep linking" line="Every object in Skymap has a unique link that you can share with friends, colleagues or on social media." href="/docs/guide/sharing/" label="Sharing a view">
+<FeatureSection side="left" level={2} title="Deep linking" line="Every named object in Skymap has a unique link that you can share with friends, colleagues or on social media." href="/docs/guide/sharing/" label="Sharing a view">
   <Figure id="guide-share-pose" sizes={big} showDrawn={false} />
   <AddressStrip slot="small" hash={siteShot('guide-share-pose').link} />
 </FeatureSection>
