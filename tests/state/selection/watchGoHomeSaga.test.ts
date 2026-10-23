@@ -26,6 +26,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -80,7 +81,7 @@ describe('watchGoHomeSaga', () => {
     const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
     const orientation = selectOrientation(store.getState());
     const frameBasis = ORIENTATION_FRAMES[orientation];
-    expect(tween!.to).toEqual(bodyHomePose('earth', simDays, FOV, frameBasis));
+    expect(tween!.to).toEqual(bodyHomePose(asSceneBodyId('earth'), simDays, FOV, frameBasis));
 
     // The descriptor pins the orientation live at dispatch time, mirroring
     // `clip.frame` and `focusTweenDescriptor`'s `frame` — the driver re-expresses

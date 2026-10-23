@@ -1,11 +1,11 @@
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { PreparedBodySurfaceFrame } from '../../../@types/engine/frame/PreparedBodySurfaceFrame';
-import type { SlabHostId } from '../../../@types/engine/frame/SlabHostId';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import { computeBodySurfaceFrame } from './computeBodySurfaceFrame';
 
-const preparedByCtx = new WeakMap<FrameView, Map<SlabHostId, PreparedBodySurfaceFrame | null>>();
+const preparedByCtx = new WeakMap<FrameView, Map<PositionedId, PreparedBodySurfaceFrame | null>>();
 
 /**
  * One body-slab-row derivation, shared by the drawing passes' `draw` and

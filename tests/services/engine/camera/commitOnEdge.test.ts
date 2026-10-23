@@ -29,6 +29,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /**
  * The commit-on-edge contract drives the driver table + Redux store directly
@@ -396,9 +397,9 @@ describe('commitOnEdge — clip deactivation', () => {
     // The rows read `base.frame` only, so the pose value is irrelevant here.
     store.dispatch(
       commitCameraPose({
-        frame: { body: 'earth' },
+        frame: { body: asSceneBodyId('earth') },
         pose: {
-          bodyId: 'earth',
+          bodyId: asSceneBodyId('earth'),
           anchorLocalM: [0, 0, 0],
           eyeRelAnchorM: [0, 0, 1e7],
           basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
@@ -407,7 +408,11 @@ describe('commitOnEdge — clip deactivation', () => {
     );
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     expect(
-      pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
+      pickWinner(drivers, store.getState(), {
+        approachDone: false,
+        dragClaimed: false,
+        navMoving: false,
+      }).id,
     ).toBe('orbitDrag');
 
     store.dispatch(
@@ -417,7 +422,11 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     expect(
-      pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
+      pickWinner(drivers, store.getState(), {
+        approachDone: false,
+        dragClaimed: false,
+        navMoving: false,
+      }).id,
     ).toBe('clip');
   });
 });

@@ -22,6 +22,7 @@ import { deriveView } from './deriveView';
 import { bodySlabRosterIds } from './bodySlabRosterIds';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;

@@ -18,7 +18,7 @@
  */
 
 import type { Renderer } from './Renderer';
-import type { SlabHostId } from '../engine/frame/SlabHostId';
+import type { PositionedId } from '../scene/PositionedId';
 
 export type PlanetRenderer = Renderer & {
   /**
@@ -35,5 +35,5 @@ export type PlanetRenderer = Renderer & {
    * calls for different ids never share a write target, so neither can
    * clobber the other before the GPU runs either draw.
    */
-  draw(pass: GPURenderPassEncoder, hostId: SlabHostId, instance: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, hostId: PositionedId, instance: Float32Array): void;
 };

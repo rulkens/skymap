@@ -1,7 +1,7 @@
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { PreparedBodySurfaceFrame } from '../../../@types/engine/frame/PreparedBodySurfaceFrame';
-import type { SlabHostId } from '../../../@types/engine/frame/SlabHostId';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
@@ -12,7 +12,7 @@ export function computeBodySurfaceFrame(
   state: PassState,
   ctx: FrameView,
   view: SlabView,
-  bodyId: SlabHostId,
+  bodyId: PositionedId,
 ): PreparedBodySurfaceFrame | null {
   const body = sceneBodyForId(state, bodyId);
   if (body === null) return null;

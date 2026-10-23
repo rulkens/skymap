@@ -4,7 +4,7 @@
  * which keeps the remembered tilt alive across a world → body → site descent.
  */
 
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import type { MeshBody } from '../../../../@types/scene/MeshBody';
 import type { SurfaceFixedSite } from '../../../../@types/scene/SurfaceFixedSite';
@@ -23,21 +23,22 @@ import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
 import { isSiteArm } from './isSiteArm';
 import { refoldTo } from './refoldTo';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
-function siteRowOf(id: BodyId): SurfaceFixedSite | null {
+function siteRowOf(id: PositionedId): SurfaceFixedSite | null {
   const driver = positionDriverById(id);
   return driver.kind === 'surfaceFixed' ? driver : null;
 }
 
 /** A frame is only ever entered for a site `engage` resolved, so a miss is unreachable. */
-function siteRowOrThrow(id: BodyId): SurfaceFixedSite {
+function siteRowOrThrow(id: SceneBodyId): SurfaceFixedSite {
   const site = siteRowOf(id);
   if (site === null) throw new Error(`siteRung: body '${id}' has no surfaceFixed driver`);
   return site;
 }
 
 /** The bounding sphere the band and the floors are rated in — the SCENE seed's, never the bake's. */
-function meshBodyOf(id: BodyId): MeshBody {
+function meshBodyOf(id: SceneBodyId): MeshBody {
   return findByIdOrThrow(SCENE_MESH_BODIES, id, 'siteRung');
 }
 
@@ -76,7 +77,7 @@ export const siteRung: ClimbRow<'site'> = {
   host(frame, ctx) {
     const site = siteRowOf(frame.site);
     if (site === null) return null;
-    return hostOf({ body: site.hostId as BodyId }, ctx);
+    return hostOf({ body: site.hostId }, ctx);
   },
 
   step(memory, tilt, framed, input, ctx) {
@@ -141,8 +142,8 @@ export const siteRung: ClimbRow<'site'> = {
     const p = sitePointBodyFixed(site, siteGroundRadiusM(site, host.radiusM));
     const eye = bodyFixedEyeM(parent.pose);
     const rangeM = Math.hypot(eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]);
-    return rangeM / meshBodyOf(focusId).boundingRadiusM < ctx.tuning.siteEngageR
-      ? { site: focusId }
+    return rangeM / meshBodyOf(site.id).boundingRadiusM < ctx.tuning.siteEngageR
+      ? { site: site.id }
       : null;
   },
 

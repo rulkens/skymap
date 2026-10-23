@@ -1,3 +1,4 @@
+import type { PositionedId } from '../../scene/PositionedId';
 /**
  * SlabFrame — which coordinate frame (and therefore which units) a slab's
  * `vp` and the geometry drawn into it are expressed in.
@@ -8,8 +9,6 @@
  * depends on distance from one shared render origin.
  */
 
-import type { SlabHostId } from './SlabHostId';
-
 export type SlabFrame =
   /** `originRelative: true` ⇒ geometry deltas are computed as pos − renderOrigin. */
-  { kind: 'world-mpc'; originRelative: boolean } | { kind: 'body-m'; hostId: SlabHostId };
+  { kind: 'world-mpc'; originRelative: boolean } | { kind: 'body-m'; hostId: PositionedId };

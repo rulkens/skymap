@@ -7,7 +7,6 @@
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
@@ -26,7 +25,7 @@ export function atmosphereShellUniforms(
 ): Float32Array {
   const { body, params, atmosphereTopM, camLocal, sunLocal } = entry;
   // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
-  const pose = ctx.bodyPose(body.id as BodyId)!;
+  const pose = ctx.bodyPose(body.id)!;
 
   // radiusM scales the unit proxy sphere — see composeBodySlabMvp's header.
   const mvp = composeBodySlabMvp(slab.vp, pose.eyeRelBodyM, atmosphereTopM);

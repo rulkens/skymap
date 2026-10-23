@@ -10,6 +10,7 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SurfaceTileSubsystem } from '../../../../../src/@types/engine/subsystems/SurfaceTileSubsystem';
@@ -21,7 +22,7 @@ vi.mock('../../../../../src/utils/surfaceTiles/cutSurfaceTiles', () => ({
   cutSurfaceTiles: () => ({ cut: CUT, requests: [] }),
 }));
 
-const EARTH = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
 const COMMITTED_TIER = () => 'small' as const;
 
 /** Three Earth radii out, looking at Earth (`seesEarth`) or straight away from it. */

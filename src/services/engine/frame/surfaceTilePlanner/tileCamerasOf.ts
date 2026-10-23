@@ -8,20 +8,19 @@
 
 import { mat4d } from 'wgpu-matrix';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
 import type { TileCamera } from '../../../../@types/scene/TileCamera';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { frustumPerspectiveF64 } from '../../../../utils/camera/frustumPerspectiveF64';
 import { MIN_NEAR_M } from '../../../../utils/camera/foregroundFrustum';
 
 export function tileCamerasOf(
   views: readonly FrameView[],
-  bodyId: SurfaceTileBodyId,
+  bodyId: SceneBodyId,
   radiusM: number,
 ): readonly TileCamera[] {
   return views.flatMap((view) => {
-    const pose = view.bodyPose(bodyId as BodyId);
+    const pose = view.bodyPose(bodyId);
     if (pose === null) return [];
     const { basisM, eyeRelBodyM } = pose;
     const look = mat4d.lookAt(

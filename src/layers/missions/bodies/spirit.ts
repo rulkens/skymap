@@ -5,6 +5,8 @@
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
 import { meshGroundOffsetM } from '../../../utils/meshBodies/meshGroundOffsetM';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../utils/scene/asSurfaceSiteId';
 
 export const SPIRIT: LayerBody = {
   body: meshBody({
@@ -20,8 +22,8 @@ export const SPIRIT: LayerBody = {
     // fix is published: the rover's bright dot in JPL PIA12205 (HiRISE
     // ESP_013499_1650), matched by eye onto the baked Gusev ortho.
     site: {
-      id: 'spirit',
-      hostId: 'mars',
+      id: asSurfaceSiteId('spirit'),
+      hostId: asSceneBodyId('mars'),
       latDeg: -14.60036,
       lonDeg: 175.52576,
       altitudeM: meshGroundOffsetM('mer'),

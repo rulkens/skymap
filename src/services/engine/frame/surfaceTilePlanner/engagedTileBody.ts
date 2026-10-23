@@ -7,21 +7,24 @@
  */
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
+import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
-import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
+import { isSurfaceTileBodyId } from '../../../../utils/surfaceTiles/isSurfaceTileBodyId';
 import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
 import { visibleBodyRows } from '../visibleBodyRows';
 
-export function engagedTileBody(ctx: FrameView): SurfaceTileBodyId | null {
+export function engagedTileBody(ctx: FrameView): (SceneBodyId & SurfaceTileBodyId) | null {
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return null;
   // `ctx.cam` is the view's turned camera, so its decoded forward is exactly the
   // `viewForward` `deriveView` culled this view's rows with.
-  const row = visibleBodyRows(ctx.snapshot, {
+  const bodyId = visibleBodyRows(ctx.snapshot, {
     camPosMpc: ctx.drawCamPos,
     camForwardMpc: orbitForwardOf(ctx.cam),
     frustum: ctx.frustum,
     pxPerRad: ctx.drawPxPerRad,
-  }).find((candidate) => candidate.anchorId in SURFACE_TILE_REGISTRY);
-  return row === undefined ? null : (row.anchorId as SurfaceTileBodyId);
+  })
+    .map((row) => row.anchorId)
+    .find(isSurfaceTileBodyId);
+  return bodyId ?? null;
 }

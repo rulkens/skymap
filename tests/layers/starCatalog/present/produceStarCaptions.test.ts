@@ -33,13 +33,14 @@ import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { ForegroundCaption } from '../../../../src/services/engine/presentation/foregroundCaption';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 // Earth: ~1 AU from the Sun (negligible at parsec scale) and, by
 // `SCALE_FADE_BANDS.starCaption`'s construction off the farthest catalogued
 // star, within EVERY famous star's full-alpha band too — the one camera pose
 // that reads every seeded catalog at its unclipped target.
-const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
 
 const PROXIMA_ID = 'sceneBody-proxima-centauri';
 const SUN_ID = 'sceneBody-sun';

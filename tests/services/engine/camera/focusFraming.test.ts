@@ -34,6 +34,7 @@ import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
@@ -127,7 +128,7 @@ describe('focusFraming', () => {
   const EARTH_RADIUS_M = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'earth', 'test'));
   const bodyRow = (over: Partial<BodyRow> = {}): BodyRow => ({
     type: 'body',
-    id: 'earth',
+    id: asSceneBodyId('earth'),
     label: 'Earth',
     positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
     driver: bodyDriverGeometry(over.id ?? 'earth'),
@@ -148,7 +149,7 @@ describe('focusFraming', () => {
     // minimum like the galaxy / structure helpers apply.
     const marsRadiusM = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'mars', 'test'));
     const earth = focusFraming(bodyRow(), FOVY).distance;
-    const mars = focusFraming(bodyRow({ id: 'mars', label: 'Mars' }), FOVY).distance;
+    const mars = focusFraming(bodyRow({ id: asSceneBodyId('mars'), label: 'Mars' }), FOVY).distance;
     expect(mars / earth).toBeCloseTo(marsRadiusM / EARTH_RADIUS_M, 10);
     // Sanity of the regime: framing Earth lands within a handful of Earth
     // radii, i.e. far below any Mpc-scale clamp floor.
@@ -201,7 +202,13 @@ describe('focusFraming', () => {
     // nominal radius, so the two arms are comparable without a fabricated row.
     const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
     const bodyResult = focusFraming(
-      { type: 'body', id: 'sun', label: 'Sun', positionMpc, driver: bodyDriverGeometry('sun') },
+      {
+        type: 'body',
+        id: asSceneBodyId('sun'),
+        label: 'Sun',
+        positionMpc,
+        driver: bodyDriverGeometry('sun'),
+      },
       FOVY,
     );
     const starResult = focusFraming(

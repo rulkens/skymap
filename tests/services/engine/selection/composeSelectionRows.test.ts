@@ -44,9 +44,10 @@ import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSks
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const SIM_DAYS = CONST_J2000;
-const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
+const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
 
 const virgo: StructureInfo = {
   type: 'structure',
@@ -214,7 +215,7 @@ describe('extractRow, composed', () => {
   });
 
   it('body ref → a self-contained row resolved at the passed simDays', () => {
-    const row = resolver.extractRow({ type: 'body', id: 'earth' }, SIM_DAYS);
+    const row = resolver.extractRow({ type: 'body', id: asSceneBodyId('earth') }, SIM_DAYS);
     expect(row).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -224,8 +225,11 @@ describe('extractRow, composed', () => {
     });
 
     const laterSimDays = SIM_DAYS + 200;
-    const expectedLater = deriveBodyStates(laterSimDays).get('earth')!.positionMpc;
-    const rowLater = resolver.extractRow({ type: 'body', id: 'earth' }, laterSimDays);
+    const expectedLater = deriveBodyStates(laterSimDays).get(asSceneBodyId('earth'))!.positionMpc;
+    const rowLater = resolver.extractRow(
+      { type: 'body', id: asSceneBodyId('earth') },
+      laterSimDays,
+    );
     expect(rowLater).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -236,7 +240,9 @@ describe('extractRow, composed', () => {
   });
 
   it('body ref with an unknown seed id → null', () => {
-    expect(resolver.extractRow({ type: 'body', id: 'krypton' }, SIM_DAYS)).toBeNull();
+    expect(
+      resolver.extractRow({ type: 'body', id: asSceneBodyId('krypton') }, SIM_DAYS),
+    ).toBeNull();
   });
 
   it('survey star ref resolves against the loaded catalog', async () => {
@@ -287,7 +293,7 @@ describe('extractRow, composed', () => {
       index: idx,
       id: 'sirius',
       label: sirius.label,
-      positionMpc: [...deriveBodyStates(SIM_DAYS).get('sirius')!.positionMpc],
+      positionMpc: [...deriveBodyStates(SIM_DAYS).get(asSceneBodyId('sirius'))!.positionMpc],
       radiusM: sirius.surface.datumRadiusM,
       // A seeded star poses from its own seed id — the S-star / famous-star
       // half of the arm→poseId mapping.
@@ -394,7 +400,7 @@ describe('resolveFocusId, composed', () => {
     expect(resolver.resolveFocusId('body-krypton')).toBeNull();
     // A star is not a body id any more (spec §6), so its old link decodes to nothing.
     expect(resolver.resolveFocusId('body-sirius')).toBeNull();
-    const id = resolver.focusIdOf({ type: 'body', id: 'earth' });
+    const id = resolver.focusIdOf({ type: 'body', id: asSceneBodyId('earth') });
     expect(id).toBe('body-earth');
     expect(resolver.resolveFocusId(id!)).toEqual({ type: 'body', id: 'earth' });
   });

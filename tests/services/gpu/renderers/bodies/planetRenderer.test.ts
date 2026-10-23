@@ -29,14 +29,9 @@ import {
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 type BufferDesc = { label?: string; size: number };
-
-// Test-fixture body ids, cast the same way the real caller's do (`body.id as
-// BodyId` in slabs.ts) — this suite only cares that distinct ids get distinct
-// buffers, not that these particular names are registered ones.
-const id = (name: string): BodyId => name as BodyId;
 
 function mockDevice(opts?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
@@ -94,7 +89,7 @@ describe('createPlanetRenderer', () => {
 
     const pass = mockPass();
     const instance = new Float32Array(INSTANCE_FLOATS);
-    expect(() => renderer.draw(pass, id('jupiter'), instance)).not.toThrow();
+    expect(() => renderer.draw(pass, asSceneBodyId('jupiter'), instance)).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
     // drawIndexed(indexCount, instanceCount): a body-m row draws exactly one.
     expect((pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(1);
@@ -108,7 +103,7 @@ describe('createPlanetRenderer', () => {
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear(); // drop the construction-time geometry uploads
-    renderer.draw(pass, id('mars'), instance);
+    renderer.draw(pass, asSceneBodyId('mars'), instance);
 
     expect(writeMock).toHaveBeenCalledTimes(1);
     const [, byteOffset, data, dataOffset, size] = writeMock.mock.calls[0]!;
@@ -135,8 +130,8 @@ describe('createPlanetRenderer', () => {
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
 
-    renderer.draw(pass, id('mercury'), new Float32Array(INSTANCE_FLOATS));
-    renderer.draw(pass, id('mars'), new Float32Array(INSTANCE_FLOATS));
+    renderer.draw(pass, asSceneBodyId('mercury'), new Float32Array(INSTANCE_FLOATS));
+    renderer.draw(pass, asSceneBodyId('mars'), new Float32Array(INSTANCE_FLOATS));
 
     const setVbo = pass.setVertexBuffer as unknown as ReturnType<typeof vi.fn>;
     const instanceVbos = setVbo.mock.calls.filter((c) => c[0] === 1).map((c) => c[1]);
@@ -157,8 +152,8 @@ describe('createPlanetRenderer', () => {
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
 
-    renderer.draw(pass, id('mars'), new Float32Array(INSTANCE_FLOATS));
-    renderer.draw(pass, id('mars'), new Float32Array(INSTANCE_FLOATS));
+    renderer.draw(pass, asSceneBodyId('mars'), new Float32Array(INSTANCE_FLOATS));
+    renderer.draw(pass, asSceneBodyId('mars'), new Float32Array(INSTANCE_FLOATS));
     expect(buffers.filter((b) => b.label?.startsWith('planet-instance-vbo'))).toHaveLength(1);
   });
 

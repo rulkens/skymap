@@ -38,9 +38,10 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraTuning } from '../../../../src/@types/camera/CameraTuning';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
+const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))! as BodyState;
 /** The script drives deltaY-100 notches — the settle's calibration point. */
 const NOTCH_CAP = ORIENT_DECAY.capRadPerLogZoom * ORIENT_DECAY.notchLogZoom;
 

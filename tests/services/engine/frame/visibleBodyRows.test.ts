@@ -12,14 +12,15 @@ import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { frameViewsAt } from '../../../helpers/frame/frameViewsAt';
 
 describe('visibleBodyRows', () => {
   it('re-admits the host of a mesh body in view', () => {
     // Beside Hubble, looking straight away from Earth.
     const states = deriveBodyStates(CONST_J2000);
-    const earth = states.get('earth')!.positionMpc;
-    const hubble = states.get('hubble')!.positionMpc;
+    const earth = states.get(asSceneBodyId('earth'))!.positionMpc;
+    const hubble = states.get(asSceneBodyId('hubble'))!.positionMpc;
     const out = normalize3([hubble[0] - earth[0], hubble[1] - earth[1], hubble[2] - earth[2]]);
     const back = 20 * SCALE_UNITS.M_TO_MPC;
     const [view] = frameViewsAt({

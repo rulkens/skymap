@@ -32,10 +32,11 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const EARTH_ROW: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),
@@ -93,7 +94,7 @@ describe('pivotFraming', () => {
     // being flung out to the backstop.
     const whale: SelectionRow = {
       type: 'body',
-      id: 'whale',
+      id: asSceneBodyId('whale'),
       label: 'Whale',
       positionMpc: [0, 0, 0],
       driver: bodyDriverGeometry('whale'),

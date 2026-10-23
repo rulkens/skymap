@@ -25,6 +25,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
@@ -129,7 +130,7 @@ const AU_M = SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.M_TO_MPC; // deep sub-pixel
 
 const planetAt = (id: string, radiusM: number, distanceM: number): PositionedSceneBody => ({
   body: {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
@@ -139,7 +140,7 @@ const planetAt = (id: string, radiusM: number, distanceM: number): PositionedSce
 });
 const meshAt = (id: string, radiusM: number, distanceM: number): PositionedSceneBody => ({
   body: {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     boundingRadiusM: radiusM,
     albedo: [0.5, 0.5, 0.5],
@@ -258,7 +259,7 @@ describe('sceneBodyPartition routing', () => {
   it("takes only core's own bodies", () => {
     const sun: PositionedSceneBody = {
       body: {
-        id: 'sun',
+        id: asSceneBodyId('sun'),
         label: 'Sun',
         absMag: 4.8,
         color: [1, 1, 1],

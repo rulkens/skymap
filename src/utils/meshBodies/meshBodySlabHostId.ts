@@ -14,6 +14,7 @@
 import { bodyHostId } from '../../data/bodies/positionDrivers';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../data/bodies/scenePlanets';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 // The store halves `frameContext`'s `slabBodyCandidates` composes — the hosts
 // that can own a `body-m` row and a mesh body alike.

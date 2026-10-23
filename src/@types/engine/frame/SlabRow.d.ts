@@ -9,11 +9,11 @@
  */
 
 import type { FadeBand } from '../../math/FadeBand';
-import type { SlabHostId } from './SlabHostId';
+import type { PositionedId } from '../../scene/PositionedId';
 
 export type SlabRow = {
   /** Pose = `ctx.bodyPose(anchorId)`; also the row's `SlabFrame.hostId`. */
-  readonly anchorId: SlabHostId;
+  readonly anchorId: PositionedId;
   /** Outermost drawn extent for this view, metres — far edge and both culls. */
   readonly drawRadiusM: (distM: number, pxPerRad: number) => number;
   /** Solid-sphere occupied radius, metres (`bodyFootprintRadiusM`) — drives the near edge / cull. */

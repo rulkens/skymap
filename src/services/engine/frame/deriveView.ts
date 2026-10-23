@@ -28,6 +28,7 @@ import { deriveSlabs } from './slabs';
 import { visibleBodyRows } from './visibleBodyRows';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { near0SphereBodies } from './near0SphereBodies';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function deriveView(
   snapshot: ReadyFrameContext,

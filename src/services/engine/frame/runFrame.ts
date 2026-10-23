@@ -10,8 +10,6 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -103,7 +101,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
   // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+  const bodyStates = deriveBodyStates(simDays);
 
   const {
     next,
@@ -121,7 +119,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     bodies: bodyStates,
     terrainHeightAt: state.terrain.heightAt,
     clipEpoch,
-    drivers: deps.controlSchemes.skymap.drivers,
+    schemes: deps.controlSchemes,
   });
   // The runtime is installed BEFORE any action reaches the store (ruled): a
   // listener fired by a commit sees this frame's register, not last frame's.
@@ -244,7 +242,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   let surfaceTilesAnimating = false;
   if (surfaceTiles !== null) {
     const tilePlan = planSurfaceTiles(surfaceTiles, views, (bodyId) =>
-      bodySurfaceTier(state, bodyId as BodyId),
+      bodySurfaceTier(state, bodyId),
     );
     surfaceTiles.setLastCut(tilePlan.value);
     surfaceTilesAnimating = tilePlan.awake;
@@ -294,7 +292,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // pre-render snapshot.
       layersAwake: snapshot.plans.awake,
     },
-    deps.controlSchemes.skymap.drivers,
+    deps.controlSchemes[next.scheme].drivers,
   );
 
   if (keepTicking) {

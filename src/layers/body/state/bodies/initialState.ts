@@ -6,7 +6,7 @@
  */
 
 import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 import type { BodyItemSettings } from '../../../../@types/settings/BodyItemSettings';
 import type { BodySettings } from '../../../../@types/settings/BodySettings';
 
@@ -16,5 +16,5 @@ export const initialState: BodySettings = {
       e.id,
       { enabled: true, labelEnabled: true },
     ]),
-  ) as Record<BodyId, BodyItemSettings>,
+  ) as Record<BodySourceId, BodyItemSettings>,
 };

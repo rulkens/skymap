@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { selectDomeStatus } from '../../src/compositions/selectDomeStatus';
 import { stateAfter } from '../fixtures/stateAfter';
+import { setControlScheme } from '../../src/state/settings/core/cameraControlsSlice';
 import { setSelectionRow } from '../../src/state/selectionRows/selectionRowsSlice';
 import { takeoverStarted } from '../../src/state/takeover/takeoverActions';
 import { beatChanged, setPaused } from '../../src/state/tour/tourSlice';
@@ -9,10 +10,17 @@ import { setSimDays } from '../../src/state/time/timeSlice';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
 import { bodyDriverGeometry } from '../../src/utils/scene/bodyDriverGeometry';
 import type { ToggleRow } from '../../src/@types/settings/ToggleRow';
+import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 
 const NO_ROWS: readonly ToggleRow[] = [];
 
 describe('selectDomeStatus', () => {
+  it('reports the camera scheme', () => {
+    expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).controls.scheme).toBe('skymap');
+    const state = stateAfter(setControlScheme('openspace'));
+    expect(selectDomeStatus(state, NO_ROWS, 0).controls.scheme).toBe('openspace');
+  });
+
   it('reports no tour when none runs', () => {
     expect(selectDomeStatus(stateAfter(), NO_ROWS, 0).tour).toBeNull();
     const clip = stateAfter(takeoverStarted({ kind: 'clip', id: 'flyout' }));
@@ -39,7 +47,7 @@ describe('selectDomeStatus', () => {
         slot: 'focus',
         row: {
           type: 'body',
-          id: 'earth',
+          id: asSceneBodyId('earth'),
           label: 'Earth',
           positionMpc: [0, 0, 0],
           driver: bodyDriverGeometry('earth'),

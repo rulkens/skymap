@@ -1,4 +1,5 @@
 import type { ClipId } from '../animation/ClipId';
+import type { ControlSchemeId } from '../engine/camera/ControlSchemeId';
 import type { PaletteAction } from '../palette/PaletteAction';
 
 /** Every command a remote may send, by name, with its payload; the registry has one row per key. */
@@ -17,5 +18,6 @@ export type RemoteCommandPayloads = {
   timeSetDirection: { direction: 1 | -1 };
   timeSetDate: { simDays: number };
   timeGoLive: null;
+  controlSchemeSet: { scheme: ControlSchemeId };
   toggleSet: { id: string; enabled: boolean };
 };

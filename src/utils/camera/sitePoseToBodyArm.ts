@@ -5,7 +5,6 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { BodyId } from '../../@types/data/body/BodyId';
 import type { SitePose } from '../../@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -31,7 +30,7 @@ export function sitePoseToBodyArm(
     pose.rangeM * (ce * (ch * north[2] + sh * east[2]) + se * localUp[2]),
   ];
   return {
-    bodyId: site.hostId as BodyId,
+    bodyId: site.hostId,
     anchorLocalM,
     eyeRelAnchorM,
     basisLocal: canonicalBasisAt(frame, pose.headingRad + Math.PI, Math.PI / 2 - pose.elevationRad),

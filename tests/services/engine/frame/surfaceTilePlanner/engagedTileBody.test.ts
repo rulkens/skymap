@@ -8,10 +8,11 @@ import { describe, expect, it } from 'vitest';
 
 import { engagedTileBody } from '../../../../../src/services/engine/frame/surfaceTilePlanner/engagedTileBody';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { SURFACE_TILE_REGISTRY } from '../../../../../src/data/bodies/surfaceTileRegistry';
+import { isSurfaceTileBodyId } from '../../../../../src/utils/surfaceTiles/isSurfaceTileBodyId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -23,7 +24,7 @@ const NEAR_DISTANCE_MPC = 1e-12;
 /** What `deriveSlabs` built: the first tiling host's slab, gated as today on distance. */
 function slabAnswer(view: FrameView): string | null {
   const hosts = view.slabs.flatMap((slab) =>
-    slab.frame.kind === 'body-m' && slab.frame.hostId in SURFACE_TILE_REGISTRY
+    slab.frame.kind === 'body-m' && isSurfaceTileBodyId(slab.frame.hostId)
       ? [slab.frame.hostId]
       : [],
   );
@@ -33,7 +34,7 @@ function slabAnswer(view: FrameView): string | null {
 
 /** Eye `distanceM` from `bodyId` along `dir`, looking at it (or away). */
 function viewNear(bodyId: string, dir: Vec3, distanceM: number, lookAway = false): FrameView {
-  const body = STATES.get(bodyId)!.positionMpc;
+  const body = STATES.get(asSceneBodyId(bodyId))!.positionMpc;
   const d = distanceM * SCALE_UNITS.M_TO_MPC;
   const toward: Vec3 = [-dir[0], -dir[1], -dir[2]];
   return frameViewsAt({
@@ -66,7 +67,7 @@ describe('engagedTileBody', () => {
 
   it('agrees on both sides of the foreground distance', () => {
     const at = (distanceMpc: number): FrameView => {
-      const earth = STATES.get('earth')!.positionMpc;
+      const earth = STATES.get(asSceneBodyId('earth'))!.positionMpc;
       const d = 3 * 6.371e6 * SCALE_UNITS.M_TO_MPC;
       return frameViewsAt({
         eyeMpc: [earth[0] + d, earth[1], earth[2]],
@@ -85,8 +86,8 @@ describe('engagedTileBody', () => {
   it('engages a host only a mesh body re-admits', () => {
     // Beside Hubble, looking straight away from Earth: Earth's own disc is out of
     // the frustum cone, but Hubble, riding Earth's row, keeps the row alive.
-    const earth = STATES.get('earth')!.positionMpc;
-    const hubble = STATES.get('hubble')!.positionMpc;
+    const earth = STATES.get(asSceneBodyId('earth'))!.positionMpc;
+    const hubble = STATES.get(asSceneBodyId('hubble'))!.positionMpc;
     const out = normalize3([hubble[0] - earth[0], hubble[1] - earth[1], hubble[2] - earth[2]]);
     const back = 20 * SCALE_UNITS.M_TO_MPC;
     const [view] = frameViewsAt({

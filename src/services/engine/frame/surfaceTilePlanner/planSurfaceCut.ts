@@ -10,7 +10,7 @@ import type { SurfaceTileSubsystem } from '../../../../@types/engine/subsystems/
 import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
 import type { SurfaceCutTile } from '../../../../@types/scene/SurfaceCutTile';
 import type { Tier } from '../../../../@types/data/Tier';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { baseLevelForTier } from '../../../../utils/surfaceTiles/baseLevelForTier';
@@ -24,21 +24,18 @@ import { tileCamerasOf } from './tileCamerasOf';
 export function planSurfaceCut(
   tiles: SurfaceTileSubsystem,
   views: readonly FrameView[],
-  committedTier: (bodyId: SurfaceTileBodyId) => Tier,
+  committedTier: (bodyId: SceneBodyId & SurfaceTileBodyId) => Tier,
 ): readonly SurfaceCutTile[] {
   // The first view that engages a body picks it; its pose stands for the eye.
   const engaged = views.map(engagedTileBody);
   const primary = engaged.findIndex((bodyId) => bodyId !== null);
   const bodyId = engaged[primary];
   if (bodyId === undefined || bodyId === null) return [];
-  // The pose provider and the subsystem key on `BodyId`, which names only
-  // 'earth' of the registry bodies, yet serve Mars at runtime too.
-  const hostId = bodyId as BodyId;
-  const pose = views[primary]!.bodyPose(hostId);
+  const pose = views[primary]!.bodyPose(bodyId);
   if (pose === null) return [];
   // The tier off the COMMITTED texture slot, so a swap in flight cannot make
   // the planner believe in detail that is not on the GPU yet.
-  const params = tiles.plannerParams(hostId, baseLevelForTier(bodyId, committedTier(bodyId)));
+  const params = tiles.plannerParams(bodyId, baseLevelForTier(bodyId, committedTier(bodyId)));
   if (params === null) return [];
 
   // Datum, not a bound: tiles displace off the datum sphere, so the camera scale
@@ -58,6 +55,6 @@ export function planSurfaceCut(
     reliefM: surface.reliefM,
     residentSlot: tiles.residentSlot,
   });
-  tiles.update({ bodyId: hostId, plan: result.requests });
+  tiles.update({ bodyId, plan: result.requests });
   return result.cut;
 }
