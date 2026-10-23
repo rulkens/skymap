@@ -6,10 +6,10 @@ import type { GalleryView } from '../@types/GalleryView';
  * crops the wide picture.
  */
 export const FEATURE_VIEWS: readonly GalleryView[] = [
-  { id: 'features-earth-glint' },
-  { id: 'saturn' },
-  { id: 'data-perseverance' },
-  { id: 'features-constellations' },
-  { id: 'features-flow' },
-  { id: 'galaxies-measured' },
+  { id: 'features-hero-glint' },
+  { id: 'features-hero-saturn' },
+  { id: 'features-hero-perseverance' },
+  { id: 'features-hero-constellations' },
+  { id: 'features-hero-flow' },
+  { id: 'features-hero-galaxies' },
 ];
