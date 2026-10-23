@@ -75,8 +75,20 @@ try {
               commitCameraPose(turnCameraArm(start.camera, loopYaw(loop.motion, turn))),
             ]);
           } else {
-            const simDays = start.simDays + turn * loop.motion.clockDays;
-            await dispatchActions(page, [setSimDays({ simDays, nowMs: 0 })]);
+            const { clockDays, orbitTurns = 0 } = loop.motion;
+            const simDays = start.simDays + turn * clockDays;
+            await dispatchActions(page, [
+              setSimDays({ simDays, nowMs: 0 }),
+              // A camera that has to stay on one side of a body that moves (the Moon, kept facing Earth) is turned with the clock.
+              ...(orbitTurns === 0
+                ? []
+                : [
+                    cancelCameraTween(),
+                    commitCameraPose(
+                      turnCameraArm(start.camera, loopYaw('orbit', turn * orbitTurns)),
+                    ),
+                  ]),
+            ]);
           }
           // One frame for the store change to reach the renderer; readCanvas draws the next and reads it.
           await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.nextFrame());

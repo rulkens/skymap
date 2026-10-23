@@ -20,6 +20,8 @@ export type SiteShotSettings = {
   filaments?: true;
   /** The DESI wedge catalogue on (off by default in the app). */
   desiWedge?: true;
+  /** The spacecraft's trails on (off by default in the app). */
+  missionTrails?: true;
   /** The constellation figures and their names on (off by default in the app). */
   constellations?: true;
   /** The galaxy flow ribbons on (off by default in the app). */

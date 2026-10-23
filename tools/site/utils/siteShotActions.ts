@@ -61,6 +61,11 @@ export function siteShotActions({
       setVisibility({ cluster: 'constellations', field: 'enabled', on: true, overMs: 0 }),
     );
   }
+  if (settings.missionTrails) {
+    actions.push(
+      setVisibility({ cluster: 'missionTrails', field: 'enabled', on: true, overMs: 0 }),
+    );
+  }
   if (settings.flow) actions.push(setFlowEnabled(true));
   if (settings.desiWedge) actions.push(setGalaxyCatalogVisible({ id: 'desiWedge', enabled: true }));
   if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
@@ -74,6 +79,18 @@ export function siteShotActions({
       ),
       setBlackHoleLabelEnabled({ id: 'sgr-a-star', enabled: false }),
     );
+    // The spacecraft's captions are the missions Layer's, not the bodies'.
+    if (!settings.keepBodyLabels) {
+      actions.push(
+        setVisibility({
+          cluster: 'missions',
+          item: 'craft',
+          field: 'labelEnabled',
+          on: false,
+          overMs: 0,
+        }),
+      );
+    }
   }
   if (settings.debugPanel) actions.push(setDebugPanelOpen(true));
   if (settings.tourStep !== undefined) {
