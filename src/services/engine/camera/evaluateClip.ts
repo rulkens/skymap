@@ -358,11 +358,10 @@ function evaluateBaseScalar(
       return runningVal;
     }
 
-    // The running value at the START of this segment is the value we've accumulated so far.
-    const segStart = runningVal;
+    // An explicit `from` (a segment continuing a composite) overrides the base chain.
+    const segStart = seg.from !== undefined ? (seg.from as number) : runningVal;
 
     if (seg.segKind === 'tween') {
-      const from = seg.from !== undefined ? (seg.from as number) : segStart;
       const to = seg.to as number;
 
       if (t >= seg.endSec) {
@@ -375,9 +374,9 @@ function evaluateBaseScalar(
         const e = EASE[seg.ease](localT);
 
         if (channel === 'yaw' || channel === 'roll') {
-          return lerpAngleShortest(from, to, e);
+          return lerpAngleShortest(segStart, to, e);
         }
-        return lerpInSpace(seg.space, from, to, e);
+        return lerpInSpace(seg.space, segStart, to, e);
       }
     } else {
       // spin segment: additive delta onto runningVal.
@@ -462,13 +461,14 @@ function evaluateBaseVec3(
 /**
  * governingCompositeAt — the composite that writes `ch` at time `t`, or null.
  *
- * A composite governs from its `startSec` onward (not just within its window):
- * it holds its final value after `endSec` so the camera does not snap back to
- * the start pose during a trailing `hold`. Per channel, the most recently
- * started composite that declares it wins.
+ * A composite governs from its `startSec` (holding its final value through a
+ * trailing `hold`) until the first base segment on `ch` starting at or after its
+ * `endSec`; compileClip gave that segment the composite's final value as `from`.
+ * Per channel, the most recently started composite that declares it wins.
  */
 function governingCompositeAt(
   tracks: readonly CompositeTrack[],
+  segments: readonly BaseSegment[],
   ch: keyof CompositeSample,
   t: number,
 ): CompositeTrack | null {
@@ -477,7 +477,9 @@ function governingCompositeAt(
     const later = best === null || c.startSec > best.startSec;
     if (c.startSec <= t && later && c.channels.includes(ch)) best = c;
   }
-  return best;
+  if (best === null) return null;
+  const endSec = best.endSec;
+  return segments.some((s) => s.startSec >= endSec && s.startSec <= t) ? null : best;
 }
 
 /** The pose a frame leg starts from, and the second it starts at. */
@@ -618,7 +620,7 @@ function evaluateBaseAt(
   let sampledTrack: CompositeTrack | null = null;
   let sampled: CompositeSample = {};
   const fromComposite = <K extends keyof CompositeSample>(ch: K): CompositeSample[K] => {
-    const track = governingCompositeAt(compiled.compositeTracks, ch, t);
+    const track = governingCompositeAt(compiled.compositeTracks, baseTracks[ch], ch, t);
     if (track === null) return undefined;
     if (track !== sampledTrack) {
       // Clamp into the track's own window: after it ends, hold the final value.

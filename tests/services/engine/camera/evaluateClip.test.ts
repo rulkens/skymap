@@ -28,9 +28,14 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { easedFocusClip } from '../../../../src/services/engine/camera/easedFocusClip';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
+import { compileClip } from '../../../../src/services/engine/animation/compileClip';
+import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
+import { neighbourhoodFlythrough } from '../../../../src/data/animation/tours/grandTour/neighbourhoodFlythrough';
+import { relErr } from '../../../support/relErr';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -531,5 +536,59 @@ describe('geodesic composite', () => {
     const mid = evaluateClip({ start: START, timeline: [seq([path, move])] }, 3);
     expect(mid.yaw).toBeCloseTo(flown.yaw, 12);
     expect(mid.pitch).toBeCloseTo(flown.pitch, 12);
+  });
+});
+
+describe('a move after a composite continues from where it ended', () => {
+  const FOV_Y = (50 * Math.PI) / 180;
+  const path = flyPath([atPoint([10, 0, 0], 5)], { over: 2, ease: 'linear', linger: 0 });
+  const flown = evaluateClip({ start: START, timeline: [path] }, 100);
+  const targetMiss = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+  it('seq([flyPath, dollyTo]): the dolly starts on the path end and lands on its target', () => {
+    // A snap back to the clip start would be invisible if the path kept the distance.
+    expect(relErr(flown.distance, START.distance)).toBeGreaterThan(0.1);
+    const data: ClipData = { start: START, timeline: [seq([path, dollyTo(50, 2)])] };
+    expect(relErr(evaluateClip(data, 2).distance, flown.distance)).toBeLessThan(1e-12);
+    expect(relErr(evaluateClip(data, 4).distance, 50)).toBeLessThan(1e-12);
+  });
+
+  it('seq([flyPath, geodesic]): the geodesic starts on the path end, no snap', () => {
+    const move = geodesic({ target: [30, 40, 0], distance: 2 }, DEFAULT_GEODESIC_TUNING, FOV_Y, 2);
+    const at = evaluateClip({ start: START, timeline: [seq([path, move])] }, 2);
+    expect(relErr(at.distance, flown.distance)).toBeLessThan(1e-9);
+    expect(targetMiss(at.target, flown.target) / flown.distance).toBeLessThan(1e-9);
+  });
+
+  it("seq([dollyTo, flyPath]): the path's first knot is the dolly's target", () => {
+    const data: ClipData = { start: START, timeline: [seq([dollyTo(50, 2), path])] };
+    const firstKnot = compileClip(data).compositeTracks[0]!.sample(0);
+    expect(relErr(firstKnot.distance!, 50)).toBeLessThan(1e-12);
+  });
+
+  it("neighbourhoodFlythrough's dwellDrift plays after the flythrough", () => {
+    // Every focus id resolves to a distinct fake galaxy; only the trailing spin matters here.
+    const coord = (id: string, k: number) => ((id.charCodeAt(1) * 7 + k * 13) % 41) - 20;
+    const resolve = {
+      resolveFocusId: (id: string) => ({ id }),
+      extractRow: (ref: { id: string }) => ({
+        type: 'galaxyCatalog',
+        x: coord(ref.id, 1),
+        y: coord(ref.id, 2),
+        z: coord(ref.id, 3),
+        diameterKpc: 30,
+      }),
+    } as unknown as SelectionResolver;
+    const data = resolveClipFoci(
+      { ...neighbourhoodFlythrough, start: START },
+      resolve,
+      FOV_Y,
+      START,
+      0,
+    );
+    const compiled = compileClip(data);
+    const pathEnd = evaluateClip(data, compiled.compositeTracks[0]!.endSec).yaw;
+    const clipEnd = evaluateClip(data, compiled.durationSec).yaw;
+    expect(relErr(clipEnd - pathEnd, ((2 * Math.PI) / 45) * 6)).toBeLessThan(1e-9);
   });
 });
