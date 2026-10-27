@@ -32,6 +32,26 @@ describe('buildGeodesicTrack', () => {
     expect(miss / to.distance).toBeLessThan(1e-6);
   });
 
+  it('over 0 samples the destination, finite', () => {
+    const to = { target: [30, 40, 0] as Vec3, distance: 2 };
+    const track = buildGeodesicTrack({
+      start: START,
+      startSec: 0,
+      to,
+      tuning: TUNING,
+      fovYRad: FOV_Y,
+      over: 0,
+    });
+    const first = track.sample(0);
+    expect(relErr(first.distance!, to.distance)).toBeLessThanOrEqual(1e-9);
+    const miss = Math.hypot(
+      first.target![0] - to.target[0],
+      first.target![1] - to.target[1],
+      first.target![2] - to.target[2],
+    );
+    expect(miss / to.distance).toBeLessThan(1e-6);
+  });
+
   it("omitted over uses geodesicPath's duration", () => {
     const to = { target: [30, 40, 0] as Vec3, distance: 2 };
     const { durationMs } = geodesicPath(START, to, FOV_Y, TUNING);

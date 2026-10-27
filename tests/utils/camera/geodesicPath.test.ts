@@ -30,11 +30,14 @@ describe('geodesicPath', () => {
       const end = g.at(1);
       expect(start.target, name).toEqual(from.target);
       expect(relErr(start.distance, from.distance), name).toBeLessThanOrEqual(1e-9);
-      const [ex, ey, ez] = end.target;
-      const [tx, ty, tz] = to.target;
-      expect(relErr(ex, tx), name).toBeLessThanOrEqual(1e-6);
-      expect(relErr(ey, ty), name).toBeLessThanOrEqual(1e-6);
-      expect(relErr(ez, tz), name).toBeLessThanOrEqual(1e-6);
+      // Against the camera distance: a per-component relErr falls back to an
+      // absolute 1e-6 Mpc on a zero component, blind at Earth-surface scale.
+      const miss = Math.hypot(
+        end.target[0] - to.target[0],
+        end.target[1] - to.target[1],
+        end.target[2] - to.target[2],
+      );
+      expect(miss / to.distance, name).toBeLessThan(1e-6);
       expect(relErr(end.distance, to.distance), name).toBeLessThanOrEqual(1e-9);
     }
   });

@@ -2,7 +2,7 @@ import type { Ease } from '../animation/Ease';
 
 /**
  * GeodesicTuning — the calibration knobs of a Geodesic focus move, one record
- * because they are calibrated together and meaningless apart (derivation in
+ * because they are calibrated together and meaningless apart (calibration in
  * `focusMoveDefaults`). ρ shapes the path AND its arc length; `velocity` and the
  * clamp bounds only turn that length into a duration; `ease` reparametrises the
  * timed arc, shaping the arrival but never the path. It must be monotone.

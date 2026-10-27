@@ -14,6 +14,10 @@
 import { describe, it, expect } from 'vitest';
 import { zoomPanGeodesic } from '../../../src/utils/camera/zoomPanGeodesic';
 import { relErr } from '../../support/relErr';
+import {
+  DEFAULT_GEODESIC_TUNING,
+  GEODESIC_RHO_MIN,
+} from '../../../src/data/camera/focusMoveDefaults';
 
 const RHO = 1.42;
 
@@ -82,15 +86,17 @@ describe('zoomPanGeodesic', () => {
     // Earth surface (~2e-16 Mpc) through the observable universe, every
     // combination of start distance × end distance × separation.
     const SCALES = [2e-16, 4.3e-14, 2e-9, 1.3e-6, 8.2e-3, 5e-2, 5, 50, 1000, 4000];
-    for (const d0 of SCALES) {
-      for (const d1 of SCALES) {
-        for (const sep of SCALES) {
-          const g = zoomPanGeodesic(0, viewWidth(d0), sep, viewWidth(d1), RHO);
-          const where = `d0=${d0} d1=${d1} sep=${sep}`;
-          expect(Number.isFinite(g.length), `length ${where}`).toBe(true);
-          for (let i = 0; i <= 50; i++) {
-            const { u, w } = g.at((i / 50) * g.length);
-            expect(Number.isFinite(u) && Number.isFinite(w), `sample ${i} ${where}`).toBe(true);
+    for (const rho of [GEODESIC_RHO_MIN, DEFAULT_GEODESIC_TUNING.rho, RHO]) {
+      for (const d0 of SCALES) {
+        for (const d1 of SCALES) {
+          for (const sep of SCALES) {
+            const g = zoomPanGeodesic(0, viewWidth(d0), sep, viewWidth(d1), rho);
+            const where = `rho=${rho} d0=${d0} d1=${d1} sep=${sep}`;
+            expect(Number.isFinite(g.length), `length ${where}`).toBe(true);
+            for (let i = 0; i <= 50; i++) {
+              const { u, w } = g.at((i / 50) * g.length);
+              expect(Number.isFinite(u) && Number.isFinite(w), `sample ${i} ${where}`).toBe(true);
+            }
           }
         }
       }

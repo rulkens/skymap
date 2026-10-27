@@ -7,9 +7,8 @@
  * must carry the SAME one — see `zoomPanGeodesic.ts`.
  */
 
-/** An optimal zoom/pan path, sampled by arc position. */
 export type ZoomPanGeodesic = {
-  /** Total path length in the (u, w) metric. Duration is length / V. */
+  /** Total path length in the (u, w) metric. */
   readonly length: number;
   /** s ∈ [0, length] → the (u, w) view at that arc position. */
   readonly at: (s: number) => { readonly u: number; readonly w: number };

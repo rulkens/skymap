@@ -2,11 +2,8 @@
  * zoomPanGeodesic — van Wijk & Nuij's optimal zoom/pan path (IEEE InfoVis 2003,
  * eq. 9), parametrised by arc length in their perceptual metric
  * ds² = (ρ²/w²)du² + (1/(ρ²w²))dw², so constant ds/dt is constant perceived
- * velocity.
- *
- * `u` and `w` must share ONE world unit: `b` below adds w₁² − w₀² to
- * ρ⁴(u₁ − u₀)², so a unit mismatch silently shifts the pan/zoom balance rather
- * than failing. Spec §2: docs/superpowers/specs/2026-10-27-geodesic-focus-moves-design.md
+ * velocity. `u` and `w` must share ONE world unit: spec §2.1,
+ * docs/superpowers/specs/2026-10-27-geodesic-focus-moves-design.md
  */
 
 import type { ZoomPanGeodesic } from '../../@types/camera/ZoomPanGeodesic';
@@ -20,10 +17,8 @@ export function zoomPanGeodesic(
 ): ZoomPanGeodesic {
   const du = u1 - u0;
 
-  // Pure zoom (every re-focus of an already-focused subject). bᵢ divides by du,
-  // so this arm is mandatory — but on EXACT equality: only du === 0
-  // misbehaves, and an epsilon band would swap a correct path for an
-  // approximation over a whole neighbourhood.
+  // Pure zoom (every re-focus of the focused subject): bᵢ divides by du. EXACT
+  // equality: only du === 0 misbehaves, and an epsilon band would approximate.
   if (du === 0) {
     const k = w1 < w0 ? -1 : 1;
     return {

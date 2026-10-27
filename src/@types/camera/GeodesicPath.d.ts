@@ -7,7 +7,6 @@
 
 import type { Vec3 } from '../math/Vec3';
 
-/** A focus move sampled by arc fraction, with its derived duration. */
 export type GeodesicPath = {
   /** clamp(length / velocity · 1000, minMs, maxMs); minMs wins when they cross. */
   readonly durationMs: number;
