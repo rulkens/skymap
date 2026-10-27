@@ -65,11 +65,10 @@ export function cutSurfaceTiles(input: {
   readonly lodBias: number;
   /** Resolve one exact tile's atlas residency, or null if it is not
    *  resident. Injected so this stays a pure function testable without a
-   *  real GPU/atlas — Task 5 wires the real `surfaceTileSubsystem.residentSlot`
-   *  query in. Takes the full `SurfaceTileId` (carries `product`, unlike
-   *  `SurfaceCutTile.id`) because it must key the same
-   *  `surfaceTilePath(tile, prefix)` lookup `surfaceTileSubsystem` already uses
-   *  for its resident map. */
+   *  real GPU/atlas; live, it is `SurfaceTileResidency.residentSlot`. Takes
+   *  the full `SurfaceTileId` (carries `product`, unlike `SurfaceCutTile.id`)
+   *  because it must key the same `surfaceTilePath(tile, prefix)` lookup
+   *  `surfaceTileStream` uses for its resident maps. */
   readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
 }): {
   readonly cut: readonly SurfaceCutTile[];

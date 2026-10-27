@@ -310,7 +310,20 @@ export type SurfaceTileStream = Destroyable & {
 - Port the stream cases of `surfaceTileSubsystem.test.ts`; delete `driveSurfaceTileSubsystem.ts` and its
   test with the live path's helpers.
 
-- [ ] Task 5
+**Record (2026-10-27).**
+
+- Release ruling: `engageDistanceM(radiusM, pxPerRad)` = R·(0.4 + 1.145e-3·pxPerRad), fitted to a re-run
+  of the sweep at base z2 (4.46 R at 60° on 4096², 1075 R at 0.5° on 8192²; it under-reads small
+  viewports by up to 21%, which the factor 2 covers, test-pinned against the real walk). No `baseLevel`
+  argument: z2 engages farthest, so one relation bounds every tier (a large-tier session holds its
+  atlases up to ~2.7× farther than its own engage needs).
+  `surfaceTileOverOf(views)` takes the finest lens of any view.
+- Off-plan: `apply(plan)` keeps its own frame counter (`runFrame` has no frame index); the stream takes
+  `baseLevelOf` (the committed tier's base level) for `heightAt`'s climb floor, as the old
+  `paramsState` did; `IDLE_SURFACE_TILE_PLAN` seeds `tiles.plan` and the planner's idle returns;
+  `engagedTileBody.test.ts` ported to `tileBodiesInView.test.ts` (the slab-agreement pins).
+
+- [x] Task 5
 
 **P8 perf estimate and ruling.** Same work as today, moved: `cutSurfaceTiles` dominant and unchanged; the
 decisions run once per frame either way; no map copies, no event queue; `subCamera` drops from an

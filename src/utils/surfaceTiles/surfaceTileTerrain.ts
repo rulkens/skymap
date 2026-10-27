@@ -6,9 +6,9 @@ export function surfaceTileTerrain(
   subsystems: Pick<EngineSubsystemHandles, 'surfaceTiles'>,
 ): LayerTerrain {
   return {
-    heightAt: (bodyId, dir) => subsystems.surfaceTiles?.terrainHeightAt(bodyId, dir) ?? 0,
+    heightAt: (bodyId, dir) => subsystems.surfaceTiles?.stream.heightAt(bodyId, dir) ?? 0,
     residentHeightLevelAt: (bodyId, dir) =>
-      subsystems.surfaceTiles?.residentHeightLevelAt(bodyId, dir) ?? null,
-    subCamera: () => subsystems.surfaceTiles?.getDebugSnapshot().subCamera ?? null,
+      subsystems.surfaceTiles?.stream.residentHeightLevelAt(bodyId, dir) ?? null,
+    subCamera: () => subsystems.surfaceTiles?.plan.subCamera ?? null,
   };
 }

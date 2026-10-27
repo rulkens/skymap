@@ -25,7 +25,8 @@ import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
-import { driveSurfaceTileSubsystem } from './surfaceTilePlanner/driveSurfaceTileSubsystem';
+import { planSurfaceTiles } from './surfaceTilePlanner/planSurfaceTiles';
+import { surfaceTileOverOf } from './surfaceTilePlanner/surfaceTileOverOf';
 import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -238,14 +239,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
   }
 
+  // The one writer of the frame's tile plan; the passes and the terrain seam read it.
   const surfaceTiles = state.subsystems.surfaceTiles;
-  let surfaceTilesAnimating = false;
   if (surfaceTiles !== null) {
-    const tilePlan = driveSurfaceTileSubsystem(surfaceTiles, views, (bodyId) =>
-      bodySurfaceTier(state, bodyId),
+    surfaceTiles.plan = planSurfaceTiles(
+      views,
+      surfaceTileOverOf(views),
+      surfaceTiles.stream.residency,
+      (bodyId) => bodySurfaceTier(state, bodyId),
     );
-    surfaceTiles.setLastCut(tilePlan.value);
-    surfaceTilesAnimating = tilePlan.awake;
+    surfaceTiles.stream.apply(surfaceTiles.plan);
   }
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
@@ -284,7 +287,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     rootState,
     nowMs,
     {
-      surfaceTilesAnimating,
+      // Outside the engagement: the manifest loads before anything can
+      // engage, and voting only on engaged frames would sleep the loop mid-fetch.
+      surfaceTilesAnimating: surfaceTiles?.plan.awake ?? false,
       labelsAnimating,
       probeDue: state.cubemapCaptures.probe.due,
       // Read AFTER `renderFrame`: every planner row — core's and every Layer's

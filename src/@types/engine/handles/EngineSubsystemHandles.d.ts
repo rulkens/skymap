@@ -18,7 +18,8 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { SurfaceTileSubsystem } from '../subsystems/SurfaceTileSubsystem';
+import type { SurfaceTileStream } from '../subsystems/SurfaceTileStream';
+import type { SurfaceTilePlan } from '../surfaceTiles/SurfaceTilePlan';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
@@ -31,12 +32,12 @@ import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
   /**
-   * Earth's surface virtual texture — tile atlas, page table and residency
-   * bookkeeping. Constructed in `wireSlots`; allocates no GPU memory until
-   * the planner says the base texture has started magnifying, so a session
-   * that never approaches Earth pays nothing. Null before `wireSlots` runs.
+   * Surface virtual texturing: the stream that owns residency, and this
+   * frame's plan, written once per frame by `runFrame` and read by the passes
+   * and the terrain seam. Constructed in `wireSlots`; the stream allocates no
+   * GPU memory until a plan engages it. Null before `wireSlots` runs.
    */
-  surfaceTiles: SurfaceTileSubsystem | null;
+  surfaceTiles: { readonly stream: SurfaceTileStream; plan: SurfaceTilePlan } | null;
   /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
   pickDriver: Destroyable | null;
   resizeWake: Destroyable | null;

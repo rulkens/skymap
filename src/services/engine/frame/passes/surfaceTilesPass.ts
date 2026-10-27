@@ -49,9 +49,9 @@ export const surfaceTilesPass: ContentPass = {
     // position reads it, so a cut drawn without it would be a flat sphere at
     // best and garbage at worst.
     return (
-      tiles.getLastCut().length > 0 &&
-      tiles.getAtlasView() !== null &&
-      tiles.getHeightAtlasView() !== null
+      tiles.plan.cut.length > 0 &&
+      tiles.stream.getAtlasView() !== null &&
+      tiles.stream.getHeightAtlasView() !== null
     );
   },
 
@@ -104,7 +104,7 @@ export const surfaceTilesPass: ContentPass = {
           };
 
     tileRenderer.draw(pass, {
-      tiles: surfaceTiles.getLastCut(),
+      tiles: surfaceTiles.plan.cut,
       // The slab vp is already eye-relative by construction (body-m rows build
       // vp about the eye) — no rebase, unlike the old NEAR0 path.
       vp: view.vp,
@@ -121,8 +121,8 @@ export const surfaceTilesPass: ContentPass = {
       debugLodOverlay: state.settings.debug.overlays['surface-lod-overlay'],
       noDisplacement: state.settings.debug.overlays['terrain-no-displacement'],
       noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
-      surfaceAtlasView: surfaceTiles.getAtlasView()!,
-      heightAtlasView: surfaceTiles.getHeightAtlasView()!,
+      surfaceAtlasView: surfaceTiles.stream.getAtlasView()!,
+      heightAtlasView: surfaceTiles.stream.getHeightAtlasView()!,
     });
   },
 };

@@ -4,7 +4,7 @@
  * the body (`over`, by position), the cut over the views that show it, the
  * engage gate, the touched/requested split, the manifest request, the atlas
  * verdict and the wake vote. The stream applies the result; nothing here
- * writes. Not yet called: `runFrame` drives `driveSurfaceTileSubsystem` until P8b.
+ * writes.
  */
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
@@ -15,6 +15,7 @@ import type { SurfaceTileRequest } from '../../../../@types/scene/SurfaceTileReq
 import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { Tier } from '../../../../@types/data/Tier';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../data/bodies/idleSurfaceTilePlan';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { baseLevelForTier } from '../../../../utils/surfaceTiles/baseLevelForTier';
@@ -34,18 +35,11 @@ export function planSurfaceTiles(
 ): SurfaceTilePlan {
   const engaged = residency.engagedBodyId();
   const inFlight = residency.inFlightCount() > 0;
-  // Past every body's release radius, or over a body other than the engaged
-  // one: the atlases hold tiles nothing will draw again soon.
+  // Out of every body's reach, or over a body other than the engaged one: the
+  // atlases hold tiles nothing will draw again soon.
   const stale = engaged !== null && engaged !== over?.bodyId;
-  const idle = { cut: [], touched: [], requests: [], lastPlan: null } as const;
   if (over === null) {
-    return {
-      ...idle,
-      wantManifest: null,
-      verdict: stale ? 'release' : 'keep',
-      subCamera: null,
-      awake: inFlight,
-    };
+    return { ...IDLE_SURFACE_TILE_PLAN, verdict: stale ? 'release' : 'keep', awake: inFlight };
   }
 
   const { bodyId, camPosLocalM } = over;
@@ -64,7 +58,7 @@ export function planSurfaceTiles(
   const shown = views.filter((view) => tileBodiesInView(view).includes(bodyId));
   const wantManifest = shown.length > 0 && manifest.status === 'absent' ? bodyId : null;
   const awake = wantManifest !== null || manifest.status === 'pending' || inFlight;
-  const unplanned = { ...idle, wantManifest, subCamera, awake };
+  const unplanned = { ...IDLE_SURFACE_TILE_PLAN, wantManifest, subCamera, awake };
   if (params === null || manifest.value === null || shown.length === 0) {
     return { ...unplanned, verdict: stale ? 'release' : 'keep' };
   }

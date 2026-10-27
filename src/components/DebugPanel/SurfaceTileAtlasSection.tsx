@@ -4,7 +4,7 @@
  * the last plan's shape, and the deepest level's resident tile keys.
  *
  * No visualization — this is for reading numbers against
- * `surfaceTileSubsystem.ts`'s `resident` map and page-table window while
+ * `surfaceTileStream.ts`'s `resident` map and the frame's tile plan while
  * chasing a tile-residency bug, not for a first look at the feature.
  *
  * ### Why poll, not subscribe

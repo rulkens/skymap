@@ -74,7 +74,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/subsystems/clipPlayer.ts',
   'src/services/engine/subsystems/label2DDirector.ts',
   'src/services/engine/subsystems/structureFocusSubsystem.ts',
-  'src/services/engine/subsystems/surfaceTileSubsystem.ts',
   'src/services/engine/wiring/attachLabelDirectors.ts',
   'src/services/gpu/device.ts',
   'src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts',

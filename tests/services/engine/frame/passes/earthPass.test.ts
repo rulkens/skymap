@@ -260,7 +260,7 @@ const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
  * handle and a `surfaceTiles` subsystem stub whose cut and two atlas views are
  * caller-controlled — the instanced-draw gate's four inputs
  * (`state.gpu.surfaceTileRenderer`, `getAtlasView()`,
- * `getHeightAtlasView()`, `getLastCut()`).
+ * `getHeightAtlasView()`, `plan.cut`).
  */
 function makeTileDrawState(input: {
   readonly tileRenderer: unknown;
@@ -281,10 +281,12 @@ function makeTileDrawState(input: {
     },
     subsystems: {
       surfaceTiles: {
-        getLastCut: () => input.cut,
-        getAtlasView: () => input.atlasView,
-        getHeightAtlasView: () =>
-          input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
+        plan: { cut: input.cut },
+        stream: {
+          getAtlasView: () => input.atlasView,
+          getHeightAtlasView: () =>
+            input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
+        },
       },
     },
   } as unknown as EngineState;

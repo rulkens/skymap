@@ -1,8 +1,7 @@
 /**
  * SurfaceTileResidency — the tile stream's read side, handed to the pure
- * planner (and, from P8b, the passes and the terrain seam). Read-only: the
- * stream alone owns the atlases, LRU and fetch queue, as `OctreeChunkStream`
- * does for the star octree. Tile keys are `surfaceTilePath(tile, prefix)`.
+ * planner. Read-only: the stream alone owns the atlases, LRU and fetch
+ * queue, as `OctreeChunkStream` does for the star octree. Tile keys are `surfaceTilePath(tile, prefix)`.
  */
 
 import type { SurfaceTileId } from '../../data/SurfaceTileId';

@@ -1,12 +1,12 @@
 /**
- * engagedTileBody — engages exactly the tiling body the view gives a `body-m`
+ * tileBodiesInView — names exactly the tiling body the view gives a `body-m`
  * slab, over the 1 px edge, the foreground-distance edge, a body behind the eye
  * and a host only a mesh body re-admits.
  */
 
 import { describe, expect, it } from 'vitest';
 
-import { engagedTileBody } from '../../../../../src/services/engine/frame/surfaceTilePlanner/engagedTileBody';
+import { tileBodiesInView } from '../../../../../src/services/engine/frame/surfaceTilePlanner/tileBodiesInView';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { isSurfaceTileBodyId } from '../../../../../src/utils/surfaceTiles/isSurfaceTileBodyId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
@@ -20,6 +20,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const STATES = deriveBodyStates(CONST_J2000);
 const NEAR_DISTANCE_MPC = 1e-12;
+const firstTileBody = (view: FrameView) => tileBodiesInView(view)[0] ?? null;
 
 /** What `deriveSlabs` built: the first tiling host's slab, gated as today on distance. */
 function slabAnswer(view: FrameView): string | null {
@@ -44,8 +45,8 @@ function viewNear(bodyId: string, dir: Vec3, distanceM: number, lookAway = false
   })[0]!;
 }
 
-describe('engagedTileBody', () => {
-  it('engages exactly the tiling bodies that get a body slab', () => {
+describe('tileBodiesInView', () => {
+  it('names exactly the tiling bodies that get a body slab', () => {
     const dir = normalize3([0.3, -0.5, 0.8]);
     for (const [bodyId, radiusM] of [
       ['earth', 6.371e6],
@@ -57,7 +58,7 @@ describe('engagedTileBody', () => {
         for (const lookAway of [false, true]) {
           const view = viewNear(bodyId, dir, distanceM, lookAway);
           const expected = slabAnswer(view);
-          expect(engagedTileBody(view), `${bodyId} at ${distanceM} m`).toBe(expected);
+          expect(firstTileBody(view), `${bodyId} at ${distanceM} m`).toBe(expected);
           outcomes.add(expected);
         }
       }
@@ -77,13 +78,13 @@ describe('engagedTileBody', () => {
     };
     const inside = at(FOREGROUND_MAX_DISTANCE_MPC * (1 - 1e-9));
     const outside = at(FOREGROUND_MAX_DISTANCE_MPC);
-    expect(engagedTileBody(inside)).toBe('earth');
-    expect(engagedTileBody(inside)).toBe(slabAnswer(inside));
-    expect(engagedTileBody(outside)).toBeNull();
-    expect(engagedTileBody(outside)).toBe(slabAnswer(outside));
+    expect(firstTileBody(inside)).toBe('earth');
+    expect(firstTileBody(inside)).toBe(slabAnswer(inside));
+    expect(firstTileBody(outside)).toBeNull();
+    expect(firstTileBody(outside)).toBe(slabAnswer(outside));
   });
 
-  it('engages a host only a mesh body re-admits', () => {
+  it('names a host only a mesh body re-admits', () => {
     // Beside Hubble, looking straight away from Earth: Earth's own disc is out of
     // the frustum cone, but Hubble, riding Earth's row, keeps the row alive.
     const earth = STATES.get(asSceneBodyId('earth'))!.positionMpc;
@@ -96,6 +97,6 @@ describe('engagedTileBody', () => {
       distanceMpc: NEAR_DISTANCE_MPC,
     });
     expect(slabAnswer(view!)).toBe('earth');
-    expect(engagedTileBody(view!)).toBe('earth');
+    expect(firstTileBody(view!)).toBe('earth');
   });
 });
