@@ -24,10 +24,13 @@ import {
   wait,
   flyPath,
   atPoint,
+  geodesic,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { easedFocusClip } from '../../../../src/services/engine/camera/easedFocusClip';
+import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -497,5 +500,36 @@ describe('roll channel', () => {
     const data = easedFocusClip(desc);
     expect(evaluateClip(data, 0).roll).toBe(0.1);
     expect(evaluateClip(data, DURATION_SEC).roll).toBe(1.2);
+  });
+});
+
+describe('geodesic composite', () => {
+  const FOV_Y = (50 * Math.PI) / 180;
+  const TO = { target: [30, 40, 0] as Vec3, distance: 2 };
+  const move = geodesic(TO, DEFAULT_GEODESIC_TUNING, FOV_Y, 2);
+
+  it('a geodesic window leaves a concurrent yaw tween live', () => {
+    const yawTween = tween('yaw', { to: 1.5, over: 2, ease: 'linear' });
+    const alone = evaluateClip({ start: START, timeline: [yawTween] }, 1).yaw;
+    const beside = evaluateClip({ start: START, timeline: [all([move, yawTween])] }, 1).yaw;
+    expect(alone).not.toBeCloseTo(START.yaw, 3);
+    expect(beside).toBe(alone);
+  });
+
+  it('a base distance writer overlapping a geodesic window throws', () => {
+    const data: ClipData = { start: START, timeline: [all([move, dollyTo(50, 1)])] };
+    expect(() => evaluateClip(data, 0.5)).toThrow(/overlaps a base 'distance' writer/);
+  });
+
+  it("yaw and pitch hold a flyPath's final values through a later geodesic window", () => {
+    const path = flyPath([atPoint([10, 0, 0], 5)], { over: 2, ease: 'linear', linger: 0 });
+    const flown = evaluateClip({ start: START, timeline: [path] }, 100);
+    // A snap back to the clip start would be invisible if the path never turned.
+    const turned = Math.abs(flown.yaw - START.yaw) + Math.abs(flown.pitch - START.pitch);
+    expect(turned).toBeGreaterThan(0.1);
+
+    const mid = evaluateClip({ start: START, timeline: [seq([path, move])] }, 3);
+    expect(mid.yaw).toBeCloseTo(flown.yaw, 12);
+    expect(mid.pitch).toBeCloseTo(flown.pitch, 12);
   });
 });

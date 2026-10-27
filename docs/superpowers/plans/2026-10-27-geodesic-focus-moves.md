@@ -306,18 +306,18 @@ review: yes
 - **No other switch changes.** `resolveClipFoci`, `clipFociReady` and `applyPathTuning` pass the
   new kind through their defaults.
 
-- [ ] Test `buildGeodesicTrack > lands exactly on to` (relErr on distance; target bound to the
+- [x] Test `buildGeodesicTrack > lands exactly on to` (relErr on distance; target bound to the
       camera distance).
-- [ ] Test `buildGeodesicTrack > omitted over uses geodesicPath's duration`. Assert it equals
+- [x] Test `buildGeodesicTrack > omitted over uses geodesicPath's duration`. Assert it equals
       `geodesicPath(...).durationMs / 1000`, with inputs inside the clamp.
-- [ ] Test `evaluateClip > a geodesic window leaves a concurrent yaw tween live`. Assert yaw at
+- [x] Test `evaluateClip > a geodesic window leaves a concurrent yaw tween live`. Assert yaw at
       mid-window equals the tween's own value.
-- [ ] Test `evaluateClip > a base distance writer overlapping a geodesic window throws`.
-- [ ] Test `evaluateClip > yaw and pitch hold a flyPath's final values through a later geodesic
+- [x] Test `evaluateClip > a base distance writer overlapping a geodesic window throws`.
+- [x] Test `evaluateClip > yaw and pitch hold a flyPath's final values through a later geodesic
       window` (Review Focus).
-- [ ] Implement.
-- [ ] Run `npx vitest run tests/services/engine/animation tests/services/engine/camera/evaluateClip` → green.
-- [ ] Commit: `feat(animation): the geodesic effect — one composite writer over target and distance`.
+- [x] Implement.
+- [x] Run `npx vitest run tests/services/engine/animation tests/services/engine/camera/evaluateClip` → green.
+- [x] Commit: `feat(animation): the geodesic effect — one composite writer over target and distance`.
 
 ### Task 5: the `focusMoves` settings slice and the persisted style
 

@@ -68,6 +68,7 @@ import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { validateCompositeExclusivity } from './validateCompositeExclusivity';
 import { buildPathTrack } from './buildPathTrack';
+import { buildGeodesicTrack } from './buildGeodesicTrack';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
 import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
@@ -222,6 +223,20 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
       // track's — not the authored `over` (the cruise budget). Return it so the
       // cursor and the single-writer window land on the true end.
+      return track.endSec - atSec;
+    }
+
+    // --- Camera leaves: zoom/pan geodesic (composite writer over target + distance) ---
+    case 'geodesic': {
+      const track = buildGeodesicTrack({
+        start: acc.start,
+        startSec: atSec,
+        to: effect.to,
+        tuning: effect.tuning,
+        fovYRad: effect.fovYRad,
+        over: effect.over,
+      });
+      acc.compositeTracks.push(track);
       return track.endSec - atSec;
     }
 
