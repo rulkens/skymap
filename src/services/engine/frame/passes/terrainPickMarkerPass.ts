@@ -27,10 +27,10 @@ export const terrainPickMarkerPass: ContentPass = {
     if (view.slab.frame.kind !== 'body-m') return false;
     if (!isSurfaceTileBodyId(view.slab.frame.hostId)) return false;
     // A non-empty cut is the closest frame-visible signal that THIS body is the
-    // one whose terrain the marcher can read: the tile subsystem serves one
-    // engaged body at a time, and `terrainHeightAt` answers 0 for any other.
+    // one whose terrain the marcher can read: the tile stream serves one
+    // engaged body at a time, and `heightAt` answers 0 for any other.
     const tiles = state.subsystems.surfaceTiles;
-    return tiles !== null && tiles !== undefined && tiles.getLastCut().length > 0;
+    return tiles !== null && tiles !== undefined && tiles.plan.cut.length > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -59,7 +59,10 @@ export const terrainPickMarkerPass: ContentPass = {
       cursorPx: cursorTexPx,
       viewportPx: view.viewportPx,
       fovYRad: frustumFovYRad(ctx.frustum),
-      terrainHeightAt: (b, d) => state.subsystems.surfaceTiles?.terrainHeightAt(b, d) ?? 0,
+      terrainHeightAt: (b, d) => {
+        const tiles = state.subsystems.surfaceTiles;
+        return tiles === null ? 0 : tiles.stream.heightAt(b, d, tiles.plan.params);
+      },
     });
     if (pick === null) return;
 

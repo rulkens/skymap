@@ -16,7 +16,7 @@ export type ResolvedTileResidency = {
   readonly atlasUvOrigin: readonly [number, number];
   readonly atlasUvScale: readonly [number, number];
   /** `performance.now()` (REAL time) when the resolved tile's bitmap
-   *  uploaded — stamped at `surfaceTileSubsystem`'s `upload` call site.
+   *  uploaded — stamped at `surfaceTileStream`'s `upload` call site.
    *  Drives the renderer's fade-in weight; never sim time, so a fade runs
    *  even while the sim clock is paused or scaled. */
   readonly readyAtMs: number;

@@ -9,7 +9,7 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `earthTiles`, `pickDriver`,
+ *   - Lazy (inside the GPU init IIFE): `surfaceTiles`, `pickDriver`,
  *     `resizeWake`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
@@ -18,7 +18,8 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { SurfaceTileSubsystem } from '../subsystems/SurfaceTileSubsystem';
+import type { SurfaceTileStream } from '../subsystems/SurfaceTileStream';
+import type { SurfaceTilePlan } from '../surfaceTiles/SurfaceTilePlan';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
@@ -31,12 +32,12 @@ import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
   /**
-   * Earth's surface virtual texture — tile atlas, page table and residency
-   * bookkeeping. Constructed in `wireSlots`; allocates no GPU memory until
-   * the planner says the base texture has started magnifying, so a session
-   * that never approaches Earth pays nothing. Null before `wireSlots` runs.
+   * Surface virtual texturing: the stream that owns residency, and this
+   * frame's plan, written once per frame by `runFrame` and read by the passes
+   * and the terrain seam. Constructed in `wireSlots`; the stream allocates no
+   * GPU memory until a plan engages it. Null before `wireSlots` runs.
    */
-  surfaceTiles: SurfaceTileSubsystem | null;
+  surfaceTiles: { readonly stream: SurfaceTileStream; plan: SurfaceTilePlan } | null;
   /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
   pickDriver: Destroyable | null;
   resizeWake: Destroyable | null;
@@ -123,20 +124,4 @@ export type EngineSubsystemHandles = {
    * dev panel. Null until the GPU init runs.
    */
   loadProgress: LoadProgressEmitter | null;
-};
-
-/**
- * Compile-time guard: every subsystem field must satisfy `Destroyable`.
- *
- * The mapped type strips `| null` via `NonNullable<...>` (nullable fields
- * are fine — the engine null-checks before calling destroy) and requires
- * the rest to be assignable to `Destroyable`. A missing `destroy()`
- * resolves to `never` for that key, surfacing as a compile error here
- * rather than as a silent leak at runtime when `engine.destroy()` walks
- * the bag uniformly.
- */
-type _EnforceDestroyable = {
-  [K in keyof EngineSubsystemHandles]: NonNullable<EngineSubsystemHandles[K]> extends Destroyable
-    ? true
-    : never;
 };

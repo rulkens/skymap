@@ -55,7 +55,7 @@ export function cameraDebugSnapshotOf(input: {
   readonly tuning: CameraTuning;
   /** `readOrientDeltas()` — measured in the frame loop, never re-derived here. */
   readonly deltas: OrientDeltas;
-  /** `SurfaceTileSubsystem.terrainHeightAt`, bound by the caller (engine.ts)
+  /** `SurfaceTileStream.heightAt`, bound by the caller (engine.ts)
    *  — the eye-to-ground row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
   /** Its sibling, for the resident-level row; same binding site. */
