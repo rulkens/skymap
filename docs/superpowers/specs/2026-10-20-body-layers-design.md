@@ -301,7 +301,7 @@ Residency stays live (updated at upload, as today), so the camera reads a landed
 frame. Position facts (`over`: nearest tiling body, camera position, distance) and view facts
 (`frame`: cameras, base level) are separate inputs, so looking up at street level keeps the position
 readout. Atlases release on a body switch or past twice the distance at which tiles would engage with
-the current lens (`engageDistanceM`, ruled 2026-10-27), never on visibility alone. The plan: `plans/2026-10-22-body-layers-tile-planner-views.md`
+the current lens (`engageDistanceM`, ruled 2026-10-27), never on visibility alone. The plan: `plans/completed/2026-10-22-body-layers-tile-planner-views.md`
 Tasks 4–5.
 
 ### P7. The surface-tile debug readout publishes through `facts`
