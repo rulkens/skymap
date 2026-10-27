@@ -13,6 +13,7 @@ import type { SurfaceStepCtx } from '../../../src/@types/camera/SurfaceStepCtx';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -33,7 +34,7 @@ const CTX: SurfaceStepCtx = {
 
 /** Mid-latitude, oblique and headed off north, so the level settle has work to do. */
 const seed: BodyFixedPose = {
-  bodyId: 'earth',
+  bodyId: asSceneBodyId('earth'),
   anchorLocalM: [0, 0, 0],
   eyeRelAnchorM: [0.6, -1.2, 1.4],
   basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],

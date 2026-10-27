@@ -17,11 +17,12 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('earthUniverseLoop', () => {
   it('opens sunward, raised 30° above the ecliptic', () => {
     const start = earthUniverseLoop(CONST_J2000).data.start as CameraPose;
-    const earth = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const earth = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     const sMag = Math.hypot(earth[0], earth[1], earth[2]);
     const sunward: Vec3 = [earth[0] / sMag, earth[1] / sMag, earth[2] / sMag];
 

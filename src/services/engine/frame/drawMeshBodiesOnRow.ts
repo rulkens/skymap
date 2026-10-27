@@ -26,6 +26,7 @@ import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { sinSunAngularRadius } from '../../../utils/occlusion/sinSunAngularRadius';
 import { sunVisibleFraction } from '../../../utils/occlusion/sunVisibleFraction';
 import { sceneBodyStates } from './sceneBodyStates';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function drawMeshBodiesOnRow(
   pass: GPURenderPassEncoder,

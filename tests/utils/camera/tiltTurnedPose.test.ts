@@ -5,6 +5,7 @@ import { tiltFromNadirRad } from '../../../src/utils/camera/tiltFromNadirRad';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 /** Right | up | forward at heading 0, tilt θ from nadir, eye on +Z. */
 function basisAtTilt(theta: number): Mat3 {
@@ -14,7 +15,12 @@ function basisAtTilt(theta: number): Mat3 {
 }
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
-  return { bodyId: 'earth', anchorLocalM: [0, 0, 0], eyeRelAnchorM: eyeM, basisLocal };
+  return {
+    bodyId: asSceneBodyId('earth'),
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: eyeM,
+    basisLocal,
+  };
 }
 
 function forwardOf(p: BodyFixedPose): Vec3 {

@@ -63,6 +63,7 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCamer
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
@@ -496,7 +497,7 @@ const BASE_DISTANCE = 500;
  * nominal Earth radius the framing oracle below reads. */
 const EARTH_ROW = {
   type: 'body' as const,
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0] as [number, number, number],
   radiusM: 6371000,
@@ -543,7 +544,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // The snapshot at the frame instant — the driver's target term must be THIS
     // (the live body), not the row's static positionMpc.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
 
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
@@ -645,7 +646,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // formula. At elapsed 0 the pose sits at the captured `from` distance; by
     // FOCUS_TWEEN_MS it has converged to the framing distance, monotonically.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
@@ -685,7 +686,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // body glides away from the pose its arrival framed it to.
     const marsRow = {
       type: 'body' as const,
-      id: 'mars',
+      id: asSceneBodyId('mars'),
       label: 'Mars',
       positionMpc: [0, 0, 0] as [number, number, number],
       driver: { ...bodyDriverGeometry('mars'), focusDistanceRadii: 7 },
@@ -712,7 +713,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // target so the zoom is honoured, instead of re-asserting the framing
     // distance every frame (snap-back).
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc

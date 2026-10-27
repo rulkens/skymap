@@ -58,11 +58,10 @@ import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
@@ -77,11 +76,11 @@ import {
 import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
-const EARTH = BODIES.get('earth')!;
+const BODIES = deriveBodyStates(CONST_J2000);
+const EARTH = BODIES.get(asSceneBodyId('earth'))!;
 const EARTH_ROW: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
   driver: bodyDriverGeometry('earth'),
@@ -100,7 +99,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     canvasPx: [100, 100],
     aspect: 1,
     steps: pendingToInputSteps(pending, [100, 100]),
-    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    bodies: deriveBodyStates(simDays),
     // No fixture here engages a real atlas, so the datum-only stub matches
     // production's own `?? 0` miss (F3a, spec §8.3).
     terrainHeightAt: () => 0,
@@ -191,14 +190,14 @@ describe('stepCameraRuntime', () => {
         pivotsOnFocusedBody: true,
         focus: EARTH_ROW,
         follow: null,
-        tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: 'earth' },
+        tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: asSceneBodyId('earth') },
         intent,
         ctx: {
           bodies: BODIES,
           poseBasis: B,
           upBasis: B,
           terrainHeightAt: datumOnlyTerrainHeight,
-          focusBodyId: 'earth',
+          focusBodyId: asSceneBodyId('earth'),
           pivot: pivotFraming(EARTH_ROW),
           viewportPx: [1000, 1000],
           fovYRad: Math.PI / 3,

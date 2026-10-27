@@ -6,8 +6,6 @@
  * the app does on load.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { Mat3 } from '../../@types/math/Mat3';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
@@ -24,7 +22,7 @@ export function linkedPoseToWorld(
   const framed = decodeFramedPose(value);
   if (framed === null) throw new Error(`linkedPoseToWorld: undecodable pose '${value}'`);
   const world = refoldTo(framed, 'absolute', {
-    bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    bodies: deriveBodyStates(simDays),
     poseBasis: basis,
     upBasis: basis,
     terrainHeightAt: datumOnlyTerrainHeight,

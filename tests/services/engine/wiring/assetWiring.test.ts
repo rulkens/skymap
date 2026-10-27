@@ -27,6 +27,7 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Core's half of the rows as the demand loop sees them; each Layer's own are
 // folded in beside these by `createLayers`, and tested beside their Layer.
@@ -74,7 +75,7 @@ function makeCtx(over: {
  * `simDays` — the same source the wiring reads.
  */
 function bodyPosOf(id: string, simDays: number = CONST_J2000): Readonly<Vec3> {
-  return deriveBodyStates(simDays).get(hostBodyId(id as never))!.positionMpc;
+  return deriveBodyStates(simDays).get(asSceneBodyId(hostBodyId(id as never)))!.positionMpc;
 }
 
 describe('ASSET_WIRING membership', () => {

@@ -29,7 +29,7 @@ import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHo
 import type { PerfWindow } from '../../../src/state/perf/@types/PerfWindow';
 import type { GpuTimingFrame } from '../../../src/@types/gpu/timing/GpuTimingFrame';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 vi.mock('../../../src/utils/url/isPerfMode', () => ({
   isPerfMode: vi.fn<() => boolean>(() => false),
@@ -265,9 +265,9 @@ describe('installPerfHook', () => {
     // body-parented vantage landed at the right world coordinates in the wrong
     // frame — Earth's atmosphere while parked over Mars.
     const framed: FramedCameraPose = {
-      frame: { body: 'mars' as BodyId },
+      frame: { body: asSceneBodyId('mars') },
       pose: {
-        bodyId: 'mars' as BodyId,
+        bodyId: asSceneBodyId('mars'),
         anchorLocalM: [711639.0023079902, 3140420.910021869, 1073467.4616577267],
         eyeRelAnchorM: [22764.552087539458, 95693.15918994322, -107497.79259981122],
         basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],

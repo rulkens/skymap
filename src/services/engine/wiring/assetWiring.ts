@@ -32,6 +32,7 @@ import type { TextureKind } from '../../../@types/data/TextureKind';
 import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
+import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
@@ -48,7 +49,8 @@ const externalFactory = (): never => {
  */
 function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly<Vec3> {
   const hostId = hostBodyId(id);
-  const state = deriveBodyStates(simDays).get(hostId);
+  // A texture key is not a scene id; the hosts all are, so a miss is the throw below.
+  const state = isSceneBodyId(hostId) ? deriveBodyStates(simDays).get(hostId) : undefined;
   if (state === undefined) {
     throw new Error(`bodyPosOf: texture host '${hostId}' has no derived body state`);
   }

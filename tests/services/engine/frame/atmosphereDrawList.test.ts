@@ -31,6 +31,7 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The derivation resolves each body's live position/orientation from the per-frame
 // body-state snapshot (keyed by id). Stub it to a map built from the SeededBody
@@ -59,7 +60,7 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
 // the real J2000 ones; refs stay stable across the mock + the assertions).
 type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededEarth = {
   ...SCENE_EARTH,
   positionMpc: EARTH_STATE.positionMpc,
@@ -131,7 +132,7 @@ function camRadiiOut(body: { positionMpc: Vec3; surface: BodySurface }, radii: n
 
 /** A body with no ATMOSPHERE_PARAMS row today — a synthetic id absent from the table. */
 const NO_ROW_PLANET: SeededPlanet = {
-  id: 'atmosphereless-test-body',
+  id: asSceneBodyId('atmosphereless-test-body'),
   label: 'No Atmosphere',
   positionMpc: SEEDED_EARTH.positionMpc,
   resolvePx: 3,

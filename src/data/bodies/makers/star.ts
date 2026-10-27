@@ -27,10 +27,11 @@ import { STAR_RESOLVE_PX } from '../starResolvePx';
 import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
 import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
 import type { StarBody } from '../../../@types/scene/StarBody';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 export function star(row: FamousStarRow): StarBody {
   return {
-    id: row.id,
+    id: asSceneBodyId(row.id),
     label: row.commonName,
     absMag: row.absMag,
     color: temperatureToLinearRgb(row.temperatureK),

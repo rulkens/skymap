@@ -5,6 +5,8 @@
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { meshBody } from '../../../data/bodies/makers/meshBody';
 import { meshGroundOffsetM } from '../../../utils/meshBodies/meshGroundOffsetM';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../utils/scene/asSurfaceSiteId';
 
 export const CURIOSITY: LayerBody = {
   // `presentFromIso`: the rover's landing (UTC).
@@ -19,8 +21,8 @@ export const CURIOSITY: LayerBody = {
     // Sol 5016 end-of-drive (RMC 125_198, ~2026-09-15), Gale crater:
     // mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints_current.json.
     site: {
-      id: 'curiosity',
-      hostId: 'mars',
+      id: asSurfaceSiteId('curiosity'),
+      hostId: asSceneBodyId('mars'),
       latDeg: -4.8246,
       lonDeg: 137.38848,
       altitudeM: meshGroundOffsetM('curiosity'),

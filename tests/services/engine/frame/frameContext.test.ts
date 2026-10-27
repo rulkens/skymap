@@ -43,13 +43,13 @@ import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -242,8 +242,8 @@ describe('deriveFrameContext — roll threads into camBasisWorld (P5)', () => {
     expect(ctxRolled.isReady).toBe(true);
     if (!ctx0.isReady || !ctxRolled.isReady) return;
 
-    const p0 = ctx0.bodyPose('earth');
-    const pRolled = ctxRolled.bodyPose('earth');
+    const p0 = ctx0.bodyPose(asSceneBodyId('earth'));
+    const pRolled = ctxRolled.bodyPose(asSceneBodyId('earth'));
     expect(p0).not.toBeNull();
     expect(pRolled).not.toBeNull();
     if (p0 === null || pRolled === null) return;
@@ -318,18 +318,18 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
     const basisLocal: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
     const bodyFixedPose: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [10, 20, 30],
       eyeRelAnchorM: [1, 2, 3],
       basisLocal,
     };
-    const arm: FramedCameraPose = { frame: { body: 'earth' }, pose: bodyFixedPose };
+    const arm: FramedCameraPose = { frame: { body: asSceneBodyId('earth') }, pose: bodyFixedPose };
 
     const ctx = deriveFrameContext(makeState(), frameInput(pose, { arm }));
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
 
-    const engaged = ctx.bodyPose('earth');
+    const engaged = ctx.bodyPose(asSceneBodyId('earth'));
     expect(engaged).not.toBeNull();
     if (engaged === null) return;
     // Hand-computed fold, independent of `poseFromBodyArm` under test elsewhere
@@ -340,14 +340,14 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
 
   it('provider A still serves every body that is not the engaged one', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
-    const marsState = deriveBodyStates(CONST_J2000).get('mars')!;
-    const earthState = deriveBodyStates(CONST_J2000).get('earth')!;
+    const marsState = deriveBodyStates(CONST_J2000).get(asSceneBodyId('mars'))!;
+    const earthState = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 
     // Engage 'earth'; 'mars' is untouched by the arm and must still resolve
     // through provider A, from the SAME world camera as the engaged body.
     const arm: FramedCameraPose = {
-      frame: { body: 'earth' },
-      pose: toBodyArm(pose, BASIS, BASIS, 'earth', earthState),
+      frame: { body: asSceneBodyId('earth') },
+      pose: toBodyArm(pose, BASIS, BASIS, asSceneBodyId('earth'), earthState),
     };
 
     const ctx = deriveFrameContext(makeState(), frameInput(pose, { arm }));
@@ -356,11 +356,7 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
 
     const { camPosMpc, camBasisWorld } = worldCamera(pose, PROJECTION);
     const expectedMars = bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: marsState });
-    // `bodyStates` is keyed by the raw orbital-element id string ('mars'), one
-    // level narrower than the closed `BodyId` union the seam's public surface
-    // exposes — the same cast `slabs.ts`/`liveWorldPose.ts` use at this
-    // boundary (see their headers).
-    const actualMars = ctx.bodyPose('mars' as BodyId);
+    const actualMars = ctx.bodyPose(asSceneBodyId('mars'));
     expect(actualMars).not.toBeNull();
     if (actualMars === null) return;
     // Provider A's own derivation, called directly — not a floor comparison:

@@ -10,7 +10,6 @@
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverActivity } from '../../../@types/engine/camera/DriverActivity';
@@ -43,6 +42,7 @@ import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -206,7 +206,7 @@ function framedClipArm(
   evaluated: FramedClipPose,
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
-  bodies: ReadonlyMap<BodyId, BodyState>,
+  bodies: ReadonlyMap<PositionedId, BodyState>,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading

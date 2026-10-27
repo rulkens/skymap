@@ -11,15 +11,15 @@
  * lower standard — only by the site's own.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
 import type { HostBody } from '../../@types/camera/HostBody';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { hostedFocusPivotM } from './hostedFocusPivotM';
 import { surfaceFloorM } from './surfaceFloorM';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export function hostedFocusOverHorizon(
   eyeM: Readonly<Vec3>,
-  focusBodyId: BodyId | null,
+  focusBodyId: PositionedId | null,
   host: HostBody,
 ): boolean {
   const p = hostedFocusPivotM(focusBodyId, host.id, host.radiusM);

@@ -12,7 +12,8 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
 
 const EARTH_RADIUS_M = 6_371_000;
 const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
@@ -55,7 +56,7 @@ describe('logCameraState', () => {
     // cam.distance and the altitude assertion below stays simple.
     const focus: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: cam.target,
       driver: bodyDriverGeometry('earth'),
@@ -100,7 +101,7 @@ describe('logCameraState', () => {
     // pivot) — cam.distance (5) must NOT leak into the derived block.
     const focus: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [3, 4, 0],
       driver: bodyDriverGeometry('earth'),
@@ -153,9 +154,9 @@ describe('logCameraState', () => {
       far: 100,
     });
     const bodyArm: FramedCameraPose = {
-      frame: { body: 'earth' },
+      frame: { body: asSceneBodyId('earth') },
       pose: {
-        bodyId: 'earth',
+        bodyId: asSceneBodyId('earth'),
         anchorLocalM: [0, 0, 0],
         eyeRelAnchorM: [0, 0, EARTH_RADIUS_M + 50],
         basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
@@ -192,8 +193,13 @@ describe('logCameraState', () => {
       far: 100,
     });
     const siteArm: FramedCameraPose = {
-      frame: { site: 'curiosity' as BodyId },
-      pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+      frame: { site: asSurfaceSiteId('curiosity') },
+      pose: {
+        siteId: asSurfaceSiteId('curiosity'),
+        headingRad: 0.7,
+        elevationRad: 0.2,
+        rangeM: 12,
+      },
     };
 
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, siteArm);

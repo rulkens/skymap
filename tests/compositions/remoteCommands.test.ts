@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parseRemoteCommand } from '../../src/compositions/parseRemoteCommand';
 import { runRemoteCommand } from '../../src/compositions/runRemoteCommand';
 import { RATE_LADDER } from '../../src/data/time/rateLadder';
+import { setControlScheme } from '../../src/state/settings/core/cameraControlsSlice';
 import { goHome } from '../../src/state/selection/goHome';
 import { advanceTour } from '../../src/state/tour/tourActions';
 import { startClip } from '../../src/state/camera/clipActions';
@@ -99,6 +100,19 @@ describe('timePause and timeResume', () => {
 
   it('rejects a malformed payload', () => {
     expect(run('timePause', 1)).toBeNull();
+  });
+});
+
+describe('controlSchemeSet', () => {
+  it('builds its actions', () => {
+    expect(run('controlSchemeSet', { scheme: 'openspace' })).toEqual([
+      setControlScheme('openspace'),
+    ]);
+  });
+
+  it('rejects anything but the two ids', () => {
+    expect(run('controlSchemeSet', { scheme: 'other' })).toBeNull();
+    expect(run('controlSchemeSet', 'openspace')).toBeNull();
   });
 });
 

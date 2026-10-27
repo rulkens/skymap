@@ -5,9 +5,10 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { SceneBodyId } from './SceneBodyId';
 
 export type MeshBody = {
-  readonly id: string;
+  readonly id: SceneBodyId;
   readonly label: string;
   /** Baked bounding sphere (hull + booms), metres — a footprint, NOT a surface:
    *  nothing about it is ground the camera can stand on. */

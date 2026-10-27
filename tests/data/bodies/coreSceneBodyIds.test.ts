@@ -21,6 +21,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const SIM_DAYS = 0;
 const STATES = deriveBodyStates(SIM_DAYS);
@@ -51,7 +52,7 @@ describe('the core, missions and earthScenes rosters', () => {
   ])(
     'every resident mesh body on a host row is drawn by exactly one mesh pass (%s)',
     (hostId, cameraAt) => {
-      const ctx = ctxAt(STATES.get(cameraAt)!.positionMpc, 1e12);
+      const ctx = ctxAt(STATES.get(asSceneBodyId(cameraAt))!.positionMpc, 1e12);
       const core = idsOf(drawableMeshBodies(STATE, ctx, hostId, CORE_SCENE_BODY_IDS));
       const missions = idsOf(drawableMeshBodies(STATE, ctx, hostId, MISSION_CRAFT_IDS));
       const whole = idsOf(

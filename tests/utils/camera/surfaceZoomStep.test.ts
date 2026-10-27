@@ -18,6 +18,7 @@ import type { GroundRadiusLookup } from '../../../src/@types/camera/GroundRadius
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const DATUM_M = 6_371_000;
 const PEAK_HEIGHT_M = 8000;
@@ -36,7 +37,7 @@ const peakField: GroundRadiusLookup = (p) => {
 describe('surfaceZoomStep', () => {
   it('anchors the wheel on the peak, not on the flat datum below it', () => {
     const arm: BodyFixedPose = {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [0, 0, DATUM_M + 100_000],
       basisLocal: NADIR,

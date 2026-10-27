@@ -22,7 +22,7 @@ import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/vi
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
+import { BODY_SOURCE_IDS } from '../../../../src/data/bodies/bodySourceIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
@@ -349,7 +349,7 @@ function makeState(
       },
       bodies: {
         items: Object.fromEntries(
-          BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+          BODY_SOURCE_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
         ),
       },
       // Overridable so a test can hide every category and pin the bug-fix

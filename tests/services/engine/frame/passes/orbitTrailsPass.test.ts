@@ -77,6 +77,7 @@ vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
   })),
 }));
 import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // Lets one test hand the pass a snapshot that differs from raw Kepler; unset, the
 // real map passes through untouched.
@@ -209,7 +210,7 @@ const FAR_DEPTH_VIEW_STUB = {} as GPUTextureView;
 function makeDepthRow(): Slab {
   return makeSlab({
     vp: Float64Array.from([2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 5, 6, 7, 1]),
-    frame: { kind: 'body-m', hostId: 'earth' },
+    frame: { kind: 'body-m', hostId: asSceneBodyId('earth') },
   });
 }
 
@@ -533,7 +534,7 @@ describe('orbitTrailsPass.draw', () => {
     // its J2000 spot. The Moon's geocentric trail must ride that moved Earth.
     const simDays = CONST_J2000 + 100;
     const snapshot = deriveBodyStates(simDays);
-    const earthPos = snapshot.get('earth')!.positionMpc;
+    const earthPos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
 
     // Park the camera AT Earth so the tiny geocentric Moon orbit projects large
     // and survives the apparent-size cull. Heliocentric planet orbits (centred
@@ -607,7 +608,7 @@ describe('orbitTrailsPass.draw', () => {
     const simDays = CONST_J2000 + 100;
     const real = deriveBodyStates(simDays);
     const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
-    const moonState = real.get('moon')!;
+    const moonState = real.get(asSceneBodyId('moon'))!;
     // 1e6 km off raw Kepler, asymmetric so a dropped axis shows.
     const shiftMpc = [1e6, -4e5, 2.5e5].map((km) => km * SCALE_UNITS.KM_TO_MPC);
     const stubbed: Vec3 = [
@@ -615,7 +616,10 @@ describe('orbitTrailsPass.draw', () => {
       moonState.positionMpc[1] + shiftMpc[1]!,
       moonState.positionMpc[2] + shiftMpc[2]!,
     ];
-    snapshotOverride.states = new Map(real).set('moon', { ...moonState, positionMpc: stubbed });
+    snapshotOverride.states = new Map(real).set(asSceneBodyId('moon'), {
+      ...moonState,
+      positionMpc: stubbed,
+    });
     try {
       // Eye 100 km off the body. The basis is packed in f32, whose ulp at the Moon's
       // ~4e5 km semi-major axis is 30 m, so 0.1 km is the tightest honest bound; the
@@ -660,8 +664,8 @@ describe('orbitTrailsPass.draw', () => {
       focusMpc[1] + kepler[1],
       focusMpc[2] + kepler[2],
     ];
-    snapshotOverride.states = new Map(real).set('moon', {
-      ...real.get('moon')!,
+    snapshotOverride.states = new Map(real).set(asSceneBodyId('moon'), {
+      ...real.get(asSceneBodyId('moon'))!,
       positionMpc: bodyMpc,
       orbit: stubbedOrbit,
     });
@@ -706,11 +710,11 @@ describe('orbitTrailsPass.draw', () => {
     // 5e-7·a is the honest bound there, not metres.
     const simDays = 2_444_556.490277778;
     const states = deriveBodyStates(simDays);
-    const saturnMpc = states.get('saturn')!.positionMpc;
+    const saturnMpc = states.get(asSceneBodyId('saturn'))!.positionMpc;
     const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
     for (const id of ['mimas', 'titan']) {
       const el = CORE_TRAIL_ELEMENTS.find((e) => e.id === id)!;
-      const { positionMpc: bodyMpc, orbit } = states.get(id)!;
+      const { positionMpc: bodyMpc, orbit } = states.get(asSceneBodyId(id))!;
       const semiMajorKm = orbit!.semiMajorMpc * kmPerMpc;
       const offset = keplerianEllipse(orbit!).centerOffsetMpc;
       const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
@@ -752,7 +756,7 @@ describe('orbitTrailsPass.draw', () => {
     const view = makeNear0View();
 
     const simDays = CONST_J2000 + 100;
-    const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const earthPos = deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc;
     const ctx = {
       snapshot: {
         meshBodies: [],

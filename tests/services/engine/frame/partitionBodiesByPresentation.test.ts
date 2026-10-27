@@ -14,6 +14,7 @@ import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/Po
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 6));
 const CAM: Vec3 = [0, 0, 0];
@@ -32,7 +33,7 @@ function radiusForPx(px: number): number {
 
 function planet(id: string, px: number): PositionedSceneBody {
   const body: PlanetBody = {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     surface: { datumRadiusM: radiusForPx(px), reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
@@ -43,7 +44,7 @@ function planet(id: string, px: number): PositionedSceneBody {
 
 function star(id: string, px: number): PositionedSceneBody {
   const body: StarBody = {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     absMag: 4.8,
     color: [1, 1, 1],

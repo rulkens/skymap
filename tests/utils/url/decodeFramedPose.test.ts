@@ -3,14 +3,15 @@ import { describe, it, expect } from 'vitest';
 import { decodeFramedPose } from '../../../src/utils/url/decodeFramedPose';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import { worldArmOf } from '../../fixtures/worldArmOf';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 // The Everest body arm from a real `l`-key dump (earth-everest.json).
 const EVEREST_ARM: FramedCameraPose = {
-  frame: { body: 'earth' },
+  frame: { body: asSceneBodyId('earth') },
   pose: {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [316016.6033591605, 5626973.168880969, 2985072.170314569],
     basisLocal: [
@@ -22,8 +23,8 @@ const EVEREST_ARM: FramedCameraPose = {
 };
 
 const SITE_ARM: FramedCameraPose = {
-  frame: { site: 'curiosity' as BodyId },
-  pose: { siteId: 'curiosity' as BodyId, headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
+  frame: { site: asSurfaceSiteId('curiosity') },
+  pose: { siteId: asSurfaceSiteId('curiosity'), headingRad: 1.2, elevationRad: 0.3, rangeM: 12.5 },
 };
 
 const WORLD_ARM: FramedCameraPose = {

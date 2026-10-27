@@ -8,6 +8,7 @@
 import type { MeshPresentation } from '../../@types/scene/MeshPresentation';
 import { MESH_ASSETS } from './meshAssets.generated';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
+import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
 /** Celestial bodies drawn from a mission shape model; the mesh key is the body id. */
 const SHAPE_MODEL_BODY_IDS = ['phobos', 'deimos'] as const;
@@ -15,7 +16,7 @@ const SHAPE_MODEL_BODY_IDS = ['phobos', 'deimos'] as const;
 function shapeModel(id: string): MeshPresentation {
   const asset = MESH_ASSETS[id];
   if (!asset) throw new Error(`meshPresentations: no MESH_ASSETS entry for '${id}'`);
-  return { id, meshKey: id, boundingRadiusM: asset.boundingRadiusM };
+  return { id: asSceneBodyId(id), meshKey: id, boundingRadiusM: asset.boundingRadiusM };
 }
 
 export const MESH_PRESENTATIONS: readonly MeshPresentation[] = [

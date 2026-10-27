@@ -92,6 +92,8 @@ Layer-to-Layer reads.
     `LayerCoreDeps` (2026-10-20, revising §3's "mesh slots" for `missions`).
 9. The inside-atmosphere row is declared by the body Layer as a tagged `slabs` row, like the lens row
    (P5). Core keeps no atmosphere code.
+11. The body work ends with a lean core: no body-related code stays in core unless it is shared
+    (2026-10-22). Contract gaps the survey found are each solved first, in their own prep (P6, P7).
 
 ## 6. Ground preparation
 
@@ -232,6 +234,110 @@ the band. P5 gives the atmosphere the same shape:
 
 P5 rides the `body` PR as its first commit, because the body Layer is the joint's only writer. A
 temporary core writer would only be thrown away.
+
+> **Open (2026-10-22 survey):** a `slabs` row anchored on a store body (`'earth'`) sits beside core's
+> own row for it (`frameContext.ts:82-85`), and `deriveSlabs` does not deduplicate, so P5 as written
+> mints a second Earth `body-m` row. Today's `inside` is also per view and gated on
+> `FOREGROUND_MAX_DISTANCE_MPC`, a pose and the sub-pixel cull, which a band does not carry; and core's
+> `bodyDrawRadiusM.ts:21-24` reads `ATMOSPHERE_PARAMS`. P5's shape is re-ruled before the body PR.
+
+**Packaging (user, 2026-10-22):** P6 and P8 ship together as one prep PR, before the body PR, each as
+its own commits. P7 lands in the body PR (R6): until the body Layer owns the tiles, any store writer
+for the readout would be deleted one PR later.
+
+### P6. The tile planner reads the rig views, not the canvas
+
+Ruling (user, 2026-10-22): the body PR ends with a lean core, holding no body code that is not
+shared. The surface-tile subsystem therefore moves (ruling 6), and its planner becomes a body
+`planners` row. A Layer planner receives `plan(snapshot, views, state)`
+(`FrameContentPlanner.d.ts:26-31`) and never the canvas view, which today's inline planner keys on
+(`runFrame.ts:259-332`): it picks the engaged body from `canvas.slabs`, gates and poses on `canvas`,
+then cuts across `views`. Under dome and XR rigs the canvas is not among `views` (`runFrame.ts:218-222`).
+
+The prep removes the canvas from tile planning, with no contract change:
+
+- The engaged body is the first tiling host (`SURFACE_TILE_REGISTRY`) with a `body-m` row in any
+  view. Mono: identical (`views` is `[canvas]`). Dome/XR: tiles engage when the body is in any drawn
+  face or eye, which is what those rigs draw.
+- Gate, pose, cut, release and the wake vote all read `views`; the LOD camera position is the first
+  engaged view's (every view shares the frame camera; an XR eye differs by centimetres).
+- The planning is one function, `planSurfaceTiles(tiles, views, state)`, returning the cut plus the
+  `awake` vote (`PlannerResult`), called from `runFrame` at today's point; the body PR's planner row
+  is a one-line closure over its runtime's subsystem. Core has no planner list
+  (`engine.ts:299` is `planners: []`), and adding one for a single interim row would be thrown away.
+- `prepareBodySurfaceFrame` leaves `earthPass.ts` (a pass file exporting a second symbol, read by the
+  planner, `surfaceTilesPass` and the old `surfaceTilesEngaged` gate) for its own file.
+- **No slab, no `PassState` (user, 2026-10-22).** Tile planning reads no slab: a slab is the
+  renderer's depth partition. The engaged body comes from `visibleBodyRows(snapshot, gate)`, the
+  visible-body cull extracted from `deriveView` (`visibleSlabBodies` over `slabBodyCandidates`, plus the
+  mesh-host re-admission), which `deriveView` and the chooser both call, so one rule decides "on
+  screen" for slabs and tiles alike. Each view's body-local frustum is built from
+  `FrameView.bodyPose` and `FrameView.frustum` in f64; `cutSurfaceTiles` reads only the x, y and w
+  rows of that matrix, so the slab's near/far band never mattered (verified). The signature is
+  `planSurfaceTiles(tiles, views, committedTier)`: surface radii and relief come from the static body
+  tables, positions from `view.snapshot.simDays`, and the committed globe tier is the one runtime fact.
+  The planner files sit together in `src/services/engine/frame/surfaceTilePlanner/`.
+
+Left for the body PR: the cut travels as the planner's value (`snapshot.plans`) once the planner is
+a registered row (P8 already moves it out of the subsystem's `setLastCut`/`getLastCut`), and the plan
+moves from `runFrame`'s position into the frame program's plan phase (the plan verifies no reader
+between the two depends on this frame's cut or fetch queue).
+
+### P8. One owner per tile fact, in the octree's shape
+
+Ruling (user, 2026-10-22): state the planner needs lives in one central place, every decision is a
+pure function, and nothing is duplicated. Today `surfaceTileSubsystem.ts` (631 lines) braids the
+stream's resources (manifest, atlases, LRU, key → slot, in-flight, failed) with the planner's decisions
+(engage gate, touch-then-allocate, body-switch release, `lastEngaged`, `lastCut`). A first draft moved
+residency into a plain-data runtime synced from the atlas by events and a fold; the user ruled it
+complected (two owners of the same facts).
+
+The shape is the star octree's (`planOctreeChunks` + `OctreeChunkStream`): `SurfaceTileStream` is the
+sole owner of residency and exposes a read-only `SurfaceTileResidency`; a pure
+`planSurfaceTiles(views, over, residency, committedTier)` returns the frame's `SurfaceTilePlan` (cut,
+touched, requests, manifest request, engage/keep/release verdict, `lastPlan`, `subCamera`, wake vote);
+`runFrame` stores the plan at `state.subsystems.surfaceTiles.plan` and calls `stream.apply(plan)`.
+Residency stays live (updated at upload, as today), so the camera reads a landed height tile the next
+frame. Position facts (`over`: nearest tiling body, camera position, distance) and view facts
+(`frame`: cameras, base level) are separate inputs, so looking up at street level keeps the position
+readout. Atlases release on a body switch or past twice the distance at which tiles would engage with
+the current lens (`engageDistanceM`, ruled 2026-10-27), never on visibility alone. The plan: `plans/completed/2026-10-22-body-layers-tile-planner-views.md`
+Tasks 4–5.
+
+### P7. The surface-tile debug readout publishes through `facts`
+
+The DebugPanel's surface-tile section (`SurfaceTileAtlasSectionContainer.tsx`, 53 lines, plus
+`DebugPanel/SurfaceTileAtlasSection.tsx`, 211) polls `engineHandleRef.current.debug.surfaceTiles()`
+every 250 ms (`engine.ts:504-505`, `EngineDebugHandle`). A Layer `ui` section is a prop-less
+`ComponentType` (`LayerUiSection.d.ts`), and every Layer debug section today is a tuning section
+that reads and writes settings only; this is the first live engine readout to move.
+
+Proposed shape, no contract change: the body Layer declares
+`facts: { surfaceTileDebug: SurfaceTileDebugSnapshot }` and publishes the snapshot through
+`LayerCoreDeps.publish` (into `state.engine.body`), throttled to the poll rate and only while the
+debug overlay that shows it is on; the section moves to the body Layer's `ui` `debug` slot and reads
+it with a selector. The store-boundary rule holds (React reads the store, never the engine); cost is
+one dispatch per 250 ms while debugging.
+
+Checked (2026-10-22):
+
+- The snapshot is small plain data (`SurfaceTileDebugSnapshot.d.ts`: counts, ≤ one row per level,
+  ≤ 16 key strings, `subCamera`), so it passes RTK's serializable check as is.
+- The gate is `selectDebugPanelOpen` (`App.tsx:52,118` mounts the panel on it); the Layer reads it
+  through `LayerCoreDeps.store`.
+- A second section has the same need: `TerrainPickMarkerTuningSectionContainer` reads
+  `engineHandleRef` → `debug.cameraDebug` for the terrain-pick marker, which also moves to `body`. P7
+  covers both.
+- `surfaceTileTerrain.ts:12` reads `getDebugSnapshot().subCamera` for the terrain seam; that read
+  moves with the subsystem and is not the panel's.
+- `engine.debug.surfaceTiles` (`engine.ts:504-505`, `EngineDebugHandle.d.ts:55`) deletes once the
+  section reads the store.
+- After P8 the snapshot composes `SurfaceTileStream.debugStats()` (residency counts) with the frame's
+  `SurfaceTilePlan` (`lastPlan`, cut count, `subCamera`). It is ≤ ~1 KB of plain JSON; building it
+  scans resident tiles (≤ ~1,280), so it is published only while the DebugPanel is open, throttled.
+
+The widening alternative was props on `LayerUiSection`, handing the whole engine handle to every
+Layer's debug UI.
 
 ### Growth, per touchpoint
 

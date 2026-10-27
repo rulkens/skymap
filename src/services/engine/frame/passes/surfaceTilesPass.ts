@@ -17,10 +17,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
-import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
-import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
 import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
 import type { SurfaceEffectInputs } from '../../../../@types/rendering/SurfaceEffectInputs';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -28,25 +25,22 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { BODY_AMBIENT_LIGHT } from '../../../../data/bodies/bodyAmbientLight';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
-import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
-import { prepareBodySurfaceFrame } from './earthPass';
+import { prepareBodySurfaceFrame } from '../prepareBodySurfaceFrame';
+import { surfaceTileSpecOf } from '../../../../utils/surfaceTiles/surfaceTileSpecOf';
 
 export const surfaceTilesPass: ContentPass = {
   name: 'surface-tiles',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;
-    // Cast: the registry stays a literal (a row typo is a compile error), which
-    // makes it non-indexable by the wider `BodyId`.
-    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<SlabHostId, SurfaceTileSpec>>)[
-      view.slab.frame.hostId
-    ];
-    if (spec === undefined || state.gpu.surfaceTileRenderer === null) return false;
+    const hostId = view.slab.frame.hostId;
+    const spec = surfaceTileSpecOf(hostId);
+    if (spec === null || state.gpu.surfaceTileRenderer === null) return false;
     if (spec.effects.length > 0 && state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const tiles = state.subsystems.surfaceTiles;
@@ -55,9 +49,9 @@ export const surfaceTilesPass: ContentPass = {
     // position reads it, so a cut drawn without it would be a flat sphere at
     // best and garbage at worst.
     return (
-      tiles.getLastCut().length > 0 &&
-      tiles.getAtlasView() !== null &&
-      tiles.getHeightAtlasView() !== null
+      tiles.plan.cut.length > 0 &&
+      tiles.stream.getAtlasView() !== null &&
+      tiles.stream.getHeightAtlasView() !== null
     );
   },
 
@@ -66,10 +60,9 @@ export const surfaceTilesPass: ContentPass = {
     const surfaceTiles = state.subsystems.surfaceTiles;
     if (tileRenderer === null || view.slab.frame.kind !== 'body-m') return;
     if (surfaceTiles === undefined || surfaceTiles === null) return;
-    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<SlabHostId, SurfaceTileSpec>>)[
-      view.slab.frame.hostId
-    ];
-    if (spec === undefined) return;
+    const hostId = view.slab.frame.hostId;
+    const spec = surfaceTileSpecOf(hostId);
+    if (spec === null) return;
     const maps = state.gpu.earthRenderer;
     if (spec.effects.length > 0 && maps === null) return;
 
@@ -111,7 +104,7 @@ export const surfaceTilesPass: ContentPass = {
           };
 
     tileRenderer.draw(pass, {
-      tiles: surfaceTiles.getLastCut(),
+      tiles: surfaceTiles.plan.cut,
       // The slab vp is already eye-relative by construction (body-m rows build
       // vp about the eye) — no rebase, unlike the old NEAR0 path.
       vp: view.vp,
@@ -128,8 +121,8 @@ export const surfaceTilesPass: ContentPass = {
       debugLodOverlay: state.settings.debug.overlays['surface-lod-overlay'],
       noDisplacement: state.settings.debug.overlays['terrain-no-displacement'],
       noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
-      surfaceAtlasView: surfaceTiles.getAtlasView()!,
-      heightAtlasView: surfaceTiles.getHeightAtlasView()!,
+      surfaceAtlasView: surfaceTiles.stream.getAtlasView()!,
+      heightAtlasView: surfaceTiles.stream.getHeightAtlasView()!,
     });
   },
 };

@@ -11,6 +11,7 @@ import { APP_EXHIBITS } from './appExhibits';
 import { clipRegistry } from '../data/animation/clips/clipRegistry';
 import { tourRegistry } from '../data/animation/tours/tourRegistry';
 import { RATE_LADDER } from '../data/time/rateLadder';
+import { setControlScheme } from '../state/settings/core/cameraControlsSlice';
 import { remotePairingToggled } from '../state/remote/remoteSlice';
 import { goHome } from '../state/selection/goHome';
 import { advanceTour, prevBeat, togglePause } from '../state/tour/tourActions';
@@ -113,6 +114,13 @@ export const REMOTE_COMMANDS: {
   },
   // `goLiveNowAction` reads the dome's own clocks, as the time bar's Now button does.
   timeGoLive: noPayloadRow(goLiveNowAction),
+  controlSchemeSet: {
+    parse: (raw) =>
+      isRecord(raw) && (raw.scheme === 'skymap' || raw.scheme === 'openspace')
+        ? { scheme: raw.scheme }
+        : undefined,
+    toActions: ({ scheme }) => [setControlScheme(scheme)],
+  },
   toggleSet: {
     parse: (raw) =>
       isRecord(raw) && typeof raw.id === 'string' && typeof raw.enabled === 'boolean'

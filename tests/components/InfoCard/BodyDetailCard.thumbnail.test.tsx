@@ -10,10 +10,11 @@ import { render } from '@testing-library/react';
 import { createElement } from 'react';
 import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const body = (id: string, label: string): BodyInfo => ({
   type: 'body',
-  id,
+  id: asSceneBodyId(id),
   label,
   positionMpc: [0, 0, 0],
 });

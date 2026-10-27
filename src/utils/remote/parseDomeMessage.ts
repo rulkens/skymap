@@ -53,6 +53,8 @@ const isStatus = (raw: unknown): boolean =>
   (raw.focus === null || (isRecord(raw.focus) && typeof raw.focus.id === 'string')) &&
   (raw.tour === null || isTour(raw.tour)) &&
   isTime(raw.time) &&
+  isRecord(raw.controls) &&
+  (raw.controls.scheme === 'skymap' || raw.controls.scheme === 'openspace') &&
   Array.isArray(raw.toggles) &&
   raw.toggles.every(isToggle);
 
