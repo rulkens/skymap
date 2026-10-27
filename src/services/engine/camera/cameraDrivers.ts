@@ -26,7 +26,10 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { tweenToClip } from './tweenToClip';
+import { focusMoveClip } from './focusMoveClip';
+import { focusMoveDurationMs } from './focusMoveDurationMs';
+import { focusMoveEase } from './focusMoveEase';
+import { EASE } from '../animation/ease';
 import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
@@ -314,13 +317,13 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     commitsOnEdge: 'register',
     isActive: (s) => s.camera.tween !== null,
     // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
-    // captured through; `tweenToClip` memoises by reference so
+    // captured through; `focusMoveClip` memoises by reference so
     // `evaluateClip`'s compile cache reuses tracks across frames.
     pose: (ctx, mem) => {
       const s = ctx.state;
       const tween = s.camera.tween!;
       const pinned = ORIENTATION_FRAMES[tween.frame];
-      const evaluated = evaluateFramedClip(tweenToClip(tween), ctx.elapsedMs / 1000, {
+      const evaluated = evaluateFramedClip(focusMoveClip(tween), ctx.elapsedMs / 1000, {
         frameBasis: pinned,
         bodies: ctx.bodies,
         playback: tween,
@@ -330,8 +333,8 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       if (offset === undefined || !isWorldArm(framed))
         return { pose: framed, memory: settledMemory(mem) };
       // Clips author no offset channel, so the start pose's eases out here, on
-      // the same easeOutCubic `tweenToClip` gives every other term.
-      const keep = 1 - easeOutCubic(ctx.elapsedMs / tween.durationMs);
+      // the same ease the clip gives every other term.
+      const keep = 1 - EASE[focusMoveEase(tween)](ctx.elapsedMs / focusMoveDurationMs(tween));
       const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
         pose: absoluteArm({ ...framed.pose, lookOffset }),

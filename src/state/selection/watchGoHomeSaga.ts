@@ -82,8 +82,7 @@ export function* watchGoHomeSaga() {
       startCameraTween({
         from: runtime.from,
         to: bodyHomePose(EARTH_REF.id, simDays, runtime.fovYRad, frameBasis),
-        durationMs: FOCUS_TWEEN_MS,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: FOCUS_TWEEN_MS, ease: 'easeOutCubic' },
         frame,
       }),
     );

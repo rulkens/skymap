@@ -65,7 +65,7 @@ describe('watchFlyToLonLatSaga', () => {
     const tween = tweenOf(puts[0]);
     expect(tween.from).toBe(FROM);
     expect(tween.to.target).toEqual([...EARTH_POS]);
-    expect(tween.durationMs).toBe(FLY_TO_LON_LAT_TWEEN_MS);
+    expect(tween.motion.durationMs).toBe(FLY_TO_LON_LAT_TWEEN_MS);
   });
 
   it('over another body: focuses it first, then tweens to its centre', () => {
@@ -73,7 +73,7 @@ describe('watchFlyToLonLatSaga', () => {
     expect(puts[0]).toEqual(updateSelectionFocus({ type: 'body', id: asSceneBodyId('mars') }));
     const tween = tweenOf(puts[1]);
     expect(tween.to.target).toEqual([...BODIES.get(asSceneBodyId('mars'))!.positionMpc]);
-    expect(tween.durationMs).toBe(250);
+    expect(tween.motion.durationMs).toBe(250);
   });
 
   it('does nothing before the camera exists', () => {

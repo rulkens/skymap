@@ -100,8 +100,7 @@ export function* watchFlyToLonLatSaga() {
       startCameraTween({
         from: runtime.from,
         to: to.pose,
-        durationMs,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs, ease: 'easeOutCubic' },
         frame,
       }),
     );

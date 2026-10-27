@@ -28,7 +28,7 @@ import { composeControlSchemes } from '../../../../src/services/engine/camera/co
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
-import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
+import { focusMoveClip } from '../../../../src/services/engine/camera/focusMoveClip';
 import {
   UNSTARTED_EPOCHS,
   advanceEpoch,
@@ -81,8 +81,7 @@ const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1.5, pitch: 0.1, distanc
 const TWEEN_DESC: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
   to: { target: [1, 2, 3], yaw: 2, pitch: 0.2, distance: 10 },
-  durationMs: 1000,
-  easing: 'easeOutCubic',
+  motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
   // Matches the store's default settings.orientation, so the tween row's
   // re-encode is the identity branch (from === to) and the raw evaluateClip
   // output is unchanged — the fixture other tests compare against verbatim.
@@ -137,7 +136,7 @@ describe('CAMERA_DRIVERS — pose functions', () => {
   }
 
   it('tween row converts ms→sec correctly', () => {
-    // Oracle independent of evaluateClip / tweenToClip — a 1000× unit slip
+    // Oracle independent of evaluateClip / easedFocusClip — a 1000× unit slip
     // (passing elapsedMs instead of elapsedMs/1000) would saturate the clip to
     // its `to` pose (500 s >> 1 s duration), making distance == 1000.
     // The midpoint + bounds assertions below catch that slip.
@@ -154,8 +153,7 @@ describe('CAMERA_DRIVERS — pose functions', () => {
     const UNIT_SLIP_DESC: CameraTweenDescriptor = {
       from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
       to: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1000 },
-      durationMs: 1000,
-      easing: 'easeOutCubic',
+      motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
       frame: DEFAULT_ORIENTATION,
     };
 
@@ -254,8 +252,7 @@ describe('CAMERA_DRIVERS — tween pins the frame it started under', () => {
   const TWEEN_WITH_AIM: CameraTweenDescriptor = {
     from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
     to: { target: [0, 0, 0], yaw: 0.7, pitch: 0.2, distance: 50 },
-    durationMs: 1000,
-    easing: 'easeOutCubic',
+    motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
     frame: 'ecliptic',
   };
 
@@ -387,7 +384,7 @@ describe('pickWinner — precedence', () => {
 
 describe("the winner's elapsed", () => {
   it('passes tween elapsed to the tween driver pose', () => {
-    // The tween driver evaluates via evaluateClip(tweenToClip(desc), elapsedSec).
+    // The tween driver evaluates via evaluateClip(focusMoveClip(desc), elapsedSec).
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
@@ -398,12 +395,12 @@ describe("the winner's elapsed", () => {
     // The tween's arrival frame: elapsed 0.
     const pose0 = runAtWinner(drivers, s, epochs, nowMs).pose;
     // Roll rides beside the clip channels; neither endpoint carries one.
-    expect(pose0).toEqual(absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 0), roll: 0 }));
+    expect(pose0).toEqual(absoluteArm({ ...evaluateClip(focusMoveClip(TWEEN_DESC), 0), roll: 0 }));
 
     // 200 ms later on the same epoch: elapsedMs = 200.
     const pose200 = runAtWinner(drivers, s, epochs, nowMs + 200).pose;
     expect(pose200).toEqual(
-      absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000), roll: 0 }),
+      absoluteArm({ ...evaluateClip(focusMoveClip(TWEEN_DESC), 200 / 1000), roll: 0 }),
     );
   });
 

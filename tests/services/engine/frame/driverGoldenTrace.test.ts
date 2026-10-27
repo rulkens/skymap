@@ -191,8 +191,7 @@ function runScript(): Trace {
     startCameraTween({
       from,
       to: { ...from, yaw: from.yaw + 0.4, distance: from.distance * 1.5 },
-      durationMs: TWEEN_MS,
-      easing: 'easeInOutCubic',
+      motion: { style: 'eased', durationMs: TWEEN_MS, ease: 'easeOutCubic' },
       frame: DEFAULT_ORIENTATION,
     }),
   );

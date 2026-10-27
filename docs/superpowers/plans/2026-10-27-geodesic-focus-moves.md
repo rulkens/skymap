@@ -193,20 +193,20 @@ review: yes
   - `flyToLonLat` uses its own value.
 - **Behaviour.** Identical to today.
 
-- [ ] `npm run move-files -- src/services/engine/camera/tweenToClip.ts src/services/engine/camera/easedFocusClip.ts`
+- [x] `npm run move-files -- src/services/engine/camera/tweenToClip.ts src/services/engine/camera/easedFocusClip.ts`
       (and the `tests/` mirror if one exists), then rename the function with `npm run refactor`.
-- [ ] Test `easedFocusClip honours motion.ease`. With `ease: 'linear'`, from distance 10 to
+- [x] Test `easedFocusClip honours motion.ease`. With `ease: 'linear'`, from distance 10 to
       1000 over 1000 ms, assert distance at 500 ms is `505`. This would have failed before: the
       field was ignored.
-- [ ] Migrate the 9 fixture files and the 3 producer literals to `motion`. These are type-driven
+- [x] Migrate the 9 fixture files and the 3 producer literals to `motion`. These are type-driven
       edits and need no new tests. `focusTweenDescriptor.test.ts:46-52` asserts
       `d.motion === motion`; it no longer restates constants.
-- [ ] Implement the types, the table, the three lookup functions, and the reader and producer
+- [x] Implement the types, the table, the three lookup functions, and the reader and producer
       changes.
-- [ ] Run `npm run typecheck:fast`, then
+- [x] Run `npm run typecheck:fast`, then
       `npx vitest run tests/services/engine/camera tests/state/camera tests/state/selection tests/services/engine/frame`
       → green.
-- [ ] Commit: `refactor(camera): the tween plan carries a motion; one row per style`.
+- [x] Commit: `refactor(camera): the tween plan carries a motion; one row per style`.
 
 ### Task 3: port the geodesic maths
 

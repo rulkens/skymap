@@ -283,8 +283,7 @@ describe('runFrame — the regime fold', () => {
       startCameraTween({
         from: FROM,
         to: TO,
-        durationMs: 4000,
-        easing: 'linear',
+        motion: { style: 'eased', durationMs: 4000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );

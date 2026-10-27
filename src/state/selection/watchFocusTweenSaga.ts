@@ -29,6 +29,7 @@ import { selectStructureBulk } from '../engine/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -95,7 +96,10 @@ export function* watchFocusTweenSaga() {
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
       const frame = yield* select(selectOrientation);
-      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, frame)));
+      const motion = { style: 'eased', durationMs: FOCUS_TWEEN_MS, ease: 'easeOutCubic' } as const;
+      yield* put(
+        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
+      );
     }),
   );
 }

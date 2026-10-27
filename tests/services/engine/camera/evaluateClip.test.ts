@@ -7,7 +7,7 @@
  *
  * The final section ('focus tween = one-segment clip') verifies that a
  * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance is
- * reproduces the focus-tween motion exactly — `evaluateClip` via `tweenToClip`
+ * reproduces the focus-tween motion exactly — `evaluateClip` via `easedFocusClip`
  * is the single camera-evaluation path for both scripted clips and focus tweens.
  */
 
@@ -25,9 +25,10 @@ import {
   flyPath,
   atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
-import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
+import { easedFocusClip } from '../../../../src/services/engine/camera/easedFocusClip';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -325,7 +326,7 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 // A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
 // with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
 // tweens use linear distance interpolation, not log-space). These four cases
-// These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
+// These four cases pin that `evaluateClip` via `easedFocusClip` reproduces the
 // focus-tween motion exactly — the single camera-evaluation path for scripted
 // clips and tweens.
 //
@@ -488,14 +489,13 @@ describe('roll channel', () => {
   });
 
   it("a camera tween lands on the descriptor's target roll", () => {
-    const desc = {
+    const desc: CameraTweenDescriptor = {
       from: { ...TWEEN_FROM, roll: 0.1 },
       to: { ...TWEEN_TO, roll: 1.2 },
-      durationMs: DURATION_MS,
-      easing: 'easeOutCubic' as const,
-      frame: 'equatorial' as const,
+      motion: { style: 'eased', durationMs: DURATION_MS, ease: 'easeOutCubic' },
+      frame: 'equatorial',
     };
-    const data = tweenToClip(desc);
+    const data = easedFocusClip(desc);
     expect(evaluateClip(data, 0).roll).toBe(0.1);
     expect(evaluateClip(data, DURATION_SEC).roll).toBe(1.2);
   });
