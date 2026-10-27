@@ -124,10 +124,11 @@ never clash with `base` or each other. This is why `spin('yaw')` +
 `oscillate('pitch')` + `rate('distance')` coexist freely, but `all([dollyTo(…),
 dollyTo(…)])` does not.
 
-**A `flyPath` is a composite base writer** — it drives all four channels over its
-window. `compileClip` runs a companion check, `validatePathExclusivity`, that throws
-if any `set`/`setVec`/`spin` base segment overlaps a `flyPath` window. So don't also
-drive the camera with `dollyTo` / `moveTarget` / `set` inside a `flyPath`'s window.
+**A `flyPath` is a composite base writer** — it declares and drives `target`,
+`distance`, `yaw` and `pitch` over its window. `compileClip` runs a companion check,
+`validateCompositeExclusivity`, that throws if any `set`/`setVec`/`spin` base segment
+on a declared channel overlaps the window. So don't also drive the camera with
+`dollyTo` / `moveTarget` / `set` inside a `flyPath`'s window; a `roll` tween is fine.
 
 > **Velocity does not cross the clip boundary.** The handoff between clips (and to
 > the resting camera) is a single `CameraPose` — position only. A clip's residual

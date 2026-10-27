@@ -113,7 +113,8 @@ import { sameFrame } from './rungs/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
-import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
+import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 // ---------------------------------------------------------------------------
@@ -455,21 +456,26 @@ function evaluateBaseVec3(
 }
 
 // ---------------------------------------------------------------------------
-// Path layer — a flyPath supersedes the base layer for every channel but roll.
+// Composite layer — a composite supersedes the base layer for the channels it declares.
 // ---------------------------------------------------------------------------
 
 /**
- * activePathAt — the path that governs the base layer at time `t`, or null.
+ * governingCompositeAt — the composite that writes `ch` at time `t`, or null.
  *
- * A path governs from its `startSec` onward (not just within its window): once a
- * flythrough has started, it holds its final pose after `endSec` so the camera
- * does not snap back to the start pose during a trailing `hold`. When clips
- * chain multiple paths, the most recently started one wins.
+ * A composite governs from its `startSec` onward (not just within its window):
+ * it holds its final value after `endSec` so the camera does not snap back to
+ * the start pose during a trailing `hold`. Per channel, the most recently
+ * started composite that declares it wins.
  */
-function activePathAt(paths: PathTrack[], t: number): PathTrack | null {
-  let best: PathTrack | null = null;
-  for (const p of paths) {
-    if (p.startSec <= t && (best === null || p.startSec > best.startSec)) best = p;
+function governingCompositeAt(
+  tracks: readonly CompositeTrack[],
+  ch: Channel,
+  t: number,
+): CompositeTrack | null {
+  let best: CompositeTrack | null = null;
+  for (const c of tracks) {
+    const later = best === null || c.startSec > best.startSec;
+    if (c.startSec <= t && later && c.channels.includes(ch)) best = c;
   }
   return best;
 }
@@ -592,7 +598,7 @@ function originOfLeg(
 // ---------------------------------------------------------------------------
 
 /**
- * evaluateBaseAt — the base layer (or the path that supersedes it) at `t`,
+ * evaluateBaseAt — the base layer (or the composites that supersede it) at `t`,
  * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
  * opening leg, so every segment counts and the walk is the pre-frames one.
  * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
@@ -608,23 +614,31 @@ function evaluateBaseAt(
   const { atSec, pose: start } = origin;
   const window: LegWindow =
     atSec === -Infinity && beforeSec === Infinity ? WHOLE_CLIP : { fromSec: atSec, beforeSec };
-  // A path authors no roll; `validatePathExclusivity` keeps roll writers out of
-  // its window, so this holds the roll the path flew in with.
-  const roll = evaluateBaseScalar(baseTracks['roll'], start.roll ?? 0, 'roll', t, window);
-  const path = activePathAt(compiled.pathTracks, t);
-  if (path !== null) {
-    // Clamp into the path's own window: before it starts we never get here
-    // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
-    const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
-    const pose = path.sample(localSec);
-    return { target: pose.target, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance, roll };
-  }
+  // Channels governed by the same composite share one sample (one spline eval per frame).
+  let sampledTrack: CompositeTrack | null = null;
+  let sampled: CompositeSample = {};
+  const fromComposite = <K extends keyof CompositeSample>(ch: K): CompositeSample[K] => {
+    const track = governingCompositeAt(compiled.compositeTracks, ch, t);
+    if (track === null) return undefined;
+    if (track !== sampledTrack) {
+      // Clamp into the track's own window: after it ends, hold the final value.
+      const span = track.endSec - track.startSec;
+      sampledTrack = track;
+      sampled = track.sample(Math.min(Math.max(t - track.startSec, 0), span));
+    }
+    return sampled[ch];
+  };
   return {
-    roll,
-    target: evaluateBaseVec3(baseTracks['target'], start.target, t, window),
-    yaw: evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
-    pitch: evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
-    distance: evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
+    roll: evaluateBaseScalar(baseTracks['roll'], start.roll ?? 0, 'roll', t, window),
+    target:
+      fromComposite('target') ?? evaluateBaseVec3(baseTracks['target'], start.target, t, window),
+    yaw: fromComposite('yaw') ?? evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
+    pitch:
+      fromComposite('pitch') ??
+      evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
+    distance:
+      fromComposite('distance') ??
+      evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
   };
 }
 

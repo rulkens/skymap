@@ -9,7 +9,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
+import { validateCompositeExclusivity } from '../../../../src/services/engine/animation/validateCompositeExclusivity';
+import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { CompositeTrack } from '../../../../src/@types/animation/compiledClip/CompositeTrack';
 import {
+  tween,
   dollyTo,
   moveTargetId,
   spinToId,
@@ -278,11 +283,11 @@ describe('compileClip frameTo', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 9 — flyPath compiles to a path track; guards its invariants
+// Test 9 — flyPath compiles to a composite track; guards its invariants
 // ---------------------------------------------------------------------------
 
 describe('compileClip flyPath', () => {
-  it('compiles a resolved flyPath to one path track spanning its window', () => {
+  it('compiles a resolved flyPath to one composite track spanning its window', () => {
     const compiled = compileClip({
       start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
       // linger:0 opts out of the default dwell so the window stays a flat 6s.
@@ -290,9 +295,9 @@ describe('compileClip flyPath', () => {
         flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 100)], { over: 6, linger: 0 }),
       ],
     });
-    expect(compiled.pathTracks).toHaveLength(1);
-    expect(compiled.pathTracks[0]!.startSec).toBe(0);
-    expect(compiled.pathTracks[0]!.endSec).toBe(6);
+    expect(compiled.compositeTracks).toHaveLength(1);
+    expect(compiled.compositeTracks[0]!.startSec).toBe(0);
+    expect(compiled.compositeTracks[0]!.endSec).toBe(6);
     expect(compiled.durationSec).toBe(6);
   });
 
@@ -305,13 +310,41 @@ describe('compileClip flyPath', () => {
   });
 
   it('throws when a base writer overlaps the flyPath window (composite exclusivity)', () => {
-    // A flyPath owns all camera channels for [0,4); a concurrent dollyTo on
-    // `distance` in the same window is a clash, caught at compile time.
+    // A flyPath owns `distance` for [0,4); a concurrent dollyTo on it in the
+    // same window is a clash, caught at compile time.
     expect(() =>
       compileClip({
         start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
         timeline: [all([flyPath([atPoint([10, 0, 0], 10)], { over: 4 }), dollyTo(50, 4)])],
       }),
-    ).toThrow(/flyPath window/);
+    ).toThrow(/composite window .* overlaps a base 'distance' writer/);
+  });
+
+  it('a roll tween inside a flyPath window compiles and evaluates', () => {
+    // A flyPath declares no roll, so a concurrent roll writer is not a clash.
+    const data: ClipData = {
+      start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+      timeline: [
+        all([
+          flyPath([atPoint([10, 0, 0], 10)], { over: 4, linger: 0 }),
+          tween('roll', { to: 0.8, over: 4, ease: 'linear' }),
+        ]),
+      ],
+    };
+    expect(() => compileClip(data)).not.toThrow();
+    expect(evaluateClip(data, 2).roll).toBeCloseTo(0.4, 9);
+  });
+
+  it('rejects a composite whose sample keys differ from its channels', () => {
+    const baseTracks = { distance: [], yaw: [], pitch: [], roll: [], target: [] };
+    const track: CompositeTrack = {
+      startSec: 0,
+      endSec: 1,
+      channels: ['target', 'distance'],
+      sample: () => ({ target: [0, 0, 0], distance: 1, yaw: 0 }),
+    };
+    expect(() => validateCompositeExclusivity(baseTracks, [track])).toThrow(
+      /declares channels \[target, distance\] but its sample writes \[target, distance, yaw\]/,
+    );
   });
 });

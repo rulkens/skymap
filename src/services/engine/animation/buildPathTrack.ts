@@ -1,5 +1,5 @@
 /**
- * buildPathTrack — compile a `flyPath`'s waypoints into an evaluable `PathTrack`.
+ * buildPathTrack — compile a `flyPath`'s waypoints into an evaluable `CompositeTrack`.
  *
  * This is where the flythrough cinematography lives. It runs ONCE at clip
  * compile time and returns a `sample(localSec)` closure the per-frame evaluator
@@ -61,7 +61,8 @@
  */
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
+import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -86,7 +87,7 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from './pathDefaults';
 import { EASE } from './ease';
-import type { PathSample } from '../../../@types/animation/compiledClip/PathSample';
+import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
 type AtWaypoint = {
@@ -218,7 +219,10 @@ function passByDirVec(
   }
 }
 
-export function buildPathTrack(params: BuildParams): PathTrack {
+// A flyPath's arc length couples all four aim/position channels; roll stays with the base layer.
+const FLY_PATH_CHANNELS: readonly Channel[] = ['target', 'distance', 'yaw', 'pitch'];
+
+export function buildPathTrack(params: BuildParams): CompositeTrack<Required<CompositeSample>> {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
@@ -606,7 +610,7 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
-  const sample = (localSec: number): PathSample => {
+  const sample = (localSec: number): Required<CompositeSample> => {
     const t = paramAtLocalSec(localSec);
     const pose = poseAtTau(t);
     const aim = aheadAim(localSec, pose.yaw, pose.pitch);
@@ -631,5 +635,5 @@ export function buildPathTrack(params: BuildParams): PathTrack {
     };
   };
 
-  return { startSec, endSec: startSec + totalSec, sample };
+  return { startSec, endSec: startSec + totalSec, channels: FLY_PATH_CHANNELS, sample };
 }

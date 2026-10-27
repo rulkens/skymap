@@ -66,11 +66,12 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
+import { validateCompositeExclusivity } from './validateCompositeExclusivity';
 import { buildPathTrack } from './buildPathTrack';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
 import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
-import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
 // ---------------------------------------------------------------------------
@@ -92,7 +93,7 @@ type Accum = {
   readonly velRamps: VelRamp[];
   readonly oscTracks: OscTrack[];
   readonly cues: SceneCue[];
-  readonly pathTracks: PathTrack[];
+  readonly compositeTracks: CompositeTrack[];
   // The resolved clip start pose — a `flyPath` flies out of it (it is the first
   // spline knot), so the walk needs it when it reaches a `flyPath` leaf.
   readonly start: CameraPose;
@@ -217,7 +218,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         passBy: effect.passBy,
         frameBasis: acc.frameBasis,
       });
-      acc.pathTracks.push(track);
+      acc.compositeTracks.push(track);
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
       // track's — not the authored `over` (the cruise budget). Return it so the
       // cursor and the single-writer window land on the true end.
@@ -330,7 +331,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velRamps: [],
     oscTracks: [],
     cues: [],
-    pathTracks: [],
+    compositeTracks: [],
     start,
     frameBasis,
   };
@@ -355,7 +356,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   ) as Record<Channel, BaseSegment[]>;
 
   validateSingleWriter(baseTracks);
-  validatePathExclusivity(baseTracks, acc.pathTracks);
+  validateCompositeExclusivity(baseTracks, acc.compositeTracks);
 
   return {
     start,
@@ -364,34 +365,6 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
     cues: sortedCues,
-    pathTracks: acc.pathTracks,
+    compositeTracks: acc.compositeTracks,
   };
-}
-
-/**
- * validatePathExclusivity — a `flyPath` is a COMPOSITE base writer: it drives
- * every camera channel over its window (roll it only holds). So just like two `set`s on the same
- * channel clash, a base segment that overlaps a path window is a clash too — the
- * evaluator would let the path silently win, which is a footgun, not a feature.
- * Catch it at registration time with the same loud-throw discipline as
- * `validateSingleWriter`.
- */
-function validatePathExclusivity(
-  baseTracks: Record<Channel, BaseSegment[]>,
-  pathTracks: PathTrack[],
-): void {
-  for (const path of pathTracks) {
-    for (const ch of ALL_CHANNELS) {
-      for (const seg of baseTracks[ch]) {
-        const overlaps = seg.startSec < path.endSec && path.startSec < seg.endSec;
-        if (overlaps) {
-          throw new Error(
-            `flyPath window [${path.startSec}, ${path.endSec}) overlaps a base '${ch}' writer ` +
-              `[${seg.startSec}, ${seg.endSec}). A flyPath owns all camera channels for its window — ` +
-              `move the conflicting camera action outside it.`,
-          );
-        }
-      }
-    }
-  }
 }

@@ -2,7 +2,7 @@
  * buildPathTrack — unit tests for the `flyPath` compile-time builder.
  *
  * The builder turns resolved waypoints + a start pose + a total duration + a
- * global ease into a `PathTrack` whose `sample(localSec)` returns the camera
+ * global ease into a `CompositeTrack` whose `sample(localSec)` returns the camera
  * pose at that instant. The camera (EYE) flies a centripetal Catmull-Rom
  * through `[liveEye, ...waypoints]`, looking down the path; the returned
  * `target` is the look-at point DERIVED from eye + aim, so to test the path we
@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildPathTrack } from '../../../../src/services/engine/animation/buildPathTrack';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { PathSample } from '../../../../src/@types/animation/compiledClip/PathSample';
+import type { CompositeSample } from '../../../../src/@types/animation/compiledClip/CompositeSample';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';
@@ -34,7 +34,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 
 /** Reconstruct the eye position from a pose via the orbit convention. */
-function eyeOf(p: PathSample): Vec3 {
+function eyeOf(p: Required<CompositeSample>): Vec3 {
   const cp = Math.cos(p.pitch);
   const dir: Vec3 = [cp * Math.sin(p.yaw), Math.sin(p.pitch), cp * Math.cos(p.yaw)];
   return [
@@ -49,7 +49,7 @@ function eyeOf(p: PathSample): Vec3 {
  * `target + distance · (frameBasis · yawPitchToDir(yaw, pitch))`, mirroring
  * `updatePosition`'s tight column-major product over the 9-float registry `Mat3`.
  */
-function eyeUnderFrame(p: PathSample, frameBasis: Mat3): Vec3 {
+function eyeUnderFrame(p: Required<CompositeSample>, frameBasis: Mat3): Vec3 {
   const cp = Math.cos(p.pitch);
   const x = cp * Math.sin(p.yaw);
   const y = Math.sin(p.pitch);
@@ -506,7 +506,7 @@ describe('buildPathTrack', () => {
     ];
 
     /** The camera's LOOK direction (target − eye, i.e. −dir) from a pose. */
-    const lookOf = (s: PathSample): Vec3 => {
+    const lookOf = (s: Required<CompositeSample>): Vec3 => {
       const cp = Math.cos(s.pitch);
       return [-cp * Math.sin(s.yaw), -Math.sin(s.pitch), -cp * Math.cos(s.yaw)];
     };
@@ -584,7 +584,7 @@ describe('buildPathTrack', () => {
       { at: [0, 0, 100] as Vec3, distance: 10 }, // interior corner: fly +Z in, +X out
       { at: [100, 0, 100] as Vec3, distance: 10 }, // destination after the turn
     ];
-    const lookOf = (s: PathSample): Vec3 => {
+    const lookOf = (s: Required<CompositeSample>): Vec3 => {
       const cp = Math.cos(s.pitch);
       return [-cp * Math.sin(s.yaw), -Math.sin(s.pitch), -cp * Math.cos(s.yaw)];
     };
@@ -660,9 +660,9 @@ describe('buildPathTrack', () => {
     const closest = (
       track: ReturnType<typeof buildPathTrack>,
       centre: Vec3,
-    ): { dist: number; sample: PathSample } => {
+    ): { dist: number; sample: Required<CompositeSample> } => {
       let best = Infinity;
-      let at: PathSample = track.sample(0);
+      let at: Required<CompositeSample> = track.sample(0);
       for (let i = 0; i <= 2000; i++) {
         const s = track.sample((i / 2000) * 20);
         const e = eyeOf(s);

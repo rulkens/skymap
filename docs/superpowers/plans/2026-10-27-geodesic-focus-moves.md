@@ -115,20 +115,20 @@ review: yes
 - **The one behaviour change.** A roll tween inside a `flyPath` window now compiles and
   evaluates instead of throwing.
 
-- [ ] Rename the types and symbols, starting with
+- [x] Rename the types and symbols, starting with
       `npm run move-files -- --dry src/@types/animation/compiledClip/PathTrack.d.ts src/@types/animation/compiledClip/CompositeTrack.d.ts`.
       Do the same for `PathSample.d.ts`, then run `npm run refactor` (rename) for `PathTrack`,
       `PathSample` and `pathTracks`. Grep afterwards for leftovers, including in comments.
       `buildPathTrack` keeps its name, because it builds a flyPath's composite.
-- [ ] Test `compileClip > a roll tween inside a flyPath window compiles and evaluates`. Assert
+- [x] Test `compileClip > a roll tween inside a flyPath window compiles and evaluates`. Assert
       that evaluated roll at mid-window equals the tween's value there; it threw before this task.
-- [ ] Test `compileClip > rejects a composite whose sample keys differ from its channels`. Use a
+- [x] Test `compileClip > rejects a composite whose sample keys differ from its channels`. Use a
       hand-built track through the exported validator, or through whatever seam the
       implementation exposes.
-- [ ] Implement the declared channels, the per-channel overlay and the validator.
-- [ ] Run `npx vitest run tests/services/engine/animation tests/services/engine/camera/evaluateClip` →
+- [x] Implement the declared channels, the per-channel overlay and the validator.
+- [x] Run `npx vitest run tests/services/engine/animation tests/services/engine/camera/evaluateClip` →
       green. Every existing `flyPath` test must pass unchanged.
-- [ ] Commit: `refactor(animation): a composite track declares the channels it writes`.
+- [x] Commit: `refactor(animation): a composite track declares the channels it writes`.
 
 ### Task 2 (prep): the tween plan carries a `motion`; one row per style
 
