@@ -36,7 +36,6 @@ import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
 import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
@@ -75,6 +74,7 @@ export function elapsedForWinner(
 export const NO_FOLLOW_MEMORY: FollowMemory = {
   from: null,
   distanceTarget: null,
+  durationMs: null,
   panOffset: [0, 0, 0],
   saturated: false,
 };
@@ -146,6 +146,8 @@ function followPose(
       lookOffset: cur.lookOffset,
     };
   }
+  // Captured beside `from`, once per activation, and carried in the memory.
+  const durationMs = memory.durationMs ?? s.settings.focusMoves.eased.durationMs;
 
   // Distance target, two sources (see FollowMemory): a fresh focus seeds
   // the framing distance — `framingPose`'s, the one every arrival lands on,
@@ -172,7 +174,7 @@ function followPose(
 
   // The debt, not the clock, decides the ease is over: settled means the framing
   // was delivered, whatever the epoch reads.
-  const t = memory.saturated ? 1 : easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
+  const t = memory.saturated ? 1 : easeOutCubic(ctx.elapsedMs / durationMs);
   return {
     pose: absoluteArm({
       target: livePos,
@@ -186,7 +188,7 @@ function followPose(
       roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
       lookOffset: easedLookOffset(from, committed, t),
     }),
-    memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
+    memory: { from, distanceTarget, durationMs, panOffset: memory.panOffset, saturated: t >= 1 },
   };
 }
 

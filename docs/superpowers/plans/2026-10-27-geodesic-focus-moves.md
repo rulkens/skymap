@@ -451,11 +451,11 @@ review: yes
 - **Test readers.** Tests that ticked past `FOCUS_TWEEN_MS` read
   `DEFAULT_FOCUS_MOVES.eased.durationMs` instead.
 
-- [ ] Test `followApproach > a duration captured at activation survives a mid-approach settings
+- [x] Test `followApproach > a duration captured at activation survives a mid-approach settings
       change`.
-- [ ] Implement, delete the constant, and migrate its readers.
-- [ ] Run `npx vitest run tests/services/engine/camera tests/services/engine/frame` → green.
-- [ ] Commit: `feat(camera): the planet approach eases over the tunable Eased duration`.
+- [x] Implement, delete the constant, and migrate its readers.
+- [x] Run `npx vitest run tests/services/engine/camera tests/services/engine/frame` → green.
+- [x] Commit: `feat(camera): the planet approach eases over the tunable Eased duration`.
 
 ### Task 8: the UI — the Settings select and the DebugPanel section
 

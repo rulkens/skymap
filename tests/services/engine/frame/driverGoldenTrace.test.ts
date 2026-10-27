@@ -28,7 +28,7 @@ import { readCameraEpochs } from '../../../helpers/camera/readCameraEpochs';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { readRegister } from '../../../helpers/camera/readRegister';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
+import { DEFAULT_FOCUS_MOVES } from '../../../../src/data/camera/focusMoveDefaults';
 import { spin } from '../../../../src/services/engine/animation/effectHelpers';
 import {
   clipStarted,
@@ -171,7 +171,7 @@ function runScript(): Trace {
   notch('notch under follow');
   // The leg is the notch the follow driver SWALLOWS: it must land while the
   // ease is still running, and it must move the driver's own target.
-  expect(nowMs() - followStart).toBeLessThan(FOCUS_TWEEN_MS);
+  expect(nowMs() - followStart).toBeLessThan(DEFAULT_FOCUS_MOVES.eased.durationMs);
   expect(readFollowMemory(state).distanceTarget).not.toBe(targetBeforeNotch);
   steps(24, 'follow settle');
 
