@@ -37,11 +37,19 @@ type FeatureGalleryProps = {
   films?: readonly string[];
   // How wide the large picture is drawn (the page's `big`).
   sizes: string;
+  // Whether each label carries the sentence under its title.
+  sentences?: boolean;
 };
 
 const THUMB_SIZES = '6rem';
 
-function FeatureGallery({ views: pictures, films, sizes, ...section }: FeatureGalleryProps) {
+function FeatureGallery({
+  views: pictures,
+  films,
+  sizes,
+  sentences = true,
+  ...section
+}: FeatureGalleryProps) {
   const views = films?.map((id) => siteLoop(id).shot) ?? pictures!;
   const gallery = useGallery(views.map((id) => ({ id })));
   const { at, live, byReader, choose, marksRef, layers, warmed } = gallery;
@@ -134,7 +142,7 @@ function FeatureGallery({ views: pictures, films, sizes, ...section }: FeatureGa
           <figcaption className={styles.captions} aria-live={live && !byReader ? 'off' : 'polite'}>
             {views.map((id, i) => (
               <div key={id} className={cx(changing.view, !current(i) && changing.away)}>
-                <ShotCaption id={id} showDrawn={false} />
+                <ShotCaption id={id} showDrawn={false} showSentence={sentences} />
               </div>
             ))}
           </figcaption>

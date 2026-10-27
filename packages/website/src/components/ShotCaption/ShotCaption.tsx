@@ -7,7 +7,8 @@
  * body text, and lays itself out by the room it is given: stacked under a
  * narrow picture, in two columns under a wide one. `label` gives the words for
  * a picture that is not in the manifest, with no address to open;
- * `showDrawn={false}` leaves out the data-and-drawing note.
+ * `showDrawn={false}` leaves out the data-and-drawing note and
+ * `showSentence={false}` the sentence under the title.
  */
 import type { SiteShot } from '../../@types/SiteShot';
 import { appLink } from '../../data/appLink.ts';
@@ -21,9 +22,16 @@ type ShotCaptionProps = {
   label?: Pick<SiteShot, 'title' | 'caption' | 'credit'>;
   open?: boolean;
   showDrawn?: boolean;
+  showSentence?: boolean;
 };
 
-function ShotCaption({ id, label, open = true, showDrawn = true }: ShotCaptionProps) {
+function ShotCaption({
+  id,
+  label,
+  open = true,
+  showDrawn = true,
+  showSentence = true,
+}: ShotCaptionProps) {
   const row = id === undefined ? undefined : siteShot(id);
   const shot: Pick<SiteShot, 'title' | 'caption' | 'drawn' | 'credit'> | undefined = row ?? label;
   if (!shot) throw new Error('ShotCaption needs the id of a shot or a label');
@@ -36,7 +44,7 @@ function ShotCaption({ id, label, open = true, showDrawn = true }: ShotCaptionPr
       <div className={styles.plate}>
         <p className={cx(styles.what, !notes && styles.alone)}>
           <strong>{shot.title}</strong>
-          {shot.caption && <span>{shot.caption}</span>}
+          {showSentence && shot.caption && <span>{shot.caption}</span>}
         </p>
         {notes && (
           <div className={styles.notes}>

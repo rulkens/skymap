@@ -1318,7 +1318,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     settings: { ...SUBJECT, hideZoneOfAvoidance: true, fovDeg: 30 },
     size: WIDE,
     widths: [1920, 1280, 640],
-    title: 'Sagittarius A* as the app draws it',
+    title: 'Sagittarius A*',
     caption: 'The stars behind are smeared into arcs around the dark disc.',
     drawn: 'The bending of light is computed for a black hole that does not rotate. The glowing ring of gas is invented.',
     alt: 'A black disc inside a tilted warm ring that seems to wrap over its top, with nearby stars drawn out into thin arcs around it.',
