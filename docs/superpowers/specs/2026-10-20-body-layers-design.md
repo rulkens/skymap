@@ -90,10 +90,34 @@ Layer-to-Layer reads.
 10. Mesh slots stay with the one core mesh handle, keyed over `MESH_PRESENTATIONS` (which folds every
     Layer's rows): a slot writes the core handle, which no Layer can reach without widening
     `LayerCoreDeps` (2026-10-20, revising §3's "mesh slots" for `missions`).
-9. The inside-atmosphere row is declared by the body Layer as a tagged `slabs` row, like the lens row
-   (P5). Core keeps no atmosphere code.
+9. The body Layer declares its own body rows; a row's `hosts` names the lines it carries, the
+   inside-atmosphere line banded like the lens row (P5, re-ruled 2026-10-27). Core keeps no
+   atmosphere code.
 11. The body work ends with a lean core: no body-related code stays in core unless it is shared
     (2026-10-22). Contract gaps the survey found are each solved first, in their own prep (P6, P7).
+12. Planet and moon palette rows move to the body Layer's `search` member. `LayerSearchEntry` gains
+    `chip?: string` (consented widening, user 2026-10-27), and the palette's `layer` arm shows it.
+    The body Layer sets its rows' chip (today's `bodyRowChip` result, "Solar System"). Craft rows
+    gain a chip too, set by `missions`, superseding #938's "no chip"; its text may differ from the
+    region label (user: "an improvement"): the craft's kind (`Rover`, `Probe`, `Space telescope`),
+    none on the whale and the petunias.
+13. Body PR plan rulings (user, 2026-10-27; detail in `plans/2026-10-27-body-layers-body.md`): three
+    PRs (render + P5, tiles + P7, identity); the tile plan lives on the body runtime, not in
+    `snapshot.plans` (probe faces have no plan store), superseding P6's "Left for the body PR"; one
+    shared `hostBandOpen` rule for host bands (Mpc, per view); the sky-view LUT resize runs in the
+    `sky-view` compute, not a planner; earthScenes publishes Søndermarken's palette row (chip
+    "Earth") and gets its own selection kind, superseding §3's "yet"; Solar System lists fifth;
+    Earth, planet and moon rows move into `body/bodies/` in the identity PR, with an ordering fix.
+
+    ```ts
+    export type LayerSearchEntry = {
+      readonly id: string;
+      readonly names: readonly string[];
+      readonly class: 'primary' | 'catalog';
+      /** Category tag shown at the row's right edge; omitted → no chip. */
+      readonly chip?: string;
+    };
+    ```
 
 ## 6. Ground preparation
 
@@ -235,11 +259,28 @@ the band. P5 gives the atmosphere the same shape:
 P5 rides the `body` PR as its first commit, because the body Layer is the joint's only writer. A
 temporary core writer would only be thrown away.
 
-> **Open (2026-10-22 survey):** a `slabs` row anchored on a store body (`'earth'`) sits beside core's
-> own row for it (`frameContext.ts:82-85`), and `deriveSlabs` does not deduplicate, so P5 as written
-> mints a second Earth `body-m` row. Today's `inside` is also per view and gated on
-> `FOREGROUND_MAX_DISTANCE_MPC`, a pose and the sub-pixel cull, which a band does not carry; and core's
-> `bodyDrawRadiusM.ts:21-24` reads `ATMOSPHERE_PARAMS`. P5's shape is re-ruled before the body PR.
+**Re-ruled (user, 2026-10-27), superseding the bullets above.** The 2026-10-22 survey found a tagged
+row anchored on `'earth'` would sit beside core's own store-derived row (`frameContext.ts:82-85`;
+`deriveSlabs` does not deduplicate), and core's `bodyDrawRadiusM` reads `ATMOSPHERE_PARAMS`. Both come
+from core deriving rows for bodies it should not know. So:
+
+- The body Layer declares its own Earth and planet rows through `Layer.slabs`; core derives no
+  store-body rows for them. `bodyDrawRadiusM` (atmosphere, cloud envelope, rings: all body facts)
+  moves into `body`. Craft and earthScenes rows keep the shared `bodySlabRowOf` at footprint radius.
+- `SlabRow.source` becomes `hosts`, the extra frame lines a row hosts, each while the camera is inside
+  its band (consented contract change, replacing the `source` widening):
+
+  ```ts
+  readonly hosts?: readonly { readonly line: BodyRowSource; readonly band?: FadeBand }[];
+  // blackHoles: hosts: [{ line: 'lens' }]
+  // body, Earth: hosts: [{ line: 'insideAtmosphere', band: { fullAt: 0, goneAt: 1.005 * atmosphereTop } }]
+  ```
+
+  `fullAt: 0` makes the band non-zero exactly below its edge: today's hard `<`.
+- `bodyRowSlabs` reads rows and bands only, with no `PassState` and no atmosphere code.
+- The plan verifies two edges: a static Earth row exists before Earth's record loads (today
+  `earth === null` gives no row), and the body's aerial pass keeps its own
+  `FOREGROUND_MAX_DISTANCE_MPC` guard, which the band does not carry.
 
 **Packaging (user, 2026-10-22):** P6 and P8 ship together as one prep PR, before the body PR, each as
 its own commits. P7 lands in the body PR (R6): until the body Layer owns the tiles, any store writer
