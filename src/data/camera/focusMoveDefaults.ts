@@ -6,6 +6,7 @@
  */
 
 import type { GeodesicTuning } from '../../@types/camera/GeodesicTuning';
+import type { FocusMoveSettings } from '../../@types/settings/FocusMoveSettings';
 import type { Ease } from '../../@types/animation/Ease';
 
 /**
@@ -54,3 +55,11 @@ export const GEODESIC_EASES: readonly Ease[] = [
   'easeOutCirc',
   'easeInOutCirc',
 ];
+
+/** Eased until the owner has judged Geodesic on screen; this also keeps every
+ *  headless profile (shot, perf, capture, golden traces) on the Eased timing. */
+export const DEFAULT_FOCUS_MOVES: FocusMoveSettings = {
+  style: 'eased',
+  eased: { durationMs: 600 },
+  geodesic: DEFAULT_GEODESIC_TUNING,
+};

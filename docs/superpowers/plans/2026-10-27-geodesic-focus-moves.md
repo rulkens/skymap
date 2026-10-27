@@ -360,11 +360,11 @@ review: yes
 - **Kept out of tours.** `CORE_SNAPSHOT_CLUSTERS` is not touched; it is an allow-list, so the
   slice stays out of tour snapshots.
 
-- [ ] Test `parseFocusMoveStyle round-trips both styles and rejects garbage`.
-- [ ] Test `focusMovesSlice > setGeodesicTuning merges one knob without touching the others`.
-- [ ] Implement, and append `FOCUS_MOVE_STYLE` to `PERSISTED_VALUES`.
-- [ ] Run `npm run typecheck:fast` and `npx vitest run tests/state/settings tests/utils/storage` → green.
-- [ ] Commit: `feat(settings): focusMoves — the style toggle and both styles' tuning`.
+- [x] Test `parseFocusMoveStyle round-trips both styles and rejects garbage`.
+- [x] Test `focusMovesSlice > setGeodesicTuning merges one knob without touching the others`.
+- [x] Implement, and append `FOCUS_MOVE_STYLE` to `PERSISTED_VALUES`.
+- [x] Run `npm run typecheck:fast` and `npx vitest run tests/state/settings tests/utils/storage` → green.
+- [x] Commit: `feat(settings): focusMoves — the style toggle and both styles' tuning`.
 
 ### Task 6: the `geodesic` row, `resolveFocusMotion`, and the producers
 

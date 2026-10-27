@@ -4,9 +4,11 @@
  */
 import type { PersistedValue } from '../@types/state/PersistedValue';
 import type { CameraControlsSettings } from '../@types/settings/CameraControlsSettings';
+import type { FocusMoveStyle } from '../@types/camera/FocusMoveStyle';
 import { selectSplashDismissedVersion } from './ui/selectors';
-import { selectCameraControls } from './settings/selectors';
+import { selectCameraControls, selectFocusMoveStyle } from './settings/selectors';
 import { parseCameraControls } from '../utils/storage/parseCameraControls';
+import { parseFocusMoveStyle } from '../utils/storage/parseFocusMoveStyle';
 
 export const SPLASH_SEEN_VERSION: PersistedValue<number | null> = {
   key: 'skymap.splash.seenVersion',
@@ -27,4 +29,12 @@ export const CAMERA_CONTROLS: PersistedValue<CameraControlsSettings> = {
   serialize: (v) => JSON.stringify(v),
 };
 
-export const PERSISTED_VALUES = [SPLASH_SEEN_VERSION, CAMERA_CONTROLS] as const;
+// The style only: the tuning resets to the calibrated defaults on reload.
+export const FOCUS_MOVE_STYLE: PersistedValue<FocusMoveStyle> = {
+  key: 'skymap.focusMoveStyle.v1',
+  select: selectFocusMoveStyle,
+  parse: parseFocusMoveStyle,
+  serialize: (v) => v,
+};
+
+export const PERSISTED_VALUES = [SPLASH_SEEN_VERSION, CAMERA_CONTROLS, FOCUS_MOVE_STYLE] as const;
