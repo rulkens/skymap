@@ -50,9 +50,8 @@ import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { bodyHomePose } from '../../services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { selectOrientation } from '../settings/selectors';
+import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchGoHomeSaga() {
@@ -75,6 +74,9 @@ export function* watchGoHomeSaga() {
     // driver can re-express the pose if the setting changes mid-flight.
     const frame = yield* select(selectOrientation);
     const frameBasis = ORIENTATION_FRAMES[frame];
+    // Eased under either style: Earth moves under a geodesic window frozen at
+    // dispatch, and the hand-off to the follow driver expects the framed pose.
+    const { eased } = yield* select(selectFocusMoves);
 
     yield* put(updateSelectionSelect(EARTH_REF));
     yield* put(updateSelectionFocus(EARTH_REF));
@@ -82,7 +84,7 @@ export function* watchGoHomeSaga() {
       startCameraTween({
         from: runtime.from,
         to: bodyHomePose(EARTH_REF.id, simDays, runtime.fovYRad, frameBasis),
-        motion: { style: 'eased', durationMs: FOCUS_TWEEN_MS, ease: 'easeOutCubic' },
+        motion: { style: 'eased', durationMs: eased.durationMs, ease: 'easeOutCubic' },
         frame,
       }),
     );

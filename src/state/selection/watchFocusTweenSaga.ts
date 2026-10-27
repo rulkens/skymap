@@ -26,12 +26,11 @@ import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, factsReported } from '../engine/engineSlice';
 import { selectStructureBulk } from '../engine/selectors';
-import { selectOrientation } from '../settings/selectors';
+import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
+import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
 import type { SagaContext } from '../../store/types';
-import type { FocusMotion } from '../../@types/camera/FocusMotion';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(
@@ -97,11 +96,8 @@ export function* watchFocusTweenSaga() {
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
       const frame = yield* select(selectOrientation);
-      const motion: FocusMotion = {
-        style: 'eased',
-        durationMs: FOCUS_TWEEN_MS,
-        ease: 'easeOutCubic',
-      };
+      // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
+      const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
       yield* put(
         startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
       );

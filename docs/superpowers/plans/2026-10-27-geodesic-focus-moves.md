@@ -411,20 +411,20 @@ review: yes
 - **Home saga.** `watchGoHomeSaga` builds the eased arm from `settings.eased.durationMs` and
   **never** the geodesic arm (owner ruling: Home targets moving Earth).
 
-- [ ] Test `focusMotions > the geodesic clip ends exactly at focusMoveDurationMs` (compiled
+- [x] Test `focusMotions > the geodesic clip ends exactly at focusMoveDurationMs` (compiled
       `endSec * 1000`).
-- [ ] Test `focusMotions > a geodesic re-focus with to.target === from.target is a finite pure
+- [x] Test `focusMotions > a geodesic re-focus with to.target === from.target is a finite pure
       zoom` (Review Focus).
-- [ ] Test `focusMotions > a geodesic move ignores the live FOV`. The pose at a fixed elapsed
+- [x] Test `focusMotions > a geodesic move ignores the live FOV`. The pose at a fixed elapsed
       time is identical when evaluated after a projection change; only `motion.fovYRad` counts
       (Review Focus).
-- [ ] Test `resolveFocusMotion maps each style to its arm, copying the eased duration and the
+- [x] Test `resolveFocusMotion maps each style to its arm, copying the eased duration and the
       whole geodesic record`.
-- [ ] Test `watchFocusTweenSaga dispatches the motion resolved from the store at dispatch`.
-- [ ] Test `watchGoHomeSaga stays eased under the geodesic style and follows the eased duration`.
-- [ ] Implement.
-- [ ] Run `npx vitest run tests/services/engine/camera tests/utils/camera tests/state/selection` → green.
-- [ ] Commit: `feat(camera): focus moves fly the geodesic when the style says so`.
+- [x] Test `watchFocusTweenSaga dispatches the motion resolved from the store at dispatch`.
+- [x] Test `watchGoHomeSaga stays eased under the geodesic style and follows the eased duration`.
+- [x] Implement.
+- [x] Run `npx vitest run tests/services/engine/camera tests/utils/camera tests/state/selection` → green.
+- [x] Commit: `feat(camera): focus moves fly the geodesic when the style says so`.
 
 ### Task 7: the follow-approach takes the Eased duration; `FOCUS_TWEEN_MS` goes
 
