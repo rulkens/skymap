@@ -52,6 +52,7 @@ import { bodyHomePose } from '../../services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchGoHomeSaga() {
@@ -84,7 +85,7 @@ export function* watchGoHomeSaga() {
       startCameraTween({
         from: runtime.from,
         to: bodyHomePose(EARTH_REF.id, simDays, runtime.fovYRad, frameBasis),
-        motion: { style: 'eased', durationMs: eased.durationMs, ease: 'easeOutCubic' },
+        motion: { style: 'eased', durationMs: eased.durationMs, ease: EASED_FOCUS_EASE },
         frame,
       }),
     );

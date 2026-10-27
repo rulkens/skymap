@@ -38,7 +38,7 @@ import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { easeOutCubic } from '../../../utils/math/easeOutCubic';
+import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
@@ -131,7 +131,9 @@ function followPose(
   // absolute-arm gate strands the camera.
   const memory = mem ?? NO_FOLLOW_MEMORY;
   let from = memory.from;
-  if (from === null) {
+  let durationMs = memory.durationMs;
+  // The duration is captured with `from`, so a slider drag never re-times a flight.
+  if (from === null || durationMs === null) {
     const cur = ctx.authoredWorld;
     const pb = ctx.poseBasis;
     const eye = eyeMpcOf(cur, pb);
@@ -145,9 +147,8 @@ function followPose(
       roll: cur.roll,
       lookOffset: cur.lookOffset,
     };
+    durationMs = s.settings.focusMoves.eased.durationMs;
   }
-  // Captured beside `from`, once per activation, and carried in the memory.
-  const durationMs = memory.durationMs ?? s.settings.focusMoves.eased.durationMs;
 
   // Distance target, two sources (see FollowMemory): a fresh focus seeds
   // the framing distance — `framingPose`'s, the one every arrival lands on,
@@ -174,7 +175,7 @@ function followPose(
 
   // The debt, not the clock, decides the ease is over: settled means the framing
   // was delivered, whatever the epoch reads.
-  const t = memory.saturated ? 1 : easeOutCubic(ctx.elapsedMs / durationMs);
+  const t = memory.saturated ? 1 : EASE[EASED_FOCUS_EASE](ctx.elapsedMs / durationMs);
   return {
     pose: absoluteArm({
       target: livePos,

@@ -71,7 +71,7 @@ describe('focusMotions', () => {
   });
 
   it('a geodesic move ignores the live FOV', () => {
-    const fly = (fovDegMidFlight: number | null) => {
+    const fly = (fovDeg: number | null) => {
       const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
       h.store.dispatch(
         startCameraTween(
@@ -81,17 +81,27 @@ describe('focusMotions', () => {
           ),
         ),
       );
-      h.frame();
-      if (fovDegMidFlight !== null) h.store.dispatch(setFovDeg(fovDegMidFlight));
-      h.frame(20);
-      return h.state.cameraRuntime;
+      // Before the first frame, so the clip compiles (and memoises) under the new lens.
+      if (fovDeg !== null) h.store.dispatch(setFovDeg(fovDeg));
+      // 1.6 s, past the ~0.83 s flight: the retirement frame is compared too.
+      return Array.from({ length: 100 }, () => {
+        h.frame();
+        const { register, outputs } = h.state.cameraRuntime;
+        return {
+          winner: register.winner,
+          displayed: outputs.displayed,
+          fovYRad: outputs.projection.fovYRad,
+        };
+      });
     };
     const steady = fly(null);
     const dragged = fly(100);
 
-    // Still mid-flight, and the drag did reach the projection.
-    expect(dragged.register.winner).toBe('tween');
-    expect(dragged.outputs.projection.fovYRad).not.toBe(steady.outputs.projection.fovYRad);
-    expect(dragged.outputs.displayed).toEqual(steady.outputs.displayed);
+    expect(dragged[0]!.fovYRad).not.toBe(steady[0]!.fovYRad);
+    expect(dragged[10]!.winner).toBe('tween');
+    expect(dragged.at(-1)!.winner).not.toBe('tween');
+    const flight = (frames: typeof steady) =>
+      frames.map(({ winner, displayed }) => ({ winner, displayed }));
+    expect(flight(dragged)).toEqual(flight(steady));
   });
 });

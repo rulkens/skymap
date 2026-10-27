@@ -56,6 +56,9 @@ export const GEODESIC_EASES: readonly Ease[] = [
   'easeInOutCirc',
 ];
 
+/** The Eased focus move's ease. Not a setting: only its duration is tunable. */
+export const EASED_FOCUS_EASE: Ease = 'easeOutCubic';
+
 /** Eased until the owner has judged Geodesic on screen; this also keeps every
  *  headless profile (shot, perf, capture, golden traces) on the Eased timing. */
 export const DEFAULT_FOCUS_MOVES: FocusMoveSettings = {

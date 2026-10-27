@@ -518,7 +518,8 @@ function makeFollowProduce(opts: {
   const mem: FollowMemory = {
     from: opts.from ?? null,
     distanceTarget: opts.distanceTarget ?? null,
-    durationMs: null,
+    // Captured together: a fixture handing in `from` hands in its duration too.
+    durationMs: opts.from ? DEFAULT_FOCUS_MOVES.eased.durationMs : null,
     panOffset: [0, 0, 0],
     saturated: false,
   };

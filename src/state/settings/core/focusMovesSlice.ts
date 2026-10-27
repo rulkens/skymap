@@ -27,8 +27,9 @@ export const focusMovesSlice = createSlice({
     setFocusMoveStyle: (moves, action: PayloadAction<FocusMoveStyle>) => {
       moves.style = action.payload;
     },
+    // Floored at 1 ms here, the one home of the invariant: every reader divides by it.
     setEasedDuration: (moves, action: PayloadAction<number>) => {
-      moves.eased.durationMs = action.payload;
+      moves.eased.durationMs = Math.max(1, action.payload);
     },
     setGeodesicTuning: (moves, action: PayloadAction<Partial<GeodesicTuning>>) => {
       Object.assign(moves.geodesic, action.payload);

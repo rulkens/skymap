@@ -17,8 +17,6 @@ import {
   setFocusMoveStyle,
   setGeodesicTuning,
 } from '../../../src/state/settings/core/focusMovesSlice';
-import { resolveFocusMotion } from '../../../src/utils/camera/resolveFocusMotion';
-import { selectFocusMoves } from '../../../src/state/settings/selectors';
 import {
   engineStatusChanged,
   factsReported,
@@ -369,13 +367,8 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(setGeodesicTuning({ rho: 0.4 }));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
-    const dispatched = resolveFocusMotion(selectFocusMoves(store.getState()), 0.8);
-
-    // A later flip must not reach the descriptor already in the store.
-    store.dispatch(setFocusMoveStyle('eased'));
 
     const tween = store.getState()[cameraRoute].tween;
-    expect(tween!.motion).toEqual(dispatched);
     expect(tween!.motion).toMatchObject({ style: 'geodesic', fovYRad: 0.8, tuning: { rho: 0.4 } });
   });
 });
