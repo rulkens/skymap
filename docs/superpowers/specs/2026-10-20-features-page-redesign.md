@@ -104,17 +104,17 @@ Part intro: _one line_
 ## Decided
 
 1. Today's other groups (Finding things, Tours and exhibits, Settings, Info cards, Loading, For developers) are **dropped** from this page.
-2. **No hero:** the page opens straight into Places.
+2. **Hero (revised 2026-10-22):** first no hero; the owner then asked for one. It is a slideshow of app views (`FeaturesHero`, views in `data/featureViews.ts`), each with its subject on the right and a link to that view.
 3. Films **play when scrolled into view**.
 4. The **NEW visuals get shot** (constellations, galaxy flow, time running, the link on a phone).
 
-5. **Layout C, alternating sides:** text on one side with 1–2 small visuals under it, a large visual on the other; sides swap each section.
+5. **Layout C, alternating sides:** text on one side, a large visual on the other; sides swap each section (`FeatureSection` `side`). Revised 2026-10-22/23: the large visual became a slideshow (`FeatureGallery`, stills or films) with thumbnails, each picture linking to its view in the app; Time is a gallery of six films.
 7. **New visuals picked:**
    - constellations B (names only);
    - flow B (250 Mpc, into the Great Attractor);
    - time: A as a large 16:9 film (Jupiter's moons) and B as a small disc film (Earth turning);
    - phone A (the app on a phone, Saturn).
-   Recipes: `<scratchpad>/new-visuals/recipes.md`.
+   Their recipes are the rows in `packages/website/src/data/siteShots.ts` and `siteLoops.ts`.
 8. **3D phone:** CSS only, no 3D library. A case of stacked layers that turns a little toward the pointer (sketch B), with the Saturn phone still on its screen. Used in **Screens › Phone** and on **Home**, where it replaces the Hubble picture.
 9. **Words:** build with drafted lines (literal, short); the owner corrects them on the page with notes.
 6. **Before the redesign:** pages move to MDX with front matter (title, description, share image, what the page is for), landing pages and docs, as its own PR.
