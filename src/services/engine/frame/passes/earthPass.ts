@@ -52,9 +52,7 @@ export const earthPass: ContentPass = {
     const { body, bodyState: earthState, radiusM } = prepared;
     // The base globe alone draws at the INNER bound (datum + reliefM[0], never
     // positive) so a below-datum trench can never be occluded by it (§7.4,
-    // F2-R5) — its own frame, recomposed here at the GPU-upload boundary.
-    // `prepared.mvpLocal`/`camLocal` stay on the datum for the tile planner
-    // and drawPick, which read the same memo.
+    // F2-R5) — its own frame, composed here at the GPU-upload boundary.
     const baseGlobeRadiusM = innerBoundRadiusM(body.surface);
     const mvp = narrowMat4(
       composeBodySlabMvp(view.slab.vp, prepared.pose.eyeRelBodyM, baseGlobeRadiusM),

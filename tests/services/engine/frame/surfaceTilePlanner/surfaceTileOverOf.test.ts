@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { surfaceTileOverOf } from '../../../../../src/services/engine/frame/surfaceTilePlanner/surfaceTileOverOf';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCelestialBodies';
 import { engageDistanceM } from '../../../../../src/utils/surfaceTiles/engageDistanceM';
+import { frustumCornerMagnification } from '../../../../../src/utils/camera/frustumCornerMagnification';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -49,7 +50,8 @@ describe('surfaceTileOverOf', () => {
     // Bug caught: a fixed radius sized for the telephoto extreme holds the
     // atlases until the body is a pixel wide at a normal lens; one at the
     // engage distance itself engages and releases on alternate frames.
-    const edge = (2 * engageDistanceM(radiusM('earth'), NORMAL_PX_PER_RAD)) / radiusM('earth');
+    const cornerPxPerRad = NORMAL_PX_PER_RAD * frustumCornerMagnification(REAL_VIEW!.frustum);
+    const edge = (2 * engageDistanceM(radiusM('earth'), cornerPxPerRad)) / radiusM('earth');
     expect(surfaceTileOverOf([viewAt({ earth: edge * (1 - 1e-9) })])?.bodyId).toBe('earth');
     expect(surfaceTileOverOf([viewAt({ earth: edge * (1 + 1e-9) })])).toBeNull();
   });
@@ -60,13 +62,5 @@ describe('surfaceTileOverOf', () => {
     expect(surfaceTileOverOf([viewAt({ earth: far })])).toBeNull();
     const zoomed = viewAt({ earth: far }, NORMAL_PX_PER_RAD * 20);
     expect(surfaceTileOverOf([viewAt({ earth: far }), zoomed])?.bodyId).toBe('earth');
-  });
-
-  it('carries the eye in the body frame, metres', () => {
-    expect(surfaceTileOverOf([viewAt({ earth: 3 })])?.camPosLocalM).toEqual([
-      3 * radiusM('earth'),
-      0,
-      0,
-    ]);
   });
 });

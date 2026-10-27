@@ -21,16 +21,13 @@ import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTi
 import type { SurfaceTilePlan } from '../../../../src/@types/engine/surfaceTiles/SurfaceTilePlan';
 import type { SurfaceTileId } from '../../../../src/@types/data/SurfaceTileId';
 import type { HeightTileImage } from '../../../../src/@types/scene/HeightTileImage';
-import {
-  createSurfaceTileStream,
-  EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
-} from '../../../../src/services/engine/subsystems/surfaceTileStream';
+import { createSurfaceTileStream } from '../../../../src/services/engine/subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/data/bodies/idleSurfaceTilePlan';
 import { fetchSurfaceTileManifest } from '../../../../src/utils/network/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
 import { baseLevelForTier } from '../../../../src/utils/surfaceTiles/baseLevelForTier';
-import { surfaceTilePath } from '../../../../src/utils/surfaceTiles/surfaceTilePath';
+import { derivePlannerParams } from '../../../../src/utils/surfaceTiles/derivePlannerParams';
 import { isSurfaceTileBodyId } from '../../../../src/utils/surfaceTiles/isSurfaceTileBodyId';
 import { equirectUvToDirection } from '../../../../src/utils/math/equirectUvToDirection';
 import { codeHeightM } from '../../../../src/utils/surfaceTiles/codeHeightM';
@@ -105,7 +102,6 @@ const albedo = (x: number, y = 0): SurfaceTileId => ({
   y,
 });
 const height = (x: number): SurfaceTileId => ({ product: 'height', z: MIN_TILE_LEVEL, x, y: 0 });
-const keyOf = (tile: SurfaceTileId) => surfaceTilePath(tile, PREFIX);
 const plan = (over: Partial<SurfaceTilePlan>): SurfaceTilePlan => ({
   ...IDLE_SURFACE_TILE_PLAN,
   ...over,
@@ -133,14 +129,13 @@ function heightImage(
 }
 
 /** A stream with Earth's manifest loaded and nothing engaged yet. */
-async function streamWithManifest(device: GPUDevice = stubDevice(), baseLevel = BASE_LEVEL) {
+async function streamWithManifest(device: GPUDevice = stubDevice()) {
   vi.mocked(fetchSurfaceTileManifest).mockImplementation(async (key) =>
     manifestOf(key === 'mars-tiles' ? 'mars-tiles/v2' : PREFIX),
   );
   const stream = createSurfaceTileStream({
     device,
     requestRender: () => {},
-    baseLevelOf: () => baseLevel,
   });
   stream.apply(plan({ wantManifest: EARTH }));
   await tick();
@@ -174,7 +169,6 @@ describe('surfaceTileStream manifests', () => {
     const stream = createSurfaceTileStream({
       device: stubDevice(),
       requestRender: () => {},
-      baseLevelOf: () => BASE_LEVEL,
     });
     expect(stream.residency.manifest(EARTH).status).toBe('absent');
 
@@ -254,7 +248,7 @@ describe('surfaceTileStream verdicts', () => {
     const stream = await engagedWith();
     const fetches = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
     stream.apply(IDLE_SURFACE_TILE_PLAN);
-    stream.apply(plan({ touched: [keyOf(albedo(0))] }));
+    stream.apply(plan({ touched: [albedo(0)] }));
     expect(stream.residency.residentSlot(albedo(0))).not.toBeNull();
     expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length).toBe(fetches);
 
@@ -293,12 +287,12 @@ describe('surfaceTileStream residency', () => {
     stream.apply(requesting([albedo(0), albedo(1)], ENGAGE_EARTH));
     await tick();
 
-    expect(stream.residency.isInFlight(keyOf(albedo(0)))).toBe(true);
-    expect(stream.residency.hasFailed(keyOf(albedo(1)))).toBe(true);
-    expect(stream.residency.hasFailed(keyOf(albedo(0)))).toBe(false);
+    expect(stream.residency.isInFlight(albedo(0))).toBe(true);
+    expect(stream.residency.hasFailed(albedo(1))).toBe(true);
+    expect(stream.residency.hasFailed(albedo(0))).toBe(false);
     fetch.resolve(bitmap());
     await tick();
-    expect(stream.residency.isInFlight(keyOf(albedo(0)))).toBe(false);
+    expect(stream.residency.isInFlight(albedo(0))).toBe(false);
     expect(stream.residency.residentSlot(albedo(0))).not.toBeNull();
   });
 
@@ -357,7 +351,7 @@ describe('surfaceTileStream apply order', () => {
 
     stream.apply(
       plan({
-        touched: filling.map(keyOf),
+        touched: filling,
         requests: [{ tile: albedo(99, 99), screenPx: 2000 }],
       }),
     );
@@ -382,9 +376,11 @@ describe('surfaceTileStream terrain', () => {
     return grid;
   };
 
-  async function withUniformHeight(baseLevel = BASE_LEVEL) {
+  const paramsAt = (baseLevel: number) => derivePlannerParams(manifestOf(PREFIX), baseLevel);
+
+  async function withUniformHeight() {
     vi.mocked(fetchHeightTile).mockImplementation(async () => heightImage(uniformGrid()));
-    const stream = await streamWithManifest(stubDevice(), baseLevel);
+    const stream = await streamWithManifest();
     stream.apply(requesting([height(0)], ENGAGE_EARTH));
     await tick();
     return stream;
@@ -393,27 +389,23 @@ describe('surfaceTileStream terrain', () => {
   it('reads the resident grid for the engaged body, and nothing for another', async () => {
     // Bug caught: Mars' camera standing on Earth's terrain.
     const stream = await withUniformHeight();
-    expect(stream.heightAt(EARTH, DIR)).toBeCloseTo(codeHeightM(CODE), 6);
-    expect(stream.residentHeightLevelAt(EARTH, DIR)).toBe(MIN_TILE_LEVEL);
-    expect(stream.heightAt(MARS, DIR)).toBe(0);
-    expect(stream.residentHeightLevelAt(MARS, DIR)).toBeNull();
+    const params = paramsAt(BASE_LEVEL);
+    expect(stream.heightAt(EARTH, DIR, params)).toBeCloseTo(codeHeightM(CODE), 6);
+    expect(stream.residentHeightLevelAt(EARTH, DIR, params)).toBe(MIN_TILE_LEVEL);
+    expect(stream.heightAt(MARS, DIR, params)).toBe(0);
+    expect(stream.residentHeightLevelAt(MARS, DIR, params)).toBeNull();
   });
 
-  it('climbs no lower than the committed base level', async () => {
+  it("climbs no lower than the plan's base level", async () => {
     // Bug caught: a tier swap reading a tile the bound base texture already covers.
-    const stream = await withUniformHeight(MIN_TILE_LEVEL);
-    expect(stream.heightAt(EARTH, DIR)).toBe(0);
-    expect(stream.residentHeightLevelAt(EARTH, DIR)).toBeNull();
+    const stream = await withUniformHeight();
+    const params = paramsAt(MIN_TILE_LEVEL);
+    expect(stream.heightAt(EARTH, DIR, params)).toBe(0);
+    expect(stream.residentHeightLevelAt(EARTH, DIR, params)).toBeNull();
   });
 });
 
 describe('surfaceTileStream debug stats', () => {
-  it('is the quiet empty readout before anything engages', async () => {
-    const stream = await streamWithManifest();
-    const { plan: _plan, subCamera: _subCamera, ...empty } = EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;
-    expect(stream.debugStats()).toEqual(empty);
-  });
-
   it('reports residency by level and the deepest keys once engaged', async () => {
     const stream = await engagedWith();
     expect(stream.debugStats()).toEqual({

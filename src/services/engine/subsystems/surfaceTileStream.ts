@@ -3,9 +3,10 @@
  * atlases at a time (`SURFACE_TILE_REGISTRY`). `planSurfaceTiles` reads the
  * live `residency` and decides; `apply` carries the plan out: fetch a wanted
  * manifest, engage or release the atlases, stamp every touched key, then
- * allocate and fetch the misses. `tileStreamSubsystem` owns each atlas's LRU
- * clock and fetch queue; this file keeps the per-product residency maps
- * `residentSlot` and the terrain queries answer from.
+ * allocate and fetch the misses. Tile keys (`surfaceTilePath` under the
+ * engaged manifest's prefix) never leave this file. `tileStreamSubsystem`
+ * owns each atlas's LRU clock and fetch queue; this file keeps the
+ * per-product residency maps `residentSlot` and the terrain queries answer from.
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
@@ -15,7 +16,6 @@ import type { ResidentSurfaceTile } from '../../../@types/engine/surfaceTiles/Re
 import type { SurfaceTilePlan } from '../../../@types/engine/surfaceTiles/SurfaceTilePlan';
 import type { SurfaceTileResidency } from '../../../@types/engine/surfaceTiles/SurfaceTileResidency';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
 import type { SurfaceTilePlannerParams } from '../../../@types/scene/SurfaceTilePlannerParams';
 import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import type { HeightTileImage } from '../../../@types/scene/HeightTileImage';
@@ -37,7 +37,6 @@ import { fetchHeightTile } from '../../../utils/network/fetchHeightTile';
 import { directionToLonLatDeg } from '../../../utils/geo/directionToLonLatDeg';
 import { deepestBandLevelAt } from '../../../utils/surfaceTiles/deepestBandLevelAt';
 import { terrainHeightM } from '../../../utils/surfaceTiles/terrainHeightM';
-import { derivePlannerParams } from '../../../utils/surfaceTiles/derivePlannerParams';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_CONCURRENCY,
@@ -72,7 +71,7 @@ export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
 const ABSENT: ReturnType<SurfaceTileResidency['manifest']> = { status: 'absent', value: null };
 
 export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTileStream {
-  const { device, requestRender, baseLevelOf } = deps;
+  const { device, requestRender } = deps;
 
   const manifests = new Map<SurfaceTileBodyId, ReturnType<SurfaceTileResidency['manifest']>>();
 
@@ -96,13 +95,6 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
   let droppedAllocations = 0;
   let frame = 0;
   let destroyed = false;
-  // `heightAt` runs per camera step and per pick-march sample: derive the
-  // bands once per manifest and base level, not per call.
-  let heightParams: {
-    readonly manifest: SurfaceTileManifest;
-    readonly baseLevel: number;
-    readonly params: SurfaceTilePlannerParams | null;
-  } | null = null;
 
   function requestManifest(bodyId: SurfaceTileBodyId): void {
     if (manifests.has(bodyId)) return;
@@ -192,15 +184,15 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     // allocating pass let a new request evict a resident this same plan wanted
     // moments later (it still carried last frame's stamp), and losing its
     // pixels cascaded into evicting the next.
-    for (const key of plan.touched) {
-      if (streams.stream.touch(key, frame) === null) streams.heightStream.touch(key, frame);
+    for (const tile of plan.touched) {
+      streamOf(streams, tile).touch(surfaceTilePath(tile, streams.prefix), frame);
     }
 
     for (const request of plan.requests) {
       const key = surfaceTilePath(request.tile, streams.prefix);
       const isHeight = request.tile.product === 'height';
       // Null means the atlas is already full this frame.
-      if ((isHeight ? streams.heightStream : streams.stream).allocate(key, frame) === null) {
+      if (streamOf(streams, request.tile).allocate(key, frame) === null) {
         droppedAllocations++;
         continue;
       }
@@ -254,6 +246,9 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     }
   }
 
+  const streamOf = (held: NonNullable<typeof atlas>, tile: SurfaceTileId) =>
+    tile.product === 'height' ? held.heightStream : held.stream;
+
   function residentSlot(tile: SurfaceTileId): ResidentSlot | null {
     if (atlas === null) return null;
     const key = surfaceTilePath(tile, atlas.prefix);
@@ -272,23 +267,17 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     };
   }
 
-  /** The stream holding `key`'s slot, either product, or null. */
-  function holderOf(key: string) {
-    if (atlas === null) return null;
-    if (atlas.stream.slots.slotOf(key) !== undefined) return atlas.stream;
-    if (atlas.heightStream.slots.slotOf(key) !== undefined) return atlas.heightStream;
-    return null;
-  }
-
   const residency: SurfaceTileResidency = {
     manifest: (bodyId) => manifests.get(bodyId) ?? ABSENT,
     residentSlot,
-    isInFlight: (key) => {
-      const holder = holderOf(key);
-      return holder !== null && !holder.isLoaded(key);
+    isInFlight: (tile) => {
+      if (atlas === null) return false;
+      const key = surfaceTilePath(tile, atlas.prefix);
+      const holder = streamOf(atlas, tile);
+      return holder.slots.slotOf(key) !== undefined && !holder.isLoaded(key);
     },
-    hasFailed: (key) =>
-      atlas !== null && (atlas.stream.isFailed(key) || atlas.heightStream.isFailed(key)),
+    hasFailed: (tile) =>
+      atlas !== null && streamOf(atlas, tile).isFailed(surfaceTilePath(tile, atlas.prefix)),
     inFlightCount: () =>
       atlas === null ? 0 : atlas.stream.inFlightCount() + atlas.heightStream.inFlightCount(),
     engagedBodyId: () => atlas?.bodyId ?? null,
@@ -299,21 +288,15 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
   function heightQueryAt(
     bodyId: SceneBodyId,
     dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
   ): {
     readonly deepestLevel: number;
     readonly baseLevel: number;
     readonly resident: ResidentHeightLookup;
   } | null {
-    if (atlas === null || atlas.bodyId !== bodyId) return null;
-    const manifest = manifests.get(atlas.bodyId)?.value;
-    if (manifest === null || manifest === undefined) return null;
-    const baseLevel = baseLevelOf(atlas.bodyId);
-    if (heightParams?.manifest !== manifest || heightParams.baseLevel !== baseLevel) {
-      heightParams = { manifest, baseLevel, params: derivePlannerParams(manifest, baseLevel) };
-    }
-    const { params } = heightParams;
-    if (params === null) return null;
+    if (atlas === null || atlas.bodyId !== bodyId || params === null) return null;
     const { prefix } = atlas;
+    const { baseLevel } = params;
     return {
       // No band covers this direction → nothing deeper than the whole-globe
       // base is ever baked there, so the climb correctly finds nothing.
@@ -328,16 +311,24 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     };
   }
 
-  function heightAt(bodyId: SceneBodyId, dirBodyFixed: Readonly<Vec3>): number {
-    const query = heightQueryAt(bodyId, dirBodyFixed);
+  function heightAt(
+    bodyId: SceneBodyId,
+    dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
+  ): number {
+    const query = heightQueryAt(bodyId, dirBodyFixed, params);
     if (query === null) return 0;
     return terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, query.resident);
   }
 
   /** Runs the real climb with an instrumented lookup rather than a second
    *  address derivation, so the level reported is the one the height came from. */
-  function residentHeightLevelAt(bodyId: SceneBodyId, dirBodyFixed: Readonly<Vec3>): number | null {
-    const query = heightQueryAt(bodyId, dirBodyFixed);
+  function residentHeightLevelAt(
+    bodyId: SceneBodyId,
+    dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
+  ): number | null {
+    const query = heightQueryAt(bodyId, dirBodyFixed, params);
     if (query === null) return null;
     let level: number | null = null;
     terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, (tile) => {
@@ -400,7 +391,6 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
       destroyed = true;
       standDown();
       manifests.clear();
-      heightParams = null;
     },
   };
   tileStream satisfies Destroyable;

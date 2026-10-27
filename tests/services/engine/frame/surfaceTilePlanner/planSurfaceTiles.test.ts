@@ -31,7 +31,6 @@ import { planSurfaceTiles } from '../../../../../src/services/engine/frame/surfa
 import { tileBodiesInView } from '../../../../../src/services/engine/frame/surfaceTilePlanner/tileBodiesInView';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { baseLevelForTier } from '../../../../../src/utils/surfaceTiles/baseLevelForTier';
-import { surfaceTilePath } from '../../../../../src/utils/surfaceTiles/surfaceTilePath';
 import { isSurfaceTileBodyId } from '../../../../../src/utils/surfaceTiles/isSurfaceTileBodyId';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -112,12 +111,10 @@ const tile = (x: number, product: SurfaceTileId['product'] = 'albedo'): SurfaceT
   x,
   y: 0,
 });
-const earthKey = (t: SurfaceTileId) => surfaceTilePath(t, MANIFESTS.earth.prefix);
 function engagedDemand(tiles: readonly SurfaceTileId[]): SurfaceTileDemand {
   return {
     zWin: BASE + 1,
     requests: tiles.map((t, i) => ({ tile: t, screenPx: 1000 - i })),
-    subCameraDirLocal: [1, 0, 0],
   };
 }
 
@@ -185,13 +182,13 @@ describe('planSurfaceTiles', () => {
       LARGE,
     );
 
-    expect(plan.touched).toEqual([tiles[0]!, tiles[2]!, tiles[4]!].map(earthKey));
+    expect(plan.touched).toEqual([tiles[0], tiles[2], tiles[4]]);
     expect(plan.requests.map((r) => r.tile)).toEqual([tiles[1], tiles[3], tiles[5]]);
     expect(plan.verdict).toBe('keep');
     expect(plan.cut).toBe(CUT);
   });
 
-  it('a failed or in-flight key is never requested again', () => {
+  it('a failed or in-flight tile is never requested again', () => {
     // Bug caught: a refetch storm on a 404, or a second fetch of a tile on its way.
     const tiles = [tile(0), tile(1), tile(2)];
     walk.demand = engagedDemand(tiles);
@@ -199,15 +196,15 @@ describe('planSurfaceTiles', () => {
       [SEES_EARTH],
       overBody(EARTH),
       residency({
-        hasFailed: (key) => key === earthKey(tiles[0]!),
-        isInFlight: (key) => key === earthKey(tiles[1]!),
+        hasFailed: (t) => t === tiles[0],
+        isInFlight: (t) => t === tiles[1],
       }),
       LARGE,
     );
 
     expect(plan.requests.map((r) => r.tile)).toEqual([tiles[2]]);
     // In flight holds a slot the stream must stamp; failed holds nothing worth one.
-    expect(plan.touched).toEqual([earthKey(tiles[1]!)]);
+    expect(plan.touched).toEqual([tiles[1]]);
     expect(plan.lastPlan).toEqual({ requestCount: 3, zWin: BASE + 1, misses: 3 });
   });
 
@@ -235,26 +232,19 @@ describe('planSurfaceTiles', () => {
   });
 
   it("never reads another body's atlas: a switch engages with every tile a miss", () => {
-    // Bug caught: Earth's resident slots drawn as Mars tiles, under Mars's ids.
-    const failedKeys: string[] = [];
+    // Bug caught: Earth's resident slots drawn as Mars tiles, under Mars's ids,
+    // or Earth's failures blocking Mars's fetches of the same (z, x, y).
     walk.demand = engagedDemand([tile(0), tile(1)]);
     const plan = planSurfaceTiles(
       [SEES_MARS],
       overBody(MARS),
-      residency({
-        residentSlot: () => SLOT,
-        hasFailed: (key) => {
-          failedKeys.push(key);
-          return false;
-        },
-      }),
+      residency({ residentSlot: () => SLOT, hasFailed: () => true, isInFlight: () => true }),
       LARGE,
     );
 
     expect(plan.verdict).toEqual({ engage: 'mars', tilePx: 512 });
     expect(plan.touched).toEqual([]);
     expect(plan.requests).toHaveLength(2);
-    expect(failedKeys.every((key) => key.startsWith('mars-tiles/v2/'))).toBe(true);
   });
 
   it('engages on the very demand a finer-tiered session stands down on', () => {
@@ -276,5 +266,18 @@ describe('planSurfaceTiles', () => {
   it('stays awake while fetches are in flight, over nothing', () => {
     const plan = planSurfaceTiles([LOOKS_AWAY], null, residency({ inFlightCount: () => 1 }), LARGE);
     expect(plan.awake).toBe(true);
+  });
+
+  it('votes awake on the frame that first issues requests', () => {
+    // Bug caught: the vote read before this plan's own requests exist, so the
+    // engaging frame sleeps with nothing yet in flight.
+    const fresh = residency({ engagedBodyId: () => null });
+    expect(planSurfaceTiles([SEES_EARTH], overBody(EARTH), fresh, LARGE).awake).toBe(true);
+  });
+
+  it("carries the over body's params at its committed tier, for the terrain climb", () => {
+    // Bug caught: `heightAt` climbing from a base level the cut was not walked from.
+    const plan = planSurfaceTiles([LOOKS_AWAY], overBody(EARTH), residency(), () => 'medium');
+    expect(plan.params?.baseLevel).toBe(baseLevelForTier('earth', 'medium'));
   });
 });

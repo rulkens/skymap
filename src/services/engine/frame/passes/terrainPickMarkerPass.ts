@@ -59,7 +59,10 @@ export const terrainPickMarkerPass: ContentPass = {
       cursorPx: cursorTexPx,
       viewportPx: view.viewportPx,
       fovYRad: frustumFovYRad(ctx.frustum),
-      terrainHeightAt: (b, d) => state.subsystems.surfaceTiles?.stream.heightAt(b, d) ?? 0,
+      terrainHeightAt: (b, d) => {
+        const tiles = state.subsystems.surfaceTiles;
+        return tiles === null ? 0 : tiles.stream.heightAt(b, d, tiles.plan.params);
+      },
     });
     if (pick === null) return;
 

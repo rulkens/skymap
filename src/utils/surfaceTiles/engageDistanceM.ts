@@ -5,7 +5,8 @@
  * grows with the lens's pixels per radian. Fitted to a sweep of the real
  * `cutSurfaceTiles` at the small tier (base z2, the farthest-engaging, so the
  * fit bounds every tier) over sub-camera latitudes 0–89°: 4.46 R at 60° on
- * 4096², 1075 R at 0.5° on 8192². Scale-free in radii.
+ * 4096², 1075 R at 0.5° on 8192². Fitted with the body at the view centre:
+ * scale `pxPerRad` by `frustumCornerMagnification` to bound it anywhere.
  */
 
 /** Body radii per pixel-per-radian: the far-field slope of the sweep. */

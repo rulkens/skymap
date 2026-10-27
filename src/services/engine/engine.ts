@@ -498,8 +498,7 @@ export function createEngine(
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.
       assetPriorities: () => assetPriorityBySlotName(state),
-      // Residency from the stream, the rest from this frame's plan, until P7
-      // publishes the readout from the body Layer.
+      // Residency from the stream, the rest from this frame's plan.
       surfaceTiles: () => {
         const tiles = state.subsystems.surfaceTiles;
         if (tiles === null) return EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;

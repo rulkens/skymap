@@ -14,6 +14,7 @@ import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnaps
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { Vec3 } from '../../math/Vec3';
+import type { SurfaceTilePlannerParams } from '../../scene/SurfaceTilePlannerParams';
 
 export type SurfaceTileStream = Destroyable & {
   readonly residency: SurfaceTileResidency;
@@ -26,15 +27,25 @@ export type SurfaceTileStream = Destroyable & {
    * Terrain height (metres above the datum) under a body-fixed direction —
    * the CPU twin of the shader's `lattice.wesl` sampler (spec §8.4). `0` for
    * any body but the engaged one: another body's tiles answer nothing here.
+   * `params` are the last plan's (`SurfaceTilePlan.params`): the climb stops
+   * at the base level the cut was walked from.
    */
-  heightAt(bodyId: SceneBodyId, dirBodyFixed: Readonly<Vec3>): number;
+  heightAt(
+    bodyId: SceneBodyId,
+    dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
+  ): number;
 
   /**
    * The level `heightAt`'s ancestor climb resolved under the same direction;
    * `null` when nothing is resident there or the body is not engaged. A
    * debug readout: the height alone cannot tell "sea level" from "no tile".
    */
-  residentHeightLevelAt(bodyId: SceneBodyId, dirBodyFixed: Readonly<Vec3>): number | null;
+  residentHeightLevelAt(
+    bodyId: SceneBodyId,
+    dirBodyFixed: Readonly<Vec3>,
+    params: SurfaceTilePlannerParams | null,
+  ): number | null;
 
   /** The albedo atlas's view, or `null` while nothing is engaged. */
   getAtlasView(): GPUTextureView | null;

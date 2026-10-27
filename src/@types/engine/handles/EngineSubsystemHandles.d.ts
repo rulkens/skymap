@@ -9,7 +9,7 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `earthTiles`, `pickDriver`,
+ *   - Lazy (inside the GPU init IIFE): `surfaceTiles`, `pickDriver`,
  *     `resizeWake`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer

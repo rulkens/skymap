@@ -30,7 +30,7 @@ export function prepareBodySurfaceFrame(
   }
   if (byBody.has(bodyId)) return byBody.get(bodyId)!;
 
-  const result = computeBodySurfaceFrame(state, ctx, view, bodyId);
+  const result = computeBodySurfaceFrame(state, ctx, bodyId);
   byBody.set(bodyId, result);
   return result;
 }

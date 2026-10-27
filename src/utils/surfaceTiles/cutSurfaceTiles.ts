@@ -406,7 +406,7 @@ export function cutSurfaceTiles(input: {
   // Largest-on-screen-first: residency walk order and fetch queue pop order.
   requests.sort((a, b) => b.screenPx - a.screenPx);
 
-  return { cut: balanced, requests: { zWin, requests, subCameraDirLocal: camDir } };
+  return { cut: balanced, requests: { zWin, requests } };
 }
 
 /**

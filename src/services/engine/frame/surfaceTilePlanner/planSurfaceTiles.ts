@@ -12,6 +12,7 @@ import type { SurfaceTileOver } from '../../../../@types/engine/surfaceTiles/Sur
 import type { SurfaceTileResidency } from '../../../../@types/engine/surfaceTiles/SurfaceTileResidency';
 import type { SurfaceTilePlan } from '../../../../@types/engine/surfaceTiles/SurfaceTilePlan';
 import type { SurfaceTileRequest } from '../../../../@types/scene/SurfaceTileRequest';
+import type { SurfaceTileId } from '../../../../@types/data/SurfaceTileId';
 import type { SurfaceTileBodyId } from '../../../../@types/data/SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { Tier } from '../../../../@types/data/Tier';
@@ -21,7 +22,6 @@ import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { baseLevelForTier } from '../../../../utils/surfaceTiles/baseLevelForTier';
 import { cutSurfaceTiles } from '../../../../utils/surfaceTiles/cutSurfaceTiles';
 import { derivePlannerParams } from '../../../../utils/surfaceTiles/derivePlannerParams';
-import { surfaceTilePath } from '../../../../utils/surfaceTiles/surfaceTilePath';
 import { deepestBandLevelAt } from '../../../../utils/surfaceTiles/deepestBandLevelAt';
 import { directionToLonLatDeg } from '../../../../utils/geo/directionToLonLatDeg';
 import { tileBodiesInView } from './tileBodiesInView';
@@ -58,14 +58,15 @@ export function planSurfaceTiles(
   const shown = views.filter((view) => tileBodiesInView(view).includes(bodyId));
   const wantManifest = shown.length > 0 && manifest.status === 'absent' ? bodyId : null;
   const awake = wantManifest !== null || manifest.status === 'pending' || inFlight;
-  const unplanned = { ...IDLE_SURFACE_TILE_PLAN, wantManifest, subCamera, awake };
-  if (params === null || manifest.value === null || shown.length === 0) {
+  const unplanned = { ...IDLE_SURFACE_TILE_PLAN, wantManifest, subCamera, params, awake };
+  if (params === null || shown.length === 0) {
     return { ...unplanned, verdict: stale ? 'release' : 'keep' };
   }
 
   // Another body's atlas answers nothing for this one: its tiles would draw
-  // under this body's ids.
-  const residentSlot = engaged === bodyId ? residency.residentSlot : () => null;
+  // under this body's ids, and its failures would block this body's fetches.
+  const own = engaged === bodyId;
+  const residentSlot = own ? residency.residentSlot : () => null;
   // Datum, not a bound: tiles displace off the datum sphere, so the camera
   // scale and the radius the cut is planned against must be that same number.
   const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, bodyId, 'planSurfaceTiles');
@@ -83,18 +84,17 @@ export function planSurfaceTiles(
     return { ...unplanned, verdict: stale ? 'release' : 'keep' };
   }
 
-  const { prefix } = manifest.value;
-  const touched: string[] = [];
+  const touched: SurfaceTileId[] = [];
   const requests: SurfaceTileRequest[] = [];
   let misses = 0;
   for (const request of demand.requests) {
-    const key = surfaceTilePath(request.tile, prefix);
-    const landed = residentSlot(request.tile) !== null;
+    const { tile } = request;
+    const landed = residentSlot(tile) !== null;
     if (!landed) misses++;
-    // Before touching: a touched failed key keeps its LRU stamp fresh forever,
+    // Before touching: a touched failed tile keeps its LRU stamp fresh forever,
     // pinning a slot on a tile with no pixels.
-    if (residency.hasFailed(key)) continue;
-    if (landed || residency.isInFlight(key)) touched.push(key);
+    if (own && residency.hasFailed(tile)) continue;
+    if (landed || (own && residency.isInFlight(tile))) touched.push(tile);
     else requests.push(request);
   }
   return {
@@ -102,9 +102,12 @@ export function planSurfaceTiles(
     touched,
     requests,
     wantManifest,
-    verdict: engaged === bodyId ? 'keep' : { engage: bodyId, tilePx: params.tilePx },
+    verdict: own ? 'keep' : { engage: bodyId, tilePx: params.tilePx },
     lastPlan: { requestCount: demand.requests.length, zWin: demand.zWin, misses },
     subCamera,
-    awake,
+    params,
+    // This plan's own requests count: `inFlight` was read before they existed,
+    // so the engaging frame would otherwise vote asleep.
+    awake: awake || requests.length > 0,
   };
 }

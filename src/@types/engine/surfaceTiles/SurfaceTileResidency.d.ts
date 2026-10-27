@@ -1,7 +1,8 @@
 /**
  * SurfaceTileResidency — the tile stream's read side, handed to the pure
  * planner. Read-only: the stream alone owns the atlases, LRU and fetch
- * queue, as `OctreeChunkStream` does for the star octree. Tile keys are `surfaceTilePath(tile, prefix)`.
+ * queue, as `OctreeChunkStream` does for the star octree. Every query
+ * answers for the engaged body's atlases.
  */
 
 import type { SurfaceTileId } from '../../data/SurfaceTileId';
@@ -20,8 +21,8 @@ export type SurfaceTileResidency = {
   /** The engaged body's tile whose bitmap has landed, else null. */
   residentSlot(tile: SurfaceTileId): ResidentSlot | null;
   /** Holds a slot whose fetch is still out. */
-  isInFlight(key: string): boolean;
-  hasFailed(key: string): boolean;
+  isInFlight(tile: SurfaceTileId): boolean;
+  hasFailed(tile: SurfaceTileId): boolean;
   inFlightCount(): number;
   /** The body whose atlases are allocated, or null while none are. */
   engagedBodyId(): (SceneBodyId & SurfaceTileBodyId) | null;

@@ -61,8 +61,6 @@ import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';
-import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
-import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
 import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
 import { installVisibilityGates } from '../wiring/installVisibilityGates';
@@ -99,7 +97,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     stream: createSurfaceTileStream({
       device: deps.phaseLocals!.device,
       requestRender: () => state.subsystems.scheduler.requestRender(),
-      baseLevelOf: (bodyId) => baseLevelForTier(bodyId, bodySurfaceTier(state, bodyId)),
     }),
     plan: IDLE_SURFACE_TILE_PLAN,
   };

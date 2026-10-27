@@ -1153,8 +1153,9 @@ describe('runFrame — the planner keep-ticking fold', () => {
   });
 
   it('writes the frame tile plan, applies it, and keeps ticking while tiles are in flight', () => {
-    // Bug caught: the loop sleeping mid-fetch once nothing is engaged, so a
-    // landed tile never shows until the next input.
+    // Bug caught: the plan's wake vote never reaching the keep-ticking
+    // predicate. A landing tile wakes the loop itself; a landing manifest does
+    // not, so only this vote carries the loop through its fetch.
     const state = makeReadyState();
     const apply = vi.fn();
     const residency = {
