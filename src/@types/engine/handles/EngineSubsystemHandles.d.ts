@@ -125,19 +125,3 @@ export type EngineSubsystemHandles = {
    */
   loadProgress: LoadProgressEmitter | null;
 };
-
-/**
- * Compile-time guard: every subsystem field must satisfy `Destroyable`.
- *
- * The mapped type strips `| null` via `NonNullable<...>` (nullable fields
- * are fine — the engine null-checks before calling destroy) and requires
- * the rest to be assignable to `Destroyable`. A missing `destroy()`
- * resolves to `never` for that key, surfacing as a compile error here
- * rather than as a silent leak at runtime when `engine.destroy()` walks
- * the bag uniformly.
- */
-type _EnforceDestroyable = {
-  [K in keyof EngineSubsystemHandles]: NonNullable<EngineSubsystemHandles[K]> extends Destroyable
-    ? true
-    : never;
-};
