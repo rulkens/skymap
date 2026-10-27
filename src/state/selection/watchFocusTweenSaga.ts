@@ -31,6 +31,7 @@ import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import type { SagaContext } from '../../store/types';
+import type { FocusMotion } from '../../@types/camera/FocusMotion';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(
@@ -96,7 +97,11 @@ export function* watchFocusTweenSaga() {
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
       const frame = yield* select(selectOrientation);
-      const motion = { style: 'eased', durationMs: FOCUS_TWEEN_MS, ease: 'easeOutCubic' } as const;
+      const motion: FocusMotion = {
+        style: 'eased',
+        durationMs: FOCUS_TWEEN_MS,
+        ease: 'easeOutCubic',
+      };
       yield* put(
         startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
       );

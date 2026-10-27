@@ -331,7 +331,6 @@ describe('compileClip flyPath', () => {
         ]),
       ],
     };
-    expect(() => compileClip(data)).not.toThrow();
     expect(evaluateClip(data, 2).roll).toBeCloseTo(0.4, 9);
   });
 

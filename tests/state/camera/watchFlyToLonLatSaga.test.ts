@@ -17,6 +17,7 @@ import { updateSelectionFocus } from '../../../src/state/selection/selectionSlic
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../../src/data/camera/flyToLonLatTweenMs';
+import { focusMoveDurationMs } from '../../../src/services/engine/camera/focusMoveDurationMs';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -65,7 +66,7 @@ describe('watchFlyToLonLatSaga', () => {
     const tween = tweenOf(puts[0]);
     expect(tween.from).toBe(FROM);
     expect(tween.to.target).toEqual([...EARTH_POS]);
-    expect(tween.motion.durationMs).toBe(FLY_TO_LON_LAT_TWEEN_MS);
+    expect(focusMoveDurationMs(tween)).toBe(FLY_TO_LON_LAT_TWEEN_MS);
   });
 
   it('over another body: focuses it first, then tweens to its centre', () => {
@@ -73,7 +74,7 @@ describe('watchFlyToLonLatSaga', () => {
     expect(puts[0]).toEqual(updateSelectionFocus({ type: 'body', id: asSceneBodyId('mars') }));
     const tween = tweenOf(puts[1]);
     expect(tween.to.target).toEqual([...BODIES.get(asSceneBodyId('mars'))!.positionMpc]);
-    expect(tween.motion.durationMs).toBe(250);
+    expect(focusMoveDurationMs(tween)).toBe(250);
   });
 
   it('does nothing before the camera exists', () => {

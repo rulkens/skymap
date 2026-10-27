@@ -8,14 +8,14 @@
 
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../@types/animation/ClipData';
-import { FOCUS_MOTIONS } from './focusMotions';
+import { focusMotionRowOf } from './focusMotionRowOf';
 
 const cache = new WeakMap<CameraTweenDescriptor, ClipData>();
 
 export function focusMoveClip(d: CameraTweenDescriptor): ClipData {
   const cached = cache.get(d);
   if (cached !== undefined) return cached;
-  const data = FOCUS_MOTIONS[d.motion.style].clipOf(d);
+  const data = focusMotionRowOf(d).clipOf(d);
   cache.set(d, data);
   return data;
 }

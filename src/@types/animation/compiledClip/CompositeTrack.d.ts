@@ -1,4 +1,3 @@
-import type { Channel } from '../Channel';
 import type { CompositeSample } from './CompositeSample';
 
 /**
@@ -10,13 +9,12 @@ import type { CompositeSample } from './CompositeSample';
  * `sample` is a closure bound at compile time over the precomputed geometry,
  * so the per-frame evaluator only calls it. Carrying a function is safe because
  * a `CompiledClip` lives only in the in-memory compile cache, never serialised.
- * `S` lets a builder promise a narrower sample (a flyPath writes all four).
  */
-export type CompositeTrack<S extends CompositeSample = CompositeSample> = {
+export type CompositeTrack = {
   readonly startSec: number;
   readonly endSec: number;
-  /** The channels `sample` writes, no more and no fewer. */
-  readonly channels: readonly Channel[];
+  /** The channels `sample` writes, no more and no fewer. Roll is never one. */
+  readonly channels: readonly (keyof CompositeSample)[];
   /** `localSec` is seconds since the track's own `startSec` (0 → `endSec−startSec`). */
-  readonly sample: (localSec: number) => S;
+  readonly sample: (localSec: number) => CompositeSample;
 };

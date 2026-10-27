@@ -1,8 +1,8 @@
 /**
  * FOCUS_MOTIONS — one row per focus-move style, keyed by `motion.style`. Read
- * only through `focusMoveClip` / `focusMoveDurationMs` / `focusMoveEase`, so a
- * new style is a new row, never a new branch at a call site. It lives in
- * services, not `src/data/`, because its rows build clips from services code.
+ * only through `focusMotionRowOf`, so a new style is a new row, never a new
+ * branch at a call site. It lives in services, not `src/data/`, because its
+ * rows build clips from services code.
  */
 
 import type { FocusMotion } from '../../../@types/camera/FocusMotion';

@@ -41,9 +41,10 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
  * `fovYRad` is the projection FOV the structure and body arms need to frame
  * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
- * `motion` is frozen onto the descriptor as given. `frame` is the orientation live at the caller's dispatch time — stamped
- * onto the descriptor so the tween driver can re-express the pose if the
- * setting changes mid-flight (same contract as `clipStarted`'s `frame`).
+ * `motion` is frozen onto the descriptor as given. `frame` is the orientation
+ * live at the caller's dispatch time — stamped onto the descriptor so the tween
+ * driver can re-express the pose if the setting changes mid-flight (same
+ * contract as `clipStarted`'s `frame`).
  */
 export function focusTweenDescriptor(
   row: SelectionRow,

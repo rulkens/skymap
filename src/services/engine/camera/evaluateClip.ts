@@ -469,7 +469,7 @@ function evaluateBaseVec3(
  */
 function governingCompositeAt(
   tracks: readonly CompositeTrack[],
-  ch: Channel,
+  ch: keyof CompositeSample,
   t: number,
 ): CompositeTrack | null {
   let best: CompositeTrack | null = null;

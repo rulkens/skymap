@@ -6,7 +6,7 @@
  * and the `ClipData` shape. All assertions are deterministic; no wall-clock.
  *
  * The final section ('focus tween = one-segment clip') verifies that a
- * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance is
+ * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance
  * reproduces the focus-tween motion exactly — `evaluateClip` via `easedFocusClip`
  * is the single camera-evaluation path for both scripted clips and focus tweens.
  */
@@ -28,7 +28,6 @@ import {
 import { easedFocusClip } from '../../../../src/services/engine/camera/easedFocusClip';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -326,7 +325,7 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 // A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
 // with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
 // tweens use linear distance interpolation, not log-space). These four cases
-// These four cases pin that `evaluateClip` via `easedFocusClip` reproduces the
+// pin that `evaluateClip` via `easedFocusClip` reproduces the
 // focus-tween motion exactly — the single camera-evaluation path for scripted
 // clips and tweens.
 //
@@ -489,7 +488,7 @@ describe('roll channel', () => {
   });
 
   it("a camera tween lands on the descriptor's target roll", () => {
-    const desc: CameraTweenDescriptor = {
+    const desc: Parameters<typeof easedFocusClip>[0] = {
       from: { ...TWEEN_FROM, roll: 0.1 },
       to: { ...TWEEN_TO, roll: 1.2 },
       motion: { style: 'eased', durationMs: DURATION_MS, ease: 'easeOutCubic' },

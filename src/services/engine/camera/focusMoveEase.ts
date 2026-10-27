@@ -2,8 +2,8 @@
 
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
 import type { Ease } from '../../../@types/animation/Ease';
-import { FOCUS_MOTIONS } from './focusMotions';
+import { focusMotionRowOf } from './focusMotionRowOf';
 
 export function focusMoveEase(d: CameraTweenDescriptor): Ease {
-  return FOCUS_MOTIONS[d.motion.style].easeOf(d);
+  return focusMotionRowOf(d).easeOf(d);
 }

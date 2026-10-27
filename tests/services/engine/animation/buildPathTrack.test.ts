@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest';
 import { buildPathTrack } from '../../../../src/services/engine/animation/buildPathTrack';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CompositeSample } from '../../../../src/@types/animation/compiledClip/CompositeSample';
+import type { CompositeTrack } from '../../../../src/@types/animation/compiledClip/CompositeTrack';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';
@@ -34,6 +35,9 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 };
 
 /** Reconstruct the eye position from a pose via the orbit convention. */
+/** A flyPath writes all four channels; read them without per-field `!`. */
+const sampleAll = (tr: CompositeTrack, t: number) => tr.sample(t) as Required<CompositeSample>;
+
 function eyeOf(p: Required<CompositeSample>): Vec3 {
   const cp = Math.cos(p.pitch);
   const dir: Vec3 = [cp * Math.sin(p.yaw), Math.sin(p.pitch), cp * Math.cos(p.yaw)];
@@ -80,16 +84,16 @@ describe('buildPathTrack', () => {
     expect(track.startSec).toBe(0);
     expect(track.endSec).toBe(4);
 
-    const a = eyeOf(track.sample(0));
+    const a = eyeOf(sampleAll(track, 0));
     expect(a[0]).toBeCloseTo(0, 5);
     expect(a[2]).toBeCloseTo(1, 5); // live eye at [0,0,1]
 
     // The eye settles framed on the final waypoint: 4 short of the [20,0,0]
     // centre along the +X approach (see the dedicated settle-framed test).
-    const b = eyeOf(track.sample(4));
+    const b = eyeOf(sampleAll(track, 4));
     expect(b[0]).toBeCloseTo(16, 4);
     expect(b[1]).toBeCloseTo(0, 4);
-    expect(track.sample(4).distance).toBeCloseTo(4, 4);
+    expect(sampleAll(track, 4).distance).toBeCloseTo(4, 4);
   });
 
   // ── Settle framed: the DESTINATION (final waypoint) is not flown through ──
@@ -109,7 +113,7 @@ describe('buildPathTrack', () => {
         { at: [20, 0, 0], distance: 4 }, // destination: settled framed
       ],
     });
-    const end = track.sample(4);
+    const end = sampleAll(track, 4);
     // The look-at TARGET lands on the final group centre…
     expect(end.target[0]).toBeCloseTo(20, 3);
     expect(end.target[1]).toBeCloseTo(0, 3);
@@ -138,7 +142,7 @@ describe('buildPathTrack', () => {
     let prevX = -Infinity;
     let prevDist = -Infinity;
     for (let i = 0; i <= 100; i++) {
-      const s = track.sample((i / 100) * 4);
+      const s = sampleAll(track, (i / 100) * 4);
       const eye = eyeOf(s);
       expect(eye[0]).toBeGreaterThanOrEqual(prevX - 1e-6);
       expect(s.distance).toBeGreaterThanOrEqual(prevDist - 1e-6);
@@ -161,12 +165,12 @@ describe('buildPathTrack', () => {
       ],
     });
 
-    const atWp0 = eyeOf(track.sample(3));
+    const atWp0 = eyeOf(sampleAll(track, 3));
     expect(atWp0[0]).toBeCloseTo(10, 3);
-    expect(track.sample(3).distance).toBeCloseTo(10, 3);
+    expect(sampleAll(track, 3).distance).toBeCloseTo(10, 3);
 
     // Halfway through the (short, fast) final leg in time → past wp0, not yet wp1.
-    const mid2 = eyeOf(track.sample(3.5));
+    const mid2 = eyeOf(sampleAll(track, 3.5));
     expect(mid2[0]).toBeGreaterThan(10);
     expect(mid2[0]).toBeLessThan(20);
   });
@@ -201,7 +205,7 @@ describe('buildPathTrack', () => {
         { at: [20, 0, 0], distance: 3 },
       ],
     });
-    const end = track.sample(4);
+    const end = sampleAll(track, 4);
     expect(end.yaw).toBeCloseTo(-Math.PI / 2, 2);
     expect(end.pitch).toBeCloseTo(0, 3);
   });
@@ -221,9 +225,9 @@ describe('buildPathTrack', () => {
       ],
     });
     // t=0: still the live orientation (looking -Z → yaw 0).
-    expect(track.sample(0).yaw).toBeCloseTo(0, 3);
+    expect(sampleAll(track, 0).yaw).toBeCloseTo(0, 3);
     // t=1.5s (> align window): already aligned forward (+X → yaw -π/2).
-    expect(track.sample(1.5).yaw).toBeCloseTo(-Math.PI / 2, 2);
+    expect(sampleAll(track, 1.5).yaw).toBeCloseTo(-Math.PI / 2, 2);
   });
 
   it('keeps the live start orientation at t=0 (no aim pop when the clip takes over)', () => {
@@ -238,7 +242,7 @@ describe('buildPathTrack', () => {
         { at: [20, 0, 0], distance: 10 },
       ],
     });
-    const a = track.sample(0);
+    const a = sampleAll(track, 0);
     expect(a.yaw).toBeCloseTo(1.2, 6);
     expect(a.pitch).toBeCloseTo(-0.3, 6);
   });
@@ -254,7 +258,7 @@ describe('buildPathTrack', () => {
         { at: [20, 0, 0], distance: 10, yaw: 0.5, pitch: 0.25 }, // pin the final aim
       ],
     });
-    const end = track.sample(4);
+    const end = sampleAll(track, 4);
     expect(end.yaw).toBeCloseTo(0.5, 3);
     expect(end.pitch).toBeCloseTo(0.25, 3);
   });
@@ -275,7 +279,7 @@ describe('buildPathTrack', () => {
       waypoints,
       align: 3,
     });
-    expect(Math.abs(slow.sample(1.0).yaw - -Math.PI / 2)).toBeGreaterThan(0.1);
+    expect(Math.abs(sampleAll(slow, 1.0).yaw - -Math.PI / 2)).toBeGreaterThan(0.1);
     // A short 0.5s align-in has already settled forward (+X → yaw -π/2) by t=0.6.
     const fast = buildPathTrack({
       start,
@@ -285,7 +289,7 @@ describe('buildPathTrack', () => {
       waypoints,
       align: 0.5,
     });
-    expect(fast.sample(0.6).yaw).toBeCloseTo(-Math.PI / 2, 2);
+    expect(sampleAll(fast, 0.6).yaw).toBeCloseTo(-Math.PI / 2, 2);
   });
 
   // ── Tunable envelope: `rampSec` (seconds) shortens the accel/decel ──
@@ -311,9 +315,9 @@ describe('buildPathTrack', () => {
       waypoints,
       rampSec: 0.4,
     });
-    expect(eyeOf(trap.sample(1))[0]).toBeGreaterThan(eyeOf(inOut.sample(1))[0]);
+    expect(eyeOf(sampleAll(trap, 1))[0]).toBeGreaterThan(eyeOf(sampleAll(inOut, 1))[0]);
     // Both still settle framed on the destination at the end (envelope reaches 1).
-    expect(eyeOf(trap.sample(4))[0]).toBeCloseTo(eyeOf(inOut.sample(4))[0], 3);
+    expect(eyeOf(sampleAll(trap, 4))[0]).toBeCloseTo(eyeOf(sampleAll(inOut, 4))[0], 3);
     // rampSec: 0 is a no-op — falls back to the named ease exactly.
     const off = buildPathTrack({
       start: START,
@@ -323,7 +327,7 @@ describe('buildPathTrack', () => {
       waypoints,
       rampSec: 0,
     });
-    expect(eyeOf(off.sample(1))[0]).toBeCloseTo(eyeOf(inOut.sample(1))[0], 6);
+    expect(eyeOf(sampleAll(off, 1))[0]).toBeCloseTo(eyeOf(sampleAll(inOut, 1))[0], 6);
   });
 
   // ── Dwell: a sustained slow-down window around each target (ADDS time) ──
@@ -345,8 +349,8 @@ describe('buildPathTrack', () => {
   ];
   const speedOf = (tr: ReturnType<typeof buildPathTrack>, t: number, total: number): number => {
     const dt = 0.02;
-    const a = eyeOf(tr.sample(Math.max(0, t - dt)));
-    const b = eyeOf(tr.sample(Math.min(total, t + dt)));
+    const a = eyeOf(sampleAll(tr, Math.max(0, t - dt)));
+    const b = eyeOf(sampleAll(tr, Math.min(total, t + dt)));
     return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / (2 * dt);
   };
   const approachTime = (
@@ -358,7 +362,7 @@ describe('buildPathTrack', () => {
     let best = Infinity;
     for (let i = 0; i <= 1000; i++) {
       const t = (i / 1000) * total;
-      const e = eyeOf(tr.sample(t));
+      const e = eyeOf(sampleAll(tr, t));
       const d = Math.hypot(e[0] - centre[0], e[1] - centre[1], e[2] - centre[2]);
       if (d < best) {
         best = d;
@@ -388,8 +392,8 @@ describe('buildPathTrack', () => {
     expect(zero.endSec).toBe(base.endSec);
     for (let i = 0; i <= 10; i++) {
       const t = (i / 10) * 8;
-      const a = eyeOf(base.sample(t));
-      const b = eyeOf(zero.sample(t));
+      const a = eyeOf(sampleAll(base, t));
+      const b = eyeOf(sampleAll(zero, t));
       expect(b[0]).toBeCloseTo(a[0], 9);
       expect(b[1]).toBeCloseTo(a[1], 9);
       expect(b[2]).toBeCloseTo(a[2], 9);
@@ -527,7 +531,7 @@ describe('buildPathTrack', () => {
       let best = Infinity;
       let look: Vec3 = [0, 0, 1];
       for (let i = 0; i <= 800; i++) {
-        const s = track.sample((i / 800) * 20);
+        const s = sampleAll(track, (i / 800) * 20);
         const e = eyeOf(s);
         const d = Math.hypot(e[0], e[1], e[2] - 100);
         if (d < best) {
@@ -562,7 +566,7 @@ describe('buildPathTrack', () => {
         });
         let maxZ = -Infinity;
         for (let i = 0; i <= 800; i++) {
-          maxZ = Math.max(maxZ, eyeOf(track.sample((i / 800) * 20))[2]);
+          maxZ = Math.max(maxZ, eyeOf(sampleAll(track, (i / 800) * 20))[2]);
         }
         return maxZ;
       };
@@ -605,7 +609,7 @@ describe('buildPathTrack', () => {
       let tStar = 0;
       for (let i = 0; i <= 1000; i++) {
         const t = (i / 1000) * 20;
-        const e = eyeOf(track.sample(t));
+        const e = eyeOf(sampleAll(track, t));
         const d = Math.hypot(e[0] - probe[0], e[1] - probe[1], e[2] - probe[2]);
         if (d < best) {
           best = d;
@@ -622,13 +626,13 @@ describe('buildPathTrack', () => {
       // that leads has a large +X component; the per-knot causal aim is still
       // mostly head-on (+Z) there, so its +X component is much smaller.
       const t = timeNearest(base, [20, 0, 100]);
-      const baseX = lookOf(base.sample(t))[0];
-      const leadX = lookOf(lead.sample(t))[0];
+      const baseX = lookOf(sampleAll(base, t))[0];
+      const leadX = lookOf(sampleAll(lead, t))[0];
       expect(leadX).toBeGreaterThan(baseX + 0.2);
     });
 
     it('still settles framed on the destination centre (tail look-at preserved)', () => {
-      const end = build(3).sample(20);
+      const end = sampleAll(build(3), 20);
       expect(end.target[0]).toBeCloseTo(100, 1);
       expect(end.target[1]).toBeCloseTo(0, 1);
       expect(end.target[2]).toBeCloseTo(100, 1);
@@ -662,9 +666,9 @@ describe('buildPathTrack', () => {
       centre: Vec3,
     ): { dist: number; sample: Required<CompositeSample> } => {
       let best = Infinity;
-      let at: Required<CompositeSample> = track.sample(0);
+      let at: Required<CompositeSample> = sampleAll(track, 0);
       for (let i = 0; i <= 2000; i++) {
-        const s = track.sample((i / 2000) * 20);
+        const s = sampleAll(track, (i / 2000) * 20);
         const e = eyeOf(s);
         const d = Math.hypot(e[0] - centre[0], e[1] - centre[1], e[2] - centre[2]);
         if (d < best) {
@@ -709,7 +713,7 @@ describe('buildPathTrack', () => {
     });
     let maxX = -Infinity;
     for (let i = 0; i <= 200; i++) {
-      const eye = eyeOf(track.sample((i / 200) * 4));
+      const eye = eyeOf(sampleAll(track, (i / 200) * 4));
       maxX = Math.max(maxX, eye[0]);
     }
     // Waypoint max x is 100; allow a small honest overshoot, not a slingshot.
@@ -750,7 +754,7 @@ describe('buildPathTrack', () => {
     // differentiator for the bug itself.
     it('keeps the knot-0 eye and the derived-target decode sites symmetric under a non-identity frame', () => {
       const track = build();
-      const eye = eyeUnderFrame(track.sample(0), frameBasis);
+      const eye = eyeUnderFrame(sampleAll(track, 0), frameBasis);
       const liveEye = eyeUnderFrame(start, frameBasis);
       expect(eye[0]).toBeCloseTo(liveEye[0], 5);
       expect(eye[1]).toBeCloseTo(liveEye[1], 5);
@@ -759,7 +763,7 @@ describe('buildPathTrack', () => {
 
     it('settles at the framing distance from its destination under a non-identity frame', () => {
       const track = build();
-      const end = track.sample(track.endSec);
+      const end = sampleAll(track, track.endSec);
       const eye = eyeUnderFrame(end, frameBasis);
       const destination: Vec3 = [200, -40, 60];
       const d = Math.hypot(

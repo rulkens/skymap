@@ -62,7 +62,6 @@
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
-import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -220,9 +219,9 @@ function passByDirVec(
 }
 
 // A flyPath's arc length couples all four aim/position channels; roll stays with the base layer.
-const FLY_PATH_CHANNELS: readonly Channel[] = ['target', 'distance', 'yaw', 'pitch'];
+const FLY_PATH_CHANNELS: CompositeTrack['channels'] = ['target', 'distance', 'yaw', 'pitch'];
 
-export function buildPathTrack(params: BuildParams): CompositeTrack<Required<CompositeSample>> {
+export function buildPathTrack(params: BuildParams): CompositeTrack {
   const { start, startSec, over, ease, waypoints, align, rampSec, linger, frameBasis } = params;
   // Normalize the basis + its causal-only knobs. centripetal carries neither, so
   // turnDelay is irrelevant and lookAhead is forced to 0 (no lead); the causal
@@ -610,7 +609,7 @@ export function buildPathTrack(params: BuildParams): CompositeTrack<Required<Com
     };
   };
 
-  const sample = (localSec: number): Required<CompositeSample> => {
+  const sample = (localSec: number): CompositeSample => {
     const t = paramAtLocalSec(localSec);
     const pose = poseAtTau(t);
     const aim = aheadAim(localSec, pose.yaw, pose.pitch);
