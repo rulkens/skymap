@@ -42,7 +42,7 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
     seconds: 5,
     width: 960,
   },
-  // One turn of the Moon about Earth, so the camera and the starry sky come back; the Sun's light is two days short of full at the end.
+  // One turn of the Moon about Earth, so the camera comes back; the Sun's light is two days short of full at the end.
   {
     id: 'features-time-moon',
     shot: 'features-time-moon',

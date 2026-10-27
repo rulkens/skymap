@@ -1,10 +1,9 @@
 /*
  * RemoteDemo — the Domes section's picture: a film of a dome swinging round Earth with a phone showing the
  * paired remote over its bottom right (below it where narrow), and a finger on the phone's drag pad that
- * moves left and right as the film swings. The finger is
- * placed from the film's own `--turn` (see DiscFilm), so it cannot drift from the picture. The film's first
- * half turns the scene to the right, so that is when the finger goes right. Where the film does not play the
- * finger is hidden and the phone is a still.
+ * moves left and right as the film swings. The finger is placed from the film's own `--turn` (see
+ * DiscFilm), so it cannot drift from the picture. Where the film does not play the finger is hidden and
+ * the phone is a still.
  */
 import { useRef } from 'react';
 

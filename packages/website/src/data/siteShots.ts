@@ -330,7 +330,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'Earth over one day',
     alt: 'Earth turning under a fixed line between day and night.',
   },
-  // Looking down on the north pole from above the ecliptic: the Sun's light crosses the hemisphere through the year. A year is 120 frames of three turns of Earth each, so the globe does not turn between frames.
+  // Looking down on the north pole from above the ecliptic: the Sun's light crosses the hemisphere through the year.
   {
     id: 'features-time-seasons',
     link: 't=2026-03-20T12:00:00Z&focus=body-earth&pose=a,0,0,0,3.14159,1.0,6.5e-16,0',
@@ -341,7 +341,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'The Sun’s light covers more of the northern hemisphere in summer than in winter.',
     alt: 'Earth seen from above its north pole, the Sun’s light covering a different part of the hemisphere as the year goes on.',
   },
-  // At full Moon, the camera on the Earth side of it: the film turns the camera round the Moon once, so it keeps facing Earth. The stars are off: they would sweep past and the film could not be kept small.
+  // At full Moon, the camera on the Earth side of it. The stars are off: they would sweep past and the film could not be kept small.
   {
     id: 'features-time-moon',
     link: 't=2026-10-26T04:00:00Z&focus=body-moon&pose=a,0,0,0,5.288,0,1.6e-16,0',

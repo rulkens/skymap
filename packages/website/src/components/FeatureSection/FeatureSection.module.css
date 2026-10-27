@@ -3,7 +3,6 @@
   align-items: center;
   row-gap: 2rem;
   padding-block: 3.5rem;
-  --phone-width: 17rem;
 }
 
 .part {
@@ -15,21 +14,11 @@
   line-height: var(--leading-display);
 }
 
-/* Small stills are as high as a film's disc, 9rem, whatever their shape; a wide one gives way first when narrow. */
 .small {
   display: flex;
   align-items: flex-start;
   gap: 1.5rem;
   margin-top: 2rem;
-
-  & > picture {
-    min-width: 0;
-  }
-
-  & img {
-    width: auto;
-    max-height: 9rem;
-  }
 }
 
 /* A phone or a disc that is narrower than the column stands in its middle. */

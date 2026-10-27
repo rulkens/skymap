@@ -1,6 +1,6 @@
 /*
  * FeatureSection — one thing Skymap does: its name, one line, a link to the page that explains it and
- * up to two `small` visuals in five columns of the page grid, beside one large visual (the children) in
+ * an optional `small` visual in five columns of the page grid, beside one large visual (the children) in
  * the other seven. `side` is where the large visual stands when wide (the words take the other side);
  * it is set per section, not counted across the page, because an island between sections breaks any
  * sibling count. Narrow, they stack, words first. `level` 2 is a section that is a part of the page itself:

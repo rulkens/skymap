@@ -60,8 +60,7 @@
   visibility: hidden;
 }
 
-/* Two classes, so the small slot's `img { width: auto }` (FeatureSection) does not win. */
-.thumbs .thumb {
+.thumb {
   flex: none;
   width: 5.5rem;
   padding: 0;
@@ -80,7 +79,6 @@
     width: 100%;
     max-width: none;
     height: 100%;
-    max-height: none;
     object-fit: cover;
   }
 }

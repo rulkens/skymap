@@ -3,13 +3,11 @@
  * with an arm that rises to the picture, the title, one sentence, then what is
  * data and what is drawn, the credit for third-party imagery in frame, and the
  * address the picture was taken at. Every picture being an address is the
- * site's honesty device. It is set quietly, as a caption: nothing in it is
- * brighter than the page's body text. It lays itself out by the room it is
- * given: stacked under a narrow picture, in two columns under a wide one.
- * `label` gives the words for a picture that is not in the manifest and is
- * not a view of the app: it has no address to open. `showDrawn={false}` leaves
- * out the data-and-drawing note, for a page that sets the picture as a plain
- * illustration.
+ * site's honesty device. It is set quietly, nothing brighter than the page's
+ * body text, and lays itself out by the room it is given: stacked under a
+ * narrow picture, in two columns under a wide one. `label` gives the words for
+ * a picture that is not in the manifest, with no address to open;
+ * `showDrawn={false}` leaves out the data-and-drawing note.
  */
 import type { SiteShot } from '../../@types/SiteShot';
 import { appLink } from '../../data/appLink.ts';

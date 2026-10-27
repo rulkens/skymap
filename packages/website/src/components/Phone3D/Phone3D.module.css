@@ -1,7 +1,7 @@
 .root {
-  --radius: calc(var(--phone-width, 15rem) * 0.15);
-  --bezel: calc(var(--phone-width, 15rem) * 0.035);
-  width: var(--phone-width, 15rem);
+  --radius: calc(var(--phone-width, 17rem) * 0.15);
+  --bezel: calc(var(--phone-width, 17rem) * 0.035);
+  width: var(--phone-width, 17rem);
   perspective: 1400px;
 }
 
