@@ -257,7 +257,7 @@ review: yes
   - The `glideCalibration.ts` derivation comments move into `focusMoveDefaults.ts` and are
     trimmed to the budget; spec §5 holds the full working.
 
-- [ ] Port the test files. Rename glide → geodesic and convert seconds → ms in the
+- [x] Port the test files. Rename glide → geodesic and convert seconds → ms in the
       expectations. Keep these #531 assertions:
   - endpoints exact;
   - the degenerate-limit agreement;
@@ -267,10 +267,10 @@ review: yes
   - the M31 → Earth target tail within the physical bound;
   - the FOV changes `w`, with inputs asserted to be inside the clamp;
   - ρ = 0 is floored and stays finite.
-- [ ] Add the test `geodesicPath > minMs above maxMs yields minMs` (Review Focus).
-- [ ] Port the implementation files and `tests/support/relErr.ts`.
-- [ ] Run `npx vitest run tests/utils/camera/zoomPanGeodesic tests/utils/camera/geodesicPath` → green.
-- [ ] Commit: `feat(camera): zoomPanGeodesic and geodesicPath — van Wijk & Nuij's zoom/pan path`.
+- [x] Add the test `geodesicPath > minMs above maxMs yields minMs` (Review Focus).
+- [x] Port the implementation files and `tests/support/relErr.ts`.
+- [x] Run `npx vitest run tests/utils/camera/zoomPanGeodesic tests/utils/camera/geodesicPath` → green.
+- [x] Commit: `feat(camera): zoomPanGeodesic and geodesicPath — van Wijk & Nuij's zoom/pan path`.
 
 ### Task 4: the `geodesic` effect and `buildGeodesicTrack`
 
