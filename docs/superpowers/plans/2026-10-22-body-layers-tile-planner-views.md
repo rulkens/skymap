@@ -236,6 +236,14 @@ export function planSurfaceTiles(
   awake`. **Bug caught:** refetch storms; Mars tiles under Earth's prefix.
 - Port the decision cases of `surfaceTileSubsystem.test.ts` (engage gate, base level, params) here.
 
+**Ruling after the measurement (user, 2026-10-27): the release radius is lens-relative.** One fixed
+radius must cover the 0.5° telephoto extreme (2110 R), so at a normal 60° lens the atlases stayed
+until the body was ~1 px. Instead `over` and the release verdict use twice the distance at which tiles
+would engage with the CURRENT lens: `engageDistanceM(body, pxPerRad, baseLevel)` (∝ the view's
+pixels per radian; the measured relation above), release when `|camPosLocalM| > 2 × engageDistanceM`.
+~9 R at 60°, ~2,100 R at 0.5° on 8192 px; zooming out from telephoto while far releases (accepted).
+`TILE_RELEASE_RADII` deletes. Done in Task 5 (below).
+
 **Record (2026-10-23).**
 
 - `TILE_RELEASE_RADII` = 2110 for Earth and Mars. Method: a throwaway script swept the eye outward
