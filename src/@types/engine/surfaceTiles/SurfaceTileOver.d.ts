@@ -1,7 +1,8 @@
 /**
  * SurfaceTileOver — the tiling body the eye is over: the nearest one within
- * its `TILE_RELEASE_RADII`, from position alone. No visibility gate, so
- * looking up from street level keeps it (and the atlases, and the readout).
+ * twice its `engageDistanceM` for the current lens, from position alone. No
+ * visibility gate, so looking up from street level keeps it (and the
+ * atlases, and the readout).
  */
 
 import type { SurfaceTileBodyId } from '../../data/SurfaceTileBodyId';

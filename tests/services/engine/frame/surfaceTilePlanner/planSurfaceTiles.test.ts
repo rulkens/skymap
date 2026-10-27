@@ -158,7 +158,7 @@ describe('planSurfaceTiles', () => {
     expect(plan.verdict).toBe('keep');
   });
 
-  it('a body switch releases at once; distance releases past TILE_RELEASE_RADII; off-screen never does', () => {
+  it('a body switch releases at once; out of reach releases; off-screen never does', () => {
     // Bug caught: atlases held long after leaving, or dropped on a turn of the head.
     expect(planSurfaceTiles([SEES_EARTH], overBody(MARS), residency(), LARGE).verdict).toBe(
       'release',
