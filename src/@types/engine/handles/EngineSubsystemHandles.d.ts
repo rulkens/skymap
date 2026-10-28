@@ -9,8 +9,7 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `surfaceTiles`, `pickDriver`,
- *     `resizeWake`.
+ *   - Lazy (inside the GPU init IIFE): `pickDriver`, `resizeWake`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
  * null-checks stay honest and `destroy()` can null fields back out
@@ -18,8 +17,6 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { SurfaceTileStream } from '../../../layers/body/@types/SurfaceTileStream';
-import type { SurfaceTilePlan } from '../../../layers/body/@types/SurfaceTilePlan';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
@@ -31,13 +28,6 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
-  /**
-   * Surface virtual texturing: the stream that owns residency, and this
-   * frame's plan, written once per frame by `runFrame` and read by the passes
-   * and the terrain seam. Constructed in `wireSlots`; the stream allocates no
-   * GPU memory until a plan engages it. Null before `wireSlots` runs.
-   */
-  surfaceTiles: { readonly stream: SurfaceTileStream; plan: SurfaceTilePlan } | null;
   /** Answers the `input` slice's hover and select requests with GPU picks; built in `wireInput`. */
   pickDriver: Destroyable | null;
   resizeWake: Destroyable | null;

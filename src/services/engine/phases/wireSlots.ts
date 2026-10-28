@@ -1,18 +1,16 @@
 /**
  * wireSlots: bootstrap phase 3, core's half of the demand-driven asset
- * orchestrator. Every slot already rides on its composed asset row; this wires the
- * surface tile stream, visibility fades and gates, load progress, the ready-wake,
- * the format-version alert and `reevaluateDemand`, the single place loads start.
- * It does not block on data arrival: `wireInput`/`startLoop` run right after, so
- * the camera and rAF loop come up with whatever has landed. Mutates
- * `deps.allSlots` and `state.subsystems.{loadProgress, surfaceTiles}`.
+ * orchestrator. Every slot already rides on its composed asset row; this wires
+ * visibility fades and gates, load progress, the ready-wake, the format-version
+ * alert and `reevaluateDemand`, the single place loads start. It does not block
+ * on data arrival: `wireInput`/`startLoop` run right after, so the camera and rAF
+ * loop come up with whatever has landed. Mutates `deps.allSlots` and
+ * `state.subsystems.loadProgress`.
  */
 
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
-import { createSurfaceTileStream } from '../../../layers/body/subsystems/surfaceTiles/surfaceTileStream';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
 import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
 import { installVisibilityGates } from '../wiring/installVisibilityGates';
@@ -25,16 +23,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
-
-  // A subsystem (owns residency and streaming), not a renderer, so it is built
-  // here rather than in `initGpu`; free until a plan engages it.
-  state.subsystems.surfaceTiles = {
-    stream: createSurfaceTileStream({
-      device: deps.phaseLocals!.device,
-      requestRender: () => state.subsystems.scheduler.requestRender(),
-    }),
-    plan: IDLE_SURFACE_TILE_PLAN,
-  };
 
   // Seeded at each identity's target (its gating slot's commit), so frame 1 is
   // coherent and a demand-loaded thing waits at 0 to fade in.

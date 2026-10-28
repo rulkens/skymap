@@ -19,6 +19,8 @@ import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextu
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 import type { ShowKey } from '../../../../src/@types/animation/ShowKey';
 
@@ -263,6 +265,29 @@ describe('createLayers composition', () => {
     await expect(
       createLayers(state, makeDeps([terrainLayer('a'), terrainLayer('b')], store)),
     ).rejects.toThrow(/terrain/);
+  });
+
+  it("createLayers composes the body Layer's terrain and no core provider", async () => {
+    // Bug caught: a core tile provider left beside the body Layer's throws at boot as a
+    // second ground; a dropped body row would leave the camera on the flat datum.
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const heightAt = vi.fn(() => 42);
+    const body = {
+      ...bodyLayerWithoutGpu,
+      create: () => ({
+        textureSlots: new Map(),
+        atlasSlot: {},
+        surfaceTiles: { stream: { heightAt }, plan: IDLE_SURFACE_TILE_PLAN },
+      }),
+    } as unknown as Layer<string, unknown>;
+    const deps = makeDeps([body], store);
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+
+    await createLayers(state, deps);
+
+    expect(state.terrain.heightAt(asSceneBodyId('earth'), [1, 0, 0])).toBe(42);
+    expect(heightAt).toHaveBeenCalledTimes(1);
   });
 
   it('throws at boot when a Layer mints a slot key core already owns', async () => {

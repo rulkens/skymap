@@ -1,12 +1,13 @@
 /**
- * create — the body renderers, then the texture slots whose commits write them. Every
- * sphere-body renderer draws into the `foreground:0` render-target row, so its
- * pipeline formats share HDR_TARGET_FORMAT/FOREGROUND_DEPTH_FORMAT with that row's
- * format/depth in renderTargets.ts, and the two can't drift apart.
+ * create — the body renderers, then the texture slots whose commits write them, then the
+ * surface-tile stream. Every sphere-body renderer draws into the `foreground:0`
+ * render-target row, so its pipeline formats share HDR_TARGET_FORMAT/FOREGROUND_DEPTH_FORMAT
+ * with that row's format/depth in renderTargets.ts, and the two can't drift apart.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { BodyRuntime } from './@types/BodyRuntime';
+import type { BodyFacts } from './@types/BodyFacts';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { SURFACE_TILE_MESH_RESOLUTION } from '../../data/bodies/surfaceTileParams';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
@@ -22,8 +23,10 @@ import { createAtmosphereShellRenderer } from './render/atmosphereShellRenderer'
 import { ATMOSPHERE_PARAMS } from './present/atmosphereParams';
 import { createBodyTextureSlots } from './load/bodyTextureSlots';
 import { createBodyTextureAtlasSlot } from './load/bodyTextureAtlasSlot';
+import { createSurfaceTileStream } from './subsystems/surfaceTiles/surfaceTileStream';
+import { IDLE_SURFACE_TILE_PLAN } from './subsystems/surfaceTiles/idleSurfaceTilePlan';
 
-export function create(deps: LayerCoreDeps): BodyRuntime {
+export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
   const { device } = deps.ctx;
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const renderers = {
@@ -76,5 +79,12 @@ export function create(deps: LayerCoreDeps): BodyRuntime {
     ...renderers,
     textureSlots: createBodyTextureSlots(renderers),
     atlasSlot: createBodyTextureAtlasSlot(renderers),
+    // Free until a plan engages it: the stream allocates its atlases on the first `engage`.
+    surfaceTiles: {
+      stream: createSurfaceTileStream({ device, requestRender: deps.requestRender }),
+      plan: IDLE_SURFACE_TILE_PLAN,
+    },
+    publish: deps.publish,
+    debugPanelOpen: () => deps.store.getState().ui.debugPanelOpen,
   };
 }

@@ -24,8 +24,7 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
       if (view.slab.frame.kind !== 'body-m') return false;
       if (!isSurfaceTileBodyId(view.slab.frame.hostId)) return false;
       // A non-empty cut signals THIS body is the one the tile stream serves; `heightAt` answers 0 for any other.
-      const tiles = state.subsystems.surfaceTiles;
-      return tiles !== null && tiles !== undefined && tiles.plan.cut.length > 0;
+      return runtime.surfaceTiles.plan.cut.length > 0;
     },
 
     draw(pass, view, ctx, state) {
@@ -52,8 +51,8 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
         viewportPx: view.viewportPx,
         fovYRad: frustumFovYRad(ctx.frustum),
         terrainHeightAt: (b, d) => {
-          const tiles = state.subsystems.surfaceTiles;
-          return tiles === null ? 0 : tiles.stream.heightAt(b, d, tiles.plan.params);
+          const tiles = runtime.surfaceTiles;
+          return tiles.stream.heightAt(b, d, tiles.plan.params);
         },
       });
       if (pick === null) return;

@@ -5,31 +5,25 @@
  *
  * No visualization — this is for reading numbers against
  * `surfaceTileStream.ts`'s `resident` map and the frame's tile plan while
- * chasing a tile-residency bug, not for a first look at the feature.
- *
- * ### Why poll, not subscribe
- *
- * `getDebugSnapshot()` is a fresh on-demand read (an O(resident) Map scan),
- * not a pushed event — there's no per-tile-arrival channel to subscribe to,
- * and adding one just for this readout would be a render-path hook for a
- * debug-only consumer. Polling at `FrameStatsRow`'s 4 Hz is plenty for a
- * number a human reads a few times a second.
+ * chasing a tile-residency bug, not for a first look at the feature. The
+ * snapshot is the body Layer's published fact, refreshed at 4 Hz while the
+ * panel is open (`surfaceTilePlanner`).
  */
 
-import { Fragment, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import type { SurfaceTileDebugSnapshot } from '../../layers/body/@types/SurfaceTileDebugSnapshot';
-import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
-import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
-import { FLY_TO_PRESETS } from '../../data/debug/flyToPresets';
-import { parseLonLatInput } from '../../utils/geo/parseLonLatInput';
-import DebugOverlayToggles from './DebugOverlayToggles';
-import DebugSection from './DebugSection';
+import { Fragment, useState, type FormEvent, type ReactElement } from 'react';
+import type { SurfaceTileDebugSnapshot } from '../@types/SurfaceTileDebugSnapshot';
+import type { DebugOverlayKey } from '../../../@types/data/debug/DebugOverlayKey';
+import { DEBUG_OVERLAY_ROWS } from '../../../data/debug/debugOverlayRows';
+import { FLY_TO_PRESETS } from '../../../data/debug/flyToPresets';
+import { parseLonLatInput } from '../../../utils/geo/parseLonLatInput';
+import DebugOverlayToggles from '../../../components/DebugPanel/DebugOverlayToggles';
+import DebugSection from '../../../components/DebugPanel/DebugSection';
 import styles from './SurfaceTileAtlasSection.module.css';
 
 export type SurfaceTileAtlasSectionProps = {
-  surfaceTileDebug: () => SurfaceTileDebugSnapshot;
-  /** Fly-to-coordinates debug instrument, from the engine handle's
-   *  `debug.flyToLonLat`. `body` omitted keeps `flyToLonLatActions`'s own
+  readonly surfaceTileDebug: SurfaceTileDebugSnapshot;
+  /** Fly-to-coordinates debug instrument, the `camera/flyToLonLat` request.
+   *  `body` omitted keeps `flyToLonLatActions`'s own
    *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
   flyToLonLat: (lonDeg: number, latDeg: number, body?: string, altKm?: number) => void;
   readonly overlays: Record<DebugOverlayKey, boolean>;
@@ -42,24 +36,16 @@ const TERRAIN_ROWS = DEBUG_OVERLAY_ROWS.filter(
   (row) => 'section' in row && row.section === 'surface-tiles',
 );
 
-const POLL_MS = 250;
-
 function SurfaceTileAtlasSection({
-  surfaceTileDebug,
+  surfaceTileDebug: snap,
   flyToLonLat,
   overlays,
   onToggle,
 }: SurfaceTileAtlasSectionProps): ReactElement {
-  const [snap, setSnap] = useState<SurfaceTileDebugSnapshot>(surfaceTileDebug);
   // Uncontrolled-feeling text box: the panel never reformats what the user
   // typed, so an in-progress edit ("12.53, 5") isn't clobbered by the 4 Hz
-  // poll — this state is local and update-on-submit only.
+  // refresh — this state is local and update-on-submit only.
   const [flyToText, setFlyToText] = useState('');
-
-  useEffect(() => {
-    const id = setInterval(() => setSnap(surfaceTileDebug()), POLL_MS);
-    return () => clearInterval(id);
-  }, [surfaceTileDebug]);
 
   // Lives outside the `!snap.engaged` early return below: flying IN is
   // exactly what a not-yet-engaged reader needs — gating the box on

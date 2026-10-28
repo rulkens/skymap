@@ -38,7 +38,6 @@ function makeState(overrides?: { booted?: boolean }): EngineState {
         simDays: CONST_J2000,
       },
     },
-    subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }
 

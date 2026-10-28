@@ -86,13 +86,7 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-// Body Layers Task 8 deletes these rows with the core tile wiring they count.
-const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
-  'services/engine/engine': 1,
-  'services/engine/frame/runFrame': 3,
-  'services/engine/phases/createLayers': 1,
-  'services/engine/phases/wireSlots': 2,
-};
+const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {};
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
   const files = [...walk('src/services/engine'), ...walk('src/state')];

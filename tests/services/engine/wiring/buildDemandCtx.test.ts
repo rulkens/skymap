@@ -62,7 +62,6 @@ function makeState(
       },
     },
     slotsByKey,
-    subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }
 

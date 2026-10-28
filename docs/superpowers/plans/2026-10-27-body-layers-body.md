@@ -659,7 +659,7 @@ export function surfaceTileDebugSnapshotOf(tiles: BodyRuntime['surfaceTiles']): 
 **Done:** `grep -rnE "subsystems\.surfaceTiles|surfaceTilesAnimating|debug\.surfaceTiles|core:surfaceTiles" src tests` is empty;
 boot passes `checkFrameOrder` (the new plan line leads PRELUDE's plan rows, scope `once`).
 
-- [ ] Task 8
+- [x] Task 8
 
 ### Task 9: the terrain-pick-marker section moves with its pass (O8 A)
 

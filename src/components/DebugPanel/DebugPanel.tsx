@@ -16,7 +16,6 @@ import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import MemorySectionContainer from '../containers/MemorySectionContainer';
-import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSectionContainer';
 import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMarkerTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
@@ -35,7 +34,7 @@ export type DebugPanelProps = {
   passNames: readonly string[];
   /** Fetch rank per slot name (`debug.assetPriorities`); a getter because slots are minted after the handle is built. */
   assetPriorities: () => ReadonlyMap<string, number>;
-  /** Threaded to the sections that read engine-only data (`debug.surfaceTiles`, `debug.cameraDebug`). */
+  /** Threaded to the sections that read engine-only data (`debug.cameraDebug`, `debug.gpuMemory`). */
   engineHandleRef: RefObject<EngineHandle | null>;
 };
 
@@ -60,7 +59,6 @@ function DebugPanel({
         <Section key={index} />
       ))}
       <DebugOverlaysSectionContainer />
-      <SurfaceTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
       <TerrainPickMarkerTuningSectionContainer engineHandleRef={engineHandleRef} />
       <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />

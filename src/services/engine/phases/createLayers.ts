@@ -17,7 +17,6 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { composeTerrain } from '../layer/composeTerrain';
-import { surfaceTileTerrain } from '../../../layers/body/subsystems/surfaceTiles/surfaceTileTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -190,14 +189,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.orbitTrailGroups = instances
     .flatMap((instance) => instance.orbitTrails)
     .map((group) => gateOrbitTrailGroup(group, state));
-  // Core keeps the slot until body Layers can reach the tile subsystem; the
-  // body move deletes this row, and the two-provider throw catches a half-done move.
-  state.terrain = composeTerrain([
-    { name: 'core:surfaceTiles', terrain: surfaceTileTerrain(state.subsystems) },
-    ...instances.flatMap((instance) =>
+  state.terrain = composeTerrain(
+    instances.flatMap((instance) =>
       instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
     ),
-  ]);
+  );
 
   // Two directors, one per slab's screen-space projection; a producer names its slab
   // (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).

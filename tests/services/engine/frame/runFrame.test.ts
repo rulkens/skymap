@@ -48,7 +48,6 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
   };
 });
 
-import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
@@ -853,7 +852,6 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        surfaceTiles: null,
         structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
@@ -958,7 +956,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        surfaceTiles: null,
         structureFocus: {
           update: vi.fn(),
           produceFocusUniforms: vi.fn(() => ({
@@ -1000,33 +997,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
 
     runFrame(state, makeCamDeps(state), 0);
 
-    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
-  });
-
-  it('writes the frame tile plan, applies it, and keeps ticking while tiles are in flight', () => {
-    // Bug caught: the plan's wake vote never reaching the keep-ticking
-    // predicate. A landing tile wakes the loop itself; a landing manifest does
-    // not, so only this vote carries the loop through its fetch.
-    const state = makeReadyState();
-    const apply = vi.fn();
-    const residency = {
-      manifest: () => ({ status: 'absent', value: null }),
-      residentSlot: () => null,
-      isInFlight: () => false,
-      hasFailed: () => false,
-      inFlightCount: () => 1,
-      engagedBodyId: () => null,
-    };
-    state.subsystems.surfaceTiles = {
-      stream: { residency, apply },
-      plan: IDLE_SURFACE_TILE_PLAN,
-    } as unknown as EngineState['subsystems']['surfaceTiles'];
-
-    runFrame(state, makeCamDeps(state), 0);
-
-    const written = state.subsystems.surfaceTiles!.plan;
-    expect(written.awake).toBe(true);
-    expect(apply).toHaveBeenCalledWith(written);
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 });

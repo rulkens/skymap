@@ -3,30 +3,29 @@
  * tile planner's base level derives from it, and "the tier the session asked for" vs "the tier that
  * committed" differ for as long as an 8 MB JPEG downloads during a tier swap; the error is invisible
  * (ground a level softer, or a tile two levels above its base). Both cases are a slot whose
- * `lastRequest()` disagrees with `state.tier`, and only the slot's load state tells them apart.
+ * `lastRequest()` disagrees with the requested tier, and only the slot's load state tells them apart.
  */
 
 import { describe, expect, it } from 'vitest';
+import { bodySurfaceTier } from '../../../../src/layers/body/load/bodySurfaceTier';
+import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
+import type { Tier } from '../../../../src/@types/data/Tier';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-import { bodySurfaceTier } from '../../../../../src/layers/body/subsystems/surfaceTiles/bodySurfaceTier';
-import { bodyTextureSlotKey } from '../../../../../src/utils/bodyTextures/bodyTextureSlotKey';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { Tier } from '../../../../../src/@types/data/Tier';
-import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
-
-/** An engine state whose `earth:surface` slot is in `kind` holding a request for
- *  `requestTier`, with a committed request of `committedTier` (defaults to
- *  `requestTier`, i.e. no reload in flight), under an app-wide `tier`. */
-function stateWith(input: {
-  tier: Tier;
-  slot?: { kind: string; requestTier: Tier; committedTier?: Tier };
-}): EngineState {
-  const bodyTextures = new Map<string, unknown>();
-  if (input.slot) {
-    const committedTier = input.slot.committedTier;
-    bodyTextures.set(bodyTextureSlotKey('earth', 'surface'), {
-      state: () => ({ kind: input.slot!.kind }),
-      lastRequest: () => ({ bodyId: 'earth', kind: 'surface', tier: input.slot!.requestTier }),
+/** The body's texture slots, with an `earth:surface` slot in `kind` holding a request for
+ *  `requestTier` and a committed request of `committedTier` (none: nothing committed yet). */
+function slotsWith(slot?: {
+  kind: string;
+  requestTier: Tier;
+  committedTier?: Tier;
+}): BodyRuntime['textureSlots'] {
+  const slots = new Map<string, unknown>();
+  if (slot) {
+    const committedTier = slot.committedTier;
+    slots.set(bodyTextureSlotKey('earth', 'surface'), {
+      state: () => ({ kind: slot.kind }),
+      lastRequest: () => ({ bodyId: 'earth', kind: 'surface', tier: slot.requestTier }),
       committed: () =>
         committedTier === undefined
           ? null
@@ -38,11 +37,10 @@ function stateWith(input: {
             },
     });
   }
-  return {
-    tier: input.tier,
-    slotsByKey: bodyTextures,
-  } as unknown as EngineState;
+  return slots as unknown as BodyRuntime['textureSlots'];
 }
+
+const EARTH = asSceneBodyId('earth');
 
 describe('bodySurfaceTier', () => {
   it('reports the committed tier, not the app-wide request, while the two differ', () => {
@@ -50,11 +48,9 @@ describe('bodySurfaceTier', () => {
     // and its level is the one the tiles have to refine on top of.
     expect(
       bodySurfaceTier(
-        stateWith({
-          tier: 'large',
-          slot: { kind: 'ready', requestTier: 'medium', committedTier: 'medium' },
-        }),
-        asSceneBodyId('earth'),
+        slotsWith({ kind: 'ready', requestTier: 'medium', committedTier: 'medium' }),
+        'large',
+        EARTH,
       ),
     ).toBe('medium');
   });
@@ -64,12 +60,9 @@ describe('bodySurfaceTier', () => {
     // whole-globe image whose level can be named, so the answer is the one that
     // is arriving. `lastRequest()` alone would be read as gospel here, which is
     // the requested tier again by a longer route.
-    expect(bodySurfaceTier(stateWith({ tier: 'small' }), asSceneBodyId('earth'))).toBe('small');
+    expect(bodySurfaceTier(slotsWith(), 'small', EARTH)).toBe('small');
     expect(
-      bodySurfaceTier(
-        stateWith({ tier: 'small', slot: { kind: 'loading', requestTier: 'large' } }),
-        asSceneBodyId('earth'),
-      ),
+      bodySurfaceTier(slotsWith({ kind: 'loading', requestTier: 'large' }), 'small', EARTH),
     ).toBe('small');
   });
 
@@ -80,11 +73,9 @@ describe('bodySurfaceTier', () => {
     // the previous ready state until the reload's commit lands.
     expect(
       bodySurfaceTier(
-        stateWith({
-          tier: 'large',
-          slot: { kind: 'loading', requestTier: 'large', committedTier: 'medium' },
-        }),
-        asSceneBodyId('earth'),
+        slotsWith({ kind: 'loading', requestTier: 'large', committedTier: 'medium' }),
+        'large',
+        EARTH,
       ),
     ).toBe('medium');
   });
