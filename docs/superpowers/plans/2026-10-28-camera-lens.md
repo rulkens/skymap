@@ -46,7 +46,7 @@ type CameraRuntime = { …; /** Last frame's driven lens; committed when the dri
 // src/@types/engine/settings/SceneSnapshot.d.ts
 type SceneSnapshot = { …; lens: number };
 
-resolveClipStart(data, live: CameraPose, lens: number)   // stamps start.fov = lens when absent
+playClip's getLivePose → { ...liveWorldPose, fov: outputs.projection.fovYRad }   // the drawn lens
 ```
 
 Clip evaluation reports `fov` **only when the clip has a `fov` track** (base, rate or osc). A clip
@@ -87,8 +87,9 @@ frame-independent, so it is evaluated outside the leg conversion (`convertChanne
   - `evaluateFramedClip` adds `channels.fov` when the compiled clip carries any `fov` track,
     evaluated from `start.fov ?? DEFAULT_FOV_Y_RAD`.
 - **Clip start.**
-  - `resolveClipStart` takes the lens: `playClip` passes `store.getState().camera.lens`, and
-    `computeClipPath` passes the same.
+  - `engine.ts` wires `playClip`'s `getLivePose` with the drawn lens as `fov`, so a `'live'` start
+    carries it. `resolveClipStart` is unchanged. An authored concrete start without `fov` starts
+    from the default lens, the lens takeovers pin.
 - **Runtime.**
   - The clip driver returns `lens: evaluated.channels.fov`.
   - `stepCameraRuntime` draws `output.lens ?? camera.lens`.
@@ -107,5 +108,6 @@ frame-independent, so it is evaluated outside the leg conversion (`convertChanne
 ### T3. Docs (one commit)
 
 - Spec P2 and D1 are amended to the shape that landed.
-- `docs/RENDERER.md` (or the camera doc that names `settings.camera.fovDeg`) is updated.
+- No other doc named `settings.camera.fovDeg`. The website's settings reference row drops its
+  state path (`docsSettings.ts`), since the lens is camera state now.
 - `comment-audit` runs over the touched files.

@@ -40,15 +40,17 @@ widest field** (Street View style: the camera lifts off and lands above the spot
 | R10 | Packaging: **prep PR first**, then the feature PR. |
 | R11 | v2 adds **ultra-high-res survey overlays** (CMB to optical, many wavelengths). v1 must not block it (§10). |
 | R12 | The field of view is **promoted to the general camera pose**, in every camera mode, and **animation clips can drive it** as a channel. |
+| R13 | The lens work (P2) ships as **its own PR**, ahead of the rest of the prep. |
 
 ### Decisions made in this spec (not user rulings — challenge freely)
 
-- **D1. The lens sits on the framed pose, beside the frame.** R12 says where the lens lives; D1
-  says how. It goes on the framed pose rather than inside each rung's pose, because the lens does
-  not vary with the frame. That way no rung conversion (`toParent`, `fromParent`, a refold) can
-  drop it, the way conversions drop `lookOffset` today. One lens then serves every mode: the slider
-  writes it, sky mode's wheel writes it, clips and tweens animate it, and links carry it.
-  `settings.camera` held nothing else, so the cluster goes (§3.3 P2).
+- **D1. The lens is camera state beside `camera.base`, not inside the pose.** R12 says the lens
+  belongs to the camera; D1 says where. *Amended at implementation (PR "camera lens"):* the first
+  draft put it on the framed pose, but any `base` the loop did not write reads as an outside commit
+  (`stepCameraRuntime.ts`, `external`). Every slider tick would then end the follow approach.
+  A lens change is not a camera move, and it does not vary with the frame, so no rung conversion can
+  drop it either. One lens serves every mode: the slider and sky mode's wheel write `camera.lens`,
+  and a clip's `fov` channel animates it. `settings.camera` held nothing else, so the cluster went.
 - **D2. Esc restores the camera only.** Sky mode authors nothing but a pose, so it does not run
   under `withSceneSnapshotSaga`. Esc commits the `camera.base` captured at entry; time, grid toggles
   and any setting the viewer changed while looking stay as they are. Tours and exhibits restore the
@@ -67,17 +69,17 @@ type RungKind = 'absolute' | 'body' | 'site' | 'sky';
 type SkyPose = {
   lonRad: number; latRad: number;          // body-fixed site; height is NOT stored (live heightAt + SKY_EYE_HEIGHT_M)
   azimuthRad: number; altitudeRad: number; // view direction in the site's ENU frame, az from north through east
-};                                         // no lens field: the lens is the framed pose's (D1)
+};                                         // no lens field: the lens is camera.lens (D1)
 type SkyMemory = { exitPushPx: number };   // wheel-out past the widest stop, accumulated; no stored flag
 
-// P2 — the lens, every rung (R12, D1)
-type FramedPose<K> = { readonly frame: FrameOf[K]; readonly pose: PoseOf[K]; readonly fovYRad: number };
-type FramedClipPose = { readonly frame: PoseFrame; readonly channels: CameraPose; readonly fovYRad?: number };
-type Channel = 'distance' | 'yaw' | 'pitch' | 'roll' | 'target' | 'fov';   // 'fov' addresses FramedClipPose.fovYRad
-type CameraTweenDescriptor = { …; fovYRad?: { from: number; to: number } };  // absent ⇒ the lens holds
-setLens(fovYRad)                    // camera action: the DisplaySection slider's new target
-LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120; DEFAULT_FOV_DEG = 60   // src/data/; one clamp for every rung
+// P2 — the lens (R12, D1); LANDED in its own PR, plan plans/2026-10-28-camera-lens.md
+type CameraState = { …; lens: number };          // radians, beside base; setLens(fovYRad)
+type CameraPose = { …; fov?: number };           // the clip channel's field only; absent ⇒ the lens holds
+type Channel = … | 'fov';                        // log space, frame-independent
+type DriverOutput = { …; lens?: number };        // a clip's fov; committed to camera.lens on hand-off
+type SceneSnapshot = { …; lens: number };        // the takeover restore hands the viewer's lens back
 // deleted: CameraSettings, cameraSettingsSlice, settings.camera, the takeover's camera-cluster merge
+LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120          // src/data/; added by the sky feature, which clamps its wheel
 
 ParentOf.sky = 'body'                           // ClimbRow; engage → null always (D3)
 
@@ -94,11 +96,11 @@ SKY_EYE_HEIGHT_M = 1.7                          // src/data/
 | Touchpoint | Verdict | Why |
 | --- | --- | --- |
 | `CAMERA_RUNGS` + `RungKind`/`PoseOf`/`FrameOf`/`MemOf`/`ParentOf` | **Growth** | A new rung is a new key plus a row, which is what the site-rung spec built the table for. `rungKindOf` gains one branch. It stays the one reader of the spelling (`oneTagReader.test.ts`). |
-| `RungRow.channels` (clips), `encodeFramedPose` (URL) | **Growth** | Every rung fills these already. Sky encodes into the five pose channels the way site does: `target: [lon, lat, 0]`, `yaw: az`, `pitch: alt`, `distance: 0`. The lens rides beside them (P2). The URL tag gets a new letter. |
-| Lens read at `stepCameraRuntime.ts:116-121` | **Prep (P2)** | It reads `settings.camera.fovDeg` unconditionally. Under R12 it reads the framed pose's `fovYRad`, the same line for every rung, so no tag reader is added. |
+| `RungRow.channels` (clips), `encodeFramedPose` (URL) | **Growth** | Every rung fills these already. Sky encodes into the five pose channels the way site does: `target: [lon, lat, 0]`, `yaw: az`, `pitch: alt`, `distance: 0`. The lens is `camera.lens` (P2). The URL tag gets a new letter. |
+| Lens read at `stepCameraRuntime.ts:116-121` | **Prep (P2, landed)** | It read `settings.camera.fovDeg` unconditionally; it now reads `camera.lens`, the same line for every rung, so no tag reader is added. |
 | `settings.camera` cluster (`CameraSettings`, `cameraSettingsSlice`) | **Delete (P2)** | `fovDeg` is its only field. It is neither persisted nor authored by any tour or exhibit, so moving the lens into the pose leaves the cluster empty. |
-| Takeover lens pin (`withSceneSnapshotSaga.ts:31-39`) | **Prep (P2)** | Today it merges `camera: { fovDeg: 60 }` into settings. It becomes a `setLens(DEFAULT)` commit at takeover start, and the restore's `camera.base` brings the viewer's lens back. Behaviour is the same, and the backlog bug "Takeover's camera-cluster merge wipes any field it doesn't set" disappears with the cluster. |
-| Clips / tweens / URL / recorder | **Growth (P2)** | `Channel` gains `'fov'`, interpolated in log space so a zoom feels even. `CameraTweenDescriptor` gains an optional lens pair, absent ⇒ hold. `encodeFramedPose` gains an optional lens field: an old link without one decodes to the default 60°, which is what it rendered at before. The recorder captures the lens, and dolly-zoom shots become authorable. |
+| Takeover lens pin (`withSceneSnapshotSaga.ts:31-39`) | **Prep (P2, landed)** | It merged `camera: { fovDeg: 60 }` into settings. It is now a `setLens(DEFAULT)` commit at takeover start, and `SceneSnapshot.lens` brings the viewer's lens back. Behaviour is the same, and the backlog bug "Takeover's camera-cluster merge wipes any field it doesn't set" disappears with the cluster. |
+| Clips / tweens / URL / recorder | **Growth (P2 clips landed; rest deferred)** | `Channel` gained `'fov'`, interpolated in log space so a zoom feels even, which makes dolly-zoom shots authorable. A lens on tweens, the URL pose codec and the recorder waits for a consumer. Sky mode's own `sky=` URL row carries its lens (§6). |
 | Site rung (`siteRung.ts`) | **Not touched** | It is a turntable about a pivot. Its drag signs are spec-ruled orbit semantics (site spec §4.6), and the research doc rules first-person "a new parameterization, not a knob". |
 | `lookedSurfacePose` | **Reuse** | Its yaw-about-local-vertical math is the sky rung's drag. The sky rung adds the ±90° clamp in its own pose space, where altitude is explicit. |
 | `MIN_NEAR_MPC` (~6.2 m) | **Prep (P3)** | `foregroundFrustum.ts:40-57` requires it to stay below the eye's minimum altitude, and 1.7 m breaks that: the ground at your feet clips. |
@@ -119,15 +121,10 @@ Each is its own commit, in this order. Every one but P1 preserves behaviour.
   marker-line segments near the eye stop folding. Gate it with shots (a constellation straddling the
   view edge from Earth, the dome rig). Consumes the backlog item: delete its index line and detail
   file in this commit.
-- **P2. The lens joins the framed pose (R12).** Two commits:
-  - **P2a, the runtime.** `FramedPose.fovYRad` is seeded with `DEFAULT_FOV_DEG` and read by
-    `stepCameraRuntime` for the projection. The DisplaySection slider dispatches `setLens`, its range
-    widened to `LENS_MAX_DEG`. The takeover pin becomes a lens commit. `settings.camera` is deleted,
-    and the "camera-cluster merge" backlog item with its detail file goes in this commit.
-  - **P2b, the channels.** Clips gain the `'fov'` channel (log-space), tweens the optional lens
-    pair, and the URL pose codec and the recorder the lens.
-  - **Gate.** No authored clip, beat or exhibit sets a lens yet, so golden traces stay
-    byte-identical.
+- **P2. The lens becomes camera state, with a clip channel (R12). Shipped as its own PR** (user,
+  2026-10-28), plan [`plans/2026-10-28-camera-lens.md`](../plans/2026-10-28-camera-lens.md):
+  `camera.lens` beside `base`, the slider and takeover pin on `setLens`, `settings.camera` deleted,
+  and the `fov` clip channel committed on hand-off. The sky PRs build on it.
 - **P3. Near floor at standing height.** Lower `MIN_NEAR_MPC` so it sits below `SKY_EYE_HEIGHT_M`
   with margin (~0.5 m). NEAR0 is reversed-Z with an infinite far, so depth precision does not care
   (`foregroundFrustum.ts:51-55`). Re-check the readers that cite it (`labelLeaderLine.ts:37`,
@@ -252,17 +249,8 @@ Test names are the contract. The plan pins each assertion.
   - `the eye sits SKY_EYE_HEIGHT_M above the live heightAt and follows a refined tile`
   - `engage always declines`
   - `channels round-trip a sky pose`
-- `encodeFramedPose.test.ts`:
-  - `sky frame round-trips through the URL tag`
-  - `the lens round-trips on every rung`
-  - `a link without a lens decodes to the default lens`
-- Lens (P2):
-  - `every CAMERA_RUNGS refold and climb keeps the framed lens` (one test over the table)
-  - `the projection reads the framed pose's lens`
-  - `a takeover starts at the default lens and its restore brings the viewer's lens back`
-  - `a clip's fov channel interpolates in log space`
-  - `a tween without a lens pair holds the lens`
-  - `the recorder captures the lens`
+- `encodeFramedPose.test.ts`: `sky frame round-trips through the URL tag`.
+- The lens (P2) shipped with its own tests; see its plan.
 - `skyGridBasis.test.ts`:
   - `alt-az zenith is the site radial and north points to the host pole`
   - `Earth's equatorial pole is the world +z`
@@ -285,7 +273,9 @@ Test names are the contract. The plan pins each assertion.
 
 ## 8. Packaging and order
 
-- **PR 1, prep:** P1–P4 as separate commits, P1 first. It gets its own plan, and no deletion audit.
+- **PR 0, the lens (P2):** landed first and separately at the user's request.
+- **PR 1, prep:** P1, P3, P4 as separate commits, P1 first. It gets its own plan, and no deletion
+  audit.
 - **PR 2, feature:** rung, takeover and entry/exit, then the `skyGrids` Layer, then the UI. It gets
   its own plan, and `/feature-done` runs the deletion audit.
 
