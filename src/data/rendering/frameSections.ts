@@ -14,12 +14,13 @@ export const PRELUDE: FrameSection = {
     // The section's plan rows, always first (`checkFrameOrder`'s boot rule):
     // the galaxy catalog's disk-planner walk, the flow renderer's
     // reconcile-and-vote, the star cut's inputs, and the Milky Way
-    // cloud's star-count reconcile, before any GPU step reads what they
-    // publish (`runPlanSteps`).
+    // cloud's star-count reconcile, and the satellites' sweep upload and
+    // request, before any GPU step reads what they publish (`runPlanSteps`).
     { kind: 'plan', name: 'galaxy-catalog' },
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
+    { kind: 'plan', name: 'satellites' },
     // The compute prelude. `flow` integrates the peculiar-velocity particles;
     // `sky-view` bakes its LUT, which folds in this frame's camera altitude + sun
     // direction and so re-bakes every frame (unlike the once-baked transmittance
@@ -300,7 +301,7 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails'],
+      passes: ['orbit-trails', 'mission-trails', 'satellites'],
       slot: 'POST_FOREGROUND',
     },
   ],

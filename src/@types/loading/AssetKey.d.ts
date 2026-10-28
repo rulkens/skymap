@@ -18,6 +18,7 @@ export type AssetKey =
   | 'pgcAlias'
   | 'filaments'
   | 'localBubble'
+  | 'satellites'
   | 'flow'
   | 'constellations'
   | 'bodyTextureAtlas'

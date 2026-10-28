@@ -2716,13 +2716,13 @@ and where they come from".
 - **What:** The libraries the app and the website bundle. Named in
   `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
   `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
-  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`; for the website `astro`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`; for the website `astro`,
   `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
   (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
   families under `react-markdown`, and others); the build lists every one in
   `third-party-licenses.md`. Build-time tools are listed in `package.json`.
 - **By:** Their authors.
-- **Licence:** MIT, each of the fourteen named, as its own `package.json`
+- **Licence:** MIT, each of the fifteen named, as its own `package.json`
   states. Of the 74 packages the app's bundle holds, the build reports MIT
   for 71, ISC for one, and no licence field for two entry points of
   `redux-saga` (itself MIT).
@@ -2739,7 +2739,10 @@ and where they come from".
 - **Enters skymap:** `package.json`, `packages/website/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
-  installed packages; the built bundle, searched for licence notices; the
+  installed packages then named; 2026-10-28: `satellite.js` 7.1.0's
+  `LICENSE.md` (MIT, © 2013 Shashwat Kandadai), whose plain-JS SGP4 the
+  satellites worker bundles; the built bundle, searched for licence notices; the
   generated `third-party-licenses.md`; the sentence quoted, in
   <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`.
-- **Not verified:** what the website's scripts and the dev-tool pages bundle.
+- **Not verified:** what the website's scripts and the dev-tool pages bundle;
+  the package count of the app's bundle since `satellite.js` joined it.
