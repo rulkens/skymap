@@ -1,8 +1,8 @@
 /**
  * starAnchor — turns one generated `FamousStarRow` into its `AnchorBody`.
  *
- * A star has a position but no orbit, so it is a root of the focus graph rather
- * than a leaf: `raDecDistToCartesian` converts the row's catalogue RA/Dec at so
+ * A star with no `orbit` has a position but no motion, so it is a root of the
+ * focus graph rather than a leaf (a binary's companion is `famousStarOrbit`'s): `raDecDistToCartesian` converts the row's catalogue RA/Dec at so
  * many parsecs into the canonical Megaparsec draw frame — the SAME right-handed
  * equatorial J2000 conversion the galaxy build pipeline uses, so the seeded
  * neighbourhood is not rotated against the real sky the catalogues paint.

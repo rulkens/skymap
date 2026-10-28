@@ -208,17 +208,8 @@ const RUST_GENERATED_BANNER =
 export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
   const gaiaMatched = selectDedupEntries(entries);
   const gaiaRows = gaiaMatched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
-  // FAMOUS_STAR_HIP_IDS is the seed-order union of every non-null `hip` and its
-  // `hipCompanions`. `selectHipEntries` stays the one home for "which entries
-  // carry a hip"; a companion rides directly after its entry's canonical hip and
-  // is tagged so the Rust provenance stays legible. A multi-component entry (the
-  // Alpha Centauri case: Gaia DR3 lacks both bright components, so one entry maps
-  // to two Hipparcos rows) therefore contributes more than one id.
   const hipMatched = selectHipEntries(entries);
-  const hipLines = hipMatched.flatMap((e) => [
-    `    ${e.hip}, // ${e.id}`,
-    ...(e.hipCompanions ?? []).map((c) => `    ${c}, // ${e.id} (companion)`),
-  ]);
+  const hipLines = hipMatched.map((e) => `    ${e.hip}, // ${e.id}`);
   const hipRows = hipLines.join('\n');
   return (
     RUST_GENERATED_BANNER +

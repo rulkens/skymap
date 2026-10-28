@@ -10,8 +10,8 @@
  * radii) into the drawn record's.
  *
  * A star's POSITION is not here: the same seed row's RA/Dec and distance become
- * a `SCENE_ANCHORS` root via `starAnchor`, and the frame's snapshot resolves it
- * — one map for every scene body, moving or not.
+ * a `SCENE_ANCHORS` root via `starAnchor`, or its `orbit` an `ORBITAL_ELEMENTS`
+ * row, and the frame's snapshot resolves it — one map for every scene body.
  */
 
 import { star } from './makers/star';

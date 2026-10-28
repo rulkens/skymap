@@ -13,6 +13,10 @@ The focus graph is strictly one-hop: `OrbitalElements.focusId` makes a body orbi
 
 `BARYCENTRIC_PAIRS` (`src/data/bodies/barycentricPairs.ts`) treats a primary's element row as the pair barycentre, and `deriveBodyStates` subtracts the secondary's mass-weighted reflex from the primary. Earth–Moon is its one row. Pluto's wobble is therefore one more row (`pluto`/`charon`, Charon's mass fraction ≈ 0.1086), once Pluto's row is re-fitted to the Pluto-system barycentre. The minor moons still need the invisible node below, because they orbit the barycentre rather than either body.
 
+## Stars too (2026-10-28)
+
+Alpha Centauri B now orbits A as a famous star with an `orbit` (spec `2026-10-28-binary-star-orbits-design.md`), relative to A, with A held fixed. In reality A swings round the barycentre too, by B's mass fraction 0.909 / (1.08 + 0.909) ≈ 0.457: about 11 au across the orbit, half of B's. A `BARYCENTRIC_PAIRS` row would fix it if the primary can be an anchor and not only an element row. Today the reflex is subtracted from an element-driven primary.
+
 ## Shape of a fix (minor moons)
 
 An invisible barycentre node in the focus graph that both partners orbit. Touchpoints that currently assume focus-graph nodes are visible bodies: pick tables (`resolvePickTable.ts` maps source → seed table by index), region extents (`bodyRegions.ts` maxes over members), labels/captions (every `SCENE_PLANETS` row gets one), glint partition. Either a `visible: false` body kind or a separate node table that only `deriveBodyStates` sees.

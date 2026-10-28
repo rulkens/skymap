@@ -61,8 +61,8 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     SLAB_REVERSED_Z[NEAR0]!,
   );
 
-  // The camera-free boot seed: the whole star list, positioned at the fixed
-  // J2000 epoch (a star is a static anchor, so the epoch cannot move it).
+  // The camera-free boot seed: the whole star list, positioned at J2000. The
+  // stars on orbits move from there; the frame re-seats them at the sim clock.
   const starPointRenderer = createStarPointRenderer(device, HDR_TARGET_FORMAT);
   const bootBodyStates = deriveBodyStates(CONST_J2000);
   starPointRenderer.setStars(

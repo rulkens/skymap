@@ -9,20 +9,16 @@ import { SCALE_UNITS } from '../../scaleUnits';
 import { planeFrameFromPole } from '../orbitPlaneFrames';
 import { skyOrbitElements } from './skyOrbitElements';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
-import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
+import { starTrailTint } from '../../../utils/color/starTrailTint';
 import type { FamousStarOrbit } from '../../../@types/data/FamousStarOrbit';
 import type { FamousStarRow } from '../../../@types/data/FamousStarRow';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 
-// The S-stars' level: the additive HDR trail draw needs the palette's ≲ 0.5 ceiling.
-const TRAIL_LEVEL = 0.5;
-
 export function famousStarOrbit(
-  row: FamousStarRow & { readonly orbit: FamousStarOrbit },
+  row: FamousStarRow,
+  orbit: FamousStarOrbit,
   host: FamousStarRow,
 ): OrbitalElements {
-  const { orbit } = row;
-  const [r, g, b] = temperatureToLinearRgb(row.temperatureK);
   return skyOrbitElements({
     id: row.id,
     focusId: asSceneBodyId(host.id),
@@ -34,6 +30,6 @@ export function famousStarOrbit(
     argPeriapsisDeg: orbit.argPeriapsisDeg,
     periapsisEpochYr: orbit.periapsisEpochYr,
     periodYr: orbit.periodYr,
-    color: [r * TRAIL_LEVEL, g * TRAIL_LEVEL, b * TRAIL_LEVEL],
+    color: starTrailTint(row.temperatureK),
   });
 }

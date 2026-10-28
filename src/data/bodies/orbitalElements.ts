@@ -813,7 +813,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
       ? []
       : [
           famousStarOrbit(
-            { ...row, orbit: row.orbit },
+            row,
+            row.orbit,
             findByIdOrThrow(FAMOUS_STARS_GENERATED, row.orbit.host, 'famous-star orbit host'),
           ),
         ],

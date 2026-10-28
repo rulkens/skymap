@@ -29,12 +29,16 @@ const ROCKY_ALBEDO: Vec3 = [0.2, 0.19, 0.18];
 
 export function exoplanet(seed: ExoplanetSeed): ExoplanetBody {
   const host = FAMOUS_STARS_GENERATED.find((row) => row.id === seed.hostId);
-  if (host === undefined) throw new Error(`exoplanet: ${seed.id}'s host ${seed.hostId} is no famous star`);
+  if (host === undefined)
+    throw new Error(`exoplanet: ${seed.id}'s host ${seed.hostId} is no famous star`);
   return {
     body: {
       id: asSceneBodyId(seed.id),
       label: seed.label,
-      surface: { datumRadiusM: seed.radiusEarth * EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_M, reliefM: [0, 0] },
+      surface: {
+        datumRadiusM: seed.radiusEarth * EARTH_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+        reliefM: [0, 0],
+      },
       albedo: ROCKY_ALBEDO,
       resolvePx: BODY_GLINT_MAX_PX,
     },
@@ -47,7 +51,8 @@ export function exoplanet(seed: ExoplanetSeed): ExoplanetBody {
       inclinationDeg: 180 - seed.inclinationDeg,
       ascendingNodeDeg: 90 - NODE_POSITION_ANGLE_DEG,
       argPeriapsisDeg: 0,
-      meanAnomalyDeg: (meanAnomalyFromTrue(TRANSIT_TRUE_ANOMALY_RAD, seed.eccentricity) * 180) / Math.PI,
+      meanAnomalyDeg:
+        (meanAnomalyFromTrue(TRANSIT_TRUE_ANOMALY_RAD, seed.eccentricity) * 180) / Math.PI,
       meanMotionDegPerDay: 360 / seed.periodDays,
       nodeRateDegPerDay: 0,
       poleRaDeg: host.raDeg,

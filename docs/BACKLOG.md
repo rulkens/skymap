@@ -36,6 +36,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **More binary-star orbits** `ready` — Sirius, Procyon and 61 Cygni as famous-star `orbit` rows, like Alpha Centauri B; also check B's position angle against an ORB6 ephemeris, which today's tests can't see. → [details](backlog/2026-10-28-more-binary-star-orbits.md)
+- [ ] **`.prettierignore`'s bare `data` hides `src/data/`** `ready` — meant for the top-level `data/` folder, it also skips every TS file under `src/data/`, so formatting drift there goes unseen; anchor it as `/data` and reformat once.
 - [ ] **Migrate the other 18 exoplanet systems to scene bodies** `ready` — TRAPPIST-1 is the pilot; each host becomes a famous star, its planets `exoplanetPlanets.ts` rows, and the face-on diagram goes with the last. → [details](backlog/2026-10-28-exoplanet-systems-to-bodies.md)
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.

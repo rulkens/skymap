@@ -99,21 +99,6 @@ export type FamousStarEntry = {
    * curation gap ("not yet resolved") can never read as an intended `null`.
    */
   hip: number | null;
-  /**
-   * Additional resolved-component HIP ids for a multi-star famous entry —
-   * dedup-only, never the identity. Present only when non-empty.
-   *
-   * Why does one entry ever need a second HIP? A famous entry is one point on
-   * the map (one `hip` identity, one InfoCard), but the sky sometimes packs two
-   * catalogued stars into it. Alpha Centauri is the motivating case: Gaia DR3
-   * resolves *neither* component A nor B (both saturate the detector), so the
-   * only way to keep their bright Hipparcos rows (HIP 71683 = A, HIP 71681 = B)
-   * from doubling the scene body is to subtract BOTH from the star bin. The
-   * canonical `hip` carries A; `hipCompanions` carries B. The native builder
-   * unions these into its HIP dedup set; nothing else reads them (the InfoCard,
-   * render row, and Gaia-side dedup all key on the single canonical identity).
-   */
-  hipCompanions?: number[];
   /** A visual-binary orbit around another entry (`host`), in place of a fixed position. */
   orbit?: FamousStarOrbit;
   /** Curated prose, 3–5 sentences, fact-checked. */
@@ -268,47 +253,19 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
       `famous stars seed: ${e.id} has hip ${JSON.stringify(e.hip)} disagreeing with its "HIP ${aliasHip}" alias`,
     );
   }
-  // Optional companion HIP ids: additional resolved components a multi-star
-  // entry contributes to the dedup set. Present only when non-empty, and only
-  // when the canonical `hip` exists — a companion enriches an identity, it never
-  // stands in for a missing one. Each must be a positive int, distinct from the
-  // others and from the entry's own `hip` (a repeat would double-count the same
-  // Hipparcos row in the subtraction).
-  if (e.hipCompanions !== undefined) {
-    if (e.hip === null) {
-      throw new Error(
-        `famous stars seed: ${e.id} has hipCompanions but a null hip (companions require a canonical hip)`,
-      );
-    }
-    if (!Array.isArray(e.hipCompanions) || e.hipCompanions.length === 0) {
-      throw new Error(
-        `famous stars seed: ${e.id} has an empty or non-array hipCompanions (omit the key when there are none)`,
-      );
-    }
-    const seenCompanions = new Set<number>();
-    for (const c of e.hipCompanions) {
-      if (!Number.isInteger(c) || c <= 0) {
-        throw new Error(
-          `famous stars seed: ${e.id} has invalid hipCompanions member ${JSON.stringify(c)} (expected positive integer)`,
-        );
-      }
-      if (c === e.hip) {
-        throw new Error(
-          `famous stars seed: ${e.id} has hipCompanions member ${c} equal to its own hip`,
-        );
-      }
-      if (seenCompanions.has(c)) {
-        throw new Error(`famous stars seed: ${e.id} has duplicate hipCompanions member ${c}`);
-      }
-      seenCompanions.add(c);
-    }
-  }
   if (typeof e.description !== 'string' || e.description.length === 0) {
     throw new Error(`famous stars seed: ${e.id} has empty description`);
   }
   if (e.orbit !== undefined) validateOrbit(e.id, e.orbit);
   return e;
 }
+
+const ORBIT_ANGLE_KEYS = [
+  'inclinationDeg',
+  'ascendingNodeDeg',
+  'argPeriapsisDeg',
+  'periapsisEpochYr',
+] as const;
 
 function validateOrbit(id: string, orbit: FamousStarOrbit): void {
   const { host, eccentricity, periodYr, semiMajorArcsec, ...angles } = orbit;
@@ -321,9 +278,11 @@ function validateOrbit(id: string, orbit: FamousStarOrbit): void {
   if (!(periodYr > 0) || !(semiMajorArcsec > 0)) {
     throw new Error(`famous stars seed: ${id} has a non-positive orbit period or size`);
   }
-  for (const [key, value] of Object.entries(angles)) {
-    if (!Number.isFinite(value))
-      throw new Error(`famous stars seed: ${id} has orbit ${key} ${value}`);
+  // A fixed list, not the object's own keys: a missing or misspelt field must throw.
+  for (const key of ORBIT_ANGLE_KEYS) {
+    if (!Number.isFinite(angles[key])) {
+      throw new Error(`famous stars seed: ${id} has orbit ${key} ${angles[key]}`);
+    }
   }
 }
 

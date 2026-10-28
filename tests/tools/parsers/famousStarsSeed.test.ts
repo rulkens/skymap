@@ -79,19 +79,17 @@ describe('famousStarsSeed', () => {
     ).toBe(100);
   });
 
-  it('throws when hipCompanions is present but hip is null', () => {
-    // A companion is an *additional* resolved component; the canonical hip is the
-    // identity, so companions are meaningless without it.
-    const e = baseEntry({ id: 'sun', gaiaDr3: null, hip: null, hipCompanions: [71681] });
-    expect(() => validateFamousStarEntry(e)).toThrow(/hipCompanions/);
-  });
-
-  it('throws when hipCompanions contains the entry own hip', () => {
-    // The canonical hip stays the identity; a companion repeating it would
-    // double-count the same Hipparcos row in the dedup set.
-    expect(() =>
-      validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71683] })),
-    ).toThrow(/hipCompanions/);
+  it('rejects an orbit missing an angle', () => {
+    const orbit = {
+      host: 'a',
+      semiMajorArcsec: 17.57,
+      periodYr: 79.91,
+      eccentricity: 0.52,
+      ascendingNodeDeg: 204.85,
+      argPeriapsisDeg: 231.65,
+      periapsisEpochYr: 1875.66,
+    } as unknown as FamousStarEntry['orbit'];
+    expect(() => validateFamousStarEntry(baseEntry({ orbit }))).toThrow(/orbit inclinationDeg/);
   });
 
   it('accepts distancePc: 0 — the Sun', () => {

@@ -12,9 +12,9 @@
  *     row is a wire format in km; the authored/runtime convention is metres,
  *     so this is the one place that boundary is crossed.
  *
- * The row's RA/Dec/distance are NOT read here: a star's position is a root of
- * the focus graph, so it becomes a `SCENE_ANCHORS` row via `starAnchor` rather
- * than a field on the drawn record.
+ * The row's RA/Dec/distance are NOT read here: a star's position is a node of
+ * the focus graph — a `SCENE_ANCHORS` root via `starAnchor`, or an orbit around
+ * its host via `famousStarOrbit` — rather than a field on the drawn record.
  *
  * Lives beside `SCENE_STARS` in `makers/` rather than in `src/utils/`: it is
  * authoring policy, has a single consumer (the stars table), and maker and

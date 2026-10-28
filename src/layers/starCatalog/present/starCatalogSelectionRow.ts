@@ -80,8 +80,8 @@ export function starCatalogSelectionRow(
       if (seededRow) {
         const star = seededRow.stars[ref.index];
         if (!star) return null;
-        // The S-stars orbit, so a seeded star's position is the caller's instant,
-        // never cached; the famous stars and the Sun are static anchors in it.
+        // The S-stars and binary companions orbit, so a seeded star's position is
+        // the caller's instant, never cached.
         const p = deriveBodyStates(simDays).get(star.id)!.positionMpc;
         return {
           type: 'starCatalog',

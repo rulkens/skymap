@@ -2,7 +2,7 @@
  * StarBody — a seeded scene body standing in for a star (the Sun included).
  *
  * Identity + photometry only, matching `PlanetBody`: the position lives in the
- * body's `BodyState`, seeded from `SCENE_ANCHORS`, never baked here. The star
+ * body's `BodyState` (an anchor, or an orbit around a host), never baked here. The star
  * layers draw `PositionedStar`, which pairs this record with the one frame's
  * resolved position from the frame's scene-body sort.
  *

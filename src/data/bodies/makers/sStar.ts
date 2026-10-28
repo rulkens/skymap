@@ -9,7 +9,7 @@ import { planeFrameFromPole } from '../orbitPlaneFrames';
 import { skyOrbitElements } from './skyOrbitElements';
 import { GALACTIC_CENTRE_ANCHOR } from '../../places/galacticCentre';
 import { sStarAppearance } from '../sStarAppearance';
-import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
+import { starTrailTint } from '../../../utils/color/starTrailTint';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { OrbitPlaneFrame } from '../../../@types/scene/OrbitPlaneFrame';
 import type { SStarSeed } from '../../../@types/scene/SStarSeed';
@@ -26,23 +26,14 @@ export const GALACTIC_CENTRE_SKY_FRAME: OrbitPlaneFrame = planeFrameFromPole(266
 const GC_R0_PC = 8178;
 const GC_ARCSEC_TO_MPC = GC_R0_PC * SCALE_UNITS.AU_TO_MPC;
 
-
 /**
  * The trail carries its own star's blackbody hue, the way `palette.ts` says a
  * star's colour is derived rather than bucketed. Seven distinct tints fall out
  * of `sStarAppearance`'s bins: the seven late-type giants read orange and the
  * two unclassified rows near-white against the early population's blue.
- *
- * Scaled because `temperatureToLinearRgb` pins the brightest channel to 1.0 —
- * that is a pure hue, and the additive HDR trail draw needs the palette's
- * ≲ 0.5 ceiling or it blows out.
  */
-const S_STAR_TRAIL_LEVEL = 0.5;
-
 function sStarTrailTint(row: SStarSeed): Vec3 {
-  const { temperatureK } = sStarAppearance(row.kMag, row.spectralClass);
-  const [r, g, b] = temperatureToLinearRgb(temperatureK);
-  return [r * S_STAR_TRAIL_LEVEL, g * S_STAR_TRAIL_LEVEL, b * S_STAR_TRAIL_LEVEL];
+  return starTrailTint(sStarAppearance(row.kMag, row.spectralClass).temperatureK);
 }
 
 export function sStar(row: SStarSeed): OrbitalElements {

@@ -136,6 +136,10 @@ pub struct FamousSeedEntry {
     pub distance_pc: f64,
     #[serde(rename = "magV")]
     pub mag_v: f64,
+    /// Present on a binary's companion: drawn where its orbit puts it, not at its
+    /// catalogue ra/dec, so a vertex must never snap to it.
+    #[serde(default)]
+    pub orbit: Option<serde::de::IgnoredAny>,
 }
 
 /// The parsed famous-star seed (`data/seeds/famous_stars.seed.json`).
@@ -307,7 +311,7 @@ pub fn resolve_vertex(
     // spuriously match figures near the RA=0 pole.
     let mut best_famous: Option<(f64, &FamousSeedEntry)> = None;
     for e in &famous.entries {
-        if e.distance_pc <= 0.0 {
+        if e.distance_pc <= 0.0 || e.orbit.is_some() {
             continue;
         }
         let sep = angular_sep_arcmin(target, unit_dir(e.ra, e.dec));
@@ -709,7 +713,7 @@ mod tests {
     }
 
     fn famous_entry(ra: f64, dec: f64, dist_pc: f64, mag_v: f64) -> FamousSeedEntry {
-        FamousSeedEntry { ra, dec, distance_pc: dist_pc, mag_v }
+        FamousSeedEntry { ra, dec, distance_pc: dist_pc, mag_v, orbit: None }
     }
 
     // Orion endpoints: one resolved from the famous seed (step 1), one from the
@@ -747,6 +751,24 @@ mod tests {
         let rr = (vr.pos_pc[0].powi(2) + vr.pos_pc[1].powi(2) + vr.pos_pc[2].powi(2)).sqrt();
         assert!((rr - 264.0).abs() < 0.5, "population distance, got {rr}");
         assert!(vr.pos_pc[2] < 0.0, "south-declination star has -z");
+    }
+
+    // Centaurus' alpha vertex sits 1.1″ from Alpha Centauri B's catalogue point and
+    // 15.8″ from A's. B is drawn on its orbit, not there, so the line must end on A.
+    #[test]
+    fn a_vertex_skips_a_companion_on_an_orbit() {
+        let a = famous_entry(219.9021, -60.8339, 1.339, -0.01);
+        let b = FamousSeedEntry {
+            orbit: Some(serde::de::IgnoredAny),
+            ..famous_entry(219.8961, -60.8375, 1.339, 1.33)
+        };
+        let v = resolve_vertex(
+            "Centaurus", 0, 360.0 - 140.1038, -60.8372, &famous(vec![a, b]), &pop_from(vec![]),
+            &Overrides::default(), DEFAULT_TOL_ARCMIN,
+        )
+        .expect("resolves from the seed")
+        .vertex;
+        assert!((v.app_mag + 0.01).abs() < 1e-4, "A's magnitude, not B's 1.33");
     }
 
     // A star prep-1 subtracted from the bin (a Big Dipper star) is absent from
