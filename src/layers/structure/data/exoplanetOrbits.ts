@@ -3,20 +3,23 @@ import type { ExoplanetOrbitSystem } from '../@types/ExoplanetOrbitSystem';
 /**
  * Orbits of the exoplanet-system anchors, keyed by structure id. From the NASA
  * Exoplanet Archive's pscomppars table (pl_orbsmax, pl_orbper, pl_tranmid,
- * st_lum), queried 2026-10-28. The habitable zone is Kopparapu et al. 2013's
- * conservative pair in its Sun-like form, sqrt(L / 1.10) to sqrt(L / 0.36) au,
- * without their stellar-temperature correction; a pulsar gets none. Each
- * host's seed radius mirrors this diagram's extent (pinned by a test), so a
- * focus frames the orbits rather than empty space around a dot.
+ * st_lum, and the median pl_orbincl as the system's plane), queried
+ * 2026-10-28. The habitable zone is Kopparapu et al. 2013's conservative pair
+ * in its Sun-like form, sqrt(L / 1.10) to sqrt(L / 0.36) au, without their
+ * stellar-temperature correction; a pulsar gets none. Each host's seed radius
+ * mirrors this diagram's extent (pinned by a test), so a focus frames the
+ * orbits rather than empty space around a dot.
  */
 export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = {
   'exoplanet-system-51-pegasi': {
+    inclinationDeg: 49.8,
     habitableZoneAu: [1.11547, 1.94986],
     planets: [
       { name: "51 Peg b", semiMajorAxisAu: 0.052, periodDays: 4.2308, transitJd: 2456326.9323 },
     ],
   },
   'exoplanet-system-55-cancri': {
+    inclinationDeg: 89.73,
     habitableZoneAu: [0.760026, 1.32854],
     planets: [
       { name: "55 Cnc e", semiMajorAxisAu: 0.01544, periodDays: 0.736547, transitJd: 2457063.2096 },
@@ -27,6 +30,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-beta-pictoris': {
+    inclinationDeg: 88.993,
     habitableZoneAu: [2.85571, 4.99182],
     planets: [
       { name: "bet Pic c", semiMajorAxisAu: 2.7, periodDays: 1202.0, transitJd: null },
@@ -35,12 +39,14 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-epsilon-eridani': {
+    inclinationDeg: 40,
     habitableZoneAu: [0.588388, 1.02851],
     planets: [
       { name: "eps Eri b", semiMajorAxisAu: 3.53, periodDays: 2680.0, transitJd: 2457388.0 },
     ],
   },
   'exoplanet-system-gliese-581': {
+    inclinationDeg: 47,
     habitableZoneAu: [0.106023, 0.185329],
     planets: [
       { name: "GJ 581 e", semiMajorAxisAu: 0.02799, periodDays: 3.1481, transitJd: null },
@@ -49,18 +55,21 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-hd-189733': {
+    inclinationDeg: 85.71,
     habitableZoneAu: [0.560672, 0.980062],
     planets: [
       { name: "HD 189733 b", semiMajorAxisAu: 0.03126, periodDays: 2.21858, transitJd: 2453955.5255511 },
     ],
   },
   'exoplanet-system-hd-209458': {
+    inclinationDeg: 86.71,
     habitableZoneAu: [1.24375, 2.1741],
     planets: [
       { name: "HD 209458 b", semiMajorAxisAu: 0.04707, periodDays: 3.52475, transitJd: 2451659.93742 },
     ],
   },
   'exoplanet-system-hr-8799': {
+    inclinationDeg: 29.85,
     habitableZoneAu: [2.21839, 3.87779],
     planets: [
       { name: "HR 8799 e", semiMajorAxisAu: 16.4, periodDays: 20815.6, transitJd: null },
@@ -70,6 +79,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-k2-18': {
+    inclinationDeg: 89.5785,
     habitableZoneAu: [0.151657, 0.265099],
     planets: [
       { name: "K2-18 c", semiMajorAxisAu: 0.06, periodDays: 8.962, transitJd: null },
@@ -77,12 +87,14 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-kepler-16': {
+    inclinationDeg: 90.0322,
     habitableZoneAu: [0.337131, 0.58931],
     planets: [
       { name: "Kepler-16 b", semiMajorAxisAu: 0.7048, periodDays: 228.776, transitJd: 2455212.12316 },
     ],
   },
   'exoplanet-system-kepler-186': {
+    inclinationDeg: 89.84,
     habitableZoneAu: [0.193555, 0.338336],
     planets: [
       { name: "Kepler-186 b", semiMajorAxisAu: 0.0343, periodDays: 3.88679, transitJd: 2454966.3304 },
@@ -93,12 +105,14 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-kepler-452': {
+    inclinationDeg: 89.806,
     habitableZoneAu: [1.05086, 1.83691],
     planets: [
       { name: "Kepler-452 b", semiMajorAxisAu: 1.046, periodDays: 384.843, transitJd: 2455147.985 },
     ],
   },
   'exoplanet-system-lhs-1140': {
+    inclinationDeg: 89.83,
     habitableZoneAu: [0.0587751, 0.10274],
     planets: [
       { name: "LHS 1140 c", semiMajorAxisAu: 0.027, periodDays: 3.77794, transitJd: 2458389.2939 },
@@ -106,6 +120,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-proxima-centauri': {
+    inclinationDeg: null,
     habitableZoneAu: [0.0370505, 0.0647648],
     planets: [
       { name: "Proxima Cen d", semiMajorAxisAu: 0.02881, periodDays: 5.12338, transitJd: null },
@@ -113,6 +128,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-psr-b1257-12': {
+    inclinationDeg: 50,
     habitableZoneAu: null,
     planets: [
       { name: "PSR B1257+12 b", semiMajorAxisAu: 0.19, periodDays: 25.262, transitJd: null },
@@ -121,6 +137,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-tau-ceti': {
+    inclinationDeg: null,
     habitableZoneAu: [0.670824, 1.17261],
     planets: [
       { name: "tau Cet g", semiMajorAxisAu: 0.133, periodDays: 20.0, transitJd: null },
@@ -129,6 +146,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-toi-700': {
+    inclinationDeg: 89.73,
     habitableZoneAu: [0.14554, 0.254407],
     planets: [
       { name: "TOI-700 b", semiMajorAxisAu: 0.0678, periodDays: 9.97722, transitJd: 2458880.0994 },
@@ -138,6 +156,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-trappist-1': {
+    inclinationDeg: 89.778,
     habitableZoneAu: [0.0224217, 0.0391935],
     planets: [
       { name: "TRAPPIST-1 b", semiMajorAxisAu: 0.01154, periodDays: 1.51083, transitJd: 2457322.514193 },
@@ -150,6 +169,7 @@ export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = 
     ],
   },
   'exoplanet-system-wasp-12': {
+    inclinationDeg: 81.8,
     habitableZoneAu: [1.89609, 3.31439],
     planets: [
       { name: "WASP-12 b", semiMajorAxisAu: 0.0234, periodDays: 1.09142, transitJd: 2457607.519305 },

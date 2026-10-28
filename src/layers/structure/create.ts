@@ -1,6 +1,6 @@
 /**
- * create — the store, one marker renderer per slab, then the bulk slot and the
- * projection that fills the store from it. The renderers come first so a
+ * create — the store, the marker and orbit-plane renderers, then the bulk slot
+ * and the projection that fills the store from it. The renderers come first so a
  * throwing constructor leaves nothing published. The anchors land
  * synchronously in the projection, so the selection row resolves a featured
  * structure from boot.
@@ -15,6 +15,7 @@ import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { createStructureStore } from './load/createStructureStore';
 import { createStructureMarkerRenderer } from './render/structureMarkerRenderer';
+import { createExoplanetOrbitPlaneRenderer } from './render/exoplanetOrbitPlaneRenderer';
 import { createStructureCatalogSlot } from './load/structureCatalogSlot';
 import { wireStructureProjection } from './load/wireStructureProjection';
 
@@ -36,7 +37,7 @@ export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
     NEAR0,
     STRUCTURE_IDS_BY_SCALE.milkyWay,
   );
-  // A third instance for the exoplanet orbit diagrams, so those rings never
+  // A third instance for the exoplanet orbit diagrams' dots, so they never
   // shift the structure rings' pick instances.
   const orbitRenderer = createStructureMarkerRenderer(
     deps.ctx,
@@ -45,7 +46,8 @@ export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
     NEAR0,
     STRUCTURE_IDS_BY_SCALE.milkyWay,
   );
+  const orbitPlaneRenderer = createExoplanetOrbitPlaneRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
   const slot = createStructureCatalogSlot();
   wireStructureProjection({ store, slot }, deps.publish);
-  return { store, cosmoRenderer, nearRenderer, orbitRenderer, slot };
+  return { store, cosmoRenderer, nearRenderer, orbitRenderer, orbitPlaneRenderer, slot };
 }
