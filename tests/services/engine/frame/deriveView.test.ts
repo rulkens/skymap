@@ -795,7 +795,6 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
       anchorId: 'sun' as PositionedId,
       drawRadiusM: () => SUN_OUTER_M,
       footprintRadiusM: SUN_OUTER_M,
-      source: 'foreground',
     };
     const withRow = { ...snapshot, slabBodyCandidates: [...snapshot.slabBodyCandidates, layerRow] };
     expect(deriveView(withRow, cam, spec()).slabs[NEAR0]!.distanceRangeM).toEqual(

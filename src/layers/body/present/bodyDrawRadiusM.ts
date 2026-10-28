@@ -1,9 +1,9 @@
-import { SCALE_UNITS } from '../../data/scaleUnits';
-import { ATMOSPHERE_PARAMS } from '../../data/bodies/atmosphereParams';
-import { SCENE_RINGS } from '../../data/bodies/sceneRings';
-import { BODY_DRAW_ENVELOPES } from '../../data/bodies/bodyDrawEnvelopes';
-import type { SceneBody } from '../../@types/scene/SceneBody';
-import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
+import { SCENE_RINGS } from '../../../data/bodies/sceneRings';
+import { BODY_DRAW_ENVELOPES } from './bodyDrawEnvelopes';
+import type { SceneBody } from '../../../@types/scene/SceneBody';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 
 /**
  * bodyDrawRadiusM — the body's outermost drawn shell, in metres:

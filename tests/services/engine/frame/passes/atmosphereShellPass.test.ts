@@ -44,12 +44,7 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // ARGUMENTS the layer feeds them, and lets packAtmosphereUniforms run for
 // real so the packed bottomRadius reveals which ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
-// OUTSIDE the atmosphere top (radius 1 in this frame): this layer is the
-// outside-only half, and a camLocal inside the shell routes every row to
-// `aerialPerspectivePass` instead.
 const MOCK_CAM_LOCAL: Vec3 = [1.0, 2.0, 3.0];
-/** Well under `isInsideAtmosphereShell`'s 1.005 ratio — `aerial-perspective`'s camera. */
-const MOCK_CAM_LOCAL_INSIDE: Vec3 = [0.0, 0.0, 0.5];
 vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
@@ -107,7 +102,12 @@ const SEEDED_MOON: SeededBody = {
   orientation: IDENTITY_MAT3,
 };
 
-const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [1, 2, 3], basisM: IDENTITY_MAT3 };
+// OUTSIDE every fixture's atmosphere band (100,000 km out): this layer is the
+// outside-only half, and an eye inside the band routes the row to
+// `aerialPerspectivePass` instead.
+const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [0, 0, 1e8], basisM: IDENTITY_MAT3 };
+/** Well inside Earth's band (1,000 km from its centre) — `aerial-perspective`'s camera. */
+const INSIDE_POSE: BodyRelativePose = { eyeRelBodyM: [0, 0, 1e6], basisM: IDENTITY_MAT3 };
 
 const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
 const camLocalMock = bodySlabCamLocal as unknown as ReturnType<typeof vi.fn>;
@@ -123,17 +123,16 @@ const PASS_STUB = {
 /**
  * A ctx comfortably inside the shared foreground gate, with a `bodyPose`
  * stub returning one fixed non-null pose for every body — `composeBodySlabMvp`
- * is mocked, so the pose's actual geometry never matters, only that it is
- * non-null and gets forwarded.
+ * is mocked, so only the eye's distance (inside or outside the band) matters.
  */
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2, pose = STUB_POSE): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    bodyPose: (() => pose) as FrameView['bodyPose'],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     snapshot: { renderTargets: { farDepthView: () => FAR_DEPTH_VIEW } },
   } as unknown as FrameView;
@@ -181,15 +180,11 @@ describe('atmosphereShellPass.enabled', () => {
   it('is false for a camera the shell encloses — that row is aerialPerspectivePass’s', () => {
     // Both draws on one body would double its in-scatter, and the proxy mesh
     // loses its near wall from inside; the two passes split on this one flag.
-    camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL_INSIDE);
-    try {
-      const state = makeState({ draw: vi.fn() });
-      expect(
-        atmosphereShellPass.enabled(state, makeCtx(), makeBodyView(asSceneBodyId('earth'))),
-      ).toBe(false);
-    } finally {
-      camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL);
-    }
+    const state = makeState({ draw: vi.fn() });
+    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2, INSIDE_POSE);
+    expect(atmosphereShellPass.enabled(state, ctx, makeBodyView(asSceneBodyId('earth')))).toBe(
+      false,
+    );
   });
 
   it('is false while the atmosphereShellRenderer handle is null, even for a bare ctx (handle short-circuits first)', () => {

@@ -34,7 +34,7 @@ import {
   NEAR_RATIO,
 } from '../../../../src/utils/camera/foregroundFrustum';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
-import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
+import { bodyLayerSlabRow } from '../../../../src/layers/body/present/bodyLayerSlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -228,7 +228,7 @@ describe('deriveSlabs', () => {
     // Deliberately NOT in distance order, so the assertion below exercises the
     // sort rather than coincidentally matching input order.
     const slabs = deriveSlabs(
-      baseInput({ pose, visibleRows: [near, far, mid].map(bodySlabRowOf) }),
+      baseInput({ pose, visibleRows: [near, far, mid].map(bodyLayerSlabRow) }),
     );
 
     expect(slabs).toHaveLength(2 + 3);
@@ -245,7 +245,9 @@ describe('deriveSlabs', () => {
 
   it('drops a body whose pose is null this frame (culled)', () => {
     const body = makePlanet({ id: asSceneBodyId('culled-body') });
-    const slabs = deriveSlabs(baseInput({ pose: NO_POSE, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(
+      baseInput({ pose: NO_POSE, visibleRows: [body].map(bodyLayerSlabRow) }),
+    );
     expect(slabs).toHaveLength(2);
   });
 
@@ -261,7 +263,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
     // Hand-written, not re-derived from bodyDrawRadiusM/dM inside the test.
     // rMaxM (1e5) has no atmosphere/ring/cloud to widen it, so the margin is
@@ -299,7 +301,9 @@ describe('deriveSlabs', () => {
     const original = mutableFlag[NEAR0];
     mutableFlag[NEAR0] = false;
     try {
-      const slabs = deriveSlabs(baseInput({ cam, pose, visibleRows: [body].map(bodySlabRowOf) }));
+      const slabs = deriveSlabs(
+        baseInput({ cam, pose, visibleRows: [body].map(bodyLayerSlabRow) }),
+      );
       const row = slabs[2]!;
       expect(row.reversedZ).toBe(false);
       const view = mat4d.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
@@ -339,7 +343,7 @@ describe('deriveSlabs', () => {
     const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
@@ -379,7 +383,7 @@ describe('deriveSlabs', () => {
     const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
@@ -396,7 +400,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [100, 0, 0], // dM = 100 m < rMaxM = 1000 m
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
     expect(row.near).toBe(MIN_NEAR_M);
     expect(row.distanceRangeM![0]).toBe(0);
@@ -419,7 +423,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [dM, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const row = slabs[2]!;
     const expectedNear = (dM - radiusM) * NEAR_RATIO;
     expect(row.near).toBeCloseTo(expectedNear, 6);
@@ -500,7 +504,7 @@ describe('deriveSlabs', () => {
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow) }));
     const vp = slabs[2]!.vp;
 
     // A translation leaking into `view` would show up in `vp`'s column 3
@@ -546,7 +550,7 @@ describe('bodySlabRow attachedBodies widening', () => {
     });
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM: EYE_REL_BODY_M, basisM: BASIS_M });
     return bodySlabRow({
-      row: bodySlabRowOf(body),
+      row: bodyLayerSlabRow(body),
       pose,
       frustum: symmetricFrustum(1, 16 / 9),
       viewportPx: [1920, 1080] as Vec2,
@@ -598,7 +602,7 @@ describe('foregroundChainOrder', () => {
     const slabs = deriveSlabs(
       baseInput({
         pose,
-        visibleRows: [near, far].map(bodySlabRowOf),
+        visibleRows: [near, far].map(bodyLayerSlabRow),
         starSphereRangeM: [1e8, 1e8],
       }),
     );
@@ -616,7 +620,7 @@ describe('foregroundChainOrder', () => {
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
     const slabs = deriveSlabs(
-      baseInput({ pose, visibleRows: [body].map(bodySlabRowOf), starSphereRangeM: null }),
+      baseInput({ pose, visibleRows: [body].map(bodyLayerSlabRow), starSphereRangeM: null }),
     );
     expect(foregroundChainOrder(slabs)).toEqual([NEAR0, 2]);
   });
@@ -640,7 +644,7 @@ describe('foregroundChainOrder', () => {
     // the primary sort key alone ties — deeply-inside is listed first to prove
     // the secondary key, not input order, decides the outcome.
     const slabs = deriveSlabs(
-      baseInput({ pose, visibleRows: [deeplyInside, barelyInside].map(bodySlabRowOf) }),
+      baseInput({ pose, visibleRows: [deeplyInside, barelyInside].map(bodyLayerSlabRow) }),
     );
     const chain = foregroundChainOrder(slabs);
 

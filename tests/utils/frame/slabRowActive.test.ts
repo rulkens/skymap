@@ -21,7 +21,6 @@ const ROW: SlabRow = {
   drawRadiusM: () => 1,
   footprintRadiusM: 1,
   activeBand: BAND,
-  source: 'lens',
 };
 
 /** The anchor `distanceMpc` from a camera at the origin. */

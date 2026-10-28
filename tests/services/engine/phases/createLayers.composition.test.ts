@@ -101,7 +101,6 @@ function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, 
       anchorId,
       boundingRadiusM: 1,
       footprintRadiusM: 1,
-      source: 'foreground' as const,
     })),
   } as unknown as Layer<string, unknown>;
 }

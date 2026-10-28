@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { bodyDrawRadiusM } from '../../../src/utils/scene/bodyDrawRadiusM';
-import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
-import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
-import { CLOUD_SHELL_PARAMS } from '../../../src/data/bodies/cloudShellParams';
-import { outerBoundRadiusM } from '../../../src/utils/occlusion/outerBoundRadiusM';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { bodyDrawRadiusM } from '../../../../src/layers/body/present/bodyDrawRadiusM';
+import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../src/data/bodies/cloudShellParams';
+import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 const findPlanet = (id: string) => {
   const body = SCENE_PLANETS.find((row) => row.id === id);

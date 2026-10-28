@@ -1,7 +1,7 @@
 /**
  * visibleSlabBodies — which of `rows` clear the sub-pixel apparent-diameter
  * floor AND the view-frustum angular cull, and so get a body slab row this
- * frame. Store bodies reach it through `bodySlabRowOf`, as in `deriveView`.
+ * frame. Body rows come from the body Layer's `bodyLayerSlabRow`, as in the app.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,7 +13,7 @@ import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
-import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
+import { bodyLayerSlabRow } from '../../../../src/layers/body/present/bodyLayerSlabRow';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -69,7 +69,7 @@ describe('visibleSlabBodies', () => {
     ]);
 
     const visible = visibleSlabBodies({
-      rows: [belowFloor, aboveFloor].map(bodySlabRowOf),
+      rows: [belowFloor, aboveFloor].map(bodyLayerSlabRow),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -97,7 +97,7 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['earth', makeState()]]);
 
     const visible = visibleSlabBodies({
-      rows: [earth, orphan].map(bodySlabRowOf),
+      rows: [earth, orphan].map(bodyLayerSlabRow),
       bodyStates,
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
@@ -123,7 +123,7 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['saturn', makeState([dMpc, 0, 0])]]);
 
     const visible = visibleSlabBodies({
-      rows: [saturn].map(bodySlabRowOf),
+      rows: [saturn].map(bodyLayerSlabRow),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -153,7 +153,7 @@ describe('visibleSlabBodies', () => {
         ['wide', makeState(offAxisPositionMpc(offAxisDeg, distanceMpc))],
       ]);
       return visibleSlabBodies({
-        rows: [wideBody].map(bodySlabRowOf),
+        rows: [wideBody].map(bodyLayerSlabRow),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -195,7 +195,7 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        rows: [straddling].map(bodySlabRowOf),
+        rows: [straddling].map(bodyLayerSlabRow),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -222,7 +222,7 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        rows: [saturn].map(bodySlabRowOf),
+        rows: [saturn].map(bodyLayerSlabRow),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -241,7 +241,7 @@ describe('visibleSlabBodies', () => {
         ['wide', makeState(offAxisPositionMpc(71, 1000))],
       ]);
       const visible = visibleSlabBodies({
-        rows: [wideBody].map(bodySlabRowOf),
+        rows: [wideBody].map(bodyLayerSlabRow),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,

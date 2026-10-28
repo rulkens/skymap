@@ -14,6 +14,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -41,7 +42,7 @@ const STATE = {
   terrain: FLAT_TERRAIN,
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
-  slabRows: [],
+  slabRows: BODY_SLAB_ROWS,
   visibilityEntries: [],
   data: {
     bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },

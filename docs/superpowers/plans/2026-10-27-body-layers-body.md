@@ -385,7 +385,7 @@ export const BODY_SLAB_ROWS: readonly SlabRow[];
 `bodyRowSlabs` imports nothing from `atmosphereDrawList`; `grep -rn isInsideAtmosphereShell src tests`
 is empty.
 
-- [ ] Task 1
+- [x] Task 1
 
 ### Task 2: the body render files move into the Layer tree (pure moves)
 

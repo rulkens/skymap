@@ -4,6 +4,8 @@
  * ONLY write of that body's shell uniform record, sharing `bodyRowSlabs`'
  * `insideAtmosphere` row and so the same `slab.vp` the apply draw reads. No
  * inside body ⇒ no pass, no timing claim (mirrors `encodeAtmosphereSkyView`).
+ * The row's band carries no foreground-distance gate and the draw list does,
+ * so an open line can still find no entry: that too bakes nothing.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
@@ -22,13 +24,16 @@ export function encodeAtmosphereAerialPerspective(
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
 
-  const insideRows = bodyRowSlabs(state, ctx).insideAtmosphere;
+  const insideRows = bodyRowSlabs(ctx).insideAtmosphere;
   if (insideRows.length === 0) return;
 
   // Same slab resolver as the render line (`aerialPerspectivePass`'s row), so
   // bake and apply share one `slab.vp`.
   const row = ctx.slabs[insideRows[0]!]!;
-  const entry = atmosphereDrawList(state, ctx).find((e) => e.inside)!;
+  if (row.frame.kind !== 'body-m') return;
+  const hostId = row.frame.hostId;
+  const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === hostId && e.inside);
+  if (entry === undefined) return;
   const uniforms = atmosphereShellUniforms(entry, row, ctx, state);
 
   const pass = encoder.beginComputePass({

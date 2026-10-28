@@ -60,7 +60,7 @@ export function deriveFrameContext(
   // keeps that true once something sets a non-zero roll.
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
-  const { earth, planets } = state.data.bodies;
+  const { planets } = state.data.bodies;
   // The ONE presence filter: an absent craft is parked on or in Earth, so every
   // consumer (slab rows, partition, glints, picks) reads this list, never the store's.
   const meshBodies = state.data.bodies.meshBodies.filter((body) =>
@@ -68,19 +68,15 @@ export function deriveFrameContext(
   );
   // A mesh body whose driver hangs off something with no row of its own gets
   // one here, off the STORE roster rather than the static table, so the two
-  // stay the same list.
+  // stay the same list. Every other row is a Layer's (`state.slabRows`).
   const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body.id) === body.id);
-  const storeBodies: readonly SceneBody[] =
-    earth === null
-      ? [...planets, ...hostlessMeshBodies]
-      : [earth, ...planets, ...hostlessMeshBodies];
   // A banded row exists only while its band is open — the row IS the gate its
   // consuming pass used to re-ask for (spec §2.5). Keyed on the FRAME camera,
   // not a view's offset eye: a rig's eye separation is metres against a band
   // measured in AU, so no view can disagree about whether the row exists.
   const slabBodyCandidates: readonly SlabRow[] = [
-    ...storeBodies.map(bodySlabRowOf),
     ...state.slabRows.filter((row) => slabRowActive(row, cam.position, bodyStates)),
+    ...hostlessMeshBodies.map(bodySlabRowOf),
   ];
 
   // Provider B serves ONLY the engaged body, straight from its own stored

@@ -123,7 +123,7 @@ Readers, and what each would need:
   `datumRadiusM × radiusRatio`. Its own comment already names this as F3's job.
 - `src/services/engine/frame/passes/cloudShellPass.ts:129` — the `insideShell` test,
   against the same datum ratio.
-- `src/utils/scene/bodyDrawRadiusM.ts:29` — the slab's outermost shell,
+- `src/layers/body/present/bodyDrawEnvelopes.ts` (read by `bodyDrawRadiusM`) — the slab's outermost shell,
   `bodyFootprintRadiusM(body) × radiusRatio`, i.e. the **outer** bound × 1.002. That is
   8,867 m further out than the shell `cloudShellPass` actually draws. Safe direction
   (slab planners over-estimate) but a real disagreement between two derivations of one

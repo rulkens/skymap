@@ -20,6 +20,6 @@ export type AtmosphereDrawEntry = {
   readonly camLocal: Vec3;
   /** Sun direction in the body's local frame (sunDirLocal, unit). */
   readonly sunLocal: Vec3;
-  /** Camera inside the shell's handoff ratio (isInsideAtmosphereShell(camLocal)). */
+  /** Eye inside the shell's handoff band (`hostBandOpen` over `atmosphereInsideBand`). */
   readonly inside: boolean;
 };

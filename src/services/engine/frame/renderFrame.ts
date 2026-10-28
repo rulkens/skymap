@@ -99,7 +99,7 @@ export function renderFrame(input: RenderFrameInput): void {
       bloomEnabled,
       foregroundChain: foregroundChainOrder(viewCtx.slabs),
       captureFaces,
-      bodyRowSlabs: bodyRowSlabs(state, viewCtx),
+      bodyRowSlabs: bodyRowSlabs(viewCtx),
     });
 
   // The batch building up for `currentView` — several sections' steps land in

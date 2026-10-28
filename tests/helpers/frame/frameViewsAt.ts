@@ -18,6 +18,7 @@ import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../src/utils/math/mat3FromColumns';
+import { BODY_SLAB_ROWS } from '../../../src/layers/body/present/bodySlabRows';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
@@ -66,7 +67,7 @@ export function frameViewsAt(input: {
     terrain: FLAT_TERRAIN,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
-    slabRows: [],
+    slabRows: BODY_SLAB_ROWS,
     visibilityEntries: [],
     data: { bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES } },
     settings: { bodies: { items: {} } },

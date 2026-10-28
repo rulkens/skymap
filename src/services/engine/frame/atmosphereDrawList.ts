@@ -16,7 +16,8 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
-import { isInsideAtmosphereShell } from '../../../utils/camera/isInsideAtmosphereShell';
+import { hostBandOpen } from '../../../utils/frame/hostBandOpen';
+import { atmosphereInsideBand } from '../../../layers/body/present/atmosphereInsideBand';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
@@ -68,7 +69,8 @@ export function atmosphereDrawList(
       atmosphereTopM,
       camLocal,
       sunLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
-      inside: isInsideAtmosphereShell(camLocal),
+      // The rule the body's slab row hosts the aerial line by, so the two agree.
+      inside: hostBandOpen(atmosphereInsideBand(body.id), ctx, body.id),
     };
 
     // A zero camera-to-centre distance means the camera is INSIDE the body, where

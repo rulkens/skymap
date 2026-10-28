@@ -25,7 +25,7 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
-import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
+import { bodyLayerSlabRow } from '../../../../../src/layers/body/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { meshBodyCaption } from '../../../../../src/utils/labels/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
@@ -98,7 +98,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
-    visibleRows: [earth].map(bodySlabRowOf),
+    visibleRows: [earth].map(bodyLayerSlabRow),
     viewportPx: VIEWPORT,
     starSphereRangeM: null,
     attachedBodiesByHostId: new Map([

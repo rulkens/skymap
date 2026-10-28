@@ -2,11 +2,10 @@
  * encodeAtmosphereAerialPerspective — unit tests for the per-frame froxel-
  * volume bake. `composeBodySlabMvp` and `bodySlabCamLocal` are mocked to fixed
  * values (the `atmosphereShellPass.test.ts` pattern) — their own math is
- * covered by their own test files, and a camLocal magnitude under 1.0 is what
- * routes a body through `inside` here rather than through the outside-shell
- * pass.
+ * covered by their own test files. The stub pose's metre-scale eye is what puts
+ * Earth's row inside its band, so the aerial line is open.
  *
- * The load-bearing assertions are the three gates: no inside body and a null
+ * The load-bearing assertions are the gates: no inside body and a null
  * renderer both skip the pass AND the timing claim (a claimed-but-unopened
  * slot reports stale ticks — see `encodeAtmosphereSkyView`'s header), and the
  * null-renderer case must short-circuit before any body input is touched, so
@@ -18,6 +17,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -29,8 +29,6 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 // 720-px viewport, 60° fovY, tangent-exact — the apparent-size gate's scale.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
-// A camLocal magnitude of 0.5 sits well inside the shell's ~1.005 entry ratio
-// — `atmosphereDrawList` reads `inside: true` off it for every body.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.5, 0, 0];
 vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
@@ -87,17 +85,20 @@ function makeBodyPose(): BodyPoseProvider {
  *  body-m slab `bodyRowSlabs` resolves `insideAtmosphere` against. Array
  *  position matches the slab's own `index` field (the `FrameView.slabs`
  *  invariant), so indexing `ctx.slabs` by that field lands on this row. */
-function makeCtx(withEarthSlab: boolean): FrameView {
+function makeCtx(
+  withEarthSlab: boolean,
+  camDistanceMpc = FOREGROUND_MAX_DISTANCE_MPC / 2,
+): FrameView {
   const slabs = withEarthSlab
     ? [makeSlab({ index: 0, frame: { kind: 'body-m', hostId: asSceneBodyId('earth') } })]
     : [];
   return {
     bodyPose: makeBodyPose(),
     drawCamPos: [0, 0, 0],
-    cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+    cam: { distance: camDistanceMpc },
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     slabs,
-    snapshot: { slabBodyCandidates: [] },
+    snapshot: { slabBodyCandidates: BODY_SLAB_ROWS },
   } as unknown as FrameView;
 }
 
@@ -143,6 +144,20 @@ describe('encodeAtmosphereAerialPerspective', () => {
     expect(bodyIdArg).toBe('earth');
     expect(uniforms).toBeInstanceOf(Float32Array);
     expect(uniforms).toHaveLength(44);
+  });
+
+  it('the aerial bake skips a hosting row whose body has no inside entry', () => {
+    // The band carries no foreground gate, so past it the line is open while the
+    // draw list is empty: the bake must find no entry rather than throw mid-frame.
+    beginComputePass.mockClear();
+    const renderer = spyRenderer();
+    const ctx = makeCtx(true, FOREGROUND_MAX_DISTANCE_MPC);
+
+    expect(() =>
+      encodeAtmosphereAerialPerspective(encoder, ctx, makeState({ renderer }), vi.fn()),
+    ).not.toThrow();
+    expect(beginComputePass).not.toHaveBeenCalled();
+    expect(renderer.bakeAerialPerspective).not.toHaveBeenCalled();
   });
 
   it('short-circuits on a null renderer before touching a bare ctx’s body inputs', () => {

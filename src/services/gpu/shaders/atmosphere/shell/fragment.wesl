@@ -26,7 +26,7 @@
 //
 // Camera INSIDE the shell -> only back faces are geometrically visible; the
 // layer hands off to the full-screen inside path slightly above the top
-// ('isInsideAtmosphereShell'), so this fragment never serves that regime.
+// ('atmosphereInsideBand'), so this fragment never serves that regime.
 //
 // ## The analytic march bound (WESL mirror of 'atmosphereShellBound')
 //

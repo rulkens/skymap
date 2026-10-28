@@ -124,7 +124,7 @@ function cloudShellDraw(
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
   // Same shell radius the geometry itself is scaled to (radiusRatio, in body
-  // radii) — NOT `isInsideAtmosphereShell`'s atmosphere-top-radius ratio, a
+  // radii) — NOT `atmosphereInsideBand`'s atmosphere-top-radius ratio, a
   // different unit convention on a different shell.
   const insideShell = distanceMpc / bodyRadiusMpc < CLOUD_SHELL_PARAMS.radiusRatio;
   // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the

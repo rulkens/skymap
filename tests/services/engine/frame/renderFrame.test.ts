@@ -1003,7 +1003,7 @@ describe('renderFrame', () => {
       bloomEnabled: false,
       foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
       captureFaces: new Map(),
-      bodyRowSlabs: bodyRowSlabs(fx.input.state as any, fx.input.canvas),
+      bodyRowSlabs: bodyRowSlabs(fx.input.canvas),
     };
     const passes = (fx.input.state as any).passes;
     const whole = expandFrameOrder(FRAME_ORDER, passes, options);

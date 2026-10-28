@@ -4,10 +4,12 @@
  *
  * The GPU query set is sized from `SLAB_ROW_CEILING` before any Layer exists,
  * so this cannot be derived from the composition; `createLayers` asserts the
- * composition fits instead. Today: the blackHoles Layer's Sgr A* row plus
- * three spare.
+ * composition fits instead. Today: Earth and every planet row the body Layer
+ * declares, the blackHoles Layer's Sgr A* row, three spare.
  */
 
-// A row is a timing-query slot and a pass-group title, so this stays
+import { SCENE_PLANETS } from '../bodies/scenePlanets';
+
+// A row is a timing-query slot and a pass-group title, so the spare stays
 // deliberately small.
-export const LAYER_SLAB_ROW_HEADROOM = 4;
+export const LAYER_SLAB_ROW_HEADROOM = 1 + SCENE_PLANETS.length + 4;
