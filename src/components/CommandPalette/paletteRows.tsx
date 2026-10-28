@@ -33,7 +33,7 @@ function thumbOrGlyph(shotUrl: string | undefined, label: string): ReactNode {
 }
 
 /**
- * A milkyWay/body/star row's leading visual: the captured card shot of the
+ * A milkyWay/star/layer row's leading visual: the captured card shot of the
  * featured card that names the same focus id `actionForRow` resolves to (the
  * id grammar the URL deep-link layer uses), else the letter glyph.
  */
@@ -54,37 +54,9 @@ type RowView = {
 
 const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
 
-/**
- * Shared render for the `body` and `starCatalog` arms below — they differ
- * only in which `ScoredRow` field they read the id/label from, everything
- * else (aliases, constellation/scale chip, captured-shot leading visual) is
- * identical, so one row shape serves both kinds.
- */
-function namedRowView(m: ScoredRow, keyPrefix: string, testidPrefix: string, id: string): RowView {
-  const label = paletteRowLabel(m).name;
-  const aliases = (BODY_SEARCH_NAMES.get(id) ?? []).slice(1);
-  const chip = bodyRowChip(id);
-  return {
-    key: `${keyPrefix}:${id}`,
-    testid: `${testidPrefix}-${id}`,
-    leading: shotOrGlyph(m, label),
-    primary: label,
-    secondary: (
-      <>
-        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-        {chip && <span className={styles.source}>{chip}</span>}
-      </>
-    ),
-  };
-}
-
 const EARTH_CHIP = <span className={styles.source}>Earth</span>;
 
-/**
- * Shared render for the `place` and `layer` arms: the first name, the rest as
- * aliases, and an optional source chip. A layer row shows the captured card shot
- * of its focus id when one exists (the craft keep theirs); a place is a glyph.
- */
+/** Shared render for the `place` and `layer` arms; only a layer row shows a captured card shot, a place is a glyph. */
 function glyphRowView(
   m: Extract<ScoredRow, { kind: 'place' | 'layer' }>,
   chip?: ReactNode,
@@ -171,19 +143,25 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // Scene-body row — captured card shot when one exists (see `shotOrGlyph`),
-  // else a letter glyph. Aliases come from the same lookup the ranker scores
-  // over, so a row shows exactly the names it can be found by; the chip is
-  // the body's constellation or, failing that, its scale regime (e.g.
-  // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre"). A seeded star's row renders identically — same lookups, same
-  // chip — off its own star identity.
-  body: (m) =>
-    m.kind !== 'body' ? EMPTY_ROW_VIEW : namedRowView(m, 'body', 'body-row', m.body.id),
-  starCatalog: (m) =>
-    m.kind !== 'starCatalog'
-      ? EMPTY_ROW_VIEW
-      : namedRowView(m, 'starCatalog', 'star-row', m.star.id),
+  // Aliases come from the lookup the ranker scores over, so a row shows exactly the names it can be found by.
+  starCatalog: (m) => {
+    if (m.kind !== 'starCatalog') return EMPTY_ROW_VIEW;
+    const label = paletteRowLabel(m).name;
+    const aliases = (BODY_SEARCH_NAMES.get(m.star.id) ?? []).slice(1);
+    const chip = bodyRowChip(m.star.id);
+    return {
+      key: `starCatalog:${m.star.id}`,
+      testid: `star-row-${m.star.id}`,
+      leading: shotOrGlyph(m, label),
+      primary: label,
+      secondary: (
+        <>
+          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+          {chip && <span className={styles.source}>{chip}</span>}
+        </>
+      ),
+    };
+  },
   // Structure row — the captured shot of a featured anchor (bulk rows have none),
   // else a glyph placeholder, + a category chip (Cluster / Supercluster /
   // Void / Group) from the per-category display copy, plus the Abell
@@ -236,10 +214,10 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
-  // Layer-published row — no thumbnail vocabulary to look up, and no chip: the
-  // publishing Layer is not a source label the user would recognise.
-  layer: (m) => (m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView(m)),
-  // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
-  // here is on the one body.
+  // The chip is the entry's own category tag (a craft's kind), never the publishing Layer's name.
+  layer: (m) =>
+    m.kind !== 'layer'
+      ? EMPTY_ROW_VIEW
+      : glyphRowView(m, m.entry.chip && <span className={styles.source}>{m.entry.chip}</span>),
   place: (m) => (m.kind !== 'place' ? EMPTY_ROW_VIEW : glyphRowView(m, EARTH_CHIP)),
 };

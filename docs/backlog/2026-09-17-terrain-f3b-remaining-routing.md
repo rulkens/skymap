@@ -38,7 +38,7 @@ to count. The live surface is small: 6 `outerBoundRadiusM(` call sites and 8
 `innerBoundRadiusM(` call sites outside their own files, plus two hubs
 (`bodyFootprintRadiusM`, 12 readers; `bodyDrawRadiusM`, 2) and ~45 non-declaration
 `datumRadiusM` reads, 24 of which are the authored rows in
-`src/data/bodies/scenePlanets.ts`.
+`src/layers/body/bodies/`.
 
 Two of the table's rows are already **done**, not pending:
 
@@ -53,7 +53,7 @@ Two of the table's rows are already **done**, not pending:
   is `const EARTH_RADIUS_KM = innerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_KM`
   — already the inner bound, since #704.
 
-Only Earth carries relief at all (`src/data/bodies/sceneEarth.ts:23`,
+Only Earth carries relief at all (`src/layers/body/bodies/earth.ts`,
 `reliefM: [-430, 8849]`); every other body is `[0, 0]`, so the three bounds coincide
 and all of this is inert outside Earth until F4 gives Mars a relief interval.
 

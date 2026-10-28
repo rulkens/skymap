@@ -12,7 +12,7 @@ import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
-import { CORE_TRAIL_ELEMENTS } from '../../../../src/data/bodies/coreTrailElements';
+import { bodyLayer } from '../../../../src/layers/body/layer';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
@@ -153,7 +153,7 @@ describe('createLayers composition', () => {
     ]);
   });
 
-  it("composes core's orbit-trail group then every Layer's guides.orbitTrails group, in tuple order", async () => {
+  it("createLayers composes only the Layers' orbit-trail groups", async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const aRow = { id: 'a-trail' } as unknown as OrbitalElements;
@@ -170,12 +170,24 @@ describe('createLayers composition', () => {
     // By reference, row for row: a structural compare would pass a copy that lost
     // the identity `orbitTrailsPass` walks.
     const groups = state.orbitTrailGroups;
-    expect(groups).toHaveLength(3);
-    expect(groups[0]!.rows).toBe(CORE_TRAIL_ELEMENTS);
-    expect(groups[0]!.show).toBe('orbitTrails');
-    expect(groups[1]!.rows).toBe(aRows);
-    expect(groups[1]!.show).toBe('sStarTrails');
-    expect(groups[2]!.rows).toBe(bRows);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]!.rows).toBe(aRows);
+    expect(groups[0]!.show).toBe('sStarTrails');
+    expect(groups[1]!.rows).toBe(bRows);
+  });
+
+  it('each planet is captioned once', async () => {
+    const { store } = createAppStore();
+    const foregroundRegisterProducer = vi.fn();
+    const state = makeState(vi.fn(), foregroundRegisterProducer);
+
+    const deps = makeDeps([bodyLayer as unknown as Layer<string, unknown>], store);
+    // The body Layer publishes a `search` feed, which createLayers runs as a saga.
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+    await createLayers(state, deps);
+
+    const ids = foregroundRegisterProducer.mock.calls.map(([producer]) => producer.id);
+    expect(ids.filter((id) => id === 'sceneBodyCaptions')).toHaveLength(1);
   });
 
   it('composes Layer world label producers onto state.label3DProducers', async () => {
