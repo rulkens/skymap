@@ -1,6 +1,6 @@
 /**
- * A file under `src/services/engine/frame/` — and its `timing/` and `passes/`
- * subfolders, and every Layer's own `passes/` — declares ONE thing: the symbol
+ * A file under `src/services/engine/frame/` — and its subfolders, and every
+ * Layer's own `passes/` — declares ONE thing: the symbol
  * it is named for (for a pass file, its `ContentPass`). Helpers and constants
  * inlined beside it are invisible to the rest of the codebase and untestable
  * alone, and agents keep re-adding them — hence a ratchet rather than a review
@@ -44,6 +44,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/expandFrameOrder': 5,
   'frame/near0LabelProjection': 1,
   'frame/pickProgram': 5,
+  'frame/prepareBodySurfaceFrame': 1,
   'frame/projectFramePose': 1,
   'frame/runBloom': 1,
   'frame/runFrame': 3,
@@ -52,7 +53,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/visibleSlabBodies': 2,
   'frame/passes/bodyGlintsPass': 2,
   'frame/passes/cloudShellPass': 1,
-  'frame/passes/earthPass': 4,
   'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
   'frame/passes/planetsPass': 1,
@@ -118,6 +118,7 @@ describe.each([
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
   ['frame/computes', FRAME_DIR + 'computes/'] as const,
+  ['frame/surfaceTilePlanner', FRAME_DIR + 'surfaceTilePlanner/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
   // `passes/index.ts` and `computes/index.ts` are

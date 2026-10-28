@@ -27,9 +27,6 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
-import { gateLabelProducer } from './layer/gateLabelProducer';
-import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabel';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -56,13 +53,12 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileStream';
 import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
-import { coreSelectionRows } from './selection/coreSelectionRows';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 
@@ -309,17 +305,6 @@ export function createEngine(
   // `#c[data-view-rig='dome']` rule reads it to square the canvas.
   canvas.dataset.viewRig = state.viewRig;
 
-  // Scene-body captions first so an equal-prominence tiebreak favours the
-  // navigation aid over the diffuse constellation overlay — the constellations
-  // Layer's own producer registers later, from `createLayers`, landing second.
-  state.subsystems.foregroundLabelDirector.registerProducer(
-    gateLabelProducer({
-      id: 'sceneBodyCaptions',
-      label: SCENE_BODY_CAPTION_LABEL,
-      produceLabels: produceSceneBodyCaptions,
-    }),
-  );
-
   // One instance feeds both the dev panel and the load-progress emitter, so the
   // loading bar and the panel agree on what is in flight.
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
@@ -334,12 +319,11 @@ export function createEngine(
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
 
-  // The one row array core owns (D5); createLayers appends each Layer's rows
-  // once, in tuple order. `selection` reads it lazily (never rebuilds a list),
-  // so a deep link seen before createLayers sees only core rows — a Layer-only
-  // id instead waits on resolveFocusRefDeferringSaga's engineStatusChanged
-  // pulse to resolve.
-  state.selectionKindRows = coreSelectionRows();
+  // Every selection kind is a Layer's: `state.selectionKindRows` starts empty and
+  // createLayers fills it once, in tuple order. `selection` reads it lazily (never
+  // rebuilds a list), so a deep link or the home ref seen before createLayers
+  // resolves nothing yet and waits on the engineStatusChanged pulse
+  // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.kinds,
@@ -430,9 +414,8 @@ export function createEngine(
     state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
-    // Owns a 67 MB atlas and a page-table texture once engaged, neither of which
-    // WebGPU releases on GC.
-    state.subsystems.surfaceTiles?.destroy();
+    // Owns two tile atlases once engaged, which WebGPU never releases on GC.
+    state.subsystems.surfaceTiles?.stream.destroy();
     state.subsystems.surfaceTiles = null;
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;
@@ -499,8 +482,14 @@ export function createEngine(
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.
       assetPriorities: () => assetPriorityBySlotName(state),
-      surfaceTiles: () =>
-        state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+      // Residency from the stream, the rest from this frame's plan.
+      surfaceTiles: () => {
+        const tiles = state.subsystems.surfaceTiles;
+        if (tiles === null) return EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;
+        const { lastPlan, cut, subCamera } = tiles.plan;
+        const plan = lastPlan === null ? null : { ...lastPlan, cutCount: cut.length };
+        return { ...tiles.stream.debugStats(), plan, subCamera };
+      },
       gpuMemory: () => state.gpu.memory?.() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`

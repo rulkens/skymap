@@ -148,7 +148,7 @@ Result order: Milky Way first, then named things (famous galaxies, planets, moon
 | E4 | Tour captions | Each step shows a title and a sentence or two once the view has arrived. | Automatic during a tour. | `src/components/TourOverlay/TourOverlay.tsx:86-121` | shipped |
 | E5 | Tour controls | Previous, pause/resume, next and exit buttons stay on screen. | Buttons, or `←` `→` `Space` `Esc`. | `src/components/TourOverlay/TourNav.tsx:69,99`; `src/state/input/keyboardShortcuts.ts:77-79` | shipped |
 | E6 | Tour progress rail | A row of marks shows which step you are on. | Automatic during a tour. | `src/components/TourBeatRail/TourBeatRail.tsx:35` | shipped |
-| E7 | Exhibit: Solar System | Looks down on the planets and their orbits from above. | Search (Highlights tab) or `#exhibit=solarSystem`. | `src/data/exhibits/solarSystem.ts:35-98` | shipped |
+| E7 | Exhibit: Solar System | Looks down on the planets and their orbits from above. | Search (Highlights tab) or `#exhibit=solarSystem`. | `src/layers/body/exhibits/solarSystem.ts:35-98` | shipped |
 | E8 | Exhibit: Cosmic Flows | Hides the galaxies and shows only the flow ribbons around our neighbourhood. | Search or `#exhibit=cosmicFlows`. | `src/data/exhibits/cosmicFlows.ts:31-108` | shipped |
 | E9 | Exhibit: Cosmic Web | Hides the galaxies and shows only the glowing web, with a second all-sky version switched on. | Search or `#exhibit=cosmicWeb`. | `src/data/exhibits/cosmicWeb.ts:30-109` | shipped |
 | E10 | Exhibit: Zone of Avoidance | Frames the Milky Way from just outside so the hidden band cuts across the galaxy field. | Search (Milky Way tab) or `#exhibit=zoneOfAvoidance`. | `src/data/exhibits/zoneOfAvoidance.ts:63-113` | shipped |

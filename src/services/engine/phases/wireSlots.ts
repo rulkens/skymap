@@ -11,7 +11,7 @@
  *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
  *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
  *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
- *   4. `createSurfaceTileSubsystem` / `seedVisibilityFades` — Earth's surface
+ *   4. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
  *      virtual texture, and every visibility identity at its boot target
  *      (`installVisibilityGates` later subscribes its gating slots, so a
  *      commit or release retargets that identity's fade).
@@ -59,7 +59,8 @@ import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
-import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
+import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';
 import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
 import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
 import { installVisibilityGates } from '../wiring/installVisibilityGates';
@@ -87,15 +88,18 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   wireBodyTextureSlots(state);
   wireMeshBodySlots(state);
 
-  // Earth's surface virtual texture. A subsystem, not a renderer — it owns
+  // The surface virtual texture. A subsystem, not a renderer — it owns
   // residency and streaming — so it's constructed here, not in `initGpu`.
-  // Construction is free (no GPU memory, no fetch until the tile planner
-  // engages), and kept out of `wireImpostorSubsystems` since it shares nothing
-  // with that dependency-ordered cluster but the device.
-  state.subsystems.surfaceTiles = createSurfaceTileSubsystem({
-    device: deps.phaseLocals!.device,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-  });
+  // Construction is free (no GPU memory, no fetch until a plan engages it),
+  // and kept out of `wireImpostorSubsystems` since it shares nothing with
+  // that dependency-ordered cluster but the device.
+  state.subsystems.surfaceTiles = {
+    stream: createSurfaceTileStream({
+      device: deps.phaseLocals!.device,
+      requestRender: () => state.subsystems.scheduler.requestRender(),
+    }),
+    plan: IDLE_SURFACE_TILE_PLAN,
+  };
 
   // Every visibility identity seeds at its target, which reads its gating slot's commit,
   // so frame 1 is coherent and a demand-loaded thing waits at 0 to fade in on arrival.

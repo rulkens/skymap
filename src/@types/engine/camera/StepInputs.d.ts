@@ -26,7 +26,7 @@ export type StepInputs = {
   readonly aspect: number;
   readonly steps: readonly InputStep[];
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
-  /** `SurfaceTileSubsystem.terrainHeightAt` bound by `runFrame`, or a `() =>
+  /** `SurfaceTileStream.heightAt` bound by `runFrame`, or a `() =>
    *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
   readonly clipEpoch: Epoch<NonNullable<CameraState['clip']>>;
