@@ -2,7 +2,7 @@
  * computePlaceDustBudget — the reservation + per-rebuild uniform inputs, a
  * pure function of (geometry, dust) with no rng/placement work. Its own
  * file, deliberately separate from `createIsmMapPlaceDust.ts`: THAT file's
- * `?static` shader import only resolves under the Vite/wesl-plugin pipeline,
+ * `?static` shader import only resolves under the Vite + weslStaticPlugin pipeline,
  * but `probeGpuErrors.ts` imports this pure function directly on the plain
  * Node/tsx side — importing from a `?static`-importing module there throws
  * `ERR_UNKNOWN_FILE_EXTENSION` before the probe boots a browser.

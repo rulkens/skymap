@@ -13,8 +13,7 @@ import { planeFrameFromPole } from '../orbitPlaneFrames';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
-
-const DAYS_PER_JULIAN_CENTURY = 36_525;
+import { DAYS_PER_JULIAN_CENTURY } from '../../time/daysPerJulianCentury';
 
 export function orbiter(spec: {
   id: string;
