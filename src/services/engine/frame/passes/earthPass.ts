@@ -22,7 +22,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
-import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
@@ -62,7 +62,7 @@ export const earthPass: ContentPass = {
 
     // Sun direction rotated into Earth's local frame (orientation carries the
     // axial tilt), so the fragment's lighting stays a plain dot product.
-    const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
+    const sun = lightDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
     // Same descent fade the cloud shell itself uses, from the same
     // camera-to-Earth-centre distance enabled's sub-pixel cull reads — the deck
     // and the shadow it casts must dissolve together.

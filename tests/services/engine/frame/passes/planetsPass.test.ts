@@ -27,7 +27,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../../src/utils/camera/lightDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -274,7 +274,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     expect(staging[18]).toBeCloseTo(mercury.albedo[2]);
     expect(staging[19]).toBe(0); // albedo pad
 
-    const expectedSun = sunDirLocal(mercury.positionMpc, RENDER_ORIGIN_MPC, mercury.orientation);
+    const expectedSun = lightDirLocal(mercury.positionMpc, RENDER_ORIGIN_MPC, mercury.orientation);
     expect(staging[20]).toBeCloseTo(expectedSun[0]);
     expect(staging[21]).toBeCloseTo(expectedSun[1]);
     expect(staging[22]).toBeCloseTo(expectedSun[2]);

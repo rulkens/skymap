@@ -70,7 +70,7 @@ import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams
 import { bodyTextureSlotKey } from '../../../../utils/bodyTextures/bodyTextureSlotKey';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
-import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packCloudShellUniforms } from '../../../../utils/gpu/packCloudShellUniforms';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
@@ -182,7 +182,7 @@ export const cloudShellPass: ContentPass = {
     // Sun rotated into Earth's local frame (its resolved orientation carries the
     // axial tilt), so the fragment's Lambert dim on the night side stays co-framed
     // with the surface.
-    const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
+    const sun = lightDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
     // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
     // uses (single source of truth), so clouds — the brightest real feature — are
     // not dimmer than the ground beneath them. The ambient floor is likewise the

@@ -27,7 +27,7 @@ import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
-import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
 import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from '../prepareBodySurfaceFrame';
@@ -70,7 +70,7 @@ export const surfaceTilesPass: ContentPass = {
     if (prepared === null) return;
     const { bodyState, pose, radiusM } = prepared;
 
-    const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    const sun = lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
     const has = (effect: SurfaceEffect) => spec.effects.includes(effect);
     // `maps` is null only for an effects-free row (returned above otherwise).
     const effectInputs: SurfaceEffectInputs =

@@ -15,14 +15,14 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import { sunDirLocal } from '../../../src/utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../src/utils/camera/lightDirLocal';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 
 describe('sunDirLocal', () => {
   it('of a body on +x with identity orientation points −x', () => {
     // Body at world +x, Sun at the origin. The direction toward the Sun is −x;
     // the identity orientation leaves it unrotated, so local ≈ (−1, 0, 0).
-    const local = sunDirLocal([1, 0, 0], [0, 0, 0], IDENTITY_MAT3 as Mat3);
+    const local = lightDirLocal([1, 0, 0], [0, 0, 0], IDENTITY_MAT3 as Mat3);
 
     expect(local[0]).toBeCloseTo(-1, 12);
     expect(local[1]).toBeCloseTo(0, 12);
@@ -42,7 +42,7 @@ describe('sunDirLocal', () => {
     // Rotating the world sun direction into the local frame uses Rᵀ:
     //   Rᵀ · (−1, 0, 0) = (0, −1, 0)
     // i.e. −x world becomes −y local.
-    const local = sunDirLocal([1, 0, 0], [0, 0, 0], orientation);
+    const local = lightDirLocal([1, 0, 0], [0, 0, 0], orientation);
 
     expect(local[0]).toBeCloseTo(0, 12);
     expect(local[1]).toBeCloseTo(-1, 12);

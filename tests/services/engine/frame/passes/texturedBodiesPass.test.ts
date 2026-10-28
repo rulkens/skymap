@@ -26,7 +26,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { LIMB_DARKENING_PARAMS } from '../../../../../src/data/bodies/limbDarkeningParams';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../../src/utils/camera/lightDirLocal';
 import { bodySlabCamAltitudeSq } from '../../../../../src/utils/camera/bodySlabCamAltitudeSq';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -247,7 +247,7 @@ describe('texturedBodiesPass.draw', () => {
     const u0 = renderer.draw.mock.calls[0]![2];
     expect(u0).toBeInstanceOf(Float32Array);
     expect(u0).toHaveLength(44);
-    const expectedSun = sunDirLocal(mars.positionMpc, RENDER_ORIGIN_MPC, mars.orientation);
+    const expectedSun = lightDirLocal(mars.positionMpc, RENDER_ORIGIN_MPC, mars.orientation);
     expect(u0[16]).toBeCloseTo(expectedSun[0]);
     expect(u0[17]).toBeCloseTo(expectedSun[1]);
     expect(u0[18]).toBeCloseTo(expectedSun[2]);

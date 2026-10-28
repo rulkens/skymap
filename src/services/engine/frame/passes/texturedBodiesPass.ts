@@ -56,7 +56,7 @@ import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp'
 import { composeBodySlabCamRelVp } from '../../../../utils/camera/composeBodySlabCamRelVp';
 import { bodySlabCamAltitudeSq } from '../../../../utils/camera/bodySlabCamAltitudeSq';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
-import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -121,7 +121,7 @@ export const texturedBodiesPass: ContentPass = {
     // Rotate the sun direction into the body's local frame (its orientation
     // carries any axial tilt) so the fragment's Lambert term stays a plain
     // co-framed dot product — the same rotate earth/planets do.
-    const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    const sun = lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
     const { inner, outer } = ringRatios(body, radiusM);
     // Minnaert limb-darkening: the per-body strength/exponent (identity for a
     // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's

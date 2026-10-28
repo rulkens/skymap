@@ -24,7 +24,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/f
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../../src/utils/camera/lightDirLocal';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -251,7 +251,7 @@ describe('ringsPass.draw', () => {
     expect(u).toBeInstanceOf(Float32Array);
     expect(u).toHaveLength(24);
 
-    const expectedSun = sunDirLocal(saturn.positionMpc, RENDER_ORIGIN_MPC, saturn.orientation);
+    const expectedSun = lightDirLocal(saturn.positionMpc, RENDER_ORIGIN_MPC, saturn.orientation);
     expect(u[16]).toBeCloseTo(expectedSun[0]);
     expect(u[17]).toBeCloseTo(expectedSun[1]);
     expect(u[18]).toBeCloseTo(expectedSun[2]);

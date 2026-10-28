@@ -18,7 +18,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../utils/camera/composeMeshMvp';
-import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../utils/camera/lightDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { packMeshBodyUniforms } from '../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
@@ -62,7 +62,7 @@ export function drawMeshBodiesOnRow(
       packMeshBodyUniforms({
         // Narrow here, at the uniform write — the compose above is f64.
         mvp: narrowMat4(composeMeshMvp(view.slab.vp, posM, hostPose.eyeRelBodyM, rotM)),
-        sunDirLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, hostState.orientation),
+        sunDirLocal: lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, hostState.orientation),
         sunVisibleFraction: umbraHost
           ? sunVisibleFraction({
               bodyPosMpc: bodyState.positionMpc,

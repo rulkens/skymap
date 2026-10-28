@@ -17,7 +17,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
 import { isInsideAtmosphereShell } from '../../../utils/camera/isInsideAtmosphereShell';
-import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../utils/camera/lightDirLocal';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
@@ -67,7 +67,7 @@ export function atmosphereDrawList(
       params,
       atmosphereTopM,
       camLocal,
-      sunLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
+      sunLocal: lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
       inside: isInsideAtmosphereShell(camLocal),
     };
 

@@ -28,7 +28,7 @@
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
-export function sunDirLocal(
+export function lightDirLocal(
   bodyPosMpc: Readonly<Vec3>,
   renderOriginMpc: Readonly<Vec3>,
   orientation: Readonly<Mat3>,

@@ -40,7 +40,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../../src/utils/camera/lightDirLocal';
 import { imagePlaneBasis } from '../../../../../src/utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../../src/utils/camera/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
@@ -481,7 +481,7 @@ describe('earthPass.draw', () => {
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms).toHaveLength(32);
-    const expected = sunDirLocal(
+    const expected = lightDirLocal(
       SEEDED_EARTH.positionMpc,
       RENDER_ORIGIN_MPC,
       SEEDED_EARTH.orientation,

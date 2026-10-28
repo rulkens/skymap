@@ -27,7 +27,7 @@ import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams'
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
-import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
+import { lightDirLocal } from '../../../../src/utils/camera/lightDirLocal';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -238,7 +238,7 @@ describe('encodeAtmosphereSkyView', () => {
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const camLocal = bodySlabCamLocal(EYE_REL_BODY_M, atmosphereTopM);
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
-    const sun = sunDirLocal(SEEDED_EARTH.positionMpc, RENDER_ORIGIN_MPC, SEEDED_EARTH.orientation);
+    const sun = lightDirLocal(SEEDED_EARTH.positionMpc, RENDER_ORIGIN_MPC, SEEDED_EARTH.orientation);
     const expectedViewHeightKm = radius * params.atmosphereTopKm;
     const expectedSunZenithCos =
       (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius;
