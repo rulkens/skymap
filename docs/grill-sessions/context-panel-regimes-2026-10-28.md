@@ -126,12 +126,12 @@ Band gaps that R1 turns into work (ground preparation candidates):
 
 | Layer | today | band to declare |
 |---|---|---|
-| flow | none | in at the survey's edge (2–230 kpc), out to be decided (R2) |
-| cosmicWebFilaments | none | same shape as flow (R2) |
-| starCatalog | two of the 18 foreground-gate sites (star points, star spheres); Gaia out 8–25 kpc | an `out` band mirroring the gate; `sStar` items `from: 'galactic-centre'` |
-| body (orbit trails) | hard gate + pixel cull | `out` band mirroring the gate |
-| missions (trails, craft labels) | hard gate; 9.2 kpc caption cut | `out` band mirroring the gate |
-| blackHoles | hard gate; lens 100–500 AU from the GC | `from: 'galactic-centre'` band on the show side; today there is no show entry at all |
+| flow | **done** (this branch): `SURVEY_DEEP_ZOOM` on the entry | outer edge still to decide |
+| cosmicWebFilaments | **done** (this branch): `SURVEY_DEEP_ZOOM` on the entry | outer edge still to decide |
+| starCatalog | **done** (this branch): `FOREGROUND_RECEDE` on `starCatalog` and `sStarTrails`, the two pass gates deleted | the Galactic Centre sits inside the gate, so no `from` was needed |
+| body (orbit trails) | **done** (this branch): `FOREGROUND_RECEDE` on `orbitTrails`; the group's value now carries the band | |
+| missions (trails, craft labels) | **done** (this branch) for the trails; the 9.2 kpc caption cut stays | |
+| blackHoles | hard gate; lens 100–500 AU from the GC; no show entry at all | a show entry needs a switch (`settings.blackHoles.items[id].enabled`) that does not exist; whether the Sgr A* marker becomes toggleable is a design question, so its two gates stay |
 | lightTime | per-sphere ratio windows in a derived liveness | entry-level "any shell live", or a band per shell |
 | earthScenes | no `visibility` member | a show entry with a surface-scale band |
 | galaxyCatalog `famousGalaxy` | exempt from `deepZoom` on purpose | keep exempt for the draw; the panel row needs its own reading (Q8) |
