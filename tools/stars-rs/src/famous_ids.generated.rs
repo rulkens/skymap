@@ -65,7 +65,6 @@ pub const FAMOUS_STAR_GAIA_IDS: [u64; 50] = [
 pub const FAMOUS_STAR_HIP_IDS: [u32; 104] = [
     70890, // proxima-centauri
     71683, // alpha-centauri
-    71681, // alpha-centauri (companion)
     87937, // barnards-star
     32349, // sirius
     16537, // epsilon-eridani
@@ -167,4 +166,5 @@ pub const FAMOUS_STAR_HIP_IDS: [u32; 104] = [
     113357, // 51-pegasi
     35793, // vy-canis-majoris
     78322, // t-coronae-borealis
+    71681, // alpha-centauri-b
 ];

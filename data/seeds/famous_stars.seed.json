@@ -25,8 +25,8 @@
   },
   {
     "id": "alpha-centauri",
-    "commonName": "Alpha Centauri",
-    "names": ["Alpha Centauri", "Rigil Kentaurus", "Toliman", "HD 128620"],
+    "commonName": "Alpha Centauri A",
+    "names": ["Alpha Centauri A", "Alpha Centauri", "Rigil Kentaurus", "HD 128620"],
     "constellation": "Centaurus",
     "ra": 219.9021,
     "dec": -60.8339,
@@ -40,7 +40,6 @@
     "luminositySolar": 1.51,
     "gaiaDr3": null,
     "hip": 71683,
-    "hipCompanions": [71681],
     "gaiaDr3Note": "Represents Alpha Centauri A, the Sun-like G2V primary; SIMBAD 'alf Cen A' lists no Gaia DR3 row (saturated bright-star hole).",
     "description": "Alpha Centauri is the nearest stellar system to the Sun and, at apparent magnitude near zero, the third-brightest star in the night sky. What the eye sees as a single point is really a close binary of two Sun-like stars — the G2 primary Rigil Kentaurus (component A) and the slightly cooler K1 dwarf Toliman (component B) — orbiting each other every 80 years, with the red dwarf Proxima as a distant third companion. Component A is almost a twin of our own Sun in mass, temperature and colour, which makes the system a favourite target for imagining nearby habitable worlds. Its estimated age is debated, with determinations ranging from roughly 5 to 8 billion years."
   },
@@ -2587,5 +2586,35 @@
     "gaiaDr3": "2635476908753563008",
     "hip": null,
     "description": "TRAPPIST-1 is an ultracool red dwarf in Aquarius, 12.4 parsecs (40.5 light-years) away, barely larger than Jupiter and less than a tenth of the Sun's mass. Seven roughly Earth-sized planets orbit it, all closer in than Mercury is to the Sun, found by the TRAPPIST and Spitzer telescopes as they passed in front of the star between 2016 and 2017. Their orbits are packed in a near-resonant chain, and three or four of them lie where liquid water could exist, which makes the system a prime target for JWST."
+  },
+  {
+    "id": "alpha-centauri-b",
+    "commonName": "Alpha Centauri B",
+    "names": ["Alpha Centauri B", "Toliman", "HD 128621", "HIP 71681"],
+    "constellation": "Centaurus",
+    "ra": 219.8961,
+    "dec": -60.8375,
+    "distancePc": 1.339,
+    "magV": 1.33,
+    "absMag": 5.7,
+    "spectralType": "K1V",
+    "radiusSolar": 0.863,
+    "temperatureK": 5260,
+    "massSolar": 0.909,
+    "luminositySolar": 0.5,
+    "gaiaDr3": null,
+    "gaiaDr3Note": "Like A, B saturates Gaia; SIMBAD 'alf Cen B' lists no Gaia DR3 row.",
+    "hip": 71681,
+    "orbit": {
+      "host": "alpha-centauri",
+      "semiMajorArcsec": 17.57,
+      "periodYr": 79.91,
+      "eccentricity": 0.5179,
+      "inclinationDeg": 79.205,
+      "ascendingNodeDeg": 204.85,
+      "argPeriapsisDeg": 231.65,
+      "periapsisEpochYr": 1875.66
+    },
+    "description": "Alpha Centauri B, named Toliman, is the K1 dwarf companion of Rigil Kentaurus, a little smaller, cooler and orange-tinted than the Sun. The two orbit each other every 80 years on an eccentric path that brings them from 11 to 36 au apart, about the span from Saturn to Pluto. Seen from Earth the pair closes to a few arcseconds and opens to over 20, so astronomers have followed a full orbit since the 1830s. The visual orbit drawn here is that of Pourbaix and colleagues (2002), relative to A."
   }
 ]

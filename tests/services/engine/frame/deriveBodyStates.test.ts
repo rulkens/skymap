@@ -23,7 +23,6 @@ import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const states = deriveBodyStates(CONST_J2000);
-const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
 const MPC_TO_KM = 1 / SCALE_UNITS.KM_TO_MPC;
 // 1900, a Voyager flyby, 2099: the reflex and correction are checked across the span.
 const SPAN_DATES = [2415171.5, 2447763.5, 2487855.5];
@@ -53,7 +52,7 @@ describe('deriveBodyStates', () => {
       expect(states.has(site.id)).toBe(true);
     }
     for (const s of SCENE_STARS) {
-      expect(states.has(s.id)).toBe(ANCHOR_IDS.has(s.id));
+      expect(states.has(s.id), s.id).toBe(true);
     }
   });
 

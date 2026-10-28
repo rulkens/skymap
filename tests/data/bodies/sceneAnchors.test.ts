@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { ORBITAL_ELEMENTS } from '../../../src/data/bodies/orbitalElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { raDecDistToCartesian } from '../../../src/utils/math/raDecDistToCartesian';
 
@@ -17,14 +18,15 @@ describe('SCENE_ANCHORS', () => {
     expect(findAnchor('sun').positionMpc).toEqual([0, 0, 0]);
   });
 
-  it('every famous star seed has a matching anchor', () => {
-    // Totality: a seed with no anchor has no snapshot entry, so
+  it('every famous star seed has a matching anchor, or an orbit in its place', () => {
+    // Totality: a seed with neither has no snapshot entry, so
     // the frame context's scene-body lookup would miss and the star would draw at
     // whatever a fallback chose — the origin, on top of the Sun. This is what
     // makes that lookup's non-null assertion safe.
     const anchorIds = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
+    const orbitIds = new Set(ORBITAL_ELEMENTS.map((el) => el.id));
     for (const star of SCENE_STARS) {
-      expect(anchorIds.has(star.id), `anchor for '${star.id}'`).toBe(true);
+      expect(anchorIds.has(star.id) !== orbitIds.has(star.id), `position for '${star.id}'`).toBe(true);
     }
   });
 

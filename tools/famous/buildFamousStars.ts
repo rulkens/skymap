@@ -143,13 +143,14 @@ function quote(s: string): string {
 }
 
 /** Serialise one value as a prettier-stable TS literal (strings, numbers, string arrays). */
-function literal(value: unknown): string {
+function literal(value: unknown, indent = '    '): string {
   if (typeof value === 'string') return quote(value);
   if (typeof value === 'number') return String(value);
   if (Array.isArray(value)) return `[${value.map((v) => literal(v)).join(', ')}]`;
   if (typeof value === 'object' && value !== null) {
-    const fields = Object.entries(value).map(([key, v]) => `${key}: ${literal(v)}`);
-    return `{ ${fields.join(', ')} }`;
+    const inner = `${indent}  `;
+    const fields = Object.entries(value).map(([key, v]) => `${inner}${key}: ${literal(v, inner)},`);
+    return `{\n${fields.join('\n')}\n${indent}}`;
   }
   // FamousStarRow carries only strings, numbers, arrays and the orbit record; anything
   // else means the row shape drifted and should fail loud rather than emit junk.

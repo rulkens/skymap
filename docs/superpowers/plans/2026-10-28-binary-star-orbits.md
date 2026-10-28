@@ -55,7 +55,7 @@ export function skyOrbitElements(spec: SkyOrbitSpec): OrbitalElements;
 - [ ] Seed B per spec §3.2. A becomes "Alpha Centauri A", drops `hipCompanions`, and gives
       "Toliman" to B. Append B last, then `npm run build-famous-stars`.
 - [ ] Append B's J2000 row to the body-state fixture.
-- [ ] Test `B is 11.4 au from A at the 2035.6 periastron and 35.9 au at the 1995.6 apastron`.
+- [ ] Test `B is 11.3 au from A at the 2035.5 periastron and 35.7 au at the 1995.6 apastron`.
 - [ ] Test `B sits about 4″ from A on the sky in early 2016`: the projected separation at the
       2016.0 date, within ±0.6″. This one pins the orientation.
 

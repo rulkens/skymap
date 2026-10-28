@@ -54,9 +54,9 @@ Its RA/Dec and distance stay in the row, for the card and the constellation look
 
 ### 3.2 Alpha Centauri
 
-- **B's orbit (relative, B around A):** Pourbaix & Boffin 2016 (A&A 586, A90):
-  - a = 17.66″, P = 79.91 yr, e = 0.5208;
-  - i = 79.32°, Ω = 205.06°, ω = 232.3°, T = 1875.66.
+- **B's orbit (relative, B around A):** Pourbaix et al. 2002 (A&A 386, 280):
+  - a = 17.57″, P = 79.91 yr, e = 0.5179;
+  - i = 79.205°, Ω = 204.85°, ω = 231.65°, T = 1875.66.
 - **B's facts:** K1V, R 0.863 R☉, T 5260 K, M 0.909 M☉, L 0.50 L☉, V 1.33, M_V 5.70.
 - **Ownership:** B carries `hip: 71681`, and A drops its `hipCompanions`, so the dedup id still
   hides the Hipparcos point once.
@@ -97,7 +97,7 @@ The refactor-ground pass asked what a star on an orbit hits today.
 ## 6. Success criteria
 
 - `#focus=star-alpha-centauri` shows A, B and B's trail.
-- B's separation from A follows the published orbit: 11.4 au at the 2035.6 periastron, 35.9 au at
+- B's separation from A follows the published orbit: 11.3 au at the 2035.5 periastron, 35.7 au at
   the 1995.6 apastron. Its sky separation is about 4″ in early 2016, near the pair's closest
   apparent approach. Both are tests.
 - Searching "Toliman" focuses B.
