@@ -10,4 +10,6 @@ export type LayerSearchEntry = {
   readonly id: string;
   readonly names: readonly string[];
   readonly class: 'primary' | 'catalog';
+  /** Category tag shown at the row's right edge; omitted means no chip. */
+  readonly chip?: string;
 };

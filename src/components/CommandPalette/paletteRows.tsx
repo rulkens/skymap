@@ -236,9 +236,13 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
-  // Layer-published row — no thumbnail vocabulary to look up, and no chip: the
-  // publishing Layer is not a source label the user would recognise.
-  layer: (m) => (m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView(m)),
+  // Layer-published row — no thumbnail vocabulary to look up. The chip is the
+  // entry's own category tag (a craft's kind), never the publishing Layer's name,
+  // which is not a label the user would recognise.
+  layer: (m) =>
+    m.kind !== 'layer'
+      ? EMPTY_ROW_VIEW
+      : glyphRowView(m, m.entry.chip && <span className={styles.source}>{m.entry.chip}</span>),
   // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
   // here is on the one body.
   place: (m) => (m.kind !== 'place' ? EMPTY_ROW_VIEW : glyphRowView(m, EARTH_CHIP)),
