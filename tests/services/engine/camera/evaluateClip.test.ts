@@ -6,8 +6,8 @@
  * and the `ClipData` shape. All assertions are deterministic; no wall-clock.
  *
  * The final section ('focus tween = one-segment clip') verifies that a
- * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance is
- * reproduces the focus-tween motion exactly — `evaluateClip` via `tweenToClip`
+ * one-segment clip with `ease:'easeOutCubic'` and `space:'lin'` on distance
+ * reproduces the focus-tween motion exactly — `evaluateClip` via `easedFocusClip`
  * is the single camera-evaluation path for both scripted clips and focus tweens.
  */
 
@@ -24,10 +24,19 @@ import {
   wait,
   flyPath,
   atPoint,
+  geodesic,
 } from '../../../../src/services/engine/animation/effectHelpers';
-import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
+import { easedFocusClip } from '../../../../src/services/engine/camera/easedFocusClip';
+import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
+import { compileClip } from '../../../../src/services/engine/animation/compileClip';
+import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
+import { neighbourhoodFlythrough } from '../../../../src/data/animation/tours/grandTour/neighbourhoodFlythrough';
+import { relErr } from '../../../support/relErr';
+import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 
 // ---------------------------------------------------------------------------
 // Shared starting pose for most tests.
@@ -325,7 +334,7 @@ describe('evaluateClip composes base+vel+osc on one channel', () => {
 // A focus tween is the degenerate clip: one `set`/`setVec` segment per channel
 // with `ease:'easeOutCubic'` and `space:'lin'` for `distance` (focus
 // tweens use linear distance interpolation, not log-space). These four cases
-// These four cases pin that `evaluateClip` via `tweenToClip` reproduces the
+// pin that `evaluateClip` via `easedFocusClip` reproduces the
 // focus-tween motion exactly — the single camera-evaluation path for scripted
 // clips and tweens.
 //
@@ -488,15 +497,96 @@ describe('roll channel', () => {
   });
 
   it("a camera tween lands on the descriptor's target roll", () => {
-    const desc = {
+    const desc: Parameters<typeof easedFocusClip>[0] = {
       from: { ...TWEEN_FROM, roll: 0.1 },
       to: { ...TWEEN_TO, roll: 1.2 },
-      durationMs: DURATION_MS,
-      easing: 'easeOutCubic' as const,
-      frame: 'equatorial' as const,
+      motion: { style: 'eased', durationMs: DURATION_MS, ease: 'easeOutCubic' },
+      frame: 'equatorial',
     };
-    const data = tweenToClip(desc);
+    const data = easedFocusClip(desc);
     expect(evaluateClip(data, 0).roll).toBe(0.1);
     expect(evaluateClip(data, DURATION_SEC).roll).toBe(1.2);
+  });
+});
+
+describe('geodesic composite', () => {
+  const FOV_Y = (50 * Math.PI) / 180;
+  const TO = { target: [30, 40, 0] as Vec3, distance: 2 };
+  const move = geodesic(TO, DEFAULT_GEODESIC_TUNING, FOV_Y, 2);
+
+  it('a geodesic window leaves a concurrent yaw tween live', () => {
+    const yawTween = tween('yaw', { to: 1.5, over: 2, ease: 'linear' });
+    const alone = evaluateClip({ start: START, timeline: [yawTween] }, 1).yaw;
+    const beside = evaluateClip({ start: START, timeline: [all([move, yawTween])] }, 1).yaw;
+    expect(alone).not.toBeCloseTo(START.yaw, 3);
+    expect(beside).toBe(alone);
+  });
+
+  it("yaw and pitch hold a flyPath's final values through a later geodesic window", () => {
+    const path = flyPath([atPoint([10, 0, 0], 5)], { over: 2, ease: 'linear', linger: 0 });
+    const flown = evaluateClip({ start: START, timeline: [path] }, 100);
+    // A snap back to the clip start would be invisible if the path never turned.
+    const turned = Math.abs(flown.yaw - START.yaw) + Math.abs(flown.pitch - START.pitch);
+    expect(turned).toBeGreaterThan(0.1);
+
+    const mid = evaluateClip({ start: START, timeline: [seq([path, move])] }, 3);
+    expect(mid.yaw).toBeCloseTo(flown.yaw, 12);
+    expect(mid.pitch).toBeCloseTo(flown.pitch, 12);
+  });
+});
+
+describe('a move after a composite continues from where it ended', () => {
+  const FOV_Y = (50 * Math.PI) / 180;
+  const path = flyPath([atPoint([10, 0, 0], 5)], { over: 2, ease: 'linear', linger: 0 });
+  const flown = evaluateClip({ start: START, timeline: [path] }, 100);
+  const targetMiss = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+  it('seq([flyPath, dollyTo]): the dolly starts on the path end and lands on its target', () => {
+    // A snap back to the clip start would be invisible if the path kept the distance.
+    expect(relErr(flown.distance, START.distance)).toBeGreaterThan(0.1);
+    const data: ClipData = { start: START, timeline: [seq([path, dollyTo(50, 2)])] };
+    expect(relErr(evaluateClip(data, 2).distance, flown.distance)).toBeLessThan(1e-12);
+    expect(relErr(evaluateClip(data, 4).distance, 50)).toBeLessThan(1e-12);
+  });
+
+  it('seq([flyPath, geodesic]): the geodesic starts on the path end, no snap', () => {
+    const move = geodesic({ target: [30, 40, 0], distance: 2 }, DEFAULT_GEODESIC_TUNING, FOV_Y, 2);
+    const at = evaluateClip({ start: START, timeline: [seq([path, move])] }, 2);
+    expect(relErr(at.distance, flown.distance)).toBeLessThan(1e-9);
+    expect(targetMiss(at.target, flown.target) / flown.distance).toBeLessThan(1e-9);
+  });
+
+  it("seq([dollyTo, flyPath]): the path's first knot is the dolly's target", () => {
+    const data: ClipData = { start: START, timeline: [seq([dollyTo(50, 2), path])] };
+    const firstKnot = compileClip(data).compositeTracks[0]!.sample(0);
+    expect(relErr(firstKnot.distance!, 50)).toBeLessThan(1e-12);
+  });
+
+  it("neighbourhoodFlythrough's dwellDrift plays after the flythrough", () => {
+    // Every focus id resolves to a distinct fake galaxy; only the trailing spin matters here.
+    const coord = (id: string, k: number) => ((id.charCodeAt(1) * 7 + k * 13) % 41) - 20;
+    const resolve = {
+      resolveFocusId: (id: string) => ({ id }),
+      extractRow: (ref: { id: string }) => ({
+        type: 'galaxyCatalog',
+        x: coord(ref.id, 1),
+        y: coord(ref.id, 2),
+        z: coord(ref.id, 3),
+        diameterKpc: 30,
+      }),
+    } as unknown as SelectionResolver;
+    const data = resolveClipFoci(
+      { ...neighbourhoodFlythrough, start: START },
+      resolve,
+      FOV_Y,
+      START,
+      0,
+    );
+    const compiled = compileClip(data);
+    const pathEnd = evaluateClip(data, compiled.compositeTracks[0]!.endSec).yaw;
+    const clipEnd = evaluateClip(data, compiled.durationSec).yaw;
+    const drift = { ...dwellDrift(6), start: START };
+    const driftTurn = evaluateClip(drift, 6).yaw - evaluateClip(drift, 0).yaw;
+    expect(relErr(clipEnd - pathEnd, driftTurn)).toBeLessThan(1e-9);
   });
 });

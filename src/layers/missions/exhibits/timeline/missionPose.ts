@@ -174,6 +174,7 @@ export function missionPose(
     memory: {
       from: null,
       distanceTarget: shown.distance,
+      durationMs: null,
       panOffset: mem?.panOffset ?? [0, 0, 0],
       saturated: from === null,
     },

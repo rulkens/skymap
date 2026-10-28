@@ -73,6 +73,7 @@ import { initialState as constellationsInitialState } from '../../../src/layers/
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
+import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
@@ -91,6 +92,7 @@ export function makeSettingsFixture(
   return {
     orientation: DEFAULT_ORIENTATION,
     cameraControls: DEFAULT_CAMERA_CONTROLS,
+    focusMoves: DEFAULT_FOCUS_MOVES,
     camera: {
       fovDeg: DEFAULT_FOV_DEG,
     },

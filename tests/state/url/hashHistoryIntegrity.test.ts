@@ -1,79 +1,12 @@
 // @vitest-environment jsdom
 /**
- * The hash bridge's HISTORY-STACK integrity — the one property no other test in
- * `tests/state/url/` can observe, because every other file mocks `writeHashBody`
- * away and therefore never sees a `pushState` at all.
- *
- * ### Why the final URL is the wrong thing to assert
- *
- * The reported browser bug reads as "Forward is dead": go to `#focus=body-mars`,
- * then `#focus=body-saturn`, press Back, and the app lands on Mars looking
- * entirely correct — but Saturn is now unreachable. Nothing about the visible
- * state is wrong. What is wrong is that answering the Back navigation took TWO
- * `pushState` calls, and a push during a back navigation truncates the forward
- * stack. So the subject here is the SEQUENCE of pushes, not the URL they settle
- * on: a case that asserted only the final hash would pass against the bug.
- *
- * ### The two independent ways a navigation grew an entry
- *
- * Both were mid-pass reads — a write composing the hash out of a store that had
- * applied part of the URL — and they are independent because either one alone
- * kills the forward stack.
- *
- *  - A TORN READ inside the `focus` row. Its `write` has a two-rung precedence
- *    ladder (`selection.pending.focus`, then `selectionRows.focus`), and the
- *    rungs were one action out of step: `updateSelectionFocus` retired the
- *    pending id while the derived row it hands off to arrived on the
- *    reconciler's `setSelectionRow` a step later. In that gap the ladder
- *    reported the PREVIOUS target. `clearSelection` tears the same ladder the
- *    same way and still does, because its reducer nulls `pending` directly while
- *    the row survives until the reconciler runs.
- *  - A CROSS-ROW gap. `applyNavigation` dispatches one table row's worth of actions at
- *    a time and each of them is a write trigger, so a two-param URL published
- *    itself half-applied — `focus=body-mars` while `orientation` was still the
- *    default — before publishing the real thing.
- *
- * The fix for both is one publish per SETTLED state: the write saga coalesces to
- * the trailing edge of the burst (`debounce(0, …)`) instead of answering every
- * trigger. That is why the cases below are mostly "pushes nothing" — and why the
- * last one is not. A bridge that never wrote at all would satisfy every empty
- * assertion here, so one case pins the write that SHOULD happen.
- *
- * ### Why the whole store, and the real `services/url` seam
- *
- * The defects are only visible while several sagas drain the same navigation.
- * Only a real store running the real root saga puts those pieces in the same
- * room, and only the real `writeHashBody` performs the compare-and-skip against
- * the live URL that decides whether a push happens. `pushState` is SPIED, not
- * stubbed: the spy calls through, so the address bar really moves and the
- * compare-and-skip sees what the browser sees. A stub that recorded without
- * navigating would freeze the live URL and silently skip every push after the
- * first, hiding exactly the pushes this file exists to count.
- *
- * Bodies are the subject rather than galaxies because a body is what fits inside
- * the gap. A galaxy deep link parks in `resolveFocusRefDeferringSaga` until its
- * catalog pulses, so its ref write lands well after the read pass has finished
- * and no other row's trigger is left to fall into the window; a body resolves
- * inline off the static `SCENE_BODIES` table, mid-pass.
- *
- * ### The cases are NOT isolated from each other, and that is safe here
- *
- * `window` is a per-FILE singleton under jsdom and a store has no teardown, so
- * every store booted here keeps its `createHashChangeChannel` subscription for
- * the rest of the run: a `navigate()` in the third case is answered by the first
- * case's store as well. That leak can only ADD pushes to the recorded sequence,
- * never remove one, so it cannot turn a failing "pushes nothing" case into a
- * passing one — and the single case that expects a push dispatches into its own
- * store rather than navigating, which no other store can hear.
- *
- * Tearing the listeners down instead is a trap worth naming, because the obvious
- * way to do it silently disarms the whole file: spying on `window.addEventListener`
- * to record and forward has to reach the original, and
- * `EventTarget.prototype.addEventListener.call(window, …)` throws under jsdom
- * ("not a valid instance of EventTarget" — `window` is a proxy over the real
- * global). The channel then registers nothing, no navigation ever reaches a
- * store, and every `toEqual([])` passes for the worst possible reason. The real
- * repair is the backlog's "URL seam is a `window` singleton".
+ * Hash bridge HISTORY-STACK integrity: assert the SEQUENCE of `pushState` calls, not the final
+ * URL. Answering Back with two pushes truncates Forward while the URL still looks right.
+ * Causes: a torn read in the `focus` row's `pending`-then-`selectionRows` ladder, and
+ * `applyNavigation` publishing a half-applied multi-param URL. Fix: one publish per settled
+ * state (`debounce(0, …)`), so most cases assert "pushes nothing" and one pins the real write.
+ * `pushState` is spied (calls through); never forward `window.addEventListener` via
+ * `EventTarget.prototype` (throws under jsdom, so every `toEqual([])` passes vacuously).
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
@@ -107,13 +40,7 @@ function seedHash(body: string) {
   window.history.replaceState(null, '', body ? `${base}#${body}` : base);
 }
 
-/**
- * What the browser does on Back/Forward across hash-only entries: the URL is
- * already the new one by the time `hashchange` fires, which is precisely the
- * condition that makes a mid-sequence write push. Driving it as an explicit
- * event rather than assigning `location.hash` keeps the case synchronous —
- * jsdom queues its own `hashchange` as a task.
- */
+/** Back/Forward on hash-only entries: the URL is already new when `hashchange` fires. An explicit event keeps it synchronous (jsdom queues its own). */
 function navigate(body: string) {
   seedHash(body);
   window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -126,15 +53,7 @@ describe('hash history integrity', () => {
   const pushedHashes = () =>
     pushState.mock.calls.map(([, , url]) => new URL(String(url), window.location.href).hash);
 
-  /**
-   * The real store, the real root saga, the real URL seam — registering the
-   * context is what releases the hash bridge, so this call IS the arrival read.
-   * `NOOP_SAGA_CONTEXT.selection` composes the real core rows over an empty
-   * structure store, so a body deep link resolves off the static `SCENE_BODIES`
-   * table with no engine resource in the path. The camera is live so the
-   * arrival can land, and the boot waits for it: until then every publish
-   * canonicalizes in place, which is the arrival's own business.
-   */
+  /** Registering the context releases the hash bridge, so this call IS the arrival read; it waits for the arrival because until then every publish canonicalizes in place. */
   const boot = async () => {
     const handle = createAppStore();
     handle.setSagaContext({
@@ -171,10 +90,7 @@ describe('hash history integrity', () => {
     navigate('focus=body-mars');
     await flush();
 
-    // A back navigation is the browser moving the URL; the app's only job is to
-    // catch up with it. ANY push here is a forward-stack truncation, so the
-    // assertion is the empty sequence rather than a bound on its length — one
-    // push would be as fatal as two, and the final URL is correct either way.
+    // ANY push during Back truncates Forward, so assert the empty sequence, not a length bound.
     expect(pushedHashes()).toEqual([]);
   });
 
@@ -187,10 +103,8 @@ describe('hash history integrity', () => {
     navigate('focus=body-mars&orientation=galactic');
     await flush();
 
-    // The cross-row gap with no torn read in it: both rows resolve cleanly, and
-    // the entry is still spurious because the `focus` row's actions land before
-    // the `orientation` row's. A write answering the first of them composes a
-    // body no history entry ever carried.
+    // The `focus` row's actions land before `orientation`'s, so a write answering the first
+    // would compose a body no history entry ever carried.
     expect(pushedHashes()).toEqual([]);
     expect(window.location.hash).toBe('#focus=body-mars&orientation=galactic');
   });
@@ -201,21 +115,13 @@ describe('hash history integrity', () => {
     await boot();
     await flush();
 
-    // What this case pins is `writeHashBody`'s compare-and-skip, which is one
-    // deleted line away from not existing: the settled body of an arrival equals
-    // the URL the visitor arrived on, and only the compare turns that publish
-    // into a no-op. Without it a visitor following a shared link lands several
-    // entries deep in a history they never navigated, every one of them the same
-    // URL, and Back does nothing visible.
+    // Pins `writeHashBody`'s compare-and-skip: without it a shared link lands several
+    // identical entries deep and Back does nothing visible.
     expect(pushedHashes()).toEqual([]);
   });
 
   it('canonicalizes a #pose= arrival with replaceState instead of pushing', async () => {
-    // `pose` never writes (`poseSource.write` is `() => null`), so the
-    // settled body of this arrival omits it — a plain push here would be the
-    // Back trap: Back returns to this same URL, re-applies, and pushes again,
-    // truncating the forward stack on every visit. The arrival must instead
-    // be canonicalized IN PLACE.
+    // `pose` never writes, so a plain push would re-apply and push again on every Back.
     const iso = '2000-01-01T12:00:00.000Z';
     seedHash(`focus=body-mars&t=${iso}&pose=${encodeFramedPose(EARTH_ARM)}`);
 
@@ -235,8 +141,7 @@ describe('hash history integrity', () => {
     navigate('exhibit=zoneOfAvoidance');
     await flush();
 
-    // The running exhibit writes its own key back, so the settled body is the
-    // URL the browser already moved to; a push would truncate Forward.
+    // The running exhibit writes its own key back, so the settled body equals the new URL.
     expect(pushedHashes()).toEqual([]);
     expect(window.location.hash).toContain('exhibit=zoneOfAvoidance');
   });
@@ -250,7 +155,6 @@ describe('hash history integrity', () => {
     store.dispatch(openExhibit({ id: 'zoneOfAvoidance', entry: 'fly' }));
     await flush();
 
-    // Opening one is the viewer's own act, so it leaves an entry Back undoes.
     expect(pushedHashes().at(-1)).toContain('exhibit=zoneOfAvoidance');
   });
 
@@ -263,12 +167,8 @@ describe('hash history integrity', () => {
     store.dispatch(requestFocus({ id: 'body-mars', transition: 'fly' }));
     await flush();
 
-    // The counterweight to every empty assertion above: focusing something IS a
-    // navigational act and MUST leave an entry, or Back stops undoing
-    // selections. Coalescing the write must not become "publish less"; it is
-    // "publish once, on the settled state". The single entry also pins that the
-    // debounce fires at all rather than being cancelled forever by the
-    // reconciler's own follow-up actions.
+    // Counterweight to the empty assertions: one entry also pins that the debounce fires
+    // rather than being cancelled forever by the reconciler's follow-up actions.
     expect(pushedHashes()).toEqual(['#focus=body-mars']);
   });
 });

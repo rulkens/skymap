@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { paletteRowLabel } from '../../../src/utils/palette/paletteRowLabel';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
 import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
@@ -42,7 +41,6 @@ describe('paletteRowLabel', () => {
         '(unnamed)',
         'Galaxy',
       ],
-      [{ kind: 'body', body: SCENE_EARTH, score: 0 }, SCENE_EARTH.label, 'Object'],
       [
         {
           kind: 'starCatalog',

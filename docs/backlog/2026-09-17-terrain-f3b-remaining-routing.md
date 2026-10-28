@@ -38,22 +38,22 @@ to count. The live surface is small: 6 `outerBoundRadiusM(` call sites and 8
 `innerBoundRadiusM(` call sites outside their own files, plus two hubs
 (`bodyFootprintRadiusM`, 12 readers; `bodyDrawRadiusM`, 2) and ~45 non-declaration
 `datumRadiusM` reads, 24 of which are the authored rows in
-`src/data/bodies/scenePlanets.ts`.
+`src/layers/body/bodies/`.
 
 Two of the table's rows are already **done**, not pending:
 
-- **Occlusion (19 sites).** `src/services/engine/frame/sceneOccluderBodies.ts:44,50,65`
+- **Occlusion (19 sites).** `src/services/engine/frame/sceneOccluderBodies.ts`
   pass `innerBoundRadiusM(...)` for every occluder. The horizon cap's occludee — the
   row the spec singles out as needing `boundsM(patch).max` — is
   `src/utils/surfaceTiles/cutSurfaceTiles.ts:168,181`, where `reliefHeadroom(z,x,y)`
   (`:253-259`) reads the deepest resident height ancestor's `subtreeRangeM` and widens
   the cap by `acos(1/(1+relief))`. That is a per-node local maximum from real header
   data, which is what the row asked for. It landed with F1/F2 (R14/R15).
-- **Atmosphere ground radius (part of the 41).** `src/data/bodies/atmosphereParams.ts:34`
+- **Atmosphere ground radius (part of the 41).** `src/layers/body/present/atmosphereParams.ts`
   is `const EARTH_RADIUS_KM = innerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_KM`
   — already the inner bound, since #704.
 
-Only Earth carries relief at all (`src/data/bodies/sceneEarth.ts:23`,
+Only Earth carries relief at all (`src/layers/body/bodies/earth.ts`,
 `reliefM: [-430, 8849]`); every other body is `[0, 0]`, so the three bounds coincide
 and all of this is inert outside Earth until F4 gives Mars a relief interval.
 
@@ -69,9 +69,9 @@ There is no object-pick problem to fix. The GPU pick pass writes identity only
 (`src/@types/data/PickResult.d.ts`: `{ sourceCode, localIdx }`), and its disc is an
 analytic sphere at the floored datum radius
 (`src/services/gpu/shaders/bodies/spherePick.wesl`, driven by
-`src/services/engine/helpers/bodySlabFlooredPick.ts:32` from
+`src/services/engine/helpers/bodySlabFlooredPick.ts` from
 `prepareBodySurfaceFrame`'s `radiusM`, which
-`src/services/engine/frame/passes/earthPass.ts:122` sets to `datumRadiusM`). A peak
+`src/layers/body/passes/earthPass.ts` sets to `datumRadiusM`). A peak
 8.8 km above the datum shifts that silhouette by 0.14 % of the radius — sub-pixel at
 any framing where the body is clickable at all.
 
@@ -110,30 +110,30 @@ four sites; they should not each grow their own.
 
 ### The cloud deck
 
-`CLOUD_SHELL_PARAMS.radiusRatio = 1.002` (`src/data/bodies/cloudShellParams.ts:107`)
+`CLOUD_SHELL_PARAMS.radiusRatio = 1.002` (`src/layers/body/present/cloudShellParams.ts`)
 places the deck at datum × 1.002 = **12,742 m**. The shell is a `uvSphereMesh(128, 64)`
 whose facet centres sag by `1 − cos²(π/128)`
-(`src/services/gpu/renderers/bodies/cloudShellRenderer.ts:76-85`), bringing the lowest
+(`src/layers/body/render/cloudShellRenderer.ts`), bringing the lowest
 point of the drawn surface to **8,917 m**. Everest displaces to 8,849 m. The clearance
 is **68 m**, and nothing enforces it.
 
 Readers, and what each would need:
 
-- `src/services/engine/frame/passes/cloudShellPass.ts:181` — the drawn shell,
+- `src/layers/body/passes/cloudShellPass.ts` — the drawn shell,
   `datumRadiusM × radiusRatio`. Its own comment already names this as F3's job.
-- `src/services/engine/frame/passes/cloudShellPass.ts:129` — the `insideShell` test,
+- `src/layers/body/passes/cloudShellPass.ts` — the `insideShell` test,
   against the same datum ratio.
-- `src/utils/scene/bodyDrawRadiusM.ts:29` — the slab's outermost shell,
+- `src/layers/body/present/bodyDrawEnvelopes.ts` (read by `bodyDrawRadiusM`) — the slab's outermost shell,
   `bodyFootprintRadiusM(body) × radiusRatio`, i.e. the **outer** bound × 1.002. That is
   8,867 m further out than the shell `cloudShellPass` actually draws. Safe direction
   (slab planners over-estimate) but a real disagreement between two derivations of one
   shell, and it dissolves the moment the deck is an altitude.
-- `src/services/engine/frame/passes/surfaceTilesPass.ts:104` and
-  `src/services/engine/frame/passes/earthPass.ts:189` — `shellRadius` for the cast
+- `src/layers/body/passes/surfaceTilesPass.ts` and
+  `src/layers/body/passes/earthPass.ts` — `shellRadius` for the cast
   shadow, passed as a unit-sphere ratio into the shaders. Re-expressing the deck as
   metres above the outer bound means these two hand the shaders a ratio derived at the
   call site, or the shaders take metres.
-- `src/utils/scene/cloudDeckFade.ts:33-34` reads `fadeStartAltitudeRadii` /
+- `src/layers/body/present/cloudDeckFade.ts` reads `fadeStartAltitudeRadii` /
   `fadeEndAltitudeRadii`, which are already altitudes-above-datum in body radii and
   are unaffected. Note `fadeEndAltitudeRadii = 0.0005` (~3.2 km) is _below_ Everest,
   so the deck's own clearance failure is only ever seen from a distant camera, where
