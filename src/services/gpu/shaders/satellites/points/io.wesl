@@ -4,10 +4,13 @@
 
 import package::lib::camera::CameraUniforms;
 
-// One satellite's TEME state at the last worker sweep, km and km/s from Earth's centre.
+// One satellite's TEME state at the last worker sweep, km and km/s from Earth's centre, its
+// catalog index (the pick id) and its class (an index into 'classOpacity').
 struct SatelliteInstance {
   @location(0) posKm: vec3<f32>,
   @location(1) velKmS: vec3<f32>,
+  @location(2) catalogIndex: u32,
+  @location(3) classCode: u32,
 };
 
 // Group 0 bindings 0-1 belong to lib/trailOcclusion; this is binding 2. 'earthKm' is Earth's
@@ -23,10 +26,12 @@ struct SatelliteUniforms {
   sizePx: f32,
   temeToWorld2: vec3<f32>,
   color: vec3<f32>,
+  classOpacity: vec3<f32>,
 };
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
   @location(0) relKm: vec3<f32>,
   @location(1) corner: vec2<f32>,
+  @location(2) @interpolate(flat) opacity: f32,
 };

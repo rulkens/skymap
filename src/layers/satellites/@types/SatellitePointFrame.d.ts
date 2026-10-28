@@ -15,7 +15,10 @@ export type SatellitePointFrame = {
   readonly simMs: number;
   readonly earthKm: Readonly<Vec3>;
   readonly temeToWorld: Readonly<Mat3>;
+  /** Distance and data-window fade, times the show toggle's master value. */
   readonly opacity: number;
+  /** Each class's own toggle fade, in `SATELLITE_CLASSES` order. */
+  readonly classOpacity: readonly [number, number, number];
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };
   readonly depth: SampledDepthBinding;
 };

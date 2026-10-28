@@ -19,11 +19,13 @@ import {
   createTrailOcclusionUniforms,
 } from '../../../services/gpu/renderers/bodies/trailOcclusionUniforms';
 
-/** One instance record: posKm (3 floats) then velKmS (3 floats). */
-export const SATELLITE_INSTANCE_STRIDE = 24;
+/** One instance record: posKm (3 floats), velKmS (3 floats), catalog index (u32), class (u32). */
+export const SATELLITE_INSTANCE_STRIDE = 32;
 export const SATELLITE_INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },
   { shaderLocation: 1, offset: 12, format: 'float32x3' },
+  { shaderLocation: 2, offset: 24, format: 'uint32' },
+  { shaderLocation: 3, offset: 28, format: 'uint32' },
 ];
 
 /** Byte offsets inside `SatelliteUniforms` (`satellites/points/io.wesl`). */
@@ -39,8 +41,9 @@ export const SATELLITE_UNIFORM_OFFSETS = {
   sizePx: 124,
   temeToWorld2: 128,
   color: 144,
+  classOpacity: 160,
 } as const;
-export const SATELLITE_UNIFORM_BYTES = 160;
+export const SATELLITE_UNIFORM_BYTES = 176;
 
 export function createSatellitePointRenderer({
   device,
@@ -108,18 +111,22 @@ export function createSatellitePointRenderer({
   const uniformScratch = new Float32Array(SATELLITE_UNIFORM_BYTES / 4);
   let bindGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
 
-  function upload(next: SatelliteSweep): void {
+  function upload(next: SatelliteSweep, classCode: Uint8Array): void {
     const n = next.valid.length;
     let live = 0;
     for (let k = 0; k < n; k++) live += next.valid[k]!;
-    const data = new Float32Array(Math.max(live, 1) * 6);
+    const floats = new Float32Array((Math.max(live, 1) * SATELLITE_INSTANCE_STRIDE) / 4);
+    const words = new Uint32Array(floats.buffer);
     let at = 0;
     for (let k = 0; k < n; k++) {
       if (next.valid[k] === 0) continue;
-      data.set(next.posKm.subarray(3 * k, 3 * k + 3), at);
-      data.set(next.velKmS.subarray(3 * k, 3 * k + 3), at + 3);
-      at += 6;
+      floats.set(next.posKm.subarray(3 * k, 3 * k + 3), at);
+      floats.set(next.velKmS.subarray(3 * k, 3 * k + 3), at + 3);
+      words[at + 6] = k;
+      words[at + 7] = classCode[k]!;
+      at += SATELLITE_INSTANCE_STRIDE / 4;
     }
+    const data = floats;
     if (instanceBuffer === null || instanceBuffer.size < data.byteLength) {
       instanceBuffer?.destroy();
       instanceBuffer = device.createBuffer({
@@ -174,6 +181,7 @@ export function createSatellitePointRenderer({
     u.set(m.slice(3, 6), o.temeToWorld1 / 4);
     u.set(m.slice(6, 9), o.temeToWorld2 / 4);
     u[o.opacity / 4] = frame.opacity;
+    u.set(frame.classOpacity, o.classOpacity / 4);
     u[o.sizePx / 4] = SATELLITE_POINT_STYLE.radiusPx;
     u.set(SATELLITE_POINT_STYLE.color, o.color / 4);
     device.queue.writeBuffer(uniformBuffer, 0, u);

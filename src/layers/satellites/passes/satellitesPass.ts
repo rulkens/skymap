@@ -20,6 +20,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
 import { satelliteOpacity } from '../subsystems/satelliteOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
+import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
   const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number => {
@@ -39,7 +40,8 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
     enabled(state, ctx, view, fade) {
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
       const sweep = runtime.renderer.uploaded();
-      if (fade <= 0 || earth === undefined || sweep === null) return false;
+      if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return false;
+      if (earth === undefined || sweep === null) return false;
       const simAge = Math.abs(julianDaysToUnixMs(ctx.snapshot.simDays) - sweep.simMs);
       if (simAge > SATELLITE_SWEEP_TIMING.maxDrawSimAgeMs) return false;
       return opacityOf(ctx.snapshot.simDays, view.camPos, earth.positionMpc) > 0;
@@ -60,7 +62,8 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
           (earth.positionMpc[2] - eye[2]) / SCALE_UNITS.KM_TO_MPC,
         ],
         temeToWorld: composeTemeToWorld(earth.orientation, simDays),
-        opacity: fade * opacityOf(simDays, eye, earth.positionMpc),
+        opacity: opacityOf(simDays, eye, earth.positionMpc),
+        classOpacity: [fade.active, fade.debris, fade.other],
         occluders: sceneOccluderSpheres(state, ctx),
         depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
       });

@@ -36,5 +36,6 @@ fn vs(@builtin(vertex_index) vid: u32, sat: SatelliteInstance) -> VSOut {
   out.clip = vec4<f32>(centre.xy + offset, 0.5 * centre.w, centre.w);
   out.relKm = relKm;
   out.corner = corner;
+  out.opacity = u.opacity * u.classOpacity[min(sat.classCode, 2u)];
   return out;
 }
