@@ -1,37 +1,11 @@
 /**
- * selectionHalo — per-kind halo descriptor for a selected thing, keyed on the
- * SelectionRow union tag: the characteristic world radius (Mpc) that sizes the
- * ring, the world position to centre it on, and the depth slab whose frustum
- * that position lives in.
+ * selectionHalo — per-kind halo descriptor keyed on the SelectionRow tag: ring radius (Mpc),
+ * world position and depth slab. Near-field kinds carry a REAL physical radius so the NEAR0 ring
+ * wraps the rendered sphere. Structures and the zone of avoidance return null.
  *
- * A galaxy uses its catalog diameter (with a missing-diameter floor); the
- * Milky Way its disc radius anchored at the galactic centre; a scene body (a
- * planet, a famous star, Earth) and a survey star each carry a REAL physical
- * radius (converted to Mpc) — so the NEAR0 ring layer can wrap the
- * rendered sphere on close approach instead of floating a fixed-px dot inside
- * it (`near0RingRadiusPx` floors to a px minimum far away, then tracks 1.5× the
- * sphere's apparent radius once it resolves). A structure returns null because
- * it renders its ring through the cluster marker pass, not this one.
- *
- * Radius, position, and slab travel together because all three are per-kind
- * facts the halo needs, and because galaxy/Milky-Way carry their world position
- * differently — a GalaxyRow has flat `x/y/z` while the milkyWay row is a bare
- * singleton tag that looks up `MILKY_WAY_CENTER_WORLD` here. Folding the
- * position into the table lets the caller read it off the (non-null) descriptor
- * without re-narrowing the union. `selectionRingPass` both gates on and sizes
- * from this table, so "which kinds get a halo here, and where" lives in one
- * place: a new halo-bearing kind is one table row.
- *
- * The `slab` field is what lets two thin ring layers — a COSMO one and a NEAR0
- * one — share the single `selectionRingRenderer` without racing: each layer
- * draws only the halos tagged with its own slab, so exactly one writes the
- * renderer's shared uniform buffers per frame (see `near0SelectionRingPass`'s
- * header for the full writeBuffer/submit argument). A galaxy or the Milky Way
- * rings through COSMO (Mpc scale); a survey star and the foreground scene bodies
- * (planet / famous star / Earth) ring through NEAR0 (their parsec/AU-scale
- * anchors fall inside COSMO's fixed near plane and outside its far plane once
- * rebased). The slab value reuses the `NEAR0`/`COSMO` index constants
- * `FRAME_ORDER`'s lines carry — not a parallel union.
+ * `slab` lets a COSMO and a NEAR0 ring layer share one `selectionRingRenderer` without racing:
+ * each draws only halos tagged with its slab, so one writes the shared uniform buffers per
+ * frame (`near0SelectionRingPass`). Near-field anchors fall outside COSMO's fixed planes.
  */
 import {
   MILKY_WAY_DISC_RADIUS_KPC,
@@ -55,14 +29,11 @@ type MilkyWayRow = { readonly type: 'milkyWay' };
 type ZoneOfAvoidanceRow = { readonly type: 'zoneOfAvoidance' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 type CraftRow = Extract<SelectionRow, { type: 'craft' }>;
+type EarthSceneRow = Extract<SelectionRow, { type: 'earthScene' }>;
 type StarCatalogRow = Extract<SelectionRow, { type: 'starCatalog' }>;
 type BlackHoleRow = Extract<SelectionRow, { type: 'blackHole' }>;
 type SatelliteRow = Extract<SelectionRow, { type: 'satellite' }>;
 
-// Table keyed on the SelectionRow union tag. Each arm receives the narrowed row
-// and returns a descriptor (or null for the structure/zoneOfAvoidance arms,
-// which have no ring center — a structure uses the cluster marker pass
-// instead, and the band is a line-of-sight effect with no point to ring).
 const SELECTION_HALO_TABLE: {
   galaxyCatalog: (row: GalaxyRow) => SelectionHalo;
   milkyWay: (row: MilkyWayRow) => SelectionHalo;
@@ -70,45 +41,37 @@ const SELECTION_HALO_TABLE: {
   zoneOfAvoidance: (row: ZoneOfAvoidanceRow) => null;
   body: (row: BodyRow) => SelectionHalo;
   craft: (row: CraftRow) => SelectionHalo;
+  earthScene: (row: EarthSceneRow) => SelectionHalo;
   starCatalog: (row: StarCatalogRow) => SelectionHalo;
   blackHole: (row: BlackHoleRow) => SelectionHalo;
   satellite: (row: SatelliteRow) => SelectionHalo;
 } = {
-  // `max(diameterKpc, 30)` handles any pre-v4-format galaxy without a measured
-  // size; *2 = diameter→radius span.
+  // 30 kpc fallback for a galaxy without a measured size; the ring spans 2x the diameter.
   galaxyCatalog: (row) => ({
     radiusMpc: ((row.diameterKpc > 0 ? row.diameterKpc : 30) * 2) / 1000,
     worldPos: [row.x, row.y, row.z],
     slab: COSMO,
   }),
-  // The milkyWay row is a bare singleton tag — position comes from the
-  // galactic-centre constant, disc radius from the published stellar-disc size.
+  // The row is a bare singleton tag, so position is the galactic-centre constant.
   milkyWay: (_row) => ({
     radiusMpc: MILKY_WAY_DISC_RADIUS_KPC / 1000,
     worldPos: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
     slab: COSMO,
   }),
-  // Structures render their ring through the cluster marker pass.
   structure: (_row) => null,
-  // The band has no ring center — it's a line-of-sight effect along the whole
-  // galactic plane, not a point selection.
   zoneOfAvoidance: (_row) => null,
-  // A scene body and a star are both drawn as a real sphere, so the ring rides
-  // the driver's footprint — the outer bound / photosphere → Mpc — letting the
-  // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
-  // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
-  // them through `near0SelectionRingPass` (not the COSMO layer), so the two
-  // layers stay slab-exclusive on the shared renderer.
+  // The ring rides the driver's footprint; far away `near0RingRadiusPx` floors it to a px minimum.
   body: nearFieldHalo,
   craft: nearFieldHalo,
+  earthScene: nearFieldHalo,
   starCatalog: nearFieldHalo,
-  // A hole's footprint is r_s: the ring hugs the horizon on close approach.
+  // Footprint is r_s: the ring hugs the horizon.
   blackHole: nearFieldHalo,
   satellite: nearFieldHalo,
 };
 
 function nearFieldHalo(
-  row: BodyRow | CraftRow | StarCatalogRow | BlackHoleRow | SatelliteRow,
+  row: BodyRow | CraftRow | EarthSceneRow | StarCatalogRow | BlackHoleRow | SatelliteRow,
 ): SelectionHalo {
   return {
     radiusMpc: row.driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
@@ -117,12 +80,6 @@ function nearFieldHalo(
   };
 }
 
-/**
- * selectionHalo — dispatch wrapper for the per-kind halo table.
- *
- * Returns the halo descriptor for the given SelectionRow, or null when the row
- * is null (nothing selected) or a structure (uses the marker pass instead).
- */
 export function selectionHalo(row: SelectionRow | null): SelectionHalo | null {
   if (row === null) return null;
   return SELECTION_HALO_TABLE[row.type](row as never);

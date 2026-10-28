@@ -1,49 +1,30 @@
 /**
- * solarSystem — the orrery exhibit: orbit rings and planets, framed from above
- * the ecliptic. Unlike the two field exhibits this one authors no look, only a
- * vantage; the scene it wants is the app's own default scene.
+ * solarSystem — the orrery exhibit, framed from above the ecliptic. It authors a vantage, no look.
  */
 
-import { initialState as orbitTrailsInitialState } from '../../layers/body/state/orbitTrails/initialState';
-import { initialState as starCatalogsInitialState } from '../../layers/starCatalog/state/starCatalogs/initialState';
-import { SCALE_UNITS } from '../scaleUnits';
-import { section } from '../../utils/exhibits/section';
-import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
-import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
-import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
-import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import { initialState as orbitTrailsInitialState } from '../state/orbitTrails/initialState';
+import { initialState as starCatalogsInitialState } from '../../starCatalog/state/starCatalogs/initialState';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { section } from '../../../utils/exhibits/section';
+import { factsKind } from '../../../components/ExhibitOverlay/kinds/factsKind';
+import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
+import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 
-/**
- * Exposure trim on the starfield (1.0 is the shader baseline). Held down so
- * the orbit rings read against the sky rather than through it — at this
- * framing the background is far brighter than the thin conics drawn over it.
- */
+/** Starfield exposure trim (1.0 is the shader baseline); held down so the thin conics read against the sky. */
 const STARFIELD_BRIGHTNESS = 0.3;
 
-/**
- * Far enough out that Neptune's 30 AU orbit clears the frame edge. The pose is
- * written in AU because that is the unit the system is legible in; `distance`
- * itself is Mpc, like every other pose.
- */
+/** Far enough out that Neptune's 30 AU orbit clears the frame edge; `distance` itself is Mpc. */
 const FRAMING_AU = 42;
 
-/**
- * Looking DOWN on the ecliptic, about 34°. POSITIVE: `orbitAnglesLookingAlong`
- * solves `pitch = asin(-forward.y)`, and `-forward` points from the target
- * toward the EYE, so a camera above the plane has positive pitch. Yaw is
- * arbitrary — the system is near enough symmetric about its pole that no
- * bearing is the right one.
- */
+/** About 34° above the ecliptic. POSITIVE: `pitch = asin(-forward.y)` and `-forward` points target to EYE. */
 const ECLIPTIC_TILT_RAD = 0.6;
 
 export const solarSystem: Exhibit = {
   id: 'solarSystem',
   label: 'Solar System',
-  // The trails are the exhibit: a viewer who switched them off in the panel still
-  // gets them here, and `withSceneSnapshotSaga`'s snapshot hands their choice back on exit.
-  // Bodies and stars both stay pickable: the Sun's own dot is a star-catalog
-  // row, so silencing `starCatalog` would take its click too. The galaxy
-  // field and the dust band still don't take clicks at 42 AU.
+  // Trails forced on (`withSceneSnapshotSaga` restores the viewer's choice on exit). `starCatalog`
+  // stays pickable because the Sun's dot is a star-catalog row.
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
@@ -51,6 +32,7 @@ export const solarSystem: Exhibit = {
       kinds: {
         body: true,
         craft: true,
+        earthScene: true,
         starCatalog: true,
         galaxyCatalog: false,
         structure: false,

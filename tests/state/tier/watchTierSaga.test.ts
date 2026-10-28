@@ -1,28 +1,13 @@
 /**
- * tierSaga — integration tests over a real store + saga middleware.
+ * tierSaga — integration tests over a real store + saga middleware, asserting the observable
+ * outcome (tier write, hover clear, re-anchored selection) rather than the effect sequence.
  *
- * Rather than driving the generator by hand (which couples the test to the
- * exact effect sequence), these tests run the watcher inside an actual store
- * wired with `redux-saga`, dispatch the `requestTier` command, and assert on
- * the observable store outcome: the tier write, the hover clear and the
- * re-anchored selection. That keeps the tests honest about the command/write
- * split and the same-tier no-op without freezing the saga's internal steps.
+ * Each test builds a FRESH store: `takeLatest` carries per-store worker state and the same-tier
+ * no-op depends on the watcher's prior view. Flush a macrotask after each dispatch; a bare
+ * microtask is not enough since the saga schedules its continuation on a macrotask.
  *
- * Each test builds a FRESH store, because `takeLatest` carries per-store
- * worker state and the same-tier no-op test depends on the watcher's prior view
- * of the current tier. A flushed macrotask (`setTimeout(…, 0)`) after each
- * dispatch lets the `takeLatest` worker run to completion — a bare
- * `Promise.resolve()` microtask is not enough, since the saga schedules its
- * continuation on a macrotask.
- *
- * ### Re-anchor tests
- *
- * The re-anchor suite seeds a galaxy select/focus ref BEFORE dispatching
- * `requestTier`, then simulates the new cloud arriving via the count pulse.
- * The galaxies fixture's `catalogs` getter is mutable: before the swap the cloud holds
- * objID at index 0; after the swap the new cloud has the same objID at index 3.
- * Asserting `select.index === 3` after the count pulse proves the saga re-anchored
- * via the durable id rather than preserving the stale positional index.
+ * Re-anchor suite: the galaxies fixture's `catalogs` getter is mutable; objID sits at index 0
+ * before the swap and index 3 after, so `select.index === 3` proves re-anchoring by durable id.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -42,7 +27,7 @@ import {
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { galaxyRowRuntime } from '../../support/selectionResolverOver';
@@ -92,7 +77,7 @@ describe('watchTierSaga', () => {
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
       selection: composeSelectionRows(
-        () => [...coreSelectionRows(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
+        () => [bodySelectionRow(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
         () => ALL_KINDS_ENABLED,
       ),
     });

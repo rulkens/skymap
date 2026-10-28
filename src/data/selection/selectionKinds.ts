@@ -11,6 +11,7 @@ export const SELECTION_KINDS = [
   'zoneOfAvoidance',
   'body',
   'craft',
+  'earthScene',
   'starCatalog',
   'blackHole',
   'satellite',

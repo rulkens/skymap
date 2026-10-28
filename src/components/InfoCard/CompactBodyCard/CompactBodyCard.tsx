@@ -1,28 +1,23 @@
 /**
- * CompactBodyCard — slim hover-preview for a scene body.  Body variant of
- * CompactCard / CompactStructureCard: name + constellation, no fetch dependency
- * — the name comes straight from `BodyInfo.label` and the constellation from the
- * synchronous compile-time `constellationOfBody` lookup, so the preview shows
- * instantly on hover, before the meta sidecar (which the detail card resolves)
- * has loaded.
+ * CompactBodyCard — slim hover preview for a scene body. Both fields are synchronous
+ * (`BodyInfo.label`, `constellationOfBody`), so it shows before the meta sidecar loads.
  */
 
 import type { ReactNode } from 'react';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { CraftInfo } from '../../../@types/engine/CraftInfo';
+import type { EarthSceneInfo } from '../../../@types/engine/EarthSceneInfo';
 import { constellationOfBody } from '../../../utils/scene/constellationOfBody';
 import CardRow from '../CardRow/CardRow';
 import styles from '../compactChrome.module.css';
 import local from './CompactBodyCard.module.css';
 
 export type CompactBodyCardProps = {
-  target: BodyInfo | CraftInfo;
+  target: BodyInfo | CraftInfo | EarthSceneInfo;
 };
 
 function CompactBodyCard({ target }: CompactBodyCardProps): ReactNode {
-  // A non-star body (a planet), or a star in no constellation (the Sun),
-  // renders name-only rather than printing a chip it cannot fill. The palette's
-  // region fallback has no analogue here — this card carries no region row.
+  // A planet, or a star in no constellation (the Sun), renders name-only.
   const constellation = constellationOfBody(target.id);
 
   return (

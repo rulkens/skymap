@@ -84,6 +84,7 @@ export const voyagerMissions: Exhibit = {
       kinds: {
         body: true,
         craft: true,
+        earthScene: true,
         starCatalog: true,
         galaxyCatalog: false,
         structure: false,
