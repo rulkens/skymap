@@ -91,9 +91,11 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
-`milkyWay`, `lightTime`, `structure` and `missions` are formed. `body` is the one
-settings-only Layer: its `layer.ts` declares the body clusters, while its render
-and load code stay in core. `missions` draws its craft: the rows live in
+`milkyWay`, `lightTime`, `structure`, `missions` and `body` are formed. `body` draws
+Earth, the planets, moons and rings: its own renderers, texture slots, passes and
+atmosphere computes, with its Earth and planet slab rows declared in `layer.ts`; its
+shape-model moons go through core's one mesh handle, and the surface-tile subsystem
+is still core's. `missions` draws its craft: the rows live in
 `missions/bodies/`, and its own mesh, contact-shadow and glint passes draw
 through core's one mesh renderer handle. `earthScenes` declares the Earth scene rows (they
 fold into the tables) and draws Søndermarken: its mesh through core's one mesh handle, its

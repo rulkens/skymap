@@ -3,7 +3,7 @@
  * their visibility entries, the Orbit trails toggle row, the Earth and planet slab rows,
  * and draws Earth, the planets, moons and rings: its own renderers, texture slots,
  * passes and the two atmosphere computes. The shape-model moons draw through core's
- * one mesh handle (the mesh slots stay core's).
+ * one mesh handle (the mesh slots stay core's); the surface-tile plan and subsystem stay core's.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';

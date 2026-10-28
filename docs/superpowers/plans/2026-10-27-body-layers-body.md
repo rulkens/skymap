@@ -539,7 +539,7 @@ reconcile in `sky-view`); `src/layers/README.md` (Status: body draws its own bod
 still core until PR 2); `src/layers/body/layer.ts` header; `near0SphereBodies.ts` header (O10: no
 expiry); `docs/BACKLOG.md` + detail file "a per-body slab declaration on `LayerBody`" (O10).
 
-- [ ] Task 6
+- [x] Task 6
 
 ---
 
