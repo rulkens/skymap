@@ -14,6 +14,10 @@ import {
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
+  setFocusMoveStyle,
+  setGeodesicTuning,
+} from '../../../src/state/settings/core/focusMovesSlice';
+import {
   engineStatusChanged,
   factsReported,
   layerFactsSeeded,
@@ -356,5 +360,15 @@ describe('watchFocusTweenSaga', () => {
 
     const tween = store.getState()[cameraRoute].tween;
     expect(tween!.frame).toBe('galactic');
+  });
+
+  it('dispatches the motion resolved from the store at dispatch', async () => {
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(setGeodesicTuning({ rho: 0.4 }));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween!.motion).toMatchObject({ style: 'geodesic', fovYRad: 0.8, tuning: { rho: 0.4 } });
   });
 });
