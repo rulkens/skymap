@@ -43,13 +43,19 @@ const SOLAR_SYSTEM_IDS: readonly PositionedId[] = anchoredMemberIds(SUN_ID);
 
 const GALACTIC_CENTRE_IDS: readonly PositionedId[] = anchoredMemberIds(GALACTIC_CENTRE_ID);
 
-// Every seeded star anchor no tighter region has claimed. The subtraction must cover EVERY
-// anchored region, or a fallen-through anchor inflates the extent the NEAR0 far plane reads.
+// Every seeded star anchor no tighter region has claimed, with whatever orbits it (a star's
+// planets). The subtraction must cover EVERY anchored region, or a fallen-through anchor
+// inflates the extent the NEAR0 far plane reads.
 const CLAIMED_IDS = new Set([...SOLAR_SYSTEM_IDS, ...GALACTIC_CENTRE_IDS]);
-
-const SOLAR_NEIGHBOURHOOD_IDS: readonly PositionedId[] = SCENE_ANCHORS.map((anchor) => anchor.id).filter(
-  (id) => !CLAIMED_IDS.has(id),
+const NEIGHBOURHOOD_ANCHOR_IDS = new Set(
+  SCENE_ANCHORS.map((anchor) => anchor.id).filter((id) => !CLAIMED_IDS.has(id)),
 );
+
+const SOLAR_NEIGHBOURHOOD_IDS: readonly PositionedId[] = POSITION_DRIVERS.filter((driver) =>
+  NEIGHBOURHOOD_ANCHOR_IDS.has(rootBodyIdOf(driver.id)),
+)
+  .map((driver) => driver.id)
+  .filter((id) => STATES_J2000.has(id));
 
 // An escaping craft has no envelope: Voyager 1 recedes ~3.6 au/yr against Pluto's
 // 30, so a snapshot max over a sampled row measures the clock rather than the
