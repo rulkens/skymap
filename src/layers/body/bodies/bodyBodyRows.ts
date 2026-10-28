@@ -1,3 +1,12 @@
+/**
+ * bodyBodyRows — the planet and moon rows, each carrying identity, orbit and rotation.
+ * Orbits: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons); JPL's `L`/`ϖ` columns
+ * are converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription
+ * stays checkable against the source. Rotation (Archinal et al. 2018): Ẇ is live everywhere;
+ * pole rates α̇/δ̇ only for Earth, nutation/libration nowhere (under 1′ over 250 years).
+ * Albedos are plausible flat linear-RGB colours, inline because each is read once per body.
+ */
+
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
 import { EARTH } from './earth';
 import { MERCURY } from './mercury';

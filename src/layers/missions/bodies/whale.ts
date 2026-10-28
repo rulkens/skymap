@@ -24,7 +24,7 @@ export const WHALE: LayerBody = {
     // A circular, equatorial 400 km orbit — i=0/node=0/ω=0 are all undefined at this
     // geometry, same convention as Deimos/Dione — riding Earth's OWN
     // equatorial pole (poleRaDeg/poleDecDeg match the 'earth' row in
-    // rotationElements.ts) rather than a distinct Laplace plane.
+    // bodies/earth.ts in the body Layer) rather than a distinct Laplace plane.
     elements: satellite({
       id: 'whale',
       focusId: 'earth',

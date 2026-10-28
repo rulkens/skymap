@@ -1,6 +1,6 @@
 /**
- * sceneBodyLabels — name captions for the true-scale foreground bodies core
- * captions: Earth and the planets.
+ * sceneBodyLabels — name captions for Earth and the planets, the true-scale
+ * foreground bodies.
  * No mesh body: the craft caption through the missions Layer's
  * `produceMissionCaptions`, and an anchored scan is ground, so it goes
  * uncaptioned. The seeded stars, the Sun and the Galactic Centre are not scene

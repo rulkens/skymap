@@ -2,9 +2,9 @@
  * orbitalElements — the J2000 Keplerian table, single source of truth for BOTH body
  * positions (`keplerianPositionMpc`) and their trails (`keplerianEllipse`); the trail pass
  * anchors each trail on the snapshot body position, so a body sits on its own trail by
- * construction. The planet and moon rows live with their Layer's body rows
- * (`layers/body/bodies/`), where the JPL transcription notes stay beside each row; this
- * table is the S-stars plus every composed Layer's orbit rows. Per row: `focusId` (the Sun
+ * construction. The planet and moon rows live with their Layer's body rows (folded through
+ * `LAYER_BODY_ROWS`), where the JPL transcription notes sit; this table is the S-stars plus
+ * every composed Layer's orbit rows. Per row: `focusId` (the Sun
  * for planets, the parent planet for a moon) and `plane` (omitted = ecliptic; a planet's
  * own moons ride their OWN Laplace pole — see `orbitPlaneFrames.ts`).
  */

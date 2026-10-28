@@ -81,10 +81,21 @@ describe('rankPaletteMatches', () => {
   });
 });
 
-async function bodyRows() {
+async function collect(feed: AsyncIterable<readonly LayerSearchEntry[]>) {
   const layerRows: LayerSearchEntry[] = [];
-  for await (const rows of bodySearch()) layerRows.push(...rows);
+  for await (const rows of feed) layerRows.push(...rows);
   return layerRows;
+}
+
+const bodyRows = () => collect(bodySearch());
+
+// Every Layer that publishes `body-<id>` rows, so a cross-Layer duplicate id fails the one-row tests.
+async function allBodyIdRows() {
+  return [
+    ...(await collect(bodySearch())),
+    ...(await collect(craftSearch())),
+    ...(await collect(earthSceneSearch())),
+  ];
 }
 
 describe('rankPaletteMatches — scene-body rows', () => {
@@ -94,8 +105,13 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(hit?.kind === 'layer' && hit.entry.id).toBe('body-earth');
   });
 
+  it('typing part of the shared "body-" id prefix lists no body row', async () => {
+    const rows = rankPaletteMatches([], [], [], await allBodyIdRows(), 'bod');
+    expect(rows.filter((r) => r.kind === 'layer')).toEqual([]);
+  });
+
   it.each(['Mars', 'Titan'])('%s ranks exactly one palette row, chip "Solar System"', async (q) => {
-    const rows = rankPaletteMatches([], [], [], await bodyRows(), q);
+    const rows = rankPaletteMatches([], [], [], await allBodyIdRows(), q);
     const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === `body-${q.toLowerCase()}`);
     expect(hits).toHaveLength(1);
     expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Solar System');
@@ -127,7 +143,6 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const rows = rankPaletteMatches([M31], [], [], [], 'Alpha Canis Majoris');
     const hit = rows.find((r) => r.kind === 'starCatalog');
     expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sirius');
-    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === 'body-sirius')).toBe(false);
   });
 
   it('finds the Sun by its authored alias, and never as a body row', () => {
@@ -137,7 +152,6 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const rows = rankPaletteMatches([M31], [], [], [], 'Sol');
     const hit = rows.find((r) => r.kind === 'starCatalog');
     expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sun');
-    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === 'body-sun')).toBe(false);
   });
 
   it('finds Sgr A* by its Sagittarius alias, through its Layer row', async () => {
@@ -203,9 +217,7 @@ describe('rankPaletteMatches — craft rows', () => {
 
 describe('rankPaletteMatches — Earth scene rows', () => {
   it('Søndermarken ranks exactly one palette row, chip "Earth"', async () => {
-    const layerRows = [];
-    for await (const rows of earthSceneSearch()) layerRows.push(...rows);
-    const rows = rankPaletteMatches([], [], [], layerRows, 'Søndermarken');
+    const rows = rankPaletteMatches([], [], [], await allBodyIdRows(), 'Søndermarken');
     const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === 'body-soendermarken');
     expect(hits).toHaveLength(1);
     expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Earth');

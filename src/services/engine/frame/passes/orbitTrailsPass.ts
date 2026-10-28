@@ -29,7 +29,7 @@ import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRendere
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 
 // Reused across frames so the hot path allocates nothing. The roster is composed
-// at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
+// at boot (every Layer's `guides.orbitTrails`), so the buffer is
 // grown on the first frame that needs more room rather than sized once here.
 let staging = new Float32Array(0);
 

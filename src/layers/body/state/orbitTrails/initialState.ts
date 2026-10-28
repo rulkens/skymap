@@ -3,7 +3,7 @@
  * (Earth / Jupiter / Moon …) are part of the baseline solar-system scene, so
  * the master gate defaults on. A plain `true` literal like `milkyWay`'s
  * label axis: the trails are a roster of conics composed at boot
- * (`BODY_TRAIL_ELEMENTS` plus any Layer's), not a registry source with its own
+ * (each Layer's `guides.orbitTrails`), not a registry source with its own
  * `visible` gate.
  */
 

@@ -105,13 +105,14 @@ export function rankPaletteMatches(
     return { kind: 'place', entry: place, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
   }).filter((s) => s.score > 0);
 
-  // Layer-published rows, scored off their own `names` like any primary row.
+  // Layer-published rows, scored off their own `names` like any primary row. The id is
+  // withheld: Layer ids are focus ids (`body-mars`), which would substring-match "bod".
   // `class` decides where they land: `primary` merges into the sorted primary
   // list below, `catalog` is capped beside the alias rows, so a Layer that one
   // day publishes a loaded catalog cannot drown the named objects.
   const layerScored: ScoredRow[] = layerRows
     .map<ScoredRow>((entry) => {
-      const raw = scoreFamousMatch({ id: entry.id, names: entry.names, description: '' }, query);
+      const raw = scoreFamousMatch({ id: '', names: entry.names, description: '' }, query);
       const boost = entry.class === 'primary' ? PRIMARY_TIEBREAK : 0;
       return { kind: 'layer', entry, score: raw > 0 ? raw + boost : 0 };
     })

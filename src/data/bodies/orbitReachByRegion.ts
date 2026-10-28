@@ -1,7 +1,7 @@
 /**
  * ORBIT_REACH_BY_REGION — the seeded scene's orbital reach per region, derived
  * once so the orbit-trail cull costs one comparison per region rather than a
- * table walk per frame. Conservative: it never drops a visible CORE orbit.
+ * table walk per frame. Conservative: it never drops a visible orbit.
  *
  * Over the non-mesh `ORBITAL_ELEMENTS`, not the body Layer's `BODY_TRAIL_ELEMENTS`: the
  * galactic-centre region's reach must still count the S-star orbits even

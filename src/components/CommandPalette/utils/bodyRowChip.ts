@@ -1,5 +1,5 @@
 /**
- * bodyRowChip — the category chip a scene-body row shows: its constellation when
+ * bodyRowChip — the category chip a seeded-star row shows: its constellation when
  * it has one, otherwise the scale regime it sits in.
  *
  * The region fallback replaces a blanket 'Solar System' literal that was true

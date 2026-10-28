@@ -54,28 +54,6 @@ type RowView = {
 
 const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
 
-/**
- * The `starCatalog` arm's render: aliases from the ranker's own name lookup, the
- * constellation (or, failing that, scale-region) chip, and the captured-shot leading visual.
- */
-function namedRowView(m: ScoredRow, keyPrefix: string, testidPrefix: string, id: string): RowView {
-  const label = paletteRowLabel(m).name;
-  const aliases = (BODY_SEARCH_NAMES.get(id) ?? []).slice(1);
-  const chip = bodyRowChip(id);
-  return {
-    key: `${keyPrefix}:${id}`,
-    testid: `${testidPrefix}-${id}`,
-    leading: shotOrGlyph(m, label),
-    primary: label,
-    secondary: (
-      <>
-        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-        {chip && <span className={styles.source}>{chip}</span>}
-      </>
-    ),
-  };
-}
-
 const EARTH_CHIP = <span className={styles.source}>Earth</span>;
 
 /**
@@ -175,10 +153,24 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   // the star's constellation or, failing that, its scale regime (e.g.
   // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
   // Centre").
-  starCatalog: (m) =>
-    m.kind !== 'starCatalog'
-      ? EMPTY_ROW_VIEW
-      : namedRowView(m, 'starCatalog', 'star-row', m.star.id),
+  starCatalog: (m) => {
+    if (m.kind !== 'starCatalog') return EMPTY_ROW_VIEW;
+    const label = paletteRowLabel(m).name;
+    const aliases = (BODY_SEARCH_NAMES.get(m.star.id) ?? []).slice(1);
+    const chip = bodyRowChip(m.star.id);
+    return {
+      key: `starCatalog:${m.star.id}`,
+      testid: `star-row-${m.star.id}`,
+      leading: shotOrGlyph(m, label),
+      primary: label,
+      secondary: (
+        <>
+          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+          {chip && <span className={styles.source}>{chip}</span>}
+        </>
+      ),
+    };
+  },
   // Structure row — the captured shot of a featured anchor (bulk rows have none),
   // else a glyph placeholder, + a category chip (Cluster / Supercluster /
   // Void / Group) from the per-category display copy, plus the Abell
@@ -231,9 +223,9 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
-  // Layer-published row — no thumbnail vocabulary to look up. The chip is the
-  // entry's own category tag (a craft's kind), never the publishing Layer's name,
-  // which is not a label the user would recognise.
+  // Layer-published row — a captured card shot of its focus id when one exists,
+  // else a glyph. The chip is the entry's own category tag (a craft's kind), never
+  // the publishing Layer's name, which is not a label the user would recognise.
   layer: (m) =>
     m.kind !== 'layer'
       ? EMPTY_ROW_VIEW
