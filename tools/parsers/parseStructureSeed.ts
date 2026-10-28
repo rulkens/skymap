@@ -19,13 +19,17 @@
 
 import type { Length } from '../../src/@types/data/Length';
 import type { NebulaKind } from '../../src/@types/data/structure/NebulaKind';
+import type { Messenger } from '../../src/@types/data/structure/Messenger';
 import type { StructureId } from '../../src/@types/data/structure/StructureId';
 import { MPC_PER_LENGTH_UNIT } from '../../src/data/mpcPerLengthUnit';
 import { NEBULA_KIND_LABELS } from '../../src/data/structure/nebulaKindLabels';
+import { MESSENGER_LABELS } from '../../src/data/structure/messengerLabels';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';
 
 const NEBULA_KINDS: readonly string[] = Object.keys(NEBULA_KIND_LABELS);
+const MESSENGERS: readonly string[] = Object.keys(MESSENGER_LABELS);
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Rows inside the Milky Way have no catalogue in this pipeline, so each names
 // the paper its numbers came from; the Milky Way scale marks exactly those categories.
@@ -78,6 +82,14 @@ export type StructureSeedEntry = {
   description: string;
   /** What a nebula is; required on `nebula`, rejected on every other category. */
   nebulaKind?: NebulaKind;
+  /** Confirmed planets; required on `exoplanet-system`, rejected elsewhere. */
+  planets?: number;
+  /** Year the first planet was announced; required on `exoplanet-system`, rejected elsewhere. */
+  discovered?: number;
+  /** What the event was seen in; required on `transient`, rejected elsewhere. */
+  messengers?: Messenger[];
+  /** ISO calendar day of the event; optional on `transient` (absent for a steady source), rejected elsewhere. */
+  date?: string;
   /**
    * Where the row's distance and radii come from (survey, paper or bibcode).
    * Required on the Milky Way categories; build-time documentation only.
@@ -147,6 +159,40 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
     }
   } else if (e.nebulaKind !== undefined) {
     throw new Error(`structure seed: ${e.id} has nebulaKind but is not a nebula`);
+  }
+  if (e.category === 'exoplanet-system') {
+    if (!Number.isInteger(e.planets) || e.planets! < 1) {
+      throw new Error(
+        `structure seed: ${e.id} needs planets >= 1, got ${JSON.stringify(e.planets)}`,
+      );
+    }
+    if (!Number.isInteger(e.discovered) || e.discovered! < 1900) {
+      throw new Error(
+        `structure seed: ${e.id} needs a discovered year, got ${JSON.stringify(e.discovered)}`,
+      );
+    }
+  } else if (e.planets !== undefined || e.discovered !== undefined) {
+    throw new Error(
+      `structure seed: ${e.id} has planets/discovered but is not an exoplanet-system`,
+    );
+  }
+  if (e.category === 'transient') {
+    if (
+      !Array.isArray(e.messengers) ||
+      e.messengers.length === 0 ||
+      !e.messengers.every((m) => MESSENGERS.includes(m))
+    ) {
+      throw new Error(
+        `structure seed: ${e.id} needs messengers, got ${JSON.stringify(e.messengers)} (expected some of ${MESSENGERS.join(' | ')})`,
+      );
+    }
+    if (e.date !== undefined && (!ISO_DAY.test(e.date) || Number.isNaN(Date.parse(e.date)))) {
+      throw new Error(
+        `structure seed: ${e.id} has date ${JSON.stringify(e.date)} (expected YYYY-MM-DD)`,
+      );
+    }
+  } else if (e.messengers !== undefined || e.date !== undefined) {
+    throw new Error(`structure seed: ${e.id} has messengers/date but is not a transient`);
   }
   if (SOURCE_REQUIRED.includes(e.category)) {
     if (typeof e.source !== 'string' || e.source.trim().length === 0) {

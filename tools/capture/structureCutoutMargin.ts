@@ -14,6 +14,8 @@ export const STRUCTURE_CUTOUT_MARGIN: Readonly<Partial<Record<StructureId, numbe
   'globular-cluster': 10,
   nebula: 1.3,
   'gc-cluster': 1.3,
+  // The 20 kpc seed radius stands for the host galaxy: 0.17 deg for NGC 4993.
+  transient: 3,
   // The 0.05 pc seed radius is a marker size: 0.5 deg for TRAPPIST-1, clamped
   // to 0.1 deg for the distant hosts (a star field with the host at its centre).
   'exoplanet-system': 1,

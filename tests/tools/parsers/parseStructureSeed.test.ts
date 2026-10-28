@@ -90,12 +90,36 @@ describe('Milky Way seed fields', () => {
     expect(() => validateStructureSeedEntry(e)).toThrow(/source/);
   });
 
+  it('requires planets and discovered on an exoplanet system, and rejects them elsewhere', () => {
+    const exo = (o: Partial<StructureSeedEntry>) =>
+      milkyWay({ category: 'exoplanet-system', planets: 7, discovered: 2016, ...o });
+    expect(() => validateStructureSeedEntry(exo({}))).not.toThrow();
+    expect(() => validateStructureSeedEntry(exo({ planets: 0 }))).toThrow(/planets/);
+    expect(() => validateStructureSeedEntry(exo({ discovered: undefined }))).toThrow(/discovered/);
+    expect(() => validateStructureSeedEntry(milkyWay({ planets: 2 }))).toThrow(/exoplanet-system/);
+  });
+
+  it('requires known messengers on a transient, checks its date, and rejects both elsewhere', () => {
+    const transient = (o: Partial<StructureSeedEntry>) =>
+      baseEntry({ category: 'transient', messengers: ['radio'], ...o });
+    expect(() => validateStructureSeedEntry(transient({ date: '2017-08-17' }))).not.toThrow();
+    expect(() => validateStructureSeedEntry(transient({}))).not.toThrow();
+    expect(() => validateStructureSeedEntry(transient({ messengers: [] }))).toThrow(/messengers/);
+    expect(() =>
+      validateStructureSeedEntry(
+        transient({ messengers: ['x-rays'] as unknown as StructureSeedEntry['messengers'] }),
+      ),
+    ).toThrow(/messengers/);
+    expect(() => validateStructureSeedEntry(transient({ date: '17 Aug 2017' }))).toThrow(/date/);
+    expect(() => validateStructureSeedEntry(baseEntry({ date: '2017-08-17' }))).toThrow(
+      /transient/,
+    );
+  });
+
   it('accepts a complete nebula and a gc-cluster row', () => {
     expect(() =>
       validateStructureSeedEntry(milkyWay({ category: 'nebula', nebulaKind: 'dark' })),
     ).not.toThrow();
-    expect(() =>
-      validateStructureSeedEntry(milkyWay({ category: 'gc-cluster' })),
-    ).not.toThrow();
+    expect(() => validateStructureSeedEntry(milkyWay({ category: 'gc-cluster' }))).not.toThrow();
   });
 });

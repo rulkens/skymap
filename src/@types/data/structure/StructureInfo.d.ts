@@ -21,6 +21,7 @@
 
 import type { Vec3 } from '../../math/Vec3';
 import type { NebulaKind } from './NebulaKind';
+import type { Messenger } from './Messenger';
 
 /**
  * Fields every structure record carries regardless of category.  Two distinct
@@ -128,10 +129,20 @@ type GcClusterRecord = StructureBase & {
 };
 
 /** A star hosting confirmed exoplanets. */
-type ExoplanetSystemRecord = StructureBase & { readonly category: 'exoplanet-system' };
+type ExoplanetSystemRecord = StructureBase & {
+  readonly category: 'exoplanet-system';
+  readonly planetCount: number;
+  /** Year the system's first planet was announced. */
+  readonly discoveryYear: number;
+};
 
-/** The host of a multi-messenger or transient event (GW, neutrino, FRB, GRB, TDE). */
-type TransientRecord = StructureBase & { readonly category: 'transient' };
+/** A transient or messenger event (GW, neutrino, FRB, GRB, TDE, supernova), at its host. */
+type TransientRecord = StructureBase & {
+  readonly category: 'transient';
+  readonly messengers: readonly Messenger[];
+  /** ISO calendar day of the event; absent for a steady source. */
+  readonly date?: string;
+};
 
 /**
  * An extended structure record.  `category` is a `StructureId`; famous

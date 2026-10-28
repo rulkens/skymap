@@ -18,4 +18,6 @@ export type StructureSourceEntry = SourceEntryBase & {
    * NEAR0 slab, cosmic ones in COSMO.
    */
   readonly scale: StructureScale;
+  /** The subject is a point, so its seed radius is a marker size (`POINT_STRUCTURE_IDS`). */
+  readonly pointLike?: true;
 };

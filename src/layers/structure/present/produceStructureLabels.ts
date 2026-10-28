@@ -23,6 +23,7 @@ import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
+import { structureMarkerRadiusMpc } from './structureMarkerRadiusMpc';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
@@ -82,11 +83,10 @@ export function produceStructureLabels(
 
       // The ring's apparent-size fade applies to the LABEL too: once the ring
       // fills the viewport the floating label is just chrome, and at far zoom it
-      // would otherwise linger after its ring is gone. Render at the WIDER
-      // apparent extent, falling back to the core for structures that set only
-      // physicalRadiusMpc. No `awake` signal — the fade is a pure function of
-      // camera distance, and camera motion already wakes the loop.
-      const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
+      // would otherwise linger after its ring is gone. Same radius as the ring
+      // (`structureMarkerRadiusMpc`). No `awake` signal — the fade is a pure
+      // function of camera distance, and camera motion already wakes the loop.
+      const markerRadiusMpc = structureMarkerRadiusMpc(p, style, distanceMpc, pxPerRad);
       if (distanceMpc > 0) {
         const apRadPx = (markerRadiusMpc / distanceMpc) * pxPerRad;
         prominencePx = apRadPx;

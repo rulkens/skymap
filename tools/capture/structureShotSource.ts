@@ -1,4 +1,5 @@
 import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';
+import { POINT_STRUCTURE_IDS } from '../../src/data/structure/pointStructureIds';
 import { structureAngularDiameterDeg } from './structureAngularDiameterDeg';
 import type { StructureId } from '../../src/@types/data/structure/StructureId';
 import type { StructureShotSource } from './@types/StructureShotSource';
@@ -20,6 +21,8 @@ const CUTOUT_IF_COMPACT: readonly StructureId[] = ['galaxy-cluster', 'galaxy-gro
  */
 export function structureShotSource(s: StructureInfo): StructureShotSource {
   if (STRUCTURE_IDS_BY_SCALE.milkyWay.includes(s.category)) return 'cutout';
+  // A point renders as empty sky once its ring and label are decluttered.
+  if (POINT_STRUCTURE_IDS.includes(s.category)) return 'cutout';
   if (!CUTOUT_IF_COMPACT.includes(s.category)) return 'render';
   const diameter = structureAngularDiameterDeg(s.physicalRadiusMpc, Math.hypot(...s.worldPos));
   return diameter > MAX_CUTOUT_DIAMETER_DEG ? 'render' : 'cutout';

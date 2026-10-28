@@ -46,6 +46,7 @@ import { lengthToMpc } from '../../../utils/math/lengthToMpc';
 import type { Length } from '../../../@types/data/Length';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { NebulaKind } from '../../../@types/data/structure/NebulaKind';
+import type { Messenger } from '../../../@types/data/structure/Messenger';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
@@ -72,6 +73,10 @@ type SeedEntry = {
   readonly apparentRadius: Length;
   readonly abell?: string;
   readonly nebulaKind?: NebulaKind;
+  readonly planets?: number;
+  readonly discovered?: number;
+  readonly messengers?: readonly Messenger[];
+  readonly date?: string;
   readonly description?: string;
   readonly wikipedia?: string;
 };
@@ -135,9 +140,21 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
     case 'gc-cluster':
       return { ...common, category: 'gc-cluster' };
     case 'exoplanet-system':
-      return { ...common, category: 'exoplanet-system' };
+      // The parser requires both on every exoplanet-system row.
+      return {
+        ...common,
+        category: 'exoplanet-system',
+        planetCount: a.planets!,
+        discoveryYear: a.discovered!,
+      };
     case 'transient':
-      return { ...common, category: 'transient' };
+      // The parser requires `messengers`; `date` is absent for a steady source.
+      return {
+        ...common,
+        category: 'transient',
+        messengers: a.messengers!,
+        ...(a.date !== undefined ? { date: a.date } : {}),
+      };
   }
 }
 

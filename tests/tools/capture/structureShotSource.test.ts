@@ -14,6 +14,11 @@ describe('structureShotSource', () => {
     expect(structureShotSource(byId('nebula-orion'))).toBe('cutout');
   });
 
+  it('cuts out points: a transient shows its host galaxy, a planet host its star field', () => {
+    expect(structureShotSource(byId('transient-gw170817'))).toBe('cutout');
+    expect(structureShotSource(byId('exoplanet-system-trappist-1'))).toBe('cutout');
+  });
+
   it('keeps superclusters and voids as app renders', () => {
     expect(structureShotSource(byId('supercluster-laniakea-sc'))).toBe('render');
     expect(structureShotSource(byId('void-bootes-void'))).toBe('render');

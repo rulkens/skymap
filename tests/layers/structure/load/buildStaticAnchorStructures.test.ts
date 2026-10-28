@@ -73,5 +73,18 @@ describe('buildStaticAnchorStructures', () => {
     expect(ophiuchus).toBeDefined();
     expect('wikipediaTitle' in ophiuchus!).toBe(false);
   });
-});
 
+  it('carries the planet and messenger facts onto their arms', () => {
+    const byId = new Map(buildStaticAnchorStructures().map((s) => [s.id, s]));
+    expect(byId.get('exoplanet-system-trappist-1')).toMatchObject({
+      planetCount: 7,
+      discoveryYear: 2016,
+    });
+    expect(byId.get('transient-gw170817')).toMatchObject({
+      messengers: ['gravitational-waves', 'gamma-rays', 'light'],
+      date: '2017-08-17',
+    });
+    // A steady source has no date, and the key is absent rather than undefined.
+    expect('date' in byId.get('transient-ngc-1068')!).toBe(false);
+  });
+});

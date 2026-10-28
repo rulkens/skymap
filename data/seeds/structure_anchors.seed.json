@@ -1493,6 +1493,8 @@
     "distance": { "value": 1.301, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 2,
+    "discovered": 2016,
     "description": "The nearest star to the Sun, a red dwarf 1.30 pc away. It has 2 confirmed planets, among them Proxima b, an Earth-mass world in the star's habitable zone found in 2016.",
     "wikipedia": "Proxima Centauri",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Proxima Cen); radii are marker sizes, not physical extents"
@@ -1506,6 +1508,8 @@
     "distance": { "value": 12.43, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 7,
+    "discovered": 2016,
     "description": "An ultracool red dwarf 12.4 pc away with 7 confirmed planets, all close to Earth's size. Several orbit in the zone where liquid water could exist, which makes it a prime target for JWST.",
     "wikipedia": "TRAPPIST-1",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host TRAPPIST-1); radii are marker sizes, not physical extents"
@@ -1519,6 +1523,8 @@
     "distance": { "value": 15.461, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 1995,
     "description": "A Sun-like star 15.5 pc away. Its planet 51 Pegasi b, found in 1995, was the first planet seen around a Sun-like star: a hot Jupiter on a 4.2-day orbit. The discovery won the 2019 Nobel Prize in Physics.",
     "wikipedia": "51 Pegasi",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host 51 Peg); radii are marker sizes, not physical extents"
@@ -1532,6 +1538,8 @@
     "distance": { "value": 177.594, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 5,
+    "discovered": 2014,
     "description": "A red dwarf about 178 pc away with 5 confirmed planets. Kepler-186f, found in 2014, was the first Earth-sized planet seen in a star's habitable zone.",
     "wikipedia": "Kepler-186",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-186); radii are marker sizes, not physical extents"
@@ -1545,6 +1553,8 @@
     "distance": { "value": 48.302, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 1999,
     "description": "A Sun-like star 48 pc away. Its hot Jupiter was the first planet seen crossing its star (1999) and the first whose atmosphere was detected (2002).",
     "wikipedia": "HD 209458",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HD 209458); radii are marker sizes, not physical extents"
@@ -1558,6 +1568,8 @@
     "distance": { "value": 551.727, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 2015,
     "description": "A Sun-like star about 550 pc away. Its planet Kepler-452b, found in 2015, is a super-Earth on a 385-day orbit in the habitable zone.",
     "wikipedia": "Kepler-452",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-452); radii are marker sizes, not physical extents"
@@ -1571,6 +1583,8 @@
     "distance": { "value": 31.127, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 4,
+    "discovered": 2020,
     "description": "A red dwarf 31 pc away with 4 confirmed planets. TOI-700 d, found by TESS in 2020, was the mission's first Earth-sized planet in a habitable zone.",
     "wikipedia": "TOI-700",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host TOI-700); radii are marker sizes, not physical extents"
@@ -1584,6 +1598,8 @@
     "distance": { "value": 14.986, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 2,
+    "discovered": 2017,
     "description": "A red dwarf 15 pc away with 2 confirmed planets. LHS 1140 b is a temperate super-Earth in the habitable zone and a candidate water world.",
     "wikipedia": "LHS 1140",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host LHS 1140); radii are marker sizes, not physical extents"
@@ -1597,6 +1613,8 @@
     "distance": { "value": 41.244, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 4,
+    "discovered": 2008,
     "description": "A young star 41 pc away. In 2008 it became the first star with several planets imaged directly: 4 confirmed planets, all giants on wide orbits.",
     "wikipedia": "HR 8799",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HR 8799); radii are marker sizes, not physical extents"
@@ -1610,6 +1628,8 @@
     "distance": { "value": 19.744, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 3,
+    "discovered": 2008,
     "description": "A young star 19.7 pc away surrounded by a bright dusty disc. It has 3 confirmed planets; the giant Beta Pictoris b was imaged directly in 2008.",
     "wikipedia": "Beta Pictoris",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host bet Pic); radii are marker sizes, not physical extents"
@@ -1623,6 +1643,8 @@
     "distance": { "value": 12.585, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 7,
+    "discovered": 1996,
     "description": "A binary star 12.6 pc away with 7 confirmed planets. Its innermost planet, 55 Cancri e, is a scorching super-Earth that JWST has studied for signs of an atmosphere.",
     "wikipedia": "55 Cancri",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host 55 Cnc); radii are marker sizes, not physical extents"
@@ -1636,6 +1658,8 @@
     "distance": { "value": 3.603, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 3,
+    "discovered": 2017,
     "description": "One of the nearest Sun-like stars, 3.6 pc away. Radial-velocity surveys found 3 confirmed planets, small worlds a few times Earth's mass.",
     "wikipedia": "Tau Ceti",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host tau Cet); radii are marker sizes, not physical extents"
@@ -1649,6 +1673,8 @@
     "distance": { "value": 3.203, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 2000,
     "description": "A young Sun-like star 3.2 pc away with dusty debris belts and one known giant planet. It is the nearest star with a known planet that can be seen without a telescope.",
     "wikipedia": "Epsilon Eridani",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host eps Eri); radii are marker sizes, not physical extents"
@@ -1662,6 +1688,8 @@
     "distance": { "value": 6.298, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 3,
+    "discovered": 2005,
     "description": "A red dwarf 6.3 pc away with 3 confirmed planets. Claims of habitable-zone planets here in 2007–2010 were later traced to stellar activity, a lesson in how hard small planets are to confirm.",
     "wikipedia": "Gliese 581",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host GJ 581); radii are marker sizes, not physical extents"
@@ -1675,6 +1703,8 @@
     "distance": { "value": 75.085, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 2011,
     "description": "A pair of stars about 75 pc away. Its planet Kepler-16b, found in 2011, was the first planet seen orbiting both stars of a binary, like Tatooine in Star Wars.",
     "wikipedia": "Kepler-16",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-16); radii are marker sizes, not physical extents"
@@ -1688,6 +1718,8 @@
     "distance": { "value": 600.0, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 3,
+    "discovered": 1992,
     "description": "A pulsar, the spinning remnant of an exploded star. In 1992 its 3 confirmed planets became the first exoplanets ever confirmed.",
     "wikipedia": "PSR B1257+12",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host PSR B1257+12); radii are marker sizes, not physical extents"
@@ -1701,6 +1733,8 @@
     "distance": { "value": 38.027, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 2,
+    "discovered": 2015,
     "description": "A red dwarf 38 pc away with 2 confirmed planets. JWST found methane and carbon dioxide in the atmosphere of K2-18 b, a sub-Neptune in the habitable zone.",
     "wikipedia": "K2-18",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host K2-18); radii are marker sizes, not physical extents"
@@ -1714,6 +1748,8 @@
     "distance": { "value": 19.764, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 2005,
     "description": "A star 19.8 pc away whose hot Jupiter is one of the best-studied exoplanets; in 2013 Hubble measured its colour as a deep blue.",
     "wikipedia": "HD 189733",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HD 189733); radii are marker sizes, not physical extents"
@@ -1727,6 +1763,8 @@
     "distance": { "value": 427.246, "unit": "pc" },
     "physicalRadius": { "value": 0.05, "unit": "pc" },
     "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "planets": 1,
+    "discovered": 2008,
     "description": "A star about 430 pc away whose hot Jupiter orbits so close that it is spiralling inward: its orbit is measurably shrinking.",
     "wikipedia": "WASP-12",
     "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host WASP-12); radii are marker sizes, not physical extents"
@@ -1740,6 +1778,8 @@
     "distance": { "value": 40, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["gravitational-waves", "gamma-rays", "light"],
+    "date": "2017-08-17",
     "description": "The first neutron-star merger caught in gravitational waves, on 17 August 2017. Telescopes then saw its light: a gamma-ray burst and a kilonova that forged heavy elements such as gold. Host galaxy NGC 4993.",
     "wikipedia": "GW170817",
     "source": "Position: AT 2017gfo, NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; distance: LIGO/Virgo, PRL 119, 161101 (2017), 40 Mpc; radii are marker sizes, not physical extents"
@@ -1753,6 +1793,8 @@
     "distance": { "value": 1322.3, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["neutrinos", "gamma-rays"],
+    "date": "2017-09-22",
     "description": "A blazar, a galaxy whose black-hole jet points at us. In 2017 it became the first source tied to a high-energy neutrino, IceCube-170922A.",
     "wikipedia": "TXS 0506+056",
     "source": "Position: IceCube Collaboration, Science 361, eaat1378 (2018); redshift z = 0.3365, Paiano et al. 2018, ApJL 854, L32; comoving distance from z (Planck 2018 flat ΛCDM, redshiftToDistanceMpc); radii are marker sizes, not physical extents"
@@ -1766,6 +1808,7 @@
     "distance": { "value": 14.4, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["neutrinos"],
     "description": "A nearby active galaxy. In 2022 IceCube found an excess of neutrinos from its direction, the second neutrino source after TXS 0506+056.",
     "wikipedia": "Messier 77",
     "source": "Position: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; distance 14.4 Mpc as used by IceCube Collaboration, Science 378, 538 (2022); radii are marker sizes, not physical extents"
@@ -1779,6 +1822,8 @@
     "distance": { "value": 786.8, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["radio"],
+    "date": "2012-11-02",
     "description": "The first fast radio burst seen to repeat. In 2017 its flashes were traced to a dwarf galaxy about 3 billion light years away.",
     "source": "Position and redshift z = 0.19273: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; comoving distance from z; radii are marker sizes, not physical extents"
   },
@@ -1791,6 +1836,8 @@
     "distance": { "value": 143.2, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["radio"],
+    "date": "2018-09-16",
     "description": "A repeating fast radio burst whose activity cycles every 16.3 days, traced to a spiral galaxy about 150 Mpc away.",
     "wikipedia": "FRB 180916.J0158+65",
     "source": "Position and redshift z = 0.0337: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; comoving distance from z; radii are marker sizes, not physical extents"
@@ -1804,6 +1851,8 @@
     "distance": { "value": 3.6, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["radio"],
+    "date": "2020-01-20",
     "description": "The nearest known fast radio burst, repeating from inside an old globular cluster of the galaxy M81.",
     "source": "Position: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; distance of M81, 3.6 Mpc (Kirsten et al. 2022, Nature 602, 585); radii are marker sizes, not physical extents"
   },
@@ -1816,6 +1865,8 @@
     "distance": { "value": 623.1, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["gamma-rays", "light"],
+    "date": "2022-10-09",
     "description": "The brightest gamma-ray burst ever recorded, nicknamed the BOAT (brightest of all time). It saturated detectors in October 2022.",
     "wikipedia": "GRB 221009A",
     "source": "Position and redshift z = 0.151: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; comoving distance from z; radii are marker sizes, not physical extents"
@@ -1829,6 +1880,8 @@
     "distance": { "value": 3121.4, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["gamma-rays", "light"],
+    "date": "2008-03-19",
     "description": "A gamma-ray burst whose afterglow briefly reached naked-eye brightness in 2008, although it lay 7.5 billion light years away.",
     "wikipedia": "GRB 080319B",
     "source": "Position and redshift z = 0.937: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; comoving distance from z; radii are marker sizes, not physical extents"
@@ -1842,6 +1895,8 @@
     "distance": { "value": 1334.5, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["gamma-rays", "light"],
+    "date": "2013-04-27",
     "description": "One of the most energetic gamma-ray bursts seen; Fermi recorded a 95 GeV photon from it, the highest-energy light ever caught from a burst at the time.",
     "wikipedia": "GRB 130427A",
     "source": "Position and redshift z = 0.3399: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28 (SN 2013cq); comoving distance from z; radii are marker sizes, not physical extents"
@@ -1855,6 +1910,8 @@
     "distance": { "value": 59.9, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["light"],
+    "date": "2018-06-16",
     "description": "Nicknamed the Cow, the prototype of a new class of explosions that brighten and fade within days, far faster than ordinary supernovae.",
     "wikipedia": "SN 2018cow",
     "source": "Position and redshift z = 0.01404: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; comoving distance from z; radii are marker sizes, not physical extents"
@@ -1868,6 +1925,8 @@
     "distance": { "value": 216.6, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["light", "neutrinos"],
+    "date": "2019-04-09",
     "description": "A star torn apart by a supermassive black hole (a tidal disruption event). A neutrino seen by IceCube in 2019 came from its direction.",
     "source": "Position and redshift z = 0.0512: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; comoving distance from z; neutrino link: Stein et al. 2021, Nature Astronomy 5, 510; radii are marker sizes, not physical extents"
   },
@@ -1880,6 +1939,8 @@
     "distance": { "value": 6.4, "unit": "Mpc" },
     "physicalRadius": { "value": 0.02, "unit": "Mpc" },
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
+    "messengers": ["light"],
+    "date": "2011-08-24",
     "description": "The nearest type Ia supernova in decades, in the Pinwheel Galaxy M101, caught within hours of the explosion. Type Ia supernovae are the standard candles that revealed dark energy.",
     "wikipedia": "SN 2011fe",
     "source": "Position: NASA/IPAC Extragalactic Database ObjectLookup, queried 2026-10-28; distance 6.4 Mpc, Shappee & Stanek 2011, ApJ 733, 124; radii are marker sizes, not physical extents"

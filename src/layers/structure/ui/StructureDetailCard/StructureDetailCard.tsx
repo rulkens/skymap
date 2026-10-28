@@ -12,6 +12,9 @@ import { formatAbellDesignation } from '../../../../utils/format/formatAbellDesi
 import { CATEGORY_DISPLAY_INFO } from '../../../../data/structure/categoryDisplayInfo';
 import { structureShotUrl } from '../../../../utils/structure/structureShotUrl';
 import { NEBULA_KIND_LABELS } from '../../../../data/structure/nebulaKindLabels';
+import { MESSENGER_LABELS } from '../../../../data/structure/messengerLabels';
+import { POINT_STRUCTURE_IDS } from '../../../../data/structure/pointStructureIds';
+import { formatCalendarDate } from '../../../../utils/format/formatCalendarDate';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
 import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
@@ -53,8 +56,10 @@ function StructureDetailCard({
   const shotBeside = shot !== undefined && layout === 'panel';
   // With a shot beside them the lead rows sit next to it as summary lines (as the body card
   // does); without one they stay ordinary CardRows.
+  // A point's seed radius is a marker size, and it has no member galaxies.
+  const pointLike = POINT_STRUCTURE_IDS.includes(target.category);
   const countRow =
-    memberCount != null
+    memberCount != null && !pointLike
       ? {
           label: <InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>,
           value: memberCount.toLocaleString(),
@@ -65,10 +70,33 @@ function StructureDetailCard({
       label: <InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>,
       value: formatDistance(distanceMpc),
     },
-    {
-      label: <InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>,
-      value: formatDistance(target.physicalRadiusMpc),
-    },
+    ...(pointLike
+      ? []
+      : [
+          {
+            label: <InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>,
+            value: formatDistance(target.physicalRadiusMpc),
+          },
+        ]),
+    ...(target.category === 'exoplanet-system'
+      ? [
+          { label: 'Planets', value: target.planetCount.toLocaleString() },
+          { label: 'First found', value: String(target.discoveryYear) },
+        ]
+      : []),
+    ...(target.category === 'transient'
+      ? [
+          {
+            label: 'Seen in',
+            value: target.messengers
+              .map((m, i) => (i === 0 ? MESSENGER_LABELS[m] : MESSENGER_LABELS[m].toLowerCase()))
+              .join(', '),
+          },
+          ...(target.date !== undefined
+            ? [{ label: 'Date', value: formatCalendarDate(target.date) }]
+            : []),
+        ]
+      : []),
   ];
   // Rows below the top row; the section is dropped when the shot took them all.
   const rows = [

@@ -31,6 +31,11 @@ export type StructureMarkerStyle = {
   readonly markerMinApparentRadiusPx: number;
   /** Smoothstep band width for the far-distance fade-out. */
   readonly markerMinApparentFadeBandPx: number;
+  /**
+   * A point category's ring never draws smaller than this on screen
+   * (`structureMarkerRadiusMpc`); set it above min + band so it never fades.
+   */
+  readonly pointRadiusPx?: number;
   /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
   readonly outlineColor: Vec4;
   /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */

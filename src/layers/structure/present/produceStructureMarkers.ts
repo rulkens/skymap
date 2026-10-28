@@ -43,6 +43,7 @@ import {
   RING_PICK_MIN_ALPHA,
 } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
+import { structureMarkerRadiusMpc } from './structureMarkerRadiusMpc';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { structurePickId } from '../../../utils/picking/structurePickId';
@@ -73,15 +74,13 @@ export function produceStructureMarkers(
     // mid-fade value scales the descriptor alpha below.
     const catFade = fade[p.category];
     if (catFade === 0) continue;
-    // Render at the WIDER apparent extent, falling back to the core for
-    // structures that only set physicalRadiusMpc.
-    const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
     const style = STRUCTURE_MARKER_STYLES[p.category];
 
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;
     const dz = p.worldPos[2] - cz;
     const distanceMpc = Math.hypot(dx, dy, dz);
+    const radiusMpc = structureMarkerRadiusMpc(p, style, distanceMpc, pxPerRad);
 
     // The apparent-size projection divides by distance, so an eye exactly on
     // the anchor gets alpha 0. Still emit a descriptor to keep the index

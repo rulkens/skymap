@@ -9,6 +9,7 @@ export const EXOPLANET_SYSTEM_ENTRY = {
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
+  pointLike: true,
   scale: 'milkyWay',
   detailLabel: 'Exoplanet System',
   shortLabel: 'Exoplanet system',

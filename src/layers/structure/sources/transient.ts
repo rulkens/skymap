@@ -9,6 +9,7 @@ export const TRANSIENT_ENTRY = {
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
+  pointLike: true,
   scale: 'cosmic',
   detailLabel: 'Transient Event',
   shortLabel: 'Transient',
