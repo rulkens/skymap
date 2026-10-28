@@ -21,6 +21,8 @@
  * source and a unit change is one function, not a re-bake of the whole table.
  */
 
+import type { FamousStarOrbit } from './FamousStarOrbit';
+
 export type FamousStarRow = {
   readonly id: string;
   readonly commonName: string; // → StarBody.label
@@ -33,4 +35,6 @@ export type FamousStarRow = {
   readonly temperatureK: number; // → color via temperatureToLinearRgb
   readonly radiusSolar: number; // → the surface datum
   readonly oblateness?: number; // → StarBody.oblateness (per-axis MVP scale)
+  /** Positions the star by its orbit around another row instead of a fixed anchor. */
+  readonly orbit?: FamousStarOrbit;
 };

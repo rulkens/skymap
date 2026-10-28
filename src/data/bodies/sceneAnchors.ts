@@ -20,7 +20,8 @@ import type { AnchorBody } from '../../@types/scene/AnchorBody';
 
 export const SCENE_ANCHORS: readonly AnchorBody[] = [
   ...SUN_GENERATED.map(starAnchor),
-  ...FAMOUS_STARS_GENERATED.map(starAnchor),
+  // A star on an orbit (a binary's companion) is positioned by ORBITAL_ELEMENTS instead.
+  ...FAMOUS_STARS_GENERATED.filter((row) => row.orbit === undefined).map(starAnchor),
   // The Galactic Centre trails the star roster so the seed order above is
   // untouched. It anchors the `galactic-centre` region rather than falling
   // into the neighbourhood's residual set, so its 8 kpc distance never

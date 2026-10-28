@@ -35,6 +35,8 @@ import {
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import { EXOPLANET_PLANETS } from './exoplanetPlanets';
+import { FAMOUS_STARS_GENERATED } from './famousStars.generated';
+import { famousStarOrbit } from './makers/famousStarOrbit';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
@@ -805,4 +807,15 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   ...S_STAR_ORBITAL_ELEMENTS,
   ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'orbit' ? [row.position.elements] : [])),
   ...EXOPLANET_PLANETS.map((planet) => planet.elements),
+  // Binary companions: a famous star on its published orbit around another.
+  ...FAMOUS_STARS_GENERATED.flatMap((row) =>
+    row.orbit === undefined
+      ? []
+      : [
+          famousStarOrbit(
+            { ...row, orbit: row.orbit },
+            findByIdOrThrow(FAMOUS_STARS_GENERATED, row.orbit.host, 'famous-star orbit host'),
+          ),
+        ],
+  ),
 ];

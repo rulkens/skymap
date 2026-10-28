@@ -30,6 +30,21 @@ function baseEntry(overrides: Partial<FamousStarEntry> = {}): FamousStarEntry {
 }
 
 describe('famousStarsSeed', () => {
+  it('rejects an orbit whose host is not a seed row', () => {
+    const orbit = {
+      host: 'nowhere',
+      semiMajorArcsec: 17.66,
+      periodYr: 79.91,
+      eccentricity: 0.52,
+      inclinationDeg: 79.3,
+      ascendingNodeDeg: 205.1,
+      argPeriapsisDeg: 232.3,
+      periapsisEpochYr: 1875.66,
+    };
+    const json = JSON.stringify([baseEntry({ id: 'b', orbit })]);
+    expect(() => parseFamousStarsSeed(json)).toThrow(/orbits "nowhere", which is no entry/);
+  });
+
   it('throws on a duplicate id', () => {
     const json = JSON.stringify([baseEntry({ id: 'vega' }), baseEntry({ id: 'vega' })]);
     expect(() => parseFamousStarsSeed(json)).toThrow(/duplicate id/);

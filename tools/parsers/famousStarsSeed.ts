@@ -25,6 +25,8 @@
  * it is.  DR3 ids exceed Number.MAX_SAFE_INTEGER, so they live as digit strings.
  */
 
+import type { FamousStarOrbit } from '../../src/@types/data/FamousStarOrbit';
+
 /**
  * One curated entry — exactly the shape stored in `famous_stars.seed.json`.
  * Co-located here (like `FamousEntry` in `famousSeed.ts`) as the tool-local
@@ -112,6 +114,8 @@ export type FamousStarEntry = {
    * render row, and Gaia-side dedup all key on the single canonical identity).
    */
   hipCompanions?: number[];
+  /** A visual-binary orbit around another entry (`host`), in place of a fixed position. */
+  orbit?: FamousStarOrbit;
   /** Curated prose, 3–5 sentences, fact-checked. */
   description: string;
 };
@@ -302,7 +306,25 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
   if (typeof e.description !== 'string' || e.description.length === 0) {
     throw new Error(`famous stars seed: ${e.id} has empty description`);
   }
+  if (e.orbit !== undefined) validateOrbit(e.id, e.orbit);
   return e;
+}
+
+function validateOrbit(id: string, orbit: FamousStarOrbit): void {
+  const { host, eccentricity, periodYr, semiMajorArcsec, ...angles } = orbit;
+  if (typeof host !== 'string' || host === id) {
+    throw new Error(`famous stars seed: ${id} has an orbit with no other host`);
+  }
+  if (!(eccentricity >= 0 && eccentricity < 1)) {
+    throw new Error(`famous stars seed: ${id} has an unbound orbit (e = ${eccentricity})`);
+  }
+  if (!(periodYr > 0) || !(semiMajorArcsec > 0)) {
+    throw new Error(`famous stars seed: ${id} has a non-positive orbit period or size`);
+  }
+  for (const [key, value] of Object.entries(angles)) {
+    if (!Number.isFinite(value))
+      throw new Error(`famous stars seed: ${id} has orbit ${key} ${value}`);
+  }
 }
 
 /**
@@ -365,6 +387,11 @@ export function parseFamousStarsSeed(rawJson: string): FamousStarEntry[] {
     }
     seen.add(id);
     out.push(e as FamousStarEntry);
+  }
+  for (const e of out) {
+    if (e.orbit !== undefined && !seen.has(e.orbit.host)) {
+      throw new Error(`famous stars seed: ${e.id} orbits "${e.orbit.host}", which is no entry`);
+    }
   }
   return out;
 }

@@ -96,6 +96,7 @@ export function seedToGeneratedRows(entries: readonly FamousStarEntry[]): Famous
     temperatureK: e.temperatureK,
     radiusSolar: e.radiusSolar,
     ...(e.oblateness !== undefined ? { oblateness: e.oblateness } : {}),
+    ...(e.orbit !== undefined ? { orbit: e.orbit } : {}),
   }));
 }
 
@@ -146,7 +147,11 @@ function literal(value: unknown): string {
   if (typeof value === 'string') return quote(value);
   if (typeof value === 'number') return String(value);
   if (Array.isArray(value)) return `[${value.map((v) => literal(v)).join(', ')}]`;
-  // FamousStarRow carries only strings, numbers, and string arrays; anything
+  if (typeof value === 'object' && value !== null) {
+    const fields = Object.entries(value).map(([key, v]) => `${key}: ${literal(v)}`);
+    return `{ ${fields.join(', ')} }`;
+  }
+  // FamousStarRow carries only strings, numbers, arrays and the orbit record; anything
   // else means the row shape drifted and should fail loud rather than emit junk.
   throw new Error(`buildFamousStars: cannot serialise generated value ${JSON.stringify(value)}`);
 }
