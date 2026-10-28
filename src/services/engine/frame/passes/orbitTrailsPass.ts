@@ -1,15 +1,11 @@
 /**
- * orbitTrailsPass — Keplerian orbit trails (Earth / Jupiter / Moon) as additive
- * screen-space conics. Drawn through NEAR0 because AU-to-lunar orbits sit far
- * inside COSMO's 0.01 Mpc near plane, while still accumulating into HDR.
+ * orbitTrailsPass — Keplerian orbit trails as additive screen-space conics, drawn through NEAR0
+ * because AU-to-lunar orbits sit far inside COSMO's 0.01 Mpc near plane. No pass-level `fade`:
+ * each trail group carries its own show key, so one switch cannot hide another group's trails.
  *
- * No pass-level `fade`: each trail group carries its own show key (core's `orbitTrails`, the
- * S-stars' `sStarTrails`), so one switch cannot hide the other group's trails.
- *
- * HARD INVARIANT: `composeOrbitConic` takes `view.slab.vp`, NOT `view.vp`. It
- * assembles and INVERTS the homography in f64 to resolve the cancellation between
- * the ~1e-12 Mpc centres and the vp's large translation column; fed the narrowed
- * `view.vp` it misplaces a trail by far more than its stroke width.
+ * HARD INVARIANT: `composeOrbitConic` takes `view.slab.vp`, NOT `view.vp`. It INVERTS the
+ * homography in f64 to resolve the cancellation between the ~1e-12 Mpc centres and the vp's large
+ * translation column; fed the f32-narrowed `view.vp` it misplaces a trail by far more than its stroke.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -28,9 +24,7 @@ import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 
-// Reused across frames so the hot path allocates nothing. The roster is composed
-// at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
-// grown on the first frame that needs more room rather than sized once here.
+// Reused across frames; grown on the first frame that needs more room (the roster is composed at boot).
 let staging = new Float32Array(0);
 
 export const orbitTrailsPass: ContentPass = {
@@ -40,11 +34,8 @@ export const orbitTrailsPass: ContentPass = {
     if (state.gpu.orbitTrailRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     if (state.orbitTrailGroups.every((group) => group.fade(ctx.snapshot) === 0)) return false;
-    // Whole-layer sub-pixel cull: the per-orbit CULL_PX test in `draw`, bounded
-    // once per region at the camera's NEAREST possible distance to any of that
-    // region's orbit points. Keyed on the eye (`drawCamPos`), NOT `cam.distance`,
-    // which measures to the orbit TARGET. Failing here lets the executor skip the
-    // whole (hdr, NEAR0) step instead of packing zero records.
+    // Whole-layer cull: `draw`'s CULL_PX test bounded per region at the NEAREST possible distance.
+    // Keyed on the eye (`drawCamPos`), NOT `cam.distance`, which measures to the orbit TARGET.
     const states = sceneBodyStates(state, ctx);
     for (const [region, reachMpc] of ORBIT_REACH_BY_REGION) {
       const nearestMpc = Math.max(
@@ -65,8 +56,7 @@ export const orbitTrailsPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.orbitTrailRenderer;
     if (renderer === null) return;
-    // Reading the shared snapshot — never re-deriving — is what welds each trail
-    // to the exact instant its body is drawn at.
+    // The shared snapshot, never a re-derivation, welds each trail to its body's instant.
     const states = sceneBodyStates(state, ctx);
     const groups = state.orbitTrailGroups;
     const limit = groups.reduce((total, group) => total + group.rows.length, 0);
@@ -91,15 +81,11 @@ export const orbitTrailsPass: ContentPass = {
       for (let i = 0; i < rows.length; i++) {
         const elements = rows[i]!;
         const body = states.get(elements.id)!;
-        // The snapshot's own elements, never a re-propagation: trail and body share one
-        // conic. `keplerianEllipse` returns FRESH vectors per call, so the in-place
-        // anchoring below cannot alias a shared scratch across orbits. Every trail row is an
-        // element row, and deriveBodyStates sets `orbit` for each of those.
+        // `keplerianEllipse` returns FRESH vectors, so the in-place anchoring below cannot alias
+        // across orbits. `deriveBodyStates` sets `orbit` for every element row.
         const orbit = body.orbit!;
         const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(orbit);
-        // Centre = the snapshot body position, less its Kepler offset, plus the
-        // ellipse centre offset: the body sits on its trail by construction, so any
-        // later correction to the snapshot position moves the trail with it.
+        // Centre = snapshot position - Kepler position + ellipse offset, so the body sits on its trail.
         const bodyMpc = body.positionMpc;
         const keplerMpc = keplerianPositionMpc(orbit);
         const centerMpc = centerOffsetMpc;
@@ -135,8 +121,6 @@ export const orbitTrailsPass: ContentPass = {
         staging[base + 13] = elements.color[1];
         staging[base + 14] = elements.color[2];
         staging[base + 15] = orbit.eccentricity;
-        // Falloff anchor: the snapshot's mean anomaly, so the trail fades behind
-        // where the body actually is at `t`.
         staging[base + 16] = orbit.meanAnomalyRad;
         staging[base + 17] = alpha;
         staging[base + 18] = view.viewportPx[0]; // ribbon vertex stage's divisor
@@ -154,10 +138,7 @@ export const orbitTrailsPass: ContentPass = {
       }
     }
     if (count > 0) {
-      // The second occluder channel: the terrain and meshes of the row that last
-      // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
-      // by metres-per-km so the fragment's reconstructed distances land in the
-      // same km as the eye-relative orbit points it compares them against.
+      // `depth` is the second occluder channel (terrain and meshes), in km like the eye-relative orbit points.
       renderer.draw(pass, {
         instances: staging,
         count,

@@ -5,7 +5,12 @@
  */
 
 import { CORE_EXHIBITS } from '../data/exhibits/coreExhibits';
+import { bodyLayerExhibits } from '../layers/body/exhibits/exhibits';
 import { missionsLayerExhibits } from '../layers/missions/exhibits/exhibits';
 import { exhibitsById } from '../utils/exhibits/exhibitsById';
 
-export const APP_EXHIBITS = exhibitsById([...CORE_EXHIBITS, ...missionsLayerExhibits]);
+export const APP_EXHIBITS = exhibitsById([
+  ...CORE_EXHIBITS,
+  ...bodyLayerExhibits,
+  ...missionsLayerExhibits,
+]);
