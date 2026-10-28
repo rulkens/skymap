@@ -105,6 +105,10 @@ const LINE_INSTANCE_BYTES = MARKER_LINE_INSTANCE_LAYOUT.arrayStride;
 // offset by ±half-width in the screen-space perpendicular.
 const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 4)
 
+// Starting instance capacity; `setLines` grows it in power-of-two steps once the
+// roster outgrows it, as `labelRenderer` does for its labels.
+const INITIAL_LINE_CAPACITY = 64;
+
 // ─── factory ──────────────────────────────────────────────────────────────
 
 /**
@@ -120,10 +124,6 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * format — but it is passed EXPLICITLY rather than read off `ctx.format`, so
  * the target is legible at the construction site.
  *
- * `maxLines` sizes the static GPU instance buffer; the default (64) covers
- * the "you are here" indicator plus any future tagged-object markers without
- * a follow-up resize.
- *
  * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
  * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
@@ -135,7 +135,6 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
 export function createMarkerLineRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
-  maxLines = 64,
   opts?: { occludeAgainstScene?: boolean },
 ): MarkerLineRenderer {
   // The `as ... | null` cast lets a test pass `device: null as unknown as
@@ -148,8 +147,9 @@ export function createMarkerLineRenderer(
   //
   // 14 floats per instance × 4 bytes = 56 bytes = LINE_INSTANCE_BYTES.
   // All fields are f32 so a single Float32Array suffices — no u32 fields
-  // unlike the label renderer's glyph instance buffer.
-  const instanceBuf = new Float32Array(maxLines * (LINE_INSTANCE_BYTES / 4));
+  // unlike the label renderer's glyph instance buffer. Sized by `allocate` below.
+  let capacity = 0;
+  let instanceBuf = new Float32Array(0);
 
   // Closure-scoped mutable counter — replaces the `this.currentLineCount`
   // field the class form would use.  Updated only by `setLines`; read by
@@ -176,6 +176,21 @@ export function createMarkerLineRenderer(
   let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
   const occludesScene = opts?.occludeAgainstScene === true;
+
+  // Sizes the CPU scratch array and the GPU instance buffer; `setLines` re-enters on growth.
+  function allocate(newCapacity: number): void {
+    capacity = newCapacity;
+    instanceBuf = new Float32Array(capacity * (LINE_INSTANCE_BYTES / 4));
+    if (!device) return;
+    // WebGPU defers a destroyed buffer's reclaim past queued GPU work reading it.
+    gpuInstanceBuffer?.destroy();
+    gpuInstanceBuffer = device.createBuffer({
+      label: 'marker-line-instances',
+      size: capacity * LINE_INSTANCE_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+  }
+  allocate(INITIAL_LINE_CAPACITY);
 
   if (device) {
     // ── Bind group layout ─────────────────────────────────────────────────
@@ -287,12 +302,6 @@ export function createMarkerLineRenderer(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    gpuInstanceBuffer = device.createBuffer({
-      label: 'marker-line-instances',
-      size: maxLines * LINE_INSTANCE_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
     // The corner buffer is tiny (32 bytes, 4 × vec2) and static — upload once
     // at construction and reuse across every frame.
     cornerBuffer = device.createBuffer({
@@ -315,8 +324,12 @@ export function createMarkerLineRenderer(
   function setLines(lines: MarkerLine[]): void {
     currentLineCount = 0;
 
-    const count = Math.min(lines.length, maxLines);
-    for (let i = 0; i < count; i++) {
+    // A roster crossing a power-of-two boundary is rare, never per frame, so a
+    // full buffer rebuild here is cheap. The instance buffer is a vertex buffer
+    // bound per draw, so no bind group pins the old one.
+    if (lines.length > capacity) allocate(2 ** Math.ceil(Math.log2(lines.length)));
+
+    for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
 
       // Pack 14 floats into the CPU scratch buffer at stride 14 (56 bytes):
