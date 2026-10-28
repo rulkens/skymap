@@ -18,8 +18,8 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { SurfaceTileStream } from '../subsystems/SurfaceTileStream';
-import type { SurfaceTilePlan } from '../surfaceTiles/SurfaceTilePlan';
+import type { SurfaceTileStream } from '../../../layers/body/@types/SurfaceTileStream';
+import type { SurfaceTilePlan } from '../../../layers/body/@types/SurfaceTilePlan';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';

@@ -24,7 +24,7 @@ import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../present/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from '../present/prepareBodySurfaceFrame';
-import { surfaceTileSpecOf } from '../../../utils/surfaceTiles/surfaceTileSpecOf';
+import { surfaceTileSpecOf } from '../subsystems/surfaceTiles/surfaceTileSpecOf';
 
 export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
   return {

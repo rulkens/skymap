@@ -19,7 +19,7 @@ import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
-import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/surfaceTileStream';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from '../../../src/layers/body/subsystems/surfaceTiles/surfaceTileStream';
 import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../../../src/services/gpu/memory/trackGpuMemory';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 

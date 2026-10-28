@@ -11,8 +11,8 @@
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
-import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
-import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';
+import { createSurfaceTileStream } from '../../../layers/body/subsystems/surfaceTiles/surfaceTileStream';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
 import { seedVisibilityFades } from '../wiring/seedVisibilityFades';
 import { installVisibilityGates } from '../wiring/installVisibilityGates';

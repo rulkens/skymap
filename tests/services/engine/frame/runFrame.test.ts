@@ -48,7 +48,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
   };
 });
 
-import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/data/bodies/idleSurfaceTilePlan';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';

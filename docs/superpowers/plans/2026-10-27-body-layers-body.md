@@ -570,7 +570,7 @@ imports the moved files at their new paths until Task 8.
 **Done:** `npx tsc --noEmit` clean; the old-path grep returns nothing; `npm run typecheck` (tools
 project) clean.
 
-- [ ] Task 7
+- [x] Task 7
 
 ### Task 8: the planner becomes a body row; body owns the stream, the terrain seam and the tile readout (P6 leftovers, P7)
 

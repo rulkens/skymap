@@ -12,7 +12,7 @@ import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { frustumFovYRad } from '../../../utils/camera/frustumFovYRad';
 import { terrainPickAt } from '../../../utils/camera/terrainPickAt';
-import { isSurfaceTileBodyId } from '../../../utils/surfaceTiles/isSurfaceTileBodyId';
+import { isSurfaceTileBodyId } from '../subsystems/surfaceTiles/isSurfaceTileBodyId';
 
 export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
   return {

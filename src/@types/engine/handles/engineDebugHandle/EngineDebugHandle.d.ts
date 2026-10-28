@@ -11,7 +11,7 @@
 
 import type { GpuTimingService } from '../../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../FrameStats';
-import type { SurfaceTileDebugSnapshot } from '../../../scene/SurfaceTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../../../layers/body/@types/SurfaceTileDebugSnapshot';
 import type { CameraDebugSnapshot } from '../../../camera/CameraDebugSnapshot';
 import type { AssetSlot } from '../../../loading/AssetSlot';
 import type { GpuMemorySnapshot } from '../../../gpu/memory/GpuMemorySnapshot';

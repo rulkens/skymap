@@ -17,7 +17,7 @@
  */
 
 import { Fragment, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../layers/body/@types/SurfaceTileDebugSnapshot';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { FLY_TO_PRESETS } from '../../data/debug/flyToPresets';

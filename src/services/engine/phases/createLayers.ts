@@ -17,7 +17,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { composeTerrain } from '../layer/composeTerrain';
-import { surfaceTileTerrain } from '../../../utils/surfaceTiles/surfaceTileTerrain';
+import { surfaceTileTerrain } from '../../../layers/body/subsystems/surfaceTiles/surfaceTileTerrain';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
