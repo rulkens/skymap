@@ -63,8 +63,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -94,8 +93,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -128,8 +126,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -159,8 +156,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: TO,
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -195,8 +191,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: PRE,
         to: TO,
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -262,8 +257,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
       startCameraTween({
         from: BASE_POSE,
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -296,8 +290,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );

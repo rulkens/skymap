@@ -153,6 +153,7 @@ export function replayInput(
         follow = {
           from: follow?.from ?? null,
           distanceTarget: follow?.distanceTarget ?? null,
+          durationMs: follow?.durationMs ?? null,
           panOffset: [
             off[0] + next.pose.target[0] - from.pose.target[0],
             off[1] + next.pose.target[1] - from.pose.target[1],
