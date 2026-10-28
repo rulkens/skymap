@@ -18,8 +18,8 @@
  *    copy. There is no API plugin — the workbench is purely a static-asset
  *    reader, with no server-side state.
  *
- * The WESL plugin mirrors the main app's setup (`vite.config.ts`): the
- * `staticBuildExtension` resolves `?static` imports by running the WESL linker
+ * The WESL plugin mirrors the main app's setup (`vite.config.ts`):
+ * `weslStaticPlugin` resolves `?static` imports by running the WESL linker
  * at build time into a flat WGSL string, so there is no runtime linker
  * dependency. `weslToml` is passed EXPLICITLY because the plugin otherwise reads
  * `<process.cwd()>/wesl.toml` — and `npm run flow-workbench` keeps cwd at the
@@ -30,9 +30,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
-import { staticBuildExtension } from 'wesl-plugin';
-import viteWesl from 'wesl-plugin/vite';
-import { serializeShaderLoads } from '../utils/vite/serializeShaderLoads.ts';
+import { weslStaticPlugin } from '../utils/vite/weslStaticPlugin.ts';
 
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { distDir } from '../utils/io/distDir.ts';
@@ -49,13 +47,5 @@ export default defineConfig(({ command }) => ({
   envDir: resolve(import.meta.dirname, '../../'),
   build: { outDir: resolve(distDir, toolPages.flowWorkbench), emptyOutDir: true },
   server: { port: DEV_PORTS.flowWorkbench },
-  plugins: [
-    serializeShaderLoads(
-      viteWesl({
-        extensions: [staticBuildExtension],
-        weslToml: resolve(import.meta.dirname, 'wesl.toml'),
-      }),
-    ),
-    react(),
-  ],
+  plugins: [weslStaticPlugin({ weslToml: resolve(import.meta.dirname, 'wesl.toml') }), react()],
 }));

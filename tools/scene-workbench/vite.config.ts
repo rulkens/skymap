@@ -10,9 +10,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
-import { staticBuildExtension } from 'wesl-plugin';
-import viteWesl from 'wesl-plugin/vite';
-import { serializeShaderLoads } from '../utils/vite/serializeShaderLoads.ts';
+import { weslStaticPlugin } from '../utils/vite/weslStaticPlugin.ts';
 
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { outlinePlugin } from './plugin/outlinePlugin.ts';
@@ -24,12 +22,7 @@ export default defineConfig({
   envDir: resolve(import.meta.dirname, '../../'),
   server: { port: DEV_PORTS.sceneWorkbench },
   plugins: [
-    serializeShaderLoads(
-      viteWesl({
-        extensions: [staticBuildExtension],
-        weslToml: resolve(import.meta.dirname, 'wesl.toml'),
-      }),
-    ),
+    weslStaticPlugin({ weslToml: resolve(import.meta.dirname, 'wesl.toml') }),
     react(),
     outlinePlugin(),
   ],

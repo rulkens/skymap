@@ -14,7 +14,7 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "@webgpu/types", "vite/client", "wesl-plugin/suffixes"]
+    "types": ["node", "@webgpu/types", "vite/client"]
   },
   "include": ["src", "tests"],
   "exclude": ["tools"]
