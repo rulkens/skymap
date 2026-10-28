@@ -22,7 +22,7 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
 /**
  * SURFACELESS_FLOOR_MPC — zoom floor (Mpc, ≈ 309 km) `pivotFraming` uses when
  * the pivot has no surface: holds the target above `foregroundFrustum.ts`'s
- * `MIN_NEAR_MPC` (~6 m), inside which it vanishes. Where the pivot DOES have a
+ * `MIN_NEAR_MPC` (~0.5 m), inside which it vanishes. Where the pivot DOES have a
  * radius, `pivotFraming` floors on `MIN_DISTANCE_MPC` instead (a sub-3 cm body).
  */
 export const SURFACELESS_FLOOR_MPC = 1e-17;

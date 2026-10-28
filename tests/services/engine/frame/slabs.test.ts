@@ -189,7 +189,7 @@ describe('deriveSlabs', () => {
 
   it('keys the near-field bracket off `altitudeMpc`, never the camera distance', () => {
     // A low orbit, where the pivot's radius dominates raw `cam.distance` and
-    // the ratio still clears `MIN_NEAR_MPC` (~6 m) so the bracket, not the
+    // the ratio still clears `MIN_NEAR_MPC` (~0.5 m) so the bracket, not the
     // floor, is what the assertion reads.
     const altitudeMpc = 500 * SCALE_UNITS.KM_TO_MPC;
     const earthRadiusMpc = 6371 * SCALE_UNITS.KM_TO_MPC;

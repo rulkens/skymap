@@ -39,22 +39,23 @@
  */
 
 /**
- * Floor for the near plane, in Mpc — ~6 m, a denormal dodge that only guards
+ * Floor for the near plane, in Mpc — ~0.5 m, a denormal dodge that only guards
  * the perspective matrix against a zero near. It is NOT derived from the
  * wheel-zoom distance floor (`clampDistance.ts: MIN_DISTANCE_MPC`, ~3 cm) and
- * must not be re-derived from it. It must stay BELOW
- * the camera's minimum ALTITUDE over a focused body — `deriveSlabs` (`slabs.ts`)
- * passes its `altitudeMpc` input here in place of raw distance once a pivot is
- * known, so a large body's own radius no longer dominates the bracket. At
- * Earth's ~15 m standoff floor
- * (`clampDistance.ts: SURFACE_STANDOFF_RADII`) the ratio underflows and this
- * floor governs: ~6 m of near against ~15 m of altitude — a wide margin is
+ * must not be re-derived from it. It must stay BELOW the camera's minimum
+ * ALTITUDE over a focused body — `deriveSlabs` (`slabs.ts`) passes its
+ * `altitudeMpc` input here in place of raw distance once a pivot is known, so a
+ * large body's own radius no longer dominates the bracket. At Earth's ~15 m
+ * standoff floor (`clampDistance.ts: SURFACE_STANDOFF_RADII`) the ratio
+ * underflows and this floor governs, and an eye standing on the ground (sky
+ * mode, 1.7 m) sits below that standoff, so ~0.5 m keeps the ground at its feet
+ * in front of the near plane. The wide margin to 1.7 m is
  * affordable because NEAR0 is reversed-Z with an infinite far plane
  * (`SLAB_REVERSED_Z`, `slabs.ts`), which spreads depth precision
  * near-uniformly regardless of how small near gets; nothing here is a
  * depth-buffer constraint, only the degenerate-matrix guard above.
  */
-export const MIN_NEAR_MPC = 2e-22;
+export const MIN_NEAR_MPC = 1.6e-23;
 
 /** Sub-millimetre floor that only keeps a metres-scale near plane above zero — not a denormal dodge like `MIN_NEAR_MPC`, which stays the Mpc-scale precision floor. */
 export const MIN_NEAR_M = 1e-6;

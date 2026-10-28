@@ -38,7 +38,7 @@ export const MIN_DISTANCE_MPC = 1e-24;
  * (`slabs.ts`) now keys `foregroundFrustum`'s bracket off ALTITUDE
  * (`cam.distance - pivotRadiusMpc`) rather than raw distance, so the floors
  * compare directly — this must stay comfortably above `foregroundFrustum.ts:
- * MIN_NEAR_MPC` (~6 m) or the near plane clips the ground, as `20fed8e31`
+ * MIN_NEAR_MPC` (~0.5 m) or the near plane clips the ground, as `20fed8e31`
  * found the hard way.
  *
  * A RATIO applies the same floor to every body, which was only validated

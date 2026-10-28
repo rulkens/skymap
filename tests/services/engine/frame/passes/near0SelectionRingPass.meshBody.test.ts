@@ -2,9 +2,9 @@
  * A mesh body is DRAWN through its host's metre-unit body row while the things
  * that point at it — the NEAR0 selection ring, the caption — project through
  * the NEAR0 slab in heliocentric Mpc. The three must land on one pixel wherever
- * the ring draws at all, it must survive NEAR0's near-plane floor (~6.2 m,
- * which these bodies never get outside of), and it must stand down once the
- * body overflows the screen — as it does at its own two-radii standoff.
+ * the ring draws at all, its centre must stay inside the NEAR0 frustum, and it
+ * must stand down once the body overflows the screen — as it does at its own
+ * two-radii standoff.
  *
  * Built from the real seams (`deriveBodyStates` → `createOrbitCamera` →
  * `deriveSlabs` → each pass's own `draw`), so a change to any of them that
@@ -190,10 +190,9 @@ function offsetPx(a: readonly number[], b: readonly number[]): number {
 }
 
 /**
- * Far enough out that the 1.5×-apparent ring fits the viewport (so the pass
- * draws at all), still inside NEAR0's MIN_NEAR_MPC floor for the pot — the
- * only window where both the projection agreement and the near pin are
- * observable at once.
+ * Far enough out that the 1.5×-apparent ring fits the viewport, so the pass
+ * draws at all. The near pin itself is `pinInsideNearPlane.test.ts`'s: NEAR0's
+ * ~0.5 m floor sits inside every distance a ring is visible from.
  */
 const RING_VISIBLE_RADII = 6;
 
@@ -209,10 +208,8 @@ describe('near0SelectionRingPass over a mesh body', () => {
       expect(offsetPx(captionClip, meshClip)).toBeLessThan(1);
     });
 
-    // NEAR0's near plane is floored at MIN_NEAR_MPC (~6.2 m), which the pot
-    // sits deep inside at every distance it is approachable from: without the
-    // pass's near pin the quad's single clip z/w fails `z <= w` and the whole
-    // ring is discarded.
+    // One clip z/w serves the whole quad, so a centre outside either NEAR0
+    // plane would discard the ring entirely.
     it(`keeps the ${id}'s ring centre inside the NEAR0 frustum`, () => {
       const { ringCall } = drawAt(id, RING_VISIBLE_RADII);
       const ringClip = clipOf(ringCall[1], ringCall[4].worldPos);
