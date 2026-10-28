@@ -33,7 +33,7 @@ export function satellitesAssetRows(runtime: SatellitesRuntime): readonly AssetW
   return [
     {
       key: 'satellites',
-      factory: () => runtime.slot,
+      slot: runtime.slot,
       req: () => undefined,
       // An open palette loads it too, so a satellite can be searched for from anywhere.
       demand: (ctx) =>
