@@ -39,12 +39,16 @@ widest field** (Street View style: the camera lifts off and lands above the spot
 | R9  | The equatorial grid is the **host planet's own**: built from the host's pole, so on Mars it is the sky that turns overhead there. |
 | R10 | Packaging: **prep PR first**, then the feature PR. |
 | R11 | v2 adds **ultra-high-res survey overlays** (CMB to optical, many wavelengths). v1 must not block it (§10). |
+| R12 | The field of view is **promoted to the general camera pose**, in every camera mode, and **animation clips can drive it** as a channel. |
 
 ### Decisions made in this spec (not user rulings — challenge freely)
 
-- **D1. The lens belongs to the pose in sky mode.** The sky pose carries its own `fovYRad`, so it
-  never leaks into the restored view, and links and clips carry it. Today the lens is the global
-  `settings.camera.fovDeg`; P2 turns "which lens" into a rung column.
+- **D1. The lens sits on the framed pose, beside the frame.** R12 says where the lens lives; D1
+  says how. It goes on the framed pose rather than inside each rung's pose, because the lens does
+  not vary with the frame. That way no rung conversion (`toParent`, `fromParent`, a refold) can
+  drop it, the way conversions drop `lookOffset` today. One lens then serves every mode: the slider
+  writes it, sky mode's wheel writes it, clips and tweens animate it, and links carry it.
+  `settings.camera` held nothing else, so the cluster goes (§3.3 P2).
 - **D2. Esc restores the camera only.** Sky mode authors nothing but a pose, so it does not run
   under `withSceneSnapshotSaga`. Esc commits the `camera.base` captured at entry; time, grid toggles
   and any setting the viewer changed while looking stay as they are. Tours and exhibits restore the
@@ -63,11 +67,18 @@ type RungKind = 'absolute' | 'body' | 'site' | 'sky';
 type SkyPose = {
   lonRad: number; latRad: number;          // body-fixed site; height is NOT stored (live heightAt + SKY_EYE_HEIGHT_M)
   azimuthRad: number; altitudeRad: number; // view direction in the site's ENU frame, az from north through east
-  fovYRad: number;                         // the lens, D1
-};
+};                                         // no lens field: the lens is the framed pose's (D1)
 type SkyMemory = { exitPushPx: number };   // wheel-out past the widest stop, accumulated; no stored flag
 
-RungRow.lens(framed, settingsFovYRad): number   // NEW column, P2; absolute/body/site return the setting
+// P2 — the lens, every rung (R12, D1)
+type FramedPose<K> = { readonly frame: FrameOf[K]; readonly pose: PoseOf[K]; readonly fovYRad: number };
+type FramedClipPose = { readonly frame: PoseFrame; readonly channels: CameraPose; readonly fovYRad?: number };
+type Channel = 'distance' | 'yaw' | 'pitch' | 'roll' | 'target' | 'fov';   // 'fov' addresses FramedClipPose.fovYRad
+type CameraTweenDescriptor = { …; fovYRad?: { from: number; to: number } };  // absent ⇒ the lens holds
+setLens(fovYRad)                    // camera action: the DisplaySection slider's new target
+LENS_MIN_DEG = 0.5; LENS_MAX_DEG = 120; DEFAULT_FOV_DEG = 60   // src/data/; one clamp for every rung
+// deleted: CameraSettings, cameraSettingsSlice, settings.camera, the takeover's camera-cluster merge
+
 ParentOf.sky = 'body'                           // ClimbRow; engage → null always (D3)
 
 type TakeoverSource = … | { kind: 'sky'; body: SceneBodyId };
@@ -75,7 +86,7 @@ type SkyTarget = 'view' | { body: SceneBodyId; lonDeg: number; latDeg: number };
 enterSky(SkyTarget)                             // saga action; starts the takeover
 skyEntry(SkyTarget) → skyEntered | skyEntryMissed   // camera action, resolved in the engine (§4.2)
 
-SKY_EYE_HEIGHT_M = 1.7; SKY_FOV_MIN_DEG = 0.5; SKY_FOV_MAX_DEG = 120   // src/data/
+SKY_EYE_HEIGHT_M = 1.7                          // src/data/
 ```
 
 ### 3.2 Verdicts
@@ -83,8 +94,11 @@ SKY_EYE_HEIGHT_M = 1.7; SKY_FOV_MIN_DEG = 0.5; SKY_FOV_MAX_DEG = 120   // src/da
 | Touchpoint | Verdict | Why |
 | --- | --- | --- |
 | `CAMERA_RUNGS` + `RungKind`/`PoseOf`/`FrameOf`/`MemOf`/`ParentOf` | **Growth** | A new rung is a new key plus a row, which is what the site-rung spec built the table for. `rungKindOf` gains one branch. It stays the one reader of the spelling (`oneTagReader.test.ts`). |
-| `RungRow.channels` (clips), `encodeFramedPose` (URL) | **Growth** | Every rung fills these already. Sky encodes into the five channels the way site does: `target: [lon, lat, 0]`, `yaw: az`, `pitch: alt`, `distance: fovY`. The URL tag gets a new letter. |
-| Lens read at `stepCameraRuntime.ts:116-121` | **Prep (P2)** | It reads the setting unconditionally. Branching on "is sky" there would be a second tag reader, so the lens becomes a rung column. |
+| `RungRow.channels` (clips), `encodeFramedPose` (URL) | **Growth** | Every rung fills these already. Sky encodes into the five pose channels the way site does: `target: [lon, lat, 0]`, `yaw: az`, `pitch: alt`, `distance: 0`. The lens rides beside them (P2). The URL tag gets a new letter. |
+| Lens read at `stepCameraRuntime.ts:116-121` | **Prep (P2)** | It reads `settings.camera.fovDeg` unconditionally. Under R12 it reads the framed pose's `fovYRad`, the same line for every rung, so no tag reader is added. |
+| `settings.camera` cluster (`CameraSettings`, `cameraSettingsSlice`) | **Delete (P2)** | `fovDeg` is its only field. It is neither persisted nor authored by any tour or exhibit, so moving the lens into the pose leaves the cluster empty. |
+| Takeover lens pin (`withSceneSnapshotSaga.ts:31-39`) | **Prep (P2)** | Today it merges `camera: { fovDeg: 60 }` into settings. It becomes a `setLens(DEFAULT)` commit at takeover start, and the restore's `camera.base` brings the viewer's lens back. Behaviour is the same, and the backlog bug "Takeover's camera-cluster merge wipes any field it doesn't set" disappears with the cluster. |
+| Clips / tweens / URL / recorder | **Growth (P2)** | `Channel` gains `'fov'`, interpolated in log space so a zoom feels even. `CameraTweenDescriptor` gains an optional lens pair, absent ⇒ hold. `encodeFramedPose` gains an optional lens field: an old link without one decodes to the default 60°, which is what it rendered at before. The recorder captures the lens, and dolly-zoom shots become authorable. |
 | Site rung (`siteRung.ts`) | **Not touched** | It is a turntable about a pivot. Its drag signs are spec-ruled orbit semantics (site spec §4.6), and the research doc rules first-person "a new parameterization, not a knob". |
 | `lookedSurfacePose` | **Reuse** | Its yaw-about-local-vertical math is the sky rung's drag. The sky rung adds the ±90° clamp in its own pose space, where altitude is explicit. |
 | `MIN_NEAR_MPC` (~6.2 m) | **Prep (P3)** | `foregroundFrustum.ts:40-57` requires it to stay below the eye's minimum altitude, and 1.7 m breaks that: the ground at your feet clips. |
@@ -105,9 +119,15 @@ Each is its own commit, in this order. Every one but P1 preserves behaviour.
   marker-line segments near the eye stop folding. Gate it with shots (a constellation straddling the
   view edge from Earth, the dome rig). Consumes the backlog item: delete its index line and detail
   file in this commit.
-- **P2. `RungRow.lens`.** A new total column. `absolute`/`body`/`site` return the settings lens.
-  `stepCameraRuntime` takes the projection from `rowFor(frame).lens(framed, settingsFovYRad)`.
-  Golden traces stay byte-identical.
+- **P2. The lens joins the framed pose (R12).** Two commits:
+  - **P2a, the runtime.** `FramedPose.fovYRad` is seeded with `DEFAULT_FOV_DEG` and read by
+    `stepCameraRuntime` for the projection. The DisplaySection slider dispatches `setLens`, its range
+    widened to `LENS_MAX_DEG`. The takeover pin becomes a lens commit. `settings.camera` is deleted,
+    and the "camera-cluster merge" backlog item with its detail file goes in this commit.
+  - **P2b, the channels.** Clips gain the `'fov'` channel (log-space), tweens the optional lens
+    pair, and the URL pose codec and the recorder the lens.
+  - **Gate.** No authored clip, beat or exhibit sets a lens yet, so golden traces stay
+    byte-identical.
 - **P3. Near floor at standing height.** Lower `MIN_NEAR_MPC` so it sits below `SKY_EYE_HEIGHT_M`
   with margin (~0.5 m). NEAR0 is reversed-Z with an infinite far, so depth precision does not care
   (`foregroundFrustum.ts:51-55`). Re-check the readers that cite it (`labelLeaderLine.ts:37`,
@@ -131,7 +151,9 @@ Each is its own commit, in this order. Every one but P1 preserves behaviour.
 - **Drag.** 1:1 gain of `fovY / viewportHeightPx` rad per px on both axes, so the grabbed point stays
   under the cursor at every lens. Altitude clamps to [−π/2, +π/2]. At the zenith the azimuth stays
   free, so dragging across the pole just turns the view.
-- **Wheel / pinch.** Scales `fovYRad` multiplicatively and clamps to [0.5°, 120°]. Wheel-out at the
+- **Wheel / pinch.** Scales the framed pose's `fovYRad` multiplicatively and clamps to
+  [`LENS_MIN_DEG`, `LENS_MAX_DEG`]. The rung's step already takes and returns the framed pose, so
+  it writes the lens without a new channel out of the rung. Wheel-out at the
   120° stop adds to `SkyMemory.exitPushPx`. Any wheel-in, drag or `SKY_EXIT_PUSH_DECAY_MS` of rest
   clears it. Past `SKY_EXIT_PUSH_PX` the rung releases (§4.3).
 - **Wheel at rest.** Today the world arm's at-rest wheel goes to the `applyWheelZoom` lane, but the
@@ -149,7 +171,8 @@ Each is its own commit, in this order. Every one but P1 preserves behaviour.
    directly. No hit (a view centre in space) → `skyEntryMissed`. The saga ends the takeover, and the
    status line says "Point the view at the ground first."
 3. **Arrival.** An existing body-arm tween descends to the floor above the site keeping the current
-   heading, then the rung commits the sky pose at that heading, altitude 15°, fov 60°. The tween
+   heading, then the rung commits the sky pose at that heading, altitude 15°, keeping the current
+   lens. The tween
    ends at the body arm's 15 m standoff and the commit drops the eye to 1.7 m with the same heading:
    a sub-second, nearly invisible cut. → `skyEntered`.
 4. Entering from sky mode, for example "Sky from Paris" while standing in Amsterdam, re-commits the
@@ -223,13 +246,23 @@ Test names are the contract. The plan pins each assertion.
   - `drag keeps the grabbed sky direction under the cursor at 1°, 60° and 120°`
   - `altitude clamps at ±90° and azimuth stays free at the zenith`
   - `camera roll about the view axis is zero after any drag sequence`
-  - `wheel scales fov multiplicatively inside [0.5°, 120°]`
+  - `wheel scales the lens multiplicatively inside [LENS_MIN_DEG, LENS_MAX_DEG]`
   - `wheel-out at the widest stop releases only once SKY_EXIT_PUSH_PX accumulates`
   - `any wheel-in, drag or rest clears the exit push`
   - `the eye sits SKY_EYE_HEIGHT_M above the live heightAt and follows a refined tile`
   - `engage always declines`
   - `channels round-trip a sky pose`
-- `encodeFramedPose.test.ts`: `sky frame round-trips through the URL tag`.
+- `encodeFramedPose.test.ts`:
+  - `sky frame round-trips through the URL tag`
+  - `the lens round-trips on every rung`
+  - `a link without a lens decodes to the default lens`
+- Lens (P2):
+  - `every CAMERA_RUNGS refold and climb keeps the framed lens` (one test over the table)
+  - `the projection reads the framed pose's lens`
+  - `a takeover starts at the default lens and its restore brings the viewer's lens back`
+  - `a clip's fov channel interpolates in log space`
+  - `a tween without a lens pair holds the lens`
+  - `the recorder captures the lens`
 - `skyGridBasis.test.ts`:
   - `alt-az zenith is the site radial and north points to the host pole`
   - `Earth's equatorial pole is the world +z`
@@ -269,8 +302,8 @@ v2 is ultra-high-res all-sky overlays, from the Planck CMB through Fermi, ROSAT,
 and WISE. The standard is IVOA **HiPS**, HEALPix-tiled and the format Aladin and Stellarium Web
 stream. It gets its own brainstorm. v1 keeps three doors open:
 
-- **The lens lives in the sky pose (D1).** Arcsecond zoom only lowers `SKY_FOV_MIN_DEG`, once perf
-  allows it.
+- **The lens is in the general pose (R12).** Arcsecond zoom only lowers `LENS_MIN_DEG`, once perf
+  allows it, and clips can already fly a survey zoom.
 - **One sky-frame helper.** The host equatorial frame built for §5 is the frame every survey is
   drawn in, with a fixed rotation for galactic-frame surveys.
 - **One overlay step.** Surveys would sit between the stars and the atmosphere composite, with a
@@ -285,6 +318,3 @@ in the backlog as "Survey sky overlays (HiPS)".
 - The ScaleBar's `distance·tan(fovY/2)` (`scaleBar.ts:98`) reads nothing useful at ground level in
   any arm, not only in sky mode. Sky mode hides it; the general case is the existing "Scale bar
   measures from the datum" item.
-- `withSceneSnapshotSaga` forces the default lens on every takeover. Sky mode sidesteps it (D1, D2).
-  The cluster-wipe bug it carries is already backlogged ("Takeover's camera-cluster merge wipes any
-  field it doesn't set").
