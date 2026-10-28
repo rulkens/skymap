@@ -29,8 +29,10 @@ export function glintsPassOver(
 
     enabled(state, ctx, _view) {
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      if (bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx)) <= 0) return false;
-      return sceneBodyPartition(state, ctx, roster, () => false).glints.length > 0;
+      const states = sceneBodyStates(state, ctx);
+      return sceneBodyPartition(state, ctx, roster, () => false).glints.some(
+        (body) => bodyGlintBackdropFade(body.id, ctx.drawCamPos, states) > 0,
+      );
     },
 
     draw(pass, view, ctx, state) {
@@ -41,7 +43,6 @@ export function glintsPassOver(
         states,
         camPosMpc: camPos,
         pxPerRad: ctx.drawPxPerRad,
-        backdropFade: bodyGlintBackdropFade(camPos, states),
       });
       if (count === 0) return;
       const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));

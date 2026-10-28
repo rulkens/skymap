@@ -16,6 +16,7 @@ import { bodyApparentDiameterPx } from './bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
 import { bodyGlintBrightnessOf } from './bodyGlintBrightnessOf';
 import { lightSourceMpc } from './lightSourceMpc';
+import { bodyGlintBackdropFade } from './bodyGlintBackdropFade';
 
 /** Packs each glint above GLINT_MIN_BRIGHTNESS into `staging`; returns the count. */
 export function packBodyGlints(
@@ -25,10 +26,9 @@ export function packBodyGlints(
     readonly states: ReadonlyMap<string, BodyState>;
     readonly camPosMpc: Readonly<Vec3>;
     readonly pxPerRad: number;
-    readonly backdropFade: number;
   },
 ): number {
-  const { states, camPosMpc, pxPerRad, backdropFade } = input;
+  const { states, camPosMpc, pxPerRad } = input;
   // A full staging buffer drops the rest silently; callers size it for their roster.
   const capacity = Math.floor(staging.length / BODY_GLINT_INSTANCE_FLOATS);
   let count = 0;
@@ -47,7 +47,7 @@ export function packBodyGlints(
       lightSourceMpc(body.id, states),
       camPosMpc,
       diameterPx,
-      backdropFade,
+      bodyGlintBackdropFade(body.id, camPosMpc, states),
     );
     if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
 

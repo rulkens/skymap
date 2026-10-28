@@ -123,8 +123,10 @@ export const bodyGlintsPass: ContentPass = {
     // `starPointsPass`'s backdrop-dissolve gate (which also empties the (hdr,
     // NEAR0) step so the executor skips it). The band completes deep inside
     // `FOREGROUND_MAX_DISTANCE_MPC`, so this is the binding — and smooth — gate.
-    if (bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx)) <= 0) return false;
-    return coreSceneBodyPartition(state, ctx).glints.length > 0;
+    const states = sceneBodyStates(state, ctx);
+    return coreSceneBodyPartition(state, ctx).glints.some(
+      (body) => bodyGlintBackdropFade(body.id, ctx.drawCamPos, states) > 0,
+    );
   },
 
   // Pick gate — WIDER than `enabled`: this layer also carries Earth's caption-
@@ -163,7 +165,6 @@ export const bodyGlintsPass: ContentPass = {
       states,
       camPosMpc: camPos,
       pxPerRad: ctx.drawPxPerRad,
-      backdropFade: bodyGlintBackdropFade(camPos, states),
     });
     if (count === 0) return;
 
@@ -234,14 +235,6 @@ export const bodyGlintsPass: ContentPass = {
     const states = sceneBodyStates(state, ctx);
 
     const camPos = view.camPos;
-    // The same far-dissolve alpha `draw` folds into each glint's brightness, so the
-    // per-body skip below recomputes `draw`'s EXACT brightness. Per-frame constant,
-    // hoisted out of the loop. Once the camera has left the region this reads 0, so
-    // beyond the caption gate — where no label invites the click — the skip drops
-    // EVERY glint and no orphan pick survives on a glint that renders nothing.
-    // Within the caption gate the label carries the click regardless, so the skip
-    // never fires and this value is inert (see below).
-    const backdropFade = bodyGlintBackdropFade(camPos, states);
     const pickPoints: BodyGlintPick[] = [];
 
     // Emit the Earth glint stamp with the EARTH priority class (0), the shallowest
@@ -310,7 +303,10 @@ export const bodyGlintsPass: ContentPass = {
         lightSourceMpc(body.id, states),
         camPos,
         diameterPx,
-        backdropFade,
+        // The same far-dissolve `draw` folds in, so this recomputes `draw`'s EXACT
+        // brightness: once the camera has left a body's system it reads 0, and beyond
+        // the caption gate no orphan pick survives on a glint that renders nothing.
+        bodyGlintBackdropFade(body.id, camPos, states),
       );
       if (
         brightness <= GLINT_MIN_BRIGHTNESS &&
