@@ -622,6 +622,31 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
 - **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
 
+### CelesTrak GP orbit data
+
+<!-- attribution: id=celestrak; keys=celestrak,celestrak.readme -->
+
+- **What:** SGP4 mean orbital elements (OMM) of about 20,000 Earth-orbiting
+  objects: the active satellites, three debris clouds, analyst objects and the
+  last 30 days of launches.
+- **By:** CelesTrak (T.S. Kelso), from the US Space Force's public catalog.
+- **Licence:** Not stated on the pages read. The usage policy sets download
+  limits ("Only download the data you need, when you are going to use it, and
+  only download data once per update") and says nothing on republishing,
+  credit or commercial use. Whether a daily copy may be republished from our
+  own storage is to be asked of CelesTrak before the satellites Layer ships.
+- **Use:** No licence stated
+- **Attribution:** None asked on the pages read; skymap credits CelesTrak.
+- **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
+- **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
+  `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
+  `npm run build-satellites` → `satellite-catalog/v1/satellites.bin` on R2.
+- **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
+  dropped, and re-encoded; the element values are copied unchanged.
+- **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
+  <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
+  <https://celestrak.org/NORAD/elements/>
+
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
 <!-- attribution: id=mcxc; keys=mcxc.* -->

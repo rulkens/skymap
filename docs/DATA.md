@@ -20,7 +20,7 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Seven formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Eight formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -30,6 +30,7 @@ Seven formats, each a magic + version header followed by fixed- or variable-size
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
+| SATG   | `0x47544153` | 1       | Earth-satellite SGP4 mean elements, columnar: ten f64 element columns, NORAD ids, class bytes, then names and COSPAR ids as a UTF-8 string table. 24-byte header. | [`writeSatelliteCatalog.ts`](../tools/utils/io/writeSatelliteCatalog.ts) |
 | SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/data/shellMesh/shellMeshFormat.ts)               |
 
 ## `public/data/` layout
@@ -43,6 +44,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
+- `satellite-catalog/v1/`: `satellites.bin`. Untracked by design: neither hashed nor in the manifest, because the daily Action overwrites it at this fixed R2 key (docs/DEPLOY.md, "Satellite catalog"). `dataUrl()` passes the unmanifested path through.
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
@@ -257,6 +259,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Voyager 1/2 tracks     | `fetch-horizons -- voyager1 voyager2` + `fetch-voyager-windows` | `build-spacecraft-tracks` (`spacecraftTracks.bin` + generated `missionEvents.generated.ts`) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
+| Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`satellite-catalog/v1/satellites.bin`; the Action uploads it, no `sync-r2`) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 
