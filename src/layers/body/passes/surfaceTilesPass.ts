@@ -25,7 +25,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { BODY_AMBIENT_LIGHT } from '../../../data/bodies/bodyAmbientLight';
 import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
-import { CLOUD_SHELL_PARAMS } from '../../../data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
 import { bodyCameraDistanceMpc } from '../present/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';

@@ -38,7 +38,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { packLitBodyUniforms } from '../../../utils/gpu/packLitBodyUniforms';
+import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `TexturedBodyUniforms` — the 20-float lit prefix + 2 ratios +
  *  2 Minnaert params + camPosLocal vec3 + camAltitudeSq + the 16-float

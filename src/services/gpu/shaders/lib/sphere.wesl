@@ -123,7 +123,7 @@ struct TintedSphereUniforms {
 //   total: 80 bytes.
 //
 // The CPU side uploads 20 f32s: 16 mvp + 3 sunDirLocal + 1 zeroed pad. The
-// single source of truth for that packing is 'utils/gpu/packLitBodyUniforms.ts'.
+// single source of truth for that packing is 'layers/body/render/packLitBodyUniforms.ts'.
 
 struct LitBodyUniforms {
   mvp: mat4x4<f32>,

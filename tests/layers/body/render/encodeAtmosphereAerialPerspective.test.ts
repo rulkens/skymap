@@ -18,7 +18,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/fore
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
-import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/SeededBody';
 import type { AtmosphereShellRenderer } from '../../../../src/layers/body/@types/AtmosphereShellRenderer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';

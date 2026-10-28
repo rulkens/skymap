@@ -17,10 +17,10 @@ import {
   packScatteringParams,
   SCATTERING_PARAMS_BYTES,
   MAX_CONSTITUENTS,
-} from '../../../src/utils/gpu/packScatteringParams';
-import type { AtmosphereParams } from '../../../src/@types/scene/AtmosphereParams';
-import type { AtmosphereConstituent } from '../../../src/@types/scene/AtmosphereConstituent';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+} from '../../../../src/layers/body/render/packScatteringParams';
+import type { AtmosphereParams } from '../../../../src/@types/scene/AtmosphereParams';
+import type { AtmosphereConstituent } from '../../../../src/@types/scene/AtmosphereConstituent';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Exponential profile + Henyey-Greenstein phase — tags (0, 1).
 const AEROSOL = {

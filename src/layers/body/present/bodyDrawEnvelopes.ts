@@ -1,4 +1,4 @@
-import { CLOUD_SHELL_PARAMS } from '../../../data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from './cloudShellParams';
 
 /**
  * BODY_DRAW_ENVELOPES — per-body extra radius `bodyDrawRadiusM` maxes in on

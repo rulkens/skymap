@@ -12,7 +12,7 @@
  * (`CLOUD_SHELL_PARAMS.radiusRatio` is one shared constant, not a per-body
  * table — the lean choice while Earth is the only textured cloud deck). The
  * `SCENE_EARTH` record is composed as a unit sphere scaled to
- * `earth.surface.datumRadiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
+ * `SCENE_EARTH.surface.datumRadiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
  * in the body's own eye-relative frame, with the orientation resolved this
  * frame from the `BodyState` snapshot. The shared `cloudShellRenderer`
  * textures that sphere with Earth's equirectangular cloud map (RGB colour +
@@ -62,10 +62,9 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EarthBody } from '../../../@types/scene/EarthBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { CLOUD_SHELL_PARAMS } from '../../../data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
 import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
 import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
 import { cloudDeckFade } from '../present/cloudDeckFade';
@@ -80,11 +79,10 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
-/** The Earth body, its resolved descent-fade multiplier, and whether the camera
+/** The resolved descent-fade multiplier, and whether the camera
  *  sits inside the shell radius this frame (Task 10: `cloudShellRenderer.draw`
  *  needs this to pick its front-cull, inside-sphere pipeline). */
 type CloudShellDraw = {
-  readonly earth: EarthBody;
   readonly deckFade: number;
   readonly insideShell: boolean;
 };
@@ -105,8 +103,7 @@ function cloudShellDraw(
   bodyId: PositionedId,
   runtime: BodyRuntime,
 ): CloudShellDraw | null {
-  const earth = SCENE_EARTH;
-  if (earth.id !== bodyId) return null;
+  if (SCENE_EARTH.id !== bodyId) return null;
   // Resident iff the clouds slot holds a committed bitmap; otherwise the shell
   // would draw a fully transparent sphere (placeholder alpha 0) — drop the row.
   if (runtime.textureSlots.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)
@@ -114,7 +111,7 @@ function cloudShellDraw(
   // Live position from the per-frame snapshot (keyed by id) — not the baked
   // record field; the record still gates presence + residency and carries the
   // authored radius.
-  const earthPos = sceneBodyStates(state, ctx).get(earth.id)!.positionMpc;
+  const earthPos = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!.positionMpc;
   const dx = earthPos[0] - ctx.drawCamPos[0];
   const dy = earthPos[1] - ctx.drawCamPos[1];
   const dz = earthPos[2] - ctx.drawCamPos[2];
@@ -122,7 +119,7 @@ function cloudShellDraw(
   // Checked before the sub-pixel cull so it also covers that cull's
   // distanceMpc === 0 degenerate case: a camera at the body's centre is deep
   // inside the fade-out band already.
-  const bodyRadiusMpc = earth.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
+  const bodyRadiusMpc = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
   // Same shell radius the geometry itself is scaled to (radiusRatio, in body
@@ -133,13 +130,14 @@ function cloudShellDraw(
   // surface gate governs both). apparentSizePx returns 0 for a zero
   // camera-to-centre distance (camera inside the body), which reads as
   // resolved here since deckFade already handled that case above.
-  if (distanceMpc === 0) return { earth, deckFade, insideShell };
+  if (distanceMpc === 0) return { deckFade, insideShell };
   const diameterPx = apparentSizePx({
-    diameterKpc: (2 * earth.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+    diameterKpc:
+      (2 * SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
     distanceMpc,
     pxPerRad: ctx.drawPxPerRad,
   });
-  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade, insideShell } : null;
+  return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { deckFade, insideShell } : null;
 }
 
 export function cloudShellPass(runtime: BodyRuntime): ContentPass {
@@ -158,7 +156,7 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
       if (view.slab.frame.kind !== 'body-m') return;
       const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.hostId, runtime);
       if (drawInputs === null) return;
-      const { earth, deckFade, insideShell } = drawInputs;
+      const { deckFade, insideShell } = drawInputs;
       // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
       // `view.slab.vp` — reading it here instead of re-deriving the pose is what
       // keeps this layer's eyeRelBodyM from ever drifting off that basis. The
@@ -169,14 +167,14 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
 
       // Live position + orientation from the per-frame snapshot (keyed by id) — not
       // the baked record fields; radius stays authored identity on the record.
-      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+      const earthState = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!;
 
       // Scale the unit sphere to the shell radius — just above the surface — in
       // metres, the body-m slab frame's own unit (the datum is already metres, so
       // no Mpc conversion crosses this seam). The deck stays a RATIO of the datum
       // here; F3 re-expresses it as an altitude above the outer bound, so a peak
       // can never rise through it.
-      const shellRadiusM = earth.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio;
+      const shellRadiusM = SCENE_EARTH.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio;
       const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, shellRadiusM);
       // Sun rotated into Earth's local frame (its resolved orientation carries the
       // axial tilt), so the fragment's Lambert dim on the night side stays co-framed

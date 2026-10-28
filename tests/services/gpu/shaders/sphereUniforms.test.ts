@@ -24,7 +24,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   packLitBodyUniforms,
   LIT_BODY_UNIFORM_FLOATS,
-} from '../../../../src/utils/gpu/packLitBodyUniforms';
+} from '../../../../src/layers/body/render/packLitBodyUniforms';
 import { createBodyPickRenderer } from '../../../../src/services/gpu/renderers/bodies/bodyPickRenderer';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

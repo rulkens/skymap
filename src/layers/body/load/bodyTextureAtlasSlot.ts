@@ -16,10 +16,10 @@ import { atlasTileRect } from '../../../utils/gpu/atlasTileRect';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
-import type { BodyRuntime } from '../@types/BodyRuntime';
+import type { BodyTextureSinks } from '../@types/BodyTextureSinks';
 
 export function createBodyTextureAtlasSlot(
-  renderers: Pick<BodyRuntime, 'earth' | 'texturedBody'>,
+  renderers: Pick<BodyTextureSinks, 'earth' | 'texturedBody'>,
 ): AssetSlot<ImageBitmap, void> {
   const slot = createAssetSlot({
     name: 'body-atlas',

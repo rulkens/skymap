@@ -82,7 +82,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { packLitBodyUniforms } from '../../../utils/gpu/packLitBodyUniforms';
+import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `EarthSurfaceUniforms` — 16 mvp + 4 (sun+rough) + 4 (cam+f0) + 4
  *  (irradiance/cloud/ambient) + 4 (oceanRoughness + 3 pad). */

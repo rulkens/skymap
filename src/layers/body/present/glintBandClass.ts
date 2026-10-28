@@ -14,7 +14,7 @@ import {
   GLINT_CLASS_EARTH,
   GLINT_CLASS_MOON,
   GLINT_CLASS_PLANET,
-} from '../../../data/bodies/glintPickClasses';
+} from './glintPickClasses';
 
 export function glintBandClass(bodyId: string): number {
   if (bodyId === 'earth') return GLINT_CLASS_EARTH;

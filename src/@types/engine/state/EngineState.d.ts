@@ -109,7 +109,7 @@ export type EngineState = {
   planners: readonly FrameContentPlanner<unknown>[];
   assetRows: readonly AssetWiringRow[];
   /** Every Layer's `slabs`, composed once by `createLayers`;
-   * `deriveFrameContext` folds the band-open ones in beside the store's own rows. */
+   * `deriveFrameContext` folds the band-open ones in beside core's own hostless-mesh-body rows. */
   slabRows: readonly SlabRow[];
   /** Every Layer's `visibility`, in composition order, composed once by `createLayers`:
    * the entries the fade targets are seeded, recomputed and resolved from. */

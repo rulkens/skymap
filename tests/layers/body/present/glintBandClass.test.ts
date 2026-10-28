@@ -20,7 +20,7 @@ import {
   GLINT_CLASS_EARTH,
   GLINT_CLASS_PLANET,
   GLINT_CLASS_MOON,
-} from '../../../../src/data/bodies/glintPickClasses';
+} from '../../../../src/layers/body/present/glintPickClasses';
 
 describe('glintBandClass — id → priority class', () => {
   it('maps the focus body, a heliocentric planet, and a moon to distinct classes', () => {

@@ -33,7 +33,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
-import type { PassState } from '../../../../src/@types/engine/frame/PassState';
+import { sceneBodyStates } from '../../../../src/services/engine/frame/sceneBodyStates';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
@@ -54,12 +54,9 @@ import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal'
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-// A fixture's bodies ride on the state under a test-only `seeded` key: production reads
-// the static scene tables, so this mock is what poses them.
+// Production reads the static scene tables, so `makeFixture` pins the snapshot to its bodies.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: PassState) =>
-    seededBodyStates(0, (state as unknown as { seeded: readonly SeededPlanet[] }).seeded),
-  ),
+  sceneBodyStates: vi.fn(),
 }));
 
 const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
@@ -131,17 +128,18 @@ function makeBodyView(bodyId: SceneBodyId): SlabView {
 
 /**
  * The pass over a runtime holding `renderer` and texture slots reporting the given
- * ids resident (`current()` non-null), and a state with a seeded body list.
+ * ids resident (`current()` non-null), and the body-state snapshot pinned to `bodies`.
  */
 function makeFixture(
   renderer: unknown,
-  bodies: readonly PlanetBody[],
+  bodies: readonly SeededPlanet[],
   residentIds: readonly string[],
 ) {
   const textureSlots = new Map(
     residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
   );
-  const state = { seeded: bodies } as unknown as EngineState;
+  vi.mocked(sceneBodyStates).mockReturnValue(seededBodyStates(0, bodies));
+  const state = {} as EngineState;
   const rings = ringsPass({ ring: renderer, textureSlots } as unknown as BodyRuntime);
   return { state, rings };
 }

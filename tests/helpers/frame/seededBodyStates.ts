@@ -5,11 +5,9 @@
  * keeps its real pose, which a draw-list cull then drops.
  */
 
-import type { BodyState } from '../../../src/@types/scene/BodyState';
-import type { CelestialBody } from '../../../src/@types/scene/CelestialBody';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-
-export type SeededBody = CelestialBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+import type { SeededBody } from './SeededBody';
+import type { BodyState } from '../../../src/@types/scene/BodyState';
 
 export function seededBodyStates(
   simDays: number,

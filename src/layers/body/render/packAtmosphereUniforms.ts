@@ -68,7 +68,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { packLitBodyUniforms } from '../../../utils/gpu/packLitBodyUniforms';
+import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `AtmosphereUniforms` — mvp 16 + invMvp 16 + sun/bottom 4 +
  *  cam/pad 4 + exposure/rings/pad 4 = 44. */

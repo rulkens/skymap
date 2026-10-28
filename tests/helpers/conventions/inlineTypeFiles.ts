@@ -110,7 +110,7 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/utils/galaxy/sampleGalaxyIsmMap.ts',
   'src/utils/galaxy/sampleIsmMapDustCdf.ts',
   'src/utils/galaxy/sampleIsmMapOrientation.ts',
-  'src/utils/gpu/packScatteringParams.ts',
+  'src/layers/body/render/packScatteringParams.ts',
   'src/utils/math/cubeSphereMesh.ts',
   'src/utils/occlusion/selectOccluderSpheresKm.ts',
   'src/utils/palette/scoreAliasMatch.ts',

@@ -3,7 +3,7 @@ import { bodyDrawRadiusM } from '../../../../src/layers/body/present/bodyDrawRad
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
-import { CLOUD_SHELL_PARAMS } from '../../../../src/data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 

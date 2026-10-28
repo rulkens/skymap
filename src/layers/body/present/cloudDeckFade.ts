@@ -22,7 +22,7 @@
  * zero — a bad measurement fails open onto "draw it," never a NaN.
  */
 
-import { CLOUD_SHELL_PARAMS } from '../../../data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from './cloudShellParams';
 import { fadeBand } from '../../../utils/math/fadeBand';
 
 export function cloudDeckFade(cameraDistanceMpc: number, bodyRadiusMpc: number): number {

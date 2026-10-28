@@ -28,7 +28,7 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
-import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/SeededBody';
 import type { AtmosphereShellDepth } from '../../../../src/layers/body/@types/AtmosphereShellDepth';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';

@@ -120,8 +120,7 @@ describe.each([
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
   // `passes/index.ts` is a registry barrel, not a row; the other dirs have no
-  // barrel and CLAUDE.md forbids adding one. `frame/computes/` holds only its
-  // own `index.ts` since the body computes moved into the Layer, so it is unswept.
+  // barrel and CLAUDE.md forbids adding one.
   const files = readdirSync(dir).filter(
     (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
   );

@@ -49,7 +49,7 @@ import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRel
 import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
-import { CLOUD_SHELL_PARAMS } from '../../../../src/data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
 import { Source } from '../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../src/services/engine/helpers/minPickRadiusMpc';
@@ -59,7 +59,7 @@ import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/SeededBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

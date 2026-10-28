@@ -27,13 +27,13 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { cloudShellPass } from '../../../../src/layers/body/passes/cloudShellPass';
-import { CLOUD_SHELL_PARAMS } from '../../../../src/data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
-import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/SeededBody';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';

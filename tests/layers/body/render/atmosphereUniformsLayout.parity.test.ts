@@ -15,11 +15,11 @@ import { dirname, resolve } from 'node:path';
 import {
   packAtmosphereUniforms,
   ATMOSPHERE_UNIFORM_FLOATS,
-} from '../../../src/layers/body/render/packAtmosphereUniforms';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+} from '../../../../src/layers/body/render/packAtmosphereUniforms';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../..');
+const repoRoot = resolve(here, '../../../..');
 const sphereWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/sphere.wesl');
 
 /** std140 alignment + size for the subset AtmosphereUniforms uses. `lanes: 0`

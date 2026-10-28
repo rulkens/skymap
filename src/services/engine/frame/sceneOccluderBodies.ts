@@ -36,16 +36,15 @@ export function sceneOccluderBodies(
   // Earth is not a sorted scene body — `earthPass` draws it alone, and it has no
   // glint form, so strictly it is opaque from the slab floor (1 px) up. It still
   // rides its own resolve size: under 3 px its disc hides under a pixel of stroke.
-  const earth = SCENE_EARTH;
-  const positionMpc = sceneBodyStates(state, ctx).get(earth.id)!.positionMpc;
-  const radiusM = innerBoundRadiusM(earth.surface);
+  const positionMpc = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!.positionMpc;
+  const radiusM = innerBoundRadiusM(SCENE_EARTH.surface);
   const diameterPx = bodyApparentDiameterPx({
     positionMpc,
     radiusM,
     camPosMpc: ctx.drawCamPos,
     pxPerRad: ctx.drawPxPerRad,
   });
-  if (diameterPx >= earth.resolvePx) occluders.push({ positionMpc, radiusM });
+  if (diameterPx >= SCENE_EARTH.resolvePx) occluders.push({ positionMpc, radiusM });
 
   return occluders;
 }

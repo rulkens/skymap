@@ -25,7 +25,7 @@ import { isBodyArm } from '../camera/rungs/isBodyArm';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { refoldTo } from '../camera/rungs/refoldTo';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
-import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
+import { HOSTLESS_MESH_BODIES } from '../../../data/bodies/hostlessMeshBodies';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
@@ -62,14 +62,14 @@ export function deriveFrameContext(
   // keeps that true once something sets a non-zero roll.
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
-  const planets = SCENE_PLANETS;
   // The ONE presence filter: an absent craft is parked on or in Earth, so every
-  // consumer (slab rows, partition, glints, picks) reads this list, never the store's.
+  // consumer (slab rows, partition, glints, picks) reads this list, never the static roster.
   const meshBodies = SCENE_MESH_BODIES.filter((body) => spacecraftPresent(body.id, simDays));
-  // A mesh body whose driver hangs off something with no row of its own gets
-  // one here, off the STORE roster rather than the static table, so the two
-  // stay the same list. Every other row is a Layer's (`state.slabRows`).
-  const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body.id) === body.id);
+  // A hostless mesh body (its driver hangs off something with no row of its own)
+  // gets a row here; every other row is a Layer's (`state.slabRows`).
+  const hostlessMeshBodies = HOSTLESS_MESH_BODIES.filter((body) =>
+    spacecraftPresent(body.id, simDays),
+  );
   // A banded row exists only while its band is open — the row IS the gate its
   // consuming pass used to re-ask for (spec §2.5). Keyed on the FRAME camera,
   // not a view's offset eye: a rig's eye separation is metres against a band
@@ -128,7 +128,7 @@ export function deriveFrameContext(
     if (!(coverage.get(body.id)?.coveredBy ?? []).every(isAboveZero)) return;
     sceneBodies.push({ body, positionMpc: bodyStates.get(body.id)!.positionMpc });
   };
-  for (const body of planets) admit(body);
+  for (const body of SCENE_PLANETS) admit(body);
   for (const body of meshBodies) admit(body);
   for (const { body } of coverage.values()) admit(body);
 

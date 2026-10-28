@@ -8,7 +8,7 @@
  * views rather than a bare `Float32Array`.
  */
 
-import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
+import type { AtmosphereParams } from '../../../@types/scene/AtmosphereParams';
 
 /** Uniform slots for constituents. Neptune spends all four; no row has headroom past it. */
 export const MAX_CONSTITUENTS = 4;

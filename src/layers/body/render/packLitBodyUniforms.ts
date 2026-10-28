@@ -32,7 +32,7 @@
  * @param sunDirLocal  Sun direction in the body's local frame (`sunDirLocal.ts`).
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /** f32 count of `LitBodyUniforms` — 16 mvp + 3 sunDirLocal + 1 pad. */
 export const LIT_BODY_UNIFORM_FLOATS = 20;

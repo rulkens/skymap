@@ -27,7 +27,7 @@ import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../render/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
-import { CLOUD_SHELL_PARAMS } from '../../../data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { bodyCameraDistanceMpc } from '../present/bodyCameraDistanceMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';

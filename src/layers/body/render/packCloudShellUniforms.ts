@@ -48,7 +48,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { packLitBodyUniforms } from '../../../utils/gpu/packLitBodyUniforms';
+import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /**
  * f32 count of `CloudShellUniforms` — 16 mvp + 3 sunDirLocal + 1 opacity + 1

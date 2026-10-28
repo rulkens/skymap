@@ -23,7 +23,7 @@ import {
   packTexturedBodyUniforms,
   TEXTURED_BODY_UNIFORM_FLOATS,
 } from '../../../../src/layers/body/render/packTexturedBodyUniforms';
-import { packLitBodyUniforms } from '../../../../src/utils/gpu/packLitBodyUniforms';
+import { packLitBodyUniforms } from '../../../../src/layers/body/render/packLitBodyUniforms';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // A recognisable MVP: 1..16 so any transposition or off-by-one placement of a

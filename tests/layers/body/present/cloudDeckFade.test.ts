@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { cloudDeckFade } from '../../../../src/layers/body/present/cloudDeckFade';
-import { CLOUD_SHELL_PARAMS } from '../../../../src/data/bodies/cloudShellParams';
+import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
 
 const BODY_RADIUS_MPC = 1; // an arbitrary unit radius — cloudDeckFade works in radii, not km
 

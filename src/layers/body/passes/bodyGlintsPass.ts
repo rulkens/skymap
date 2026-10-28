@@ -255,9 +255,8 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       // cross-layer coupling to `earthPass`. Unlike the per-body glint brightness
       // skip below, the Earth stamp is NOT brightness-gated (it is not a partition
       // glint).
-      const earth = SCENE_EARTH;
       if (earthCaptionPickable(ctx)) {
-        const earthPos = states.get(earth.id)!.positionMpc;
+        const earthPos = states.get(SCENE_EARTH.id)!.positionMpc;
         pickPoints.push({
           posRelCamMpc: [
             earthPos[0] - camPos[0],

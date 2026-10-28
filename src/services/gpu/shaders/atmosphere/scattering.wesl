@@ -32,7 +32,7 @@ const EXTINCTION_EPS: f32 = 1e-7;
 // ── ScatteringParams ─────────────────────────────────────────────────
 //
 // The per-body constants the bakes integrate — the WESL twin of the TypeScript
-// 'AtmosphereParams', written by 'utils/gpu/packScatteringParams.ts'. Keep the
+// 'AtmosphereParams', written by 'layers/body/render/packScatteringParams.ts'. Keep the
 // two in lockstep: a byte-layout drift raises no GPU error and iOS answers it
 // with a dropped frame. Coefficients are 1/km and radii/heights are km, so the
 // bakes march in km with no conversion.

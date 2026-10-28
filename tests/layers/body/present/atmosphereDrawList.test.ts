@@ -27,7 +27,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
-import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/SeededBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

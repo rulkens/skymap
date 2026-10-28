@@ -23,7 +23,7 @@ import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
 import {
   packScatteringParams,
   SCATTERING_PARAMS_BYTES,
-} from '../../../utils/gpu/packScatteringParams';
+} from './packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
 import transmittanceCode from '../../../services/gpu/shaders/atmosphere/transmittanceLut.wesl?static';
