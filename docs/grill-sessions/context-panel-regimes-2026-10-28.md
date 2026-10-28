@@ -142,7 +142,7 @@ Declaring the foreground gate as bands is the same un-braid #912 did for toggles
 
 ## The map: every control and destination by regime
 
-Legend: ● in range at that rung · ◐ fading at an edge inside the rung · ○ out of range · **?** no band today, reads as "everywhere" under R1 until the band above lands. Read at each rung's representative range with the camera near the origin, except rows marked GC (Galactic Centre anchor).
+Legend: ● the band is full somewhere inside the rung · ◐ the band only fades inside the rung, never full · ○ out of range · **?** no band today, reads as "everywhere" under R1 until the band above lands. Read with the camera near the origin, except rows marked GC (Galactic Centre anchor). A static reading of a live value: at runtime the panel reads the band itself.
 
 ### Layer sections and their rows
 
@@ -151,9 +151,9 @@ Legend: ● in range at that rung · ◐ fading at an edge inside the rung · �
 | Galaxies › 2MRS, SDSS, GLADE, Milliquas, DESI ×3 | `survey` items | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● |
 | Galaxies › Famous | `survey:famousGalaxy` | ? | ? | ? | ? | ● | ● | ● | ◐ |
 | Galaxies › Advanced (6 sliders, select) | follow `survey` | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● |
-| Stars › Famous, Gaia, Sun, S-Star | `starCatalog` items | ● | ● | ● | ● | ◐ | ? | ? | ? |
+| Stars › Famous, Gaia, Sun, S-Star | `starCatalog` items | ● | ● | ● | ● | ● (gone by 25 kpc) | ? | ? | ? |
 | Stars › S-Star (GC) | `starCatalog:sStar` | ○ | ● GC | ● GC | ◐ GC | ○ | ? | ? | ? |
-| Stars › Advanced (2 sliders) | follow `starCatalog` | ● | ● | ● | ● | ◐ | ? | ? | ? |
+| Stars › Advanced (2 sliders) | follow `starCatalog` | ● | ● | ● | ● | ● (gone by 25 kpc) | ? | ? | ? |
 | Cosmic web density › MCPM, Polyphorm, Workbench | `cosmicWebDensity` items | ○ | ○ | ○ | ○ | ◐ | ● | ● | ● |
 | Cosmic web filaments › master, Intensity | `cosmicWebFilaments` | ? | ? | ? | ? | ? | ? | ● | ◐ |
 | Flow › master, Intensity | `flow` | ? | ? | ? | ? | ? | ? | ● | ◐ |
@@ -174,8 +174,8 @@ Legend: ● in range at that rung · ◐ fading at an edge inside the rung · �
 | Spacecraft | `label:missions` | ● | ● | ● | ◐ | ○ | ○ | ○ | ○ |
 | S-star trails | `sStarTrails` | ○ | ● GC | ● GC | ○ | ○ | ? | ? | ? |
 | Mission trails | `missionTrails` | ◐ | ● | ● | ◐ | ○ | ? | ? | ? |
-| Zone of Avoidance | `zoneOfAvoidance` | ○ | ○ | ○ | ○ | ◐ | ● | ◐ | ○ |
-| Local Bubble | `localBubble` | ○ | ○ | ○ | ◐ | ◐ | ○ | ○ | ○ |
+| Zone of Avoidance | `zoneOfAvoidance` | ○ | ○ | ○ | ○ | ● (from 175 kpc) | ● | ◐ | ○ |
+| Local Bubble | `localBubble` | ○ | ○ | ○ | ● (from 1 kpc) | ● (to 4 kpc) | ○ | ○ | ○ |
 | Light-time spheres | `lightTime` | ○ | ● | ● | ● | ● | ● | ● | ● |
 | Constellations | `constellations` | ● | ● | ● | ● | ◐ | ○ | ○ | ○ |
 | Orbit trails | `orbitTrails` | ○ | ◐ | ● | ◐ | ○ | ? | ? | ? |
@@ -265,6 +265,8 @@ The first twelve were put in chat before the sweep; Q1 and Q4 of that set are an
 **The question:** Accept the eight rungs and the two judgment edges (0.05 AU, 3 Mpc)? And what is the Stars rung's landmark, given no card or exhibit lands there?
 
 **Considerations:** Candidates for Stars: a Sun focus pulled back to 1 pc; a Local Bubble exhibit (the Layer exists, off by default); a constellations exhibit (backlog `constellation-interactivity`). The Milky Way card's capture at 60 kpc is Galaxy, not Stars.
+
+The Stars rung is also the widest, 5.6 decades from 1,000 AU to 2 kpc, against about 2 for Galaxy and Cosmic web. The Local Bubble (full 1–4 kpc), the disc's onset (200 pc) and the Gaia crowd all sit in its upper decade. A split at about 100 pc into "Nearest stars" and "Neighbourhood" would give the Local Bubble a rung of its own as that rung's guide and landmark; nine rungs instead of eight.
 
 **Decision:** open.
 
