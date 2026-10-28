@@ -30,6 +30,5 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // positions match the frame that drew them.
     simDays: state.cameraRuntime.outputs.simDays,
     tier: state.tier,
-    selection: state.selection,
   };
 }

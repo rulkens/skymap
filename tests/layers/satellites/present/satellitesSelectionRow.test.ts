@@ -76,7 +76,7 @@ describe('satellitesSelectionRow', () => {
     expect(row.resolvePick(undefined as never, pick)).toEqual(ISS_REF);
   });
 
-  it('puts the ISS about 400 km up, posed from a position the camera can follow', () => {
+  it('puts the ISS about 400 km up, posed from the id the camera follows', () => {
     const extracted = row.extractRow(ISS_REF, AT) as Extract<SelectionRow, { type: 'satellite' }>;
     expect(extracted.label).toBe('ISS (ZARYA)');
     expect(extracted.altitudeKm).toBeGreaterThan(380);
@@ -84,20 +84,13 @@ describe('satellitesSelectionRow', () => {
     expect(extracted.periodMin).toBeCloseTo(92.96, 1);
     expect(extracted.driver.poseId).toBe(satelliteTransientId(25544));
     expect(extracted.driver.followsSimClock).toBe(true);
-    // The clock moves it: ten seconds on, ~77 km along its orbit (measured from Earth, which
-    // itself moves ~300 km in that time).
-    const fromEarth = (days: number, id: string) => {
-      const states = deriveBodyStates(days);
-      const p = states.get(id as never)!.positionMpc;
-      const e = states.get(SCENE_EARTH.id)!.positionMpc;
-      return [0, 1, 2].map((i) => (p[i]! - e[i]!) / SCALE_UNITS.KM_TO_MPC);
-    };
-    const id = extracted.driver.poseId!;
-    const before = fromEarth(AT, id);
-    const after = fromEarth(AT + 10 / 86_400, id);
-    const movedKm = Math.hypot(...[0, 1, 2].map((i) => after[i]! - before[i]!));
-    expect(movedKm).toBeGreaterThan(70);
-    expect(movedKm).toBeLessThan(85);
+  });
+
+  // Hover extracts a row at pointer-pick rate; registering there grew the registry with every dot
+  // the pointer crossed. Only `createSelectedSatellites` registers.
+  it('registers nothing while it extracts', () => {
+    row.extractRow(ISS_REF, AT);
+    expect(deriveBodyStates(AT).has(satelliteTransientId(25544))).toBe(false);
   });
 
   it('follows the same point the dot is drawn at, to under a metre', () => {

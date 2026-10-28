@@ -11,7 +11,6 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LocalBubbleRuntime } from '../../../../src/layers/localBubble/@types/LocalBubbleRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
-import { NO_SELECTION } from '../../../support/noSelection';
 
 // The row reads neither the renderer nor the slot — only `factory` closes
 // over the runtime, and nothing here calls it.
@@ -27,7 +26,6 @@ function makeCtx(enabled: boolean, distanceMpc: number): DemandCtx {
     cameraPosMpc: [distanceMpc, 0, 0],
     simDays: CONST_J2000,
     tier: 'medium',
-    selection: NO_SELECTION,
   };
 }
 

@@ -13,7 +13,6 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
-import { NO_SELECTION } from '../../../support/noSelection';
 
 // Only `slot` reads the runtime, and nothing here inspects it.
 const ROWS = cosmicWebDensityAssetRows({ slots: {} } as unknown as CosmicWebDensityRuntime);
@@ -36,7 +35,6 @@ function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
-    selection: NO_SELECTION,
   };
 }
 

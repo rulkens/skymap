@@ -16,7 +16,6 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import { NO_SELECTION } from '../../../support/noSelection';
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
 // core's authored table plus every Layer's, and the fold is per-key local.
@@ -40,7 +39,6 @@ function makeCtx(over: {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
-    selection: NO_SELECTION,
   };
 }
 

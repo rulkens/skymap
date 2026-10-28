@@ -11,7 +11,6 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
-import { NO_SELECTION } from '../../../support/noSelection';
 
 const RUNTIME = { slot: { __mockSlot: true } } as unknown as ConstellationsRuntime;
 const ROW = constellationsAssetRows(RUNTIME)[0]!;
@@ -24,7 +23,6 @@ function makeCtx(settings: unknown): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
-    selection: NO_SELECTION,
   };
 }
 

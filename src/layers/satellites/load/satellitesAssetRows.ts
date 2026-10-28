@@ -1,8 +1,9 @@
 /**
  * The Layer's one asset row: demand while a class is shown and the camera is near Earth, the
  * palette is open or a satellite is selected; release when every class is off or none of those
- * holds (spec §5.5). The selection arm is what lets a deep link to a satellite resolve from far
- * away. Earth's position comes from the same instant the last frame derived its bodies at.
+ * holds (spec §5.5). The selection arm (`runtime.selected`, set as soon as a link's ref lands) is
+ * what lets a deep link to a satellite resolve from far away; core's selection wake re-runs this
+ * demand. Earth's position comes from the same instant the last frame derived its bodies at.
  */
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
@@ -23,9 +24,6 @@ const cameraEarthKm = (ctx: DemandCtx): number =>
   distanceMpc(ctx.cameraPosMpc, deriveBodyStates(ctx.simDays).get(SCENE_EARTH.id)!.positionMpc) /
   SCALE_UNITS.KM_TO_MPC;
 
-const satelliteSelected = (ctx: DemandCtx): boolean =>
-  ctx.selection.select?.type === 'satellite' || ctx.selection.focus?.type === 'satellite';
-
 const anyClassShown = (ctx: DemandCtx): boolean =>
   SATELLITE_CLASSES.some((cls) => visibilitySwitchOf(ctx.settings, SHOW_ENTRY, cls));
 
@@ -39,12 +37,12 @@ export function satellitesAssetRows(runtime: SatellitesRuntime): readonly AssetW
       demand: (ctx) =>
         anyClassShown(ctx) &&
         (ctx.ui.paletteOpen ||
-          satelliteSelected(ctx) ||
+          runtime.selected.any() ||
           cameraEarthKm(ctx) < SATELLITE_FADES.loadWithinKm),
       release: (ctx) =>
         !anyClassShown(ctx) ||
         (!ctx.ui.paletteOpen &&
-          !satelliteSelected(ctx) &&
+          !runtime.selected.any() &&
           cameraEarthKm(ctx) > SATELLITE_FADES.releaseBeyondKm),
       priority: 84, // next free rung after the Local Bubble (83)
       // No `gates`: one file holds every class, and a gate names one item's whole data. The pass

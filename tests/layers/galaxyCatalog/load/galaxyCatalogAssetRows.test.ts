@@ -18,7 +18,6 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import { NO_SELECTION } from '../../../support/noSelection';
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
 // core's authored table plus every Layer's, and the fold is per-key local.
@@ -44,7 +43,6 @@ function makeCtx(over: {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: over.tier ?? 'large',
-    selection: NO_SELECTION,
   };
 }
 

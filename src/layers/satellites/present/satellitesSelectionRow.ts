@@ -1,9 +1,9 @@
 /**
  * satellitesSelectionRow — the `satellite` selection kind. The ref is the NORAD number, which
- * outlives any day's file; the pick index is the catalog index. Extracting a row registers the
- * satellite with `transientPositions` (once, while it stays registered), so the camera poses from
- * its SGP4 position and follows it as the clock moves (`followsSimClock`). With no catalog loaded
- * there is no row: the satellites live only near Earth.
+ * outlives any day's file; the pick index is the catalog index. Extracting is a pure read: the row
+ * carries its SGP4 position at `simDays`, and the camera follows `driver.poseId`, whose transient
+ * position `createSelectedSatellites` holds while the satellite is selected (`followsSimClock`).
+ * With no catalog loaded there is no row: the satellites live only near Earth.
  */
 import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -12,7 +12,6 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 import { SATELLITE_FOCUS_GEOMETRY } from '../../../data/satellites/satelliteFocusGeometry';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { transientPositions } from '../../../services/bodies/transientPositions';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { catalogIndexOf } from '../subsystems/catalogIndexOf';
 import { satellitePositioner } from '../subsystems/satellitePositioner';
@@ -49,14 +48,9 @@ export function satellitesSelectionRow(
       const k = catalog === null ? -1 : catalogIndexOf(catalog, ref.noradId);
       if (catalog === null || k < 0) return null;
       const id = satelliteTransientId(ref.noradId);
-      let states = deriveBodyStates(simDays);
-      if (!states.has(id)) {
-        transientPositions.set(id, satellitePositioner(catalog, k));
-        states = deriveBodyStates(simDays);
-      }
-      const position = states.get(id)?.positionMpc;
-      if (position === undefined) return null;
-      const earth = states.get(SCENE_EARTH.id)!.positionMpc;
+      const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!.positionMpc;
+      const position = satellitePositioner(catalog, k)(simDays, new Map([[SCENE_EARTH.id, earth]]));
+      if (position === null) return null;
       return {
         type: 'satellite',
         noradId: ref.noradId,
