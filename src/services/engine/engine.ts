@@ -254,12 +254,6 @@ export function createEngine(
     // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
-    // Declared up-front so consumers can reach a slot without a null check; the
-    // mesh body slots (whale, petunias, …) are minted in `wireSlots`, their commit
-    // closures re-reading the mesh handle at call time.
-    assetSlots: {
-      meshBodies: new Map(),
-    },
     // Both empty until `createLayers` runs (D8); see EngineState.d.ts for why
     // `selectionKindRows` is not named `selectionRows` (that getter, above, is
     // the unrelated saga display cache).
@@ -276,13 +270,13 @@ export function createEngine(
     computes: [],
     planners: [],
     assetRows: [],
+    slotsByKey: new Map(),
     slabRows: [],
     visibilityEntries: [],
     visibilityGates: new Map(),
     label3DProducers: [],
     orbitTrailGroups: [],
     terrain: FLAT_TERRAIN,
-    layerSlots: new Map(),
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s

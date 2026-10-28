@@ -6,7 +6,7 @@ import type { TextureKind } from './TextureKind';
  * BodyTextureSlotKey — the composite `\`${bodyId}:${kind}\`` string that is the
  * single comparable value the body-texture family keys on: the `bodyTextures`
  * `Map` key, the `AssetKey` union member, and the `AssetWiringRow.key`. Those
- * three must agree on one primitive (`slotFor` resolves `row.key` → the Map), so
+ * three must agree on one primitive (`state.slotsByKey` resolves `row.key`), so
  * the family carries a flat string alongside its structured `BodyTextureKey`.
  *
  * The separator is `:` — deliberately not `-`, which already appears inside a

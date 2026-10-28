@@ -33,7 +33,7 @@ export function expandCompanionRows(
     }
     return {
       key: row.key,
-      factory: row.factory,
+      slot: row.slot,
       req: parent.req,
       demand: (ctx) => ctx.slotState(row.companionOf) !== 'idle',
       priority: parent.priority + 1,

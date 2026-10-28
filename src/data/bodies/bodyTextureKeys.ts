@@ -7,9 +7,9 @@
  * where each row's `kinds` names the maps that body carries; `SCENE_RINGS` for
  * the rings) rather than hand-listed, so a new textured body, a new map kind on
  * an existing body, or a new ring joins the slot family, its demand/release
- * wiring row, and its `slotFor` routing automatically — one edit in an authored
- * table, no third list to keep in sync. This IS the iteration list `initGpu`
- * mints slots from and `assetWiring` maps `bodyTextureRow` over. Today every body
+ * wiring row automatically — one edit in an authored table, no third list to
+ * keep in sync. This IS the iteration list `bodyTextureSlots` mints slots from
+ * and `bodyAssetRows` maps `bodyTextureRow` over. Today every body
  * has only a `surface` kind, so this yields one entry per body plus the ring.
  */
 

@@ -8,7 +8,7 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  * Supercluster and Void all arrive via the single `'structureCatalog'` fetch, so a
  * per-source key would pull one file three times; conversely `'flow'` does have
  * a `Source` code but its slot is keyed by that string, not the code.
- * See ADR 0005 §2 for the identity-vs-wiring split; `EngineAssetSlots` for the slots.
+ * See ADR 0005 §2 for the identity-vs-wiring split; `EngineState.slotsByKey` for the slots.
  */
 export type AssetKey =
   | SourceType
@@ -22,5 +22,5 @@ export type AssetKey =
   | 'constellations'
   | 'bodyTextureAtlas'
   | 'hiResFamous' // a GPU allocation rather than a fetch, so the demand loop owns its lifetime; its request is keyed on `layerSide`, not the tier — medium and large share 1024 and never drift
-  | BodyTextureSlotKey // the body Layer's per-(body, kind) texture slots, reached through `state.layerSlots`
-  | `mesh:${string}`; // meshBodies family: one slot per body id, `slotFor` routes via `isMeshBodyKey`. Prefixed (unlike the plain-string `meshBodies` Map key) so this member stays a template literal type rather than widening the whole union to bare `string`.
+  | BodyTextureSlotKey // the body Layer's per-(body, kind) texture slots, reached through `state.slotsByKey`
+  | `mesh:${string}`; // one mesh slot per body id (`meshAssetRows`). Prefixed so this member stays a template literal type rather than widening the whole union to bare `string`.

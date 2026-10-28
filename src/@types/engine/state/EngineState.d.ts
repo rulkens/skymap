@@ -12,7 +12,6 @@ import type { Tier } from '../../data/Tier';
 import type { ViewRigKey } from '../frame/ViewRigKey';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EnginePickingState } from './EnginePickingState';
-import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { CameraRuntime } from './CameraRuntime';
@@ -74,7 +73,6 @@ export type EngineState = {
    * settings, and is read by `scheduleSkyCaptures`' re-bake key.
    */
   contentVersion: number;
-  assetSlots: EngineAssetSlots;
   /**
    * Every Layer bound to its runtime by `createLayers`, in composition tuple
    * order. `[]` until that phase runs; `destroy()` tears these down in
@@ -92,11 +90,10 @@ export type EngineState = {
   /**
    * The composed contributions: core's constants followed by each Layer's, in
    * tuple order, assembled once by `createLayers`. Every runtime reader walks
-   * these rather than `CONTENT_PASSES` / `MESH_ASSET_WIRING`, which are core's
+   * these rather than `CONTENT_PASSES` / `meshAssetRows`, which are core's
    * authored halves only; every compute row is a Layer's. `assetRows` is the
-   * COMPANION-EXPANDED fold over both halves; `layerSlots` holds the slot each
-   * Layer asset row's factory minted, consulted by `slotFor` ahead of core's
-   * own homes.
+   * COMPANION-EXPANDED fold over both halves; `slotsByKey` indexes each row's
+   * slot by its key, the one home a key-addressed read resolves through.
    */
   passes: readonly ContentPass[];
   /** `executeFrame` resolves a `'compute'` step's name against this; an absent
@@ -116,7 +113,7 @@ export type EngineState = {
   visibilityEntries: readonly VisibilityEntry[];
   /** The slot behind every gated fade identity, collected once by `wireSlots`. */
   visibilityGates: VisibilityGates;
-  layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
+  slotsByKey: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   /** Every Layer's `worldLabels`, in composition order, composed once by
    * `createLayers`; `runLabel3DProducers` walks this. */
   label3DProducers: readonly Label3DProducer[];

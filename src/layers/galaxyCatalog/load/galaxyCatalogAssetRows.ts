@@ -1,6 +1,6 @@
 /**
- * The Layer's authored asset rows — demand + request only; every `factory` hands
- * back a slot `create` already minted, so core folds companions over these and
+ * The Layer's authored asset rows — demand + request only; every `slot` is one
+ * `create` already minted, so core folds companions over these and
  * core's own rows once (Ruling 10) without ever building one.
  */
 
@@ -31,7 +31,7 @@ function pointRow(
   const excluded = (tier: Tier) => tierTarget(source, tier) === 0;
   return {
     key: source,
-    factory: () => runtime.points.get(source)!,
+    slot: runtime.points.get(source)!,
     req: (tier) => galaxyCatalogRequest(source, tier),
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true && !excluded(ctx.tier),
     release: (ctx) => excluded(ctx.tier),
@@ -50,7 +50,7 @@ export function galaxyCatalogAssetRows(
     // alongside the binary rather than racing ahead of it.
     {
       key: 'famousGalaxiesMeta',
-      factory: () => runtime.famousGalaxiesMeta,
+      slot: runtime.famousGalaxiesMeta,
       companionOf: Source.FamousGalaxy,
     },
 
@@ -58,7 +58,7 @@ export function galaxyCatalogAssetRows(
     // `watchPaletteWakeSaga`'s header for why opening it must also wake a frame.
     {
       key: 'pgcAlias',
-      factory: () => runtime.pgcAlias,
+      slot: runtime.pgcAlias,
       req: () => undefined,
       demand: (ctx) => ctx.ui.paletteOpen,
       priority: 90, // last: nothing renders from it, and it tolerates a wait
@@ -69,7 +69,7 @@ export function galaxyCatalogAssetRows(
     // alternative is a second "allocate outside the queue" mechanism for one row.
     {
       key: 'hiResFamous',
-      factory: () => runtime.hiResFamous,
+      slot: runtime.hiResFamous,
       req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
       demand: () => true,
       priority: 1,

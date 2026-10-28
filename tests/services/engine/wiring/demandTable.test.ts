@@ -16,7 +16,7 @@
  *                                    (the intent bit galaxy catalog demand reads)
  *   - `state.tier`                 — passed to `req(tier)` by `reevaluateDemand`
  *   - `state.ui`                   — `UiState`; `paletteOpen` is the pgcAlias trigger
- *   - `state.assetSlots`           — `slotFor` dispatch target
+ *   - `state.slotsByKey`           — `slotState` lookup target
  *
  * All other `EngineState` fields are irrelevant to the demand loop; they
  * are `as unknown as` cast so tests don't need a fully-constructed engine.
@@ -62,7 +62,7 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { MESH_ASSET_WIRING } from '../../../../src/services/engine/wiring/meshAssetWiring';
+import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
@@ -207,8 +207,8 @@ type MakeStateOptions = {
 };
 
 /**
- * All source codes that appear in the asset rows as point rows. Ensures every
- * expected-key slot is reachable via `slotFor`.
+ * All source codes that appear in the asset rows as point rows, each needing a
+ * stub slot on the runtime its rows read.
  */
 const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.SDSS,
@@ -232,44 +232,30 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   } = opts;
 
   // Build the points map: every source gets either the caller's override or a
-  // fresh idle stub, so slotFor never returns undefined for a demanded key.
+  // fresh idle stub.
   const points = new Map<SourceType, AssetSlot<unknown, unknown>>(
     ALL_POINT_SOURCES.map((src) => [
       src,
       (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>,
     ]),
   );
-  // The Layer's own slots, in the one map `createLayers` fills.
-  const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>(points);
-  layerSlots.set(
-    'famousGalaxiesMeta',
-    (namedSlots.famousGalaxiesMeta ?? stubSlot()) as AssetSlot<unknown, unknown>,
-  );
-  layerSlots.set('pgcAlias', (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown>);
-  layerSlots.set('hiResFamous', stubSlot() as AssetSlot<unknown, unknown>);
-  layerSlots.set(
-    'structureCatalog',
-    (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<unknown, unknown>,
-  );
   const structureRuntime = {
-    slot: layerSlots.get('structureCatalog'),
+    slot: namedSlots.structureCatalog ?? stubSlot(),
   } as unknown as StructureRuntime;
-  // The Layer's rows hand back these same slots from their factories.
+  // The Layer's rows carry these same slots.
   const galaxyRuntime = {
     points,
-    famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
-    pgcAlias: layerSlots.get('pgcAlias'),
-    hiResFamous: layerSlots.get('hiResFamous'),
+    famousGalaxiesMeta: namedSlots.famousGalaxiesMeta ?? stubSlot(),
+    pgcAlias: namedSlots.pgcAlias ?? stubSlot(),
+    hiResFamous: stubSlot(),
   } as unknown as GalaxyCatalogRuntime;
-  // The density Layer's slots, keyed by `Source` code as its rows key them.
   const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
-  for (const [code, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
+  for (const [, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
     densitySlots[entry.id] = stubSlot() as AssetSlot<unknown, unknown>;
-    layerSlots.set(code, densitySlots[entry.id]!);
   }
   const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;
 
-  return {
+  const state = {
     // tier feeds `req(state.tier)`; it lives in its own root field on EngineState.
     tier: 'medium',
     // Inject galaxy catalog + volume items directly into the settings bag — demand
@@ -296,42 +282,36 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    assetSlots: {
-      // Empty keyed family: the body-texture rows resolve to undefined slots
-      // (far resting pose ⇒ none demanded anyway), so none fires.
-      bodyTextures: new Map(),
-      meshBodies: new Map(),
-    },
     // `evaluateRows` enqueues onto this rather than calling `slot.load()`
     // directly. Per state so no pending entry survives into the next case, and
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-    // The composed lists `createLayers` would have written: core's authored
-    // registry plus the Layers', folded once, with the Layers' slots in the map
-    // `slotFor` consults first.
-    assetRows: expandCompanionRows([
-      ...MESH_ASSET_WIRING,
-      ...galaxyCatalogAssetRows(galaxyRuntime),
-      ...cosmicWebDensityAssetRows(densityRuntime),
-      ...structureAssetRows(structureRuntime),
-    ]),
-    layerSlots,
   } as unknown as EngineState;
+  // The composed lists `createLayers` would have written: core's mesh rows plus
+  // the Layers', folded once, with every row's slot indexed by its key. The mesh
+  // rows mint real slots; the far resting pose keeps them undemanded.
+  state.assetRows = expandCompanionRows([
+    ...meshAssetRows(state),
+    ...galaxyCatalogAssetRows(galaxyRuntime),
+    ...cosmicWebDensityAssetRows(densityRuntime),
+    ...structureAssetRows(structureRuntime),
+  ]);
+  state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
+  return state;
 }
 
 // ── Key → spy collector ──────────────────────────────────────────────────────
 
 /**
  * The set of `AssetKey`s whose `load` spy has fired at least once. The mapping
- * from spy to key is built from the same stub objects inserted into
- * `state.layerSlots` — we inspect `load.mock.calls.length > 0` for each.
+ * from spy to key is `state.slotsByKey` — we inspect `load.mock.calls.length > 0`
+ * for each stub (the mesh rows' real slots are never demanded here).
  */
 function collectFired(state: EngineState): Set<AssetKey> {
   const fired = new Set<AssetKey>();
 
-  // The Layers' slots — point sources, sidecars, density cubes and the structure catalog.
-  for (const [key, slot] of state.layerSlots) {
-    if ((slot as StubSlot).load.mock.calls.length) fired.add(key);
+  for (const [key, { load }] of state.slotsByKey) {
+    if (vi.isMockFunction(load) && load.mock.calls.length) fired.add(key);
   }
 
   return fired;

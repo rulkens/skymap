@@ -59,8 +59,7 @@ function makeState(): EngineState {
 
 /**
  * A runtime whose `slot.committed()` models the load status directly — the
- * gate reads `runtime.slot`, not `state.assetSlots.flow`, now that the pass
- * closes over the Layer's own Runtime.
+ * gate reads `runtime.slot`, the pass closing over the Layer's own Runtime.
  */
 function makeRuntime(
   over: { loaded?: boolean; draw?: (...args: unknown[]) => void } = {},

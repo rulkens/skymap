@@ -7,7 +7,7 @@
  * set). `settings` is a direct passthrough and needs no behaviour test.
  *
  * Mocking strategy: inject a minimal `state` carrying only the slices the
- * builder reads — `settings`, `ui`, and `assetSlots`. No GPU
+ * builder reads — `settings`, `ui`, and `slotsByKey`. No GPU
  * resources are involved.
  */
 
@@ -36,8 +36,7 @@ function makeState(
     simDays?: number;
   } = {},
 ): EngineState {
-  // A Layer's slot, so it sits where `slotFor` looks first.
-  const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>(
+  const slotsByKey = new Map<AssetKey, AssetSlot<unknown, unknown>>(
     opts.famousGalaxiesMetaState === undefined
       ? []
       : [
@@ -63,7 +62,6 @@ function makeState(
       cosmicWebDensity: { items: {} },
     },
     ui: { paletteOpen: opts.paletteOpen ?? false } as UiState,
-    assetSlots: { meshBodies: new Map() },
     terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm(pose) },
@@ -74,7 +72,7 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    layerSlots,
+    slotsByKey,
     subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }

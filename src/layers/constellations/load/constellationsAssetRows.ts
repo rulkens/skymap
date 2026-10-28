@@ -1,6 +1,6 @@
 /**
- * The Layer's one asset row — demand + request only; the `factory` hands back
- * the slot `create` already minted, so core folds this over its own rows
+ * The Layer's one asset row — demand + request only; its `slot` is the one
+ * `create` already minted, so core folds this over its own rows
  * (Ruling 10) without ever building one.
  */
 
@@ -11,7 +11,7 @@ export function constellationsAssetRows(runtime: ConstellationsRuntime): readonl
   return [
     {
       key: 'constellations',
-      factory: () => runtime.slot,
+      slot: runtime.slot,
       req: () => undefined,
       demand: (ctx) => ctx.settings.constellations.enabled,
       priority: 31, // small JSON on the near-sky rung, right behind the marker catalog

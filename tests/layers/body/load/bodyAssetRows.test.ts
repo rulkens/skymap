@@ -58,7 +58,7 @@ describe('bodyAssetRows membership', () => {
     for (const entry of ALL_BODY_TEXTURE_KEYS) {
       const key = bodyTextureSlotKey(entry.bodyId, entry.kind);
       const row = rowFor(key);
-      expect(row.factory(undefined as never)).toBe(SLOTS.get(key));
+      expect(row.slot).toBe(SLOTS.get(key));
       expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
   });

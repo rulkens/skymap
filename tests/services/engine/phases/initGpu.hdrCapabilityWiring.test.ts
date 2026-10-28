@@ -267,13 +267,6 @@ function makeState(): EngineState {
         requestRender: vi.fn(),
       },
     },
-    // Both families are minted in wireSlots, not initGpu; declared here (empty,
-    // untouched by this phase) only because EngineState requires them.
-    assetSlots: {
-      points: new Map(),
-      bodyTextures: new Map(),
-      meshBodies: new Map(),
-    },
   } as unknown as EngineState;
 }
 

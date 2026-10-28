@@ -6,8 +6,8 @@
  * (`'glade-points'`, `'starCatalog:gaiaStars'`, …) while the wiring rows are
  * keyed by `AssetKey` (numeric `Source` codes, composite body-texture keys,
  * named sidecar strings). Nothing static relates the two: a slot's name is
- * baked into its factory, so the only honest join runs through
- * `slotFor(state, row.key)` once the slots exist.
+ * baked in where it is minted, so the only honest join runs through each
+ * composed row's own `slot`.
  *
  * That is why this takes `EngineState` rather than being a module constant. A
  * hand-written `{ 'glade-points': 62, … }` table would be the same numbers in a
@@ -23,15 +23,10 @@
  * absent from the map, which the panel renders as "unranked".
  */
 
-import { slotFor } from './slotFor';
-
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
-export function assetPriorityBySlotName(state: EngineState): ReadonlyMap<string, number> {
-  const out = new Map<string, number>();
-  for (const row of state.assetRows) {
-    const slot = slotFor(state, row.key);
-    if (slot) out.set(slot.name, row.priority);
-  }
-  return out;
+export function assetPriorityBySlotName(
+  state: Pick<EngineState, 'assetRows'>,
+): ReadonlyMap<string, number> {
+  return new Map(state.assetRows.map((row) => [row.slot.name, row.priority]));
 }

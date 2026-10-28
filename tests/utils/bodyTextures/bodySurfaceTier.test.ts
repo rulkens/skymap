@@ -49,8 +49,7 @@ function stateWith(input: {
   }
   return {
     tier: input.tier,
-    layerSlots: bodyTextures,
-    assetSlots: { meshBodies: new Map() },
+    slotsByKey: bodyTextures,
   } as unknown as EngineState;
 }
 

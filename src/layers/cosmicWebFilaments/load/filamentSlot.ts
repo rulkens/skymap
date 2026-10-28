@@ -1,8 +1,7 @@
 /**
  * filamentSlot — factory for the cosmic-web skeleton's asset slot: its own fetcher
  * (the binary format is segments, not points) and its own renderer target.
- * Construction-pure — builds and returns. A Layer's slot lands in
- * `state.layerSlots` (`createLayers`), never `state.assetSlots`.
+ * Construction-pure — builds and returns; the Layer's asset row carries it.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';

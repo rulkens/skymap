@@ -11,9 +11,9 @@
  * structureCatalog.
  *
  * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers and GPU
- * device are mocked. The Layer's point slots are pre-seeded fakes injected
- * into `state.layerSlots` — `createLayers` mints the real ones, and this
- * suite never runs that phase.
+ * device are mocked. The Layer's point slots are pre-seeded fakes on the rows
+ * this suite composes — `createLayers` composes the real ones, and this suite
+ * never runs that phase.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -115,10 +115,9 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { MESH_ASSET_WIRING } from '../../../../src/services/engine/wiring/meshAssetWiring';
+import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/layers/structure/load/structureCatalogFetcher';
 import { createStructureCatalogSlot } from '../../../../src/layers/structure/load/structureCatalogSlot';
@@ -233,27 +232,17 @@ function makeState(
     labelCategoryVisibility: Record<string, boolean>;
   }> = {},
 ): EngineState {
-  const points = overrides.points ?? new Map();
-  // The Layer's slots and the runtime its rows read: `createLayers` would have
-  // minted both before this phase runs.
-  const layerSlots = new Map<AssetKey, never>(points as never);
-  // Every point row gates its catalog's fade, so each needs a slot, as `createLayers`
-  // mints; the ones a test does not pass stay idle.
+  // Every point row carries a slot, as its Layer's `create` mints; the ones a
+  // test does not pass stay idle.
+  const points = new Map(overrides.points);
   for (const code of GALAXY_CATALOG_SOURCES) {
-    if (!layerSlots.has(code)) layerSlots.set(code, makeFakeSlot(`points-${code}`) as never);
-  }
-  for (const [key, name] of [
-    ['famousGalaxiesMeta', 'famous-galaxies-meta'],
-    ['pgcAlias', 'pgc-aliases'],
-    ['hiResFamous', 'hi-res-famous'],
-  ] as const) {
-    layerSlots.set(key, makeFakeSlot(name) as never);
+    if (!points.has(code)) points.set(code, makeFakeSlot(`points-${code}`));
   }
   const galaxyRuntime = {
     points,
-    famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
-    pgcAlias: layerSlots.get('pgcAlias'),
-    hiResFamous: layerSlots.get('hiResFamous'),
+    famousGalaxiesMeta: makeFakeSlot('famous-galaxies-meta'),
+    pgcAlias: makeFakeSlot('pgc-aliases'),
+    hiResFamous: makeFakeSlot('hi-res-famous'),
   } as unknown as GalaxyCatalogRuntime;
   // The density Layer's real slots over a stub renderer.
   const densityRenderer = { upload: vi.fn() } as never;
@@ -266,12 +255,8 @@ function makeState(
       ]),
     ),
   } as unknown as CosmicWebDensityRuntime;
-  for (const [code, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
-    layerSlots.set(code, densityRuntime.slots[entry.id] as never);
-  }
   // The structure Layer's real slot, so its (mocked) fetcher observes the load.
   const structureRuntime = { slot: createStructureCatalogSlot() };
-  layerSlots.set('structureCatalog', structureRuntime.slot as never);
   const allVisible: Record<string, boolean> = {
     'galaxy-cluster': true,
     supercluster: true,
@@ -296,7 +281,7 @@ function makeState(
   // overlay load fires. starCatalogs is forced OFF here (Gaia boots enabled,
   // so leaving the master gate on would demand a real star-bin fetch this
   // fixture provides no slot for).
-  return {
+  const state = {
     // Top-level data tier — its own root field on EngineState; the source
     // expression `req(state.tier)` reads it.
     tier: 'medium',
@@ -395,20 +380,19 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    assetSlots: { meshBodies: new Map() },
-    // The composed lists `createLayers` would have written: core's registries
-    // plus the Layers' rows, with their slots in `layerSlots` —
-    // wireSlots itself no longer mints any of them.
-    assetRows: expandCompanionRows([
-      ...MESH_ASSET_WIRING,
-      ...galaxyCatalogAssetRows(galaxyRuntime),
-      ...cosmicWebDensityAssetRows(densityRuntime),
-      ...structureAssetRows(structureRuntime),
-    ]),
-    // The entries of the Layers whose rows are composed above.
+    // The entries of the Layers whose rows are composed below.
     visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
-    layerSlots,
   } as unknown as EngineState;
+  // The composed lists `createLayers` would have written: core's mesh rows plus
+  // the Layers' rows, with every row's slot indexed by its key.
+  state.assetRows = expandCompanionRows([
+    ...meshAssetRows(state),
+    ...galaxyCatalogAssetRows(galaxyRuntime),
+    ...cosmicWebDensityAssetRows(densityRuntime),
+    ...structureAssetRows(structureRuntime),
+  ]);
+  state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
+  return state;
 }
 
 /** Build a stub `BootstrapDeps` with a populated `phaseLocals`. */
@@ -569,10 +553,10 @@ describe('wireSlots', () => {
     // Default-on / structures-visible ⇒ fetched. The famous-meta sidecar is
     // the Layer's slot now, so its load is observed on the stub, not its fetcher.
     expect(structureCatalogFetcher).toHaveBeenCalled();
-    expect(state.layerSlots.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
+    expect(state.slotsByKey.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
-    expect(state.layerSlots.get('pgcAlias')!.load).not.toHaveBeenCalled();
+    expect(state.slotsByKey.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 
   it('does not load structureCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
@@ -651,7 +635,8 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // Registry includes the Layer's slots (the per-source point slots and its
-    // two sidecars, by `.name`) plus the structure Layer's catalog slot.
+    // two sidecars, by `.name`), the structure Layer's catalog slot, and core's
+    // mesh slots.
     // Asserted as a superset so additive
     // changes don't break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
@@ -662,5 +647,6 @@ describe('wireSlots', () => {
     expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
+    expect(names.has('curiosity-mesh')).toBe(true);
   });
 });

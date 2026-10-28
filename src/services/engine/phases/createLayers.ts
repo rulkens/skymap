@@ -2,7 +2,7 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.visibilityEntries` / `.layerSlots` / `.selectionKindRows`,
+ * `.computes` / `.assetRows` / `.slotsByKey` / `.visibilityEntries` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
  * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
  */
@@ -14,8 +14,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { AssetKey } from '../../../@types/loading/AssetKey';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { composeTerrain } from '../layer/composeTerrain';
@@ -43,7 +41,7 @@ import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
-import { MESH_ASSET_WIRING } from '../wiring/meshAssetWiring';
+import { meshAssetRows } from '../wiring/meshAssetRows';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -163,17 +161,17 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     (planner) => planner.name,
     instances.map((instance) => instance.planners),
   ).map((planner) => gatePlannerByFade(planner, state));
-  // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
-  // first — so a duplicate would silently SHADOW the other rather than surface,
-  // leaving whichever slot core still mints loading into nothing. One fold over
-  // the whole list: a companion's parent may sit in the other half, and
-  // `expandCompanionRows` is only correct over a list holding both.
+  // A duplicate key would leave two slots behind one key, and every key-addressed
+  // read would answer with only one of them. One fold over the whole list: a
+  // companion's parent may sit in the other half, and `expandCompanionRows` is
+  // only correct over a list holding both.
   state.assetRows = expandCompanionRows(
     concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
-      MESH_ASSET_WIRING,
+      meshAssetRows(state),
       ...instances.map((instance) => instance.assets),
     ]),
   );
+  state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
   // Static, so read off the composition rather than the instances — `targets`
   // is composed the same way. The ceiling sizes the GPU query set before any
   // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
@@ -221,14 +219,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     [COSMO]: state.subsystems.cosmoLabelDirector,
   };
 
-  const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>();
   for (const instance of instances) {
-    for (const row of instance.assets) {
-      // Once, here — not per frame: the slot IS the Layer's runtime-owned
-      // object, and a second call would mint a second subscriber. `SlotDeps` is
-      // passed for signature parity; a Layer row's factory ignores it.
-      layerSlots.set(row.key, row.factory({ state, cb: deps.cb }) as AssetSlot<unknown, unknown>);
-    }
     for (const { slab, ...producer } of instance.screenLabels) {
       const director = screenLabelDirectors[slab];
       if (!director) {
@@ -237,7 +228,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       director.registerProducer(gateLabelProducer(producer));
     }
   }
-  state.layerSlots = layerSlots;
 
   state.selectionKindRows = [
     ...state.selectionKindRows,

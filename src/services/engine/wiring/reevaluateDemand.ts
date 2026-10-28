@@ -10,7 +10,6 @@
  */
 
 import { buildDemandCtx } from './buildDemandCtx';
-import { slotFor } from './slotFor';
 import { sameRequest } from '../../../utils/loading/sameRequest';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -34,8 +33,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
   const batch: QueueEntry<void>[] = [];
   for (const row of rows) {
     try {
-      const slot = slotFor(state, row.key);
-      if (!slot) continue;
+      const { slot } = row;
       const kind = slot.state().kind;
       const lastRequest = slot.lastRequest();
       // The queue dedups by string key. `AssetKey` is a union of numeric
@@ -118,7 +116,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
     }
   }
   // Outside the per-row guard on purpose: everything policy-shaped (the demand
-  // predicate, slot lookup, release) ran inside it, and all that is left here is
+  // predicate, release, drift reload) ran inside it, and all that is left here is
   // a map insert per entry plus the queue's own scheduling — a throw from that
   // is an engine bug worth surfacing, not one row's failure to contain.
   queue.enqueueMany(batch);

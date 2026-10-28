@@ -7,7 +7,6 @@
 
 import type { AssetKey } from './AssetKey';
 import type { AssetSlot } from './AssetSlot';
-import type { SlotDeps } from './SlotDeps';
 import type { DemandCtx } from './DemandCtx';
 import type { Tier } from '../data/Tier';
 import type { VisibilityAddress } from '../animation/VisibilityAddress';
@@ -15,10 +14,11 @@ import type { VisibilityAddress } from '../animation/VisibilityAddress';
 export type AssetWiringRow<T = unknown, R = unknown> = {
   key: AssetKey;
   /**
-   * Hands back the slot, called once by `createLayers` for a Layer's row. Must
-   * NOT call `slot.load()`: `reevaluateDemand` owns when a slot loads.
+   * The slot this row drives, minted by whoever authors the row (a Layer's
+   * `create`, or core's `meshAssetRows`) and never loaded by them:
+   * `reevaluateDemand` owns when a slot loads.
    */
-  factory: (deps: SlotDeps) => AssetSlot<T, R>;
+  slot: AssetSlot<T, R>;
   /** Build the request from the current tier (void/empty for tier-agnostic). */
   req: (tier: Tier) => R;
   demand: (ctx: DemandCtx) => boolean;

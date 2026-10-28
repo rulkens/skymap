@@ -15,7 +15,6 @@ import { engineLoadProgressChanged } from '../../../../src/state/engine/engineSl
 import { Source } from '../../../../src/data/sources';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { EngineAssetSlots } from '../../../../src/@types/engine/state/EngineAssetSlots';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -54,13 +53,10 @@ function makeProgressState(): EngineState {
     cancel: () => {},
     release: () => {},
   });
-  const assetSlots: EngineAssetSlots = { meshBodies: new Map() };
   return {
-    assetSlots,
     subsystems: { loadProgress: null },
-    // A member, so the per-source Layer-slot walk is exercised (the starCatalog
-    // Layer's Gaia slot is the real-world example this fixture stands in for).
-    layerSlots: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
+    // The starCatalog Layer's Gaia slot is the real-world example this fixture stands in for.
+    slotsByKey: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
   } as unknown as EngineState;
 }
 

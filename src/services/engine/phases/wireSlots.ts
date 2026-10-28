@@ -1,24 +1,22 @@
 /**
  * wireSlots — bootstrap phase 3: core's half of the demand-driven asset
- * orchestrator. Every Layer's slots already exist (`createLayers` minted them);
- * this mints core's own and then lets the demand loop decide what loads:
+ * orchestrator. Every slot already exists (each rides on its asset row, which
+ * `createLayers` composed); this lets the demand loop decide what loads:
  *
- *   1. `wireMeshBodySlots` — core's own slots, the mesh body family (the mesh
- *      slots stay beside the one mesh renderer every body-bearing Layer uses).
- *   2. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
+ *   1. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
  *      virtual texture, and every visibility identity at its boot target
  *      (`installVisibilityGates` later subscribes its gating slots, so a
  *      commit or release retargets that identity's fade).
- *   3. `installLoadProgress` — the flat `allSlots` registry + load-progress
- *      emitter, over core's slots and every Layer's.
- *   4. `installSlotReadyWake` — one subscription per slot wakes the render
+ *   2. `installLoadProgress` — the flat `allSlots` registry + load-progress
+ *      emitter, over every row's slot.
+ *   3. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
  *      `installFormatVersionAlert` shares the same window and shape: the first
  *      time any slot's error is a `FormatVersionError`, it dispatches a
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
  *      visitor's `seenVersion` already hid the splash, so the alert needs
  *      both to actually reach them.
- *   5. `reevaluateDemand` — the single place loads start, awaited on
+ *   4. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
  *      with its tier-derived request. The same loop re-runs on every state
@@ -31,7 +29,6 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.meshBodies` (via `wireMeshBodySlots`).
  *   - `state.subsystems.{loadProgress, surfaceTiles}`.
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
@@ -47,7 +44,6 @@
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
-import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';
 import { collectVisibilityGates } from '../wiring/collectVisibilityGates';
@@ -62,10 +58,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
-
-  // Before `installLoadProgress` (enumerates them into `allSlots`) and
-  // `reevaluateDemand` (triggers their loads).
-  wireMeshBodySlots(state);
 
   // The surface virtual texture. A subsystem, not a renderer — it owns
   // residency and streaming — so it's constructed here, not in `initGpu`.
@@ -85,8 +77,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   state.visibilityGates = collectVisibilityGates(state);
   seedVisibilityFades(state);
 
-  // Build the flat `allSlots` registry + load-progress emitter over every
-  // installed slot (core and Layer-owned).
+  // Build the flat `allSlots` registry + load-progress emitter over every slot.
   installLoadProgress(state, deps);
 
   // Channel-mouth render wake.  After installLoadProgress (allSlots fully

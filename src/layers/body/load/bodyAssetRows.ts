@@ -1,6 +1,6 @@
 /**
  * The body Layer's asset rows — demand, release, request and priority only; each
- * `factory` hands back a slot `create` already minted. The atlas row is rank 0 and
+ * `slot` is one `create` already minted. The atlas row is rank 0 and
  * never proximity-gated: it is the universal fallback the per-body rows upgrade, so
  * gating it would reinstate the "body reached before its texture" gap it closes.
  */
@@ -59,7 +59,7 @@ function bodyTextureRow(runtime: BodyRuntime, entry: BodyTextureKey): AssetWirin
   const key = bodyTextureSlotKey(entry.bodyId, entry.kind);
   return {
     key,
-    factory: () => runtime.textureSlots.get(key)!,
+    slot: runtime.textureSlots.get(key)!,
     req: (tier) => ({
       bodyId: entry.bodyId,
       kind: entry.kind,
@@ -82,7 +82,7 @@ export function bodyAssetRows(runtime: BodyRuntime): readonly AssetWiringRow[] {
   return [
     {
       key: 'bodyTextureAtlas',
-      factory: () => runtime.atlasSlot,
+      slot: runtime.atlasSlot,
       req: () => undefined,
       demand: () => true,
       priority: 0,

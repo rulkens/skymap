@@ -15,9 +15,7 @@ import type { LoadState } from '../../../src/@types/loading/LoadState';
 
 const parent: AssetWiringRow = {
   key: 'filaments',
-  factory: () => {
-    throw new Error('not called by this suite');
-  },
+  slot: {} as never,
   req: (t) => ({ small: t === 'small' }),
   demand: () => true,
   priority: 20,
@@ -25,9 +23,7 @@ const parent: AssetWiringRow = {
 
 const companion: CompanionAssetRow = {
   key: 'pgcAlias',
-  factory: () => {
-    throw new Error('not called by this suite');
-  },
+  slot: {} as never,
   companionOf: 'filaments',
 };
 

@@ -150,12 +150,6 @@ function makeState(): EngineState {
         projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
       },
     },
-    assetSlots: {
-      points: new Map(),
-      filaments: null,
-      famousGalaxiesMeta: null,
-      pgcAlias: null,
-    },
   } as unknown as EngineState;
 }
 

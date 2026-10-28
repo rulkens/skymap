@@ -1,7 +1,7 @@
 /**
  * The Layer's one asset row, the bulk cluster/supercluster/void coverage —
- * demand + request only; the `factory` hands back the slot `create` already
- * minted, so core folds this over its own rows without ever building one.
+ * demand + request only; its `slot` is the one `create` already minted, so core
+ * folds this over its own rows without ever building one.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -21,7 +21,7 @@ export function structureAssetRows(
   return [
     {
       key: 'structureCatalog',
-      factory: () => runtime.slot,
+      slot: runtime.slot,
       req: () => ({}),
       // The structures-enabled proxy: loads when ANY bulk category has its ring OR
       // its label on, both axes read from the per-category item rows.

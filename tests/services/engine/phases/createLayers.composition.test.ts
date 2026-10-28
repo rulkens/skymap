@@ -1,7 +1,7 @@
 /**
  * createLayers — the contribution composition: core's constants first, then
- * every Layer's, in tuple order, with each asset row's factory called exactly
- * once and no two rows claiming one slot key.
+ * every Layer's, in tuple order, with each asset row's slot indexed by its key
+ * and no two rows claiming one slot key.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -57,22 +57,15 @@ function makeDeps(
 
 /**
  * A Layer contributing one distinctly named row of every kind. `assetKey` and
- * `factory` are separate so a test can aim two Layers at one key, or watch how
- * often the factory runs.
+ * `slot` are separate so a test can aim two Layers at one key.
  */
-function contributingLayer(
-  tag: string,
-  assetKey: string,
-  factory: () => object,
-): Layer<string, unknown> {
+function contributingLayer(tag: string, assetKey: string, slot: object): Layer<string, unknown> {
   return {
     name: tag,
     create: () => ({}),
     destroy: () => {},
     passes: () => [{ name: `${tag}-pass`, enabled: () => false, draw: () => {} }],
-    assets: () => [
-      { key: assetKey, factory, req: () => undefined, demand: () => false, priority: 1 },
-    ],
+    assets: () => [{ key: assetKey, slot, req: () => undefined, demand: () => false, priority: 1 }],
     guides: () => ({
       screenLabels: [{ id: `${tag}-labels`, slab: COSMO, produceLabels: () => ({}) }],
     }),
@@ -126,11 +119,10 @@ describe('createLayers composition', () => {
     const registerProducer = vi.fn();
     const slotA = { name: 'slot-a' };
     const slotB = { name: 'slot-b' };
-    const factoryA = vi.fn(() => slotA);
     const state = makeState(registerProducer);
     const layers = [
-      contributingLayer('a', 'a-asset', factoryA),
-      contributingLayer('b', 'b-asset', () => slotB),
+      contributingLayer('a', 'a-asset', slotA),
+      contributingLayer('b', 'b-asset', slotB),
     ];
 
     await createLayers(state, makeDeps(layers, store));
@@ -141,11 +133,8 @@ describe('createLayers composition', () => {
       'b-pass',
     ]);
     expect(state.assetRows.map((row) => row.key).slice(-2)).toEqual(['a-asset', 'b-asset']);
-    expect(state.layerSlots.get('a-asset' as never)).toBe(slotA);
-    expect(state.layerSlots.get('b-asset' as never)).toBe(slotB);
-    // Once at composition, never per frame: a second call mints a second
-    // subscriber onto the same payload.
-    expect(factoryA).toHaveBeenCalledTimes(1);
+    expect(state.slotsByKey.get('a-asset' as never)).toBe(slotA);
+    expect(state.slotsByKey.get('b-asset' as never)).toBe(slotB);
     expect(registerProducer.mock.calls.map(([producer]) => producer.id)).toEqual([
       'a-labels',
       'b-labels',
@@ -221,8 +210,8 @@ describe('createLayers composition', () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const layers = [
-      contributingLayer('a', 'shared-asset', () => ({})),
-      contributingLayer('b', 'shared-asset', () => ({})),
+      contributingLayer('a', 'shared-asset', {}),
+      contributingLayer('b', 'shared-asset', {}),
     ];
 
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
@@ -248,7 +237,7 @@ describe('createLayers composition', () => {
   it('throws at boot when a Layer mints a slot key core already owns', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    const layer = contributingLayer('a', 'mesh:curiosity', () => ({}));
+    const layer = contributingLayer('a', 'mesh:curiosity', {});
 
     await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/mesh:curiosity/);
   });

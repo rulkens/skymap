@@ -211,12 +211,6 @@ function makeState(): EngineState {
     booted: false,
     // runFrame looks up VIEW_RIGS[viewRig].views(canvas, state) once, ready-gated.
     viewRig: 'mono',
-    assetSlots: {
-      points: new Map(),
-      filaments: null,
-      famousGalaxiesMeta: null,
-      pgcAlias: null,
-    },
     // cameraRuntime Resource bag — required for the camera-driver block
     // that runs BEFORE the renderer-null bail-out.
     terrain: FLAT_TERRAIN,

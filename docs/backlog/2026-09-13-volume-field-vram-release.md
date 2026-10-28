@@ -55,7 +55,8 @@ The eviction mechanism already exists and has two users:
 - `AssetWiringRow.release?: (ctx) => boolean`, evaluated in `reevaluateDemand.ts`
   (`kind === 'ready' && row.release?.(ctx)` → `slot.release()` → the slot's
   `onRelease`).
-- `meshSlotRegistry.ts:24` and `bodyTextureSlotRegistry.ts:82` are both one-liners.
+- The mesh slots' `onRelease` (`meshAssetRows.ts`) and the body texture slots' are both
+  one-liners.
 - `VolumeFieldRenderer.unload(id)` (`volumeFieldRenderer.ts:329-342`) already destroys
   all four per-field resources and leaves the fade handle registered, which is the
   correct split — `seedVisibilityFades` owns the identity set across upload/unload.
