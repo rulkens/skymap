@@ -27,9 +27,6 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
-import { gateLabelProducer } from './layer/gateLabelProducer';
-import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabel';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -307,17 +304,6 @@ export function createEngine(
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s
   // `#c[data-view-rig='dome']` rule reads it to square the canvas.
   canvas.dataset.viewRig = state.viewRig;
-
-  // Scene-body captions first so an equal-prominence tiebreak favours the
-  // navigation aid over the diffuse constellation overlay — the constellations
-  // Layer's own producer registers later, from `createLayers`, landing second.
-  state.subsystems.foregroundLabelDirector.registerProducer(
-    gateLabelProducer({
-      id: 'sceneBodyCaptions',
-      label: SCENE_BODY_CAPTION_LABEL,
-      produceLabels: produceSceneBodyCaptions,
-    }),
-  );
 
   // One instance feeds both the dev panel and the load-progress emitter, so the
   // loading bar and the panel agree on what is in flight.

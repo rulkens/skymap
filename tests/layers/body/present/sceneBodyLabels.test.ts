@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';

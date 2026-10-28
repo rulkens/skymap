@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
+import { bodySearch } from '../../../src/layers/body/present/bodySearch';
 import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
 import { earthSceneSearch } from '../../../src/layers/earthScenes/present/earthSceneSearch';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
@@ -81,15 +81,27 @@ describe('rankPaletteMatches', () => {
   });
 });
 
+async function bodyRows() {
+  const layerRows: LayerSearchEntry[] = [];
+  for await (const rows of bodySearch()) layerRows.push(...rows);
+  return layerRows;
+}
+
 describe('rankPaletteMatches — scene-body rows', () => {
-  it("surfaces Earth for the query 'earth'", () => {
-    const rows = rankPaletteMatches([M31], [], [], [], 'earth');
-    const hit = rows.find((r) => r.kind === 'body');
-    expect(hit?.kind === 'body' && hit.body.id).toBe('earth');
-    expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
+  it("surfaces Earth for the query 'earth'", async () => {
+    const rows = rankPaletteMatches([M31], [], [], await bodyRows(), 'earth');
+    const hit = rows.find((r) => r.kind === 'layer');
+    expect(hit?.kind === 'layer' && hit.entry.id).toBe('body-earth');
   });
 
-  it('ranks an exact body match above a famous row that only matched in its description', () => {
+  it.each(['Mars', 'Titan'])('%s ranks exactly one palette row, chip "Solar System"', async (q) => {
+    const rows = rankPaletteMatches([], [], [], await bodyRows(), q);
+    const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === `body-${q.toLowerCase()}`);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Solar System');
+  });
+
+  it('ranks an exact body match above a famous row that only matched in its description', async () => {
     // A famous entry whose *description* contains 'earth' scores low (~15);
     // Earth the scene body is an exact *name* match (~1000). The body must
     // outrank the famous row, even though famous rows are otherwise listed
@@ -100,8 +112,8 @@ describe('rankPaletteMatches — scene-body rows', () => {
       description: 'A galaxy visible from Earth on a clear night.',
       type: 'Sc',
     };
-    const rows = rankPaletteMatches([earthlyFamous], [], [], [], 'earth');
-    const bodyIdx = rows.findIndex((r) => r.kind === 'body' && r.body.id === 'earth');
+    const rows = rankPaletteMatches([earthlyFamous], [], [], await bodyRows(), 'earth');
+    const bodyIdx = rows.findIndex((r) => r.kind === 'layer' && r.entry.id === 'body-earth');
     const famousIdx = rows.findIndex((r) => r.kind === 'famous');
     expect(bodyIdx).toBeGreaterThanOrEqual(0);
     expect(famousIdx).toBeGreaterThanOrEqual(0);
@@ -115,7 +127,7 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const rows = rankPaletteMatches([M31], [], [], [], 'Alpha Canis Majoris');
     const hit = rows.find((r) => r.kind === 'starCatalog');
     expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sirius');
-    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sirius')).toBe(false);
+    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === 'body-sirius')).toBe(false);
   });
 
   it('finds the Sun by its authored alias, and never as a body row', () => {
@@ -125,7 +137,7 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const rows = rankPaletteMatches([M31], [], [], [], 'Sol');
     const hit = rows.find((r) => r.kind === 'starCatalog');
     expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sun');
-    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sun')).toBe(false);
+    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === 'body-sun')).toBe(false);
   });
 
   it('finds Sgr A* by its Sagittarius alias, through its Layer row', async () => {
@@ -183,11 +195,7 @@ describe('rankPaletteMatches — craft rows', () => {
     ['oh no not again', 'body-petunias'],
   ])('a craft alias ranks exactly one palette row: %s', async (query, id) => {
     const rows = rankPaletteMatches([], [], [], await craftRows(), query);
-    const hits = rows.filter(
-      (r) =>
-        (r.kind === 'layer' && r.entry.id === id) ||
-        (r.kind === 'body' && `body-${r.body.id}` === id),
-    );
+    const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === id);
     expect(hits).toHaveLength(1);
     expect(hits[0]!.kind).toBe('layer');
   });
@@ -198,11 +206,7 @@ describe('rankPaletteMatches — Earth scene rows', () => {
     const layerRows = [];
     for await (const rows of earthSceneSearch()) layerRows.push(...rows);
     const rows = rankPaletteMatches([], [], [], layerRows, 'Søndermarken');
-    const hits = rows.filter(
-      (r) =>
-        (r.kind === 'layer' && r.entry.id === 'body-soendermarken') ||
-        (r.kind === 'body' && r.body.id === 'soendermarken'),
-    );
+    const hits = rows.filter((r) => r.kind === 'layer' && r.entry.id === 'body-soendermarken');
     expect(hits).toHaveLength(1);
     expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Earth');
   });

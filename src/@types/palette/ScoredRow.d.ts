@@ -7,7 +7,6 @@
 import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
-import type { SceneBody } from '../scene/SceneBody';
 import type { StarBody } from '../scene/StarBody';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 import type { Exhibit } from '../exhibits/Exhibit';
@@ -19,10 +18,8 @@ import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
  * One scored row, ready to render.  `kind` discriminates the payload shapes;
  * `ROW_VIEW` dispatches on it for the rendered text and `utils/palette/actionForRow`
  * for the resulting `PaletteAction`.  `milkyWay` carries no payload — it's the singleton
- * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
- * (Earth, a planet, a mesh body — the `SceneBody` union; the row only reads
- * the shared `id`/`label` fields) and `starCatalog` a seeded star with the
- * source + index its ref needs; both are scored and ranked in like a famous
+ * FocusableTarget, resolved by the saga.  `starCatalog` carries a seeded star with the
+ * source + index its ref needs; it is scored and ranked in like a famous
  * row (see `rankPaletteMatches`).  `exhibit` and `tour` carry a registry row each
  * (`APP_EXHIBITS`, `tourRegistry`); `place` carries an `EarthPlace` — a
  * search-only point, not a focusable ref — ranked the same way. Those three
@@ -35,7 +32,6 @@ export type ScoredRow =
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
   | { kind: 'milkyWay'; score: number }
-  | { kind: 'body'; body: SceneBody; score: number }
   | {
       kind: 'starCatalog';
       source: StarCatalogSourceType;

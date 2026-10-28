@@ -10,7 +10,6 @@
 
 import { encodeGalaxyId } from '../../services/url/encodeGalaxyId';
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
-import { BODY_FOCUS_PREFIX } from '../../services/url/bodyFocusId';
 import { encodeStarFocusId } from '../../services/url/encodeStarFocusId';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
@@ -45,10 +44,6 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
   }),
   structure: (row) => ({ kind: 'focus', focusId: row.kind === 'structure' ? row.entry.id : '' }),
   milkyWay: () => ({ kind: 'focus', focusId: MILKY_WAY_FOCUS_ID }),
-  body: (row) => ({
-    kind: 'focus',
-    focusId: row.kind === 'body' ? `${BODY_FOCUS_PREFIX}${row.body.id}` : '',
-  }),
   starCatalog: (row) => ({
     kind: 'focus',
     focusId:

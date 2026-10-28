@@ -1,21 +1,19 @@
 /**
  * rankPaletteMatches — the command palette's pure ranking pipeline: filters and
- * ranks the parallel indexes (famous atlas, scene bodies, Earth places, alias
+ * ranks the parallel indexes (famous atlas, seeded stars, Earth places, alias
  * index, structures) plus the Milky Way row against a non-empty query (the
  * featured grid owns browsing).
  *
- * Famous rows, bodies, seeded stars and Earth places share one score-sorted
- * list, so an exact body match like "earth" outranks a famous row that only
- * matched "earth" in its description. Alias and structure lists are capped and
+ * Famous rows, seeded stars, Earth places and the Layers' primary rows share one
+ * score-sorted list, so an exact match like "earth" outranks a famous row that
+ * only matched "earth" in its description. Alias and structure lists are capped and
  * appended after.
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../../data/palette/milkyWayNames';
-import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
-import { isBodyKindId } from '../../layers/body/present/isBodyKindId';
 import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
@@ -55,28 +53,6 @@ export function rankPaletteMatches(
     .map<ScoredRow>((entry) => {
       const raw = scoreFamousMatch(entry, query);
       return { kind: 'famous', entry, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
-    })
-    .filter((s) => s.score > 0);
-
-  // Seeded scene bodies (Earth, the planets, the mesh bodies) are scored like a
-  // famous row. The wheel-zoom floor (clampDistance.ts) is derived from the
-  // focused body's own radius, so a picked body always resolves to a
-  // reachable, non-sub-pixel focus target.
-  //
-  // A body scores over its full alias list (BODY_SEARCH_NAMES), so a Bayer
-  // designation ("Alpha Canis Majoris") surfaces the same row as the common
-  // name ("Sirius"). Earth/planets aren't in the map and fall back to their
-  // single label.
-  //
-  // `SCENE_BODIES` still lists the seeded stars for the camera and occluder
-  // readers, so the body rows are narrowed to the ids the `body` kind claims (the
-  // craft and the Earth scenes are their own Layers' palette rows); the stars
-  // get their own rows below, carrying star identity.
-  const bodyScored: ScoredRow[] = SCENE_BODIES.filter((body) => isBodyKindId(body.id))
-    .map<ScoredRow>((body) => {
-      const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
-      const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);
-      return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
     })
     .filter((s) => s.score > 0);
 
@@ -121,7 +97,7 @@ export function rankPaletteMatches(
     })
     .filter((s) => s.score > 0);
 
-  // Earth places are scored the same way as a scene body: a fixed, small
+  // Earth places are scored the same way as a seeded star: a fixed, small
   // table with no catalog membership, so no cap/append treatment like alias
   // or structure rows.
   const placeScored: ScoredRow[] = EARTH_PLACES.map<ScoredRow>((place) => {
@@ -147,14 +123,13 @@ export function rankPaletteMatches(
     (s) => s.kind === 'layer' && s.entry.class === 'catalog',
   );
 
-  // Famous rows, scene bodies, Earth places, exhibits and tours are one class
+  // Famous rows, seeded stars, Earth places, exhibits and tours are one class
   // of primary named object: merge and sort together so an exact match
   // ("earth") outranks a famous row that only matched "earth" in its
   // description. The sort is stable, so earlier arrays stay ahead on an exact
   // score tie (famous first).
   const primaryScored = [
     ...famousScored,
-    ...bodyScored,
     ...starScored,
     ...placeScored,
     ...exhibitScored,

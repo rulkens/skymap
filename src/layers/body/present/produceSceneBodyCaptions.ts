@@ -8,19 +8,20 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { LabelItemOf } from '../../../@types/animation/LabelItemOf';
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
-import type { CaptionKind } from './captionPriority';
+import type { CaptionKind } from '../../../services/engine/presentation/captionPriority';
 import { sceneBodyLabels } from './sceneBodyLabels';
-import { SCENE_BODY_CAPTION_LABEL } from '../../../data/labels/sceneBodyCaptionLabel';
-import { SOURCE_REGISTRY, Source } from '../../../data/sources';
-import { sceneBodyStates } from '../frame/sceneBodyStates';
+import { EARTH_ENTRY } from '../sources/earth';
+import { PLANET_ENTRY } from '../sources/planet';
+import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 
-// Which item of core's own `label:body` entry carries each kind `sceneBodyLabels` emits:
+// Which item of the `label:body` entry carries each kind `sceneBodyLabels` emits:
 // the source entry the kind's bodies caption under.
-const BODY_CAPTION_ITEM: Readonly<
-  Partial<Record<CaptionKind, LabelItemOf<typeof SCENE_BODY_CAPTION_LABEL>>>
-> = { earth: SOURCE_REGISTRY[Source.Earth].id, planet: SOURCE_REGISTRY[Source.Planet].id };
+const BODY_CAPTION_ITEM: Readonly<Partial<Record<CaptionKind, LabelItemOf<'body'>>>> = {
+  earth: EARTH_ENTRY.id,
+  planet: PLANET_ENTRY.id,
+};
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.
@@ -37,9 +38,11 @@ function baseLabelsFor(
   return cachedLabels;
 }
 
-export const produceSceneBodyCaptions: LayerScreenLabel<
-  typeof SCENE_BODY_CAPTION_LABEL
->['produceLabels'] = (state, ctx, fade) => {
+export const produceSceneBodyCaptions: LayerScreenLabel<'body'>['produceLabels'] = (
+  state,
+  ctx,
+  fade,
+) => {
   const composeCtx = captionComposeContextOf(state, ctx);
   const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) =>
     composeForegroundCaption(composeCtx, label, fade[BODY_CAPTION_ITEM[label.kind]!]),

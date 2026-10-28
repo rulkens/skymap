@@ -19,10 +19,10 @@
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
-import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
+import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/produceSceneBodyCaptions';
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLabels';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

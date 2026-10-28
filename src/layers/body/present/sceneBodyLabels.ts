@@ -36,7 +36,7 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ForegroundCaption } from './foregroundCaption';
+import type { ForegroundCaption } from '../../../services/engine/presentation/foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { compressBrightness } from '../../../utils/color/compressBrightness';

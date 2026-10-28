@@ -33,7 +33,7 @@ function thumbOrGlyph(shotUrl: string | undefined, label: string): ReactNode {
 }
 
 /**
- * A milkyWay/body/star row's leading visual: the captured card shot of the
+ * A milkyWay/star/layer row's leading visual: the captured card shot of the
  * featured card that names the same focus id `actionForRow` resolves to (the
  * id grammar the URL deep-link layer uses), else the letter glyph.
  */
@@ -55,10 +55,8 @@ type RowView = {
 const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
 
 /**
- * Shared render for the `body` and `starCatalog` arms below — they differ
- * only in which `ScoredRow` field they read the id/label from, everything
- * else (aliases, constellation/scale chip, captured-shot leading visual) is
- * identical, so one row shape serves both kinds.
+ * The `starCatalog` arm's render: aliases from the ranker's own name lookup, the
+ * constellation (or, failing that, scale-region) chip, and the captured-shot leading visual.
  */
 function namedRowView(m: ScoredRow, keyPrefix: string, testidPrefix: string, id: string): RowView {
   const label = paletteRowLabel(m).name;
@@ -171,15 +169,12 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // Scene-body row — captured card shot when one exists (see `shotOrGlyph`),
+  // Seeded-star row — captured card shot when one exists (see `shotOrGlyph`),
   // else a letter glyph. Aliases come from the same lookup the ranker scores
   // over, so a row shows exactly the names it can be found by; the chip is
-  // the body's constellation or, failing that, its scale regime (e.g.
+  // the star's constellation or, failing that, its scale regime (e.g.
   // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre"). A seeded star's row renders identically — same lookups, same
-  // chip — off its own star identity.
-  body: (m) =>
-    m.kind !== 'body' ? EMPTY_ROW_VIEW : namedRowView(m, 'body', 'body-row', m.body.id),
+  // Centre").
   starCatalog: (m) =>
     m.kind !== 'starCatalog'
       ? EMPTY_ROW_VIEW

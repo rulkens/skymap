@@ -4,14 +4,14 @@
  * vantage; the scene it wants is the app's own default scene.
  */
 
-import { initialState as orbitTrailsInitialState } from '../../layers/body/state/orbitTrails/initialState';
-import { initialState as starCatalogsInitialState } from '../../layers/starCatalog/state/starCatalogs/initialState';
-import { SCALE_UNITS } from '../scaleUnits';
-import { section } from '../../utils/exhibits/section';
-import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
-import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
-import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
-import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import { initialState as orbitTrailsInitialState } from '../state/orbitTrails/initialState';
+import { initialState as starCatalogsInitialState } from '../../starCatalog/state/starCatalogs/initialState';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { section } from '../../../utils/exhibits/section';
+import { factsKind } from '../../../components/ExhibitOverlay/kinds/factsKind';
+import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
+import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 
 /**
  * Exposure trim on the starfield (1.0 is the shader baseline). Held down so
