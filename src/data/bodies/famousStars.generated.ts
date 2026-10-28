@@ -1427,4 +1427,16 @@ export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [
     temperatureK: 3561,
     radiusSolar: 69,
   },
+  {
+    id: 'trappist-1',
+    commonName: 'TRAPPIST-1',
+    names: ['TRAPPIST-1', '2MASS J23062928-0502285', 'EPIC 246199087'],
+    constellation: 'Aquarius',
+    raDeg: 346.6264,
+    decDeg: -5.0435,
+    distancePc: 12.43,
+    absMag: 18.33,
+    temperatureK: 2566,
+    radiusSolar: 0.1192,
+  },
 ];

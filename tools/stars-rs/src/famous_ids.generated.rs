@@ -10,7 +10,7 @@
 //     catch the saturated bright stars Gaia DR3 lacks a row for.
 // include!()-d into population.rs so the consts land in that module's
 // namespace, exactly where the hand-maintained array used to live.
-pub const FAMOUS_STAR_GAIA_IDS: [u64; 49] = [
+pub const FAMOUS_STAR_GAIA_IDS: [u64; 50] = [
     5853498713190525696, // proxima-centauri
     4472832130942575872, // barnards-star
     3864972938605115520, // wolf-359
@@ -60,6 +60,7 @@ pub const FAMOUS_STAR_GAIA_IDS: [u64; 49] = [
     2835207319109249920, // 51-pegasi
     4152993273702130432, // uy-scuti
     1220110705972528512, // t-coronae-borealis
+    2635476908753563008, // trappist-1
 ];
 pub const FAMOUS_STAR_HIP_IDS: [u32; 104] = [
     70890, // proxima-centauri

@@ -166,11 +166,11 @@ export function validateFamousStarEntry(e: FamousStarEntry): FamousStarEntry {
     throw new Error(`famous stars seed: ${e.id} has negative distancePc ${e.distancePc}`);
   }
   // Apparent V spans the Sun (-26.74) at the bright end to the faintest curated
-  // naked-ish targets (Proxima at +11.1); [-27, 16] keeps a mistyped value loud
+  // planet host (TRAPPIST-1 at +18.8); [-27, 20] keeps a mistyped value loud
   // without clipping any real entry.
-  if (!Number.isFinite(e.magV) || e.magV < -27 || e.magV > 16) {
+  if (!Number.isFinite(e.magV) || e.magV < -27 || e.magV > 20) {
     throw new Error(
-      `famous stars seed: ${e.id} has out-of-range magV ${e.magV} (expected [-27, 16])`,
+      `famous stars seed: ${e.id} has out-of-range magV ${e.magV} (expected [-27, 20])`,
     );
   }
   // Absolute V runs from luminous supergiants (~-12) to dim M dwarfs (~+17);

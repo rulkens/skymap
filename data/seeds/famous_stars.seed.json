@@ -2567,5 +2567,25 @@
     "hip": 78322,
     "gaiaDr3Note": "Gaia DR3 1220110705972528512 resolves in SIMBAD to V* T CrB, the recurrent-nova binary.",
     "description": "T Coronae Borealis, nicknamed the Blaze Star, is a recurrent nova in Corona Borealis — a red giant paired with a heavy white dwarf that steadily draws gas from its companion. Roughly every eighty years enough matter piles onto the white dwarf to trigger a runaway thermonuclear flash, and the normally tenth-magnitude system flares within hours to about second magnitude, briefly rivalling the stars of the Northern Crown. It last erupted in 1866 and 1946, and astronomers widely forecast another outburst in 2024–2026, though as of mid-2026 the star has stayed quiet. Its white dwarf sits near the mass limit above which such a star can explode outright as a supernova."
+  },
+  {
+    "id": "trappist-1",
+    "commonName": "TRAPPIST-1",
+    "names": ["TRAPPIST-1", "2MASS J23062928-0502285", "EPIC 246199087"],
+    "constellation": "Aquarius",
+    "ra": 346.6264,
+    "dec": -5.0435,
+    "distancePc": 12.43,
+    "magV": 18.8,
+    "absMag": 18.33,
+    "spectralType": "M8V",
+    "radiusSolar": 0.1192,
+    "temperatureK": 2566,
+    "massSolar": 0.0898,
+    "luminositySolar": 0.000553,
+    "ageGyr": 7.6,
+    "gaiaDr3": "2635476908753563008",
+    "hip": null,
+    "description": "TRAPPIST-1 is an ultracool red dwarf in Aquarius, 12.4 parsecs (40.5 light-years) away, barely larger than Jupiter and less than a tenth of the Sun's mass. Seven roughly Earth-sized planets orbit it, all closer in than Mercury is to the Sun, found by the TRAPPIST and Spitzer telescopes as they passed in front of the star between 2016 and 2017. Their orbits are packed in a near-resonant chain, and three or four of them lie where liquid water could exist, which makes the system a prime target for JWST."
   }
 ]
