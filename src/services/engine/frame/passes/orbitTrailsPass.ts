@@ -42,8 +42,8 @@ export const orbitTrailsPass: ContentPass = {
     if (state.orbitTrailGroups.every((group) => group.fade(ctx.snapshot) === 0)) return false;
     // Whole-layer sub-pixel cull: the per-orbit CULL_PX test in `draw`, bounded
     // once per root anchor (the Sun, the Galactic Centre, a planet host) at the
-    // camera's NEAREST possible distance to any of that root's orbit points. Keyed on the eye (`drawCamPos`), NOT `cam.distance`,
-    // which measures to the orbit TARGET. Failing here lets the executor skip the
+    // camera's NEAREST possible distance to any of that root's orbit points. Keyed
+    // on the eye (`drawCamPos`), NOT `cam.distance`, which measures to the orbit TARGET. Failing here lets the executor skip the
     // whole (hdr, NEAR0) step instead of packing zero records.
     const states = sceneBodyStates(state, ctx);
     for (const [rootId, reachMpc] of ORBIT_REACH_BY_ROOT) {

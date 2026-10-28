@@ -3,10 +3,11 @@
  * its `OrbitalElements`, the one site of this table's unit and frame choices.
  *
  * The reference plane is the sky at the host (`orbiter`'s pole = the host's
- * RA/Dec, so the plane normal points away from us). Inclination fixes the tilt;
- * the node's position angle is unmeasured for a transiting planet and is 0 by
- * convention, with ω = 0 too. At mid-transit the planet is nearest us, which is
- * true anomaly 270° in that frame, so the transit time is the epoch.
+ * RA/Dec: x East, y North, normal away from us). The sky angles convert as the
+ * S-stars' do (`makers/sStar.ts`): frame i = 180° − i, frame Ω = 90° − PA. The
+ * node's PA is unmeasured for a transiting planet and is 0 (north) by
+ * convention, with ω = 0. At mid-transit the planet is nearest us, true anomaly
+ * 270° in that frame, so the transit time is the epoch.
  */
 
 import { SCALE_UNITS } from '../../scaleUnits';
@@ -14,25 +15,19 @@ import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
 import { EXOPLANET_TRAIL } from '../palette';
 import { FAMOUS_STARS_GENERATED } from '../famousStars.generated';
 import { orbiter } from './orbiter';
+import { meanAnomalyFromTrue } from '../../../utils/orbit/meanAnomalyFromTrue';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 import type { ExoplanetSeed } from '../../../@types/scene/ExoplanetSeed';
-import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
-import type { PlanetBody } from '../../../@types/scene/PlanetBody';
+import type { ExoplanetBody } from '../../../@types/scene/ExoplanetBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 const EARTH_RADIUS_KM = 6371;
 const TRANSIT_TRUE_ANOMALY_RAD = (3 * Math.PI) / 2;
+const NODE_POSITION_ANGLE_DEG = 0;
 // Dark rock: JWST's thermal phase curves put b and c at low albedo; the rest are unmeasured.
 const ROCKY_ALBEDO: Vec3 = [0.2, 0.19, 0.18];
 
-/** Mean anomaly at a true anomaly ν, in degrees, through the eccentric anomaly. */
-function meanAnomalyDeg(trueAnomalyRad: number, e: number): number {
-  const half = trueAnomalyRad / 2;
-  const eAnom = 2 * Math.atan2(Math.sqrt(1 - e) * Math.sin(half), Math.sqrt(1 + e) * Math.cos(half));
-  return ((eAnom - e * Math.sin(eAnom)) * 180) / Math.PI;
-}
-
-export function exoplanet(seed: ExoplanetSeed): { body: PlanetBody; elements: OrbitalElements } {
+export function exoplanet(seed: ExoplanetSeed): ExoplanetBody {
   const host = FAMOUS_STARS_GENERATED.find((row) => row.id === seed.hostId);
   if (host === undefined) throw new Error(`exoplanet: ${seed.id}'s host ${seed.hostId} is no famous star`);
   return {
@@ -49,10 +44,10 @@ export function exoplanet(seed: ExoplanetSeed): { body: PlanetBody; elements: Or
       epochJd: seed.transitJd,
       semiMajorKm: (seed.semiMajorAu * SCALE_UNITS.AU_TO_MPC) / SCALE_UNITS.KM_TO_MPC,
       eccentricity: seed.eccentricity,
-      inclinationDeg: seed.inclinationDeg,
-      ascendingNodeDeg: 0,
+      inclinationDeg: 180 - seed.inclinationDeg,
+      ascendingNodeDeg: 90 - NODE_POSITION_ANGLE_DEG,
       argPeriapsisDeg: 0,
-      meanAnomalyDeg: meanAnomalyDeg(TRANSIT_TRUE_ANOMALY_RAD, seed.eccentricity),
+      meanAnomalyDeg: (meanAnomalyFromTrue(TRANSIT_TRUE_ANOMALY_RAD, seed.eccentricity) * 180) / Math.PI,
       meanMotionDegPerDay: 360 / seed.periodDays,
       nodeRateDegPerDay: 0,
       poleRaDeg: host.raDeg,

@@ -101,13 +101,14 @@ export const planetsPass: ContentPass = {
     if (pose === null) return;
 
     // Live position + orientation from the per-frame snapshot (keyed by id) —
-    // sunDirLocal still reads Mpc/orientation directly; only the mvp/camLocal
+    // lightDirLocal still reads Mpc/orientation directly; only the mvp/camLocal
     // seam moved to the metre-native body-slab primitives.
-    const bodyState = sceneBodyStates(state, ctx).get(planet.id)!;
+    const states = sceneBodyStates(state, ctx);
+    const bodyState = states.get(planet.id)!;
     const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.surface.datumRadiusM);
     const sun = lightDirLocal(
       bodyState.positionMpc,
-      lightSourceMpc(planet.id, sceneBodyStates(state, ctx)),
+      lightSourceMpc(planet.id, states),
       bodyState.orientation,
     );
     // The analytic ray's ORIGIN, in the frame where this body is the unit

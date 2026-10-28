@@ -10,6 +10,7 @@
 
 import { exoplanet } from './makers/exoplanet';
 import type { ExoplanetSeed } from '../../@types/scene/ExoplanetSeed';
+import type { ExoplanetBody } from '../../@types/scene/ExoplanetBody';
 
 const TRAPPIST_1 = (
   letter: string,
@@ -41,4 +42,4 @@ const SEEDS: readonly ExoplanetSeed[] = [
   TRAPPIST_1('h', 0.06189, 18.772866, 0.00567, 89.805, 2457662.5741486, 0.755),
 ];
 
-export const EXOPLANET_PLANETS = SEEDS.map(exoplanet);
+export const EXOPLANET_PLANETS: readonly ExoplanetBody[] = SEEDS.map(exoplanet);

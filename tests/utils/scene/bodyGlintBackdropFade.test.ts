@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bodyGlintBackdropFade } from '../../../src/utils/scene/bodyGlintBackdropFade';
+import { lightSourceMpc } from '../../../src/utils/scene/lightSourceMpc';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -15,7 +16,11 @@ const nearTrappist: [number, number, number] = [
 
 describe('bodyGlintBackdropFade', () => {
   it("keeps a planet's glint inside its own system and dissolves the others", () => {
-    expect(bodyGlintBackdropFade(asSceneBodyId('trappist-1-e'), nearTrappist, states)).toBe(1);
-    expect(bodyGlintBackdropFade(asSceneBodyId('mars'), nearTrappist, states)).toBe(0);
+    expect(
+      bodyGlintBackdropFade(lightSourceMpc(asSceneBodyId('trappist-1-e'), states), nearTrappist),
+    ).toBe(1);
+    expect(bodyGlintBackdropFade(lightSourceMpc(asSceneBodyId('mars'), states), nearTrappist)).toBe(
+      0,
+    );
   });
 });

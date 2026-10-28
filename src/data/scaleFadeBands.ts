@@ -41,7 +41,8 @@ export const SCALE_FADE_BANDS = {
   // layer's gate cuts it, so the cut cannot pop.
   starCaption: { fullAt: FARTHEST_STAR_PC * 1.1, goneAt: FARTHEST_STAR_PC * 2 },
 
-  // Keyed on: CAMERA distance from the `solar-system` region's anchor, Mpc —
+  // Keyed on: CAMERA distance from each glint's root anchor (its star), Mpc, sized
+  // off the solar system's extent for every star —
   // the same dissolve-before-the-gate contract as the star Layer's own backdrop
   // dissolve, one scale-decade in. Both consumers DISABLE outright at 0 ("opacity
   // 0 ⇒ no render"), so this far-dissolve is the binding smooth gate; the 2×/10×

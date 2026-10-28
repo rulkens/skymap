@@ -41,13 +41,14 @@ export function packBodyGlints(
       camPosMpc,
       pxPerRad,
     });
+    const lightMpc = lightSourceMpc(body.id, states);
     const brightness = bodyGlintBrightnessOf(
       body.albedo,
       positionMpc,
-      lightSourceMpc(body.id, states),
+      lightMpc,
       camPosMpc,
       diameterPx,
-      bodyGlintBackdropFade(body.id, camPosMpc, states),
+      bodyGlintBackdropFade(lightMpc, camPosMpc),
     );
     if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
 

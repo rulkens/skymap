@@ -6,18 +6,11 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { BodyState } from '../../@types/scene/BodyState';
-import type { PositionedId } from '../../@types/scene/PositionedId';
 import { SCALE_FADE_BANDS } from '../../data/scaleFadeBands';
 import { fadeBand } from '../math/fadeBand';
 import { distanceMpc } from '../math/distanceMpc';
-import { rootBodyIdOf } from './rootBodyIdOf';
 
-export function bodyGlintBackdropFade(
-  bodyId: PositionedId,
-  camPosMpc: Readonly<Vec3>,
-  states: ReadonlyMap<string, BodyState>,
-): number {
-  const root = states.get(rootBodyIdOf(bodyId))!.positionMpc;
-  return fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, distanceMpc(camPosMpc, root));
+/** `rootMpc` is the body's root anchor, `lightSourceMpc`'s answer: callers walk it once per glint. */
+export function bodyGlintBackdropFade(rootMpc: Readonly<Vec3>, camPosMpc: Readonly<Vec3>): number {
+  return fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, distanceMpc(camPosMpc, rootMpc));
 }

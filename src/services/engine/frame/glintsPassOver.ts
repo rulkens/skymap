@@ -12,6 +12,7 @@ import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintIns
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 import { bodyGlintBackdropFade } from '../../../utils/scene/bodyGlintBackdropFade';
+import { lightSourceMpc } from '../../../utils/scene/lightSourceMpc';
 import { packBodyGlints } from '../../../utils/scene/packBodyGlints';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
@@ -31,7 +32,7 @@ export function glintsPassOver(
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const states = sceneBodyStates(state, ctx);
       return sceneBodyPartition(state, ctx, roster, () => false).glints.some(
-        (body) => bodyGlintBackdropFade(body.id, ctx.drawCamPos, states) > 0,
+        (body) => bodyGlintBackdropFade(lightSourceMpc(body.id, states), ctx.drawCamPos) > 0,
       );
     },
 

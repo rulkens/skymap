@@ -1,7 +1,7 @@
 /**
- * orbiter — row maker for a spacecraft orbiting a planet, from one JPL Horizons
- * ELEMENTS column set (`REF_PLANE='FRAME'`, KM-D) plus the node rate read off a
- * multi-day span. Horizons publishes at the FETCH epoch and this table is
+ * orbiter — row maker for a body on fixed elements at a stated epoch: a spacecraft
+ * from one JPL Horizons ELEMENTS column set (`REF_PLANE='FRAME'`, KM-D) plus the
+ * node rate read off a multi-day span, or an exoplanet (`makers/exoplanet.ts`). Horizons publishes at the FETCH epoch and this table is
  * authored at J2000, so M and Ω are back-propagated at their own rates; M stays
  * UNWRAPPED, exactly as in `probe`.
  */

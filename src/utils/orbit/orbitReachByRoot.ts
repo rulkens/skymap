@@ -4,12 +4,9 @@
  * the Galactic Centre, a star with planets.
  *
  * Per root, not one scene-wide maximum, because a reach is only ever subtracted
- * from a camera distance measured against the SAME anchor. Fold a Galactic Centre
- * orbit into a single maximum and the solar-system trails inherit ITS envelope, so
- * the orbit-trail cull stops firing for cameras nowhere near it.
- *
- * The tables are parameters so the far-anchored case is testable before such an
- * orbit is seeded.
+ * from a camera distance measured against the SAME anchor: one maximum would hand
+ * the solar-system trails a Galactic Centre envelope and stop the cull firing.
+ * The tables are parameters so a far-anchored case is testable with synthetic rows.
  */
 
 import type { AnchorBody } from '../../@types/scene/AnchorBody';

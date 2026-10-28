@@ -51,10 +51,9 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: PassState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
-    // The 'solar-system' region's anchor (sceneAnchors.ts authors the Sun at
-    // [0, 0, 0]) — an absent entry reads as Infinity, not 0 (see
-    // regionRelativeDistanceMpc's header), so every case needs it regardless of
-    // which planets it seeds. Orientation is inlined rather than reusing the
+    // Every planet's root anchor and light (sceneAnchors.ts authors the Sun at
+    // [0, 0, 0]): `lightSourceMpc` reads it for each glint, so every case needs it
+    // regardless of which planets it seeds. Orientation is inlined rather than reusing the
     // module's IDENTITY const: this factory is hoisted above IDENTITY's
     // declaration and runs at first import, a TDZ hazard.
     m.set('sun', {

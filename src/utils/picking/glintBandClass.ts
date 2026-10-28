@@ -18,6 +18,7 @@ import {
 
 export function glintBandClass(bodyId: string): number {
   if (bodyId === 'earth') return GLINT_CLASS_EARTH;
-  // heliocentric (planet, probe) : hanging off a planet (moon, rover)
-  return bodyHostId(bodyId) === 'sun' ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
+  // Hanging off a root, a star (planet, probe, exoplanet) : off a planet (moon, rover).
+  const host = bodyHostId(bodyId);
+  return host !== null && bodyHostId(host) === null ? GLINT_CLASS_PLANET : GLINT_CLASS_MOON;
 }

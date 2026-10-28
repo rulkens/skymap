@@ -17,7 +17,7 @@
  *     high-albedo body (Venus) outshines a dark one (Neptune) at equal apparent
  *     size, which is why the naked-eye planets rank the way they do.
  *   - **illuminated fraction (phase)** — `(1 + cos α) / 2`, where α is the
- *     Sun–body–camera phase angle: `cos α = dot(toSun, toCam)` from the body.
+ *     star–body–camera phase angle: `cos α = dot(toLight, toCam)` from the body.
  *     Full phase (camera on the sunlit side) → 1; new phase (the unlit far side)
  *     → 0, so a body whose lit face is turned away adds no light. The phase is a
  *     dot of two directions and thus frame-invariant — computing it in the world
@@ -51,7 +51,7 @@ export function bodyGlintBrightness(input: {
   // Albedo luminance (Rec.709).
   const lum = LUMA_R * albedo[0] + LUMA_G * albedo[1] + LUMA_B * albedo[2];
 
-  // Illuminated fraction from the Sun–body–camera geometry (frame-invariant).
+  // Illuminated fraction from the star–body–camera geometry (frame-invariant).
   const sx = lightMpc[0] - positionMpc[0];
   const sy = lightMpc[1] - positionMpc[1];
   const sz = lightMpc[2] - positionMpc[2];
@@ -60,7 +60,7 @@ export function bodyGlintBrightness(input: {
   const cy = camPosMpc[1] - positionMpc[1];
   const cz = camPosMpc[2] - positionMpc[2];
   const cLen = Math.hypot(cx, cy, cz);
-  // Degenerate (body at the Sun, or camera on the body) — no meaningful phase;
+  // Degenerate (body at its star, or camera on the body) — no meaningful phase;
   // treat as fully lit. The camera-on-body case never reaches here anyway (the
   // partition sends distance-0 bodies to the mesh, not the glint).
   const illum =

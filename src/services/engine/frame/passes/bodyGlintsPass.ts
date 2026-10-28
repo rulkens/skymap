@@ -24,13 +24,13 @@
  *     the mesh still draws: at 3 px the glint is ~0 (the mesh carries), by 1 px it
  *     is full (the mesh is about to cull at `SUB_PIXEL_BODY_CULL_PX`), a popless
  *     handoff. This is the NEAR handoff to the resolved sphere.
- *   - `bodyGlintBackdrop`, keyed on the camera's distance from the solar system's
- *     own region anchor. The FAR dissolve: the glints are minimum-size additive
- *     sprites (like the star points), so as the camera pulls back all ~22 collapse
- *     onto one bright dot. This band fades the whole field out a few solar-system
- *     radii out, so glints stop mattering long before Milky-Way framing rather
- *     than riding full-brightness to the coarse foreground gate — the sibling of
- *     `starPointsPass`'s backdrop dissolve. Hoisted per-frame in `draw` (one camera).
+ *   - `bodyGlintBackdrop`, keyed on the camera's distance from each body's root
+ *     anchor (the Sun, or an exoplanet's star). The FAR dissolve: the glints are
+ *     minimum-size additive sprites (like the star points), so as the camera pulls
+ *     back a system's glints collapse onto one bright dot. This band fades them out
+ *     a few solar-system radii from their star, so glints stop mattering long
+ *     before Milky-Way framing rather than riding full-brightness to the coarse
+ *     foreground gate — the sibling of `starPointsPass`'s backdrop dissolve.
  * `color` is the body's albedo tint (the shader premultiplies it by brightness).
  *
  * ### The zero-brightness skip (`feedback_opacity_zero_no_render`)
@@ -125,7 +125,7 @@ export const bodyGlintsPass: ContentPass = {
     // `FOREGROUND_MAX_DISTANCE_MPC`, so this is the binding — and smooth — gate.
     const states = sceneBodyStates(state, ctx);
     return coreSceneBodyPartition(state, ctx).glints.some(
-      (body) => bodyGlintBackdropFade(body.id, ctx.drawCamPos, states) > 0,
+      (body) => bodyGlintBackdropFade(lightSourceMpc(body.id, states), ctx.drawCamPos) > 0,
     );
   },
 
@@ -297,16 +297,17 @@ export const bodyGlintsPass: ContentPass = {
         camPosMpc: camPos,
         pxPerRad: ctx.drawPxPerRad,
       });
+      const lightMpc = lightSourceMpc(body.id, states);
       const brightness = bodyGlintBrightnessOf(
         body.albedo,
         positionMpc,
-        lightSourceMpc(body.id, states),
+        lightMpc,
         camPos,
         diameterPx,
         // The same far-dissolve `draw` folds in, so this recomputes `draw`'s EXACT
         // brightness: once the camera has left a body's system it reads 0, and beyond
         // the caption gate no orphan pick survives on a glint that renders nothing.
-        bodyGlintBackdropFade(body.id, camPos, states),
+        bodyGlintBackdropFade(lightMpc, camPos),
       );
       if (
         brightness <= GLINT_MIN_BRIGHTNESS &&
