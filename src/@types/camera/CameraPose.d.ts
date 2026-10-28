@@ -27,4 +27,9 @@ export type CameraPose = {
    * conversion into a body-fixed or site arm drops it.
    */
   lookOffset?: Vec2;
+  /**
+   * Vertical field of view, radians — the clip `fov` channel's field only. The
+   * live lens is `camera.lens`, beside `base`; absent ⇒ the lens holds.
+   */
+  fov?: number;
 };

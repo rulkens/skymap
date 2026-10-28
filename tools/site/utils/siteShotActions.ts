@@ -15,7 +15,8 @@ import {
 } from '../../../src/layers/structure/state/structures/slice';
 import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
-import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setLens } from '../../../src/state/camera/cameraSlice';
+import { degToRad } from '../../../src/utils/math/degToRad';
 import { setOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/slice';
 import { requestTier } from '../../../src/state/tier/requestTier';
 import { startTour } from '../../../src/state/tour/tourActions';
@@ -53,7 +54,7 @@ export function siteShotActions({
   if (settings.hideCosmicWeb) actions.push(setCosmicWebDensityEnabled(false));
   if (settings.hideZoneOfAvoidance) actions.push(setZoneOfAvoidanceEnabled(false));
   if (settings.filaments) actions.push(setCosmicWebFilamentsEnabled(true));
-  if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
+  if (settings.fovDeg !== undefined) actions.push(setLens(degToRad(settings.fovDeg)));
   if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));
   // The new size's files load after this; the row's `settleMs` is the wait for them.
   if (settings.dataSize !== undefined) actions.push(requestTier(settings.dataSize));

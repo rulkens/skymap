@@ -43,7 +43,6 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_EXPOSURE,
-  DEFAULT_FOV_DEG,
   DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
   DEFAULT_HDR_HEADROOM,
@@ -91,9 +90,6 @@ export function makeSettingsFixture(
   return {
     orientation: DEFAULT_ORIENTATION,
     cameraControls: DEFAULT_CAMERA_CONTROLS,
-    camera: {
-      fovDeg: DEFAULT_FOV_DEG,
-    },
     galaxyCatalogs: {
       ...galaxyCatalogsInitialState,
       items: Object.fromEntries(

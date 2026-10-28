@@ -18,7 +18,14 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCameraRuntime';
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
+import {
+  NEAR_CLIP_MPC,
+  FAR_CLIP_MPC,
+  DEFAULT_FOV_Y_RAD,
+} from '../../../../src/services/engine/camera/cameraFraming';
+import { dollyTo, tween } from '../../../../src/services/engine/animation/effectHelpers';
+import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -66,7 +73,7 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, setLens, startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
@@ -233,7 +240,7 @@ describe('stepCameraRuntime', () => {
     const stored = h.store.getState();
     const rootState = {
       ...stored,
-      settings: { ...stored.settings, camera: { ...stored.settings.camera, fovDeg: 90 } },
+      camera: { ...stored.camera, lens: Math.PI / 2 },
     };
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 16, { rootState, aspect: 2 }));
@@ -244,6 +251,22 @@ describe('stepCameraRuntime', () => {
       near: NEAR_CLIP_MPC,
       far: FAR_CLIP_MPC,
     });
+  });
+
+  it('a lens change is not an outside commit: base and the follow row are untouched', () => {
+    // The lens sits beside `base`: were it inside, every slider tick would hand
+    // `base` a new identity, which the loop reads as an outside commit.
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    const before = h.store.getState().camera.base;
+
+    h.store.dispatch(setLens(Math.PI / 4));
+    h.frame(1);
+
+    expect(h.store.getState().camera.base).toBe(before);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(Math.PI / 4);
   });
 });
 
@@ -703,5 +726,56 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     const free = turn();
     expect(Math.abs(free)).toBeGreaterThan(1e-3);
     expect(turn(claimed)).toBeCloseTo(free, 9);
+  });
+});
+
+describe('a clip fov channel drives the drawn lens', () => {
+  const START: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+  const playing = (data: ClipData) => {
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
+    h.frame(2);
+    h.store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION }));
+    return h;
+  };
+
+  it('draws the clip lens while it plays, leaving the committed lens alone', () => {
+    const h = playing({
+      start: { ...START, fov: 1 },
+      timeline: [tween('fov', { to: 0.25, over: 0.5, ease: 'linear' })],
+    });
+    h.frame(10);
+
+    const drawn = h.state.cameraRuntime.outputs.projection.fovYRad;
+    expect(drawn).toBeLessThan(1);
+    expect(drawn).toBeGreaterThan(0.25);
+    expect(h.store.getState().camera.lens).toBe(DEFAULT_FOV_Y_RAD);
+  });
+
+  it('commits the driven lens when the clip hands off, with no frame snapping back', () => {
+    const h = playing({
+      start: { ...START, fov: 1 },
+      timeline: [tween('fov', { to: 0.25, over: 0.5, ease: 'linear' })],
+    });
+    const drawn: number[] = [];
+    for (let i = 0; i < 60; i += 1) {
+      h.frame(1);
+      drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
+    }
+
+    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.lens).toBeCloseTo(0.25, 12);
+    // The hand-off frame draws the driven lens, never the committed default.
+    expect(drawn.every((fov, i) => i === 0 || fov <= drawn[i - 1]!)).toBe(true);
+    expect(drawn.at(-1)).toBeCloseTo(0.25, 12);
+  });
+
+  it('a clip without a fov track leaves the slider lens live', () => {
+    const h = playing({ start: START, timeline: [dollyTo(50, 5)] });
+    h.frame(2);
+    h.store.dispatch(setLens(0.5));
+    h.frame(1);
+
+    expect(h.store.getState().camera.clip).not.toBeNull();
+    expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.5);
   });
 });

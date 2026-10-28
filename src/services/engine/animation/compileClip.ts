@@ -81,7 +81,7 @@ import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 const ZERO_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
 
 // Every channel, used to build the initial baseTracks record.
-const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'roll', 'target'];
+const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'roll', 'target', 'fov'];
 
 // ---------------------------------------------------------------------------
 // Mutable accumulator — threaded through the recursive walk.

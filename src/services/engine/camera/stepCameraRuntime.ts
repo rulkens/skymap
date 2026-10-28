@@ -45,6 +45,7 @@ import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
   commitCameraPose,
+  setLens,
 } from '../../../state/camera/cameraSlice';
 
 export function stepCameraRuntime(
@@ -114,7 +115,7 @@ export function stepCameraRuntime(
   const lastWinnerRidesWheel = ridesWheelTarget(prevDrivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
-    fovYRad: stored.settings.camera.fovDeg * (Math.PI / 180),
+    fovYRad: stored.camera.lens,
     aspect,
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
@@ -232,7 +233,7 @@ export function stepCameraRuntime(
     edge.committed === null
       ? rootState
       : { ...rootState, camera: { ...rootState.camera, base: edge.committed } };
-  const { pose, memory, own, pivotBody } = winner.pose(
+  const { pose, memory, own, pivotBody, lens } = winner.pose(
     {
       state: produced,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -288,6 +289,10 @@ export function stepCameraRuntime(
   }
 
   actions.push(...edge.actions);
+  // A driven lens outlives its row the way the pose does: the hand-off frame
+  // still draws it while the commit lands, so a dolly zoom never snaps back.
+  const drawnLens = lens ?? prev.drivenLens ?? projection.fovYRad;
+  if (lens === undefined && prev.drivenLens !== null) actions.push(setLens(prev.drivenLens));
   const foldCtx: RungCtx = { ...rungFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
@@ -340,11 +345,13 @@ export function stepCameraRuntime(
       scheme: controls.scheme,
       own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
       pivotBody: pivotBody ?? null,
+      drivenLens: lens ?? null,
       outputs: {
         displayed: projected.displayed,
         simDays,
         upBasis,
-        projection,
+        projection:
+          drawnLens === projection.fovYRad ? projection : { ...projection, fovYRad: drawnLens },
       },
     },
     actions,

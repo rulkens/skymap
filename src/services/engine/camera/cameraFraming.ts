@@ -34,7 +34,7 @@ export const NEAR_CLIP_MPC = 0.01;
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
 export const FAR_CLIP_MPC = 80000;
 
-/** Bootstrap lens in radians — derived from the `settings.camera.fovDeg` default so boot and slider rest position can't drift apart. */
+/** Bootstrap lens in radians — seeds `camera.lens`, derived from `DEFAULT_FOV_DEG` so boot and slider rest position can't drift apart. */
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * DEFAULT_FOV_DEG;
 
 /**

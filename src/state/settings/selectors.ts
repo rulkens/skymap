@@ -27,15 +27,6 @@ import type { CameraControlsSettings } from '../../@types/settings/CameraControl
 export const selectOrientation = (state: RootState): OrientationFrameId =>
   selectSettings(state).orientation;
 
-// --- camera cluster -------------------------------------------------------------
-
-/**
- * Vertical field of view, in degrees — the "Field of view" knob. A primitive
- * read, so no memoization. `runFrame` converts it to radians and writes it onto
- * `cameraRuntime.outputs.projection.fovYRad` once per frame.
- */
-export const selectFovDeg = (state: RootState): number => selectSettings(state).camera.fovDeg;
-
 // --- cameraControls cluster ----------------------------------------------------
 
 export const selectCameraControls = (state: RootState): CameraControlsSettings =>
