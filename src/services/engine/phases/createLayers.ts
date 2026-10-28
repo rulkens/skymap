@@ -154,11 +154,12 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // A duplicate key would leave two slots behind one key, and every key-addressed
   // read would answer with only one of them. One fold over the whole list: a
   // companion's parent may sit in the other half, and `expandCompanionRows` is
-  // only correct over a list holding both.
+  // only correct over a list holding both. Layer rows lead: the queue breaks equal
+  // ranks by array order, so body textures load ahead of craft meshes.
   state.assetRows = expandCompanionRows(
     concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
-      meshAssetRows(state),
       ...instances.map((instance) => instance.assets),
+      meshAssetRows(state),
     ]),
   );
   state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));

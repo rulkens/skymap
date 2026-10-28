@@ -1,7 +1,8 @@
 /**
  * createLayers — the contribution composition: core's constants first, then
- * every Layer's, in tuple order, with each asset row's slot indexed by its key
- * and no two rows claiming one slot key.
+ * every Layer's, in tuple order (asset rows the other way round: Layers' before
+ * core's meshes), with each asset row's slot indexed by its key and no two rows
+ * claiming one slot key.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -13,6 +14,9 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
+import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
+import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
@@ -111,7 +115,7 @@ function orbitTrailLayer(
 }
 
 describe('createLayers composition', () => {
-  it("composes a Layer's passes, assets and labels after core's, in tuple order", async () => {
+  it("composes a Layer's passes and labels after core's and its assets before core's, in tuple order", async () => {
     const { store } = createAppStore();
     const registerProducer = vi.fn();
     const slotA = { name: 'slot-a' };
@@ -129,7 +133,7 @@ describe('createLayers composition', () => {
       'a-pass',
       'b-pass',
     ]);
-    expect(state.assetRows.map((row) => row.key).slice(-2)).toEqual(['a-asset', 'b-asset']);
+    expect(state.assetRows.map((row) => row.key).slice(0, 2)).toEqual(['a-asset', 'b-asset']);
     expect(state.slotsByKey.get('a-asset' as never)).toBe(slotA);
     expect(state.slotsByKey.get('b-asset' as never)).toBe(slotB);
     expect(registerProducer.mock.calls.map(([producer]) => producer.id)).toEqual([
@@ -173,6 +177,24 @@ describe('createLayers composition', () => {
 
     const ids = foregroundRegisterProducer.mock.calls.map(([producer]) => producer.id);
     expect(ids.filter((id) => id === 'sceneBodyCaptions')).toHaveLength(1);
+  });
+
+  it('lists body texture rows before core mesh rows, so equal ranks load textures first', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const deps = makeDeps([bodyLayerWithoutGpu], store);
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+    await createLayers(state, deps);
+
+    const keys = state.assetRows.map((row) => String(row.key));
+    const firstMesh = keys.findIndex((key) => key.startsWith(String(meshBodySlotKey(''))));
+    const lastTexture = Math.max(
+      ...ALL_BODY_TEXTURE_KEYS.map((e) =>
+        keys.indexOf(String(bodyTextureSlotKey(e.bodyId, e.kind))),
+      ),
+    );
+    expect(firstMesh).toBeGreaterThan(-1);
+    expect(lastTexture).toBeLessThan(firstMesh);
   });
 
   it('composes Layer world label producers onto state.label3DProducers', async () => {
