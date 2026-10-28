@@ -27,7 +27,7 @@ This file holds the facts swept for the session, the rulings so far, the propose
 ### Visibility and scale (full ladder of 108 edges: session scratch `inventory-scale.md`)
 
 - Bands (`bandValueOf.ts`) measure the camera's distance from the render origin (the Sun), or from a region anchor via `from`. Smoothstep in/out; an item's value is the product of the bands that apply.
-- The NEAR0 foreground gate (`FOREGROUND_MAX_DISTANCE_MPC` = 0.23 Mpc, 100 × the largest region extent) and the 9.2 kpc caption cut measure `cam.distance`, camera to target, in 17 hand-written `enabled` checks across passes. A different quantity from the bands.
+- The NEAR0 foreground gate (`FOREGROUND_MAX_DISTANCE_MPC` = 0.23 Mpc, 100 × the largest region extent) and the 9.2 kpc caption cut measure `cam.distance`, camera to target, in 18 hand-written `enabled` checks across 16 files: eleven body and Earth passes, two star passes, mission trails, the black-hole marker and pick, the Earth-scene glints. A different quantity from the bands, which is why ADR 0012 could not fold it.
 - Region extents, derived: solar-system ≈ 30 AU (1.47e-10 Mpc), solar-neighbourhood 2.3 kpc (exact, Eta Carinae), galactic-centre ≈ 0.11 pc (1.17e-7 Mpc).
 - Seven of fifteen Layers declare bands: galaxyCatalog (survey in 2–230 kpc; famous exempt), cosmicWebDensity (same), zoneOfAvoidance (in 35–175 kpc, out 2–6 Mpc), localBubble (in 0.4–1 kpc, out 4–10 kpc), constellations (out 1–10 kpc), milkyWay (disc in 200 pc–2 kpc and, from the Galactic Centre, 600 pc–12 kpc; "You are here" label in 2–230 kpc, out 0.6–2 Mpc), structure (cosmic rings in 2–230 kpc; Milky Way places out 35–230 kpc).
 - No bands, gated elsewhere: starCatalog (foreground gate; Gaia out 8–25 kpc; backdrop dissolve 4.6–23 kpc), body (foreground gate + pixel cull on orbit trails), missions (foreground gate), blackHoles (foreground gate; lens 100–500 AU from the Galactic Centre), lightTime (per-sphere ratio windows 1.2r–2r in, 12r–40r out), earthScenes (no `visibility` member).
@@ -128,7 +128,7 @@ Band gaps that R1 turns into work (ground preparation candidates):
 |---|---|---|
 | flow | none | in at the survey's edge (2–230 kpc), out to be decided (R2) |
 | cosmicWebFilaments | none | same shape as flow (R2) |
-| starCatalog | 17 hand-written `cam.distance >= 0.23` gates; Gaia out 8–25 kpc | an `out` band mirroring the gate; `sStar` items `from: 'galactic-centre'` |
+| starCatalog | two of the 18 foreground-gate sites (star points, star spheres); Gaia out 8–25 kpc | an `out` band mirroring the gate; `sStar` items `from: 'galactic-centre'` |
 | body (orbit trails) | hard gate + pixel cull | `out` band mirroring the gate |
 | missions (trails, craft labels) | hard gate; 9.2 kpc caption cut | `out` band mirroring the gate |
 | blackHoles | hard gate; lens 100–500 AU from the GC | `from: 'galactic-centre'` band on the show side; today there is no show entry at all |
@@ -136,7 +136,7 @@ Band gaps that R1 turns into work (ground preparation candidates):
 | earthScenes | no `visibility` member | a show entry with a surface-scale band |
 | galaxyCatalog `famousGalaxy` | exempt from `deepZoom` on purpose | keep exempt for the draw; the panel row needs its own reading (Q8) |
 
-Declaring the foreground gate as bands is the same un-braid #912 did for toggles: core then skips those passes from one value, and the 17 hand-written checks go. It is a prep PR candidate for `refactor-ground`, not part of the panel.
+Declaring the foreground gate as bands is the same un-braid #912 did for toggles: core then skips those passes from one value, and the 18 hand-written checks go. It needs a band that measures range (camera to target), a second measure beside the origin and anchor distances bands read today. It is a prep PR candidate for `refactor-ground`, not part of the panel.
 
 ---
 
@@ -302,7 +302,7 @@ The Stars rung is also the widest, 5.6 decades from 1,000 AU to 2 kpc, against a
 
 ## Q9: The foreground gate as bands
 
-**The question:** Make the six band-less Layers declare bands (table above), and let core skip the NEAR0 passes from the handed value instead of 17 `cam.distance` checks?
+**The question:** Make the six band-less Layers declare bands (table above), and let core skip the NEAR0 passes from the handed value instead of 18 `cam.distance` checks?
 
 **Considerations:** It is a prep refactor in `refactor-ground`'s sense: behaviour-neutral, deletes code, and the panel cannot be honest without it. It is also the largest piece of ground.
 
