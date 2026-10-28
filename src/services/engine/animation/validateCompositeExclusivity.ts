@@ -11,6 +11,7 @@
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { Channel } from '../../../@types/animation/Channel';
+import { rungKindOf } from '../camera/rungs/rungKindOf';
 
 export function validateCompositeExclusivity(
   baseTracks: Record<Channel, BaseSegment[]>,
@@ -35,7 +36,7 @@ export function validateCompositeExclusivity(
               `move the conflicting camera action outside it.`,
           );
         }
-        if (seg.frame !== undefined && seg.frame !== 'absolute') {
+        if (seg.frame !== undefined && rungKindOf(seg.frame) !== 'absolute') {
           throw new Error(
             `a frame-tagged base '${ch}' writer [${seg.startSec}, ${seg.endSec}) shares '${ch}' ` +
               `with a composite [${track.startSec}, ${track.endSec}). A composite hands its ` +
