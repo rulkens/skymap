@@ -38,7 +38,6 @@ import { gateOrbitTrailGroup } from '../layer/gateOrbitTrailGroup';
 import { gatePassByFade } from '../layer/gatePassByFade';
 import { gatePlannerByFade } from '../layer/gatePlannerByFade';
 import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
-import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
 import { meshAssetRows } from '../wiring/meshAssetRows';
@@ -187,10 +186,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.label3DProducers = instances.flatMap((instance) =>
     instance.worldLabels.map(gateWorldLabelProducer),
   );
-  state.orbitTrailGroups = [
-    { show: 'orbitTrails' as const, rows: CORE_TRAIL_ELEMENTS },
-    ...instances.flatMap((instance) => instance.orbitTrails),
-  ].map((group) => gateOrbitTrailGroup(group, state));
+  state.orbitTrailGroups = instances
+    .flatMap((instance) => instance.orbitTrails)
+    .map((group) => gateOrbitTrailGroup(group, state));
   // Core keeps the slot until body Layers can reach the tile subsystem; the
   // body move deletes this row, and the two-provider throw catches a half-done move.
   state.terrain = composeTerrain([
@@ -217,9 +215,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     }
   }
 
-  state.selectionKindRows = [
-    ...state.selectionKindRows,
-    ...instances.flatMap((instance) => instance.selection),
-  ];
+  state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
 }

@@ -43,7 +43,7 @@ import {
 } from '../../../src/state/selection/selectors';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { arrived } from '../../../src/state/arrival/arrivalSlice';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
@@ -86,11 +86,7 @@ function build() {
   });
   mw.setContext({
     selection: composeSelectionRows(
-      () => [
-        ...coreSelectionRows(),
-        structureSelectionRow(EMPTY_STRUCTURES),
-        milkyWaySelectionRow(),
-      ],
+      () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES), milkyWaySelectionRow()],
       () => ALL_KINDS_ENABLED,
     ),
     cameraRuntime: () => ({

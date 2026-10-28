@@ -72,7 +72,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/presentation/captionPriority.ts',
   'src/services/engine/presentation/famousLabelStyle.ts',
   'src/services/engine/presentation/foregroundCaption.ts',
-  'src/services/engine/selection/bodySelectionRow.ts',
   'src/services/engine/subsystems/clipPlayer.ts',
   'src/services/engine/subsystems/label2DDirector.ts',
   'src/services/engine/subsystems/structureFocusSubsystem.ts',

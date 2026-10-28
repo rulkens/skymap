@@ -233,7 +233,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-earth-barycentre',
     text: 'Earth is drawn at the Earth-Moon barycentre, the point the pair turn about, since that is what JPL’s elements and our fit describe. The real Earth’s centre is off that point, always on the side away from the Moon.',
-    source: `${REPO_BLOB}/src/data/bodies/orbitalElements.ts`,
+    source: `${REPO_BLOB}/src/layers/body/bodies/earth.ts`,
     sourceLabel: `the orbital elements, ${IN_REPO}`,
     checked: CHECKED,
   },

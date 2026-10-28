@@ -55,71 +55,42 @@ export type EngineState = {
   booted: boolean;
   /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
   fadesAnimating: boolean;
-  /**
-   * Live camera Resources, seeded with placeholders in `engine.ts` and filled
-   * by `wireInput`'s bootstrap seed once the initial camera exists.
-   */
+  /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
-  /** Per-`CUBEMAP_CAPTURES`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky target's `allocateWhen`. */
+  /** Per-`CUBEMAP_CAPTURES`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
   cubemapCaptures: CubemapCaptureRuntimes;
-  /**
-   * Bumped once per successful galaxy-catalog commit (`wireGalaxyCatalogSourceSlot`'s
-   * single writer). A scalar, not per-row: it counts catalog content changes, not
-   * settings, and is read by `scheduleSkyCaptures`' re-bake key.
-   */
+  /** Bumped per galaxy-catalog commit (`wireGalaxyCatalogSourceSlot` is the sole writer); `scheduleSkyCaptures`' re-bake key. */
   contentVersion: number;
-  /**
-   * Layers bound to their runtimes by `createLayers`, in tuple order; `[]` until
-   * then. `destroy()` tears them down in REVERSE order, before any core teardown
-   * a Layer's captured core object depends on.
-   */
+  /** Bound by `createLayers` in composition order; `destroy()` tears them down in REVERSE, before any core teardown they depend on. */
   layers: readonly LayerInstance[];
-  /**
-   * Tasks forked for each Layer's `sagas`. `destroy()` cancels them BEFORE tearing
-   * down `layers`, so a re-`createEngine` on the same store never has two
-   * watchers reacting.
-   */
+  /** Forked per Layer `sagas`; `destroy()` cancels them BEFORE `layers`, so a re-`createEngine` on the same store never doubles watchers. */
   layerSagaTasks: readonly Task[];
   /**
-   * The composed contributions: core's constants then each Layer's, assembled once
-   * by `createLayers`. Readers walk these, not `CONTENT_PASSES` / `meshAssetRows`
-   * (core's half only). `assetRows` is the companion-expanded fold of both halves;
-   * `slotsByKey` indexes each row's slot by key.
+   * Composed once by `createLayers` (core's constants, then each Layer's). Runtime readers
+   * walk these, not `CONTENT_PASSES` / `CORE_COMPUTES` / `meshAssetRows` (core's halves only).
    */
   passes: readonly ContentPass[];
-  /** `executeFrame` resolves a `'compute'` step's name against this; an absent
-   * name drops rather than throws, mirroring a `FRAME_ORDER` name no present
-   * Layer owns. */
+  /** `executeFrame` resolves a `'compute'` step's name here; an absent name drops rather than throws. */
   computes: readonly ContentCompute[];
-  /** `runPlanSteps` resolves a `'plan'` step's name against this; `checkFrameOrder`
-   * asserts every row here is named on exactly one `plan` line, in a section
-   * of the same scope — unlike `computes`, a `plan` line naming nothing here throws. */
+  /** `runPlanSteps` resolves a `'plan'` step's name here; unlike `computes`, a `plan` line naming nothing throws. */
   planners: readonly FrameContentPlanner<unknown>[];
+  /** Companion-expanded fold over core's and every Layer's asset rows. */
   assetRows: readonly AssetWiringRow[];
-  /** Every Layer's `slabs`, composed once by `createLayers`;
-   * `deriveFrameContext` folds the band-open ones in beside core's own hostless-mesh-body rows. */
+  /** `deriveFrameContext` folds the band-open ones in beside core's own hostless-mesh-body rows. */
   slabRows: readonly SlabRow[];
-  /** Every Layer's `visibility`, in composition order, composed once by `createLayers`:
-   * the entries the fade targets are seeded, recomputed and resolved from. */
+  /** The entries the fade targets are seeded, recomputed and resolved from. */
   visibilityEntries: readonly VisibilityEntry[];
   /** The slot behind every gated fade identity, collected once by `wireSlots`. */
   visibilityGates: VisibilityGates;
+  /** Each asset row's slot, indexed by key. */
   slotsByKey: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
-  /** Every Layer's `worldLabels`, in composition order, composed once by
-   * `createLayers`; `runLabel3DProducers` walks this. */
   label3DProducers: readonly Label3DProducer[];
-  /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade
-   * bound, composed once by `createLayers`; `orbitTrailsPass` walks this. */
+  /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade bound. */
   orbitTrailGroups: readonly GatedOrbitTrailGroup[];
   /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
   terrain: LayerTerrain;
-  /**
-   * Core's selection rows plus each Layer's, appended once by `createLayers`:
-   * the composed resolver's dispatch table. Unrelated to `selectionRows`
-   * above, the saga-reconciled display cache.
-   */
+  /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
-  /** Every Layer's static `targets`, in tuple order — seeded by `createEngine`, read by the
-   * `renderTargets` GPU-handle row, which runs before `createLayers`. */
+  /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */
   readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

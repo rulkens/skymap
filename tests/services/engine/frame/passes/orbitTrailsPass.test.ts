@@ -1,12 +1,14 @@
 /**
  * orbitTrailsPass — the conic orbit-trails content row.
  *
- * Load-bearing: (1) the f64 seam, every conic's Ginv composes from the slab's Float64Array
- * `view.slab.vp`, NOT the f32 `view.vp` (identity-pinned via a mocked `composeOrbitConic`);
- * (2) ONE `renderer.draw(pass, staging, count)` packs every VISIBLE conic at instance stride
- * 34 floats, dropping orbits below the cull threshold. `enabled` is renderer-presence AND the
- * shared foreground gate AND the whole-layer sub-pixel bound (per REGION: the largest of that
- * region's orbits at the camera's nearest approach). The roster is `state.orbitTrailGroups`.
+ * Load-bearing: (1) the f64 seam, every conic's Ginv composes from `view.slab.vp`, NOT the
+ * f32-narrowed `view.vp` (identity-pinned via a mocked `composeOrbitConic`); (2) ONE
+ * `renderer.draw` paints every VISIBLE conic at stride `INSTANCE_FLOATS`, in the layout of
+ * `orbitTrailsPass`'s staging writes, with sub-cull orbits dropped from the batch.
+ *
+ * Plus the handle gates: `enabled` is renderer presence AND the foreground distance gate AND the
+ * per-REGION sub-pixel bound, and `draw` no-ops on a null handle. The roster is
+ * `state.orbitTrailGroups`.
  */
 
 import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
@@ -21,7 +23,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
-import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
+import { BODY_TRAIL_ELEMENTS } from '../../../../../src/layers/body/present/bodyTrailElements';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
@@ -99,8 +101,14 @@ function conicAtJ2000(el: OrbitalElements) {
   };
 }
 
-const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!);
-const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!);
+// Mercury leads the pass's rows so the staging-layout asserts below address instance 0 by
+// construction, not by the body Layer's roster order (Earth leads that one).
+const TRAIL_ROWS = [
+  BODY_TRAIL_ELEMENTS.find((e) => e.id === 'mercury')!,
+  ...BODY_TRAIL_ELEMENTS.filter((e) => e.id !== 'mercury'),
+];
+const MERCURY_CONIC = conicAtJ2000(BODY_TRAIL_ELEMENTS.find((e) => e.id === 'mercury')!);
+const MOON_CONIC = conicAtJ2000(BODY_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!);
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -243,9 +251,7 @@ function makeState(
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
       },
     },
-    orbitTrailGroups: opts.groups ?? [
-      { show: 'orbitTrails', rows: CORE_TRAIL_ELEMENTS, fade: () => 1 },
-    ],
+    orbitTrailGroups: opts.groups ?? [{ show: 'orbitTrails', rows: TRAIL_ROWS, fade: () => 1 }],
   } as unknown as EngineState;
 }
 
@@ -253,7 +259,7 @@ describe('orbitTrailsPass.enabled', () => {
   it("stays on while any group's fade is above 0, and is off when all are 0", () => {
     const group = (fade: number) => ({
       show: 'orbitTrails' as const,
-      rows: CORE_TRAIL_ELEMENTS,
+      rows: TRAIL_ROWS,
       fade: () => fade,
     });
     const near = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
@@ -460,7 +466,7 @@ describe('orbitTrailsPass.draw', () => {
   it("multiplies each group's own fade into that group's per-orbit alpha", () => {
     // Mercury's apparent-size alpha saturates at 1 from the Sun, so each packed alpha is
     // exactly its group's fade. The same row in two groups tells the records apart by order.
-    const mercury = CORE_TRAIL_ELEMENTS[0]!;
+    const mercury = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'mercury')!;
     const groups = [
       { show: 'orbitTrails' as const, rows: [mercury], fade: () => 0.5 },
       { show: 'sStarTrails' as const, rows: [mercury], fade: () => 0.25 },
@@ -554,7 +560,7 @@ describe('orbitTrailsPass.draw', () => {
   it('trail follows a snapshot position that differs from raw Kepler', () => {
     const simDays = CONST_J2000 + 100;
     const real = deriveBodyStates(simDays);
-    const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonEl = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
     const moonState = real.get(asSceneBodyId('moon'))!;
     // 1e6 km off raw Kepler, asymmetric so a dropped axis shows.
     const shiftMpc = [1e6, -4e5, 2.5e5].map((km) => km * SCALE_UNITS.KM_TO_MPC);
@@ -601,7 +607,7 @@ describe('orbitTrailsPass.draw', () => {
     // (~3.7e5 km); reading the snapshot keeps it at focus + the ellipse offset.
     const simDays = CONST_J2000 + 100;
     const real = deriveBodyStates(simDays);
-    const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonEl = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
     const propagated = propagateElements(moonEl, simDays);
     const stubbedOrbit = { ...propagated, meanAnomalyRad: propagated.meanAnomalyRad + 1 };
     const focusMpc = real.get(moonEl.focusId)!.positionMpc;
@@ -660,7 +666,7 @@ describe('orbitTrailsPass.draw', () => {
     const saturnMpc = states.get(asSceneBodyId('saturn'))!.positionMpc;
     const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
     for (const id of ['mimas', 'titan']) {
-      const el = CORE_TRAIL_ELEMENTS.find((e) => e.id === id)!;
+      const el = BODY_TRAIL_ELEMENTS.find((e) => e.id === id)!;
       const { positionMpc: bodyMpc, orbit } = states.get(asSceneBodyId(id))!;
       const semiMajorKm = orbit!.semiMajorMpc * kmPerMpc;
       const offset = keplerianEllipse(orbit!).centerOffsetMpc;

@@ -75,7 +75,7 @@ export const GPU_HANDLE_ROWS = [
     key: 'markerLineRendererCosmo',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
+      createMarkerLineRenderer(deps.ctx, deps.ctx.format, {
         occludeAgainstScene: true,
       }),
   },
@@ -113,7 +113,7 @@ export const GPU_HANDLE_ROWS = [
     key: 'markerLineRendererNear',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMarkerLineRenderer(deps.ctx, deps.ctx.format, undefined, {
+      createMarkerLineRenderer(deps.ctx, deps.ctx.format, {
         occludeAgainstScene: true,
       }),
   },

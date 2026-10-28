@@ -26,9 +26,6 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
-import { gateLabelProducer } from './layer/gateLabelProducer';
-import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabel';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -61,7 +58,6 @@ import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
-import { coreSelectionRows } from './selection/coreSelectionRows';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 
@@ -265,17 +261,6 @@ export function createEngine(
   // `#c[data-view-rig='dome']` rule reads it to square the canvas.
   canvas.dataset.viewRig = state.viewRig;
 
-  // Scene-body captions first so an equal-prominence tiebreak favours the
-  // navigation aid over the diffuse constellation overlay — the constellations
-  // Layer's own producer registers later, from `createLayers`, landing second.
-  state.subsystems.foregroundLabelDirector.registerProducer(
-    gateLabelProducer({
-      id: 'sceneBodyCaptions',
-      label: SCENE_BODY_CAPTION_LABEL,
-      produceLabels: produceSceneBodyCaptions,
-    }),
-  );
-
   // One instance feeds both the dev panel and the load-progress emitter, so the
   // loading bar and the panel agree on what is in flight.
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
@@ -290,10 +275,11 @@ export function createEngine(
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
 
-  // createLayers appends each Layer's rows in tuple order. `selection` reads it lazily,
-  // so a deep link seen before createLayers sees only core rows; a Layer-only id waits
-  // on resolveFocusRefDeferringSaga's engineStatusChanged pulse.
-  state.selectionKindRows = coreSelectionRows();
+  // Every selection kind is a Layer's: `state.selectionKindRows` starts empty and
+  // createLayers fills it once, in tuple order. `selection` reads it lazily (never
+  // rebuilds a list), so a deep link or the home ref seen before createLayers
+  // resolves nothing yet and waits on the engineStatusChanged pulse
+  // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.kinds,

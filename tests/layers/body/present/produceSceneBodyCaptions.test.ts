@@ -1,21 +1,18 @@
 /**
- * produceSceneBodyCaptions — candidate math for the true-scale foreground bodies core captions (Earth,
- * the planets), read beside the missions Layer's craft captions where a case needs a mesh body, and the
- * blackHoles Layer's Galactic Centre caption where a case needs a control whose reach is not the
- * solar system's. Seeded-star kind routing is `produceStarCaptions.test.ts`'s; the shared fade-band /
- * occlusion / registry-ramp mechanics are covered once here.
- *
- * The producer emits EVERY candidate caption every frame (declutter and the temporal envelope are the
- * director's), so each case reads the candidate's `fadeAlpha`, the producer's TARGET.
+ * produceSceneBodyCaptions — candidate math for Earth's and the planets' captions, read beside
+ * the missions Layer's craft captions (mesh-body cases) and the blackHoles Layer's Galactic
+ * Centre caption (a control whose reach is not the solar system's). The producer emits EVERY
+ * candidate every frame, so cases read the candidate's `fadeAlpha` (its TARGET). The shared
+ * fade-band / occlusion / registry-ramp mechanics are covered here once, on core's bodies.
  */
 
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
-import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
+import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/produceSceneBodyCaptions';
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
-import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLabels';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -35,8 +32,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 
-// The producer binds its caption epoch to `ctx.simDays`; pin it at J2000 so
-// this file's anchors match the producer's internal `sceneBodyStates` read.
+// Pinned at J2000 so anchors match the producer's `sceneBodyStates` read at `ctx.simDays`.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const BASE = [
   ...sceneBodyLabels(J2000_STATES),
@@ -79,12 +75,7 @@ function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   } as unknown as FrameView;
 }
 
-/**
- * The value core hands for the `label:body` entry. A bare boolean switches every
- * caption category on or off; the per-category cases pass them separately. Left at
- * the defaults a switched-on category reads 1 and a switched-off one 0 (the settled
- * value its fade reaches); `over` replaces one with a mid-ramp or clipped value.
- */
+/** The `label:body` entry value: a boolean switches every category; `over` sets a mid-ramp value. */
 function fadeOf(
   bodyLabels: boolean | Readonly<Record<string, boolean>> = true,
   over: Readonly<Partial<Record<string, number>>> = {},
@@ -98,9 +89,7 @@ function fadeOf(
 
 function makeState(): EngineState {
   return {
-    // `sceneOccluderBodies` (the per-caption depth gate) reads the real seed
-    // tables off the state, so the fixture carries them rather than a stub:
-    // the captions' occlude weights are then the genuine J2000 geometry.
+    // Real seed tables, so `sceneOccluderBodies` yields genuine J2000 occlude weights.
     gpu: {},
     settings: {
       missions: { craft: null },
@@ -169,13 +158,8 @@ describe('produceSceneBodyCaptions', () => {
   });
 
   it('keeps captioning Sgr A* past the solar-system gate while Earth and the planets go dark', () => {
-    // `captionFadeRules.sgrAStar` takes NO SOLAR_SYSTEM_REACH row — it is the
-    // one caption whose reach outlives the solar-system gate (8 kpc away, and
-    // the galaxy-framing view that most needs it). Camera near Earth keeps the
-    // Sgr A*-to-camera distance essentially R0 (fullAt on its own band, ~1 AU
-    // of slack against an 8 kpc scale) while `ctx.cam.distance` — the
-    // SEPARATE quantity Earth/planet's SOLAR_SYSTEM_REACH gate reads — is
-    // pushed past the gate, so Earth and the planets must read exactly 0.
+    // `captionFadeRules.sgrAStar` has NO SOLAR_SYSTEM_REACH row. A camera near Earth keeps the
+    // Sgr A* distance ~R0, while `ctx.cam.distance` (the quantity the gate reads) is pushed past it.
     const camPos = worldPosOf(EARTH_LABEL_ID);
     const ctx = makeCtx(camPos, SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2);
     const out = produceSceneBodyCaptions(makeState(), ctx, fadeOf());
@@ -185,9 +169,7 @@ describe('produceSceneBodyCaptions', () => {
   });
 
   it('drops a caption once its subject outgrows the viewport', () => {
-    // `worldEmMpc` is the body's radius, so a camera this far out sees the pot
-    // subtend the full frame height — and its caption's own 1.5× lift would
-    // carry it clean off the top edge, leader line and all.
+    // `worldEmMpc` is the body's radius; at 2 radii the pot fills the frame and the caption's 1.5× lift leaves the top edge.
     const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
     const camAt = (radii: number): Vec3 => [
       pot.worldPos[0] + radii * pot.worldEmMpc,
@@ -200,9 +182,8 @@ describe('produceSceneBodyCaptions', () => {
   });
 
   it('holds a seeded reveal caption dark until the approach, leaving an unbanded one lit', () => {
-    // The petunias author `captionRevealM`; Sgr A* (8 kpc away, no reveal band) is the control read from
-    // the SAME two poses, so only the band can explain a difference. Earth is the wrong control: the pot
-    // orbits 400 km up, close enough to Earth's disc to overflow Earth's caption (see the overflow case).
+    // Sgr A* is the control from the SAME poses, so only the reveal band explains a difference.
+    // Earth is the wrong control: this close to the pot it overflows Earth's own caption.
     const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
     const revealMpc =
       SCENE_MESH_BODIES.find((b) => b.id === 'petunias')!.captionRevealM! * SCALE_UNITS.M_TO_MPC;
@@ -229,9 +210,7 @@ describe('produceSceneBodyCaptions', () => {
   });
 
   it('a body caption scales by its own item of the handed value', () => {
-    // Earth's band target is exactly 1 at this camera distance (well inside
-    // `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`), so a handed 0.5 must halve the emitted
-    // alpha with nothing else in play, and the planets (handed 1) stay untouched.
+    // Earth's band target is exactly 1 here, so a handed 0.5 must halve its alpha alone.
     const camPos = worldPosOf(EARTH_LABEL_ID);
     const out = produceSceneBodyCaptions(
       makeState(),
@@ -271,11 +250,7 @@ describe('produceSceneBodyCaptions', () => {
   });
 });
 
-/**
- * The per-caption depth gate. The overlay shaders attenuate per PIXEL, which
- * cannot tell a subject in FRONT of a body from one behind it; `occludeWeight`
- * is the producer's verdict on that, and these are its two real poses.
- */
+/** The overlay shaders attenuate per PIXEL and cannot tell a subject in FRONT of a body from one behind; `occludeWeight` is the producer's verdict. */
 describe('produceSceneBodyCaptions occlude weight', () => {
   const WHALE_LABEL_ID = 'sceneBody-whale';
   const MOON_LABEL_ID = 'sceneBody-moon';
@@ -297,19 +272,14 @@ describe('produceSceneBodyCaptions occlude weight', () => {
   }
 
   it('exempts a caption whose subject floats in FRONT of Earth', () => {
-    // The reported bug: the whale orbits 400 km up and draws over Earth, but
-    // its name vanished wherever the text crossed the disc. Eye 200 km further
-    // out along the same ray — Earth fills the background, nothing stands
-    // between the eye and the whale.
+    // The whale draws over Earth but its name vanished where the text crossed the disc.
     const whale = worldPosOf(WHALE_LABEL_ID);
     const camPos = step(whale, direction(EARTH_POS, whale), 200);
     expect(occludeWeightOf(camPos, WHALE_LABEL_ID)).toBe(0);
   });
 
   it('carries the subject’s NEAR-surface distance in km as the depth channel’s cutoff', () => {
-    // The sampled-depth channel compares a scene texel's distance against this.
-    // The subject's own front surface sits exactly AT it, so a body never
-    // occludes its own caption — which is why it is centre MINUS radius.
+    // Centre MINUS radius: the subject's own front surface sits exactly AT the cutoff, so a body never occludes its caption.
     const moon = worldPosOf(MOON_LABEL_ID);
     const camPos = step(EARTH_POS, direction(moon, EARTH_POS), 20000);
     const label = produceSceneBodyCaptions(makeState(), makeCtx(camPos), fadeOf()).labels.find(
@@ -325,19 +295,15 @@ describe('produceSceneBodyCaptions occlude weight', () => {
       (centreMpc - base.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
       0,
     );
-    // A subject the sphere test calls occluded keeps weight 1 — the two
-    // channels are independent, and the fragment takes whichever fires.
+    // The sphere-test and depth channels are independent; the fragment takes whichever fires.
     expect(label.occludeWeight).toBe(1);
   });
 
   it('keeps the per-pixel rule for a subject Earth really hides', () => {
-    // Eye on the anti-Moon side of Earth, well clear of the surface: the Moon
-    // is behind the disc and must still sink into the limb.
+    // Anti-Moon side of Earth: the Moon is behind the disc and must still sink into the limb.
     const moon = worldPosOf(MOON_LABEL_ID);
     const camPos = step(EARTH_POS, direction(moon, EARTH_POS), 20000);
     expect(occludeWeightOf(camPos, MOON_LABEL_ID)).toBe(1);
-    // Earth's own caption is anchored at Earth's centre — it must never be
-    // occluded by the body it names.
     expect(occludeWeightOf(camPos, EARTH_LABEL_ID)).toBe(0);
   });
 });
