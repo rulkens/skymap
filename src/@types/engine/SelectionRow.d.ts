@@ -4,6 +4,7 @@ import type { StructureInfo } from '../data/structure/StructureInfo';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 import type { BodyInfo } from './BodyInfo';
 import type { CraftInfo } from './CraftInfo';
+import type { EarthSceneInfo } from './EarthSceneInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
 import type { Vec3 } from '../math/Vec3';
 
@@ -12,8 +13,8 @@ import type { Vec3 } from '../math/Vec3';
  * in the saga-owned `selectionRows` derived cache. The galaxy arm is the small
  * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
  * structure arm is the already-serializable `StructureInfo` record; the Milky
- * Way and the zone of avoidance are each the singleton tag; the body, craft and
- * black-hole arms are their card record plus the camera `driver`. The `label`
+ * Way and the zone of avoidance are each the singleton tag; the body, craft, Earth
+ * scene and black-hole arms are their card record plus the camera `driver`. The `label`
  * rides the row (not the async meta sidecar) so a star's name shows the instant
  * it is selected, before the JSON has loaded.
  *
@@ -32,6 +33,7 @@ export type SelectionRow =
   | { readonly type: 'zoneOfAvoidance' }
   | (BodyInfo & { readonly driver: DriverGeometry })
   | (CraftInfo & { readonly driver: DriverGeometry })
+  | (EarthSceneInfo & { readonly driver: DriverGeometry })
   // Star arm — the self-contained display projection of a picked star from any
   // of the four catalogs, its physical fields snapshotted at extract time so
   // framing and card read them directly. `source` + `index` come from the ref

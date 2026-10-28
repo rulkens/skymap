@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { blackHoleSearch } from '../../../src/layers/blackHoles/present/blackHoleSearch';
 import { craftSearch } from '../../../src/layers/missions/present/craftSearch';
+import { earthSceneSearch } from '../../../src/layers/earthScenes/present/earthSceneSearch';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../src/data/sources';
@@ -189,6 +190,21 @@ describe('rankPaletteMatches — craft rows', () => {
     );
     expect(hits).toHaveLength(1);
     expect(hits[0]!.kind).toBe('layer');
+  });
+});
+
+describe('rankPaletteMatches — Earth scene rows', () => {
+  it('Søndermarken ranks exactly one palette row, chip "Earth"', async () => {
+    const layerRows = [];
+    for await (const rows of earthSceneSearch()) layerRows.push(...rows);
+    const rows = rankPaletteMatches([], [], [], layerRows, 'Søndermarken');
+    const hits = rows.filter(
+      (r) =>
+        (r.kind === 'layer' && r.entry.id === 'body-soendermarken') ||
+        (r.kind === 'body' && r.body.id === 'soendermarken'),
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.kind === 'layer' && hits[0]!.entry.chip).toBe('Earth');
   });
 });
 

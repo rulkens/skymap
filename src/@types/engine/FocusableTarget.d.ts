@@ -4,6 +4,7 @@ import type { MilkyWayInfo } from './MilkyWayInfo';
 import type { ZoneOfAvoidanceInfo } from './ZoneOfAvoidanceInfo';
 import type { BodyInfo } from './BodyInfo';
 import type { CraftInfo } from './CraftInfo';
+import type { EarthSceneInfo } from './EarthSceneInfo';
 import type { StarInfo } from './StarInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
 
@@ -15,7 +16,8 @@ import type { BlackHoleInfo } from './BlackHoleInfo';
  * band singleton (`type: 'zoneOfAvoidance'` — a line-of-sight extinction
  * effect with no `x`/`y`/`z`, so it carries no Focus target), a seeded scene
  * body (`type: 'body'` — the BodyInfo arm: Earth, a planet, a mesh body), a
- * craft (`type: 'craft'` — the CraftInfo arm, the missions Layer's), or a
+ * craft (`type: 'craft'` — the CraftInfo arm, the missions Layer's), an Earth
+ * scene (`type: 'earthScene'` — the EarthSceneInfo arm, the earthScenes Layer's), or a
  * star (`type: 'starCatalog'` — the StarInfo arm, one for every catalog, named
  * or anonymous), or a black hole (`type: 'blackHole'`).
  *
@@ -34,5 +36,6 @@ export type FocusableTarget =
   | ZoneOfAvoidanceInfo
   | BodyInfo
   | CraftInfo
+  | EarthSceneInfo
   | StarInfo
   | BlackHoleInfo;

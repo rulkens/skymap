@@ -19,8 +19,10 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   // A scene body's seed id is stable and unique within the body namespace, so
   // the `body:${id}` key names it exactly — the same shape as the structure arm.
   body: (t) => (t.type === 'body' ? `body:${t.id}` : ''),
-  // Seed ids are unique across every scene body, so a craft shares the body key shape.
+  // Seed ids are unique across every scene body, so a craft and an Earth scene share the body
+  // key shape.
   craft: (t) => (t.type === 'craft' ? `body:${t.id}` : ''),
+  earthScene: (t) => (t.type === 'earthScene' ? `body:${t.id}` : ''),
   // A star's identity is the source + index pair its ref carries; the two
   // seeded tables and the survey bin number independently, so the source is
   // part of the key rather than a redundant prefix.

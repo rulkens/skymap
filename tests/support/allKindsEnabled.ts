@@ -14,6 +14,7 @@ export const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
   zoneOfAvoidance: true,
   body: true,
   craft: true,
+  earthScene: true,
   starCatalog: true,
   blackHole: true,
 };

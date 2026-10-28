@@ -36,6 +36,7 @@ const PICK_BAND_AND_GALAXIES = {
     galaxyCatalog: true,
     body: false,
     craft: false,
+    earthScene: false,
     starCatalog: false,
     structure: false,
     milkyWay: false,

@@ -10,13 +10,14 @@
 import type { ReactNode } from 'react';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { CraftInfo } from '../../../@types/engine/CraftInfo';
+import type { EarthSceneInfo } from '../../../@types/engine/EarthSceneInfo';
 import { constellationOfBody } from '../../../utils/scene/constellationOfBody';
 import CardRow from '../CardRow/CardRow';
 import styles from '../compactChrome.module.css';
 import local from './CompactBodyCard.module.css';
 
 export type CompactBodyCardProps = {
-  target: BodyInfo | CraftInfo;
+  target: BodyInfo | CraftInfo | EarthSceneInfo;
 };
 
 function CompactBodyCard({ target }: CompactBodyCardProps): ReactNode {

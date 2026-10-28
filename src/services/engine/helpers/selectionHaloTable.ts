@@ -55,6 +55,7 @@ type MilkyWayRow = { readonly type: 'milkyWay' };
 type ZoneOfAvoidanceRow = { readonly type: 'zoneOfAvoidance' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 type CraftRow = Extract<SelectionRow, { type: 'craft' }>;
+type EarthSceneRow = Extract<SelectionRow, { type: 'earthScene' }>;
 type StarCatalogRow = Extract<SelectionRow, { type: 'starCatalog' }>;
 type BlackHoleRow = Extract<SelectionRow, { type: 'blackHole' }>;
 
@@ -69,6 +70,7 @@ const SELECTION_HALO_TABLE: {
   zoneOfAvoidance: (row: ZoneOfAvoidanceRow) => null;
   body: (row: BodyRow) => SelectionHalo;
   craft: (row: CraftRow) => SelectionHalo;
+  earthScene: (row: EarthSceneRow) => SelectionHalo;
   starCatalog: (row: StarCatalogRow) => SelectionHalo;
   blackHole: (row: BlackHoleRow) => SelectionHalo;
 } = {
@@ -99,12 +101,15 @@ const SELECTION_HALO_TABLE: {
   // layers stay slab-exclusive on the shared renderer.
   body: nearFieldHalo,
   craft: nearFieldHalo,
+  earthScene: nearFieldHalo,
   starCatalog: nearFieldHalo,
   // A hole's footprint is r_s: the ring hugs the horizon on close approach.
   blackHole: nearFieldHalo,
 };
 
-function nearFieldHalo(row: BodyRow | CraftRow | StarCatalogRow | BlackHoleRow): SelectionHalo {
+function nearFieldHalo(
+  row: BodyRow | CraftRow | EarthSceneRow | StarCatalogRow | BlackHoleRow,
+): SelectionHalo {
   return {
     radiusMpc: row.driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
