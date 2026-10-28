@@ -33,7 +33,7 @@
  *
  * ### Sub-shapes are private compile artifacts
  *
- * `BaseSegment`, `VelRamp`, `OscTrack`, `PathSample`, `PathTrack`, and
+ * `BaseSegment`, `VelRamp`, `OscTrack`, `CompositeSample`, `CompositeTrack`, and
  * `SceneCue` (each in its own sibling file, per the one-type-per-file
  * convention) are internal representations produced by `compileClip` and
  * consumed only by the evaluator (Task 6) and the cue-firer (Task 7). They
@@ -48,7 +48,7 @@ import type { CameraPose } from '../../camera/CameraPose';
 import type { BaseSegment } from './BaseSegment';
 import type { VelRamp } from './VelRamp';
 import type { OscTrack } from './OscTrack';
-import type { PathTrack } from './PathTrack';
+import type { CompositeTrack } from './CompositeTrack';
 import type { SceneCue } from './SceneCue';
 
 /**
@@ -88,8 +88,8 @@ export type CompiledClip = {
   /** Time-ordered (ascending `atSec`) list of scene cues to fire. */
   readonly cues: SceneCue[];
 
-  /** `flyPath` flythroughs, each a composite writer over its own window. The
-   *  evaluator lets an active path supersede the base layer for the four camera
-   *  channels; `validateSingleWriter` forbids a base writer overlapping one. */
-  readonly pathTracks: PathTrack[];
+  /** Composite writers (a `flyPath` each), each over its own window. The
+   *  evaluator lets one supersede the base layer for the channels it declares;
+   *  `validateCompositeExclusivity` forbids a base writer overlapping one there. */
+  readonly compositeTracks: CompositeTrack[];
 };

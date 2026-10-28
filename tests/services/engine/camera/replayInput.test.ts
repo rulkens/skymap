@@ -124,7 +124,13 @@ describe('replayInput', () => {
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: { ...EMPTY_SURFACE_GESTURE_MEMORY },
       tilt: { ...EMPTY_TILT_MEMORY },
-      follow: { from: null, distanceTarget: 42, panOffset: [1, 2, 3] as Vec3, saturated: false },
+      follow: {
+        from: null,
+        distanceTarget: 42,
+        durationMs: null,
+        panOffset: [1, 2, 3] as Vec3,
+        saturated: false,
+      },
     });
     const steps = deepFreeze<readonly InputStep[]>([
       atRestZoom(1.5),
@@ -225,6 +231,7 @@ describe('replayInput', () => {
     const follow = {
       from: null,
       distanceTarget: 2.5 * EARTH_RADIUS_MPC,
+      durationMs: null,
       panOffset: [0, 0, 0] as Vec3,
       saturated: false,
     };
@@ -560,6 +567,7 @@ describe('replayInput', () => {
     const follow = {
       from: null,
       distanceTarget: 4 * EARTH_RADIUS_MPC,
+      durationMs: null,
       panOffset: [0, 0, 0] as Vec3,
       saturated: false,
     };
@@ -615,7 +623,13 @@ describe('replayInput', () => {
           register,
           gesture: EMPTY_SURFACE_GESTURE_MEMORY,
           tilt: EMPTY_TILT_MEMORY,
-          follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0], saturated: false },
+          follow: {
+            from: null,
+            distanceTarget: target,
+            durationMs: null,
+            panOffset: [0, 0, 0],
+            saturated: false,
+          },
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
