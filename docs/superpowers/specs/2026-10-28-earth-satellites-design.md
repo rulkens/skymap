@@ -62,7 +62,7 @@ src/layers/satellites/
 **Data file.** `satellites.bin` (magic `SATG`, under `satellite-catalog/v1/`) holds one record per
 object: the SGP4 mean elements at f64 (epoch, mean motion, eccentricity, inclination, node, argument of
 perigee, mean anomaly, B*), the NORAD id, a class byte, and the name and COSPAR id as strings. About
-1.5 MB for 20k objects, less gzipped. The header carries the fetch time, which drives §5.3.
+2.3 MB for 20k objects, 1.1 MB gzipped. The header carries the fetch time, which drives §5.3.
 
 **Propagation.** The worker builds satrecs once (`satellite.js` `json2satrec`, WGS-72, opsmode `'i'`),
 then sweeps every object when asked (§5.5). Each sweep posts transferred Float32 arrays of TEME position
