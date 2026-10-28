@@ -3,7 +3,8 @@
  * from its id, dispatching on the rotation row's arm. A body with no rotation
  * row carries `IDENTITY_MAT3`: no facing modelled, not a fabricated pole.
  * `simDays` turns an IAU body's prime meridian: `W = W₀ + Ẇ·(simDays − J2000)`,
- * so at `CONST_J2000` the result is the epoch facing.
+ * and moves its pole by α̇/δ̇ per century where the row carries them (Earth's
+ * precession), so at `CONST_J2000` the result is the epoch facing.
  */
 
 import { rotationRowById } from './rotationElements';
@@ -17,6 +18,8 @@ import { rotationSurfaceLocked } from '../../utils/orbit/rotationSurfaceLocked';
 import { IDENTITY_MAT3 } from '../../utils/math/identityMat3';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
+
+const DAYS_PER_JULIAN_CENTURY = 36_525;
 
 function positionOrThrow(
   positions: ReadonlyMap<string, Readonly<Vec3>>,
@@ -49,9 +52,14 @@ export function orientationForBody(
     // The authored IAU-pole rows predate the union and carry no discriminant.
     case undefined:
     case 'iau-pole': {
-      const primeMeridianDeg =
-        row.primeMeridianDeg + row.spinRateDegPerDay * (simDays - CONST_J2000);
-      return rotationFromIau(row, primeMeridianDeg);
+      const days = simDays - CONST_J2000;
+      const centuries = days / DAYS_PER_JULIAN_CENTURY;
+      const pole = {
+        ...row,
+        poleRaDeg: row.poleRaDeg + (row.poleRaRateDegPerCty ?? 0) * centuries,
+        poleDecDeg: row.poleDecDeg + (row.poleDecRateDegPerCty ?? 0) * centuries,
+      };
+      return rotationFromIau(pole, row.primeMeridianDeg + row.spinRateDegPerDay * days);
     }
     case 'lookAt':
       return rotationLookAt(
