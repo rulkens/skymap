@@ -46,7 +46,7 @@ export const STEPS = [
 
 {/* The disc leads: the page's subject is round, so its header is not a rectangle with words on it. */}
 
-<DiscBand id="dome-earth">
+<DiscBand id="dome-earth" showDrawn={false}>
   <h1>Domes and museums</h1>
   <p>Skymap is made to be projected on a dome. We support 4K output (depending on the specs of your projection system) and can pre-render videos of any size.</p>
   <ObjLink hang href="#contact">How to reach us</ObjLink>
@@ -59,7 +59,7 @@ export const STEPS = [
   </SectionHead>
 
   <Offer title="Live fisheye from the app">
-    <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc open={false} />
+    <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc open={false} showDrawn={false} />
     <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
     <Fragment slot="today">Skymap has an OpenSpace-compatible <a href={sitePath('/docs/reference/settings/#camera-controls')}>navigation scheme</a>: a drag sets the camera moving and it slows to a stop after you let go. Shift+C switches to it.</Fragment>
     <Fragment slot="work">Another tilt, and labels or captions on the dome. Skymap gives one disc: dividing it between projectors is the job of your dome system.</Fragment>
@@ -67,7 +67,7 @@ export const STEPS = [
   </Offer>
 
   <Offer title="A rendered film, for a dome or a flat screen" wide>
-    <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} />
+    <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} showDrawn={false} />
     <p>A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in the projection room.</p>
     <Fragment slot="today">{`${fact('film-recorder').text} ${fact('film-silent').text}`}</Fragment>
     <Fragment slot="work">The flight itself: where it goes, how long it rests, what the captions say. Narration and music come from you or from someone you choose.</Fragment>
@@ -75,7 +75,7 @@ export const STEPS = [
   </Offer>
 
   <Offer title="A build for an exhibit or kiosk">
-    <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
+    <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" showDrawn={false} />
     <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
     <Fragment slot="today">{`${fact('exhibits').text} ${fact('kiosk-planned').text}`}</Fragment>
     <Fragment slot="work">A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor walks away is the planned kiosk mode, and we would build it for the first venue that needs it.</Fragment>
