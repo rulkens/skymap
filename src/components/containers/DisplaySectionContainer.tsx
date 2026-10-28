@@ -27,7 +27,6 @@ import {
   selectOrientation,
   selectToneMapCurve,
   selectExposure,
-  selectFovDeg,
   selectHdrEnabled,
   selectHdrKnee,
   selectHdrHeadroom,
@@ -37,7 +36,9 @@ import {
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
 import { setToneMapCurve, setExposure } from '../../state/settings/core/tonemapSlice';
-import { setFovDeg } from '../../state/settings/core/cameraSettingsSlice';
+import { setLens } from '../../state/camera/cameraSlice';
+import { selectLens } from '../../state/camera/selectors';
+import { degToRad } from '../../utils/math/degToRad';
 import { setHdrEnabled, setHdrKnee, setHdrHeadroom } from '../../state/settings/core/hdrSlice';
 import {
   setBloomEnabled,
@@ -58,7 +59,7 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
   const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
   const exposure = useAppSelector(selectExposure);
-  const fovDeg = useAppSelector(selectFovDeg);
+  const fovDeg = useAppSelector(selectLens) * (180 / Math.PI);
   const hdrEnabled = useAppSelector(selectHdrEnabled);
   const hdrCapable = useAppSelector(selectHdrCapable);
   const hdrKnee = useAppSelector(selectHdrKnee);
@@ -79,7 +80,10 @@ function DisplaySectionContainer({ children }: DisplaySectionContainerProps): Re
     [dispatch],
   );
   const onExposureChange = useCallback((next: number) => dispatch(setExposure(next)), [dispatch]);
-  const onFovDegChange = useCallback((next: number) => dispatch(setFovDeg(next)), [dispatch]);
+  const onFovDegChange = useCallback(
+    (next: number) => dispatch(setLens(degToRad(next))),
+    [dispatch],
+  );
   const onHdrEnabledChange = useCallback(
     (next: boolean) => dispatch(setHdrEnabled(next)),
     [dispatch],

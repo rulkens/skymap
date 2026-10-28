@@ -13,10 +13,10 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { withSceneSnapshotSaga } from '../../../src/state/takeover/withSceneSnapshotSaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
-import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setLens } from '../../../src/state/camera/cameraSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
-import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
+import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/cameraFraming';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -37,20 +37,20 @@ describe('withSceneSnapshotSaga', () => {
   // The poses every takeover flies to are authored at the default lens, and a
   // fit-derived distance clamps silently at MAX_DISTANCE_MPC once the FOV
   // narrows — so a viewer who left the slider narrow must not carry it in.
-  it('pins the FOV to the default and gives the viewer theirs back on exit', async () => {
+  it('pins the lens to the default and gives the viewer theirs back on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
-    const narrowed = DEFAULT_FOV_DEG / 3;
-    store.dispatch(setFovDeg(narrowed));
+    const narrowed = DEFAULT_FOV_Y_RAD / 3;
+    store.dispatch(setLens(narrowed));
 
     sagaMiddleware.run(function* () {
       yield* withSceneSnapshotSaga(waitingBody);
     });
     await flush();
-    expect(store.getState().settings.camera.fovDeg).toBe(DEFAULT_FOV_DEG);
+    expect(store.getState().camera.lens).toBe(DEFAULT_FOV_Y_RAD);
 
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.camera.fovDeg).toBe(narrowed);
+    expect(store.getState().camera.lens).toBe(narrowed);
   });
 
   it("restores the body's settings changes on exit", async () => {

@@ -66,7 +66,7 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { setLens, startCameraTween } from '../../../../src/state/camera/cameraSlice';
 import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
@@ -233,7 +233,7 @@ describe('stepCameraRuntime', () => {
     const stored = h.store.getState();
     const rootState = {
       ...stored,
-      settings: { ...stored.settings, camera: { ...stored.settings.camera, fovDeg: 90 } },
+      camera: { ...stored.camera, lens: Math.PI / 2 },
     };
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 16, { rootState, aspect: 2 }));
@@ -244,6 +244,22 @@ describe('stepCameraRuntime', () => {
       near: NEAR_CLIP_MPC,
       far: FAR_CLIP_MPC,
     });
+  });
+
+  it('a lens change is not an outside commit: base and the follow row are untouched', () => {
+    // The lens sits beside `base`: were it inside, every slider tick would hand
+    // `base` a new identity, which the loop reads as an outside commit.
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    const before = h.store.getState().camera.base;
+
+    h.store.dispatch(setLens(Math.PI / 4));
+    h.frame(1);
+
+    expect(h.store.getState().camera.base).toBe(before);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(Math.PI / 4);
   });
 });
 

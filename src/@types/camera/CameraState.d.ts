@@ -27,6 +27,11 @@ export type CameraState = {
   frameTween: FrameTween | null;
   /** The last re-aim an exhibit's hold asked for; null before any. */
   aim: CameraAim | null;
+  /**
+   * Vertical field of view, radians: the viewer's committed lens. Beside `base`, not in it — a
+   * lens change is not a camera move, and any `base` the loop did not write reads as an outside commit.
+   */
+  lens: number;
   /** The band edges the camera math is threaded with; session-only, never serialized. `readonly`: always replaced whole. */
   readonly tuning: CameraTuning;
 };

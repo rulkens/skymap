@@ -1,7 +1,7 @@
 /**
  * restoreSceneSaga — put a captured `SceneSnapshot` back onto the live store:
- * settings, orientation, selection focus, then the sim clock. Pure Intent — four
- * dispatches, no engine context of its own.
+ * settings, orientation, the lens, selection focus, then the sim clock. Pure
+ * Intent — five dispatches, no engine context of its own.
  *
  * This is the close of a takeover's capture → play → restore round-trip
  * (`captureScene` is the open). `withSceneSnapshotSaga` runs it in its `finally`, so it
@@ -42,7 +42,7 @@
  * 4. `put(restoreTime(...))` — the clock returns last (live to the real now,
  *    manual to its captured instant, with the captured rate/direction/paused).
  *
- * All four `put`s block until their effect lands, true even inside a `finally`
+ * All five `put`s block until their effect lands, true even inside a `finally`
  * driven by a cancelling dispatch. `watchTakeoverSaga` waits for the cancelled
  * bracket to settle, so on a supersede this restore is complete before the
  * successor run's snapshot reads the store.
@@ -56,6 +56,7 @@ import { put } from 'typed-redux-saga';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
+import { setLens } from '../camera/cameraSlice';
 import { restoreTime } from '../time/timeSlice';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
@@ -63,6 +64,7 @@ import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(mergeSnapshot(snapshot.settings));
   yield* put(requestOrientationChange(snapshot.orientation));
+  yield* put(setLens(snapshot.lens));
   yield* put(updateSelectionFocus(snapshot.focus));
   yield* put(restoreTime(resolveRestoredTime(snapshot)));
 }

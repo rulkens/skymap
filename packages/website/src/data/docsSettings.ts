@@ -626,8 +626,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         does: 'Sets the angle the picture spans from top to bottom. A small angle works as a telephoto lens, a large one as a wide-angle lens.',
         values: '0.5° to 100°, in steps of 0.5',
         first: '60°',
-        state: 'camera.fovDeg',
-        firstValue: 60,
       },
     ],
   },

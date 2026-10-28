@@ -114,7 +114,7 @@ export function stepCameraRuntime(
   const lastWinnerRidesWheel = ridesWheelTarget(prevDrivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
-    fovYRad: stored.settings.camera.fovDeg * (Math.PI / 180),
+    fovYRad: stored.camera.lens,
     aspect,
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
