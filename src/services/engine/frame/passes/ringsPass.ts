@@ -62,8 +62,6 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
-import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -75,9 +73,10 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../subPixelBodyCullPx';
 import { sceneBodyStates } from '../sceneBodyStates';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 /**
  * This row's ring, if `bodyId` hosts one AND its radial strip is resident AND
@@ -87,7 +86,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
 function ringDrawForBody(
   state: PassState,
   ctx: FrameView,
-  bodyId: SlabHostId,
+  bodyId: PositionedId,
 ): { readonly ring: RingSpec; readonly body: PlanetBody; readonly pose: BodyRelativePose } | null {
   const ring = SCENE_RINGS.find((r) => r.bodyId === bodyId);
   if (ring === undefined) return null;

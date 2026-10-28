@@ -9,7 +9,7 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
-import type { StarChunkStream } from './@types/StarChunkStream';
+import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
 import type { SourceType } from '../../@types/data/SourceType';
 
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
@@ -24,10 +24,11 @@ import { createStarCatalogPickRenderer } from './render/starCatalogPickRenderer'
 import { createStarRenderer } from './render/starRenderer';
 import { createStarPointRenderer } from './render/starPointRenderer';
 import { createStarAggregateUpsample } from './render/starAggregateUpsample';
-import type { StarPoolHost } from './@types/StarPoolHost';
+import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
 import { createStarCatalogSlot } from './load/starCatalogSlot';
 import { createFamousStarsMetaSlot } from './load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
+import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
 
 export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntime {
   // `star-<id>` splits seeded from survey on the all-digits test
@@ -77,8 +78,12 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
-  const chunkStreams = new Map<SourceType, StarChunkStream>();
-  const poolHost: StarPoolHost = { renderer, chunkStreams, requestRender: deps.requestRender };
+  const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
+  const poolHost: OctreePoolHost<StarColumns> = {
+    renderer,
+    chunkStreams,
+    requestRender: deps.requestRender,
+  };
   const catalogs = new Map(
     STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
       ([source]) =>

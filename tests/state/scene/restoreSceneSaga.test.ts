@@ -70,6 +70,7 @@ function makeSnapshot(
       missions: { ...f.missions },
       voyage: { ...f.voyage },
       missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
+      sStarTrails: { ...f.sStarTrails, enabled: !f.sStarTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
       blackHoles: { items: { 'sgr-a-star': { labelEnabled: false } } },

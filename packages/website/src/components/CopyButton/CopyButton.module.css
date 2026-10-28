@@ -1,0 +1,39 @@
+/* 44 px square: the smallest target a finger hits reliably. */
+.root {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--site-text-dim);
+  cursor: pointer;
+}
+
+.root:hover,
+.root:focus-visible,
+.root[data-copied] {
+  color: var(--color-accent);
+}
+
+.root svg {
+  grid-area: 1 / 1;
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.root .tick,
+.root[data-copied] .sheets {
+  visibility: hidden;
+}
+
+.root[data-copied] .tick {
+  visibility: visible;
+}

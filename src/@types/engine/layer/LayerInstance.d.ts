@@ -1,3 +1,4 @@
+import type { LayerTerrain } from './LayerTerrain';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -10,6 +11,7 @@ import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
 import type { Layer } from './Layer';
+import type { OrbitTrailGroup } from './OrbitTrailGroup';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
 export type LayerInstance = {
@@ -21,7 +23,8 @@ export type LayerInstance = {
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly screenLabels: readonly LayerScreenLabel[];
   readonly worldLabels: readonly LayerWorldLabel[];
-  readonly orbitTrails: readonly OrbitalElements[];
+  /** `[]` or `[the Layer's group]`. */
+  readonly orbitTrails: readonly OrbitTrailGroup[];
   readonly selection: readonly SelectionKindRow[];
   /** Bound feeds, absent when the Layer declares no such member; `createLayers`
    * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
@@ -29,5 +32,6 @@ export type LayerInstance = {
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
   /** The Layer's own `boost`, carried through unbound: it closes over settings, not the runtime. */
   readonly boost?: Layer<string, unknown>['boost'];
+  readonly terrain?: LayerTerrain;
   destroy(): void;
 };

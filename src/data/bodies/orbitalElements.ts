@@ -11,12 +11,10 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
-import { orbiter } from './makers/orbiter';
 import { satellite } from './makers/satellite';
 import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
-import { SCENE_EARTH } from './sceneEarth';
+import { LAYER_BODY_ROWS } from './layerBodyRows';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
-import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
 import {
   MERCURY_GREY,
   VENUS_CREAM,
@@ -33,24 +31,11 @@ import {
   SAT_ICE,
   IO_SULFUR,
   TITAN_ORANGE,
-  WHALE_GREY,
-  PETUNIA_PINK,
-  HUBBLE_SILVER,
 } from './palette';
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
-
-// The whale and petunias (Hitchhiker's Guide easter egg) share one 400 km
-// circular geocentric orbit — the pot trails the whale in PHASE, not
-// altitude — so one semi-major axis and period feed both `satellite()` rows.
-// 40 m behind along the track, converted to mean-anomaly degrees by arc
-// length: 40 / (2π·a) × 360. The period is exported because the whale's
-// orbit lock reads it a second time, as a spin rate (`rotationElements.ts`).
-const MESH_BODY_SEMI_MAJOR_KM = SCENE_EARTH.surface.datumRadiusM / 1000 + 400;
-export const MESH_BODY_PERIOD_DAYS = periodDaysFromSemiMajorKm(MESH_BODY_SEMI_MAJOR_KM);
-const PETUNIA_TRAIL_OFFSET_DEG =
-  (40 / (2 * Math.PI * MESH_BODY_SEMI_MAJOR_KM * SCALE_UNITS.KM_TO_M)) * 360;
+import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
 export function elementsById(id: string): OrbitalElements {
   return findByIdOrThrow(ORBITAL_ELEMENTS, id, 'orbitalElements');
@@ -63,8 +48,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Mercury, heliocentric. JPL: L = 252.25032350°, ϖ = 77.45779628°,
     // Ω = 48.33076593°.
-    id: 'mercury',
-    focusId: 'sun',
+    id: asSceneBodyId('mercury'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 0.38709927 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.20563593,
     inclinationRad: degToRad(7.00497902),
@@ -88,8 +73,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Venus, heliocentric. JPL: L = 181.97909950°, ϖ = 131.60246718°,
     // Ω = 76.67984255°.
-    id: 'venus',
-    focusId: 'sun',
+    id: asSceneBodyId('venus'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 0.72333566 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.00677672,
     inclinationRad: degToRad(3.39467605),
@@ -113,8 +98,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Earth–Moon barycenter, heliocentric. JPL: L = 100.46457166°,
     // ϖ = 102.93768193°, Ω = 0.0°.
-    id: 'earth',
-    focusId: 'sun',
+    id: asSceneBodyId('earth'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 1.00000261 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.01671123,
     inclinationRad: degToRad(-0.00001531),
@@ -138,8 +123,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Mars, heliocentric. JPL: L = −4.55343205°, ϖ = −23.94362959°,
     // Ω = 49.55953891°.
-    id: 'mars',
-    focusId: 'sun',
+    id: asSceneBodyId('mars'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 1.52371034 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.0933941,
     inclinationRad: degToRad(1.84969142),
@@ -163,8 +148,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Jupiter, heliocentric. JPL: L = 34.39644051°, ϖ = 14.72847983°,
     // Ω = 100.47390909°.
-    id: 'jupiter',
-    focusId: 'sun',
+    id: asSceneBodyId('jupiter'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 5.202887 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.04838624,
     inclinationRad: degToRad(1.30439695),
@@ -188,8 +173,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Saturn, heliocentric. JPL: L = 49.95424423°, ϖ = 92.59887831°,
     // Ω = 113.66242448°.
-    id: 'saturn',
-    focusId: 'sun',
+    id: asSceneBodyId('saturn'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 9.53667594 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.05386179,
     inclinationRad: degToRad(2.48599187),
@@ -213,8 +198,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Uranus, heliocentric. JPL: L = 313.23810451°, ϖ = 170.95427630°,
     // Ω = 74.01692503°.
-    id: 'uranus',
-    focusId: 'sun',
+    id: asSceneBodyId('uranus'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 19.18916464 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.04725744,
     inclinationRad: degToRad(0.77263783),
@@ -238,8 +223,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   {
     // Neptune, heliocentric. JPL: L = −55.12002969°, ϖ = 44.96476227°,
     // Ω = 131.78422574°.
-    id: 'neptune',
-    focusId: 'sun',
+    id: asSceneBodyId('neptune'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 30.06992276 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.00859048,
     inclinationRad: degToRad(1.77004347),
@@ -265,8 +250,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // in the Explanatory Supplement to the Astronomical Almanac, 3rd ed. (2013), §8.10 Table
     // 8.10.2 — the approx_pos.html web edition dropped Pluto and the PDF it replaced now
     // redirects there. L = 238.92903833°, ϖ = 224.06891629°, Ω = 110.30393684°.
-    id: 'pluto',
-    focusId: 'sun',
+    id: asSceneBodyId('pluto'),
+    focusId: asSceneBodyId('sun'),
     semiMajorMpc: 39.48211675 * SCALE_UNITS.AU_TO_MPC,
     eccentricity: 0.2488273,
     inclinationRad: degToRad(17.14001206),
@@ -300,8 +285,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     // relative to the regressing node: 360/(360/8.85 + 360/18.6) = 5.997, consistent with the
     // familiar 8.85 yr perigee (longitude ϖ) and 18.6 yr node. Prograde, so apsis advances (+)
     // and node regresses (−). Ecliptic-framed, so `plane` is omitted.
-    id: 'moon',
-    focusId: 'earth',
+    id: asSceneBodyId('moon'),
+    focusId: asSceneBodyId('earth'),
     semiMajorMpc: 384400 * SCALE_UNITS.KM_TO_MPC,
     eccentricity: 0.0554,
     inclinationRad: degToRad(5.16),
@@ -813,73 +798,9 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: CHARON_GREY,
   }),
 
-  // The whale and the petunias (Hitchhiker's Guide easter egg): a circular,
-  // equatorial 400 km orbit — i=0/node=0/ω=0 are all undefined at this
-  // geometry, same convention as Deimos/Dione above — riding Earth's OWN
-  // equatorial pole (poleRaDeg/poleDecDeg match the 'earth' row in
-  // rotationElements.ts) rather than a distinct Laplace plane.
-  satellite({
-    id: 'whale',
-    focusId: 'earth',
-    semiMajorKm: MESH_BODY_SEMI_MAJOR_KM,
-    eccentricity: 0,
-    inclinationDeg: 0,
-    ascendingNodeDeg: 0,
-    argPeriapsisDeg: 0,
-    meanAnomalyDeg: 0,
-    periodDays: MESH_BODY_PERIOD_DAYS,
-    periodKind: 'anomalistic',
-    apsidalPrecessionYears: 0,
-    nodalPrecessionYears: 0,
-    poleRaDeg: 0.0,
-    poleDecDeg: 90.0,
-    color: WHALE_GREY,
-  }),
-  satellite({
-    // Trails the whale by PETUNIA_TRAIL_OFFSET_DEG in mean anomaly — behind in
-    // the direction of travel, so a smaller M at this shared epoch.
-    id: 'petunias',
-    focusId: 'earth',
-    semiMajorKm: MESH_BODY_SEMI_MAJOR_KM,
-    eccentricity: 0,
-    inclinationDeg: 0,
-    ascendingNodeDeg: 0,
-    argPeriapsisDeg: 0,
-    meanAnomalyDeg: -PETUNIA_TRAIL_OFFSET_DEG,
-    periodDays: MESH_BODY_PERIOD_DAYS,
-    periodKind: 'anomalistic',
-    apsidalPrecessionYears: 0,
-    nodalPrecessionYears: 0,
-    poleRaDeg: 0.0,
-    poleDecDeg: 90.0,
-    color: PETUNIA_PINK,
-  }),
-
-  // Hubble, geocentric. Columns verbatim from JPL Horizons ELEMENTS (`-48`,
-  // CENTER='500@399', REF_PLANE='FRAME', OUT_UNITS='KM-D') at JDTDB 2461298.5 =
-  // 2026-Sep-15 00:00 TDB, and the node rate is the mean of two 5-day `OM`
-  // steps over the same span. The refresh query is recorded in
-  // `data/raw/meshes/hubble/README.md`.
-  orbiter({
-    id: 'hubble',
-    focusId: 'earth',
-    epochJd: 2461298.5,
-    semiMajorKm: 6852.132959105691,
-    eccentricity: 2.423931415351075e-4,
-    inclinationDeg: 28.45103713579995,
-    ascendingNodeDeg: 185.7242679199093,
-    argPeriapsisDeg: 189.2459336243418,
-    meanAnomalyDeg: 51.61232139214808,
-    meanMotionDegPerDay: 5510.190163541656,
-    // OM 185.7242679 → 151.4846789 → 117.4543700 over 2026-09-15/20/25.
-    nodeRateDegPerDay: -6.827,
-    poleRaDeg: 270,
-    poleDecDeg: 90,
-    color: HUBBLE_SILVER,
-  }),
-
   // The 39 bound S-stars: their per-row facts live in `sStarElements.ts` beside the verbatim
   // Gillessen lines, converted once in `sStarOrbitalElements.ts` (also the star Layer's trail
   // roster). Their focus is the `galactic-centre` place, so they join the `galactic-centre` region by existing.
   ...S_STAR_ORBITAL_ELEMENTS,
+  ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'orbit' ? [row.position.elements] : [])),
 ];

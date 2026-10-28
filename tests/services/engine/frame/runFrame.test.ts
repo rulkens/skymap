@@ -74,9 +74,11 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
   };
 });
 
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/data/bodies/idleSurfaceTilePlan';
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -125,6 +127,7 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -217,6 +220,7 @@ function makeState(): EngineState {
     },
     // cameraRuntime Resource bag — required for the camera-driver block
     // that runs BEFORE the renderer-null bail-out.
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
@@ -229,6 +233,8 @@ function makeState(): EngineState {
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
+      navigator: NAV_AT_REST,
+      scheme: 'skymap',
       own: {},
       pivotBody: null,
       outputs: {
@@ -771,7 +777,7 @@ describe('runFrame — sim clock (Task 8)', () => {
     };
     const deps: RunFrameDeps = {
       ...makeCamDeps(state, store),
-      controlSchemes: { skymap: { drivers: [stub] } },
+      controlSchemes: { skymap: { drivers: [stub] }, openspace: { drivers: [stub] } },
     };
 
     runFrame(state, deps, NOW);
@@ -1102,7 +1108,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        earthTiles: null,
+        surfaceTiles: null,
         structureFocus: {
           update: vi.fn(),
           produceFocusUniforms: vi.fn(() => ({
@@ -1146,6 +1152,33 @@ describe('runFrame — the planner keep-ticking fold', () => {
 
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
+
+  it('writes the frame tile plan, applies it, and keeps ticking while tiles are in flight', () => {
+    // Bug caught: the plan's wake vote never reaching the keep-ticking
+    // predicate. A landing tile wakes the loop itself; a landing manifest does
+    // not, so only this vote carries the loop through its fetch.
+    const state = makeReadyState();
+    const apply = vi.fn();
+    const residency = {
+      manifest: () => ({ status: 'absent', value: null }),
+      residentSlot: () => null,
+      isInFlight: () => false,
+      hasFailed: () => false,
+      inFlightCount: () => 1,
+      engagedBodyId: () => null,
+    };
+    state.subsystems.surfaceTiles = {
+      stream: { residency, apply },
+      plan: IDLE_SURFACE_TILE_PLAN,
+    } as unknown as EngineState['subsystems']['surfaceTiles'];
+
+    runFrame(state, makeCamDeps(state), 0);
+
+    const written = state.subsystems.surfaceTiles!.plan;
+    expect(written.awake).toBe(true);
+    expect(apply).toHaveBeenCalledWith(written);
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
+  });
 });
 
 describe('runFrame — effective intent', () => {
@@ -1179,7 +1212,8 @@ describe('runFrame — effective intent', () => {
         return { pose: ctx.register, memory: mem };
       },
     };
-    const deps = { ...h.deps, controlSchemes: { skymap: { drivers: [probe, ...CAMERA_DRIVERS] } } };
+    const drivers = [probe, ...CAMERA_DRIVERS];
+    const deps = { ...h.deps, controlSchemes: { skymap: { drivers }, openspace: { drivers } } };
 
     const before = h.store.getState();
     runFrame(h.state, deps, 16);

@@ -2,6 +2,22 @@
 
 Quick orientation for an AI agent picking up work here; it points at the deeper docs.
 
+## Why this exists
+
+Skymap puts the measured universe in anyone's hands: students, teachers, planetarium
+audiences, anyone curious. It is built to last, and every change is held to three tests:
+
+- **Can we keep building on it?** Leave each file clearer than you found it, and finish
+  what you start: no half-renames, no old and new code left standing side by side.
+- **Could a new developer pick it up cold?** If the why isn't in the code, the docs or an
+  ADR, the work isn't done.
+- **Would a user come back?** A bug a user sees costs more than a feature that ships late,
+  so never trade reliability for landing speed.
+
+When you pass quality debt (a stale branch, a flaky test, dead code, an unclear name),
+say so and offer to fix it. Don't build around it. The conventions below are how we meet
+these tests.
+
 ## What this is
 
 A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at build time into a custom binary format, loaded in the browser, drawn as instanced point billboards with per-galaxy thumbnail quads on close approach. TS + Vite + React UI shell; raw WebGPU + WGSL renderer.
@@ -43,7 +59,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **Code is liability**: the scarce resource is the user's maintenance attention — smallest diff wins, deletion beats addition, speculative generality and extra knobs are review findings, and neutral-or-negative evidence **halts** a landing pipeline (land/park is the user's ruling, never process momentum); `deletion-audit` is the standing counter-bias after fix waves and at `/feature-done`, per [`leanness.md`](docs/superpowers/conventions/leanness.md).
 - **Fix a bug** → reproduce it as a failing test first, then fix.
 - **Why is this slow?** → measure first with `npm run perf`, then [docs/RENDERER.md](docs/RENDERER.md) for the CPU mental model (per-frame work scales with ~2.5M on-screen galaxies: hoist constants, gate with squared distances, no per-galaxy `Math.tan`).
-- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports, CSS `@import` paths (the website imports the app's tokens.css) and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
+- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports, the website's `.astro`/`.mdx` imports, CSS `@import` paths (the website imports the app's tokens.css) and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
 - **Refactors keep the services/ layout**: cross-cutting helpers in `utils/`, rendering subsystems in `services/gpu/`, tests mirroring src.
 - **Choices I must make**: if the `mcp__claude-dash-ui__ask_user` tool is available, put every one in ONE call (`options`, `recommended`, a `why` of ≤ 15 words; visual checks as `kind: "check"` with the image attached) and end the turn with one line saying they're in the dash, without repeating them in prose. Don't act on a question the answers list under "Left open". Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
 - **Process progress**: if the `mcp__claude-dash-ui__session_progress` tool is available, call it when your work moves between explore, design, plan, implement, verify, land and done (main session only; carry on if it fails). For your own steps, send `steps` once, then `{ step, label }` per task; set `doc` to the plan path.

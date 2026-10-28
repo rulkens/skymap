@@ -1,0 +1,52 @@
+.summary {
+  margin: 0 0 var(--stack);
+}
+
+.meaning,
+.links,
+.byHand {
+  composes: small from '../../styles/type.module.css';
+  max-width: var(--doc-measure);
+  margin: 0.25rem 0 0.5rem;
+  color: var(--site-text-dim);
+}
+
+/* The record writes a term's meaning as the rest of a line that the term began. */
+.meaning::first-letter {
+  text-transform: uppercase;
+}
+
+/* The links of a row side by side, each a line of its own on a phone. */
+.links {
+  composes: tap-links from '../../styles/links.module.css';
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+  margin-top: 0.5rem;
+}
+
+/* The developer's part of the page: closed until asked for. The ring fills while it is open (styles/ring.module.css). */
+.files {
+  margin: 0 0 var(--stack);
+
+  & > :not(summary) {
+    margin-top: 0.5rem;
+  }
+
+  /* One step more specific than the ring's own colour. */
+  & .summaryRing {
+    max-width: var(--doc-measure);
+    margin: 0.25rem 0 0.5rem;
+    color: var(--site-text-dim);
+  }
+}
+
+.summaryRing {
+  composes: ring ring-small from '../../styles/ring.module.css';
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}

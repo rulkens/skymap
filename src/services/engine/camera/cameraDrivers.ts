@@ -10,7 +10,6 @@
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverActivity } from '../../../@types/engine/camera/DriverActivity';
@@ -43,6 +42,7 @@ import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -206,7 +206,7 @@ function framedClipArm(
   evaluated: FramedClipPose,
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
-  bodies: ReadonlyMap<BodyId, BodyState>,
+  bodies: ReadonlyMap<PositionedId, BodyState>,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading
@@ -371,3 +371,40 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pose: (ctx, mem) => ({ pose: ctx.state.camera.base, memory: mem }),
   },
 ];
+
+// Neither row reads a timed channel, so held <-> coast is an edge and each one
+// commits the register. Both echo it, as `orbitDrag` does: the navigator's
+// nudge already moved it this frame.
+const NAVIGATOR_ROW = {
+  pivotsOnFocusedBody: true,
+  commitsOnEdge: 'register',
+  pose: (ctx: DriverCtx, mem: FollowMemory | null) => ({ pose: ctx.register, memory: mem }),
+} as const;
+
+/**
+ * The openspace table: `CAMERA_DRIVERS` with `orbitDrag` swapped for the
+ * navigator's rows. The coast sits at 50, under tween (60) and the follow
+ * approach (55), so a focus change preempts it; the held row keeps the drag's
+ * 80. An exhibit row claims the drag in this scheme as in skymap's.
+ */
+export const OPENSPACE_DRIVERS: readonly CameraDriver[] = CAMERA_DRIVERS.flatMap((d) =>
+  d.id !== 'orbitDrag'
+    ? [d]
+    : [
+        {
+          ...NAVIGATOR_ROW,
+          id: 'openSpaceHeld',
+          priority: 80,
+          // Any open gesture, as `orbitDrag`: a pinch, or a drag latched under skymap
+          // before a toggle, moves the register with no navigator input at all.
+          isActive: (s: RootState, a: DriverActivity) => s.camera.dragging && !a.dragClaimed,
+        },
+        {
+          ...NAVIGATOR_ROW,
+          id: 'openSpaceCoast',
+          priority: 50,
+          isActive: (s: RootState, a: DriverActivity) =>
+            !s.camera.dragging && a.navMoving && !a.dragClaimed,
+        },
+      ],
+);

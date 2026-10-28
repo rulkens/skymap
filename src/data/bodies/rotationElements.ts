@@ -2,15 +2,15 @@
  * rotationElements — J2000 rotation elements for bodies with a modelled facing:
  * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. `orbitalElements`
  * places a body; this aims it. A body with no row is rotation-invariant and
- * falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
- * α̇/δ̇ and the periodic nutation/libration terms (Neptune's `N`, the Moon's `E1…`)
- * are dropped — they move the pole under an arcminute over 250
- * years, below a textured sphere's resolution. Source: the constant terms of
- * Archinal et al. (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3.
+ * falls back to `IDENTITY_MAT3`. Ẇ is live everywhere; the pole rates α̇/δ̇ only
+ * for Earth (0.15° by 2026, 17 km of ground), and the periodic nutation/libration
+ * terms (Neptune's `N`, the Moon's `E1…`) nowhere — elsewhere they stay under an
+ * arcminute over 250 years. Source: Archinal et al. (2018), Cel. Mech. Dyn.
+ * Astron. 130:22, Tables 1 and 2/3; Earth's spin is the IERS one (see its row).
  */
 
 import type { RotationElements } from '../../@types/scene/RotationElements';
-import { MESH_BODY_PERIOD_DAYS } from './orbitalElements';
+import { LAYER_BODY_ROWS } from './layerBodyRows';
 
 export function rotationRowById(id: string): RotationElements | null {
   return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;
@@ -32,12 +32,19 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 160.2,
     spinRateDegPerDay: -1.4813688,
   },
+  // LANDMINE — Archinal's own Earth W (190.147 + 360.9856235·d) is in TDB days, and the
+  // sim clock is UTC: fed UTC it put Greenwich 0.2–0.3° (23–35 km) west. W is instead the
+  // IERS Earth Rotation Angle (UT1 ≈ UTC), ERA = 280.46061837504 + 360.98561228808761·d,
+  // less 90° + α₀(t): `rotationFromIau` measures W from the node at α₀ + 90°, so the
+  // −0.641°/cy α̇ adds 0.641/36525 °/day to Ẇ. The pole rates are the IAU precession.
   {
     id: 'earth',
     poleRaDeg: 0.0,
     poleDecDeg: 90.0,
-    primeMeridianDeg: 190.147,
-    spinRateDegPerDay: 360.9856235,
+    poleRaRateDegPerCty: -0.641,
+    poleDecRateDegPerCty: -0.557,
+    primeMeridianDeg: 190.46061837504,
+    spinRateDegPerDay: 360.98562983768,
   },
   // `orbitPlaneFrames.ts` carries the same pole rounded to 317.681/52.887.
   {
@@ -241,48 +248,5 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 122.695,
     spinRateDegPerDay: 56.3625225,
   },
-  // Whale and petunias (Hitchhiker's Guide easter egg). The whale is ORBIT-LOCKED: one turn
-  // per orbit about the orbit pole (Earth's own, so α₀/δ₀ match the 'earth' row), holding its
-  // head along the velocity and its belly Earthward in the body frame the bake's
-  // `bodyFromSource` remap sets (+X nose, -Y dorsal); W₀ phases that to the M = 0 epoch. The
-  // pot's pole stays DECORATIVE — off-axis and quick, a turn per 90 s, so its tumble wobbles.
-  {
-    id: 'whale',
-    poleRaDeg: 0.0,
-    poleDecDeg: 90.0,
-    primeMeridianDeg: 90.0,
-    spinRateDegPerDay: 360 / MESH_BODY_PERIOD_DAYS,
-  },
-  {
-    id: 'petunias',
-    poleRaDeg: 198.6,
-    poleDecDeg: -37.2,
-    primeMeridianDeg: 0.0,
-    spinRateDegPerDay: 345600,
-  },
-  // Both probes keep the high-gain dish on Earth — the real pointing constraint,
-  // and the only one that stays true at any epoch as the geometry opens up.
-  { kind: 'lookAt', id: 'voyager1', targetId: 'earth' },
-  { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },
-  // Hubble holds an inertial attitude, but WHICH one is the observing schedule's
-  // business, so this one is authored: aperture (+X) on the celestial north pole
-  // — the one direction a 28.5°-inclined orbit never puts the Earth in front of
-  // — and the solar-array long axis (+Z, the pole here) on the equinox. Ẇ = 0.
-  {
-    id: 'hubble',
-    poleRaDeg: 0.0,
-    poleDecDeg: 0.0,
-    primeMeridianDeg: 90.0,
-    spinRateDegPerDay: 0,
-  },
-  // Rover headings are AUTHORED presentation, not surveyed landing azimuths:
-  // they only spread the four so no two face the same way, and the visual pass
-  // is their only gate.
-  { kind: 'surfaceLocked', id: 'curiosity', headingDeg: 90 },
-  { kind: 'surfaceLocked', id: 'perseverance', headingDeg: 0 },
-  { kind: 'surfaceLocked', id: 'spirit', headingDeg: 180 },
-  { kind: 'surfaceLocked', id: 'opportunity', headingDeg: 270 },
-  // The scan is already authored with +X east (no bodyFromSource remap), so
-  // heading 90 puts body +X on east with no rotation left to apply.
-  { kind: 'surfaceLocked', id: 'soendermarken', headingDeg: 90 },
+  ...LAYER_BODY_ROWS.flatMap((row) => row.rotation ?? []),
 ];

@@ -8,7 +8,6 @@
  * slope over two seconds of poll jitter is the floor (I4).
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDebugSnapshot } from '../../../@types/camera/CameraDebugSnapshot';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -34,6 +33,7 @@ import { isBodyArm } from './rungs/isBodyArm';
 import { isSiteArm } from './rungs/isSiteArm';
 import { sameFrame } from './rungs/sameFrame';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
 
@@ -44,7 +44,7 @@ export function cameraDebugSnapshotOf(input: {
   readonly poseBasis: Readonly<Mat3>;
   readonly upBasis: Readonly<Mat3>;
   readonly orientationFrame: string;
-  readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
+  readonly bodyStates: ReadonlyMap<PositionedId, BodyState>;
   readonly lastRenderedSimDays: number;
   readonly liveSimDays: number;
   readonly time: TimeState;
@@ -55,7 +55,7 @@ export function cameraDebugSnapshotOf(input: {
   readonly tuning: CameraTuning;
   /** `readOrientDeltas()` — measured in the frame loop, never re-derived here. */
   readonly deltas: OrientDeltas;
-  /** `SurfaceTileSubsystem.terrainHeightAt`, bound by the caller (engine.ts)
+  /** `SurfaceTileStream.heightAt`, bound by the caller (engine.ts)
    *  — the eye-to-ground row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
   /** Its sibling, for the resident-level row; same binding site. */

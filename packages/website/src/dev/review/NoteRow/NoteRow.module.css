@@ -1,0 +1,21 @@
+.root {
+  composes: row from '../ReviewRow/ReviewRow.module.css';
+}
+
+.reason {
+  composes: reason from '../ReviewRow/ReviewRow.module.css';
+}
+
+.passage {
+  composes: passage from '../ReviewRow/ReviewRow.module.css';
+  display: block;
+  width: 100%;
+}
+
+.words {
+  margin: var(--space-2) 0;
+}
+
+.delete {
+  composes: button from '../ReviewControl/ReviewControl.module.css';
+}

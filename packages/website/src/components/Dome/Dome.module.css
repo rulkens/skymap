@@ -1,0 +1,37 @@
+.root {
+  composes: wrap section grid from '../../styles/layout.module.css';
+  row-gap: 3.5rem;
+  align-items: center;
+}
+
+.figure {
+  margin: 0;
+}
+
+/* Five columns of the page grid and six, with an empty one between. */
+@media (min-width: 901px) {
+  .figure {
+    grid-column: span 5;
+    --cols: 5;
+  }
+
+  .copy {
+    grid-column: 7 / -1;
+  }
+}
+
+.caption {
+  max-width: 38.75rem;
+  margin: 2.5rem auto 0;
+}
+
+.dome {
+  max-width: 38.75rem;
+  margin-inline: auto;
+}
+
+@media (max-width: 900px) {
+  .dome {
+    max-width: 85%;
+  }
+}

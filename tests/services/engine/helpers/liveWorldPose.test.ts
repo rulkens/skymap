@@ -15,10 +15,10 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // The epoch the "last frame" drew at, and where the clock has since moved to —
 // a month apart, so Earth has travelled ~1e4 body radii between them.
@@ -30,9 +30,9 @@ const MOVED_ON_SIM_DAYS = RENDERED_SIM_DAYS + 30;
 // resolved target must sit exactly one body radius from the body's centre.
 const ALTITUDE_M = 1e6;
 const EARTH_ARM: FramedCameraPose = {
-  frame: { body: SCENE_EARTH.id as BodyId },
+  frame: { body: SCENE_EARTH.id },
   pose: {
-    bodyId: SCENE_EARTH.id as BodyId,
+    bodyId: SCENE_EARTH.id,
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [SCENE_EARTH.surface.datumRadiusM + ALTITUDE_M, 0, 0],
     // right | up | forward as columns: right × up = forward = −x.
@@ -43,6 +43,7 @@ const EARTH_ARM: FramedCameraPose = {
 function makeState(): EngineState {
   return {
     settings: { orientation: 'ecliptic' },
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: EARTH_ARM },
       outputs: {

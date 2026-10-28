@@ -22,7 +22,7 @@ import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/vi
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
+import { BODY_SOURCE_IDS } from '../../../../src/data/bodies/bodySourceIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
@@ -145,6 +145,7 @@ import { loadDataManifest } from '../../../../src/services/loading/dataManifest'
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -337,6 +338,7 @@ function makeState(
       cosmicWebFilaments: { enabled: false, intensity: 1.0 },
       orbitTrails: { enabled: true },
       missionTrails: { enabled: false },
+      sStarTrails: { enabled: true },
       cosmicWebDensity: {
         enabled: true,
         items: {
@@ -347,7 +349,7 @@ function makeState(
       },
       bodies: {
         items: Object.fromEntries(
-          BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+          BODY_SOURCE_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
         ),
       },
       // Overridable so a test can hide every category and pin the bug-fix
@@ -396,6 +398,7 @@ function makeState(
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set (boot-load expectations stay
     // sdss/2mrs/glade/…, no Blue Marble fetch).
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),

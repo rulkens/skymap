@@ -809,18 +809,6 @@ describe('cutSurfaceTiles', () => {
       const result = cutSurfaceTiles({ ...nadirAt(1000), camPosLocalM: [1, 0, 0] });
       expect(result.requests.requests).toEqual([]);
       expect(result.cut).toEqual([]);
-      // Still a meaningful sub-camera direction, not a zero vector NaN trap —
-      // the debug readout needs this even on the degenerate "no horizon" path.
-      expect(result.requests.subCameraDirLocal).toEqual([1, 0, 0]);
-    });
-
-    it('reports subCameraDirLocal as the normalised camPosLocalM, not a recomputed one', () => {
-      const { camPosLocalM } = nadirAt(1000);
-      const len = Math.hypot(camPosLocalM[0], camPosLocalM[1], camPosLocalM[2]);
-      const result = cutSurfaceTiles(nadirAt(1000));
-      expect(result.requests.subCameraDirLocal[0]).toBeCloseTo(camPosLocalM[0] / len, 12);
-      expect(result.requests.subCameraDirLocal[1]).toBeCloseTo(camPosLocalM[1] / len, 12);
-      expect(result.requests.subCameraDirLocal[2]).toBeCloseTo(camPosLocalM[2] / len, 12);
     });
 
     it('emits leaves on both sides of the antimeridian', () => {

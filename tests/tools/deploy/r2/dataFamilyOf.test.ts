@@ -1,10 +1,12 @@
 /**
  * The runtime fetch surface is the spec: every name the browser requests must
- * map to its family with today's transport and wire encoding, and the legacy
+ * map to its family with its transport and wire encoding, and the legacy
  * un-tiered build artefacts must map to none. A wrong `gzipOnWire` here is
  * invisible to every other check — R2 would hold bytes labelled wrongly.
  */
 import { describe, expect, it } from 'vitest';
+import { OCTREE_CATALOGS } from '../../../../tools/deploy/r2/octreeCatalogs';
+import { OCTREE_FAMILIES } from '../../../../src/data/octree/octreeFamilies';
 import { dataFamilyOf } from '../../../../tools/deploy/r2/dataFamilyOf';
 
 const GALAXY = { label: 'galaxy-catalog', transport: 'wrangler', gzipOnWire: true };

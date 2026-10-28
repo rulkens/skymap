@@ -28,11 +28,11 @@ import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
@@ -48,7 +48,7 @@ const FIXTURE_PX_PER_RAD = 600 / (2 * Math.tan(1 / 2));
 
 /** The camera parked at a body: the partition then resolves it as a mesh. */
 function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
-  const positionMpc = deriveBodyStates(SIM_DAYS).get(bodyId)!.positionMpc;
+  const positionMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId(bodyId))!.positionMpc;
   return {
     // Frame-owned: `scheduleProbeCapture` and `sceneBodyStates` both read
     // these off `ctx.snapshot.x`.
@@ -83,7 +83,7 @@ function faceCtxWithMarsRow(face: CubeFace): FrameView {
 }
 
 function marsSlab(index: number) {
-  return makeSlab({ index, frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
+  return makeSlab({ index, frame: { kind: 'body-m', hostId: asSceneBodyId('mars') } });
 }
 
 /** `faceViewSpec` is real here — a mocked `deriveView` recovers the face it
@@ -159,7 +159,7 @@ describe('scheduleProbeCapture', () => {
     expect(faces).not.toBeNull();
     expect([...faces!.keys()].sort()).toEqual([...ALL_CUBE_FACES]);
     const row = CUBEMAP_CAPTURES.probe;
-    const curiosityMpc = deriveBodyStates(SIM_DAYS).get('curiosity')!.positionMpc;
+    const curiosityMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('curiosity'))!.positionMpc;
 
     // One frame for the whole row.
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
@@ -168,7 +168,7 @@ describe('scheduleProbeCapture', () => {
       nearMpc: row.nearMpc,
       nowMs: NOW_MS,
       // The cube is captured in the axes the host row shades in.
-      axes: deriveBodyStates(SIM_DAYS).get('mars')!.orientation,
+      axes: deriveBodyStates(SIM_DAYS).get(asSceneBodyId('mars'))!.orientation,
     });
 
     // Six faces off that one frame, each stamped with the row's slot base and size.
@@ -203,7 +203,7 @@ describe('scheduleProbeCapture', () => {
           slabs: [
             makeSlab(),
             makeSlab({ index: 1 }),
-            makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'voyager1' as BodyId } }),
+            makeSlab({ index: 2, frame: { kind: 'body-m', hostId: asSceneBodyId('voyager1') } }),
           ],
         }) as unknown as FrameView,
     );

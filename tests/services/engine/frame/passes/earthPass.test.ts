@@ -30,14 +30,11 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  earthPass,
-  prepareBodySurfaceFrame,
-} from '../../../../../src/services/engine/frame/passes/earthPass';
+import { earthPass } from '../../../../../src/services/engine/frame/passes/earthPass';
 import { surfaceTilesPass } from '../../../../../src/services/engine/frame/passes/surfaceTilesPass';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -59,7 +56,6 @@ import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/help
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
@@ -83,6 +79,8 @@ vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
 }));
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
+import { prepareBodySurfaceFrame } from '../../../../../src/services/engine/frame/prepareBodySurfaceFrame';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The layer reads each body's live position/orientation from the per-frame
 // body-state snapshot (keyed by id). Stub it to a map built from
@@ -112,13 +110,13 @@ function toBodyState(b: SeededBody): BodyState {
 // Fixtures pairing each body's identity record with its real J2000 state —
 // position + orientation are sourced from deriveBodyStates so the values are
 // the real ones and the refs stay stable across the assertions.
-const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
   positionMpc: EARTH_STATE.positionMpc,
   orientation: EARTH_STATE.orientation,
 };
-const MARS_STATE = deriveBodyStates(CONST_J2000).get('mars')!;
+const MARS_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('mars'))!;
 const SEEDED_MARS: SeededBody = {
   ...SCENE_PLANETS.find((p) => p.id === 'mars')!,
   positionMpc: MARS_STATE.positionMpc,
@@ -215,13 +213,9 @@ const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  // `BodyId` is the coarse source-registry category set ('earth' | 'planet' |
-  // …), not per-planet ids — `bodySlabRow` (slabs.ts) already force-casts a
-  // SceneBody's real string id ('mars', 'venus', …) the same way when it
-  // builds a body-m row's frame.
   const slab: Slab = makeSlab({
     vp: f64Vp,
-    frame: { kind: 'body-m', hostId: bodyId as BodyId },
+    frame: { kind: 'body-m', hostId: asSceneBodyId(bodyId) },
   });
   return {
     slab,
@@ -266,7 +260,7 @@ const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
  * handle and a `surfaceTiles` subsystem stub whose cut and two atlas views are
  * caller-controlled — the instanced-draw gate's four inputs
  * (`state.gpu.surfaceTileRenderer`, `getAtlasView()`,
- * `getHeightAtlasView()`, `getLastCut()`).
+ * `getHeightAtlasView()`, `plan.cut`).
  */
 function makeTileDrawState(input: {
   readonly tileRenderer: unknown;
@@ -287,10 +281,12 @@ function makeTileDrawState(input: {
     },
     subsystems: {
       surfaceTiles: {
-        getLastCut: () => input.cut,
-        getAtlasView: () => input.atlasView,
-        getHeightAtlasView: () =>
-          input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
+        plan: { cut: input.cut },
+        stream: {
+          getAtlasView: () => input.atlasView,
+          getHeightAtlasView: () =>
+            input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
+        },
       },
     },
   } as unknown as EngineState;
@@ -403,20 +399,6 @@ describe('prepareBodySurfaceFrame', () => {
     expect(prepareBodySurfaceFrame(state, ctx, makeEarthBodyView('earth'))).toBeNull();
   });
 
-  it('composes mvpLocal from the slab f64 vp, not the f32 vp', () => {
-    mvpMock.mockClear();
-    const state = makeState({ draw: vi.fn() }, SEEDED_EARTH);
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
-    const view = makeEarthBodyView('earth');
-
-    prepareBodySurfaceFrame(state, ctx, view);
-
-    expect(mvpMock).toHaveBeenCalledTimes(1);
-    const call = mvpMock.mock.calls[0]!;
-    expect(call[0]).toBe(view.slab.vp);
-    expect(call[0]).not.toBe(view.vp);
-  });
-
   it('memoizes per (ctx, body): same object for a repeat call, a DIFFERENT object and pose for a second bodyId on the same ctx', () => {
     mvpMock.mockClear();
     const state: EngineState = {
@@ -458,23 +440,17 @@ describe('earthPass.draw', () => {
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     earthPass.draw(PASS_STUB, view, ctx, state);
 
-    // Two MVPs composed: prepareBodySurfaceFrame's (the datum, memoised for
-    // the tile planner/drawPick) and the base globe's own, at the inner
-    // bound (F2-R5) so relief can never be occluded by it (§7.4).
-    expect(mvpMock).toHaveBeenCalledTimes(2);
+    expect(mvpMock).toHaveBeenCalledTimes(1);
     const call = mvpMock.mock.calls[0]!;
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // The body's true equatorial radius in metres, not an Mpc conversion.
-    expect(call[2]).toBe(SEEDED_EARTH.surface.datumRadiusM);
-    // The base globe's own compose, at the inner bound — never the datum.
-    const baseGlobeCall = mvpMock.mock.calls[1]!;
-    expect(baseGlobeCall[2]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
+    // The base globe composes at the inner bound in metres (F2-R5), never the
+    // datum, so relief can never be occluded by it (§7.4).
+    expect(call[2]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
-    expect(camLocalMock).toHaveBeenCalledTimes(2);
-    expect(camLocalMock.mock.calls[0]![1]).toBe(SEEDED_EARTH.surface.datumRadiusM);
-    expect(camLocalMock.mock.calls[1]![1]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
+    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
     // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
@@ -798,22 +774,20 @@ describe('earthPass.drawPick', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.packedId).toBe(packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET));
 
-    // Two composes each: `prepareBodySurfaceFrame` (called internally, base
-    // radius) and drawPick's own floored-radius pair — the SECOND call of
-    // each is the pick one, and it MUST share one floored radius, the
-    // invariant drawFlooredSpherePick's header names, reproduced here
-    // directly against the body-slab primitives.
-    expect(mvpMock).toHaveBeenCalledTimes(2);
-    expect(camLocalMock).toHaveBeenCalledTimes(2);
-    const pickRadiusM = mvpMock.mock.calls[1]![2] as number;
-    expect(camLocalMock.mock.calls[1]![1]).toBe(pickRadiusM);
+    // The mvp and camLocal MUST share one floored radius, the invariant
+    // drawFlooredSpherePick's header names, reproduced here directly against
+    // the body-slab primitives.
+    expect(mvpMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    const pickRadiusM = mvpMock.mock.calls[0]![2] as number;
+    expect(camLocalMock.mock.calls[0]![1]).toBe(pickRadiusM);
     expect(pickRadiusM).toBeGreaterThan(SEEDED_EARTH.surface.datumRadiusM);
 
     // Independently recomputed floor formula.
     const dM = Math.hypot(
-      mvpMock.mock.calls[1]![1][0],
-      mvpMock.mock.calls[1]![1][1],
-      mvpMock.mock.calls[1]![1][2],
+      mvpMock.mock.calls[0]![1][0],
+      mvpMock.mock.calls[0]![1][1],
+      mvpMock.mock.calls[0]![1][2],
     );
     const expectedFloor = Math.max(
       SEEDED_EARTH.surface.datumRadiusM,

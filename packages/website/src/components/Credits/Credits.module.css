@@ -1,0 +1,21 @@
+.root {
+  composes: small from '../../styles/type.module.css';
+  padding-block: 2rem 3rem;
+  border-top: 1px solid var(--border-divider);
+  color: var(--site-text-dim);
+
+  & h2 {
+    font-size: var(--text-h3);
+  }
+
+  & p {
+    max-width: 62rem;
+    margin-block: 0 0.75rem;
+    color: inherit;
+  }
+
+  & b {
+    font-weight: 400;
+    color: var(--site-text-muted);
+  }
+}

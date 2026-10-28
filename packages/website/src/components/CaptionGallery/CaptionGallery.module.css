@@ -1,0 +1,37 @@
+.root {
+  composes: caption from '../../styles/picture.module.css';
+  position: relative;
+  z-index: 0;
+  width: 100%;
+}
+
+/* The foot (the caption vocabulary's `::before`) is drawn once, on the root, so it holds still while the labels change. */
+.labels {
+  composes: view-words from '../../styles/picture.module.css';
+  --caption-foot: none;
+}
+
+/* The row stands in the host's rise above the label (`--caption-lift`). */
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  margin-top: calc(-1 * var(--caption-lift, 0rem));
+}
+
+.idle {
+  visibility: hidden;
+}
+
+.mark {
+  composes: ring ring-small from '../../styles/ring.module.css';
+}
+
+/* Full tap height, narrow width: the dots read as one group. */
+.marks .mark {
+  flex: none;
+  justify-content: center;
+  width: 1.5rem;
+  padding: 0;
+}

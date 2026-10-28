@@ -20,6 +20,7 @@ import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { SurfaceGestureMemory } from '../../../src/@types/camera/SurfaceGestureMemory';
 import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 const CTX = {
@@ -46,7 +47,7 @@ export function seedRememberedTilt(
     h.state.cameraRuntime.gesture.value ?? EMPTY_SURFACE_GESTURE_MEMORY;
   let tilt: TiltMemory = h.state.cameraRuntime.tilt;
   let p: BodyFixedPose = {
-    bodyId: 'earth',
+    bodyId: asSceneBodyId('earth'),
     anchorLocalM: [0, 0, 0],
     eyeRelAnchorM: [0, 0, 1.15],
     basisLocal: NADIR,

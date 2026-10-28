@@ -1,0 +1,65 @@
+/* In the margin of the heading, above it on a narrow page, never in the line. */
+.root {
+  position: absolute;
+  right: 100%;
+  top: 0.25em;
+  box-sizing: border-box;
+  min-width: 24px;
+  min-height: 24px;
+  margin-right: var(--space-6);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid currentColor;
+  border-radius: var(--space-2);
+  background: var(--color-bg);
+  color: #9aa3b2;
+  font: 600 0.75rem / 1 var(--font-body);
+  cursor: pointer;
+}
+
+.root::before {
+  content: '§';
+}
+
+.root::after {
+  content: attr(data-count);
+  margin-left: var(--space-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.root[data-state='good'],
+.root[data-state='keep'] {
+  color: #4ade80;
+}
+
+.root[data-state='rewrite'] {
+  color: #facc15;
+}
+
+.root[data-state='note'] {
+  color: var(--color-accent);
+}
+
+.root:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 900px) {
+  .root {
+    right: auto;
+    left: 0;
+    top: -2rem;
+    margin: 0;
+  }
+
+  /* An h1 has no room above it: its icon goes just under it. */
+  .root.underHeading {
+    top: 100%;
+  }
+}
+
+/* Our own span in the heading; the icon positions against the heading, not this. */
+.host {
+  display: contents;
+}

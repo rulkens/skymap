@@ -33,7 +33,6 @@ import type { FrameBoost } from '../../../../src/@types/engine/frame/FrameBoost'
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
-import type { SlabHostId } from '../../../../src/@types/engine/frame/SlabHostId';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
@@ -41,11 +40,13 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
 // Roll and a rotated orientation basis keep every lookAt element off ±0, so the
 // pin below compares real values rather than the sign of a zero.
@@ -69,6 +70,7 @@ function makeState(): EngineState {
   return {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
+    terrain: FLAT_TERRAIN,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
@@ -260,14 +262,19 @@ describe('deriveView', () => {
     // from a camera 100 Mpc out (frameContext.test.ts's routing fixture).
     const basisLocal: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
     const arm: FramedCameraPose = {
-      frame: { body: 'earth' },
-      pose: { bodyId: 'earth', anchorLocalM: [10, 20, 30], eyeRelAnchorM: [1, 2, 3], basisLocal },
+      frame: { body: asSceneBodyId('earth') },
+      pose: {
+        bodyId: asSceneBodyId('earth'),
+        anchorLocalM: [10, 20, 30],
+        eyeRelAnchorM: [1, 2, 3],
+        basisLocal,
+      },
     };
     // 2 m along the TURNED view's right: basisLocal·YAW_RIGHT's first column is
     // local +y (the unturned basis would put it on +x).
     const eyeOffsetMpc: Vec3 = [2 * SCALE_UNITS.M_TO_MPC, 0, 0];
     const v = deriveView(frame(arm), CAM, spec({ rotation: YAW_RIGHT, eyeOffsetMpc }));
-    const pose = v.bodyPose('earth');
+    const pose = v.bodyPose(asSceneBodyId('earth'));
     expect(pose).not.toBeNull();
     expectVec(pose!.eyeRelBodyM, [11, 24, 33], 9);
     expect(pose!.basisM).toEqual(multiply3x3(basisLocal, YAW_RIGHT));
@@ -413,6 +420,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       slabRows: [],
       visibilityEntries: [],
       data: { bodies: { earth: null, planets: [], meshBodies: [] } },
+      terrain: FLAT_TERRAIN,
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
@@ -652,7 +660,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     // rounding (to zero, NaN vp, further out). In the host's own frame the
     // face's forward is the bare cube axis.
     const bodyStates = deriveBodyStates(CAPTURE_LAST_SIM_DAYS);
-    const voyager = bodyStates.get('voyager1')!;
+    const voyager = bodyStates.get(asSceneBodyId('voyager1'))!;
     const capture = cubemapCaptureFrame({
       state: makeCaptureState(),
       eyeMpc: voyager.positionMpc,
@@ -669,7 +677,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     );
     expect(Array.from(view.vp).every(Number.isFinite)).toBe(true);
     expect(Array.from(view.slabs[0]!.vp).every(Number.isFinite)).toBe(true);
-    const { basisM } = view.bodyPose('voyager1' as BodyId)!;
+    const { basisM } = view.bodyPose(asSceneBodyId('voyager1'))!;
     expect(basisM[6]).toBeCloseTo(0, 9);
     expect(basisM[7]).toBeCloseTo(0, 9);
     expect(basisM[8]).toBeCloseTo(1, 9);
@@ -735,7 +743,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
 
 describe('deriveView — NEAR0 range from the spheres it draws', () => {
   const STATES = deriveBodyStates(CONST_J2000);
-  const SUN_MPC = STATES.get('sun')!.positionMpc;
+  const SUN_MPC = STATES.get(asSceneBodyId('sun'))!.positionMpc;
   const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
   const MERCURY = findByIdOrThrow(SCENE_PLANETS, 'mercury', 'test');
 
@@ -802,7 +810,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
   it('NEAR0 never spans a planet', () => {
     // 1e5 km off Mercury both it (~30 px) and the Sun (~15 px) resolve; Mercury
     // draws in its own body slab, so NEAR0's range is the Sun's alone.
-    const mercuryMpc = STATES.get('mercury')!.positionMpc;
+    const mercuryMpc = STATES.get(asSceneBodyId('mercury'))!.positionMpc;
     const pose: CameraPose = {
       target: [...mercuryMpc],
       yaw: 0,
@@ -824,7 +832,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
     // cast is the one every body anchor takes (`bodySlabRowOf`).
     const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
     const layerRow: SlabRow = {
-      anchorId: 'sun' as SlabHostId,
+      anchorId: 'sun' as PositionedId,
       drawRadiusM: () => SUN_OUTER_M,
       footprintRadiusM: SUN_OUTER_M,
       source: 'foreground',

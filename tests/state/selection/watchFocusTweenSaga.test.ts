@@ -34,6 +34,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { StarRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -282,7 +283,7 @@ describe('watchFocusTweenSaga', () => {
   // non-body focus (here the Milky Way) still tweens as before.
   it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
     // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
-    store.dispatch(updateSelectionFocus({ type: 'body', id: 'earth' }));
+    store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
 

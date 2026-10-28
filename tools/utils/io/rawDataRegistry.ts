@@ -1577,6 +1577,87 @@ export const RAW_DATA = {
     description:
       'Provenance for the Voyager model — author, model URL, NASA media guidelines, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
   },
+  'meshes.phobosSource': {
+    path: 'data/raw/meshes/phobos/PHOBOS_M003_GAS_V01.OBJ',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Gaskell Phobos shape model M003 (3,145,728 facets, km, IAU body frame, origin at the centre of mass) as NAIF serves it beside the Rosetta DSKs. buildMeshes never reads it: `npm run import-mesh -- phobos` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ',
+    readme: 'meshes.phobos.readme',
+  },
+  'meshes.phobosAlbedo': {
+    path: 'data/raw/meshes/phobos/Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Phobos Viking Orbiter global mosaic, 40 ppd (14400x7200), DLR control network; planetocentric, east-positive, left edge -180. The import samples it 4.5 deg east of each surface point (measured registration against the shape relief).',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif',
+    readme: 'meshes.phobos.readme',
+  },
+  'meshes.phobosBlend': {
+    path: 'data/raw/meshes/phobos/phobos.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'phobos.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the Viking mosaic by longitude/latitude; written by `npm run import-mesh -- phobos` from the two downloads above.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.phobos.readme',
+  },
+  'meshes.phobos': {
+    path: 'data/raw/meshes/phobos/phobos.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Phobos decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 3.1M-facet surface — what MESH_SOURCES.phobos points at. Regenerate with `npm run prebake-mesh -- phobos` (Blender, not CI).',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.phobos.readme',
+  },
+  'meshes.phobos.readme': {
+    path: 'data/raw/meshes/phobos/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Phobos shape model and Viking mosaic — sources, licences, fetch date, checksums, frame and units, the colour registration, and how to rebuild.',
+  },
+  'meshes.deimosSource': {
+    path: 'data/raw/meshes/deimos/DEIMOS_K005_THO_V01.OBJ',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Thomas Deimos shape model K005 (5,184 facets, km, IAU body frame, origin at the centre of mass) as NAIF serves it beside the Rosetta DSKs. No usable albedo map exists (the USGS basemap is shaded relief), so the import paints it the seed albedo.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ',
+    readme: 'meshes.deimos.readme',
+  },
+  'meshes.deimosBlend': {
+    path: 'data/raw/meshes/deimos/deimos.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'deimos.blend — the shape model in metres, smooth-shaded, in a constant rock material; written by `npm run import-mesh -- deimos`.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.deimos.readme',
+  },
+  'meshes.deimos': {
+    path: 'data/raw/meshes/deimos/deimos.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Deimos with albedo, normal, roughness and metallic 4096^2 atlases — what MESH_SOURCES.deimos points at. Regenerate with `npm run prebake-mesh -- deimos` (Blender, not CI).',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.deimos.readme',
+  },
+  'meshes.deimos.readme': {
+    path: 'data/raw/meshes/deimos/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Deimos shape model — source, licence, fetch date, checksum, frame and units, and how to rebuild.',
+  },
   'meshes.hubbleSource': {
     path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
     kind: 'file',

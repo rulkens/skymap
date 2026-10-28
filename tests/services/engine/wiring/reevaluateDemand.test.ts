@@ -35,6 +35,7 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../src/@types/data/Tier';
+import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 type StubSlot = AssetSlot<unknown, unknown> & {
   load: ReturnType<typeof vi.fn>;
@@ -105,6 +106,7 @@ function makeState(
     // buildDemandCtx assembles the camera eye from pose + projection, so both
     // must be present. A far resting pose keeps the proximity-gated body-texture
     // rows out of the demand set.
+    terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
       outputs: {
@@ -457,6 +459,7 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
       assetSlots: { points: new Map(), bodyTextures: new Map([[key, slot]]) },
       // Per-call queue, for the same reasons spelled out on `makeState`.
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
+      terrain: FLAT_TERRAIN,
       cameraRuntime: {
         register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
         outputs: {

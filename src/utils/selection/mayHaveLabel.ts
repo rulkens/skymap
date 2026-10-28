@@ -22,6 +22,7 @@ export function mayHaveLabel(ref: SelectionRef | null): boolean {
       return false;
     case 'structure':
     case 'body':
+    case 'craft':
     case 'blackHole':
     case 'milkyWay':
       return true;

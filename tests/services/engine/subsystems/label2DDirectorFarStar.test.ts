@@ -31,7 +31,7 @@ import { createLabel2DDirector } from '../../../../src/services/engine/subsystem
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -58,9 +58,10 @@ import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum'
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
-const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
+const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
 // The handed value is full: this fixture is about the ill-conditioned-projection regression, not the fade channels.
 const STAR_FADE = { sun: 1, famousStar: 1 };
 

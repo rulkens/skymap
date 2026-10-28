@@ -5,10 +5,11 @@ import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPosit
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const row: OrbitalElements = {
-  id: 'test',
-  focusId: 'saturn',
+  id: asSceneBodyId('test'),
+  focusId: asSceneBodyId('saturn'),
   semiMajorMpc: 1_000_000 * SCALE_UNITS.KM_TO_MPC,
   eccentricity: 0.2,
   inclinationRad: 0.4,

@@ -17,7 +17,7 @@ import type { PlanetBody } from '../../@types/scene/PlanetBody';
 
 // Throws at module load on a typo'd id: an unresolved seed would otherwise silently
 // mis-size or mis-colour the shell rather than fail.
-const seededById = new Map(SCENE_PLANETS.map((body) => [body.id, body]));
+const seededById = new Map<string, PlanetBody>(SCENE_PLANETS.map((body) => [body.id, body]));
 const seededPlanet = (id: string): PlanetBody => {
   const body = seededById.get(id);
   if (body === undefined) throw new Error(`atmosphereParams: no seeded planet '${id}'`);

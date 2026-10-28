@@ -10,6 +10,7 @@ import type { FrameBoost } from '../../../src/@types/engine/frame/FrameBoost';
 import type { Slab } from '../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { foldBoostIntoSlab } from '../../../src/utils/camera/foldBoostIntoSlab';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 vi.mock('../../../src/data/renderOrigin', () => ({ RENDER_ORIGIN_MPC: [5, -3, 2] }));
 const ORIGIN: Vec3 = [5, -3, 2];
@@ -53,7 +54,7 @@ describe('foldBoostIntoSlab', () => {
   });
 
   it('throws for a body row whose host has no orientation', () => {
-    const body = slab({ kind: 'body-m', hostId: 'earth' });
+    const body = slab({ kind: 'body-m', hostId: asSceneBodyId('earth') });
     expect(() => foldBoostIntoSlab(body, BOOST, [0, 0, 0], () => undefined)).toThrow(/earth/);
   });
 });

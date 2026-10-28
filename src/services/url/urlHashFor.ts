@@ -40,6 +40,8 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   // resolveFocusId strips, closing the `#focus=body-<id>` round-trip. A bare
   // `t.id` would collide with the famous-galaxy character class and mis-decode.
   body: (t) => (t.type === 'body' ? `${BODY_FOCUS_PREFIX}${t.id}` : null),
+  // A craft keeps the body prefix, so its deep links stay valid.
+  craft: (t) => (t.type === 'craft' ? `${BODY_FOCUS_PREFIX}${t.id}` : null),
   // A star's id is `star-<seedId>` for a seeded catalog and `star-<index>` for a
   // survey star; `decodeStarFocusId` splits the two apart again, closing the
   // round-trip.

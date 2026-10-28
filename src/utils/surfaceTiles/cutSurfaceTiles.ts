@@ -1,10 +1,10 @@
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
 import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
-import type { SurfaceTilePlan } from '../../@types/scene/SurfaceTilePlan';
+import type { SurfaceTileDemand } from '../../@types/scene/SurfaceTileDemand';
 import type { SurfaceTileRequest } from '../../@types/scene/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../../@types/scene/SurfaceCutTile';
 import type { ResolvedTileResidency } from '../../@types/scene/ResolvedTileResidency';
-import type { Vec2 } from '../../@types/math/Vec2';
+import type { TileCamera } from '../../@types/scene/TileCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { surfaceTileColumns } from './surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
@@ -42,20 +42,11 @@ export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
    *  units — see `radiusM` below, the walk's new length scale). */
   readonly camPosLocalM: Readonly<Vec3>;
-  /** Every view's body slab f64 vp, paired with ITS OWN viewport size — an
-   *  XR eye sized differently than the main view must scale its NDC by its
-   *  own target, not a shared one. A node survives if ANY view keeps it, and
-   *  refines to the finest view's footprint. Only x/y extent of `viewProjLocal`
-   *  is read, so the depth convention doesn't matter here. `viewProjLocal`
-   *  stays `Float64Array` as a belt-and-braces contract: the `w`-row
-   *  cancellation that forced it under the old Mpc-frame walk
-   *  (`composeBodyMvp`'s header) no longer occurs — metres is already the
-   *  small, well-conditioned unit — but keeping the type honest costs nothing
-   *  and guards a future caller that narrows too early. */
-  readonly views: readonly {
-    readonly viewProjLocal: Float64Array;
-    readonly viewportPx: Readonly<Vec2>;
-  }[];
+  /** Every view, each with ITS OWN viewport size — an XR eye sized
+   *  differently than the main view must scale its NDC by its own target, not
+   *  a shared one. A node survives if ANY view keeps it, and refines to the
+   *  finest view's footprint. */
+  readonly views: readonly TileCamera[];
   /** The body's equatorial radius in metres — was implicit (unit sphere);
    *  the walk's horizon test now scales against this instead. */
   readonly radiusM: number;
@@ -74,15 +65,14 @@ export function cutSurfaceTiles(input: {
   readonly lodBias: number;
   /** Resolve one exact tile's atlas residency, or null if it is not
    *  resident. Injected so this stays a pure function testable without a
-   *  real GPU/atlas — Task 5 wires the real `surfaceTileSubsystem.residentSlot`
-   *  query in. Takes the full `SurfaceTileId` (carries `product`, unlike
-   *  `SurfaceCutTile.id`) because it must key the same
-   *  `surfaceTilePath(tile, prefix)` lookup `surfaceTileSubsystem` already uses
-   *  for its resident map. */
+   *  real GPU/atlas; live, it is `SurfaceTileResidency.residentSlot`. Takes
+   *  the full `SurfaceTileId` (carries `product`, unlike `SurfaceCutTile.id`)
+   *  because it must key the same `surfaceTilePath(tile, prefix)` lookup
+   *  `surfaceTileStream` uses for its resident maps. */
   readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
 }): {
   readonly cut: readonly SurfaceCutTile[];
-  readonly requests: SurfaceTilePlan;
+  readonly requests: SurfaceTileDemand;
 } {
   const {
     camPosLocalM,
@@ -416,7 +406,7 @@ export function cutSurfaceTiles(input: {
   // Largest-on-screen-first: residency walk order and fetch queue pop order.
   requests.sort((a, b) => b.screenPx - a.screenPx);
 
-  return { cut: balanced, requests: { zWin, requests, subCameraDirLocal: camDir } };
+  return { cut: balanced, requests: { zWin, requests } };
 }
 
 /**

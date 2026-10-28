@@ -15,9 +15,10 @@
 
 import type { EarthBody } from '../../@types/scene/EarthBody';
 import { BODY_GLINT_MAX_PX } from './bodyGlintMaxPx';
+import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
 export const SCENE_EARTH: EarthBody = {
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   // Mariana Trench to Everest, against the WGS84-ish datum above (spec §7.4).
   // F3 replaces this from the compiled §3.4e grid.

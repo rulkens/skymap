@@ -19,6 +19,7 @@ import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
 import type { SlabRow } from './SlabRow';
 import type { FrameBoost } from './FrameBoost';
+import type { PositionedId } from '../../scene/PositionedId';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -35,10 +36,8 @@ export type ReadyFrameContext = {
    * This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes
    * one deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call
    * this frame returns this SAME Map by reference — no second cache, no drift.
-   * Keyed by the raw orbital-element id string, one level wider than `BodyId`
-   * — the boundary `slabs.ts`/`liveWorldPose.ts` already cast at.
    */
-  bodyStates: ReadonlyMap<string, BodyState>;
+  bodyStates: ReadonlyMap<PositionedId, BodyState>;
   /**
    * The UN-turned pose provider (spec §5's provider seam), built once here so
    * a body-slab layer's own `bodyRelativePose` read can never drift from the
@@ -56,7 +55,7 @@ export type ReadyFrameContext = {
    * (`visibleSlabBodies`), it never re-assembles it.
    */
   slabBodyCandidates: readonly SlabRow[];
-  /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
+  /** The full mesh body roster — a view runs the SAME gate over it to re-admit
    *  the hosts of mesh bodies riding someone else's slab row. */
   meshBodies: readonly MeshBody[];
   /** Every admitted scene body but Earth (its own renderer), at this frame's

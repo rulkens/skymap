@@ -4,29 +4,34 @@ import '../styles/site.css';
 // The two faces every page paints with at once; preloaded so the first paint is the last swap.
 import jostUrl from '@fontsource-variable/jost/files/jost-latin-wght-normal.woff2?url';
 import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
-// The site's own card (npm run site:shots); the app keeps its own at /og-image.jpg.
-import cardUrl from '../assets/og-card.jpg?url';
-import { siteShot } from '../data/siteShot';
-import Nav from '../components/Nav.astro';
-import Footer from '../components/Footer.astro';
-import DevFeedback from '../dev/feedback/DevFeedback.astro';
-import DevReview from '../dev/review/DevReview.astro';
+import BaseLayout from './BaseLayout/BaseLayout.tsx';
+import NavMenu from '../components/Nav/NavMenu.tsx';
+import LightLine from '../components/Footer/LightLine.tsx';
+import { fact } from '../data/fact';
+import DevOverlay from '../dev/overlay/DevOverlay/DevOverlay.tsx';
 import { INDEXABLE } from '../data/site';
+import { shareImage } from '../utils/shareImage';
 
 type Props = {
   title: string;
   description: string;
+  /** A shot id of data/siteShots.ts for link previews; the site card when absent. */
+  image?: string;
+  /** The page's job, for the dev review bar only; absent on pages made from data. */
+  job?: string;
+  /** Where a job is written when it is not the page's front matter, for the review bar's note. */
+  jobSetIn?: string;
   jsonLd?: readonly Record<string, unknown>[];
   heroNav?: boolean;
   /** The id "Skip to content" goes to, where a layout has its own contents before the text. */
   skipTo?: string;
 };
 
-const { title, description, jsonLd = [], heroNav = false, skipTo = 'main' } = Astro.props;
-const imageAlt = siteShot('og-card').alt;
+const { title, description, image, job, jobSetIn, jsonLd = [], heroNav = false, skipTo = 'main' } = Astro.props;
+const card = await shareImage(image);
 // Shared root files stay root-absolute (the main shell serves them); the canonical and the card need the site origin.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const imageUrl = new URL(cardUrl, Astro.site).href;
+const imageUrl = new URL(card.src, Astro.site).href;
 ---
 
 <!doctype html>
@@ -51,26 +56,46 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={imageUrl} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={imageAlt} />
+    <meta property="og:image:width" content={String(card.width)} />
+    <meta property="og:image:height" content={String(card.height)} />
+    <meta property="og:image:alt" content={card.alt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
-    <meta name="twitter:image:alt" content={imageAlt} />
+    <meta name="twitter:image:alt" content={card.alt} />
+    {import.meta.env.DEV && job !== undefined && <meta name="skymap:job" content={job} data-set-in={jobSetIn} />}
     <!-- `<` is escaped so a string containing `</script>` cannot close the block. -->
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}
     <slot name="head" />
   </head>
-  <body class={heroNav ? 'hero-nav' : undefined}>
-    <a class="skip-link" href={`#${skipTo}`}>Skip to content</a>
-    <Nav />
-    <main id="main">
+  <body>
+    <BaseLayout path={Astro.url.pathname} skipTo={skipTo} hero={heroNav}>
+      <NavMenu slot="menu" path={Astro.url.pathname} />
+      <LightLine slot="light" text={fact('speed-of-light').short!} />
       <slot />
-    </main>
-    <Footer />
-    {import.meta.env.DEV && <DevFeedback />}
-    {import.meta.env.DEV && <DevReview />}
+    </BaseLayout>
+    <script>
+      import '../components/Footer/lightLine.client.ts';
+      import '../components/CopyButton/copyButtons.client.ts';
+      import '../components/Remark/remarkLines.client.ts';
+    </script>
+    {
+      import.meta.env.DEV && (
+        <>
+          {/* Astro's dev toolbar strips the source attributes once it boots, so describeElement reads these copies, taken before the island runs. */}
+          <script is:inline>
+            window.__feedbackSources = new WeakMap();
+            for (const el of document.querySelectorAll('[data-astro-source-file]')) {
+              window.__feedbackSources.set(el, [
+                el.getAttribute('data-astro-source-file'),
+                el.getAttribute('data-astro-source-loc'),
+              ]);
+            }
+          </script>
+          <DevOverlay client:only="react" />
+        </>
+      )
+    }
   </body>
 </html>

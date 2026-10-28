@@ -10,7 +10,6 @@
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -21,7 +20,7 @@ import { isInsideAtmosphereShell } from '../../../utils/camera/isInsideAtmospher
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
-import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 import { sceneBodyStates } from './sceneBodyStates';
 import { atmosphereDrawListCache } from './atmosphereDrawListCache';
@@ -58,7 +57,7 @@ export function atmosphereDrawList(
     // The body-slab pose seam `deriveSlabs` built this body's row from. Every
     // derived field below hangs off it, so a poseless body is no entry at all —
     // which is what lets the bake read an entry's fields unguarded.
-    const pose = ctx.bodyPose(body.id as BodyId);
+    const pose = ctx.bodyPose(body.id);
     if (pose === null) continue;
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, atmosphereTopM);

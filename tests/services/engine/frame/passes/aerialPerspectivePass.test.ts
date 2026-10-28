@@ -10,14 +10,15 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { aerialPerspectivePass } from '../../../../../src/services/engine/frame/passes/aerialPerspectivePass';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { makeSlab } from '../../../../fixtures/makeSlab';
-import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
+import type { SceneBodyId } from '../../../../../src/@types/scene/SceneBodyId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // Well under / well over `isInsideAtmosphereShell`'s 1.005 ratio, in the
 // shell's atmosphere-top-radius frame.
@@ -62,7 +63,7 @@ function makeCtx(): FrameView {
   } as unknown as FrameView;
 }
 
-function makeBodyView(bodyId: BodyId): SlabView {
+function makeBodyView(bodyId: SceneBodyId): SlabView {
   return {
     slab: makeSlab({ frame: { kind: 'body-m', hostId: bodyId } }),
     vp: new Float32Array(16),
@@ -82,7 +83,7 @@ function makeState(renderer: unknown): EngineState {
 describe('aerialPerspectivePass.enabled', () => {
   it('is true only for a body whose shell encloses the camera', () => {
     const state = makeState({ drawAerialPerspective: vi.fn() });
-    const view = makeBodyView('earth' as BodyId);
+    const view = makeBodyView(asSceneBodyId('earth'));
 
     mocked.camLocal = CAM_LOCAL_INSIDE;
     expect(aerialPerspectivePass.enabled(state, makeCtx(), view)).toBe(true);
@@ -98,7 +99,7 @@ describe('aerialPerspectivePass.enabled', () => {
       aerialPerspectivePass.enabled(
         makeState(null),
         {} as FrameView,
-        makeBodyView('earth' as BodyId),
+        makeBodyView(asSceneBodyId('earth')),
       ),
     ).toBe(false);
   });

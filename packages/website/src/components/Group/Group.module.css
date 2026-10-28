@@ -1,0 +1,50 @@
+.root {
+  margin-top: 3.5rem;
+
+  & h3 {
+    margin: 0;
+  }
+}
+
+.big {
+  margin-top: 4.5rem;
+
+  & h3 {
+    font-size: var(--text-ring-big);
+  }
+}
+
+.root.first {
+  margin-top: 0;
+}
+
+.name {
+  margin-bottom: 1.5rem;
+
+  & p {
+    max-width: var(--measure-lead);
+    margin: 0;
+  }
+}
+
+.lede {
+  composes: grid from '../../styles/layout.module.css';
+  row-gap: 0.5rem;
+  align-items: baseline;
+}
+
+@media (min-width: 901px) {
+  .lede h3 {
+    grid-column: span 3;
+  }
+
+  .lede > p {
+    grid-column: 4 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .big {
+    margin-top: 3.5rem;
+  }
+}

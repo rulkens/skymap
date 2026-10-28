@@ -1,0 +1,10 @@
+.root {
+  composes: small from '../../styles/type.module.css';
+  composes: tap-links from '../../styles/links.module.css';
+  color: var(--site-text-dim);
+}
+
+.closing {
+  max-width: 34rem;
+  margin: 2rem 0 0;
+}

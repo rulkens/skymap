@@ -22,10 +22,10 @@ import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf
 import { describe, it, expect, vi } from 'vitest';
 
 import { bodyGlintsPass } from '../../../../../src/services/engine/frame/passes/bodyGlintsPass';
-import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
-import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
+import { BODY_GLINT_INSTANCE_FLOATS as INSTANCE_FLOATS } from '../../../../../src/data/rendering/bodyGlintInstanceFloats';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
+import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../../src/data/labels/solarSystemLabelMaxDistance';
+import { SCALE_FADE_BANDS } from '../../../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
@@ -41,6 +41,7 @@ import type { PassState } from '../../../../../src/@types/engine/frame/PassState
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The layer reads each body's live position/orientation from the per-frame
 // body-state snapshot (keyed by id). Stub it to a map built from the fixture
@@ -96,7 +97,7 @@ const CAM_POS: Vec3 = [CAM_KM * KM, 0, 0];
  */
 function bodyAt(id: string, posKm: number, albedo: Vec3): SeededPlanet {
   return {
-    id,
+    id: asSceneBodyId(id),
     label: id,
     positionMpc: [posKm * KM, 0, 0],
     resolvePx: 3,
@@ -211,7 +212,7 @@ describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
     // `FOREGROUND_MAX_DISTANCE_MPC` gate — deep in Milky-Way framing, where all ~22
     // collapse onto one bright dot. The `bodyGlintBackdrop` far-dissolve fixes it:
     // once the band zeroes, the layer must LEAVE the pass plan (opacity 0 ⇒ no
-    // render), exactly as `starPointsPass` does with `starBackdrop`.
+    // render), exactly as `starPointsPass` does with its backdrop dissolve.
     const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
     const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → band in (0,1)
     const dGone = backdrop.goneAt * 2; // past goneAt → band 0
@@ -258,7 +259,7 @@ describe('bodyGlintsPass.draw — far-dissolve brightness scaling', () => {
     const brightnessAt = (camX: number): number => {
       const camPos: Vec3 = [camX, 0, 0];
       const body: SeededPlanet = {
-        id: 'jupiter',
+        id: asSceneBodyId('jupiter'),
         label: 'jupiter',
         positionMpc: [camX + OFF, 0, 0], // just beyond the camera → lit, ~2 px glint
         resolvePx: 3,
@@ -292,7 +293,7 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
   // pick gate is therefore WIDER than the draw gate: admit when glints are present
   // OR when Earth is seeded within the caption range.
   const earthWithinGate: SeededPlanet = {
-    id: 'earth',
+    id: asSceneBodyId('earth'),
     label: 'Earth',
     positionMpc: [1_100_000 * KM, 0, 0],
     resolvePx: 3,
@@ -415,7 +416,7 @@ function makePickRenderer() {
 // diameter is many px, so `earthPass.enabled` (the SAME predicate the Earth
 // stamp is gated on) holds and the stamp is emitted.
 const EARTH_RESOLVED: SeededPlanet = {
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [1_100_000 * KM, 0, 0],
   resolvePx: 3,
@@ -501,7 +502,7 @@ describe('bodyGlintsPass.drawPick', () => {
     // sub-pixel (→ glints branch) AND unlit (camera beyond it along the sun ray →
     // illuminated fraction 0), so it is skipped.
     const marsFar: SeededPlanet = {
-      id: 'mars',
+      id: asSceneBodyId('mars'),
       label: 'mars',
       positionMpc: [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, 0, 0],
       resolvePx: 3,
@@ -534,7 +535,7 @@ describe('bodyGlintsPass.drawPick', () => {
     expect(camFar[0]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, camFar[0])).toBe(0);
     const litFar: SeededPlanet = {
-      id: 'jupiter',
+      id: asSceneBodyId('jupiter'),
       label: 'jupiter',
       positionMpc: [camFar[0] + 1e5 * KM, 0, 0], // just beyond the camera → lit, ~2 px glint
       resolvePx: 3,
@@ -625,7 +626,7 @@ describe('bodyGlintsPass.drawPick', () => {
     // Earth stamp is the ONLY pick point. On the pre-fix code (gated on
     // earthPass.enabled) this batch is empty — the bite.
     const earthSubPixel: SeededPlanet = {
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [1_100_000 * KM, 0, 0],
       resolvePx: 3,

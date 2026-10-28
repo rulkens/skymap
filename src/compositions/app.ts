@@ -13,6 +13,7 @@ import { bodyLayer } from '../layers/body/layer';
 import { constellationsLayer } from '../layers/constellations/layer';
 import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
 import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
+import { earthScenesLayer } from '../layers/earthScenes/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { lightTimeLayer } from '../layers/lightTime/layer';
@@ -41,6 +42,7 @@ export const APP_COMPOSITION = {
     structureLayer,
     bodyLayer,
     voyageLayer,
+    earthScenesLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -60,5 +62,6 @@ export const APP_COMPOSITION = {
     typeof structureLayer,
     typeof bodyLayer,
     typeof voyageLayer,
+    typeof earthScenesLayer,
   ]
 >;

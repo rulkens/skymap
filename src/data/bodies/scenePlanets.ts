@@ -64,8 +64,22 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     albedo: [0.3, 0.42, 0.75],
   }),
   satelliteBody({ id: 'moon', label: 'Moon', datumRadiusM: 1737000, albedo: [0.35, 0.34, 0.33] }),
-  satelliteBody({ id: 'phobos', label: 'Phobos', datumRadiusM: 11000, albedo: [0.3, 0.29, 0.28] }),
-  satelliteBody({ id: 'deimos', label: 'Deimos', datumRadiusM: 6000, albedo: [0.32, 0.3, 0.28] }),
+  // reliefM: the shape models' measured radius extremes (8.10–13.94 km, 3.58–8.71 km),
+  // so the outer bound — camera floor, glint footprint — encloses the drawn mesh.
+  satelliteBody({
+    id: 'phobos',
+    label: 'Phobos',
+    datumRadiusM: 11000,
+    reliefM: [-2901, 2942],
+    albedo: [0.3, 0.29, 0.28],
+  }),
+  satelliteBody({
+    id: 'deimos',
+    label: 'Deimos',
+    datumRadiusM: 6000,
+    reliefM: [-2418, 2708],
+    albedo: [0.32, 0.3, 0.28],
+  }),
   satelliteBody({ id: 'io', label: 'Io', datumRadiusM: 1822000, albedo: [0.6, 0.55, 0.32] }),
   satelliteBody({
     id: 'europa',

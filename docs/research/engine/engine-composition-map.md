@@ -511,7 +511,7 @@ shapes, already used together by the Milky Way's own liveness chain:
 
 - **`fadeBand(band, distanceMpc)` returns a number in [0,1]**
   (`src/utils/math/fadeBand.ts`, consumed via `SCALE_FADE_BANDS`
-  (`presentation/scaleFadeBands.ts`)) — a named, tunable `{fullAt, goneAt}`
+  (`src/data/scaleFadeBands.ts`)) — a named, tunable `{fullAt, goneAt}`
   style band evaluated fresh each frame against
   `Math.hypot(ctx.drawCamPos[...])`. Used by `milkyWayCloudLiveness.ts`'s
   `milkyWayApproachSun` band, `volumeLiveness.ts`'s `surveyDeepZoom` band, and

@@ -24,6 +24,7 @@ import {
   elapsedForWinner,
   pickWinner,
 } from '../../../../src/services/engine/camera/cameraDrivers';
+import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
@@ -49,7 +50,6 @@ import {
 import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
-import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
 import type { ExhibitId } from '../../../../src/@types/exhibits/ExhibitId';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -63,14 +63,19 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCamer
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-const APPROACHING: DriverActivity = { approachDone: false, dragClaimed: false };
-const APPROACH_DONE: DriverActivity = { approachDone: true, dragClaimed: false };
+const APPROACHING: DriverActivity = {
+  approachDone: false,
+  dragClaimed: false,
+  navMoving: false,
+};
+const APPROACH_DONE: DriverActivity = { ...APPROACHING, approachDone: true };
 const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1.5, pitch: 0.1, distance: 100 };
 
 const TWEEN_DESC: CameraTweenDescriptor = {
@@ -116,7 +121,7 @@ function runAtWinner(
   nowMs: number,
   approachDone = false,
 ) {
-  const winner = pickWinner(drivers, s, { approachDone, dragClaimed: false });
+  const winner = pickWinner(drivers, s, { ...APPROACHING, approachDone });
   const ctx = makeDriverCtx({
     state: s,
     elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -365,7 +370,7 @@ describe('the mission row, lifted from the timeline kind', () => {
     const store = inExhibit('voyager-missions');
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
-    const claimed = { approachDone: false, dragClaimed: true };
+    const claimed = { ...APPROACHING, dragClaimed: true };
     expect(pickWinner(drivers, s, claimed).id).toBe('mission');
   });
 });
@@ -492,7 +497,7 @@ const BASE_DISTANCE = 500;
  * nominal Earth radius the framing oracle below reads. */
 const EARTH_ROW = {
   type: 'body' as const,
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0] as [number, number, number],
   radiusM: 6371000,
@@ -539,7 +544,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // The snapshot at the frame instant — the driver's target term must be THIS
     // (the live body), not the row's static positionMpc.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
 
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
@@ -641,7 +646,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // formula. At elapsed 0 the pose sits at the captured `from` distance; by
     // FOCUS_TWEEN_MS it has converged to the framing distance, monotonically.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
@@ -681,7 +686,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // body glides away from the pose its arrival framed it to.
     const marsRow = {
       type: 'body' as const,
-      id: 'mars',
+      id: asSceneBodyId('mars'),
       label: 'Mars',
       positionMpc: [0, 0, 0] as [number, number, number],
       driver: { ...bodyDriverGeometry('mars'), focusDistanceRadii: 7 },
@@ -708,7 +713,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // target so the zoom is honoured, instead of re-asserting the framing
     // distance every frame (snap-back).
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc
@@ -857,5 +862,25 @@ describe('orbitDrag — the register comes from the ctx', () => {
     });
     const drag = CAMERA_DRIVERS.find((d) => d.id === 'orbitDrag')!;
     expect(drag.pose(ctx, null, null).pose).toBe(REGISTER_POSE);
+  });
+});
+
+describe('the openspace table', () => {
+  const rest = composeControlSchemes([]);
+
+  it('the held row takes any open gesture over the coast, and both yield to a claimed drag', () => {
+    const store = makeStore();
+    const idle = store.getState() as unknown as RootState;
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+    const pressed = store.getState() as unknown as RootState;
+    const pick = (s: RootState, a: Partial<DriverActivity>) =>
+      pickWinner(rest.openspace.drivers, s, { ...APPROACHING, ...a }).id;
+
+    expect(pick(pressed, {})).toBe('openSpaceHeld');
+    expect(pick(pressed, { navMoving: true })).toBe('openSpaceHeld');
+    expect(pick(idle, { navMoving: true })).toBe('openSpaceCoast');
+    expect(pick(idle, {})).toBe('resting');
+    expect(pick(pressed, { dragClaimed: true })).toBe('resting');
+    expect(pick(idle, { navMoving: true, dragClaimed: true })).toBe('resting');
   });
 });

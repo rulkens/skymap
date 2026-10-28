@@ -5,6 +5,7 @@ import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const J2000_JD = 2_451_545.0;
 const earth = elementsById('earth');
@@ -28,8 +29,8 @@ describe('propagateElements', () => {
     // The Moon carries no rate fields (Task 5 owns satellite rates), so it must
     // propagate to itself at any epoch — the optional-rate contract.
     const staticBody: OrbitalElements = {
-      id: 'x',
-      focusId: 'sun',
+      id: asSceneBodyId('x'),
+      focusId: asSceneBodyId('sun'),
       semiMajorMpc: 3,
       eccentricity: 0.1,
       inclinationRad: 0.2,

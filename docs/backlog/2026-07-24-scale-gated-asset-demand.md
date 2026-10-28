@@ -20,7 +20,7 @@ nothing.
   term anywhere in the demand function for glade, sdss, milliquas, stars,
   or the mcpm volume.
 - At the Earth boot view, the `surveyDeepZoom` band
-  (`src/services/engine/presentation/scaleFadeBands.ts:66`,
+  (`src/data/scaleFadeBands.ts:66`,
   `{ fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 }`) is fully faded
   to zero below 0.002 Mpc, and boot starts well inside that. So glade, sdss,
   milliquas, and the mcpm volume render nothing at boot, yet all fetch at

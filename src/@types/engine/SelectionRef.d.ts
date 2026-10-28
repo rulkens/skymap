@@ -1,6 +1,7 @@
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
+import type { SceneBodyId } from '../scene/SceneBodyId';
 
 /**
  * SelectionRef — the identity Intent for a selectable thing. The single
@@ -9,7 +10,7 @@ import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
  * tier saga re-anchors them by durable id); structure refs carry the durable
  * instance `id`; the Milky Way and the zone of avoidance are both singletons
  * needing no per-instance data; a scene body (Earth, a planet, a mesh body)
- * carries the durable seed `id`
+ * and a craft each carry the durable seed `id`
  * that keys the static `SCENE_BODIES` table — the body's data is re-looked-up
  * from that table when the ref is resolved, mirroring the structure arm.
  *
@@ -25,7 +26,8 @@ export type SelectionRef =
   | { readonly type: 'structure'; readonly id: string }
   | { readonly type: 'milkyWay' }
   | { readonly type: 'zoneOfAvoidance' }
-  | { readonly type: 'body'; readonly id: string }
+  | { readonly type: 'body'; readonly id: SceneBodyId }
+  | { readonly type: 'craft'; readonly id: SceneBodyId }
   // One arm for all four star catalogs, the pair the pick texture already packs:
   // `index` is the bin-stable global record index for the Gaia survey (tier-
   // scoped, so a stale index after a tier swap warns+nulls rather than

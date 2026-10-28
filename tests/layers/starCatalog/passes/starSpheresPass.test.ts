@@ -26,7 +26,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starSpheresPass';
 import { seedIndexOfBody } from '../../../../src/utils/picking/seedIndexOfBody';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -54,6 +54,7 @@ vi.mock('../../../../src/utils/camera/composeBodyMvp', () => ({
   composeBodyMvp: vi.fn<() => Float64Array>(() => new Float64Array(16)),
 }));
 import { composeBodyMvp } from '../../../../src/utils/camera/composeBodyMvp';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -246,7 +247,7 @@ describe('starSpheresPass.draw', () => {
 
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(
-      deriveBodyStates(CONST_J2000).get('sirius')!.positionMpc,
+      deriveBodyStates(CONST_J2000).get(asSceneBodyId('sirius'))!.positionMpc,
     );
   });
 

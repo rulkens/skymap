@@ -1,11 +1,9 @@
 /**
  * composeSelectionRows, driven through the six core rows via
  * `selectionResolverOver` — the composed resolver's dispatch and its
- * claim-then-decode focus-id contract. Cases moved from the deleted
- * resolvePick.test.ts, resolvePickTable.test.ts, extractSelectionRow.test.ts
- * and resolveFocusId.test.ts (Task 8's `git rm`), one describe per former
- * source file's subject; new describes at the end pin the composer's own
- * dispatch behaviour that no single row's test could.
+ * claim-then-decode focus-id contract. One describe per resolver
+ * subject (pick, pick table, row extraction, focus id); the last describes pin
+ * the composer's own dispatch behaviour that no single row's test could.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -41,13 +39,15 @@ import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const SIM_DAYS = CONST_J2000;
-const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
+const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
 
 const virgo: StructureInfo = {
   type: 'structure',
@@ -101,7 +101,7 @@ const structures: StructureRowFixture = {
 };
 
 /** The starCatalog Layer's slice of the composed resolver — its own live read. */
-function starsFixture(catalog: StarOctree | null): StarRowFixture {
+function starsFixture(catalog: Octree<StarColumns> | null): StarRowFixture {
   return {
     renderer: {
       loadedCatalogs: () =>
@@ -123,12 +123,13 @@ describe('resolvePick, composed', () => {
     expect(resolver.resolvePick(null)).toBeNull();
   });
 
-  it('maps a galaxy code to a positional ref regardless of whether the cloud is loaded', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.DesiDeep, localIdx: 3 })).toEqual({
+  it('maps a galaxy pick to its record ref, or null when its source is not loaded', () => {
+    expect(resolver.resolvePick({ sourceCode: Source.Glade, localIdx: 0 })).toEqual({
       type: 'galaxyCatalog',
-      source: Source.DesiDeep,
-      index: 3,
+      source: Source.Glade,
+      index: 0,
     });
+    expect(resolver.resolvePick({ sourceCode: Source.DesiDeep, localIdx: 3 })).toBeNull();
   });
 
   it('maps a structure code to a durable-id ref, or null with no backing record', () => {
@@ -214,7 +215,7 @@ describe('extractRow, composed', () => {
   });
 
   it('body ref → a self-contained row resolved at the passed simDays', () => {
-    const row = resolver.extractRow({ type: 'body', id: 'earth' }, SIM_DAYS);
+    const row = resolver.extractRow({ type: 'body', id: asSceneBodyId('earth') }, SIM_DAYS);
     expect(row).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -224,8 +225,11 @@ describe('extractRow, composed', () => {
     });
 
     const laterSimDays = SIM_DAYS + 200;
-    const expectedLater = deriveBodyStates(laterSimDays).get('earth')!.positionMpc;
-    const rowLater = resolver.extractRow({ type: 'body', id: 'earth' }, laterSimDays);
+    const expectedLater = deriveBodyStates(laterSimDays).get(asSceneBodyId('earth'))!.positionMpc;
+    const rowLater = resolver.extractRow(
+      { type: 'body', id: asSceneBodyId('earth') },
+      laterSimDays,
+    );
     expect(rowLater).toEqual({
       type: 'body',
       id: SCENE_EARTH.id,
@@ -236,7 +240,9 @@ describe('extractRow, composed', () => {
   });
 
   it('body ref with an unknown seed id → null', () => {
-    expect(resolver.extractRow({ type: 'body', id: 'krypton' }, SIM_DAYS)).toBeNull();
+    expect(
+      resolver.extractRow({ type: 'body', id: asSceneBodyId('krypton') }, SIM_DAYS),
+    ).toBeNull();
   });
 
   it('survey star ref resolves against the loaded catalog', async () => {
@@ -287,7 +293,7 @@ describe('extractRow, composed', () => {
       index: idx,
       id: 'sirius',
       label: sirius.label,
-      positionMpc: [...deriveBodyStates(SIM_DAYS).get('sirius')!.positionMpc],
+      positionMpc: [...deriveBodyStates(SIM_DAYS).get(asSceneBodyId('sirius'))!.positionMpc],
       radiusM: sirius.surface.datumRadiusM,
       // A seeded star poses from its own seed id — the S-star / famous-star
       // half of the arm→poseId mapping.
@@ -311,7 +317,7 @@ describe('extractRow, composed', () => {
   });
 });
 
-async function makeStarCatalog(): Promise<StarOctree> {
+async function makeStarCatalog(): Promise<Octree<StarColumns>> {
   const octree = buildStarOctree(
     [
       { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },
@@ -394,7 +400,7 @@ describe('resolveFocusId, composed', () => {
     expect(resolver.resolveFocusId('body-krypton')).toBeNull();
     // A star is not a body id any more (spec §6), so its old link decodes to nothing.
     expect(resolver.resolveFocusId('body-sirius')).toBeNull();
-    const id = resolver.focusIdOf({ type: 'body', id: 'earth' });
+    const id = resolver.focusIdOf({ type: 'body', id: asSceneBodyId('earth') });
     expect(id).toBe('body-earth');
     expect(resolver.resolveFocusId(id!)).toEqual({ type: 'body', id: 'earth' });
   });
@@ -465,7 +471,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
   });
 
-  it('GLADE ref (objId 0n) → pos@ra,dec → same ref', () => {
+  it('GLADE ref (objId 0n) → pos@ra,dec,dMpc → same ref; the legacy two-part id still decodes', () => {
     // objId 0 is the "no durable id" sentinel, so the encoder falls back to
     // the positional form — only GLADE is loaded, and with that objId.
     const posDeps = selectionResolverOver(structures, {
@@ -474,8 +480,11 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     } as GalaxyRowFixture);
     const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
     const id = posDeps.focusIdOf(ref);
-    expect(id).toBe('pos@0.0000,0.0000');
+    expect(id).toBe('pos@0.0000,0.0000,1.00');
     expect(posDeps.resolveFocusId(id!)).toEqual(ref);
+    expect(posDeps.resolveFocusId('pos@0.0000,0.0000')).toEqual(ref);
+    // A distance names a shell: the same direction 2 Mpc further holds nothing.
+    expect(posDeps.resolveFocusId('pos@0.0000,0.0000,3.00')).toBeNull();
   });
 
   it('FamousGalaxy ref → famous seed id → same ref', () => {
@@ -579,6 +588,7 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
+        craft: true,
         starCatalog: true,
         blackHole: true,
       }),
@@ -593,6 +603,7 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
+        craft: true,
         starCatalog: true,
         blackHole: true,
       }),
@@ -609,6 +620,7 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
+        craft: true,
         starCatalog: true,
         blackHole: true,
       }),

@@ -33,7 +33,7 @@ import { SCENE_BODY_CAPTION_LABEL } from '../../data/labels/sceneBodyCaptionLabe
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
+import { FLAT_TERRAIN } from '../../data/camera/flatTerrain';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -44,8 +44,6 @@ import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 
@@ -58,7 +56,7 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileStream';
 import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
@@ -275,7 +273,7 @@ export function createEngine(
     // `initGpu` already assigned them.
     assetSlots: {
       bodyTextures: new Map(),
-      // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
+      // Keyed mesh body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
       meshBodies: new Map(),
       // One boot fetch seeding every body's placeholder, so no body ever draws
@@ -302,7 +300,8 @@ export function createEngine(
     visibilityEntries: [],
     visibilityGates: new Map(),
     label3DProducers: [],
-    orbitTrailRows: [],
+    orbitTrailGroups: [],
+    terrain: FLAT_TERRAIN,
     layerSlots: new Map(),
   };
 
@@ -431,9 +430,8 @@ export function createEngine(
     state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
-    // Owns a 67 MB atlas and a page-table texture once engaged, neither of which
-    // WebGPU releases on GC.
-    state.subsystems.surfaceTiles?.destroy();
+    // Owns two tile atlases once engaged, which WebGPU never releases on GC.
+    state.subsystems.surfaceTiles?.stream.destroy();
     state.subsystems.surfaceTiles = null;
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;
@@ -500,8 +498,14 @@ export function createEngine(
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.
       assetPriorities: () => assetPriorityBySlotName(state),
-      surfaceTiles: () =>
-        state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+      // Residency from the stream, the rest from this frame's plan.
+      surfaceTiles: () => {
+        const tiles = state.subsystems.surfaceTiles;
+        if (tiles === null) return EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;
+        const { lastPlan, cut, subCamera } = tiles.plan;
+        const plan = lastPlan === null ? null : { ...lastPlan, cutCount: cut.length };
+        return { ...tiles.stream.debugStats(), plan, subCamera };
+      },
       gpuMemory: () => state.gpu.memory?.() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
@@ -510,7 +514,7 @@ export function createEngine(
         const rootState = store.getState();
         const time = selectTimeState(rootState);
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
-        const bodyStates = deriveBodyStates(outputs.simDays) as ReadonlyMap<BodyId, BodyState>;
+        const bodyStates = deriveBodyStates(outputs.simDays);
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
           renderedPose: outputs.displayed,
@@ -527,9 +531,8 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
-          terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
-          residentHeightLevelAt: (bodyId, dir) =>
-            state.subsystems.surfaceTiles?.residentHeightLevelAt(bodyId, dir) ?? null,
+          terrainHeightAt: state.terrain.heightAt,
+          residentHeightLevelAt: state.terrain.residentHeightLevelAt,
           // Null unless the `terrain-pick-marker` overlay is on — its listener
           // is the only writer, so the pick row is dead with the toggle off.
           cursorTexPx: state.picking.cursorTexPx,

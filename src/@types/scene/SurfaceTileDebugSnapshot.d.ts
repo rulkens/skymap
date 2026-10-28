@@ -1,8 +1,8 @@
-import type { LonLatDeg } from './LonLatDeg';
+import type { TerrainSubCamera } from '../camera/TerrainSubCamera';
 import type { SurfaceTileBodyId } from '../data/SurfaceTileBodyId';
 
 /**
- * SurfaceTileDebugSnapshot — a cheap, on-demand read of `surfaceTileSubsystem`'s
+ * SurfaceTileDebugSnapshot — a cheap, on-demand read of `surfaceTileStream`'s
  * residency for the DebugPanel. Built fresh per call (not pushed per-frame),
  * so the panel polls it at a human-readable rate instead of every render.
  * `engaged: false` (atlas never allocated, or destroyed) means every other
@@ -34,8 +34,8 @@ export type SurfaceTileDebugSnapshot = {
     readonly zWin: number;
     /** Planned tiles with no bitmap resident yet. */
     readonly misses: number;
-    /** Leaves in the last frame's drawn cut (`surfaceTileSubsystem`'s
-     *  `lastCut`) — unbounded today; a growth watch, not a cap. */
+    /** Leaves in the frame's drawn cut (`SurfaceTilePlan.cut`) — unbounded
+     *  today; a growth watch, not a cap. */
     readonly cutCount: number;
   } | null;
   /** `atlas.allocate` refusals ("atlas full this frame") on the last update. */
@@ -46,5 +46,5 @@ export type SurfaceTileDebugSnapshot = {
    *  deepest band level available AT that point — the readout that answers
    *  "am I over a spot with deep imagery?" without cross-referencing bounds
    *  by hand. `null` while disengaged, matching `plan`. */
-  readonly subCamera: (LonLatDeg & { readonly coveredMaxLevel: number | null }) | null;
+  readonly subCamera: TerrainSubCamera | null;
 };

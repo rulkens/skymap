@@ -21,13 +21,19 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('homePose', () => {
   const FOV = (Math.PI / 180) * 60;
 
   it('frames the Earth home pose at the given sim instant', () => {
     const cam = worldArmOf(homePose(EARTH_HOME, FOV, CONST_J2000, ORIENTATION_FRAMES.ecliptic));
-    const home = bodyHomePose('earth', CONST_J2000, FOV, ORIENTATION_FRAMES.ecliptic);
+    const home = bodyHomePose(
+      asSceneBodyId('earth'),
+      CONST_J2000,
+      FOV,
+      ORIENTATION_FRAMES.ecliptic,
+    );
 
     expect(cam.target).toEqual(home.target);
     expect(cam.yaw).toBe(home.yaw);

@@ -74,7 +74,6 @@ const SETTINGS_STUB: VolumeFieldSettings = {
   paletteId: 'viridis' as VolumeFieldSettings['paletteId'],
   trim: 0,
   exposure: 1,
-  bands: [],
 };
 
 const LIVENESS_STUB: VolumeFieldLiveness<FieldId> = {

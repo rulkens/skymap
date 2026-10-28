@@ -18,7 +18,7 @@ export function focusResolveOrder(
   elements: readonly OrbitalElements[],
 ): readonly OrbitalElements[] {
   const anchorIds = new Set(anchors.map((anchor) => anchor.id));
-  const byId = new Map(elements.map((el) => [el.id, el]));
+  const byId = new Map<string, OrbitalElements>(elements.map((el) => [el.id, el]));
   const order: OrbitalElements[] = [];
   const placed = new Set<string>();
   // The chain being walked right now. A row that reappears in it closes a cycle,

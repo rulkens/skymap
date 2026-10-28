@@ -4,14 +4,14 @@
  * of `state.cubemapCaptures.probe`: `subject` names what this frame's faces
  * write (null when idle), `refreshedAtMs` when each body last completed.
  *
- * The candidates are the mesh bodies drawn this frame AND resident, so a probe
- * is never captured for a body no pass will shade with it.
+ * The candidates are the mesh bodies drawn this frame AND resident, whichever
+ * pass draws them, so a probe is never captured for a body no pass will shade with it.
  */
 
 import type { CaptureFace } from '../../../@types/engine/frame/CaptureFace';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { MeshBody } from '../../../@types/scene/MeshBody';
+import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../data/rendering/probeRefreshIntervalMs';
@@ -19,8 +19,10 @@ import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId
 import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
+import { bodySlabRosterIds } from './bodySlabRosterIds';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;
@@ -35,11 +37,11 @@ export function scheduleProbeCapture(input: {
 
   // The oldest refresh wins, a never-refreshed body oldest of all — so N bodies
   // resolving at once cycle through the one in-flight probe in turn.
-  let subject: MeshBody | null = null;
+  let subject: MeshPresentation | null = null;
   let refreshedAtMs = Number.POSITIVE_INFINITY;
   let dueCount = 0;
-  for (const body of sceneBodyPartition(state, ctx).meshes) {
-    if (!renderer.hasMesh(body.id)) continue;
+  const roster = bodySlabRosterIds(ctx.snapshot.meshBodies);
+  for (const body of sceneBodyPartition(state, ctx, roster, () => false).meshes) {
     const at = runtime.refreshedAtMs.get(body.id) ?? Number.NEGATIVE_INFINITY;
     if (ctx.snapshot.nowMs - at >= PROBE_REFRESH_INTERVAL_MS) dueCount++;
     if (at < refreshedAtMs) {
@@ -53,8 +55,8 @@ export function scheduleProbeCapture(input: {
   const row = CUBEMAP_CAPTURES.probe;
   const bodyStates = sceneBodyStates(state, ctx);
   const eyeMpc = bodyStates.get(subject.id)!.positionMpc;
-  const hostId = meshBodySlabHostId(subject);
-  // Cube axes = the host axes `meshBodiesPass` shades in (io.wesl's contract).
+  const hostId = meshBodySlabHostId(subject.id);
+  // Cube axes = the host axes `drawMeshBodiesOnRow` shades in (io.wesl's contract).
   const axes = bodyStates.get(hostId)!.orientation;
   // One frame for the whole row: null only pre-bootstrap, so the next frame retries.
   const capture = cubemapCaptureFrame({

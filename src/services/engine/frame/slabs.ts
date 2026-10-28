@@ -35,7 +35,7 @@ import { nearestSphereFaceM } from '../../../utils/occlusion/nearestSphereFaceM'
 import { timingSlotForView } from '../../../utils/frame/timingSlotForView';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { FrameBoost } from '../../../@types/engine/frame/FrameBoost';
-import type { SlabHostId } from '../../../@types/engine/frame/SlabHostId';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { foldBoostIntoSlab } from '../../../utils/camera/foldBoostIntoSlab';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
@@ -271,7 +271,7 @@ export function deriveSlabs(input: {
   /** The view's own eye (`FrameView.drawCamPos`): a body row's origin, for the fold. */
   readonly eyeMpc: Readonly<Vec3>;
   /** A body row host's fixed-frame orientation, for the fold. */
-  readonly hostOrientationOf: (hostId: SlabHostId) => Readonly<Mat3> | undefined;
+  readonly hostOrientationOf: (hostId: PositionedId) => Readonly<Mat3> | undefined;
 }): readonly Slab[] {
   const {
     cam,
