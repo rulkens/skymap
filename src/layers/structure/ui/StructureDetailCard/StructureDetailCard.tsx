@@ -56,7 +56,7 @@ function StructureDetailCard({
   const shotBeside = shot !== undefined && layout === 'panel';
   // With a shot beside them the lead rows sit next to it as summary lines (as the body card
   // does); without one they stay ordinary CardRows.
-  // A point's seed radius is a marker size, and it has no member galaxies.
+  // A point's seed radius only frames the close-up, and it has no member galaxies.
   const pointLike = POINT_STRUCTURE_IDS.includes(target.category);
   const countRow =
     memberCount != null && !pointLike

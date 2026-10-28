@@ -1491,13 +1491,13 @@
     "raHours": 14.492898,
     "decDeg": -62.67618,
     "distance": { "value": 1.301, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.0647648, "unit": "au" },
+    "apparentRadius": { "value": 0.194294, "unit": "au" },
     "planets": 2,
     "discovered": 2016,
     "description": "The nearest star to the Sun, a red dwarf 1.30 pc away. It has 2 confirmed planets, among them Proxima b, an Earth-mass world in the star's habitable zone found in 2016.",
     "wikipedia": "Proxima Centauri",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Proxima Cen); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Proxima Cen); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "trappist-1",
@@ -1506,13 +1506,13 @@
     "raHours": 23.108426,
     "decDeg": -5.04346,
     "distance": { "value": 12.43, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.06189, "unit": "au" },
+    "apparentRadius": { "value": 0.18567, "unit": "au" },
     "planets": 7,
     "discovered": 2016,
     "description": "An ultracool red dwarf 12.4 pc away with 7 confirmed planets, all close to Earth's size. Several orbit in the zone where liquid water could exist, which makes it a prime target for JWST.",
     "wikipedia": "TRAPPIST-1",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host TRAPPIST-1); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host TRAPPIST-1); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "51-pegasi",
@@ -1521,13 +1521,13 @@
     "raHours": 22.957836,
     "decDeg": 20.7691,
     "distance": { "value": 15.461, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 1.94986, "unit": "au" },
+    "apparentRadius": { "value": 5.84958, "unit": "au" },
     "planets": 1,
     "discovered": 1995,
     "description": "A Sun-like star 15.5 pc away. Its planet 51 Pegasi b, found in 1995, was the first planet seen around a Sun-like star: a hot Jupiter on a 4.2-day orbit. The discovery won the 2019 Nobel Prize in Physics.",
     "wikipedia": "51 Pegasi",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host 51 Peg); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host 51 Peg); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "kepler-186",
@@ -1536,13 +1536,13 @@
     "raHours": 19.910182,
     "decDeg": 43.95499,
     "distance": { "value": 177.594, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.432, "unit": "au" },
+    "apparentRadius": { "value": 1.296, "unit": "au" },
     "planets": 5,
     "discovered": 2014,
     "description": "A red dwarf about 178 pc away with 5 confirmed planets. Kepler-186f, found in 2014, was the first Earth-sized planet seen in a star's habitable zone.",
     "wikipedia": "Kepler-186",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-186); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-186); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "hd-209458",
@@ -1551,13 +1551,13 @@
     "raHours": 22.053001,
     "decDeg": 18.88424,
     "distance": { "value": 48.302, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 2.1741, "unit": "au" },
+    "apparentRadius": { "value": 6.5223, "unit": "au" },
     "planets": 1,
     "discovered": 1999,
     "description": "A Sun-like star 48 pc away. Its hot Jupiter was the first planet seen crossing its star (1999) and the first whose atmosphere was detected (2002).",
     "wikipedia": "HD 209458",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HD 209458); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HD 209458); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "kepler-452",
@@ -1566,13 +1566,13 @@
     "raHours": 19.733583,
     "decDeg": 44.27759,
     "distance": { "value": 551.727, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 1.83691, "unit": "au" },
+    "apparentRadius": { "value": 5.51073, "unit": "au" },
     "planets": 1,
     "discovered": 2015,
     "description": "A Sun-like star about 550 pc away. Its planet Kepler-452b, found in 2015, is a super-Earth on a 385-day orbit in the habitable zone.",
     "wikipedia": "Kepler-452",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-452); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-452); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "toi-700",
@@ -1581,13 +1581,13 @@
     "raHours": 6.473048,
     "decDeg": -65.57861,
     "distance": { "value": 31.127, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.254407, "unit": "au" },
+    "apparentRadius": { "value": 0.763221, "unit": "au" },
     "planets": 4,
     "discovered": 2020,
     "description": "A red dwarf 31 pc away with 4 confirmed planets. TOI-700 d, found by TESS in 2020, was the mission's first Earth-sized planet in a habitable zone.",
     "wikipedia": "TOI-700",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host TOI-700); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host TOI-700); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "lhs-1140",
@@ -1596,13 +1596,13 @@
     "raHours": 0.749909,
     "decDeg": -15.27411,
     "distance": { "value": 14.986, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.10274, "unit": "au" },
+    "apparentRadius": { "value": 0.30822, "unit": "au" },
     "planets": 2,
     "discovered": 2017,
     "description": "A red dwarf 15 pc away with 2 confirmed planets. LHS 1140 b is a temperate super-Earth in the habitable zone and a candidate water world.",
     "wikipedia": "LHS 1140",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host LHS 1140); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host LHS 1140); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "hr-8799",
@@ -1611,13 +1611,13 @@
     "raHours": 23.124677,
     "decDeg": 21.13404,
     "distance": { "value": 41.244, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 68, "unit": "au" },
+    "apparentRadius": { "value": 204, "unit": "au" },
     "planets": 4,
     "discovered": 2008,
     "description": "A young star 41 pc away. In 2008 it became the first star with several planets imaged directly: 4 confirmed planets, all giants on wide orbits.",
     "wikipedia": "HR 8799",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HR 8799); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HR 8799); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "beta-pictoris",
@@ -1626,13 +1626,13 @@
     "raHours": 5.788082,
     "decDeg": -51.06615,
     "distance": { "value": 19.744, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 26, "unit": "au" },
+    "apparentRadius": { "value": 78, "unit": "au" },
     "planets": 3,
     "discovered": 2008,
     "description": "A young star 19.7 pc away surrounded by a bright dusty disc. It has 3 confirmed planets; the giant Beta Pictoris b was imaged directly in 2008.",
     "wikipedia": "Beta Pictoris",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host bet Pic); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host bet Pic); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "55-cancri",
@@ -1641,13 +1641,13 @@
     "raHours": 8.876456,
     "decDeg": 28.32982,
     "distance": { "value": 12.585, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 5.6, "unit": "au" },
+    "apparentRadius": { "value": 16.8, "unit": "au" },
     "planets": 7,
     "discovered": 1996,
     "description": "A binary star 12.6 pc away with 7 confirmed planets. Its innermost planet, 55 Cancri e, is a scorching super-Earth that JWST has studied for signs of an atmosphere.",
     "wikipedia": "55 Cancri",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host 55 Cnc); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host 55 Cnc); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "tau-ceti",
@@ -1656,13 +1656,13 @@
     "raHours": 1.733954,
     "decDeg": -15.9338,
     "distance": { "value": 3.603, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 1.334, "unit": "au" },
+    "apparentRadius": { "value": 4.002, "unit": "au" },
     "planets": 3,
     "discovered": 2017,
     "description": "One of the nearest Sun-like stars, 3.6 pc away. Radial-velocity surveys found 3 confirmed planets, small worlds a few times Earth's mass.",
     "wikipedia": "Tau Ceti",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host tau Cet); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host tau Cet); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "epsilon-eridani",
@@ -1671,13 +1671,13 @@
     "raHours": 3.548562,
     "decDeg": -9.45817,
     "distance": { "value": 3.203, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 3.53, "unit": "au" },
+    "apparentRadius": { "value": 10.59, "unit": "au" },
     "planets": 1,
     "discovered": 2000,
     "description": "A young Sun-like star 3.2 pc away with dusty debris belts and one known giant planet. It is the nearest star with a known planet that can be seen without a telescope.",
     "wikipedia": "Epsilon Eridani",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host eps Eri); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host eps Eri); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "gliese-581",
@@ -1686,13 +1686,13 @@
     "raHours": 15.323765,
     "decDeg": -7.72269,
     "distance": { "value": 6.298, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.185329, "unit": "au" },
+    "apparentRadius": { "value": 0.555987, "unit": "au" },
     "planets": 3,
     "discovered": 2005,
     "description": "A red dwarf 6.3 pc away with 3 confirmed planets. Claims of habitable-zone planets here in 2007–2010 were later traced to stellar activity, a lesson in how hard small planets are to confirm.",
     "wikipedia": "Gliese 581",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host GJ 581); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host GJ 581); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "kepler-16",
@@ -1701,13 +1701,13 @@
     "raHours": 19.271722,
     "decDeg": 51.75723,
     "distance": { "value": 75.085, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.7048, "unit": "au" },
+    "apparentRadius": { "value": 2.1144, "unit": "au" },
     "planets": 1,
     "discovered": 2011,
     "description": "A pair of stars about 75 pc away. Its planet Kepler-16b, found in 2011, was the first planet seen orbiting both stars of a binary, like Tatooine in Star Wars.",
     "wikipedia": "Kepler-16",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-16); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host Kepler-16); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "psr-b1257-12",
@@ -1716,13 +1716,13 @@
     "raHours": 13.000994,
     "decDeg": 12.68235,
     "distance": { "value": 600.0, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.46, "unit": "au" },
+    "apparentRadius": { "value": 1.38, "unit": "au" },
     "planets": 3,
     "discovered": 1992,
     "description": "A pulsar, the spinning remnant of an exploded star. In 1992 its 3 confirmed planets became the first exoplanets ever confirmed.",
     "wikipedia": "PSR B1257+12",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host PSR B1257+12); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host PSR B1257+12); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "k2-18",
@@ -1731,13 +1731,13 @@
     "raHours": 11.504009,
     "decDeg": 7.58783,
     "distance": { "value": 38.027, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.265099, "unit": "au" },
+    "apparentRadius": { "value": 0.795297, "unit": "au" },
     "planets": 2,
     "discovered": 2015,
     "description": "A red dwarf 38 pc away with 2 confirmed planets. JWST found methane and carbon dioxide in the atmosphere of K2-18 b, a sub-Neptune in the habitable zone.",
     "wikipedia": "K2-18",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host K2-18); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host K2-18); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "hd-189733",
@@ -1746,13 +1746,13 @@
     "raHours": 20.012141,
     "decDeg": 22.70978,
     "distance": { "value": 19.764, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 0.980062, "unit": "au" },
+    "apparentRadius": { "value": 2.94019, "unit": "au" },
     "planets": 1,
     "discovered": 2005,
     "description": "A star 19.8 pc away whose hot Jupiter is one of the best-studied exoplanets; in 2013 Hubble measured its colour as a deep blue.",
     "wikipedia": "HD 189733",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HD 189733); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host HD 189733); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "wasp-12",
@@ -1761,13 +1761,13 @@
     "raHours": 6.50911,
     "decDeg": 29.67227,
     "distance": { "value": 427.246, "unit": "pc" },
-    "physicalRadius": { "value": 0.05, "unit": "pc" },
-    "apparentRadius": { "value": 0.5, "unit": "pc" },
+    "physicalRadius": { "value": 3.31439, "unit": "au" },
+    "apparentRadius": { "value": 9.94317, "unit": "au" },
     "planets": 1,
     "discovered": 2008,
     "description": "A star about 430 pc away whose hot Jupiter orbits so close that it is spiralling inward: its orbit is measurably shrinking.",
     "wikipedia": "WASP-12",
-    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host WASP-12); radii are marker sizes, not physical extents"
+    "source": "NASA Exoplanet Archive, Planetary Systems Composite Parameters (pscomppars), queried 2026-10-28: ra, dec, sy_dist, sy_pnum (host WASP-12); physicalRadius is the orbit diagram's extent (outermost orbit or habitable-zone edge, from pl_orbsmax and st_lum), apparentRadius 3x it so a focus frames the whole diagram"
   },
   {
     "id": "gw170817",

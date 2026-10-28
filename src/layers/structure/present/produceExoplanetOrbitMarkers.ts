@@ -15,6 +15,7 @@ import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import type { StructureStore } from '../@types/StructureStore';
 import type { StructureMarkerDescriptor } from '../@types/StructureMarkerDescriptor';
 import { EXOPLANET_ORBITS } from '../data/exoplanetOrbits';
+import { exoplanetSystemExtentAu } from './exoplanetSystemExtentAu';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
 import { smoothstep } from '../../../utils/math/smoothstep';
@@ -55,11 +56,7 @@ export function produceExoplanetOrbitMarkers(
     if (host === null) continue;
     const [hx, hy, hz] = host.worldPos;
     const distanceMpc = Math.hypot(hx - cx, hy - cy, hz - cz);
-    const outerAu = Math.max(
-      ...system.planets.map((p) => p.semiMajorAxisAu),
-      system.habitableZoneAu?.[1] ?? 0,
-    );
-    const outerPx = ((outerAu * AU) / distanceMpc) * view.drawPxPerRad;
+    const outerPx = ((exoplanetSystemExtentAu(system) * AU) / distanceMpc) * view.drawPxPerRad;
     const alpha = fade * smoothstep(FADE_IN_PX[0], FADE_IN_PX[1], outerPx);
     if (alpha === 0) continue;
 

@@ -4,7 +4,7 @@ import type { StructureMarkerStyle } from '../@types/StructureMarkerStyle';
 /**
  * The radius a structure's ring draws at: its apparent extent, floored at the
  * style's `pointRadiusPx` on screen for a point (a planet host, a transient),
- * whose seed radius is only a marker size. A region has no floor, so it fades
+ * whose seed radius is far too small to see from afar. A region has no floor, so it fades
  * out when too small to read; a point stays findable at every zoom.
  */
 export function structureMarkerRadiusMpc(

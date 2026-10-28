@@ -5,7 +5,9 @@ import type { ExoplanetOrbitSystem } from '../@types/ExoplanetOrbitSystem';
  * Exoplanet Archive's pscomppars table (pl_orbsmax, pl_orbper, pl_tranmid,
  * st_lum), queried 2026-10-28. The habitable zone is Kopparapu et al. 2013's
  * conservative pair in its Sun-like form, sqrt(L / 1.10) to sqrt(L / 0.36) au,
- * without their stellar-temperature correction; a pulsar gets none.
+ * without their stellar-temperature correction; a pulsar gets none. Each
+ * host's seed radius mirrors this diagram's extent (pinned by a test), so a
+ * focus frames the orbits rather than empty space around a dot.
  */
 export const EXOPLANET_ORBITS: Readonly<Record<string, ExoplanetOrbitSystem>> = {
   'exoplanet-system-51-pegasi': {
