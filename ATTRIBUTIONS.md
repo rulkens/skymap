@@ -371,6 +371,32 @@ unclear, and no entry here reads them as a licence.
 - **Not verified:** the licence line on the article's own page (the
   publisher's site asked for a human check).
 
+### Planck 2015 SMICA CMB map
+
+<!-- attribution: id=planck-cmb; keys=cmb.* -->
+
+- **What:** The SMICA all-sky map of the cosmic microwave background
+  temperature, `COM_CMB_IQU-smica_1024_R2.02_full.fits` (HEALPix Nside 1024).
+- **By:** ESA and the Planck Collaboration. Planck Collaboration 2016, A&A 594,
+  A9 (Planck 2015 results. IX. Diffuse component separation: CMB maps).
+- **Licence:** No licence is stated on the pages read. ESA's Planck publications
+  page asks: "If you use any of these results for presentations, please
+  acknowledge the corresponding paper, ESA/Planck, and the Planck
+  Collaboration."
+- **Use:** No licence stated
+- **Attribution:** ESA/Planck and the Planck Collaboration; Planck
+  Collaboration 2016, A&A 594, A9.
+- **Upstream:** https://irsa.ipac.caltech.edu/data/Planck/release_2/all-sky-maps/maps/component-maps/cmb/
+  (NASA/IPAC's mirror of the Planck Legacy Archive)
+- **Enters skymap:** `tools/cmb/projectCmbMap.py` →
+  `public/images/cmb/planck-smica-galactic.webp`, the horizon shell's texture.
+- **Modified:** Smoothed to a 0.5° beam, projected to equirectangular galactic
+  coordinates and coloured (blue cold, orange hot).
+- **Checked:** 2026-10-28, https://www.cosmos.esa.int/web/planck/publications
+- **Not verified:** the Planck Legacy Archive's own terms page
+  (https://www.cosmos.esa.int/web/planck/pla) renders client-side and could not
+  be read; check it before shipping.
+
 ### Gaia DR3
 
 <!-- attribution: id=gaia; keys=gaia.dir,gaia.readme,gaia.sha256; hosts=www.cosmos.esa.int -->

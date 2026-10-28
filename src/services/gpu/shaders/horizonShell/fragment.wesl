@@ -17,11 +17,18 @@ import package::horizonShell::io::VsOut;
 import package::lib::fresnel::fresnelRim;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(1) var cmbMap: texture_2d<f32>;
+@group(0) @binding(2) var cmbSampler: sampler;
 
 // ── Tuning constants ───────────────────────────────────────────────
 const RIM_POWER: f32 = 3.0;
 const SHELL_COLOR: vec3<f32> = vec3<f32>(0.35, 0.55, 0.80);
 const INTENSITY: f32 = 0.25;
+// The CMB map's additive weight. Seen from outside, the shell IS the subject;
+// from inside, its far wall is the backdrop behind the galaxy surveys.
+const CMB_OUTSIDE: f32 = 0.6;
+const CMB_INSIDE: f32 = 0.18;
+const PI: f32 = 3.14159265;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
@@ -62,5 +69,16 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // Distance fade (CPU-side smoothstep) scales the whole additive
   // contribution, so the shell ramps in as the camera pulls back.
   let value = rim * INTENSITY * u.fadeAlpha;
-  return vec4<f32>(SHELL_COLOR * value, value);
+
+  // The CMB at this point of the shell: the outward normal is the direction
+  // from the observer (the world origin) to it, which the map stores by
+  // galactic longitude and latitude. Explicit LOD: the seam at l = 0 would
+  // otherwise spike the derivatives into a one-pixel streak.
+  let g = transpose(u.galToWorld) * normal;
+  let l = atan2(g.y, g.x);
+  let uv = vec2<f32>(fract(l / (2.0 * PI)), 0.5 - asin(clamp(g.z, -1.0, 1.0)) / PI);
+  let cmbWeight = select(CMB_INSIDE, CMB_OUTSIDE, tNear > 0.0);
+  let cmb = textureSampleLevel(cmbMap, cmbSampler, uv, 0.0).rgb * cmbWeight * u.fadeAlpha;
+
+  return vec4<f32>(SHELL_COLOR * value + cmb, value);
 }

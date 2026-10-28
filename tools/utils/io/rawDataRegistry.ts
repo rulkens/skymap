@@ -311,6 +311,26 @@ export const RAW_DATA = {
       'Per-tier mean/std .npy cubes produced by tools/volumes/extractDustCube.py (edenhofer_{mean,std}_{128,256,384}.npy), consumed by tools/volumes/buildDustVolume.ts.',
   },
 
+  // ─── Planck CMB map ────────────────────────────────────────────────────
+
+  'cmb.smica': {
+    path: 'data/raw/cmb/COM_CMB_IQU-smica_1024_R2.02_full.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Planck 2015 SMICA CMB temperature map, HEALPix Nside 1024, galactic — projected by tools/cmb/projectCmbMap.py into the horizon shell texture.',
+    upstream:
+      'https://irsa.ipac.caltech.edu/data/Planck/release_2/all-sky-maps/maps/component-maps/cmb/COM_CMB_IQU-smica_1024_R2.02_full.fits',
+    readme: 'cmb.readme',
+  },
+  'cmb.readme': {
+    path: 'data/raw/cmb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Planck CMB map — upstream file, fetch command, citation and what the projector does with it.',
+  },
+
   // ─── Local Bubble shell surface (O'Neill+ 2024) ───────────────────────
 
   'localbubble.shell': {

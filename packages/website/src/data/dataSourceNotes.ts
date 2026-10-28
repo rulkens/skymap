@@ -587,6 +587,11 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'A map of the dust within 1.25 kiloparsecs of the Sun, in three dimensions.',
   },
+  'planck-cmb': {
+    title: 'Planck CMB map',
+    description:
+      'The Planck satellite’s all-sky map of the cosmic microwave background, the oldest light we can see.',
+  },
   'local-bubble': {
     description:
       'The shape of the Local Bubble, the cavity in the gas around the Sun, from O’Neill and colleagues, 2024.',

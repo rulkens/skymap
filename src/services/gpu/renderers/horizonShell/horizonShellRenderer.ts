@@ -25,7 +25,13 @@
  * per-vertex, and interpolated across the quad — so the vertex stage
  * never multiplies a large world coordinate either.
  *
- * ### Uniform buffer ABI (64 bytes)
+ * ### The CMB on the shell
+ *
+ * The far wall carries the Planck CMB map (`loadCmbTexture`), looked up by
+ * the galactic direction of each hit point; until the image arrives a black
+ * texel stands in, so the shell draws its rim alone.
+ *
+ * ### Uniform buffer ABI (112 bytes)
  *
  * See `shaders/horizonShell/io.wesl` for the authoritative layout:
  *
@@ -33,6 +39,7 @@
  *   offset 16 | vec3<f32> camRight   + f32 aspect
  *   offset 32 | vec3<f32> camUp      + f32 radiusGpc
  *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
+ *   offset 64 | mat3x3<f32> galToWorld (three padded columns)
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -45,6 +52,8 @@ import fsCode from '../../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { HORIZON_RADIUS_GPC } from '../../../../data/rendering/horizonRadiusGpc';
+import { GAL_TO_EQ_MATRIX } from '../../../../data/superGalacticTransform';
+import { loadCmbTexture } from '../../resources/loadCmbTexture';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../../../../@types/rendering/HorizonShellRenderer';
@@ -62,7 +71,7 @@ type Init = {
 };
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
-const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
+const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 112;
 
 export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   const { device, targetFormat } = init;
@@ -84,14 +93,44 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: { type: 'uniform' },
       },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     ],
   });
-
-  const bindGroup = device.createBindGroup({
-    label: 'horizonShell-bg-uniforms',
-    layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  // Longitude wraps; latitude clamps at the poles.
+  const cmbSampler = device.createSampler({
+    label: 'horizonShell-cmb-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'repeat',
   });
+  const bindGroupFor = (cmb: GPUTexture): GPUBindGroup =>
+    device.createBindGroup({
+      label: 'horizonShell-bg',
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: cmb.createView() },
+        { binding: 2, resource: cmbSampler },
+      ],
+    });
+  const placeholder = device.createTexture({
+    label: 'horizonShell-cmb-placeholder',
+    size: [1, 1],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  device.queue.writeTexture({ texture: placeholder }, new Uint8Array(4), {}, [1, 1]);
+  let cmbTexture: GPUTexture | null = null;
+  let destroyed = false;
+  let bindGroup = bindGroupFor(placeholder);
+  void loadCmbTexture(device)
+    .then((texture) => {
+      if (destroyed) return texture.destroy();
+      cmbTexture = texture;
+      bindGroup = bindGroupFor(texture);
+    })
+    .catch((err: unknown) => console.warn('[horizonShell] CMB map failed to load', err));
 
   const pipeline = device.createRenderPipeline({
     label: 'horizonShell-pipeline',
@@ -118,6 +157,10 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(HORIZON_SHELL_UNIFORM_BUFFER_SIZE);
   const f32 = new Float32Array(uniforms);
+  // galToWorld never changes: written once, as three 16-byte-padded columns.
+  for (let col = 0; col < 3; col++) {
+    for (let row = 0; row < 3; row++) f32[16 + col * 4 + row] = GAL_TO_EQ_MATRIX[col * 3 + row]!;
+  }
   // Plain Vec3 tuples so the per-component reads below index cleanly under
   // noUncheckedIndexedAccess; `orbitForwardOf` writes into them in place.
   const fwd: Vec3 = [0, 0, 0];
@@ -181,7 +224,10 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   }
 
   function destroy(): void {
+    destroyed = true;
     uniformBuffer.destroy();
+    placeholder.destroy();
+    cmbTexture?.destroy();
   }
 
   const renderer: HorizonShellRenderer = {

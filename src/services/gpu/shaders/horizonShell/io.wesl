@@ -50,6 +50,9 @@ struct Uniforms {
   radiusGpc: f32,
   cameraPosGpc: vec3<f32>,
   fadeAlpha: f32,
+  // Galactic -> world rotation; its transpose takes a world direction to the
+  // galactic frame the CMB map is stored in.
+  galToWorld: mat3x3<f32>,
 };
 
 // ── Vertex-to-fragment interface ────────────────────────────────────
