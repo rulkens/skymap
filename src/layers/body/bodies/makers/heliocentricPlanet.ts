@@ -6,15 +6,13 @@
  * body and trail stay on the same ellipse). Moons are NOT built through this —
  * they are geocentric (`satelliteBody`).
  *
- * Lives beside `SCENE_PLANETS` in `makers/` rather than in `src/utils/`: it is
- * authoring policy, has a single consumer (the planets table), and maker and
- * table change together.
+ * Lives beside the body rows in `bodies/`: authoring policy only the body Layer's rows use.
  */
 
-import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
-import type { BodySpec } from '../../../@types/scene/BodySpec';
-import type { PlanetBody } from '../../../@types/scene/PlanetBody';
-import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
+import { BODY_GLINT_MAX_PX } from '../../../../data/bodies/bodyGlintMaxPx';
+import type { BodySpec } from '../../../../@types/scene/BodySpec';
+import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
+import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 
 export function heliocentricPlanet(spec: BodySpec): PlanetBody {
   return {

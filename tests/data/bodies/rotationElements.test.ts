@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ROTATION_ELEMENTS, rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SATURN_EQUATORIAL_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegistry';
 import { degToRad } from '../../../src/utils/math/degToRad';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
@@ -18,6 +19,14 @@ describe('ROTATION_ELEMENTS', () => {
       if (!('poleDecDeg' in el)) continue; // the aimed arms carry no pole
       expect(el.poleDecDeg).toBeGreaterThanOrEqual(-90);
       expect(el.poleDecDeg).toBeLessThanOrEqual(90);
+    }
+  });
+
+  it('every textured body keeps its rotation row', () => {
+    // A row without one falls back to IDENTITY_MAT3: the texture would turn with the
+    // ecliptic frame and its prime meridian would be wrong, silently.
+    for (const spec of Object.values(BODY_TEXTURE_REGISTRY)) {
+      expect(rotationRowById(spec.bodyId), spec.bodyId).not.toBeNull();
     }
   });
 

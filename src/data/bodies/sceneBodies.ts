@@ -2,9 +2,9 @@
  * SCENE_BODIES — the flat registry every body-aware consumer reads from: the
  * command-palette search rows, the `body-<id>` focus-id resolver, and the
  * selection-row extractor all iterate / look up this one list. Seeding a new
- * body is a one-line push into its seed table (`sceneEarth`, `sceneStars`,
- * `sceneSun`, `scenePlanets`, `sceneSStars`, `sceneMeshBodies`) — no
- * parallel list to keep in sync. Membership
+ * body is a row in its Layer's `bodies/` (Earth, planets, moons, craft;
+ * `sceneEarth`/`scenePlanets` project the fold) or a line in a seed table
+ * (`sceneStars`, `sceneSun`, `sceneSStars`) — no parallel list to keep in sync. Membership
  * is what makes a body searchable, focusable and selectable AT ALL: all three
  * consumers return null on a miss, so an omitted body fails silently rather than
  * loudly. Consumers only touch the
