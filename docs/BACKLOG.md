@@ -37,6 +37,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
+- [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
 - [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **`DragMode` consumers test `=== 'pan'`, a new variant falls silently into orbit** `ready` — five sites hand-pick one string literal instead of an exhaustive switch, and the workbenches' `attachOrbitControls.ts` keeps its own local `DragMode` type distinct from the shared one. → [details](backlog/2026-09-29-dragmode-binary-pan-tests.md)
