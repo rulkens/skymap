@@ -13,6 +13,7 @@ import type { BodyTextureSlotKey } from '../../../@types/data/BodyTextureSlotKey
 import type { SurfaceTileStream } from './SurfaceTileStream';
 import type { SurfaceTilePlan } from './SurfaceTilePlan';
 import type { BodyFacts } from './BodyFacts';
+import type { TrailingThrottle } from '../../../@types/utils/TrailingThrottle';
 
 /** The Layer's whole runtime. Non-null: `create` builds it before returning. */
 export type BodyRuntime = {
@@ -36,4 +37,6 @@ export type BodyRuntime = {
   readonly publish: (patch: Partial<BodyFacts>) => void;
   /** Gates the tile readout: nothing is published while no one can read it. */
   readonly debugPanelOpen: () => boolean;
+  /** Paces the tile readout; a turned-away publish wakes one more frame once it reopens. */
+  readonly readoutGate: TrailingThrottle;
 };

@@ -25,6 +25,10 @@ import { createBodyTextureSlots } from './load/bodyTextureSlots';
 import { createBodyTextureAtlasSlot } from './load/bodyTextureAtlasSlot';
 import { createSurfaceTileStream } from './subsystems/surfaceTiles/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from './subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { throttleWithTrailingCall } from '../../utils/throttle/throttleWithTrailingCall';
+
+/** The rate every textual DebugPanel readout refreshes at. */
+const READOUT_INTERVAL_MS = 250;
 
 export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
   const { device } = deps.ctx;
@@ -85,6 +89,9 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
       plan: IDLE_SURFACE_TILE_PLAN,
     },
     publish: deps.publish,
+    // The trailing wake runs the frame that publishes a turned-away readout, so the
+    // last state before the loop sleeps still reaches the panel.
+    readoutGate: throttleWithTrailingCall(READOUT_INTERVAL_MS, deps.requestRender),
     debugPanelOpen: () => deps.store.getState().ui.debugPanelOpen,
   };
 }
