@@ -1,7 +1,5 @@
 /**
- * BODY_TRAIL_ELEMENTS — the body Layer's orbit-trail roster: every Earth, planet and moon row's
- * Keplerian elements. The craft ride the missions Layer's own trails and the S-stars the star
- * Layer's, so no filter is needed to keep them out.
+ * BODY_TRAIL_ELEMENTS — the body Layer's orbit-trail roster (Earth, planet and moon rows).
  */
 
 import { BODY_BODY_ROWS } from '../bodies/bodyBodyRows';

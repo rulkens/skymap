@@ -2,7 +2,7 @@
  * bodySelectionRow — the body Layer's `body` selection kind: Earth, the planets and the moons
  * (the craft are the missions Layer's `craft` kind, Søndermarken the earthScenes Layer's
  * `earthScene` kind, Sgr A* the blackHoles Layer's `blackHole` kind). A star is a `starCatalog`
- * ref wherever it comes from (spec §7), so `body-sirius` no longer decodes. Position is
+ * ref wherever it comes from (spec §7), so `body-sirius` does not decode. Position is
  * re-derived at `extractRow`'s own `simDays`, never cached.
  */
 

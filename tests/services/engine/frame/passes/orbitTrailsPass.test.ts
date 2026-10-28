@@ -1,24 +1,14 @@
 /**
  * orbitTrailsPass — unit tests for the conic orbit-trails content row.
  *
- * Two load-bearing assertions:
+ * Load-bearing: (1) the f64 seam, every conic's Ginv composes from `view.slab.vp`, NOT the
+ * f32-narrowed `view.vp` (identity-pinned via a mocked `composeOrbitConic`); (2) ONE
+ * `renderer.draw` paints every VISIBLE conic at stride `INSTANCE_FLOATS`, in the layout of
+ * `orbitTrailsPass`'s staging writes, with sub-cull orbits dropped from the batch.
  *
- *   1. The f64 seam — every conic's Ginv composes from the slab's
- *      `Float64Array` view-projection (`view.slab.vp`), NOT the f32-narrowed
- *      `view.vp` (identity-pinned via a mocked `composeOrbitConic`).
- *   2. The packed draw — ONE `renderer.draw(pass, staging, count)` paints
- *      every VISIBLE conic, with conic i's trail params packed at instance
- *      stride 34 floats (Ginv at floats base+0..11, colour + eccentricity at
- *      base+12..15, mean anomaly at base+16, apparent-size fade alpha at
- *      base+17, viewportPx at base+18..19, the clip basis Cc/Ac/Bc at
- *      base+20..31, and the visible arc at base+32..33) front-to-back, and
- *      orbits below the cull threshold dropped from the batch entirely.
- *
- * Plus the handle gates: `enabled` is renderer-presence AND the shared
- * foreground distance gate AND the whole-layer sub-pixel bound (per REGION: the
- * largest of that region's orbits at the camera's nearest possible approach to
- * it — the conservative envelope of the per-orbit cull), and `draw` no-ops on a
- * null handle. The roster is `state.orbitTrailGroups`, composed at boot.
+ * Plus the handle gates: `enabled` is renderer presence AND the foreground distance gate AND the
+ * per-REGION sub-pixel bound, and `draw` no-ops on a null handle. The roster is
+ * `state.orbitTrailGroups`.
  */
 
 import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';

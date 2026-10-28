@@ -1,67 +1,11 @@
 /**
- * markerLineRenderer — screen-space thick-line overlay pass for the 3D sky map.
+ * markerLineRenderer — instanced thick-line overlay for world-anchored segments: each expands
+ * to a screen-aligned quad between its endpoints, anti-aliased perpendicular to the line.
  *
- * Renders a set of world-anchored line segments as instanced thick quads.
- * Each line segment expands into a screen-aligned rectangle between its two
- * world-space endpoints.  The vertex stage projects both endpoints to clip
- * space, computes the screen-space perpendicular, and offsets each quad
- * corner by ±half-width in NDC.  The fragment stage applies a smooth
- * one-pixel anti-aliased falloff perpendicular to the line, so thick lines
- * stay crisp at any pixel width without staircasing.
- *
- * ## Why a closure-keyed factory and not a class?
- *
- * Same convention every other freshly-extracted handle in the engine
- * follows (`thumbnailSubsystem`, `proceduralDiskSubsystem`,
- * the `Pass` object literals in `engine/frame/passes/`): factories return
- * typed handles, not class instances.  Internal state (CPU scratch buffer,
- * running count, pipeline + bind-group reference) is genuinely inaccessible
- * from outside the
- * closure — there is no `this.instanceBuf` to reach in and poke from a
- * misbehaving caller — and the `type` aliases convention (CLAUDE.md)
- * deliberately rejects the inheritance escape hatch a class would otherwise
- * carry.  Existing renderers (Point/Quad/Disk/…) are still classes for now;
- * new renderers from this point on follow the factory shape.
- *
- * ## Why no storage buffer?
- *
- * Labels needed a storage buffer because all glyphs of one label share world
- * position, color, and sizing — duplicating those into every glyph instance
- * would be wasteful.  Marker lines have no such grouping: every quad already
- * carries its full state (endpoints + color + width + fade) through the
- * per-instance vertex attributes.  No indirect lookup is needed, so the
- * bind group layout shrinks to a single uniform binding.
- *
- * ## Why a separate renderer instead of reusing filaments?
- *
- * Filaments are an emissive overlay using ADDITIVE blend with per-segment
- * density driving brightness — they're a scientific data layer.  Marker lines
- * are UI overlay (premultiplied OVER blend, fade-alpha gate) and must occlude
- * rather than accumulate.  Sharing one renderer would mean branching the blend
- * state at draw time.  Two small pipelines is cleaner.  See
- * `shaders/markerLines/io.wesl` for the full rationale.
- *
- * ## Uniform layout (CameraUniforms, 80 bytes)
- *
- * The marker-line shaders use only the shared `CameraUniforms` prefix from
- * `shaders/lib/camera.wesl` — no renderer-specific tail.  That prefix is:
- *
- *   bytes  0..63  viewProj     mat4x4<f32>
- *   bytes 64..71  viewportPx   vec2<f32>
- *   bytes 72..75  pxPerRad    f32 (CameraUniforms focal term)
- *   bytes 76..79  _pad0       one reserved f32 (must stay zero)
- *
- * The size const and the prefix write both come from
- * `lib/cameraUniforms.ts`, the TS twin of the WESL struct — if
- * `CameraUniforms` ever grows past 80 bytes, that one module is the
- * place to change.
- *
- * ## Blend mode
- *
- * Premultiplied-alpha OVER, NOT additive.  Marker lines are UI overlay — they
- * should occlude the HDR sky content at full opacity.  Additive blend (used by
- * `texturedQuadRenderer` for emissive thumbnails) would make dark marker-line pixels
- * accumulate rather than replace, which is wrong for an opaque indicator line.
+ * Per-instance attributes carry the full line state, so the only binding is the 80-byte shared
+ * `CameraUniforms` prefix (`lib/cameraUniforms.ts`, twin of `shaders/lib/camera.wesl`; its
+ * trailing pad f32 must stay zero). Premultiplied OVER blend, NOT additive: opaque UI indicators
+ * must replace dark pixels, not accumulate; see `shaders/markerLines/io.wesl`.
  */
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
@@ -87,91 +31,43 @@ import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unit
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { MARKER_LINE_INSTANCE_LAYOUT } from '../../lib/markerLineInstanceLayout';
 
-// ─── buffer constants ──────────────────────────────────────────────────────
-
-/**
- * Per-instance stride — see `lib/markerLineInstanceLayout.ts` for the byte map.
- * Packing pixelWidth and fadeAlpha into the trailing slot of the world-position
- * vec3s saves 16 bytes per instance versus carrying them as separate vec4
- * attributes — same trick as the filament renderer's density field.
- */
+// See `lib/markerLineInstanceLayout.ts` for the byte map.
 const LINE_INSTANCE_BYTES = MARKER_LINE_INSTANCE_LAYOUT.arrayStride;
 
-// ─── corner buffer ────────────────────────────────────────────────────────
-
-// The unit-quad corners + their slot-0 layout come from `lib/unitQuad.ts`,
-// shared byte-for-byte with the label and debug-line overlays.  The vertex
-// shader uses `uv.x` to select which endpoint (from vs to) and `uv.y` to
-// offset by ±half-width in the screen-space perpendicular.
 const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 4)
 
-// Starting instance capacity; `setLines` grows it in power-of-two steps once the
-// roster outgrows it, as `labelRenderer` does for its labels.
+// `setLines` grows it in power-of-two steps.
 const INITIAL_LINE_CAPACITY = 64;
 
-// ─── factory ──────────────────────────────────────────────────────────────
-
 /**
- * Construct a `MarkerLineRenderer` against the given GPU context and
- * colour-target format.
- *
- * Pass `device: null` (or a GpuContext whose `device` is null) for unit
- * tests that exercise CPU state only.  GPU resource creation is skipped
- * in that branch and `draw(...)` becomes a no-op.
- *
- * `targetFormat` is the colour-attachment format the pipeline writes into.
- * Marker lines are a post-tone-map UI overlay, so this is the swap-chain
- * format — but it is passed EXPLICITLY rather than read off `ctx.format`, so
- * the target is legible at the construction site.
- *
- * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
- * behind the solar-system bodies.  When set, the pipeline gains a group(1)
- * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
- * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
- * consumes a per-frame `OverlaySceneOcclusion`.  The default (opts omitted)
- * keeps the plain single-BGL pipeline the Milky Way + structure leader lines
- * rely on — byte-for-byte unchanged.
+ * A `device: null` GpuContext skips GPU creation and makes `draw` a no-op, for CPU-only tests.
+ * `targetFormat` is the swap-chain format, passed explicitly so the target is legible here.
+ * `opts.occludeAgainstScene` adds the group(1) coverage binding and `fragmentOcclude.wesl`
+ * (per-pixel attenuation behind solar-system bodies); omitted keeps the plain single-BGL pipeline.
  */
 export function createMarkerLineRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
   opts?: { occludeAgainstScene?: boolean },
 ): MarkerLineRenderer {
-  // The `as ... | null` cast lets a test pass `device: null as unknown as
-  // GPUDevice` through GpuContext without TypeScript complaining at the
-  // factory's call site.  Runtime code below null-checks before each use.
+  // The cast lets a test pass `device: null`; every use below null-checks.
   const device = ctx.device as GPUDevice | null;
   const format = targetFormat;
 
-  // ── CPU scratch buffer — always allocated, safe to use with null device ──
-  //
-  // 14 floats per instance × 4 bytes = 56 bytes = LINE_INSTANCE_BYTES.
-  // All fields are f32 so a single Float32Array suffices — no u32 fields
-  // unlike the label renderer's glyph instance buffer. Sized by `allocate` below.
+  // 14 f32 per instance (56 bytes = LINE_INSTANCE_BYTES), all f32, so one Float32Array suffices.
   let capacity = 0;
   let instanceBuf = new Float32Array(0);
 
-  // Closure-scoped mutable counter — replaces the `this.currentLineCount`
-  // field the class form would use.  Updated only by `setLines`; read by
-  // `draw` and `lineCount`.
   let currentLineCount = 0;
 
-  // ── GPU resources (null when device is null) ─────────────────────────────
-  //
-  // The occlusion instance builds BOTH pipelines and picks per-draw:
-  // `plainPipeline` (single BGL) whenever no scene colour is supplied this frame,
-  // `occludePipeline` (two BGLs, discard-gated fragment) when it is. A
-  // non-occlusion instance builds only `plainPipeline` and leaves the other null.
+  // The occlusion instance builds BOTH pipelines and picks per draw; others only `plainPipeline`.
   let plainPipeline: GPURenderPipeline | null = null;
   let occludePipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let gpuInstanceBuffer: GPUBuffer | null = null;
   let cornerBuffer: GPUBuffer | null = null;
   let bindGroup: GPUBindGroup | null = null;
-  // Retained only on the occlusion path — the group(1) coverage BGL that
-  // `draw` rebuilds a per-frame bind group against, and the depth-frame
-  // uniform that joint's binding 2 reads.  Null on the plain path (and
-  // whenever device is null), which is what gates `draw`'s occlusion branch.
+  // Null off the occlusion path, which is what gates `draw`'s occlusion branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
   let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
@@ -193,26 +89,13 @@ export function createMarkerLineRenderer(
   allocate(INITIAL_LINE_CAPACITY);
 
   if (device) {
-    // ── Bind group layout ─────────────────────────────────────────────────
-    //
-    // One binding, matching `vertex.wesl`'s `@group(0) @binding(0)`:
-    //   0 → uniform buffer  (CameraUniforms, vertex-visible)
-    //
-    // The fragment stage reads no bound resource — only the interpolated
-    // `color` and `uv` varyings from the vertex stage — so it does not
-    // appear here.
+    // Matches `vertex.wesl`'s `@group(0) @binding(0)`; the fragment stage binds nothing.
     const bindGroupLayout = device.createBindGroupLayout({
       label: 'marker-line-bgl',
       entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
     });
 
-    // ── Occlusion joint (opt-in) ─────────────────────────────────────────
-    //
-    // When this instance attenuates against scene coverage, the pipeline gains
-    // a second bind-group layout at group 1 (the shared coverage joint).
-    // `occlusionCoverageBGL` is retained so `draw` can rebuild its per-frame
-    // bind group (the colour view changes on every resize — see
-    // occlusionCoverageGroup.ts).
+    // Retained so `draw` can rebuild the per-frame bind group (the colour view changes on resize).
     if (occludesScene) {
       occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
       occlusionDepthFrameBuffer = createOcclusionDepthFrameBuffer(
@@ -221,33 +104,16 @@ export function createMarkerLineRenderer(
       );
     }
 
-    // ── Pipelines ─────────────────────────────────────────────────────────
-    //
-    // An occlusion instance builds BOTH pipelines and picks per-draw. `draw`
-    // selects `occludePipeline` only when handed a scene colour view THIS frame,
-    // and falls back to `plainPipeline` otherwise — so a frame in which no
-    // foreground body drew (hence no valid scene colour) still paints its
-    // connectors un-occluded through a VALID draw, rather than an occlusion
-    // draw with group(1) left unbound. A non-occlusion instance builds only
-    // the plain pipeline.
+    // `draw` takes `occludePipeline` only when handed a scene colour view THIS frame; a frame
+    // with no foreground body falls back to `plainPipeline` rather than an occlusion draw
+    // with group(1) unbound.
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'markerLines.vertex');
 
-    // Both pipelines draw the identical geometry into the identical target;
-    // only the fragment entry and the group(1) coverage binding differ, so the
-    // vertex-buffer + colour-target descriptors are shared.
+    // Buffer 0 is the unit corner quad (`uv.x` picks the endpoint, `uv.y` the ±half-width side).
     const vertexBuffers: GPUVertexBufferLayout[] = [
-      // Buffer 0: unit-corner quad, 4 vertices, stepMode 'vertex'.
-      // Provides (x,y) unit-square corners to location 0 (`uv`).
-      // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
       UNIT_QUAD_VERTEX_LAYOUT,
-      // Buffer 1: per-instance line data to locations 1–5.
       MARKER_LINE_INSTANCE_LAYOUT,
     ];
-    // Premultiplied-alpha OVER blend.  Marker lines are UI overlay, not
-    // emissive content: at alpha=0 they should be fully transparent against
-    // whatever's behind them, not additive.  'one-minus-src-alpha' for dst
-    // preserves the existing HDR content at line-free pixels while the line
-    // alpha fades.
     const colorTargets: GPUColorTargetState[] = [{ format, blend: PREMULTIPLIED_OVER_BLEND }];
 
     const fsPlainModule = createShaderModuleWithDevLog(device, fsCode, 'markerLines.fragment');
@@ -259,11 +125,7 @@ export function createMarkerLineRenderer(
       }),
       vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: { module: fsPlainModule, entryPoint: 'fs', targets: colorTargets },
-      // Triangle-strip topology — the four unit corners form two triangles
-      // covering the line quad with just 4 vertices (no index buffer needed).
       primitive: { topology: 'triangle-strip' },
-      // No depthStencil — marker lines are a pure UI overlay and do not
-      // participate in depth testing.
     });
 
     if (occlusionCoverageBGL) {
@@ -272,11 +134,8 @@ export function createMarkerLineRenderer(
         fsOccludeCode,
         'markerLines.fragmentOcclude',
       );
-      // A SEPARATE vertex module, not 'vsModule' + a different entry point:
-      // vertexOcclude.wesl imports lib::sceneDepth, which statically pulls in
-      // group(1) bindings — vertex.wesl's 'vs' must stay clear of those for
-      // the plain pipeline's group(1)-less layout to accept it (see
-      // vertexOcclude.wesl's header).
+      // A SEPARATE module: lib::sceneDepth statically pulls in group(1) bindings, which
+      // the plain pipeline's group(1)-less layout would reject.
       const vsOccludeModule = createShaderModuleWithDevLog(
         device,
         vsOccludeCode,
@@ -286,7 +145,6 @@ export function createMarkerLineRenderer(
         label: 'marker-line-pipeline-occlude',
         layout: device.createPipelineLayout({
           label: 'marker-line-pipeline-occlude-layout',
-          // group 0 = the marker-line BGL; group 1 = the shared coverage joint.
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
         vertex: { module: vsOccludeModule, entryPoint: 'vsOcclude', buffers: vertexBuffers },
@@ -295,15 +153,12 @@ export function createMarkerLineRenderer(
       });
     }
 
-    // ── Buffers ───────────────────────────────────────────────────────────
     uniformBuffer = device.createBuffer({
       label: 'marker-line-uniforms',
       size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // The corner buffer is tiny (32 bytes, 4 × vec2) and static — upload once
-    // at construction and reuse across every frame.
     cornerBuffer = device.createBuffer({
       label: 'marker-line-corners',
       size: CORNER_BYTES,
@@ -311,7 +166,6 @@ export function createMarkerLineRenderer(
     });
     device.queue.writeBuffer(cornerBuffer, 0, UNIT_QUAD_STRIP_CORNERS);
 
-    // ── Bind group ────────────────────────────────────────────────────────
     bindGroup = device.createBindGroup({
       label: 'marker-line-bg',
       layout: bindGroupLayout,
@@ -319,33 +173,19 @@ export function createMarkerLineRenderer(
     });
   }
 
-  // ── public methods (closures over the locals above) ────────────────────
-
   function setLines(lines: MarkerLine[]): void {
     currentLineCount = 0;
 
-    // A roster crossing a power-of-two boundary is rare, never per frame, so a
-    // full buffer rebuild here is cheap. The instance buffer is a vertex buffer
-    // bound per draw, so no bind group pins the old one.
+    // Rare, never per frame; the instance buffer is bound per draw, so no bind group pins the old one.
     if (lines.length > capacity) allocate(2 ** Math.ceil(Math.log2(lines.length)));
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
 
-      // Pack 14 floats into the CPU scratch buffer at stride 14 (56 bytes):
-      //
-      //   [0..2]  fromWorld.xyz  — line start in world Mpc
-      //   [3]     pixelWidth     — full line width in CSS pixels
-      //   [4..6]  toWorld.xyz    — line end in world Mpc
-      //   [7]     fadeAlpha      — multiplied into colour by vertex stage
-      //   [8..11] color          — premultiplied rgba
-      //   [12]    occludeWeight  — 1 = take the per-pixel scene attenuation
-      //   [13]    occludeNearKm  — eye to the subject's near surface, km
-      //
-      // All fields are f32 so we write directly through the Float32Array —
-      // no Uint32Array aliasing needed (unlike labelRenderer's glyph buffer
-      // which carries a u32 labelIndex at offset 8).
-      const base = i * (LINE_INSTANCE_BYTES / 4); // 14 f32s per instance
+      // [0..2] fromWorld Mpc, [3] pixelWidth (CSS px), [4..6] toWorld Mpc, [7] fadeAlpha,
+      // [8..11] premultiplied rgba, [12] occludeWeight (1 = take scene attenuation),
+      // [13] occludeNearKm (eye to the subject's near surface).
+      const base = i * (LINE_INSTANCE_BYTES / 4);
       instanceBuf[base + 0] = line.fromWorld[0];
       instanceBuf[base + 1] = line.fromWorld[1];
       instanceBuf[base + 2] = line.fromWorld[2];
@@ -364,7 +204,6 @@ export function createMarkerLineRenderer(
       currentLineCount++;
     }
 
-    // Upload to GPU only when a real device is present.
     if (!device) return;
 
     if (gpuInstanceBuffer && currentLineCount > 0) {
@@ -397,20 +236,11 @@ export function createMarkerLineRenderer(
     }
     if (currentLineCount === 0) return;
 
-    // Pack uniforms (80 bytes = CameraUniforms prefix only).  The pad
-    // float 19 stays zero via Float32Array zero-init — the shared writer
-    // leaves it untouched by design.
+    // The pad float 19 stays zero: the shared writer leaves it untouched.
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
-    // Pipeline selection: an occlusion instance draws through its occlusion
-    // pipeline only when the scene views are supplied THIS frame, binding the
-    // group(1) coverage joint rebuilt from them. With none (e.g. no foreground
-    // body rendered this frame), it falls back to the plain pipeline and draws
-    // the connectors un-occluded — a valid draw, NOT an occlusion draw with
-    // group(1) left unbound. A non-occlusion instance (occludePipeline null)
-    // always takes the plain path.
     if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
@@ -426,11 +256,8 @@ export function createMarkerLineRenderer(
       pass.setPipeline(plainPipeline);
       pass.setBindGroup(0, bindGroup);
     }
-    // Buffer slot 0: static corner quad (4 vertices, broadcast across instances).
     pass.setVertexBuffer(0, cornerBuffer);
-    // Buffer slot 1: per-line instance data.
     pass.setVertexBuffer(1, gpuInstanceBuffer);
-    // 4 vertices per triangle-strip quad × N line instances.
     pass.draw(4, currentLineCount, 0, 0);
   }
 
@@ -452,8 +279,6 @@ export function createMarkerLineRenderer(
     lineCount,
     destroy,
   };
-  // `satisfies Renderer` confirms the shared label+destroy contract at
-  // compile time without widening the static type seen by consumers.
   renderer satisfies Renderer;
   return renderer;
 }

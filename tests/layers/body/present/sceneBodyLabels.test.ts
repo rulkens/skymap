@@ -7,8 +7,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { compressBrightness } from '../../../../src/utils/color/compressBrightness';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// The caller passes the per-frame body snapshot; these tests use the J2000
-// instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
+// RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc throughout.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get(asSceneBodyId('earth'))!.positionMpc;
 
@@ -16,28 +15,20 @@ describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
   it('emits one label per scene body (Earth + planets, no mesh body)', () => {
-    // The seeded stars, the Sun and the craft are not captioned here: they
-    // caption from their Layer's own producer, and an anchored scan is ground.
     expect(labels).toHaveLength(1 + SCENE_PLANETS.length);
   });
 
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {
-    // RENDER_ORIGIN_MPC is [0,0,0], so the renderOrigin-relative worldPos
-    // equals the absolute body position.
     const earth = labels.find((label) => label.text === 'Earth')!;
     expect(earth.worldPos).toEqual([...EARTH_POS]);
   });
 
   it('a body caption position tracks the snapshot when simDays changes', () => {
-    // Earth + planets read their anchor from the passed snapshot, so a DIFFERENT
-    // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
-    // to the new world position — the label FOLLOWS the body.
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
     const laterLabels = sceneBodyLabels(laterStates);
 
     const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
     const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;
-    // RENDER_ORIGIN is the Sun, so worldPos == the snapshot position exactly.
     expect(earthLater.worldPos).toEqual([...laterStates.get(asSceneBodyId('earth'))!.positionMpc]);
     expect(earthLater.worldPos).not.toEqual(earthNow.worldPos);
   });
@@ -58,16 +49,11 @@ describe('sceneBodyLabels', () => {
   });
 
   it('sizes captions comparably to famous labels (shares the famous pixel clamps)', () => {
-    // Parity treatment: a scene-body caption must clamp to the SAME projected-em
-    // pixel band as a famous-galaxy label, and by reference to the one
-    // FAMOUS_LABEL_STYLE constant — not a re-typed 30/150 pair — so a future
-    // retune of the famous band carries here instead of silently drifting apart.
+    // By reference to FAMOUS_LABEL_STYLE, not a re-typed pair, so a retune carries here.
     for (const label of labels) {
       expect(label.minPixelSize).toBe(FAMOUS_LABEL_STYLE.minPixelSize);
       expect(label.maxPixelSize).toBe(FAMOUS_LABEL_STYLE.maxPixelSize);
     }
-    // And it is a genuine bump off the retired painted-on-body 13/44 band —
-    // guards against the constants being re-pointed back to the old small tags.
     expect(FAMOUS_LABEL_STYLE.minPixelSize).toBeGreaterThan(13);
     expect(FAMOUS_LABEL_STYLE.maxPixelSize).toBeGreaterThan(44);
   });
@@ -78,7 +64,6 @@ describe('sceneBodyLabels', () => {
       expect(label.id).toMatch(/^sceneBody-[a-z0-9-]+$/);
       expect(label.alignX).toBe('center');
     }
-    // ids are unique — one caption per body, addressable for future fades.
     expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length);
   });
 });

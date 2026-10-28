@@ -1,9 +1,6 @@
 /**
- * zoneOfAvoidance — the dust-band exhibit, framed just outside the Milky Way
- * looking down the galactic plane, where the wedge the catalogs cannot see
- * through cuts across the galaxy field. The distance is dictated by the band's
- * own scale window, not by taste — see `FRAMING_MPC`. Copy is hand-written and
- * user-owned; nothing generates this file.
+ * zoneOfAvoidance — the dust-band exhibit, framed just outside the Milky Way looking down the
+ * galactic plane (distance: see `FRAMING_MPC`). Copy is hand-written and user-owned.
  */
 
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
@@ -16,20 +13,13 @@ import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
 import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
-// The band is the subject, so the exhibit forces it on rather than inheriting
-// it: it boots enabled, but a viewer who switched it off in the panel would
-// otherwise arrive at a view of nothing.
+// Forced on: a viewer who switched the band off in the panel would otherwise arrive at nothing.
 const BAND_ON = { ...zoneOfAvoidanceInitialState, enabled: true };
 
-// The disc and its "you are here" label stay on: the band IS the plane of this
-// galaxy, and without the disc there is nothing to read the gap against.
+// Without the disc there is nothing to read the gap against.
 const MILKY_WAY_WITH_MARKER = { ...milkyWayInitialState, enabled: true, labelEnabled: true };
 
-/**
- * Only the band and the galaxies take clicks. The point of the exhibit is the
- * relationship between those two — a stray hit on a survey star or a cluster
- * ring opens an InfoCard about something the copy never mentions.
- */
+// Only the band and the galaxies take clicks; any other hit opens a card the copy never mentions.
 const PICK_BAND_AND_GALAXIES = {
   kinds: {
     zoneOfAvoidance: true,
@@ -45,24 +35,15 @@ const PICK_BAND_AND_GALAXIES = {
 };
 
 /**
- * Eye 20° above the galactic plane on the ANTICENTRE side, so the aim runs
- * toward the galactic centre where the wedge is at its 10° bulge width rather
- * than the 3° it narrows to the other way (`ZONE_OF_AVOIDANCE_SHELL`).
- * Derived through `orbitAnglesLookingAlong` against the ecliptic basis — the
- * default orientation — never a hand-rolled inverse. POSITIVE pitch is above
- * the plane: that helper solves `pitch = asin(-forward.y)`, and `-forward`
- * runs from target to EYE. Yaw is then swung off the exact centre so the band
- * crosses frame-left, clearing the overlay's right-hand notes column.
+ * Eye 20° above the galactic plane on the ANTICENTRE side, aiming at the centre where the wedge
+ * is 10° wide, not 3° (`ZONE_OF_AVOIDANCE_SHELL`). Derived via `orbitAnglesLookingAlong`, never a
+ * hand-rolled inverse; POSITIVE pitch is above the plane (`pitch = asin(-forward.y)`, and
+ * `-forward` runs target to EYE). Yaw is swung off-centre so the band clears the notes column.
  */
 const GALACTIC_LATITUDE_YAW = -3.15;
 const GALACTIC_LATITUDE_PITCH = 0.263728;
 
-/**
- * LOAD-BEARING, and not a framing choice: the band is only drawn between
- * roughly 0.15 Mpc and 6 Mpc. The `zoneOfAvoidance` entry's `veil` band is an
- * approach window composed with a recede one (full at 2 Mpc, gone by 6), because the guide
- * is scoped to the Milky-Way-context shot. Frame this exhibit at cosmic-web distances and it renders nothing at all.
- */
+/** LOAD-BEARING: the band's `veil` window draws it only between ~0.15 and 6 Mpc (full at 2); cosmic-web distances render nothing. */
 const FRAMING_MPC = 1.2;
 
 export const zoneOfAvoidance: Exhibit = {

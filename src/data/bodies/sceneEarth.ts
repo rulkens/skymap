@@ -1,10 +1,6 @@
 /**
- * SCENE_EARTH — Earth's identity-only scene record (strictly the Earth–Moon
- * barycentre), projected from the fold's one `EarthBody` row, authored in the
- * body Layer's `bodies/earth.ts`.
- *
- * Position and orientation are NOT baked: they are derived per sim-instant
- * from `ORBITAL_ELEMENTS` by `deriveBodyStates`.
+ * SCENE_EARTH — Earth's identity-only record (strictly the Earth–Moon barycentre), projected
+ * from the fold's one `EarthBody` row. Position and orientation come from `deriveBodyStates`.
  */
 
 import type { EarthBody } from '../../@types/scene/EarthBody';

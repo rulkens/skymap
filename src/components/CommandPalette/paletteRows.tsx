@@ -56,11 +56,7 @@ const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, seconda
 
 const EARTH_CHIP = <span className={styles.source}>Earth</span>;
 
-/**
- * Shared render for the `place` and `layer` arms: the first name, the rest as
- * aliases, and an optional source chip. A layer row shows the captured card shot
- * of its focus id when one exists (the craft keep theirs); a place is a glyph.
- */
+/** Shared render for the `place` and `layer` arms; only a layer row shows a captured card shot, a place is a glyph. */
 function glyphRowView(
   m: Extract<ScoredRow, { kind: 'place' | 'layer' }>,
   chip?: ReactNode,
@@ -147,12 +143,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // Seeded-star row — captured card shot when one exists (see `shotOrGlyph`),
-  // else a letter glyph. Aliases come from the same lookup the ranker scores
-  // over, so a row shows exactly the names it can be found by; the chip is
-  // the star's constellation or, failing that, its scale regime (e.g.
-  // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre").
+  // Aliases come from the lookup the ranker scores over, so a row shows exactly the names it can be found by.
   starCatalog: (m) => {
     if (m.kind !== 'starCatalog') return EMPTY_ROW_VIEW;
     const label = paletteRowLabel(m).name;
@@ -223,14 +214,10 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
-  // Layer-published row — a captured card shot of its focus id when one exists,
-  // else a glyph. The chip is the entry's own category tag (a craft's kind), never
-  // the publishing Layer's name, which is not a label the user would recognise.
+  // The chip is the entry's own category tag (a craft's kind), never the publishing Layer's name.
   layer: (m) =>
     m.kind !== 'layer'
       ? EMPTY_ROW_VIEW
       : glyphRowView(m, m.entry.chip && <span className={styles.source}>{m.entry.chip}</span>),
-  // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
-  // here is on the one body.
   place: (m) => (m.kind !== 'place' ? EMPTY_ROW_VIEW : glyphRowView(m, EARTH_CHIP)),
 };

@@ -1,9 +1,7 @@
 /**
- * LAYER_BODY_ROWS: every composed Layer's body rows, folded by direct import
- * as `data/sources.ts` folds source rows. Rule: a host's Layer before the
- * Layers whose rows hang off it (the body Layer's Earth before the craft that
- * orbit it). The solver reorders by focus, so this is reading order, not a
- * correctness need; the composition's order is not read here.
+ * LAYER_BODY_ROWS: every composed Layer's body rows, folded by direct import as
+ * `data/sources.ts` does. A host's Layer comes before the Layers hanging off it; the solver
+ * reorders by focus, so this is reading order only.
  */
 
 import type { LayerBody } from '../../@types/engine/layer/LayerBody';

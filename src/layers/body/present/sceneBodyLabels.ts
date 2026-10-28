@@ -1,38 +1,11 @@
 /**
- * sceneBodyLabels — name captions for Earth and the planets, the true-scale
- * foreground bodies.
- * No mesh body: the craft caption through the missions Layer's
- * `produceMissionCaptions`, and an anchored scan is ground, so it goes
- * uncaptioned. The seeded stars, the Sun and the Galactic Centre are not scene
- * bodies here, and caption through their Layers.
+ * sceneBodyLabels — name captions for Earth and the planets (craft caption through the
+ * missions Layer; stars, the Sun and the Galactic Centre through theirs). Tints come from the
+ * body records (planet `albedo`, a fixed Earth blue), so no colour table drifts from the seeds.
  *
- * The scene bodies render true-scale in the foreground/HDR passes, so at
- * almost every zoom level they are sub-pixel and impossible to locate by
- * eye. These labels anchor a name to each body's world position, giving
- * the descent toward the solar system something to aim at.
- *
- * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS`), each tinted by
- * its own authored colour: a planet's brightened `albedo`, and a fixed tint for
- * Earth, which carries a texture instead of a colour. Deriving the tints from the body records keeps this
- * file free of a parallel colour table that would drift from the seeds.
- *
- * ### Why the foreground projection, not the main one
- *
- * The main camera projection is pinned at near = 0.01 Mpc.  At solar-system
- * zoom the bodies sit ~1e-13 Mpc from the camera — far inside that near
- * plane — so the normal label path (which projects with `ctx.vp`) would
- * clip them away.  `labelsNearPass` instead draws these through the
- * NEAR0 slab view (`view.vp`), whose near plane is proportional to
- * `cam.distance` and so always contains the bodies.
- *
- * ### Why renderOrigin-relative positions
- *
- * The NEAR0 slab view is built relative to `renderOrigin`: every position
- * handed to it must already have the origin subtracted (the same contract
- * `composeBodyMvp` honours for the sphere MVPs).  With `RENDER_ORIGIN_MPC`
- * fixed at the Sun ([0, 0, 0]) the subtraction is numerically a no-op
- * today, but doing it here keeps the labels correct by construction if a
- * future floating origin moves.
+ * Captions go through the NEAR0 slab view (`labelsNearPass`, `view.vp`), not `ctx.vp`: the
+ * main projection's near plane is 0.01 Mpc and the bodies sit ~1e-13 Mpc away, so it would
+ * clip them. The slab view is renderOrigin-relative, as `composeBodyMvp` is.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -44,11 +17,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 
-/**
- * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
- * so this is the one hand-authored tint in the set — the same Earth blue
- * the captions have always used.
- */
+// `EarthBody` carries a texture rather than a colour, so this is the one authored tint.
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
 
 /**
@@ -59,15 +28,8 @@ const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
 const PLANET_TINT_GAMMA = 0.3;
 
 /**
- * Build one name label per core seeded scene body, positioned relative to
- * `RENDER_ORIGIN_MPC` for the foreground view-projection.
- *
- * Every body reads its position from the caller's `bodyStates` snapshot (the
- * per-frame `deriveBodyStates(simDays)` map), so Earth's and the planets'
- * captions FOLLOW them as the sim clock advances. The caller re-invokes this only
- * when the snapshot actually changes — a paused clock returns the same map by
- * reference, so a fresh instant is the only thing that rebuilds the captions
- * (see `labelsNearPass`'s memo).
+ * Positions come from the caller's `bodyStates` snapshot, so captions follow the sim clock;
+ * a paused clock returns the same map by reference and `labelsNearPass` memoises on that.
  */
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [

@@ -1,12 +1,6 @@
 /**
- * heliocentricPlanet — row maker for a HELIOCENTRIC planet: builds its
- * identity-only record. Position and orientation are NOT baked here — they are
- * derived per sim-instant from the same `ORBITAL_ELEMENTS` table by
- * `deriveBodyStates` (the trail this body sits on reads the one table too, so
- * body and trail stay on the same ellipse). Moons are NOT built through this —
- * they are geocentric (`satelliteBody`).
- *
- * Lives beside the body rows in `bodies/`: authoring policy only the body Layer's rows use.
+ * heliocentricPlanet — row maker for a HELIOCENTRIC planet's identity-only record; position
+ * comes from `ORBITAL_ELEMENTS` via `deriveBodyStates`. Moons are geocentric: `satelliteBody`.
  */
 
 import { BODY_GLINT_MAX_PX } from '../../../../data/bodies/bodyGlintMaxPx';

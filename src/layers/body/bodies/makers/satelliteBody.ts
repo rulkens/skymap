@@ -1,11 +1,6 @@
 /**
- * satelliteBody — row maker for a MOON: builds its identity-only record. Like
- * `heliocentricPlanet` it bakes no position — a moon's world position rides its
- * parent planet's current position and is derived per sim-instant by
- * `deriveBodyStates` (one parent hop; there is no moon-of-a-moon), reading the
- * same `ORBITAL_ELEMENTS` table. This maker subsumes Earth's Moon too.
- *
- * Lives beside the body rows in `bodies/`: authoring policy only the body Layer's rows use.
+ * satelliteBody — row maker for a MOON's identity-only record (Earth's Moon included). A moon
+ * rides its parent planet's position, one hop in `deriveBodyStates`; there is no moon-of-a-moon.
  */
 
 import { BODY_GLINT_MAX_PX } from '../../../../data/bodies/bodyGlintMaxPx';

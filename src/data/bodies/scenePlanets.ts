@@ -1,9 +1,6 @@
 /**
- * scenePlanets — planet + moon identity rows, projected from the fold of every
- * Layer's body rows (authored in the body Layer's `bodies/`). Order is the pick
- * order: a pick decodes to a body by array position (see `bodySelectionRow.ts`'s
- * `resolvePick`), so rows only ever append. Positions are not baked here but
- * derived per instant by `deriveBodyStates`.
+ * scenePlanets — planet + moon identity rows. Order is the pick order: a pick decodes to a
+ * body by array position (`bodySelectionRow.ts`'s `resolvePick`), so rows only ever append.
  */
 
 import type { PlanetBody } from '../../@types/scene/PlanetBody';

@@ -10,23 +10,17 @@ export const CHARON: LayerBody = {
     datumRadiusM: 606000, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
     albedo: [0.4, 0.39, 0.38],
   }),
-  // Charon comes from a different page than the other moons' satellite() rows: JPL
-  // sats/elem/sep.html "Satellites of Pluto" (mean EQUATORIAL orbital elements, epoch
-  // 2000-01-01.5 TDB, ephemeris PLU060; Brozović & Jacobson 2024, AJ 167:256).
+  // JPL sats/elem/sep.html "Satellites of Pluto" (mean EQUATORIAL elements, epoch 2000-01-01.5
+  // TDB, ephemeris PLU060; Brozović & Jacobson 2024, AJ 167:256).
   position: {
     kind: 'orbit',
     elements: satellite({
-      // Charon, plutocentric. Verbatim: a=19600. e=0.000 ω=0.0 M=304.1 i=0.0 node=0.0
-      // P=6.387222 Papsis=- Pnode=-. Given DIRECTLY in Pluto's own equatorial plane, with no
-      // per-moon Laplace pole column unlike elem.html, so the pole below is Pluto's own.
-      // Papsis/Pnode are published "-" (undefined, not 0.000): e=0.000 and i=0.0 leave periapsis
-      // and node geometrically meaningless. Passed as 0, which moonRatesFromPeriods's
-      // MIN_PRECESSION_YEARS guard freezes to zero drift — the same degenerate case as
-      // Deimos/Dione/Tethys (deimos.ts, dione.ts, tethys.ts). LANDMINE: the legend calls P
-      // "sidereal period", the word that routes the Moon through moonRatesFromSiderealPeriods
-      // instead, but with both precession rates frozen meanAnomalyRate = meanLongitudeRate − 0 − 0,
-      // so the two readings of P coincide for THIS row only. Revisit if JPL ever publishes nonzero
-      // e/i.
+      // Verbatim: a=19600. e=0.000 ω=0.0 M=304.1 i=0.0 node=0.0 P=6.387222 Papsis=- Pnode=-.
+      // Given in Pluto's own equatorial plane, so the pole below is Pluto's. Papsis/Pnode are
+      // published "-" (e=0, i=0 make them meaningless); passed as 0, which
+      // moonRatesFromPeriods's MIN_PRECESSION_YEARS guard freezes (as deimos/dione/tethys).
+      // LANDMINE: the legend calls P "sidereal period" (the Moon's moonRatesFromSiderealPeriods
+      // route), but with both precession rates frozen the two readings coincide for THIS row only.
       id: 'charon',
       focusId: 'pluto',
       semiMajorKm: 19600,
@@ -39,25 +33,17 @@ export const CHARON: LayerBody = {
       periodKind: 'anomalistic',
       apsidalPrecessionYears: 0.0,
       nodalPrecessionYears: 0.0,
-      // Pluto's IAU pole (WGCCRE 2015), not a Charon one: the pair is mutually tidally locked,
-      // so the poles coincide exactly — see this file's `rotation` and pluto.ts's for the same
-      // lock's other three shared numbers.
+      // Pluto's IAU pole (WGCCRE 2015): the pair is mutually tidally locked, so the poles coincide.
       poleRaDeg: 132.993,
       poleDecDeg: -6.163,
-      // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric position
-      // rather than orbiting the Pluto–Charon barycentre, which sits ~2130 km from
-      // Pluto's CENTRE (JPL GMs 106.1 / 869.3 put it ~11% along the 19600 km
-      // separation) — 1.8 Pluto radii, so ~940 km above the surface and visibly
-      // off, unlike the same approximation Earth–Moon already makes. Deliberate;
-      // the fix is scoped in docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
+      // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric position, not orbiting
+      // the barycentre ~2130 km from its centre (JPL GMs 106.1 / 869.3, ~11% of 19600 km), ~940 km
+      // above the surface. Deliberate; see docs/backlog/2026-08-16-barycentric-orbit-pairs.md.
       color: CHARON_GREY,
     }),
   },
-  // LANDMINE — what this row shares with Pluto's is physics, not copy-paste: mutual tidal lock
-  // means one spin axis (identical pole), each prime meridian is the sub-companion one (W₀
-  // exactly 180° apart), and rotation and orbit are one quantity measured twice (Ẇ =
-  // 360°/6.387222 d, Charon's period in this file's orbit row; 56.3625225 × 6.387222 =
-  // 359.99994°, the residual being their rounding).
+  // Shared with Pluto's row by tidal lock, not copy-paste: identical pole, W₀ exactly 180° apart,
+  // and Ẇ = 360°/6.387222 d (56.3625225 × 6.387222 = 359.99994°, rounding residual).
   rotation: {
     id: 'charon',
     poleRaDeg: 132.993,

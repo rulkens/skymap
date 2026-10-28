@@ -1,10 +1,8 @@
 /**
  * rotationElements — J2000 rotation elements for bodies with a modelled facing:
- * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. `orbitalElements`
- * places a body; this aims it. A body with no row is rotation-invariant and
- * falls back to `IDENTITY_MAT3`. The rows live with their Layer's body rows (Archinal et al.
- * (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3; Earth's spin is the IERS one, see
- * its row); this table folds them through `LAYER_BODY_ROWS`.
+ * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. A body with no row
+ * falls back to `IDENTITY_MAT3`. Rows live with their Layer's body rows (Archinal et al.
+ * (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3; Earth's spin is IERS).
  */
 
 import type { RotationElements } from '../../@types/scene/RotationElements';

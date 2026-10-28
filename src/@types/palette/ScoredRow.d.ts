@@ -1,7 +1,6 @@
 /**
- * ScoredRow — the command palette's row vocabulary. Kept free of React / CSS imports on purpose: the pure
- * ranking pipeline (`rankPaletteMatches`) needs it, and reaching it through the JSX `paletteRows` module would
- * drag React and the CSS module into a pure util.
+ * ScoredRow — the command palette's row vocabulary, free of React / CSS imports so the pure
+ * `rankPaletteMatches` need not pull in the JSX `paletteRows` module.
  */
 
 import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
@@ -15,17 +14,10 @@ import type { EarthPlace } from './EarthPlace';
 import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
 
 /**
- * One scored row, ready to render.  `kind` discriminates the payload shapes;
- * `ROW_VIEW` dispatches on it for the rendered text and `utils/palette/actionForRow`
- * for the resulting `PaletteAction`.  `milkyWay` carries no payload — it's the singleton
- * FocusableTarget, resolved by the saga.  `starCatalog` carries a seeded star with the
- * source + index its ref needs; it is scored and ranked in like a famous
- * row (see `rankPaletteMatches`).  `exhibit` and `tour` carry a registry row each
- * (`APP_EXHIBITS`, `tourRegistry`); `place` carries an `EarthPlace` — a
- * search-only point, not a focusable ref — ranked the same way. Those three
- * are the kinds that resolve to something other than a focus. `layer` carries a
- * row a Layer published through its `search` feed, whose `id` is the durable
- * focus id that Layer's own `SelectionKindRow.focusId` claims.
+ * One scored row. `ROW_VIEW` and `utils/palette/actionForRow` dispatch on `kind`. `exhibit`,
+ * `tour` and `place` (a search-only `EarthPlace`, not a focusable ref) resolve to something
+ * other than a focus. `layer` carries a Layer's `search` feed row, whose `id` is the focus id
+ * that Layer's `SelectionKindRow.focusId` claims.
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousGalaxyMetaEntry; score: number }

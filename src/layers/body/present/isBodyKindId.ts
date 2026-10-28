@@ -1,8 +1,6 @@
 /**
- * isBodyKindId — is `id` a body the `body` selection kind names: Earth, a planet or moon, one of
- * the `BODY_PICK_ROWS` ids? The craft are the missions Layer's `craft` kind and the Earth scenes
- * the earthScenes Layer's `earthScene` kind, neither in those rows, so the three kinds'
- * `body-<id>` claims are disjoint by construction.
+ * isBodyKindId — is `id` one of the `BODY_PICK_ROWS` ids the `body` kind names? Craft and Earth
+ * scenes are not in those rows, so the three kinds' `body-<id>` claims are disjoint.
  */
 
 import { BODY_PICK_ROWS } from '../../../data/bodies/bodyPickRows';

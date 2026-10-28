@@ -2,11 +2,8 @@
  * liveFocusRow — the focused SelectionRow with its `positionMpc` corrected to
  * the LIVE value, for debug tooling that runs OUTSIDE the frame loop.
  *
- * Only the 'body', 'craft' and 'earthScene' arms ever go stale: the composed resolver's `extractRow` resolves them once,
- * at the hardcoded CONST_J2000 epoch (see its header), so a row read long
- * after selection can sit years off the pose it's dumped next to. Every other
- * arm already carries a live-resolved position. Identity fields
- * (type/id/label) pass through unchanged.
+ * Only 'body', 'craft' and 'earthScene' go stale: `extractRow` resolves them once at the
+ * hardcoded CONST_J2000 epoch, so a long-held row can sit years off the pose it's dumped next to.
  */
 
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';

@@ -1,12 +1,9 @@
 /**
- * ORBIT_REACH_BY_REGION — the seeded scene's orbital reach per region, derived
- * once so the orbit-trail cull costs one comparison per region rather than a
- * table walk per frame. Conservative: it never drops a visible orbit.
+ * ORBIT_REACH_BY_REGION — orbital reach per region, derived once so the orbit-trail cull is
+ * one comparison per region per frame. Conservative: never drops a visible orbit.
  *
- * Over the non-mesh `ORBITAL_ELEMENTS`, not the body Layer's `BODY_TRAIL_ELEMENTS`: the
- * galactic-centre region's reach must still count the S-star orbits even
- * though their TRAIL is now the star Layer's `guides.orbitTrails`, not core's
- * — reworking this into a roster-derived reach is the backlog item.
+ * Over the non-mesh `ORBITAL_ELEMENTS`, not `BODY_TRAIL_ELEMENTS`: the galactic-centre
+ * region's reach must still count the S-star orbits, whose trail is the star Layer's.
  */
 
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
