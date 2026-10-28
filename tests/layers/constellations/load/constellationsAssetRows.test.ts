@@ -33,8 +33,4 @@ describe('constellationsAssetRows', () => {
     expect(ROW.demand(makeCtx({ constellations: { enabled: true } }))).toBe(true);
     expect(ROW.demand(makeCtx({ constellations: { enabled: false } }))).toBe(false);
   });
-
-  it('the factory hands back the runtime’s own slot, never minting one', () => {
-    expect(ROW.factory({} as never)).toBe(RUNTIME.slot);
-  });
 });

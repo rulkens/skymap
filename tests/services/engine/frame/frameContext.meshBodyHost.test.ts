@@ -13,8 +13,7 @@ import { assembleOrbitCamera } from '../../../../src/services/engine/camera/asse
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -36,16 +35,12 @@ const STATE = {
     galaxyPickRenderer: {},
     renderTargets: {},
     compositor: {},
-    texturedBodyRenderer: null,
   },
   terrain: FLAT_TERRAIN,
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
-  slabRows: [],
+  slabRows: BODY_SLAB_ROWS,
   visibilityEntries: [],
-  data: {
-    bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },
-  },
   settings: {
     bodies: { items: {} },
   },
@@ -64,8 +59,6 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       petunias[1] - earth[1],
       petunias[2] - earth[2],
     ]);
-    // The eye sits between Earth and the petunias, so the orbit pose's
-    // target-to-eye direction is the inward one.
     const toEye: Vec3 = [-outward[0], -outward[1], -outward[2]];
     const pose: CameraPose = {
       target: [petunias[0], petunias[1], petunias[2]],
@@ -79,8 +72,6 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       {
         cam: assembleOrbitCamera(pose, PROJECTION, IDENTITY, IDENTITY),
         arm: absoluteArm(pose),
-        // World arm, no focus: the same value `pivotSurfaceRangeMpc` used to
-        // fall back to when this test omitted `altitudeMpc`.
         altitudeMpc: pose.distance,
         nowMs: 0,
         simDays: CONST_J2000,

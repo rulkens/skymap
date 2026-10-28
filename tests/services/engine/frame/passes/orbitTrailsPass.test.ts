@@ -1,5 +1,5 @@
 /**
- * orbitTrailsPass — unit tests for the conic orbit-trails content row.
+ * orbitTrailsPass — the conic orbit-trails content row.
  *
  * Load-bearing: (1) the f64 seam, every conic's Ginv composes from `view.slab.vp`, NOT the
  * f32-narrowed `view.vp` (identity-pinned via a mocked `composeOrbitConic`); (2) ONE
@@ -38,18 +38,15 @@ import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalEle
 import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 
-// Mock composeOrbitConic so the test can (a) assert which vp it consumed by
-// object identity and (b) hand each conic recognisable Float32Arrays. The real
-// composition math is covered by composeOrbitConic's own tests. Ginv is a
-// 12-float padded mat3; clipBasis is the (Cc, Ac, Bc) triple the ribbon vertex
-// stage consumes. Distinct sentinel values so the packing offsets are pinned.
+// Mock composeOrbitConic to assert which vp it consumed by identity and hand each conic
+// recognisable Float32Arrays (Ginv: 12-float padded mat3; clipBasis: the (Cc, Ac, Bc) triple).
+// Distinct sentinels pin the packing offsets.
 type ConicOut = {
   ginv: Float32Array;
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
@@ -86,10 +83,8 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', async (impor
 
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
-// The J2000 oracle `SCENE_ORBIT_CONICS` used to provide, hand-derived here with
-// its own helpers (`keplerianEllipse` for the ellipse, the snapshot body less its
-// raw Kepler offset for the focus the trail anchors on) so the expected values
-// never come from the layer under test.
+// The J2000 oracle, hand-derived with its own helpers (`keplerianEllipse`; the snapshot body less
+// its raw Kepler offset for the trail's focus) so expected values never come from the layer.
 function conicAtJ2000(el: OrbitalElements) {
   const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(el);
   const bodyMpc = deriveBodyStates(CONST_J2000).get(el.id)!.positionMpc;
@@ -126,7 +121,6 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as FrameView;
 
-// Every scene body the frame admits with every catalog on: the planets and the seeded stars.
 const sceneBodiesAt = (simDays: number) =>
   positionedBodiesOf(
     [...SCENE_PLANETS, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
@@ -137,11 +131,9 @@ const sceneBodiesAt = (simDays: number) =>
 // this instead of restating (canvasSize, fovYRad).
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
 
-// Beyond the handle check, enabled reads ctx.cam.distance (the shared
-// foreground gate) and the camera POSITION + projection knobs (the
-// whole-layer sub-pixel cull). The fixture camera sits AT the origin —
-// inside the system's reach — where the cull always stays enabled, so the
-// `distance` argument alone drives the foreground-gate assertions.
+// enabled also reads ctx.cam.distance (foreground gate) and the camera position + projection
+// knobs (sub-pixel cull). The camera sits AT the origin, inside the system's reach, so the
+// cull stays enabled and `distance` alone drives the gate assertions.
 function makeCtx(distance: number): FrameView {
   return {
     snapshot: { nowMs: 0, meshBodies: [], sceneBodies: sceneBodiesAt(CONST_J2000) },
@@ -151,16 +143,11 @@ function makeCtx(distance: number): FrameView {
   } as unknown as FrameView;
 }
 
-// draw reads ctx.drawCamPos + ctx.drawPxPerRad for the per-orbit apparent-size
-// cull/fade, and ctx.simDays to re-derive each conic. Evaluate at CONST_J2000 so
-// the propagated elements equal their tabulated values and the derived conics
-// reproduce the J2000 oracle (the zero-change point). Park the camera a hair
-// off the Sun (render origin): the heliocentric planet orbits then project large
-// (uncalled) while the tiny geocentric moon orbits — centred at their distant
-// planets — stay sub-pixel and cull. No single pose can show every orbit
-// (planets and their moons want opposite zooms), so the test asserts the seam
-// for ALL composed conics and the layout for the first (Mercury,
-// MERCURY_CONIC, always visible here).
+// draw reads ctx.drawCamPos, ctx.drawPxPerRad (per-orbit cull/fade) and ctx.simDays (re-derives
+// each conic); evaluated at CONST_J2000 so conics reproduce the J2000 oracle. The camera sits a
+// hair off the Sun: heliocentric planet orbits project large, tiny geocentric moon orbits stay
+// sub-pixel and cull. No single pose shows every orbit, so the seam is asserted for ALL composed
+// conics and the layout for the first (Mercury, MERCURY_CONIC, always visible).
 function makeDrawCtx(): FrameView {
   return {
     snapshot: {
@@ -191,7 +178,6 @@ function makeDrawCtx(): FrameView {
 // asymmetric so a dropped or swapped axis in the km conversion shows up.
 const DEPTH_ROW_EYE_M: Vec3 = [6.6e6, -1.2e6, 3.4e5];
 
-// The depth texture the sampled row stamped; identity is all the layer forwards.
 const DEPTH_VIEW_STUB = {} as GPUTextureView;
 
 // `ctx.renderTargets.farDepthView()`'s stand-in — what a null depth frame
@@ -229,7 +215,6 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
   };
 }
 
-/** Camera-at-`eye` frame at `simDays`, no body pose, deep-zoom distance. */
 function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
   return {
     snapshot: {
@@ -260,13 +245,7 @@ function makeState(
   opts: { impostorOn?: boolean; groups?: EngineState['orbitTrailGroups'] } = {},
 ): EngineState {
   return {
-    gpu: { orbitTrailRenderer, texturedBodyRenderer: null },
-    // The seeded body bag `sceneOccluderSpheres` reads beside the frame's
-    // scene bodies (every catalog admitted, `sceneBodiesAt`), so the occluder
-    // set is decided by apparent size alone.
-    data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: [] },
-    },
+    gpu: { orbitTrailRenderer },
     settings: {
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
@@ -298,10 +277,7 @@ describe('orbitTrailsPass.enabled', () => {
   it('gates on the renderer handle + the foreground distance over the boot-composed roster', () => {
     const state = makeState(makeRendererSpy());
     const view = makeNear0View();
-    // Null handle (pre-bootstrap): the handle check short-circuits before the
-    // ctx.cam read, so a bare ctx is safe.
     expect(orbitTrailsPass.enabled(makeState(null), CTX_STUB, view)).toBe(false);
-    // Handle present, camera inside the shared foreground gate.
     expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), view)).toBe(
       true,
     );
@@ -356,8 +332,6 @@ describe('orbitTrailsPass.draw', () => {
 
     const n = composeMock.mock.calls.length;
     expect(n).toBeGreaterThan(0);
-    // The load-bearing seam: EVERY composed Ginv comes from the slab's
-    // Float64Array vp — NOT the f32-narrowed view.vp.
     for (const call of composeMock.mock.calls) {
       expect(call[0]).toBe(view.slab.vp);
       expect(call[0]).not.toBe(view.vp);
@@ -384,8 +358,6 @@ describe('orbitTrailsPass.draw', () => {
     expect(call0[4]).toBe(view.viewportPx);
     expect(call0[5]).toBe(RENDER_ORIGIN_MPC);
 
-    // Exactly one draw for the whole batch, one packed record per composed
-    // conic — count == number composed.
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, args] = renderer.draw.mock.calls[0]!;
     const { instances: staging, count } = args;
@@ -393,11 +365,9 @@ describe('orbitTrailsPass.draw', () => {
     expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
 
-    // Staging layout for the first conic (instance 0, stride 34): colour +
-    // eccentricity at floats 12..15, mean anomaly at 16, fade alpha at 17
-    // (saturated — Mercury's orbit is large from the Sun), then the viewport
-    // (was a zeroed pad; now the ribbon vertex stage's divisor), then the
-    // clip basis at 20..31 and the visible arc at 32..33.
+    // Staging layout for the first conic (instance 0, stride 34): colour + eccentricity at floats
+    // 12..15, mean anomaly at 16, fade alpha at 17 (saturated: Mercury's orbit is large from the Sun),
+    // viewport at 18..19, clip basis at 20..31, visible arc at 32..33.
     expect(staging[12]).toBeCloseTo(first.color[0]);
     expect(staging[13]).toBeCloseTo(first.color[1]);
     expect(staging[14]).toBeCloseTo(first.color[2]);
@@ -409,10 +379,9 @@ describe('orbitTrailsPass.draw', () => {
   });
 
   it('the clip basis and viewport reach the packed record', () => {
-    // Task 6's other new floats: 20..31 (Cc/Ac/Bc, the ribbon vertex stage's
-    // screen-space bound) and 18..19 (viewportPx, its divisor — a landmine if
-    // left zeroed: the ribbon vertex shader divides by it, so a stray zero
-    // turns every ribbon vertex NaN with no visible error anywhere).
+    // 20..31 (Cc/Ac/Bc, the ribbon vertex stage's screen-space bound) and 18..19 (viewportPx, its
+    // divisor): a landmine if left zeroed, since a stray zero turns every ribbon vertex NaN with no
+    // visible error anywhere.
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
@@ -421,7 +390,6 @@ describe('orbitTrailsPass.draw', () => {
     const [, { instances: staging }] = renderer.draw.mock.calls[0]!;
     expect(staging[18]).toBe(view.viewportPx[0]);
     expect(staging[19]).toBe(view.viewportPx[1]);
-    // clipBasis = [Cc, Ac, Bc], each a length-4 padded sentinel from the mock.
     expect(Array.from(staging.slice(20, 24))).toEqual([301, 302, 303, 0]);
     expect(Array.from(staging.slice(24, 28))).toEqual([401, 402, 403, 0]);
     expect(Array.from(staging.slice(28, 32))).toEqual([501, 502, 503, 0]);
@@ -482,9 +450,7 @@ describe('orbitTrailsPass.draw', () => {
     // `world-mpc` row case: neither carries a body pose to unproject through.
     // A null depth frame must arrive bound to `ctx.renderTargets.farDepthView()`
     // — never `sampledDepth.view` — so the shader's FAR_DEPTH early-out, not an
-    // assumption about that texture's contents, is what makes it safe. The
-    // converse (a body-m row hands the sampled view) is pinned above, in
-    // 'derives the depth frame from the sampled row...'.
+    // assumption about that texture's contents, is what makes it safe.
     const renderer = makeRendererSpy();
 
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(null), makeDrawCtx(), makeState(renderer));
@@ -550,12 +516,9 @@ describe('orbitTrailsPass.draw', () => {
 
     orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
 
-    // Expected Moon centre = Earth's SNAPSHOT position + the Moon's focus-relative
-    // offset at t. The parent position is READ from the snapshot (Task 7), NOT
-    // re-derived, so this pins the rides-the-snapshot-parent contract rather than
-    // re-running the layer's own composition (no mirror). Only the Moon's
-    // focus-relative offset — which the snapshot does not carry — comes from
-    // keplerianEllipse, hand-composed onto the snapshot parent.
+    // Expected Moon centre = Earth's SNAPSHOT position + the Moon's focus-relative offset at t. The
+    // parent is READ from the snapshot, NOT re-derived (no mirror); only the Moon's focus-relative
+    // offset, which the snapshot does not carry, comes from keplerianEllipse.
     const moonEl = ORBITAL_ELEMENTS.find((e) => e.id === 'moon')!;
     const moonOffset = keplerianEllipse(propagateElements(moonEl, simDays)).centerOffsetMpc;
     const expected: Vec3 = [
@@ -585,9 +548,6 @@ describe('orbitTrailsPass.draw', () => {
     expect(moon[1]).toBeCloseTo(expected[1], 18);
     expect(moon[2]).toBeCloseTo(expected[2], 18);
 
-    // And it MOVED off the frozen J2000 centre — the whole point of re-deriving
-    // at t. Earth swept ~98° in 100 days, so the geocentric centre shifts far
-    // more than the lunar a·e.
     const j2000Moon = MOON_CONIC;
     const drift = Math.hypot(
       moon[0] - j2000Moon.centerMpc[0],
@@ -738,12 +698,8 @@ describe('orbitTrailsPass.draw', () => {
   });
 
   it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
-    // Same pose as "rides a moon trail on its propagated parent" above — parking
-    // the camera at Earth is what makes the Moon's tiny geocentric orbit survive
-    // the apparent-size cull. Regression for the user ruling: whale/petunias ride
-    // that same Earth focus on an even smaller 400 km ring, so if their rows ever
-    // leaked back into the draw loop they — not the Moon — would be the closest
-    // composed conic to Earth.
+    // Whale/petunias ride the same Earth focus on an even smaller 400 km ring, so if their rows leaked
+    // back into the draw loop they, not the Moon, would be the closest composed conic to Earth.
     composeMock.mockClear();
     const renderer = makeRendererSpy();
     const view = makeNear0View();
@@ -808,8 +764,6 @@ describe('orbitTrailsPass.draw', () => {
   it('culls every orbit and skips the draw when all are deep sub-pixel', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();
-    // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
-    // apparent-size cull threshold, so nothing is packed and no draw is issued.
     const farCtx = {
       snapshot: {
         simDays: CONST_J2000,
