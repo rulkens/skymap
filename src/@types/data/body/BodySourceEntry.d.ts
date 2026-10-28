@@ -2,7 +2,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 
 /**
  * Body-typed row of the SOURCE_REGISTRY — a true-scale near-field object in
- * the final descent (Earth, the Solar-System planets, the Sun).
+ * the final descent (Earth and the Solar-System planets; the Sun is a seeded star catalog).
  *
  * One `type` across all of them because they share every axis that matters to
  * the registry: seeded in code (a body's identity is its stable seed id, never

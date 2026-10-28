@@ -173,9 +173,9 @@ export const Source = {
    */
   Constellations: 25,
   /**
-   * The Sun — the descent's aim point and the render origin, a body row in its
-   * own right rather than a member of the curated star map. Modelling it as a
-   * row is what lets the star map's gate be a plain membership test instead of
+   * The Sun — the descent's aim point and the render origin, a one-star seeded
+   * catalog of its own rather than a member of the curated star map. Its own row
+   * is what lets the star map's gate be a plain membership test instead of
    * an id exemption threaded through the star layers and the caption pipeline.
    * Registry-key-only: the Sun's dot is drawn (and picked) by the star layers
    * over the shared seed table, so its pick carries the FamousStar code (21) —
