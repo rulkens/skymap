@@ -194,10 +194,11 @@ Each is its own commit, in this order. Every one but P1 preserves behaviour.
   - The **alt-az grid** (every 10° in altitude, 15° in azimuth) and the **meridian** are built in
     the local ENU frame and turned each frame by one `mat3` uniform from the site basis.
   - The **equatorial grid** (every 15° RA, 10° Dec) and the **celestial equator** are built in the
-    host's equatorial frame, whose pole is the third column of the host `orientation` (R9). On Earth
-    that frame is the world J2000 frame, since precession is not modelled (`rotationElements.ts`
-    header), so no Earth special case is needed. On a non-Earth host the RA origin is the host
-    equator's ascending node on the ICRS equator, the IAU convention. Name that in a comment.
+    host's equatorial frame, whose pole is the third column of the host `orientation` (R9). Since
+    #947 Earth's pole precesses (`rotationElements.ts`), so on Earth this is the grid **of date**,
+    not J2000, which is what turns overhead. RA zero is the host's own vernal equinox, the node of
+    its equator on its orbit plane: the equinox of date on Earth (equator ∩ ecliptic), Mars's
+    equinox on Mars. One rule for every host, with no Earth special case. Name it in a comment.
   - The **ecliptic** is world-fixed through `ECLIPTIC_FRAME` (`orbitPlaneFrames.ts:72-85`).
 - **Drawing.** Points at infinity, so the projection's translation drops out. Lines come out of
   `expandSegmentQuad` (with P1's clip) and `edgeBandMask`, one colour and width per grid. Lines
@@ -253,7 +254,8 @@ Test names are the contract. The plan pins each assertion.
 - The lens (P2) shipped with its own tests; see its plan.
 - `skyGridBasis.test.ts`:
   - `alt-az zenith is the site radial and north points to the host pole`
-  - `Earth's equatorial pole is the world +z`
+  - `Earth's equatorial pole is its precessed IAU pole at the sim date`
+  - `RA zero is the host's vernal equinox (its equator's node on its orbit plane)`
   - `Mars's equatorial pole is Mars's IAU pole`
 - `skyTakeover.test.ts`:
   - `Esc restores the entry camera.base and keeps a time change`
