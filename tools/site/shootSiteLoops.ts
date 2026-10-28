@@ -21,6 +21,7 @@ import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { SITE_LOOP_PLAN } from './siteLoopPlan';
+import { blendLoopSeam } from './utils/blendLoopSeam';
 import { loopVideoArgs } from './utils/loopVideoArgs';
 import { clockLoopYaw } from './utils/clockLoopYaw';
 import { loopYaw } from './utils/loopYaw';
@@ -55,6 +56,7 @@ try {
   for (const loop of rows) {
     const framesDir = join(MASTERS_DIR, loop.id);
     const frameCount = loop.seconds * SITE_LOOP_PLAN.fps;
+    const seamFrames = loop.motion === 'live' ? SITE_LOOP_PLAN.seamSeconds * SITE_LOOP_PLAN.fps : 0;
     const shot = siteShot(loop.shot);
     if (browser) {
       rmSync(framesDir, { recursive: true, force: true });
@@ -68,9 +70,12 @@ try {
           return { camera: state.camera.base, simDays: state.time.anchor.simDays };
         });
         // Frame 0 is the still; the frame after the last would be frame 0 again, which is the seam.
-        for (let frame = 0; frame < frameCount; frame++) {
+        // A live film is recorded a seam longer and blended afterwards, as nothing brings its scene back.
+        for (let frame = 0; frame < frameCount + seamFrames; frame++) {
           const turn = frame / frameCount;
-          if (loop.motion === 'orbit' || !('clockDays' in loop.motion)) {
+          if (loop.motion === 'live') {
+            // The scene moves on its own: only the frames are taken.
+          } else if (loop.motion === 'orbit' || !('clockDays' in loop.motion)) {
             await dispatchActions(page, [
               cancelCameraTween(),
               commitCameraPose(turnCameraArm(start.camera, loopYaw(loop.motion, turn))),
@@ -98,6 +103,7 @@ try {
             await readCanvas(page, 'png'),
           );
         }
+        if (seamFrames > 0) await blendLoopSeam(framesDir, frameCount, seamFrames);
       } catch (err) {
         failed = true;
         console.error(`${loop.id}: ${err instanceof Error ? err.message : String(err)}`);
