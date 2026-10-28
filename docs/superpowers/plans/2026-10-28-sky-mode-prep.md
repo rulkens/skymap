@@ -93,9 +93,18 @@ so the in-front path is unchanged.
 - **Rule.** Fix only what the shots show. If nothing reproduces, P4 drops and the ledger records the
   shots.
 
-## P5. Spec correction (rides this PR)
+## P5. Spec correction — landed on #949
 
-#947 now precesses Earth's pole, so spec §5's "Earth's equatorial frame is the world J2000 frame,
-no Earth special case" is wrong. The equatorial grid follows the host's live pole on every host
-(of-date), and the `skyGridBasis` test name changes to
-`Earth's equatorial pole is its precessed IAU pole`.
+#947 precesses Earth's pole, so the spec's equatorial grid is now the grid **of date**, and RA zero is
+the host's vernal equinox for every host. The fix rode #949, the PR that carries the spec.
+
+## Status (2026-10-28, autonomous run)
+
+- **P1 done, verified in an offscreen harness.** An offscreen WebGPU page (SwiftShader) draws
+  eye-crossing segments through the old and new helpers against a CPU reference projection. Old:
+  wedges. New: constant-width lines on the reference, with the both-in-front case unchanged. All 155
+  linked entry shaders compile clean in Chrome's WGSL compiler. The in-app shots listed above are
+  still owed: vite cannot run in that container (EMFILE), and the deployed app renders a black scene
+  under SwiftShader (texture uploads fail).
+- **P3 done.** The suite is green, and the Søndermarken/Everest shots are still owed.
+- **P4 not started.** It needs the in-app shots.
