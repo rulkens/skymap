@@ -43,6 +43,7 @@ import package::constellations::io::Uniforms;
 import package::constellations::io::PerVertex;
 import package::constellations::io::VSOut;
 import package::lib::segmentQuad::expandSegmentQuad;
+import package::lib::segmentQuad::segmentScreenTangent;
 import package::lib::camera::worldToClip;
 import package::lib::starPhotometry::STAR_GLOW_MIN_PX;
 import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
@@ -70,20 +71,13 @@ fn endpointGapPx(appMag : f32) -> f32 {
 fn vs(in : PerVertex) -> VSOut {
   // 1. Thickness/base clip via the shared helper. 'u.halfWidthPx' is already a
   //    half-width, so it passes straight through. 'base.w' is the SELECTED
-  //    endpoint's w (the helper returns the endpoint's z/w untouched), which the
+  //    endpoint's w (the in-front end's for a corner behind the eye), which the
   //    gap step below re-uses to convert its NDC offset back to clip space.
   let base = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx);
 
-  // 2. Screen-space tangent, recomputed here (a few lines, NOT a second
-  //    expansion): project both endpoints, perspective-divide, take the NDC
-  //    direction from a to b. This is the same project->divide the helper does
-  //    internally, but the helper hides its tangent, so the gap step derives it
-  //    once more rather than re-copying the whole expansion.
-  let aClip = worldToClip(u.cam, in.aWorld);
-  let bClip = worldToClip(u.cam, in.bWorld);
-  let aNdc = aClip.xy / aClip.w;
-  let bNdc = bClip.xy / bClip.w;
-  let tangent = normalize(bNdc - aNdc);
+  // 2. Screen-space tangent, from the helper's own homogeneous form, so it
+  //    holds with an endpoint behind the eye (a divided tangent flips there).
+  let tangent = segmentScreenTangent(worldToClip(u.cam, in.aWorld), worldToClip(u.cam, in.bWorld));
 
   // This corner's endpoint, by the SAME public convention the helper documents
   // (corner.x >0.5 -> b). Pull it toward the OTHER end: endpoint a moves +tangent
