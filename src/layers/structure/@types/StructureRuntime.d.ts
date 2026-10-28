@@ -15,5 +15,7 @@ export type StructureRuntime = {
   readonly store: StructureStore;
   readonly cosmoRenderer: StructureMarkerRenderer;
   readonly nearRenderer: StructureMarkerRenderer;
+  /** Draws the exoplanet orbit diagrams (`exoplanetOrbitsPass`); never picked. */
+  readonly orbitRenderer: StructureMarkerRenderer;
   readonly slot: AssetSlot<StructureCatalogPayload, StructureCatalogReq>;
 };

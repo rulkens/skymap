@@ -36,7 +36,16 @@ export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
     NEAR0,
     STRUCTURE_IDS_BY_SCALE.milkyWay,
   );
+  // A third instance for the exoplanet orbit diagrams, so those rings never
+  // shift the structure rings' pick instances.
+  const orbitRenderer = createStructureMarkerRenderer(
+    deps.ctx,
+    HDR_TARGET_FORMAT,
+    deps.fadeBgl,
+    NEAR0,
+    STRUCTURE_IDS_BY_SCALE.milkyWay,
+  );
   const slot = createStructureCatalogSlot();
   wireStructureProjection({ store, slot }, deps.publish);
-  return { store, cosmoRenderer, nearRenderer, slot };
+  return { store, cosmoRenderer, nearRenderer, orbitRenderer, slot };
 }

@@ -113,6 +113,7 @@ describe('expandFrameOrder', () => {
       'star-catalog',
       'star-upsample',
       'structure-markers-near',
+      'exoplanet-orbits',
       'constellations',
       'body-glints',
       'mission-glints',

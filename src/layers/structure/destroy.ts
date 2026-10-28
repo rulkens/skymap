@@ -7,5 +7,6 @@ import type { StructureRuntime } from './@types/StructureRuntime';
 
 export function destroy(runtime: StructureRuntime): void {
   runtime.nearRenderer.destroy();
+  runtime.orbitRenderer.destroy();
   runtime.cosmoRenderer.destroy();
 }

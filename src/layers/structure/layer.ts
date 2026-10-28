@@ -17,6 +17,7 @@ import { structureMarkersPlanner } from './frame';
 import { structureAssetRows } from './load/structureAssetRows';
 import { structureMarkersCosmoPass } from './passes/structureMarkersCosmoPass';
 import { structureMarkersNearPass } from './passes/structureMarkersNearPass';
+import { exoplanetOrbitsPass } from './passes/exoplanetOrbitsPass';
 import { produceStructureLabels } from './present/produceStructureLabels';
 import { structureSelectionRow } from './present/structureSelectionRow';
 import StructuresSectionContainer from './ui/StructuresSectionContainer';
@@ -35,7 +36,11 @@ export const structureLayer = defineLayer({
   // Wrapped, not passed bare: the row's narrow `Pick` parameter would otherwise
   // become `defineLayer`'s inferred Runtime.
   assets: (runtime) => structureAssetRows(runtime),
-  passes: (runtime) => [structureMarkersCosmoPass(runtime), structureMarkersNearPass(runtime)],
+  passes: (runtime) => [
+    structureMarkersCosmoPass(runtime),
+    structureMarkersNearPass(runtime),
+    exoplanetOrbitsPass(runtime),
+  ],
   planners: (runtime) => [structureMarkersPlanner(runtime)],
   guides: (runtime) => ({
     screenLabels: [
