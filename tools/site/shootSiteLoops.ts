@@ -22,6 +22,7 @@ import { launchChromium } from '../utils/browser/launchChromium';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { SITE_LOOP_PLAN } from './siteLoopPlan';
 import { loopVideoArgs } from './utils/loopVideoArgs';
+import { clockLoopYaw } from './utils/clockLoopYaw';
 import { loopYaw } from './utils/loopYaw';
 import { turnCameraArm } from './utils/turnCameraArm';
 import { openSiteShot } from './utils/openSiteShot';
@@ -69,23 +70,23 @@ try {
         // Frame 0 is the still; the frame after the last would be frame 0 again, which is the seam.
         for (let frame = 0; frame < frameCount; frame++) {
           const turn = frame / frameCount;
-          if (loop.motion === 'orbit' || 'swayDeg' in loop.motion) {
+          if (loop.motion === 'orbit' || !('clockDays' in loop.motion)) {
             await dispatchActions(page, [
               cancelCameraTween(),
               commitCameraPose(turnCameraArm(start.camera, loopYaw(loop.motion, turn))),
             ]);
           } else {
-            const { clockDays, orbitTurns = 0 } = loop.motion;
+            const { clockDays, orbitTurns, swayDeg } = loop.motion;
             const simDays = start.simDays + turn * clockDays;
             await dispatchActions(page, [
               setSimDays({ simDays, nowMs: 0 }),
-              // A camera that has to stay on one side of a body that moves (the Moon, kept facing Earth) is turned with the clock.
-              ...(orbitTurns === 0
+              // A camera that has to stay on one side of a body that moves (the Moon, kept facing Earth) is turned with the clock; one that sways breaks up an otherwise still view.
+              ...(orbitTurns === undefined && swayDeg === undefined
                 ? []
                 : [
                     cancelCameraTween(),
                     commitCameraPose(
-                      turnCameraArm(start.camera, loopYaw('orbit', turn * orbitTurns)),
+                      turnCameraArm(start.camera, clockLoopYaw({ orbitTurns, swayDeg }, turn)),
                     ),
                   ]),
             ]);
