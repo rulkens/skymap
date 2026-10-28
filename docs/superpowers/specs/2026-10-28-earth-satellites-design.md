@@ -23,6 +23,8 @@ data refreshed daily. A user can find a satellite in the palette, pick it, and r
 - Pick, palette search and an InfoCard: name, NORAD and COSPAR ids, class, altitude, period, inclination,
   data epoch.
 - Classes (active payloads, debris, other) toggle in Settings.
+- Nothing runs unless the Layer is drawing: no download, no worker and no sweep while it is off or the
+  camera is far from Earth (§5.5).
 
 **Non-goals**
 
@@ -46,8 +48,9 @@ data refreshed daily. A user can find a satellite in the palette, pick it, and r
 GitHub Action (daily) ── CelesTrak OMM JSON ──▶ tools/satellites/buildSatellites.ts ──▶ R2 satellites/gp.bin
                                                                                              │ fetch (max-age 1 h)
 src/layers/satellites/
-  sagas/loadSatellitesSaga.ts   fetch + parse once ready, hand the buffer to the worker
-  load/satellitesWorker.ts      long-lived: json2satrec once, then SGP4 sweep at ~1 Hz → TEME pos/vel
+  load/satellitesAsset.ts       `assets?` row: demand = shown and near Earth; the committed value is the
+                                worker, and `onRelease` terminates it
+  load/satellitesWorker.ts      json2satrec once at load, then one SGP4 sweep per request → TEME pos/vel
   render/satellitePointRenderer.ts   additive dots, positions extrapolated in the vertex stage
   render/satelliteRingRenderer.ts    one analytic ring per object from its mean elements
   passes/satellitesPass.ts      NEAR0 POST_FOREGROUND hdr line, beside the mission trails
@@ -62,10 +65,9 @@ perigee, mean anomaly, B*), the NORAD id, a class byte, and the name and COSPAR 
 1.5 MB for 20k objects, less gzipped. The header carries the fetch time, which drives §5.3.
 
 **Propagation.** The worker builds satrecs once (`satellite.js` `json2satrec`, WGS-72, opsmode `'i'`),
-then sweeps every object about once a second. It posts transferred Float32 arrays of TEME position and
-velocity in km and km/s, relative to the sweep's instant, plus the sweep's sim time. An object whose
-propagation errors (decayed, perigee below the surface) is flagged and not drawn. The worker lives as
-long as the Layer and ends in its `destroy`.
+then sweeps every object when asked (§5.5). Each sweep posts transferred Float32 arrays of TEME position
+and velocity in km and km/s, relative to the sweep's instant, plus the sweep's sim time. An object whose
+propagation errors (decayed, perigee below the surface) is flagged and not drawn.
 
 **Between sweeps.** The vertex stage extrapolates `p + v·dt − ½·GM·p/|p|³·dt²` in TEME. Measured worst
 case over 2,000 LEO objects: 0.78 m after 1 s, 2.9 m after 4 s.
@@ -108,6 +110,19 @@ the fallback if `npm run phone` disagrees.
    with node and perigee turned at the satrec's own J2 rates (`nodedot`, `argpdot`), so a ring needs only
    static data and the sim time. The worker sends the ring parameters once. The exact detent is the
    builder's, measured.
+5. **The worker exists only while the Layer is active, and sweeps only while it draws.** Two gates:
+   - *Existence* is the demand loop's, like the body textures' proximity loads. The `gp.bin` asset row
+     demands while the show toggle is on and the camera is inside a load radius of Earth, and releases when
+     the toggle goes off or the camera passes a larger evict radius (hysteresis, so hovering at the edge
+     does not thrash). Loading fetches the file and spawns the worker; the committed value is the worker
+     handle, so `onRelease` terminates it and frees its ~20k satrecs. The load radius sits outside the
+     distance where the Layer fades in, so the data is resident before the first point shows. A user who
+     never flies near Earth never downloads the file.
+   - *Work* is pulled, not pushed. The worker never sweeps on a timer. The pass asks for a sweep only on a
+     frame where it actually draws points (faded in, inside the time window, below the rings detent) and the
+     last sweep is about a second old in real time or the sim clock has jumped. So a hidden tab (no frames),
+     a paused clock (one sweep, then extrapolation with `dt = 0`), the rings regime and a time outside the
+     window all cost nothing. At most one sweep is in flight.
 
 ## 6. Ground preparation
 
@@ -115,7 +130,9 @@ None needed, because each candidate is already a seam or belongs to this Layer a
 
 - **Long-lived worker.** `runDisposableWorker` is one-shot by design, and its docblock says a reusable
   worker is "a different abstraction". The satellites worker is the first and only one, so it lives in the
-  Layer (`load/`) and is not generalised (§2 anti-goals).
+  Layer (`load/`) and is not generalised (§2 anti-goals). Its lifetime needs no new seam: an `assets?` row's
+  demand and release predicates plus the slot's `onRelease` are exactly the "load near, free far" lifecycle
+  the body textures already use (§5.5).
 - **Point renderer.** `bodyGlintRenderer` has a fixed capacity, and `starPointRenderer` uploads static
   positions. Neither extrapolates in the vertex stage, so the Layer owns its renderer, mirroring
   `starPointRenderer`'s upload-then-draw split. Its pick twin mirrors `starCatalogPickRenderer`, under a new
