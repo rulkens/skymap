@@ -9,7 +9,7 @@ import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import type { MeshBody } from '../../../../@types/scene/MeshBody';
 import type { SurfaceFixedSite } from '../../../../@types/scene/SurfaceFixedSite';
 import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
-import { positionDriverById } from '../../../../data/bodies/positionDrivers';
+import { positionDriverOrNull } from '../../../../data/bodies/positionDrivers';
 import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
@@ -26,8 +26,8 @@ import { refoldTo } from './refoldTo';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
 
 function siteRowOf(id: PositionedId): SurfaceFixedSite | null {
-  const driver = positionDriverById(id);
-  return driver.kind === 'surfaceFixed' ? driver : null;
+  const driver = positionDriverOrNull(id);
+  return driver?.kind === 'surfaceFixed' ? driver : null;
 }
 
 /** A frame is only ever entered for a site `engage` resolved, so a miss is unreachable. */
