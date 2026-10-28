@@ -2,11 +2,11 @@
  * rotationElements — J2000 rotation elements for bodies with a modelled facing:
  * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. `orbitalElements`
  * places a body; this aims it. A body with no row is rotation-invariant and
- * falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
- * α̇/δ̇ and the periodic nutation/libration terms (Neptune's `N`, the Moon's `E1…`)
- * are dropped — they move the pole under an arcminute over 250
- * years, below a textured sphere's resolution. Source: the constant terms of
- * Archinal et al. (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3.
+ * falls back to `IDENTITY_MAT3`. Ẇ is live everywhere; the pole rates α̇/δ̇ only
+ * for Earth (0.15° by 2026, 17 km of ground), and the periodic nutation/libration
+ * terms (Neptune's `N`, the Moon's `E1…`) nowhere — elsewhere they stay under an
+ * arcminute over 250 years. Source: Archinal et al. (2018), Cel. Mech. Dyn.
+ * Astron. 130:22, Tables 1 and 2/3; Earth's spin is the IERS one (see its row).
  */
 
 import type { RotationElements } from '../../@types/scene/RotationElements';
@@ -32,12 +32,19 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 160.2,
     spinRateDegPerDay: -1.4813688,
   },
+  // LANDMINE — Archinal's own Earth W (190.147 + 360.9856235·d) is in TDB days, and the
+  // sim clock is UTC: fed UTC it put Greenwich 0.2–0.3° (23–35 km) west. W is instead the
+  // IERS Earth Rotation Angle (UT1 ≈ UTC), ERA = 280.46061837504 + 360.98561228808761·d,
+  // less 90° + α₀(t): `rotationFromIau` measures W from the node at α₀ + 90°, so the
+  // −0.641°/cy α̇ adds 0.641/36525 °/day to Ẇ. The pole rates are the IAU precession.
   {
     id: 'earth',
     poleRaDeg: 0.0,
     poleDecDeg: 90.0,
-    primeMeridianDeg: 190.147,
-    spinRateDegPerDay: 360.9856235,
+    poleRaRateDegPerCty: -0.641,
+    poleDecRateDegPerCty: -0.557,
+    primeMeridianDeg: 190.46061837504,
+    spinRateDegPerDay: 360.98562983768,
   },
   // `orbitPlaneFrames.ts` carries the same pole rounded to 317.681/52.887.
   {
