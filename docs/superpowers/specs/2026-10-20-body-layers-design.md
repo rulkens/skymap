@@ -47,8 +47,14 @@ in Søndermarken, his eye, the cells in it), so it gets its own Layer now.
 | `missions` (exists)           | Voyager 1/2, Hubble, Curiosity, Perseverance, Spirit, Opportunity, the whale, the petunias | Their mesh slots, mesh draw pass, contact shadows (only rovers carry a contact decal), glints for sub-pixel craft, captions, selection, search aliases, presence gating (`presentFromIso`, `spacecraftPresent`). Keeps its trails, exhibit, mission camera and trajectory loading. |
 | `earthScenes` (new)           | Søndermarken                                                                               | Its mesh slot and mesh draw pass. Søndermarken is an anchored site (`surfaceFixedSites.ts:76`): uncaptioned (`sceneBodyLabels.ts:102-107`) and unpicked (`meshBodiesPass.ts:97-118`), and it stays that way, so the Layer contributes no caption, selection kind or card yet. Later: Chris, his eye, its cells. |
 
-"Sun?" is open: the builder places the Sun's row where its readers point, in `body` unless the trace
-shows it belongs with the stars.
+"Sun?" is settled (trace, 2026-10-28): the Sun belongs with the stars. starCatalog draws, picks,
+captions and searches it (its source row is `layers/starCatalog/sources/sun.ts`); `body` reads only its
+position, as the focus and render origin. Its seed (`data/bodies/sceneSun.ts`) and its
+`SCENE_ANCHORS` row move with the seeded stars in §7 step 5.
+
+Søndermarken's row above predates the body PR plan: earthScenes now owns an `earthScene` selection
+kind, a card (the shared body card components) and Søndermarken's palette row, chip "Earth"
+(ruling 13). It stays uncaptioned and unpicked.
 
 The craft merge into `missions` because a mission is a craft, its trajectory and its events, and the
 two halves already read each other: `produceMissionCaptions.ts:9` reads the craft roster, and
