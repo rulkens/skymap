@@ -20,7 +20,6 @@ import CompactSatelliteCard from './ui/CompactSatelliteCard/CompactSatelliteCard
 import { SATELLITES_SOURCE_ROWS } from './sources/satellitesSourceRows';
 import { satellitesSelectionRow } from './present/satellitesSelectionRow';
 import { satellitesSearch } from './present/satellitesSearch';
-import { watchSatelliteSelectionWakeSaga } from './sagas/watchSatelliteSelectionWakeSaga';
 
 export const satellitesLayer = defineLayer({
   name: 'satellites',
@@ -35,7 +34,6 @@ export const satellitesLayer = defineLayer({
   sourceCounts: satellitesSourceCounts,
   selection: (runtime) => [satellitesSelectionRow(runtime)],
   search: (runtime) => satellitesSearch(runtime),
-  sagas: [watchSatelliteSelectionWakeSaga],
   ui: [
     { slot: 'main', content: SatellitesSectionContainer },
     {
