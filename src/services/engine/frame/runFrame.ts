@@ -104,7 +104,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt: state.terrain.heightAt,
+    terrainHeightAt: state.terrainHeightAt,
     clipEpoch,
     schemes: deps.controlSchemes,
   });

@@ -53,11 +53,4 @@ export type CameraDebugSnapshot = {
    * overlay (no cursor is carried otherwise), off a body arm, or on a miss.
    */
   readonly terrainPickHeightM: number | null;
-  /**
-   * The pyramid level the height lattice UNDER THE EYE actually resolved to
-   * (`SurfaceTileStream.residentHeightLevelAt`). Null when nothing is
-   * resident there — which `altitudeM` alone cannot show, since an unresident
-   * direction and sea level both read 0 metres.
-   */
-  readonly residentHeightLevelAtEye: number | null;
 };

@@ -239,6 +239,12 @@ Core reads the subsystem in three more places, settled as follows (builder-check
   `ui` debug slot, which is growth.
 - `engine.ts:436-437` tears the subsystem down. That moves into `body`'s `destroy`.
 
+**2026-10-28:** the seam narrowed to a `heightAt` member (`Layer.heightAt?(runtime):
+TerrainHeightAtLookup`, composed into `state.terrainHeightAt`). The other two members served only a
+debug line (the Camera section's resident level at the eye, now the body Layer's own terrain-pick
+readout) and a log field (`logCameraState`'s sub-camera). The contract is to be revisited (backlog
+"Layer terrain contract review").
+
 ### P5. The inside-atmosphere row is declared, like the lens row
 
 Core's frame expansion places the aerial-apply line on the body row whose atmosphere holds the camera.

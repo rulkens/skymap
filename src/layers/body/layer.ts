@@ -40,7 +40,7 @@ import { NEAR0 } from '../../services/engine/frame/slabs';
 import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
-import { surfaceTileTerrain } from './subsystems/surfaceTiles/surfaceTileTerrain';
+import { surfaceTileHeightAt } from './subsystems/surfaceTiles/surfaceTileHeightAt';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTiles/surfaceTileStream';
 import { NO_TERRAIN_PICK_MARKER_READOUT } from './present/terrainPickMarkerReadoutOf';
 import SurfaceTileAtlasSectionContainer from './ui/SurfaceTileAtlasSectionContainer';
@@ -77,7 +77,7 @@ export const bodyLayer = defineLayer({
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
   assets: bodyAssetRows,
   planners: (runtime) => [surfaceTilePlanner(runtime)],
-  terrain: (runtime) => surfaceTileTerrain(runtime.surfaceTiles),
+  heightAt: (runtime) => surfaceTileHeightAt(runtime.surfaceTiles),
   guides: () => ({
     screenLabels: [
       {

@@ -18,7 +18,7 @@ import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKe
 import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
@@ -250,24 +250,24 @@ describe('createLayers composition', () => {
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
   });
 
-  it('throws at boot when terrain is provided more than once', async () => {
+  it('throws at boot when heightAt is provided more than once', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    const terrainLayer = (tag: string) =>
+    const heightAtLayer = (tag: string) =>
       ({
         name: tag,
         create: () => ({}),
         destroy: () => {},
         passes: () => [],
-        terrain: () => FLAT_TERRAIN,
+        heightAt: () => datumOnlyTerrainHeight,
       }) as unknown as Layer<string, unknown>;
 
     await expect(
-      createLayers(state, makeDeps([terrainLayer('a'), terrainLayer('b')], store)),
-    ).rejects.toThrow(/terrain/);
+      createLayers(state, makeDeps([heightAtLayer('a'), heightAtLayer('b')], store)),
+    ).rejects.toThrow(/heightAt provided twice — a and b/);
   });
 
-  it("createLayers composes the body Layer's terrain and no core provider", async () => {
+  it("createLayers composes the body Layer's heightAt and no core provider", async () => {
     // Bug caught: a core tile provider left beside the body Layer's throws at boot as a
     // second ground; a dropped body row would leave the camera on the flat datum.
     const { store } = createAppStore();
@@ -286,7 +286,7 @@ describe('createLayers composition', () => {
 
     await createLayers(state, deps);
 
-    expect(state.terrain.heightAt(asSceneBodyId('earth'), [1, 0, 0])).toBe(42);
+    expect(state.terrainHeightAt(asSceneBodyId('earth'), [1, 0, 0])).toBe(42);
     expect(heightAt).toHaveBeenCalledTimes(1);
   });
 

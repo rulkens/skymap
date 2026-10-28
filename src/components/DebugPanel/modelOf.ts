@@ -29,7 +29,6 @@ export function modelOf(
       // The gauge's own size: a height written down beside a buried fraction
       // means nothing without the sphere radius it was read against.
       { key: 'terrain_pick_marker_radius_m', value: num(markerRadiusM) },
-      { key: 'resident_height_level_at_eye', value: num(snap.residentHeightLevelAtEye) },
       { key: 'band_up_weight', value: num(snap.bandUpWeight) },
       { key: 'engage/disengage_hr', value: `${tuning.engageHR} / ${tuning.disengageHR}` },
       { key: 'tilt_full/zero_hr', value: `${tuning.tiltFullHR} / ${tuning.tiltZeroHR}` },

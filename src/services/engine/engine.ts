@@ -29,7 +29,7 @@ import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDire
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { FLAT_TERRAIN } from '../../data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -251,7 +251,7 @@ export function createEngine(
     visibilityGates: new Map(),
     label3DProducers: [],
     orbitTrailGroups: [],
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s
@@ -449,8 +449,7 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
-          terrainHeightAt: state.terrain.heightAt,
-          residentHeightLevelAt: state.terrain.residentHeightLevelAt,
+          terrainHeightAt: state.terrainHeightAt,
           // Null unless the `terrain-pick-marker` overlay is on — its listener
           // is the only writer, so the pick row is dead with the toggle off.
           cursorTexPx: state.picking.cursorTexPx,

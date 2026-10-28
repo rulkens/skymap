@@ -100,7 +100,7 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 function makeStore() {
   return configureStore({ reducer: rootReducer });
@@ -169,7 +169,7 @@ function makeState(): EngineState {
     },
     booted: false,
     viewRig: 'mono',
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),

@@ -16,7 +16,7 @@ import type { SourceCountReport } from '../../../@types/engine/layer/SourceCount
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
-import { composeTerrain } from '../layer/composeTerrain';
+import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
@@ -189,9 +189,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   state.orbitTrailGroups = instances
     .flatMap((instance) => instance.orbitTrails)
     .map((group) => gateOrbitTrailGroup(group, state));
-  state.terrain = composeTerrain(
+  state.terrainHeightAt = composeTerrainHeightAt(
     instances.flatMap((instance) =>
-      instance.terrain ? [{ name: instance.name, terrain: instance.terrain }] : [],
+      instance.heightAt ? [{ name: instance.name, heightAt: instance.heightAt }] : [],
     ),
   );
 

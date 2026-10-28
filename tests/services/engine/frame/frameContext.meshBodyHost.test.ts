@@ -21,7 +21,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -36,7 +36,7 @@ const STATE = {
     renderTargets: {},
     compositor: {},
   },
-  terrain: FLAT_TERRAIN,
+  terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: BODY_SLAB_ROWS,
