@@ -1,12 +1,8 @@
 /**
  * SlabRow — one candidate `body-m` slab row, as plain data. A Layer authors
- * its own (`Layer.slabs`: the body Layer's Earth and planets, blackHoles'
- * Sgr A*); core derives one only for a hostless mesh body (`bodySlabRowOf`).
- *
- * Camera fields are deliberately absent: driving the camera and hosting a
- * metre frame vary independently (spec §2.5). The two radii are separate
- * because the culls and the near plane need the drawn footprint and the
- * occupied sphere as distinct facts.
+ * its own (`Layer.slabs`); core derives one only for a hostless mesh body
+ * (`bodySlabRowOf`). The two radii are separate: the culls and the near plane
+ * need the drawn footprint and the occupied sphere as distinct facts.
  */
 
 import type { FadeBand } from '../../math/FadeBand';

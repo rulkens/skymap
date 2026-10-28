@@ -1,41 +1,17 @@
 /**
- * planetRenderer — flat-lit albedo planets drawn into the opaque near-field
- * foreground target with ONE instanced draw.
+ * planetRenderer: flat-lit albedo planets in the opaque near-field foreground
+ * target. The uploaded `uvSphereMesh` is NOT the surface: the vertex stage inflates
+ * it into a shell circumscribing the body and the fragment recovers the analytic
+ * sphere per pixel (`shaders/lib/analyticSphere.wesl`), as `texturedBodyRenderer`
+ * and `bodyPickRenderer` do. The atmosphere shell rays against a perfectly round
+ * ground radius, so a polygon inscribed 0.2-0.4% inside it leaves a limb sliver
+ * neither rasterises; every body gets the ray test, textured or not.
  *
- * The uploaded `uvSphereMesh` is NOT the surface: the vertex stage inflates it
- * into a shell that CIRCUMSCRIBES the body and the fragment recovers the
- * analytic sphere per pixel, the same path `texturedBodyRenderer` and
- * `bodyPickRenderer` take (maths in `shaders/lib/analyticSphere.wesl`). A
- * pixel-exact silhouette is not a texture privilege: the atmosphere shell rays
- * against a perfectly round ground radius, so a drawn polygon inscribed 0.2–0.4%
- * inside it leaves a limb sliver that neither rasterises — over-disc haze on
- * empty background, and the glow amputated where it is brightest. Being
- * untextured has nothing to do with it, so every flat body gets the ray test.
- *
- * The shading is still one lambert dot product against the per-instance sun
- * direction (the Sun rotated into the body's local frame, baked into the
- * instance record) plus an ambient floor — see `planet/fragment.wesl` and the
- * shared `lib/bodyLighting.wesl`.
- *
- * No texture machinery: a per-instance albedo is enough at the descent's
- * fly-past distances. If a body ever earns imagery it moves to
- * `texturedBodyRenderer`, and — now that both silhouettes come from the same ray
- * test — it does so without changing shape.
- *
- * ### Why GPU instancing, and why one buffer per body
- *
- * A planet's MVP + albedo rides in a single-instance vertex-buffer record,
- * stepped by `@builtin(instance_index)`, the same attribute layout
- * `galaxyPointRenderer` uses for its own batched draw. Here the "batch" is
- * one row, but `planetsPass` calls `draw` once PER BODY-M SLAB ROW, all
- * inside ONE submit (Task 7's per-body slabs) — a single shared instance
- * buffer would let a later row's `writeBuffer` clobber an earlier row's bytes
- * before the GPU ran either draw. Fix: each `hostId` gets its OWN instance
- * buffer (`texturedBodyRenderer`'s own-buffer-per-body precedent, keyed here
- * by the caller's id instead of a bind group), so two same-submit rows never
- * touch the same bytes.
- *
- * @module
+ * Shading: one lambert dot against the per-instance body-local sun direction plus
+ * an ambient floor (`planet/fragment.wesl`, `lib/bodyLighting.wesl`). MVP, albedo,
+ * sun and camera ride a per-instance vertex record. `planetsPass` calls `draw` once
+ * per body-m slab row inside ONE submit, so each `hostId` gets its OWN instance
+ * buffer; a shared one would let a later row's `writeBuffer` clobber an earlier.
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -49,35 +25,21 @@ import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompil
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 /**
- * Float32 slots in the one-instance record: four `vec4<f32>` MVP columns (16)
- * + one `vec4<f32>` albedo (rgb + 1 pad float, 4) + one `vec4<f32>`
- * sunDirLocal (xyz + 1 pad, 4) + one `vec4<f32>` camPosLocal (xyz + 1 pad, 4)
- * = 28.
- *
- * `camPosLocal` is the ray ORIGIN for the analytic sphere test, and it is
- * per-body data: this renderer's vertex-buffer pipeline carries no bind
- * group, so the ray origin rides the instance record rather than a uniform.
+ * Float32 slots in the instance record: four `vec4` MVP columns, then `vec4`s of
+ * albedo, sunDirLocal and camPosLocal (xyz + 1 pad each) = 28. `camPosLocal` is the
+ * analytic sphere test's ray ORIGIN; the pipeline has no bind group, so it rides the
+ * record.
  */
 export const INSTANCE_FLOATS = 28;
 
-/**
- * Per-instance byte stride: 28 × 4 = 112. Declared here AND in the pipeline's
- * instance-buffer descriptor; a mismatch either validate-errors or silently
- * reads garbage.
- */
+/** Per-instance byte stride; a mismatch with the descriptor validate-errors or silently reads garbage. */
 export const INSTANCE_STRIDE = INSTANCE_FLOATS * 4; // 112 bytes
 
 /**
- * Per-instance vertex attributes — the four MVP columns (reassembled into a
- * `mat4x4<f32>` in the shader), the albedo, the body-local sun direction, then
- * the body-local camera, at `@location`s 1..7 (location 0 is the per-vertex
- * sphere position). Byte offsets must match `planet/vertex.wesl` exactly.
- *
- * `camPosLocal` takes a whole `vec4` slot rather than the `.w` lanes `albedo`
- * and `sunDirLocal` leave free: a `vec3` wants three lanes and there are only
- * two, so the saving would need the vector split across two attributes — 16
- * bytes on a roster of tens of bodies, against a layout nobody can read off
- * against the shader.
+ * Per-instance attributes at `@location`s 1..7 (0 is the vertex position). Byte
+ * offsets must match `planet/vertex.wesl` exactly. `camPosLocal` takes a whole
+ * `vec4` slot: packing it into the free `.w` lanes would split it across two
+ * attributes to save 16 bytes per body.
  */
 const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 1, offset: 0, format: 'float32x4' }, // mvp column 0
@@ -89,19 +51,13 @@ const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 7, offset: 96, format: 'float32x4' }, // camPosLocal (xyz + pad)
 ];
 
-/**
- * @param reversedZ selects this slab's depth convention (single-sourced in
- *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
- *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`
- *   so this renderer never hardcodes the occlusion direction.
- */
+/** @param reversedZ this slab's depth convention (`SLAB_REVERSED_Z`), resolved by `resolveDepthCompare`. */
 export function createPlanetRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
 ): PlanetRenderer {
-  // ── Geometry upload (positions + indices; the lambert term needs no uvs) ──
   const mesh = uvSphereMesh(BODY_SPHERE_SEGMENTS, BODY_SPHERE_RINGS);
   const indexCount = mesh.indices.length;
 
@@ -119,17 +75,11 @@ export function createPlanetRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
 
-  // ── Shader modules ────────────────────────────────────────────────────────
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'planet.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'planet.fragment');
 
-  // ── Render pipeline (opaque foreground profile, same as earthRenderer) ────
-  //
-  // No bind groups: every per-body value (MVP, albedo, sunDirLocal, camPosLocal)
-  // is a per-instance vertex attribute and the ambient floor is a WESL `const`
-  // (in `lib/bodyLighting`), so the shader reads nothing from the uniform
-  // address space. An explicit empty pipeline layout keeps this off the
-  // 'auto'-layout path entirely.
+  // No bind groups (every per-body value is a vertex attribute; ambient is a WESL
+  // const). An explicit empty layout keeps this off the 'auto'-layout path.
   const pipeline = device.createRenderPipeline({
     label: 'planet-pipeline',
     layout: device.createPipelineLayout({
@@ -147,8 +97,7 @@ export function createPlanetRenderer(
         {
           arrayStride: INSTANCE_STRIDE,
           stepMode: 'instance',
-          // Spread because `@webgpu/types` declares the field mutable while the
-          // module-level export is readonly.
+          // Spread: `@webgpu/types` declares the field mutable, the export is readonly.
           attributes: [...INSTANCE_ATTRIBUTES],
         },
       ],
@@ -159,19 +108,15 @@ export function createPlanetRenderer(
       targets: [
         {
           format: targetFormat,
-          // No blend descriptor = opaque replace; the fragment emits alpha=1
-          // and the foreground composite blends the whole layer.
         },
       ],
     },
     primitive: {
       topology: 'triangle-list',
-      frontFace: 'ccw', // CCW = outward-facing (matches uvSphereMesh winding)
-      // The proxy is invisible scaffolding, so its FAR hemisphere is the one to
-      // keep. Front faces would vanish the moment the camera crossed inside the
-      // 5% shell — a legal close approach — and take the body with them; the far
-      // hemisphere still covers the whole disc from in there, because the near
-      // hemisphere is behind the eye.
+      frontFace: 'ccw', // matches uvSphereMesh winding
+      // Keep the proxy's FAR hemisphere: front faces would vanish once the camera
+      // crossed inside the 5% shell (a legal close approach) and take the body
+      // with them; the far hemisphere still covers the disc from in there.
       cullMode: 'front',
     },
     depthStencil: {
@@ -181,14 +126,8 @@ export function createPlanetRenderer(
     },
   });
 
-  // Own instance buffer per `hostId` — the caller's own per-body-m-slab-row
-  // identity — rather than one shared buffer, because `planetsPass` calls
-  // `draw` once per row, all inside one submit (see the module header's
-  // writeBuffer-vs-submit note). A body-m row draws exactly one planet, so
-  // each buffer is a fixed one-instance allocation, created once and reused.
+  // One fixed one-instance buffer per `hostId` (see the module header).
   const bodies = new Map<PositionedId, GPUBuffer>();
-
-  // ── draw ──────────────────────────────────────────────────────────────────
 
   function draw(pass: GPURenderPassEncoder, hostId: PositionedId, instance: Float32Array): void {
     let buffer = bodies.get(hostId);
@@ -209,8 +148,6 @@ export function createPlanetRenderer(
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount, 1);
   }
-
-  // ── destroy ───────────────────────────────────────────────────────────────
 
   function destroy(): void {
     positionBuffer.destroy();

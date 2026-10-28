@@ -76,11 +76,8 @@ export function createEngine(
   cb: EngineCallbacks,
   composition: EngineComposition<readonly Layer<string, unknown>[]>,
 ): EngineHandle {
-  // The scheduler needs an `onFrame` at construction time — here — but the real
-  // frame body lives in `runFrame.ts` and only lands once `startLoop` runs. The
-  // scheduler captures `frameRef` and calls through it, so assigning
-  // `frameRef.current` later is enough. A ref, not a `let`, because the bootstrap
-  // phases are sibling modules where a `let` would be invisible.
+  // The scheduler needs `onFrame` now but the real body lands at `startLoop`; it
+  // calls through `frameRef`. A ref, not a `let`: the phases are sibling modules.
   const frameRef: { current: () => void } = {
     current: () => {
       /* stub until startLoop assigns the real body */
@@ -145,14 +142,11 @@ export function createEngine(
       cursorTexPx: null,
     },
     gpu: {
-      // Every handle here is null until the async bootstrap constructs it and is
-      // released in `destroy()`. Only the `isEngineReady` members are relied on
-      // downstream; the rest are optional and null-checked at their use site. See
+      // Null until the async bootstrap constructs each; released in `destroy()`. See
       // `@types/EngineGpuHandles.d.ts` for the lifecycle.
       pickProgram: null,
-      // Canonical bind-group layouts, threaded into every renderer's
-      // createPipelineLayout so consumers share one layout identity — see
-      // services/gpu/bindGroupLayouts/fadeUniforms.ts (the layout:'auto' trap).
+      // Canonical bind-group layouts shared by every renderer's createPipelineLayout
+      // (the layout:'auto' trap: services/gpu/bindGroupLayouts/fadeUniforms.ts).
       fadeBgl: null,
       sourceBgl: null,
       focusBgl: null,
@@ -160,8 +154,6 @@ export function createEngine(
       renderTargets: null,
       compositor: null,
       envBrdfLut: null,
-      // Installed by initGpu right after the device resolves — see
-      // `EngineGpuHandles.memory`'s field doc.
       memory: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
@@ -193,12 +185,8 @@ export function createEngine(
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      // Holds no GPU memory even once constructed — the atlas is allocated by the
-      // first frame the tile planner engages on.
       surfaceTiles: null,
 
-      // The directors own the label/marker-line uploads and declutter across every
-      // registered producer; the layers only issue draws against what was flushed.
       cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
@@ -214,10 +202,9 @@ export function createEngine(
 
       clipPathInspector: createClipPathInspector(),
 
-      // Constructed eagerly, not as a deferred shim: anyone capturing the scheduler
-      // gets the live one, and a shim by reference would break hover-pick on the
-      // first frames. `onFrame` is the single per-frame chokepoint, which is why
-      // the frame-stats timing wraps this one site.
+      // Eager, not a deferred shim: a shim captured by reference would break hover-pick
+      // on the first frames. `onFrame` is the single per-frame chokepoint, so frame-stats
+      // timing wraps this one site.
       scheduler: createRenderScheduler({
         onFrame: () => {
           const start = performance.now();
@@ -233,7 +220,6 @@ export function createEngine(
         },
       }),
 
-      // Eager so initGpu can register handles without a null-check.
       fades: createFadeRegistry({
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
@@ -254,18 +240,14 @@ export function createEngine(
     // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
-    // Both empty until `createLayers` runs (D8); see EngineState.d.ts for why
-    // `selectionKindRows` is not named `selectionRows` (that getter, above, is
-    // the unrelated saga display cache).
+    // Both empty until `createLayers` runs. `selectionKindRows` is not `selectionRows`:
+    // that getter, above, is the unrelated saga display cache.
     layers: [],
     layerSagaTasks: [],
     selectionKindRows: [],
-    // Static per Layer, known before any GPU phase runs — the `renderTargets`
-    // GPU-handle row reads this to compose its table, and that row constructs
-    // BEFORE `createLayers`.
+    // Static per Layer; the `renderTargets` row reads it and constructs BEFORE `createLayers`.
     layerTargets: composition.layers.map((layer) => layer.targets ?? []),
-    // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of these (`pickProgram` is `wireInput`).
+    // Empty until `createLayers` composes core's rows with every Layer's.
     passes: [],
     computes: [],
     planners: [],
@@ -308,11 +290,9 @@ export function createEngine(
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
 
-  // The one row array core owns (D5); createLayers appends each Layer's rows
-  // once, in tuple order. `selection` reads it lazily (never rebuilds a list),
-  // so a deep link seen before createLayers sees only core rows — a Layer-only
-  // id instead waits on resolveFocusRefDeferringSaga's engineStatusChanged
-  // pulse to resolve.
+  // createLayers appends each Layer's rows in tuple order. `selection` reads it lazily,
+  // so a deep link seen before createLayers sees only core rows; a Layer-only id waits
+  // on resolveFocusRefDeferringSaga's engineStatusChanged pulse.
   state.selectionKindRows = coreSelectionRows();
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
@@ -335,11 +315,9 @@ export function createEngine(
     getLivePose: () => liveWorldPose(state),
   });
 
-  // `sampleCount` must cover the WAYPOINT-DENSEST clip, not the sparse demo path: a
-  // flyPath threading ~200 waypoints gets only ~1.9 samples per leg at 384, so the
-  // polyline draws raw waypoint-to-waypoint CHORDS and hides the spline between
-  // knots — hard corners everywhere. 4000 is ~20 per leg on such a route, and stays
-  // within debugLineRenderer's maxLines (2·(n−1) + 9 gizmo = 8007 against 8192).
+  // `sampleCount` must cover the WAYPOINT-DENSEST clip: ~200 waypoints at 384 samples
+  // is ~1.9 per leg, drawing raw CHORDS that hide the spline. 4000 is ~20 per leg and
+  // fits debugLineRenderer's maxLines (2·(n−1) + 9 gizmo = 8007 against 8192).
   const clipPathInspect = createClipPathInspectSeam({
     inspector: state.subsystems.clipPathInspector,
     getLivePose: () => liveWorldPose(state),
@@ -380,11 +358,10 @@ export function createEngine(
   })();
 
   function destroy(): void {
-    // Ordering is load-bearing only for the first two groups: the render loop stops
-    // before anything it touches is torn down, and DOM listeners detach before the
-    // subsystems they fire into. Past that it is free. Layers go before core, in
-    // reverse tuple order (D8) — a Layer's captured core object (e.g. `focusUniform`)
-    // must still be alive when its `destroy` runs.
+    // Order matters for the first two groups only: the render loop stops before anything
+    // it touches is torn down, and DOM listeners detach before their subsystems. Layers
+    // go before core, in reverse tuple order: a captured core object (e.g. `focusUniform`)
+    // must outlive the Layer's `destroy`.
     state.subsystems.scheduler.destroy();
     state.subsystems.assetQueue.destroy();
 
@@ -417,13 +394,11 @@ export function createEngine(
     // — so `focusUniform` is destroyed last, after the pick renderer that captured
     // its bind group at construction.
     destroyGpuHandles(GPU_HANDLE_ROWS, state);
-    // fontAtlases/uiCtx own no GPU resource — re-nulled for lifecycle symmetry.
     state.gpu.fontAtlases = null;
     state.gpu.uiCtx = null;
     // The LUT does own one, and it is no row, so nothing else releases it.
     state.gpu.envBrdfLut?.destroy();
     state.gpu.envBrdfLut = null;
-    // Owns no GPU resource of its own — re-nulled for lifecycle symmetry.
     state.gpu.memory = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
@@ -441,8 +416,7 @@ export function createEngine(
         () => state.fadesAnimating,
       ),
     debug: {
-      // The same Map the bootstrap populates, so the dev panel observes slots as
-      // they appear. Read-only at the type level, so React-side mutation trips tsc.
+      // The Map the bootstrap populates, so the dev panel sees slots as they appear.
       assetSlots: allSlots,
       // A getter, not a copied reference: initGpu assigns `state.gpu.timingService`
       // AFTER this literal is built, so a copy would be null forever.
@@ -458,11 +432,9 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // The prelude's compute steps first (they run first, and their dispatches
-      // are GPU work no render toggle could reach), then every composed pass.
+      // Prelude compute steps first: GPU work no render toggle could reach.
       passOverrides: {
         allNames: [
-          // 'canvas': mono's only rig view — see timedSlotRowsOf.ts's identical note.
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
             computeTimingSlotName(step.name, 'canvas'),
           ),

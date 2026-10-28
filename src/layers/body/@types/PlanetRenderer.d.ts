@@ -1,20 +1,8 @@
 /**
- * PlanetRenderer — handle for a flat-lit albedo planet drawn into the opaque
- * near-field foreground target.
- *
- * The planet is the same UV-sphere mesh the Earth and star renderers use
- * (`uvSphereMesh`), shaded by one lambert dot product against the per-instance
- * sun direction (rotated into the body's local frame) plus a small ambient
- * floor (see `planet/fragment.wesl` and the shared `lib/bodyLighting.wesl`).
- * No texture: the per-instance albedo is enough for the descent's fly-past
- * distances; per-planet texturing would follow the Earth's `setMap`
- * pattern when a body earns it.
- *
- * Each body's MVP + albedo + sun direction rides in a per-instance
- * vertex-buffer record, needing neither a per-body bind nor a per-draw
- * uniform — but `draw` is called once per body-m slab row (own instance
- * buffer per `hostId`), not once for the whole roster; see `planetRenderer`'s
- * header for the per-body-buffer race and its fix.
+ * PlanetRenderer: a flat-lit albedo planet drawn into the opaque near-field
+ * foreground target (lambert against the body-local sun direction plus a small
+ * ambient floor; no texture). `draw` is called once per body-m slab row, each
+ * `hostId` with its own instance buffer, so same-submit writes never clobber.
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -22,18 +10,10 @@ import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 export type PlanetRenderer = Renderer & {
   /**
-   * Draw the one planet belonging to the slab's host into the current
-   * (opaque, depth-tested) pass; `hostId` is always a planet id for this
-   * renderer (a place never reaches it). `instance` is a packed Float32Array
-   * of 28 floats:
-   * floats 0..15 the body's column-major MVP (model T·R·S + view +
-   * projection), 16..18 linear-RGB albedo (+ pad at 19), 20..22 the sun
-   * direction in the body's local frame (+ pad at 23), 24..26 camPosLocal (+
-   * pad at 27). `planetsPass` calls `draw` once per body-m slab row, all
-   * inside one submit, so each `hostId` gets its OWN instance buffer (the
-   * `texturedBodyRenderer` own-buffer-per-body precedent): two same-submit
-   * calls for different ids never share a write target, so neither can
-   * clobber the other before the GPU runs either draw.
+   * Draw the slab host's planet into the current (opaque, depth-tested) pass.
+   * `instance` is 28 floats: 0..15 column-major MVP, 16..18 linear-RGB albedo,
+   * 20..22 sun direction in the body's local frame, 24..26 camPosLocal; each
+   * vec3 is followed by one pad float.
    */
   draw(pass: GPURenderPassEncoder, hostId: PositionedId, instance: Float32Array): void;
 };

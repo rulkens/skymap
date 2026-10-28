@@ -1,12 +1,9 @@
 /**
- * atmosphereShellPass — the in-scatter atmosphere as a `'body'`-slab row in the depth-bearing
- * `foreground:0` target (spec §8.3): a proxy sphere at the atmosphere-TOP radius, OUTSIDE the
- * shell only — a camera it encloses is `aerial-perspective`'s, and exactly one of the two draws
- * runs per body per frame or the in-scatter doubles. The frame program expands it to one step
- * per body-m row, so `enabled`/`draw` run once PER BODY on `view.slab.frame.hostId`. Non-pickable (a translucent halo has no clickable silhouette), so no `drawPick`.
- * Argued elsewhere: bake↔draw equality in `atmosphereDrawList`, the shell itself in
- * `atmosphereShellRenderer` + `shell/fragment.wesl`, this row's order in `frameOrder.ts`, the
- * uniform record in `atmosphereShellUniforms`.
+ * atmosphereShellPass — the in-scatter atmosphere: a proxy sphere at the atmosphere-TOP
+ * radius in the depth-bearing `foreground:0` target, OUTSIDE the shell only. A camera it
+ * encloses is `aerial-perspective`'s; exactly one of the two draws per body per frame or the
+ * in-scatter doubles. Expanded to one step per body-m row, so `enabled`/`draw` run PER BODY on
+ * `view.slab.frame.hostId`. Non-pickable (a translucent halo), so no `drawPick`.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -32,8 +29,7 @@ export function atmosphereShellPass(runtime: BodyRuntime): ContentPass {
       const bodyId = view.slab.frame.hostId;
       const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
       if (entry === undefined) return;
-      // The depth this row's opaque passes stamped: every ray the fragment
-      // classifies ends at it, in the sampled row's own frame scaled to km.
+      // Every ray the fragment classifies ends at the depth this row's opaque passes stamped.
       runtime.atmosphereShellRenderer.draw(
         pass,
         entry.body.id,

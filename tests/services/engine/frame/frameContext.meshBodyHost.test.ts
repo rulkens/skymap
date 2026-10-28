@@ -59,8 +59,6 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       petunias[1] - earth[1],
       petunias[2] - earth[2],
     ]);
-    // The eye sits between Earth and the petunias, so the orbit pose's
-    // target-to-eye direction is the inward one.
     const toEye: Vec3 = [-outward[0], -outward[1], -outward[2]];
     const pose: CameraPose = {
       target: [petunias[0], petunias[1], petunias[2]],
@@ -74,8 +72,6 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       {
         cam: assembleOrbitCamera(pose, PROJECTION, IDENTITY, IDENTITY),
         arm: absoluteArm(pose),
-        // World arm, no focus: the same value `pivotSurfaceRangeMpc` used to
-        // fall back to when this test omitted `altitudeMpc`.
         altitudeMpc: pose.distance,
         nowMs: 0,
         simDays: CONST_J2000,

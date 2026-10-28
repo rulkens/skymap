@@ -1,18 +1,8 @@
 /**
- * AtmosphereUniforms byte-layout guard.
- *
- * The WGSL `AtmosphereUniforms` struct in `shaders/lib/sphere.wesl` and the
- * CPU-side `packAtmosphereUniforms` must agree byte-for-byte: a mismatch
- * produces no GPU error, just a wrong (or, on iOS, silently dropped) frame.
- * This is the `testing.md` keep-rule for uniform layouts — it fails on a real
- * drift no compiler check catches.
- *
- * The test drives the real packer with distinct, non-round values in every
- * slot (no two sentinels equal, so a swapped pair of fields is caught) and
- * reads the returned `Float32Array` at the offsets the struct pins. In
- * particular it pins `bottomRadius` at float index 19 — the slot the lit packer
- * leaves a zeroed pad — so a packer that forgot to overwrite it (and left the
- * lit pad in place) fails.
+ * AtmosphereUniforms byte-layout guard: the WGSL struct in `shaders/lib/sphere.wesl` and
+ * `packAtmosphereUniforms` must agree byte-for-byte; a mismatch gives no GPU error, just a wrong (on
+ * iOS, silently dropped) frame. Distinct non-round values in every slot catch swapped fields;
+ * `bottomRadius` at float 19 (a zeroed pad in the lit packer) catches a packer that never overwrote it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -23,20 +13,14 @@ import {
 import { packLitBodyUniforms } from '../../../../src/layers/body/render/packLitBodyUniforms';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// A recognisable MVP: 1..16 so any transposition or off-by-one placement of a
-// later field into the matrix block shows up as a wrong value.
 const MVP = new Float32Array(16);
 for (let i = 0; i < 16; i++) MVP[i] = i + 1;
 
-// A second recognisable matrix — 17..32, distinct from MVP's 1..16 — so a
-// swap between the two 16-float blocks is caught.
 const INV_MVP = new Float32Array(16);
 for (let i = 0; i < 16; i++) INV_MVP[i] = i + 17;
 
-// Distinct, non-unit vectors + scalars so a mis-mapped component perturbs a
-// byte the check would catch, and no two sentinels are equal (swap-proof).
-// Dyadic fractions — exactly representable in float32, so `toBe` stays exact
-// (swap-proof) rather than needing a tolerance, yet no two sentinels are equal.
+// Distinct dyadic fractions: exactly representable in float32, so `toBe` stays exact, and no two
+// sentinels are equal (swap-proof).
 const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
 const CAM_POS: Vec3 = [1.5, 2.5, 3.5];
 const BOTTOM_RADIUS = 0.96875; // planetRadiusKm / atmosphereTopKm ∈ (0,1)
@@ -62,41 +46,33 @@ describe('AtmosphereUniforms byte offsets', () => {
     expect(rec.length).toBe(44); // 176 bytes
     expect(rec.byteLength).toBe(176);
 
-    // mvp — all 16 floats verbatim at bytes 0..63.
     for (let i = 0; i < 16; i++) expect(rec[i]).toBe(MVP[i]);
 
-    // sunDirLocal — vec3 at byte 64 (float index 16). The lit prefix is reused,
-    // so bytes 0..75 (float 0..18) match packLitBodyUniforms exactly.
+    // sunDirLocal — vec3 at byte 64 (float 16); the lit prefix is reused, so floats 0..18 match packLitBodyUniforms.
     const lit = packLitBodyUniforms(MVP, SUN_DIR);
     for (let i = 0; i < 19; i++) expect(rec[i]).toBe(lit[i]);
     expect(rec[16]).toBe(SUN_DIR[0]); // byte 64
     expect(rec[17]).toBe(SUN_DIR[1]); // byte 68
     expect(rec[18]).toBe(SUN_DIR[2]); // byte 72
 
-    // bottomRadius — float index 19 (byte 76), the vec3's trailing slot. A REAL
-    // field here (like RingUniforms.planetRadiusRatio), NOT the zeroed pad the
-    // lit packer leaves — so this fails if the override was dropped.
+    // bottomRadius — float 19 (byte 76), the vec3's trailing slot: a REAL field, not the zeroed lit pad.
     expect(rec[19]).toBe(BOTTOM_RADIUS); // byte 76
 
-    // camPosLocal — vec3 at byte 80 (float index 20), 16-byte aligned.
     expect(rec[20]).toBe(CAM_POS[0]); // byte 80
     expect(rec[21]).toBe(CAM_POS[1]); // byte 84
     expect(rec[22]).toBe(CAM_POS[2]); // byte 88
 
-    // the vec3 tail pad — was sunIrradiance, structural not content
+    // the vec3 tail pad (structural, not content)
     expect(rec[23]).toBe(0); // byte 92
     expect(rec[24]).toBe(EXPOSURE); // byte 96
 
-    // Ring ratios — the host's ring annulus in atmosphere-top units (0 = no
-    // ring), for the shell's ring-in-front occlusion.
+    // Ring ratios in atmosphere-top units (0 = no ring), for the shell's ring-in-front occlusion.
     expect(rec[25]).toBe(RING_INNER); // byte 100
     expect(rec[26]).toBe(RING_OUTER); // byte 104
 
     // froxelSliceKm — a real field in the slot that rounds the prefix to 112.
     expect(rec[27]).toBe(FROXEL_SLICE_KM); // byte 108
 
-    // invMvp — all 16 floats verbatim at bytes 112..175, distinct from MVP's
-    // sentinel so a swap of the two matrix blocks is caught.
     for (let i = 0; i < 16; i++) expect(rec[28 + i]).toBe(INV_MVP[i]);
   });
 });

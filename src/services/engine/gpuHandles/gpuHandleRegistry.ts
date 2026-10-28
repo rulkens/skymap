@@ -1,11 +1,8 @@
 /**
- * GPU_HANDLE_ROWS — the declarative table `constructGpuHandles` /
- * `destroyGpuHandles` walk, and the table `initGpu.ts`/`wireInput.ts` call
- * live. One row per `GpuHandleKey`, in today's `initGpu.ts` order
- * (`focusUniform` first), except `pickProgram` — marked
- * `constructPhase: 'wireInput'` — declared LAST so reverse-order teardown
- * destroys it first. `rebuildOnSwapFormat: true` marks the rows
- * `buildSwapRenderers.ts` rebuilds on a format change.
+ * GPU_HANDLE_ROWS — the table `constructGpuHandles` / `destroyGpuHandles` walk.
+ * One row per `GpuHandleKey`, `focusUniform` first; `pickProgram`
+ * (`constructPhase: 'wireInput'`) is LAST so reverse-order teardown destroys it
+ * first. `rebuildOnSwapFormat: true` marks rows `buildSwapRenderers.ts` rebuilds.
  */
 
 import { createCompositor } from '../../gpu/passes/compositor';
@@ -35,18 +32,12 @@ import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
-// `as const satisfies`, not a plain `: readonly GpuHandleRow[]` annotation:
-// `satisfies` checks every row against its `GpuHandleRow` union member;
-// `as const` keeps each row's `key` a literal in GPU_HANDLE_ROWS's own
-// inferred type, which the totality check below depends on (an ordinary
-// annotation widens `key` back to `GpuHandleKey`, making that check
-// vacuously true). `as const` gives `construct` no contextual type, so
-// every row spells out its `state`/`deps` parameter types.
+// `as const satisfies`, not an annotation: an annotation widens `key` back to
+// `GpuHandleKey`, making the totality check below vacuously true. `as const`
+// gives `construct` no contextual type, so rows spell out their parameter types.
 export const GPU_HANDLE_ROWS = [
-  // focusUniform first: reversing the array for teardown destroys it LAST,
-  // matching its real early construction position (initGpu.ts) and the one
-  // proven destroy-order constraint — a Layer's pick renderer captures its
-  // bind group at construction, and every Layer is destroyed before core.
+  // focusUniform first: teardown reverses the array and destroys it LAST, because a
+  // Layer's pick renderer captures its bind group at construction.
   {
     key: 'focusUniform',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
@@ -58,10 +49,8 @@ export const GPU_HANDLE_ROWS = [
       createCompositor({ device: deps.ctx.device }),
   },
   {
-    // `state`, not a defaults constant: the `mw-aggregate` row's `scale` is a
-    // function of `settings.milkyWay.aggregateDivisor`, and every reconcile
-    // re-reads it off this same live state. Not a second path to the same
-    // answer — the scale function IS the reconcile path, seeded here.
+    // `state`, not a defaults constant: `mw-aggregate`'s `scale` is a function of
+    // `settings.milkyWay.aggregateDivisor`, which every reconcile re-reads.
     key: 'renderTargets',
     construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
       createRenderTargets(
@@ -71,7 +60,7 @@ export const GPU_HANDLE_ROWS = [
         state,
       ),
   },
-  // ── The 8 swap-chain-format rows (buildSwapRenderers.ts order) ──────────
+  // The 8 swap-chain-format rows, in buildSwapRenderers.ts order.
   {
     key: 'labelRendererCosmo',
     rebuildOnSwapFormat: true,
@@ -129,12 +118,9 @@ export const GPU_HANDLE_ROWS = [
       }),
   },
 
-  // The two label pick providers. NOT `rebuildOnSwapFormat` rows despite
-  // pairing with the two swap-format label renderers above: they draw into the
-  // pick program's r32uint targets, whose formats are fixed, so an HDR toggle
-  // leaves them valid. Each takes its slab's pick-target depth format from
-  // `pickDepthFormat` — the same function the program sizes the target with —
-  // plus that slab's depth convention.
+  // The two label pick providers are NOT `rebuildOnSwapFormat` rows: they draw into the
+  // pick program's fixed-format r32uint targets, so an HDR toggle leaves them valid.
+  // Depth format comes from `pickDepthFormat`, the function that sizes the target.
   {
     key: 'labelPickRendererCosmo',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
@@ -151,8 +137,7 @@ export const GPU_HANDLE_ROWS = [
       createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
-    // Draws into HDR (rgba16float), not the swap chain — no
-    // rebuildOnSwapFormat (that's only the 8 swap-chain-format rows above).
+    // Draws into HDR (rgba16float), not the swap chain: no rebuildOnSwapFormat.
     key: 'label3DRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
@@ -169,8 +154,6 @@ export const GPU_HANDLE_ROWS = [
       createCubeFaceBlitRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
-    // Boot-eager like every other renderer row; `dome-cube` itself is the lazy
-    // one (`allocateWhen: state.viewRig === 'dome'`).
     key: 'domeResampleRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
@@ -186,9 +169,8 @@ export const GPU_HANDLE_ROWS = [
       createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
-    // Mesh bodies ride their host's NEAR0 body slab, so they share the sphere
-    // bodies' foreground:0 formats and depth convention exactly: its pipeline
-    // formats are the `foreground:0` row's own (data/renderTargetFormats.ts).
+    // Mesh bodies ride a host's body slab: pipeline formats are the `foreground:0`
+    // row's own (data/renderTargetFormats.ts).
     key: 'meshBodyRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMeshBodyRenderer({
@@ -200,11 +182,8 @@ export const GPU_HANDLE_ROWS = [
       }),
   },
 
-  // ── wireInput.ts-phase rows, declared LAST ───────────────────────────────
-  // Constructed once `focusUniform` exists (a later bootstrap phase), and
-  // declared last so reverse-order teardown destroys them FIRST.
-  // `constructPhase: 'wireInput'` is what `initGpu.ts`/`wireInput.ts` filter
-  // on — see GpuHandleRow.d.ts.
+  // wireInput-phase rows: constructed once `focusUniform` exists, declared LAST so
+  // reverse-order teardown destroys them FIRST.
   {
     key: 'pickProgram',
     constructPhase: 'wireInput',
@@ -218,15 +197,9 @@ export const GPU_HANDLE_ROWS = [
   },
 ] as const satisfies readonly GpuHandleRow[];
 
-// Compile-time totality: fails `tsc` if a `GpuHandleKey` has no row above —
-// the enforcement Task 11's "add a row when you add a field" pointer needs.
-// No `as` cast: `_totalityCheck`'s declared type IS the check result, so a
-// missing key assigns literal `true` to a mismatched tuple type — a real
-// assignability error. The plan's own `as _AssertEveryKeyCovered extends
-// true ? true : never` phrasing does NOT fail here: `as` accepts either
-// direction of assignability, and `never` is assignable to (from) anything,
-// so `true as never` — and the reverse assignment into `: true` — both
-// silently succeed regardless of whether a row is missing.
+// Compile-time totality: fails `tsc` if a `GpuHandleKey` has no row. No `as` cast:
+// `as X extends true ? true : never` accepts either direction of assignability, so
+// it silently succeeds even when a row is missing.
 type _AssertEveryKeyCovered = GpuHandleKey extends (typeof GPU_HANDLE_ROWS)[number]['key']
   ? true
   : [

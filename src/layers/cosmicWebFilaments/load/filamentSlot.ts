@@ -1,8 +1,4 @@
-/**
- * filamentSlot — factory for the cosmic-web skeleton's asset slot: its own fetcher
- * (the binary format is segments, not points) and its own renderer target.
- * Construction-pure — builds and returns; the Layer's asset row carries it.
- */
+/** filamentSlot — factory for the cosmic-web skeleton's asset slot (its format is segments, not points). */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { filamentFetcher } from './filamentFetcher';
@@ -18,9 +14,6 @@ export function createFilamentSlot(
     name: 'filaments',
     fetch: filamentFetcher,
     commit: async (cloud) => {
-      // upload() is synchronous (returns void); no await needed today. Kept
-      // inside the async commit body for symmetry with the galaxy-catalog point
-      // slot, whose upload is async.
       renderer.upload(cloud);
     },
   });

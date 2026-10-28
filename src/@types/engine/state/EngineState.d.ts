@@ -60,12 +60,7 @@ export type EngineState = {
    * by `wireInput`'s bootstrap seed once the initial camera exists.
    */
   cameraRuntime: CameraRuntime;
-  /**
-   * Per-`CUBEMAP_CAPTURES`-row bake bookkeeping — render state, not camera
-   * state; written by `scheduleSkyCaptures` and `scheduleProbeCapture`, read
-   * by each sky row's target's `allocateWhen`. Seeded in `engine.ts`; entries
-   * are mutated in place.
-   */
+  /** Per-`CUBEMAP_CAPTURES`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky target's `allocateWhen`. */
   cubemapCaptures: CubemapCaptureRuntimes;
   /**
    * Bumped once per successful galaxy-catalog commit (`wireGalaxyCatalogSourceSlot`'s
@@ -74,26 +69,22 @@ export type EngineState = {
    */
   contentVersion: number;
   /**
-   * Every Layer bound to its runtime by `createLayers`, in composition tuple
-   * order. `[]` until that phase runs; `destroy()` tears these down in
-   * REVERSE order before any core teardown a Layer's captured core object
-   * depends on (D8).
+   * Layers bound to their runtimes by `createLayers`, in tuple order; `[]` until
+   * then. `destroy()` tears them down in REVERSE order, before any core teardown
+   * a Layer's captured core object depends on.
    */
   layers: readonly LayerInstance[];
   /**
-   * The `Task`s `createLayers` forked for each Layer's declared `sagas` (RunSaga's
-   * doc comment). `destroy()` cancels every one of these BEFORE tearing down
-   * `layers` above, so a re-`createEngine` on the same store never leaves a
-   * watcher from the previous run reacting alongside the new one's.
+   * Tasks forked for each Layer's `sagas`. `destroy()` cancels them BEFORE tearing
+   * down `layers`, so a re-`createEngine` on the same store never has two
+   * watchers reacting.
    */
   layerSagaTasks: readonly Task[];
   /**
-   * The composed contributions: core's constants followed by each Layer's, in
-   * tuple order, assembled once by `createLayers`. Every runtime reader walks
-   * these rather than `CONTENT_PASSES` / `meshAssetRows`, which are core's
-   * authored halves only; every compute row is a Layer's. `assetRows` is the
-   * COMPANION-EXPANDED fold over both halves; `slotsByKey` indexes each row's
-   * slot by its key, the one home a key-addressed read resolves through.
+   * The composed contributions: core's constants then each Layer's, assembled once
+   * by `createLayers`. Readers walk these, not `CONTENT_PASSES` / `meshAssetRows`
+   * (core's half only). `assetRows` is the companion-expanded fold of both halves;
+   * `slotsByKey` indexes each row's slot by key.
    */
   passes: readonly ContentPass[];
   /** `executeFrame` resolves a `'compute'` step's name against this; an absent
@@ -123,12 +114,9 @@ export type EngineState = {
   /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
   terrain: LayerTerrain;
   /**
-   * The one selection-row array core owns (D5, Ruling 4): `[]` here,
-   * populated by Task 8's core rows and appended to once, by `createLayers`,
-   * with each Layer's own rows. Named distinctly from `selectionRows` above —
-   * that field is the UNRELATED saga-reconciled display cache
-   * (`SelectionRowsState`); this one holds `SelectionKindRow`s, the composed
-   * resolver's dispatch table.
+   * Core's selection rows plus each Layer's, appended once by `createLayers`:
+   * the composed resolver's dispatch table. Unrelated to `selectionRows`
+   * above, the saga-reconciled display cache.
    */
   selectionKindRows: readonly SelectionKindRow[];
   /** Every Layer's static `targets`, in tuple order — seeded by `createEngine`, read by the

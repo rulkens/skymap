@@ -23,7 +23,6 @@ const ROW: SlabRow = {
   activeBand: BAND,
 };
 
-/** The anchor `distanceMpc` from a camera at the origin. */
 function statesAt(distanceMpc: number): ReadonlyMap<string, BodyState> {
   const positionMpc: Vec3 = [distanceMpc, 0, 0];
   return new Map([[ANCHOR_ID, { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 }]]);

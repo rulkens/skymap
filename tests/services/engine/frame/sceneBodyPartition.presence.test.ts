@@ -119,7 +119,6 @@ describe('spacecraft presence', () => {
   });
 });
 
-// The four-way routing of core's own bodies, fed straight through `sceneBodies`.
 const PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 6));
 const CAM: Vec3 = [0, 0, 0];
 const CLOSE = (radiusM: number) => radiusM * 5; // resolved (~hundreds of px)

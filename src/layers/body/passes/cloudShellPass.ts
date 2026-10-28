@@ -1,61 +1,15 @@
 /**
- * cloudShellPass — Earth's translucent cloud deck as a `'body'`-slab content
- * row drawing into the depth-bearing `foreground:0` target (spec §8), a thin
- * shell just above the opaque surface `earthPass` stamps.
- *
- * ### What it draws — the translucent deck over the opaque globe
- *
- * The frame program expands a `'body'` layer into one render step per body-m
- * slab row (Task 7); `enabled`/`draw` are called once per body-m row and gate
- * on `view.slab.frame.hostId` — `cloudShellDraw` widens that gate to "this
- * row's body has a cloud-shell row", which today still means Earth alone
- * (`CLOUD_SHELL_PARAMS.radiusRatio` is one shared constant, not a per-body
- * table — the lean choice while Earth is the only textured cloud deck). The
- * `SCENE_EARTH` record is composed as a unit sphere scaled to
- * `SCENE_EARTH.surface.datumRadiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
- * in the body's own eye-relative frame, with the orientation resolved this
- * frame from the `BodyState` snapshot. The shared `cloudShellRenderer`
- * textures that sphere with Earth's equirectangular cloud map (RGB colour +
- * `.a` coverage) and dims it by the same body-local sun-relative Lambert term
- * the surface uses, so the deck goes dark on the night side.
- * `CLOUD_SHELL_PARAMS.opacity` is the coverage-to-alpha multiplier folded
- * into the shell's straight-alpha output. `cloudShellDraw`'s `insideShell`
- * (camera below the shell radius) selects `cloudShellRenderer`'s front-cull
- * pipeline over its back-cull one, so the deck stays visible descending
- * through it (Task 10) instead of every triangle culling away.
- *
- * ### Why it draws AFTER earth, OVER not opaque
- *
- * The shell is the second translucent member of the `(foreground:0, 'body')`
- * render group (the ring is the other). It is registered immediately AFTER
- * `earthPass` so it draws once the opaque globe has stamped its depth: the
- * shell pipeline depth-TESTS against the surface (`depthCompare: 'greater'`,
- * the body-m slab's reversed-Z convention — clear `0.0`, greater-z-wins, so a
- * nearer surface stamps a LARGER depth) so the far hemisphere is correctly
- * occluded, but writes NO depth (`depthWriteEnabled: false`) and blends
- * straight-alpha OVER. `atmosphereShellPass` lands AFTER this row (drawn
- * last), so the deck sits under the atmosphere but over the surface.
- *
- * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
- *
- * Same seam as every body-slab layer: this row's `pose =
- * ctx.bodyPose('earth')` is the SAME closure `deriveSlabs` built this row's
- * `view.slab.vp` from. See `composeBodySlabMvp`'s module header.
- *
- * ### When it draws
- *
- * `enabled` gates on this row being Earth's own body-m row, the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`) — the same near-field gate `earthPass`
- * applies, so the shell appears exactly when the surface does — AND the
- * clouds slot being RESIDENT and `cloudDeckFade` (see its header) being above
- * 0: a row that would add nothing to the frame — no map yet, or fully faded
- * on approach to the surface tiles — leaves the pass plan rather than draw a
- * fully transparent sphere. Both `enabled` and `draw` read ONE
- * `cloudShellDraw` derivation, so the gate and the loop can never disagree.
- *
- * The shell is non-pickable (spec §8.3): a translucent overlay has no
- * clickable silhouette of its own — clicking Earth hits the opaque surface
- * `earthPass` stamps into the pick pass. So this row declares no `drawPick`.
+ * cloudShellPass: Earth's translucent cloud deck as a `'body'`-slab content row in
+ * the depth-bearing `foreground:0` target, a shell at `datumRadiusM x
+ * CLOUD_SHELL_PARAMS.radiusRatio` just above the surface `earthPass` stamps.
+ * Registered immediately AFTER `earthPass` (and before `atmosphereShellPass`): it
+ * depth-TESTS against the surface (reversed-Z `greater`) but writes no depth, and
+ * blends straight-alpha OVER. `insideShell` (camera below the shell radius) picks
+ * the renderer's front-cull pipeline so the deck survives a descent through it.
+ * The pose is `ctx.bodyPose(hostId)`, the closure `deriveSlabs` built `view.slab.vp`
+ * from. Non-pickable (a translucent overlay has no silhouette; the click hits the
+ * surface), so no `drawPick`. `enabled` and `draw` share ONE `cloudShellDraw`
+ * derivation: a row that would draw nothing leaves the pass plan.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -79,23 +33,15 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
-/** The resolved descent-fade multiplier, and whether the camera
- *  sits inside the shell radius this frame (Task 10: `cloudShellRenderer.draw`
- *  needs this to pick its front-cull, inside-sphere pipeline). */
+/** The descent-fade multiplier, and whether the camera is inside the shell radius. */
 type CloudShellDraw = {
   readonly deckFade: number;
   readonly insideShell: boolean;
 };
 
 /**
- * The Earth record + descent-fade multiplier to draw the cloud shell with this
- * frame for `bodyId`, or `null` if the shell should not render — `bodyId` is
- * not Earth (today's only cloud-shell body), the clouds map has not
- * committed, the body is beyond the near-field distance gate, it resolves to
- * sub-pixel, or the descent fade has reached 0. ONE derivation feeds both
- * `enabled` and `draw`, so the gate and the loop can never disagree about
- * whether the shell renders. Mirrors `earthPass`'s near-field gate plus the
- * ring's residency gate.
+ * The fade and inside-shell flag for `bodyId`, or `null` if the shell should not
+ * render: not Earth, clouds map not committed, sub-pixel, or the fade reached 0.
  */
 function cloudShellDraw(
   state: PassState,
@@ -104,32 +50,21 @@ function cloudShellDraw(
   runtime: BodyRuntime,
 ): CloudShellDraw | null {
   if (SCENE_EARTH.id !== bodyId) return null;
-  // Resident iff the clouds slot holds a committed bitmap; otherwise the shell
-  // would draw a fully transparent sphere (placeholder alpha 0) — drop the row.
+  // Without a committed bitmap the shell would draw a fully transparent sphere.
   if (runtime.textureSlots.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)
     return null;
-  // Live position from the per-frame snapshot (keyed by id) — not the baked
-  // record field; the record still gates presence + residency and carries the
-  // authored radius.
   const earthPos = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!.positionMpc;
   const dx = earthPos[0] - ctx.drawCamPos[0];
   const dy = earthPos[1] - ctx.drawCamPos[1];
   const dz = earthPos[2] - ctx.drawCamPos[2];
   const distanceMpc = Math.hypot(dx, dy, dz);
-  // Checked before the sub-pixel cull so it also covers that cull's
-  // distanceMpc === 0 degenerate case: a camera at the body's centre is deep
-  // inside the fade-out band already.
+  // Before the sub-pixel cull, so it also covers that cull's distanceMpc === 0 case.
   const bodyRadiusMpc = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
-  // Same shell radius the geometry itself is scaled to (radiusRatio, in body
-  // radii) — NOT `atmosphereInsideBand`'s atmosphere-top-radius ratio, a
-  // different unit convention on a different shell.
+  // The cloud shell's radius (body radii), not `atmosphereInsideBand`'s atmosphere-top ratio.
   const insideShell = distanceMpc / bodyRadiusMpc < CLOUD_SHELL_PARAMS.radiusRatio;
-  // Sub-pixel cull on Earth's diameter (the shell is a hair larger, so the
-  // surface gate governs both). apparentSizePx returns 0 for a zero
-  // camera-to-centre distance (camera inside the body), which reads as
-  // resolved here since deckFade already handled that case above.
+  // apparentSizePx returns 0 at zero distance (camera inside the body), handled above.
   if (distanceMpc === 0) return { deckFade, insideShell };
   const diameterPx = apparentSizePx({
     diameterKpc:
@@ -147,8 +82,6 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      // A row that would draw nothing (no resident map / sub-pixel) must leave the
-      // pass plan: mirror draw's branch with the SAME derivation.
       return cloudShellDraw(state, ctx, view.slab.frame.hostId, runtime) !== null;
     },
 
@@ -157,35 +90,17 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
       const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.hostId, runtime);
       if (drawInputs === null) return;
       const { deckFade, insideShell } = drawInputs;
-      // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
-      // `view.slab.vp` — reading it here instead of re-deriving the pose is what
-      // keeps this layer's eyeRelBodyM from ever drifting off that basis. The
-      // row's own `bodyId` (not `earth.id`, a plain `string`) is what
-      // `BodyPoseProvider` accepts.
       const pose = ctx.bodyPose(view.slab.frame.hostId);
       if (pose === null) return;
 
-      // Live position + orientation from the per-frame snapshot (keyed by id) — not
-      // the baked record fields; radius stays authored identity on the record.
       const earthState = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!;
 
-      // Scale the unit sphere to the shell radius — just above the surface — in
-      // metres, the body-m slab frame's own unit (the datum is already metres, so
-      // no Mpc conversion crosses this seam). The deck stays a RATIO of the datum
-      // here; F3 re-expresses it as an altitude above the outer bound, so a peak
-      // can never rise through it.
+      // Metres, the body-m slab frame's own unit.
       const shellRadiusM = SCENE_EARTH.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio;
       const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, shellRadiusM);
-      // Sun rotated into Earth's local frame (its resolved orientation carries the
-      // axial tilt), so the fragment's Lambert dim on the night side stays co-framed
-      // with the surface.
+      // Rotated into Earth's local frame (axial tilt), co-framed with the surface.
       const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
-      // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
-      // uses (single source of truth), so clouds — the brightest real feature — are
-      // not dimmer than the ground beneath them. The ambient floor is likewise the
-      // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
-      // the deck's night side dims in lockstep with the ground. `deckFade` folds
-      // the descent fade into the opacity multiplier; it is always > 0 here.
+      // Irradiance and ambient are the SAME values the surface reads, so the deck matches the ground.
       runtime.cloudShellRenderer.draw(
         pass,
         packCloudShellUniforms(

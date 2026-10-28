@@ -44,8 +44,6 @@ const FIXTURE_PX_PER_RAD = 600 / (2 * Math.tan(1 / 2));
 function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   const positionMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId(bodyId))!.positionMpc;
   return {
-    // Frame-owned: `scheduleProbeCapture` and `sceneBodyStates` both read
-    // these off `ctx.snapshot.x`.
     snapshot: {
       simDays: SIM_DAYS,
       nowMs,
@@ -66,7 +64,6 @@ function makeState(resident: readonly string[]): EngineState {
   } as unknown as EngineState;
 }
 
-/** A face ctx whose slab table carries Mars's body-m row at index 3. */
 function faceCtxWithMarsRow(face: CubeFace): FrameView {
   return {
     __face: face,
@@ -139,7 +136,6 @@ describe('scheduleProbeCapture', () => {
     expect(state.cubemapCaptures.probe.subject).toBeNull();
     expect(deriveViewMock).not.toHaveBeenCalled();
 
-    // One millisecond later the interval has elapsed.
     expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', NOW_MS + 1) })).not.toBeNull();
   });
 
@@ -152,7 +148,6 @@ describe('scheduleProbeCapture', () => {
     const row = CUBEMAP_CAPTURES.probe;
     const curiosityMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('curiosity'))!.positionMpc;
 
-    // One frame for the whole row.
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
     expect(cubemapCaptureFrameMock.mock.calls[0]![0]).toMatchObject({
       eyeMpc: curiosityMpc,
@@ -162,7 +157,6 @@ describe('scheduleProbeCapture', () => {
       axes: deriveBodyStates(SIM_DAYS).get(asSceneBodyId('mars'))!.orientation,
     });
 
-    // Six faces off that one frame, each stamped with the row's slot base and size.
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
     for (const call of deriveViewMock.mock.calls) {
       const spec = call[2] as ViewSpec;

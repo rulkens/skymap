@@ -1,19 +1,9 @@
 /**
- * atmosphereShellPass — unit tests for the in-scatter atmosphere's `'body'`-
- * slab content row.
- *
- * Like the other body-slab layers, the load-bearing assertion is the f64 seam,
- * pinned end-to-end through the layer: the slab's `Float64Array` view-projection
- * (`view.slab.vp`) must reach `composeBodySlabMvp`, NOT the f32-narrowed
- * `view.vp`, and the pose must come off `ctx.bodyPose(bodyId)` rather than a
- * re-derivation — `atmosphereShellUniforms` does both on the layer's behalf.
- * `composeBodySlabMvp` and `bodySlabCamLocal` are mocked to fixed values; their
- * own math is covered by their own test files.
- *
- * The layer is invoked once PER body-m row, so the other thing pinned here is
- * per-row selection: two body-m rows (earth, mars) each draw with THEIR OWN
- * `ATMOSPHERE_PARAMS` entry, and a row for a body with no atmosphere table
- * entry (the Moon) draws nothing.
+ * atmosphereShellPass — the in-scatter atmosphere's `'body'`-slab content row, invoked once
+ * per body-m row. Load-bearing: the slab's f64 `view.slab.vp` must reach `composeBodySlabMvp`
+ * (not the f32 `view.vp`) and the pose must come off `ctx.bodyPose(bodyId)`; each row draws
+ * with its OWN `ATMOSPHERE_PARAMS` entry, and a body with none (the Moon) draws nothing.
+ * `composeBodySlabMvp` and `bodySlabCamLocal` are mocked; their math has its own tests.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -40,10 +30,8 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// Mock the two body-slab compose primitives — real math is covered by
-// composeBodySlabMvp.test.ts / bodySlabCamLocal.test.ts. This suite pins the
-// ARGUMENTS the layer feeds them, and lets packAtmosphereUniforms run for
-// real so the packed bottomRadius reveals which ATMOSPHERE_PARAMS row fed it.
+// packAtmosphereUniforms runs for real so the packed bottomRadius reveals which
+// ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [1.0, 2.0, 3.0];
 vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
@@ -56,22 +44,16 @@ import { composeBodySlabMvp } from '../../../../src/utils/camera/composeBodySlab
 import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// atmosphereDrawList (unmocked — its own cull math is covered by
-// atmosphereDrawList.test.ts) reads live body positions off this per-frame
-// snapshot. Stub it to each fixture's own positionMpc/orientation refs so the
-// layer sees the exact fixture values.
+// atmosphereDrawList reads live body positions off this snapshot; stub it to the fixtures' refs.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, SEEDED_BODIES)),
 }));
 
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
 
-// Positioned at tiny, DISTINCT offsets from the render origin — real Mars
-// orbital distance would put it far below the sub-pixel cull for a camera
-// framed on Earth, and this suite only cares about per-row selection, not
-// orbital mechanics. `1e-15` keeps every body comfortably non-sub-pixel
-// (apparent diameter tracks 1/distance) while the offsets stay small enough
-// that `bodyRelativePose` is never asked to cancel a large shared magnitude.
+// Tiny DISTINCT offsets from the render origin: real Mars distance falls below the sub-pixel
+// cull, and 1e-15 keeps every body non-sub-pixel while `bodyRelativePose` never has to cancel
+// a large shared magnitude.
 const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
   positionMpc: [-1e-15, 0, 0],
@@ -107,11 +89,8 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-/**
- * A ctx comfortably inside the shared foreground gate, with a `bodyPose`
- * stub returning one fixed non-null pose for every body — `composeBodySlabMvp`
- * is mocked, so only the eye's distance (inside or outside the band) matters.
- */
+/** A ctx inside the foreground gate; `bodyPose` returns one fixed pose, so only the eye's
+ *  distance (inside or outside the band) matters. */
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
@@ -147,7 +126,6 @@ const STATE = {
   settings: { earth: { atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure } },
 } as unknown as EngineState;
 
-/** The pass over a runtime whose atmosphere renderer is `renderer`, and the shared state. */
 function makeFixture(renderer: unknown) {
   const pass = atmosphereShellPass({ atmosphereShellRenderer: renderer } as unknown as BodyRuntime);
   return { state: STATE, pass };
@@ -190,11 +168,9 @@ describe('atmosphereShellPass.draw', () => {
     // pose came off ctx.bodyPose rather than a re-derivation.
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
     // Third arg is the atmosphere-TOP radius in METRES (km → m, not km → Mpc):
-    // the seam this task moved off the Mpc-based composeBodyMvp/camPosLocal.
     const expectedTopM = ATMOSPHERE_PARAMS.earth!.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     expect(call[2]).toBeCloseTo(expectedTopM);
 
-    // The camLocal call is the draw list's, off this same pose seam.
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
     expect(camLocalMock.mock.calls[0]![1]).toBeCloseTo(expectedTopM);
   });
@@ -209,7 +185,6 @@ describe('atmosphereShellPass.draw', () => {
     pass.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
     pass.draw(PASS_STUB, makeBodyView(asSceneBodyId('moon')), ctx, state);
 
-    // Exactly two draws — the Moon's row (no ATMOSPHERE_PARAMS entry) is a no-op.
     expect(drawSpy).toHaveBeenCalledTimes(2);
 
     const [, earthBodyId, earthUniforms] = drawSpy.mock.calls[0]!;
@@ -280,14 +255,10 @@ describe('invMvp inversion sanity (mat4d.inverse dst-last / f64 contract)', () =
     const invMvp = mat4d.inverse(mvp);
     const invMvpF32 = narrowMat4(invMvp);
 
-    // A chosen clip-space point [7, 3, -2, 1]. Hand-worked expected unprojection:
-    // local = 0.5*(7-5, 3, -2) = (1, 1.5, -1). mvp/invMvp are pure affine
-    // (translate+scale only), so w stays 1 throughout — no perspective divide
-    // needed, but the test still divides by w to exercise the real un-project path.
+    // Clip point [7, 3, -2, 1]: local = 0.5*(7-5, 3, -2) = (1, 1.5, -1). Affine only, so w stays 1;
+    // the test still divides by w to exercise the real un-project path.
     const clip: [number, number, number, number] = [7, 3, -2, 1];
 
-    // Plain column-major 4x4 * vec4 — hand-rolled, one-off verification, not a
-    // reusable util: out[row] = sum_col m[col*4 + row] * v[col].
     const unprojected: [number, number, number, number] = [0, 0, 0, 0];
     for (let row = 0; row < 4; row++) {
       let sum = 0;

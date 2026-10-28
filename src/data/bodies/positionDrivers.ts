@@ -1,11 +1,7 @@
 /**
- * positionDrivers — the three authored position tables read as one tagged
- * union, so a consumer asking "how does this body get its position?" or "what
- * does it hang off?" does not have to probe each table for membership.
- *
- * Derived, never authored: `SCENE_ANCHORS`, `ORBITAL_ELEMENTS` and
- * `SURFACE_FIXED_SITES` remain the single source of truth, and an orbit driver
- * carries its element row whole rather than a narrowed copy of it.
+ * positionDrivers — the authored position tables read as one tagged union.
+ * Derived, never authored: the source tables stay the single source of truth,
+ * and an orbit driver carries its element row whole.
  */
 
 import { SCENE_ANCHORS } from './sceneAnchors';

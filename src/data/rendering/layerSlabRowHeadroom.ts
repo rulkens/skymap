@@ -10,6 +10,4 @@
 
 import { SCENE_PLANETS } from '../bodies/scenePlanets';
 
-// A row is a timing-query slot and a pass-group title, so the spare stays
-// deliberately small.
 export const LAYER_SLAB_ROW_HEADROOM = 1 + SCENE_PLANETS.length + 4;

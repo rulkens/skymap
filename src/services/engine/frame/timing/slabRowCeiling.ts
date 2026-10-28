@@ -1,11 +1,9 @@
 /**
- * SLAB_ROW_CEILING — upper bound on body rows `deriveSlabs` can emit in one
- * frame: the composed `state.slabRows`, which `createLayers` asserts fit in
- * `LAYER_SLAB_ROW_HEADROOM`, plus the `HOSTLESS_MESH_BODIES` core derives a
- * row for (the mesh bodies with no host row to ride). One slot is allocated
- * per capacity row, not per row actually drawn, so the query-set size is a
- * compile-time constant — and therefore cannot read the composition, which
- * boots later.
+ * SLAB_ROW_CEILING: upper bound on body rows `deriveSlabs` can emit in one frame,
+ * the composed `state.slabRows` (asserted by `createLayers` to fit in
+ * `LAYER_SLAB_ROW_HEADROOM`) plus the `HOSTLESS_MESH_BODIES` core derives a row
+ * for. A compile-time constant because the timing query set is sized before the
+ * composition boots.
  */
 
 import { HOSTLESS_MESH_BODIES } from '../../../../data/bodies/hostlessMeshBodies';

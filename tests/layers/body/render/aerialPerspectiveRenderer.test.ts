@@ -182,9 +182,8 @@ describe('createAerialPerspectiveRenderer — bake and apply share one uniform w
 
 describe('rebind', () => {
   it('binds the replacement sky-view view on the next apply draw', () => {
-    // The shell's tier `reconcile` DESTROYS `skyViewTex`; an apply group still
-    // holding a view of it binds a destroyed texture — a validation error, and
-    // on iOS a whole dropped frame. Binding 2 is that view.
+    // `reconcile` DESTROYS `skyViewTex`; an apply group still holding a view of it binds a destroyed
+    // texture. Binding 2 is that view.
     const { renderer, descOf, bindGroups } = build();
     const replacementView = {} as GPUTextureView;
     const replacement = {

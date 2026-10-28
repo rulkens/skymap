@@ -30,7 +30,6 @@ vi.mock('../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
   textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
 }));
 
-/** The value core hands for the `famousGalaxy` label item. */
 const handed = (famousGalaxy: number) => ({ famousGalaxy });
 const ONE = handed(1);
 
@@ -47,9 +46,6 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousGalaxyLabels reads its Layer's runtime for the sidecar records
-// and the positional catalog, and the text layout bbox for the caption's ink
-// bbox (which places the leader-line top); its fade arrives as the handed value.
 function makeState(
   opts: {
     focusedOnly?: boolean;
@@ -67,13 +63,11 @@ function makeState(
 
 // View-projection matching the ctx below: camera at the origin looking down
 // +X (toward the seeded galaxies at [10, 0, 0]), 60° vertical fov, 16:9.
-// The producer projects through this to compute the screen-space label lift.
 const VP = mat4.multiply(
   mat4.perspective((60 * Math.PI) / 180, 1920 / 1080, 0.1, 1000),
   mat4.lookAt([0, 0, 0], [1, 0, 0], [0, 1, 0]),
 ) as Float32Array;
 
-/** Project a world point through VP to screen pixels (screen +Y down). */
 function screenOf(p: readonly number[]): [number, number] {
   const clipX = VP[0]! * p[0]! + VP[4]! * p[1]! + VP[8]! * p[2]! + VP[12]!;
   const clipY = VP[1]! * p[0]! + VP[5]! * p[1]! + VP[9]! * p[2]! + VP[13]!;
@@ -91,7 +85,6 @@ function makeCtx(over: { focusBlend?: number } = {}): FrameView {
   } as unknown as FrameView;
 }
 
-// pxPerRad the producer derives from the ctx above (= drawPxPerRad).
 const PX_PER_RAD = 1080 / (2 * Math.tan((30 * Math.PI) / 180));
 const sizePxAt = (diameterKpc: number, distanceMpc: number) =>
   (diameterKpc / (distanceMpc * 1000)) * PX_PER_RAD;
@@ -108,10 +101,6 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
-/**
- * The runtime slice the producer closes over — its catalog map and the famous
- * sidecar. `seed` returns it; every call site hands it to the producer factory.
- */
 function seed(
   entries: Partial<FamousGalaxyMetaEntry>[],
   positions: number[],
@@ -150,8 +139,6 @@ describe('produceFamousGalaxyLabels', () => {
     expect(label.fadeAlpha).toBe(1);
     expect(label.prominencePx).toBeCloseTo(sizePxAt(120, 5), 3);
 
-    // Leader present, from the dot up to exactly the padding below the
-    // text's measured bottom.
     expect(label.leader).toBeDefined();
     expect(label.leader!.fromWorld).toEqual([5, 0, 0]);
     const tip = screenOf(label.leader!.toWorld);
@@ -160,12 +147,8 @@ describe('produceFamousGalaxyLabels', () => {
   });
 
   it('keeps the line top exactly the padding below the label bottom at any lift', () => {
-    // The structural invariant: the line top DERIVES from the measured text
-    // bottom minus the padding, so the gap is identical at different lifts.
-    // Two distances in the proportional regime → two lifts (~33.7 px and
-    // ~42.1 px); the old fraction-of-the-lift geometry would have produced
-    // two different gaps (0.25 × lift), so this discriminates derivation from
-    // coincidence.
+    // The line top DERIVES from the measured text bottom minus the padding, so the gap is
+    // identical at different lifts (~33.7 px and ~42.1 px, both proportional-regime).
     for (const distanceMpc of [5, 4]) {
       const state = makeState();
       const runtime = seed([{ id: 'm31', names: ['M31'] }], [distanceMpc, 0, 0], [120]);
@@ -217,10 +200,7 @@ describe('produceFamousGalaxyLabels', () => {
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
-    // The ink bottom (anchor + ink drop, screen +Y down) clears the dot by
-    // exactly the guaranteed minimum.
     expect(dot[1] - (anchor[1] + inkDropPx)).toBeCloseTo(MIN_LABEL_CLEARANCE_PX, 2);
-    // The connector reappears, top at the padding below the ink bottom.
     expect(out.labels[0]!.leader).toBeDefined();
     const tip = screenOf(out.labels[0]!.leader!.toWorld);
     expect(tip[1] - anchor[1]).toBeCloseTo(inkDropPx + LEADER_LINE_PADDING_PX, 2);
@@ -288,9 +268,6 @@ describe('produceFamousGalaxyLabels', () => {
   });
 
   it('focusedOnly mode: emits only the focused famous galaxy', () => {
-    // Two famous galaxies, both above the size gate and in front of the
-    // camera (which looks down +X); the focus ref addresses catalog row 1
-    // (m87). Only its label (and anchor line) survives.
     const state = makeState({
       focusedOnly: true,
       focus: { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 1 },
@@ -323,10 +300,9 @@ describe('produceFamousGalaxyLabels', () => {
   });
 
   it('caps a very close companion (e.g. the LMC) to the near-distance pixel ceiling', () => {
-    // Inside the near band (< 0.1 Mpc), the ramp is fully bottomed out at the
-    // 60 px near cap rather than the category's 150 px `maxPixelSize` — the
-    // bug this fixes: a fixed 150 px ceiling let the LMC/SMC tower over the
-    // view from inside the Milky Way.
+    // Inside the near band (< 0.1 Mpc) the ramp bottoms out at the 60 px near cap, not the
+    // category's 150 px `maxPixelSize`: a fixed ceiling let the LMC/SMC tower over the view
+    // from inside the Milky Way.
     const state = makeState();
     const runtime = seed([{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
     const out = produceFamousGalaxyLabels(runtime)(state, makeCtx(), ONE);
@@ -381,7 +357,6 @@ describe('produceFamousGalaxyLabels', () => {
     expect(pickOf(under, 'famous-out')).toBeUndefined();
     const out = under.find((l) => l.id === 'famous-out')!;
     expect(out.fadeAlpha).toBeGreaterThan(0);
-    // Not clickable, still named: emphasis keys on the subject, not the pick.
     expect(out.subjectId).toBe(packSelection(Source.FamousGalaxy, 1 + PICK_SENTINEL_OFFSET));
   });
 });

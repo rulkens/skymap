@@ -18,8 +18,6 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
 
-// ── Module mocks ──────────────────────────────────────────────────────
-
 const homePoseSpy = vi.fn(() => ({
   frame: 'absolute' as const,
   pose: {
@@ -65,15 +63,12 @@ vi.mock('../../../../src/services/engine/interaction/attachResizeWake', () => ({
   attachResizeWake: vi.fn(() => ({ detach: vi.fn() })),
 }));
 
-// Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 // The registry itself: derives the wireInput-phase key set for the
 // phase-split assertion below, rather than a hand-written key list that
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
-
-// ── Fixtures ─────────────────────────────────────────────────────────
 
 function makeState(): EngineState {
   return {
@@ -111,8 +106,6 @@ function makeState(): EngineState {
     },
     bias: {} as never,
     picking: { pickInFlight: false, cursorTexPx: null },
-    // createPickDriver is module-mocked here, so resolvePick's accessors are
-    // never invoked — an empty galaxies/structures stub is enough.
     data: {
       structures: { byCategory: () => [] },
       galaxies: { get: () => undefined, famousMeta: [] },
@@ -124,8 +117,6 @@ function makeState(): EngineState {
       } as never,
       galaxyPickRenderer: null,
       pickProgram: null,
-      // createGalaxyPickRenderer binds the shared focus group; the stub only
-      // needs an opaque bindGroup handle.
       focusUniform: { bindGroup: {} as GPUBindGroup },
       renderTargets: null,
       labelRendererCosmo: null,
@@ -164,8 +155,6 @@ function makeDeps(): BootstrapDeps {
     frameRef: { current: () => {} },
     handleRef: { current: null },
     allSlots: new Map(),
-    // `createPickDriver` is module-mocked above, so no test here exercises
-    // a resolution — a resolver that always returns null is enough.
     selection: {
       resolvePick: () => null,
       extractRow: () => null,
@@ -180,8 +169,6 @@ function makeDeps(): BootstrapDeps {
     },
   };
 }
-
-// ── Tests ────────────────────────────────────────────────────────────
 
 describe('wireInput', () => {
   it('frames the boot camera at the canonical 60° FOV and the live sim instant', async () => {

@@ -1,13 +1,8 @@
 /**
- * Glint pick-priority classes — the per-instance datum `starPointPick.wesl`'s
- * `vsGlint` ranks glints by, so a click where a planet and its moons stack
- * inside each other's ~18 px pick footprints resolves to the IMPORTANT body.
- * An unconditional depth win per class, not the fragile instance-draw-order
- * tie-break an earlier design leaned on.
- *
- * Single-sourced on the WESL side as `lib/pickDepthBands`'s `GLINT_CLASS_*`;
- * a parity test pins the two, since renumbering one side alone would silently
- * mis-map a body to the wrong band with no compile error.
+ * Glint pick-priority classes: the per-instance datum `vsGlint` in
+ * `starPointPick.wesl` ranks by, so a click on stacked planet and moons resolves
+ * to the important body. Single-sourced on the WESL side as `lib/pickDepthBands`'s
+ * `GLINT_CLASS_*`; a parity test pins the two.
  */
 
 /** The Earth glint stamp (the descent's focus body). Shallowest band. */

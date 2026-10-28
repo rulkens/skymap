@@ -1,22 +1,8 @@
 /**
- * installLoadProgress — build the flat slot registry and wire the
- * load-progress emitter over it.
- *
- * Runs AFTER every slot exists (`createLayers` indexed every asset row's slot
- * into `state.slotsByKey`). It populates `deps.allSlots` — keyed by
- * `slot.name` — from that index, then hands the same Map
- * to `createLoadProgressEmitter` and subscribes the emitter to each slot.
- *
- * ### Why one shared Map
- *
- * `deps.allSlots` is the single registry both the loading bar (via the emitter)
- * AND the `LoadingDevPanel` read from — the public handle exposes it as
- * `assetSlots`. Building it once here keeps both consumers byte-for-byte in
- * agreement on what counts as "in flight"; per-subset `attachSlot` calls would
- * risk the two views drifting.
- *
- * The `unknown` type-erasure is benign — `aggregateRegistry` reads only the
- * `slot.state()` discriminator + byte counts, never the payload type.
+ * installLoadProgress — fills `deps.allSlots` (keyed by `slot.name`) from
+ * `state.slotsByKey` and subscribes the load-progress emitter to each slot.
+ * Runs AFTER `createLayers`. One shared Map feeds both the loading bar and
+ * `LoadingDevPanel` (`assetSlots`), so they agree on what is "in flight".
  */
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';

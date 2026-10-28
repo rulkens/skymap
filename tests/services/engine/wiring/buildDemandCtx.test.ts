@@ -1,14 +1,9 @@
 /**
  * buildDemandCtx — unit tests for the demand-context builder.
  *
- * The builder maps `EngineState` into the read surfaces a demand predicate
- * consults. These tests target the two non-trivial surfaces: `slotState`
- * (slot accessor + idle fallback) and `request` (the transient request-flag
- * set). `settings` is a direct passthrough and needs no behaviour test.
- *
- * Mocking strategy: inject a minimal `state` carrying only the slices the
- * builder reads — `settings`, `ui`, and `slotsByKey`. No GPU
- * resources are involved.
+ * Targets the two non-trivial surfaces: `slotState` (slot accessor + idle fallback) and `request` (the
+ * transient request-flag set). `settings` is a direct passthrough. A minimal `state` carries only
+ * `settings`, `ui` and `slotsByKey`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -22,12 +17,6 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
-/**
- * Build a minimal EngineState with only the fields buildDemandCtx reads.
- * `ui.paletteOpen` defaults to false, and the slot maps/fields to empty so
- * `slotState` falls back to 'idle' unless a test supplies a slot.  `tier`
- * lives top-level on `settings` (the builder itself never reads it).
- */
 function makeState(
   opts: {
     paletteOpen?: boolean;

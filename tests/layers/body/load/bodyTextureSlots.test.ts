@@ -63,12 +63,10 @@ describe('createBodyTextureSlots', () => {
     slot.load({ bodyId: 'moon', kind: 'normal', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // The Prep-B kind routing must carry the NEW `normal` kind through verbatim —
-    // this fails the moment the commit collapses `kind` back to `'surface'`.
+    // Fails if the commit collapses `kind` back to `'surface'`.
     expect(sinks.texturedBodyRenderer.setMap).toHaveBeenCalledTimes(1);
     expect(sinks.texturedBodyRenderer.setMap).toHaveBeenCalledWith('moon', 'normal', bitmap);
     expect(sinks.texturedBodyRenderer.setMap).not.toHaveBeenCalledWith('moon', 'surface', bitmap);
-    // The Moon is not Earth's — Earth's renderer stays untouched.
     expect(sinks.earthRenderer.setMap).not.toHaveBeenCalled();
   });
 
@@ -77,9 +75,7 @@ describe('createBodyTextureSlots', () => {
     const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('mars:surface')!;
     slot.load({ bodyId: 'mars', kind: 'surface', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-    // Eviction: releasing the slot must actually free Mars's GPU texture — and
-    // per-KIND, so the slot's `kind` flows through. This fails the moment the
-    // release collapses to a per-body clear that would destroy a sibling kind.
+    // Per-KIND release: a per-body clear would destroy a sibling kind.
     slot.release();
     expect(sinks.texturedBodyRenderer.clearMap).toHaveBeenCalledTimes(1);
     expect(sinks.texturedBodyRenderer.clearMap).toHaveBeenCalledWith('mars', 'surface');
@@ -138,14 +134,9 @@ describe('createBodyTextureSlots', () => {
     slot.load({ bodyId: 'saturn-ring', kind: 'surface', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // The ring strip binds to its HOST body (saturn) via setRingTexture — the
-    // sphere setMap path is untouched, and Earth's renderer stays clear.
     expect(sinks.texturedBodyRenderer.setRingTexture).toHaveBeenCalledTimes(1);
     expect(sinks.texturedBodyRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
-    // …to the translucent overlay itself…
     expect(sinks.ringRenderer.setTexture).toHaveBeenCalledWith(bitmap);
-    // …and fans out to the atmosphere shell's ring-in-front occlusion binding,
-    // keyed on the same host body.
     expect(sinks.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledTimes(1);
     expect(sinks.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
     expect(sinks.texturedBodyRenderer.setMap).not.toHaveBeenCalled();

@@ -8,12 +8,8 @@ import { computeBodySurfaceFrame } from './computeBodySurfaceFrame';
 const preparedByCtx = new WeakMap<FrameView, Map<PositionedId, PreparedBodySurfaceFrame | null>>();
 
 /**
- * One body-slab-row derivation, shared by the drawing passes' `draw` and
- * `drawPick`. Memoised per `(ctx, bodyId)`, so whichever call
- * site reaches it first in a frame does the work and the rest read the cache —
- * keyed on `bodyId`, not just `ctx`, because a single ctx serves every
- * body-slab row and a `ctx`-only memo would return Earth's frame for any other
- * body sharing the same frame.
+ * Per-frame memo of a body-slab-row derivation, shared by `draw` and `drawPick`.
+ * Keyed on `bodyId` as well as `ctx`: one ctx serves every body-slab row.
  */
 export function prepareBodySurfaceFrame(
   state: PassState,

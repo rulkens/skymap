@@ -1,20 +1,11 @@
 /**
- * encodeAtmosphereSkyView — unit tests for the per-frame sky-view LUT bake.
- *
- * Two load-bearing assertions. First the `SkyViewParams` packing contract
- * (AtmosphereShellRenderer.d.ts): the renderer writes the 16-byte record
- * VERBATIM, so a mis-pack silently mis-indexes the LUT (the GPU never reports
- * it; on iOS it drops the frame). Slots 0-3 are recomputed here from the
- * contract's own formulae, so a slot swap, a dropped `× atmosphereTopKm`, or a
- * surface-vs-atmosphere-top radius choice fails here.
- *
- * Second, the SOURCE of the camera altitude (the M1 fix): the bake packs the
- * entry's `camLocal`/`sunLocal`, off the body-slab pose seam, NOT a second
- * Mpc-side re-derivation from `ctx.drawCamPos`/`state.cam.position`. The packing
- * test recomputes them from the pose fixture, so any other source fails here.
- *
- * The bake fixture is sized supra-pixel because `atmosphereDrawList` applies a
- * sub-pixel disc cull, so the packing case reaches an entry at all.
+ * encodeAtmosphereSkyView — the per-frame sky-view LUT bake. Pinned: (1) the `SkyViewParams` packing
+ * contract (AtmosphereShellRenderer.d.ts): the renderer writes the 16-byte record VERBATIM, so a
+ * mis-pack silently mis-indexes the LUT (no GPU error; on iOS a dropped frame), and slots 0-3 are
+ * recomputed from the contract's formulae; (2) the SOURCE of the camera altitude: the entry's
+ * `camLocal`/`sunLocal` off the body-slab pose seam, NOT a Mpc-side re-derivation from
+ * `ctx.drawCamPos`/`state.cam.position`. The fixture is supra-pixel so `atmosphereDrawList`'s
+ * sub-pixel disc cull lets the packing case reach an entry.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -40,20 +31,12 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// The bake resolves each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id, via `atmosphereDrawList`) for `sunDirLocal`
-// — unrelated to the M1 fix (the camera altitude now comes from `ctx.bodyPose`
-// instead). Stub it to a map built from the SeededBody fixtures, REUSING each
-// fixture's own positionMpc/orientation refs, keeping the sun-direction
-// recompute bit-for-bit.
+// `atmosphereDrawList` resolves positions/orientations (for `sunDirLocal`) from this snapshot; stub
+// it from the SeededBody fixtures, reusing their refs so the sun-direction recompute is bit-for-bit.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 
-// Test fixtures pairing the identity records with the J2000 state the snapshot
-// carries — position + orientation were lifted off the record onto the derive, so
-// the fixtures supply them here (Earth's sourced from the derive so the values are
-// the real J2000 ones; refs stay stable across the mock + the recompute).
 const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
@@ -67,7 +50,6 @@ const computePass = { end: vi.fn() } as unknown as GPUComputePassEncoder;
 const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => computePass);
 const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
 
-/** A spy atmosphere renderer — only `dispatchSkyView` is exercised here. */
 function spyRenderer(): AtmosphereShellRenderer & { dispatchSkyView: ReturnType<typeof vi.fn> } {
   return { dispatchSkyView: vi.fn() } as unknown as AtmosphereShellRenderer & {
     dispatchSkyView: ReturnType<typeof vi.fn>;
@@ -79,7 +61,6 @@ function makeState(): EngineState {
   return {} as unknown as EngineState;
 }
 
-/** A `BodyPoseProvider` stub returning one fixed pose for 'earth', null otherwise. */
 function makeBodyPose(eyeRelBodyM: Vec3): BodyPoseProvider {
   return (bodyId) =>
     bodyId === 'earth' ? { eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 } : null;
@@ -89,13 +70,10 @@ function makeBodyPose(eyeRelBodyM: Vec3): BodyPoseProvider {
 const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(Math.PI / 4 / 2));
 
 /**
- * The minimal FrameView the encode reads: `bodyPose` (the M1 seam the
- * camera altitude now derives from), `drawCamPos` + `cam.distance` (still read
- * by `atmosphereDrawList`'s OWN near-field + sub-pixel disc culls, decoupled
- * from the sky-view math itself), and `drawPxPerRad` (that same
- * cull). `camDistance` defaults to 0 — inside the near-field edge, the common
- * Earth-framed path. `drawCamPos` is sized so Earth's disc resolves well above
- * sub-pixel, clearing the cull the bake shares with the draw.
+ * The minimal FrameView the encode reads: `bodyPose` (source of the camera altitude), `drawCamPos` +
+ * `cam.distance` + `drawPxPerRad` (for `atmosphereDrawList`'s own culls, decoupled from the sky-view
+ * math). `camDistance` defaults to 0, inside the near-field edge; `drawCamPos` is sized so Earth's
+ * disc resolves well above sub-pixel.
  */
 function makeCtx(input: {
   bodyPose: BodyPoseProvider;
@@ -110,9 +88,7 @@ function makeCtx(input: {
   } as unknown as FrameView;
 }
 
-// Clears `atmosphereDrawList`'s sub-pixel disc cull — a few Earth radii off the
-// centre, along +x, in Mpc (unrelated to the pose fixture below: this only
-// feeds the CULL, not the sky-view math).
+// A few Earth radii off the centre along +x, in Mpc: feeds only the sub-pixel CULL, not the sky-view math.
 const DRAW_CAM_POS: Vec3 = [
   SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
   SEEDED_EARTH.positionMpc[1],
@@ -203,11 +179,9 @@ describe('encodeAtmosphereSkyView', () => {
     expect(uniforms).toBeInstanceOf(Float32Array);
     expect(uniforms).toHaveLength(4);
 
-    // Independent recompute from the contract's formula, using the SAME
-    // `bodySlabCamLocal` util the encode (and `atmosphereShellPass`'s
-    // fragment-facing draw) calls — the camera is expressed in
-    // ATMOSPHERE-TOP-radius units (NOT surface radius); its length ×
-    // the atmosphere-top km recovers the camera radius in km.
+    // Independent recompute from the contract's formula with the SAME `bodySlabCamLocal` util: the
+    // camera is in ATMOSPHERE-TOP-radius units (NOT surface radius); its length × atmosphere-top km
+    // recovers the camera radius in km.
     const params = ATMOSPHERE_PARAMS['earth']!;
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const camLocal = bodySlabCamLocal(EYE_REL_BODY_M, atmosphereTopM);
@@ -217,16 +191,11 @@ describe('encodeAtmosphereSkyView', () => {
     const expectedSunZenithCos =
       (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius;
 
-    // The encode narrows this exact f64 expression once at the Float32Array
-    // write, so the slot equals Math.fround of the recomputed value bit-for-bit
-    // (the values are ~3e4 km, where toBeCloseTo's absolute tolerance is
-    // meaningless — the same posture earthPass.test uses for bodySlabCamLocal).
+    // The encode narrows this f64 expression once at the Float32Array write, so the slot equals
+    // Math.fround bit-for-bit (values ~3e4 km, where toBeCloseTo's absolute tolerance is meaningless).
     expect(uniforms[0]).toBe(Math.fround(expectedViewHeightKm));
     expect(uniforms[1]).toBe(Math.fround(expectedSunZenithCos));
 
-    // A different pose (20 Earth radii out, along local +z) must pack a
-    // strictly different, larger view height — pins that the packed value
-    // actually tracks `ctx.bodyPose`, not a fixed/ignored input.
     const fartherPose: Vec3 = [0, 0, 20 * SEEDED_EARTH.surface.datumRadiusM];
     const fartherRenderer = spyRenderer();
     encodeAtmosphereSkyView(
@@ -238,12 +207,8 @@ describe('encodeAtmosphereSkyView', () => {
     const fartherUniforms = fartherRenderer.dispatchSkyView.mock.calls[0]![2] as Float32Array;
     expect(fartherUniforms[0]).toBeGreaterThan(uniforms[0]!);
 
-    // The camera five radii out sits well above the surface, so the LUT's view
-    // height must clear the ground radius — a guard against a surface-radius
-    // mis-scale that would collapse the altitude.
+    // Five radii out is well above the surface: a surface-radius mis-scale would collapse the altitude.
     expect(uniforms[0]!).toBeGreaterThan(params.planetRadiusKm);
-    // Slots 2 + 3 carry the body's `AtmosphereParams` twilight softness + intensity
-    // — packed from the params row for every body.
     expect(uniforms[2]).toBe(Math.fround(params.twilightSoftness));
     expect(uniforms[3]).toBe(Math.fround(params.twilightIntensity));
   });

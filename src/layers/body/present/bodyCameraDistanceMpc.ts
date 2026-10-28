@@ -3,9 +3,8 @@
  * snapshot position, NOT `cam.distance` (the orbit distance-to-FOCUS, which
  * coincides with this only while that body is the orbit pivot).
  *
- * Earth's sub-pixel cull, the cloud-deck descent fade and the shadow the deck
- * casts on both the base globe and the surface tiles all key off this one
- * quantity; sharing it is what keeps them from drifting onto two readings.
+ * Earth's sub-pixel cull, cloud-deck descent fade and deck shadow all key off
+ * this one quantity.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';

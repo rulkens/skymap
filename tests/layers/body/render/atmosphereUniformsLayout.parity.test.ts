@@ -1,12 +1,9 @@
 /**
- * AtmosphereUniforms WESL↔packer parity — nothing previously read the WGSL
- * struct itself, so a field reorder there would drift silently past
- * `packAtmosphereUniforms.test.ts` (which only re-asserts the packer's own
- * documented offsets) and corrupt every atmosphere draw. This parses `struct
- * AtmosphereUniforms` out of `sphere.wesl`, derives its std140 float offsets,
- * then drives the REAL packer with a distinct sentinel per field and asserts
- * each sentinel lands where the struct — not the packer — says it should.
- * Locates/parses the struct and computes WGSL alignment itself.
+ * AtmosphereUniforms WESL↔packer parity: `packAtmosphereUniforms.test.ts` only re-asserts the
+ * packer's own offsets, so a field reorder in the WGSL struct would drift silently and corrupt every
+ * atmosphere draw. This parses `struct AtmosphereUniforms` out of `sphere.wesl`, derives its std140
+ * float offsets, drives the REAL packer with a distinct sentinel per field, and asserts each lands
+ * where the struct, not the packer, says it should.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

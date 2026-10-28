@@ -1,30 +1,13 @@
 /**
- * earthPass — unit tests for Earth's two `'body'`-slab content rows: the base
- * globe (`earthPass`) and the detail patches over it (`surfaceTilesPass`).
- * One suite because the two rows share every fixture here — the seeded body,
- * the slab view, the pose provider — and split files would duplicate ~200 lines
- * of setup to assert one draw call each.
+ * earthPass — Earth's two `'body'`-slab content rows: the base globe (`earthPass`) and the
+ * detail patches over it (`surfaceTilesPass`). One suite because the rows share every fixture.
  *
- * Like the other body-slab layers, the load-bearing assertion is the f64 seam: the
- * layer MUST feed `composeBodySlabMvp` the slab's `Float64Array` view-projection
- * (`view.slab.vp`), NOT the f32-narrowed `view.vp`. `composeBodySlabMvp` and
- * `bodySlabCamLocal` are both mocked to fixed, recognisable return values —
- * the primitives' own math is covered by their own test files; this suite
- * pins that the layer feeds them the right ARGUMENTS and forwards their
- * RETURN values to the right uniform slots / draw-call fields.
- *
- * `bodyRelativePose` is left UNMOCKED (its own test file covers the math):
- * `prepareBodySurfaceFrame` calls it for real, so `ctx.cam` fixtures need
- * non-degenerate `position`/`target` fields, not just the bare `{ distance }`
- * shape the pre-body-slab fixtures got away with.
- *
- * The layer also gates on the shared
- * near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`),
- * AND on the view's slab actually being Earth's own `body-m` row. This suite
- * carries the representative executor-group check: above the gate the whole
- * `(foreground:0, 'body')` group must come back empty from the SAME filter
- * `executeFrame` uses, which is what lets the frame skip the foreground
- * render pass + its composite wholesale at galaxy zoom.
+ * Load-bearing: the f64 seam. The layer MUST feed `composeBodySlabMvp` the slab's `Float64Array`
+ * `view.slab.vp`, NOT the f32-narrowed `view.vp`. `composeBodySlabMvp` and `bodySlabCamLocal` are
+ * mocked to recognisable values (their math has its own tests); `bodyRelativePose` stays UNMOCKED,
+ * so `ctx.cam` fixtures need non-degenerate `position`/`target`. Above `FOREGROUND_MAX_DISTANCE_MPC`
+ * the whole `(foreground:0, 'body')` group must come back empty from the SAME filter
+ * `executeFrame` uses, which lets the frame skip the foreground pass at galaxy zoom.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -65,10 +48,8 @@ import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/Body
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SurfaceTileDrawArgs } from '../../../../src/layers/body/@types/SurfaceTileDrawArgs';
 
-// Mock the two body-slab compose primitives so the test can (a) assert which
-// vp/pose they consumed by argument identity and (b) hand the layer
-// recognisable return values — the real primitives' math is covered by
-// composeBodySlabMvp.test.ts / bodySlabCamLocal.test.ts.
+// Mocked so tests can assert which vp/pose they consumed by argument identity and hand the
+// layer recognisable return values.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
 vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
@@ -82,11 +63,8 @@ import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal'
 import { prepareBodySurfaceFrame } from '../../../../src/layers/body/present/prepareBodySurfaceFrame';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// The layer reads each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to the fixtures below — REUSING each
-// one's own positionMpc/orientation refs — so the layer sees the exact fixture
-// values (identity-equal), keeping toBe(...) assertions intact. Mars is seeded
-// too, so the second-bodyId memo test below has a real second body to resolve.
+// Stub the snapshot to the fixtures below, reusing each one's own positionMpc/orientation refs so
+// toBe(...) holds. Mars is seeded too, for the second-bodyId memo test.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH, SEEDED_MARS])),
 }));
@@ -95,9 +73,6 @@ function toBodyState(b: SeededBody): BodyState {
   return { positionMpc: b.positionMpc, orientation: b.orientation };
 }
 
-// Fixtures pairing each body's identity record with its real J2000 state —
-// position + orientation are sourced from deriveBodyStates so the values are
-// the real ones and the refs stay stable across the assertions.
 const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
@@ -117,14 +92,9 @@ const BODY_STATES_BY_ID = new Map<string, BodyState>([
 ]);
 
 /**
- * A real `BodyPoseProvider` for a given camera position/target — mirrors
- * `frameContext.ts`'s own construction (camBasisWorld via
- * imagePlaneBasis/frameUp at roll 0, then `bodyRelativePose` per body) so
- * `ctx.bodyPose` here exercises the SAME seam `earthPass.ts` now reads
- * (Task 9 fix round 1, B2) instead of a bespoke double. Resolves both earth
- * and mars unconditionally — a given test's seeded bodies (via the
- * mocked `sceneBodyStates` above) is the actual per-test gate on which body
- * a call succeeds for.
+ * A real `BodyPoseProvider` built like `frameContext.ts` (camBasisWorld via imagePlaneBasis/frameUp
+ * at roll 0, then `bodyRelativePose` per body). Resolves earth and mars unconditionally; the bodies
+ * seeded through the mocked `sceneBodyStates` gate which one a call succeeds for.
  */
 function makeBodyPose(camPosMpc: Vec3, target: Vec3): BodyPoseProvider {
   const camForward = normalize3([
@@ -153,13 +123,9 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 /**
- * A ctx whose camera sits `distance` Mpc from Earth's centre along +x,
- * looking AT Earth — `bodyRelativePose` (unmocked) needs a real
- * position/target pair to derive a non-degenerate basis, unlike the old
- * `{ cam: { distance } }` shape which never fed the pose seam. `cam.distance`
- * (the orbit distance-to-focus) is set independently from the camera's
- * actual position, exactly as before: the two gates it and the sub-pixel
- * cull key off are meant to vary independently across these tests.
+ * A ctx whose camera sits `distance` Mpc from Earth's centre along +x, looking AT Earth (the unmocked
+ * `bodyRelativePose` needs a real position/target). `cam.distance` is set independently of the
+ * camera's actual position: the gates keyed on it and on the sub-pixel cull must vary independently.
  */
 function makeCtx(distance: number): FrameView {
   const drawCamPos: Vec3 = [
@@ -177,21 +143,13 @@ function makeCtx(distance: number): FrameView {
   } as unknown as FrameView;
 }
 
-// A camera comfortably inside the shared foreground gate. Reused by reference
-// where safe; the first few `earthPass.draw` tests below call `makeCtx`
-// fresh instead — `prepareBodySurfaceFrame`'s ctx-keyed memo would otherwise
-// let the second and third hit the cache the first one primed (same
-// NEAR_CTX object ⇒ same memo entry ⇒ composeBodySlabMvp not re-invoked, and
-// the first test's `toHaveBeenCalledTimes(1)` would misattribute the shared
-// call).
+// Tests asserting `toHaveBeenCalledTimes(1)` call `makeCtx` fresh instead of sharing this:
+// `prepareBodySurfaceFrame`'s ctx-keyed memo would otherwise hit an entry another test primed.
 const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
 
 /**
- * A body-m SlabView for `bodyId`, whose f64 `slab.vp` and f32 `vp` are
- * deliberately DIFFERENT arrays, so a first-arg identity check unambiguously
- * reveals which one the layer fed to composeBodySlabMvp. The f64 array
- * carries recognisable non-zero values; the f32 array is left as a distinct
- * all-zero Float32Array.
+ * A body-m SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT arrays (the f32 one
+ * all-zero), so an identity check reveals which one the layer fed composeBodySlabMvp.
  */
 function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
@@ -209,7 +167,6 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   };
 }
 
-/** A runtime whose Earth and surface-tile renderers are the given stubs. */
 function makeRuntime(
   parts: { earthRenderer?: unknown; surfaceTileRenderer?: unknown } = {},
 ): BodyRuntime {
@@ -225,23 +182,15 @@ function makeRuntime(
 function makeState(): EngineState {
   return {
     gpu: {},
-    // The tile subsystem is absent until `wireSlots` builds it, and a session
-    // that never approaches Earth never engages it — so `null` here is the
-    // shipped identity case, in which the packed page-table window is all-zero
-    // and the fragment reads the whole-globe base texture alone.
+    // `null` is the shipped identity case (no tile subsystem until `wireSlots` builds it): the
+    // page-table window is all-zero and the fragment reads the base texture alone.
     subsystems: { surfaceTiles: null },
-    // earthPass.draw reads the live night-side floor + ocean-glint roughness
-    // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
-    // packed tail slots equal the authored defaults (a no-op override, exactly
-    // how the settings slice seeds them).
+    // Seeded from EARTH_SURFACE_PARAMS so the packed tail slots equal the authored defaults.
     settings: {
       earth: {
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
-      // The Surface LOD overlay debug toggle earthPass.draw now reads each
-      // frame (forwarded into the tile draw args) — off by default, like the
-      // fixture's other DEBUG_OVERLAY_ROWS entries.
       debug: { overlays: { 'surface-lod-overlay': false } },
     },
   } as unknown as EngineState;
@@ -250,9 +199,8 @@ function makeState(): EngineState {
 const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
 
 /**
- * `makeState`'s tile-draw variant: adds a `surfaceTiles` subsystem stub whose cut
- * and two atlas views are caller-controlled — the instanced-draw gate's three
- * inputs (`getAtlasView()`, `getHeightAtlasView()`, `plan.cut`).
+ * `makeState` plus a `surfaceTiles` stub with caller-controlled cut and atlas views: the
+ * instanced-draw gate's three inputs (`getAtlasView()`, `getHeightAtlasView()`, `plan.cut`).
  */
 function makeTileDrawState(input: {
   readonly cut: readonly unknown[];
@@ -275,9 +223,6 @@ function makeTileDrawState(input: {
   } as unknown as EngineState;
 }
 
-// `enabled` reads `view.slab.frame` now — every gating case below passes a
-// real Earth body-m view (VIEW_STUB reused where the rest of the gate is
-// what's under test).
 const VIEW_STUB = makeEarthBodyView('earth');
 
 describe('earthPass.enabled', () => {
@@ -303,14 +248,11 @@ describe('earthPass.enabled', () => {
 
   it('is disabled beyond the foreground gate and enabled below it', () => {
     const state = makeState();
-    // Below the gate → the handle + body gates decide (both pass).
     expect(
       earthPass(makeRuntime()).enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), VIEW_STUB),
     ).toBe(true);
-    // At and above the gate → off, however present the handles are: Earth is
-    // a deep-sub-pixel speck at the galactic centre. Both the gate edge and a
-    // full decade beyond it (cosmic scale) are derived, so the seed roster
-    // growing the gate carries this assertion instead of stranding a literal.
+    // At and above the gate Earth is a deep-sub-pixel speck at the galactic centre; the edge and a
+    // decade beyond are derived from the gate, so growing it cannot strand a literal.
     expect(
       earthPass(makeRuntime()).enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), VIEW_STUB),
     ).toBe(false);
@@ -322,19 +264,14 @@ describe('earthPass.enabled', () => {
 
 describe("the (foreground:0, 'body') render group above the foreground gate", () => {
   it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
-    // The SAME group filter executeFrame's render step applies: (target, slab)
-    // match + the layer's own enabled gate. An empty group means the executor
-    // never opens the foreground render pass, and the untouched foreground:0
-    // source then skips its composite too. Earth is seeded; no other body is in
-    // the frame's snapshot and no texture is resident.
+    // The SAME group filter executeFrame applies: (target, slab) match + the layer's enabled gate.
+    // An empty group means the executor never opens the foreground pass or its composite.
     const state = makeState();
     const passes = bodyLayer.passes({
       ...makeRuntime(),
       texturedBodyRenderer: { hasMap: () => false },
       textureSlots: new Map(),
     } as unknown as BodyRuntime);
-    // The group VIEW_STUB's body-m row resolves: the foreground line's BODY
-    // roster, read off the order that draws it.
     const bodyRoster = FRAME_ORDER.flatMap((step) =>
       step.kind === 'foreground' ? step.bodyPasses : [],
     );
@@ -343,11 +280,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
         (pass) => bodyRoster.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
       );
 
-    // Below the gate: earth draws (its gates pass), so the group is
-    // non-empty and the foreground pass runs.
     expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2)).map((l) => l.name)).toContain('earth');
-    // Above the gate: EVERY foreground:0 layer is off — the group is empty
-    // and the executor skips the pass + composite wholesale.
     expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toEqual([]);
     expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toEqual([]);
   });
@@ -367,9 +300,8 @@ describe('prepareBodySurfaceFrame', () => {
     const second = prepareBodySurfaceFrame(state, ctx, earthView);
     expect(second).toBe(first);
 
-    // The load-bearing half: a ctx-keyed-only memo would return Earth's
-    // frame for Mars here — assert a genuinely different object AND a
-    // different pose/body, not just a different reference.
+    // A ctx-keyed-only memo would return Earth's frame for Mars: assert a different object AND
+    // a different pose/body.
     const third = prepareBodySurfaceFrame(state, ctx, marsView);
     expect(third).not.toBe(first);
     expect(third!.body.id).toBe('mars');
@@ -387,11 +319,8 @@ describe('earthPass.draw', () => {
     const state = makeState();
     const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
-    // A camera comfortably inside the shared foreground gate, well above the
-    // cloud-shadow descent-fade band (see the note on NEAR_CTX). Fresh per
-    // this test, not the shared NEAR_CTX — this test's `toHaveBeenCalledTimes(1)`
-    // assertion needs its OWN `prepareBodySurfaceFrame` memo entry, not one
-    // another test using the same ctx object already primed.
+    // Fresh ctx, not the shared NEAR_CTX: `toHaveBeenCalledTimes(1)` needs its own memo entry.
+    // Well above the cloud-shadow descent-fade band.
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     globe.draw(PASS_STUB, view, ctx, state);
 
@@ -419,19 +348,13 @@ describe('earthPass.draw', () => {
   });
 
   it('packs sunDirLocal into the lit uniform', () => {
-    // The lit-body seam: earthPass must rotate the sun direction into Earth's
-    // local frame (via the sunDirLocal util with Earth's baked orientation and
-    // the render origin) and pack it at f32 slots 16..18 (bytes 64..75). We pin
-    // it by recomputing sunDirLocal independently — NOT through the layer — so a
-    // drift in the layer's rotate/pack lands as a failure here.
+    // earthPass must rotate the sun direction into Earth's local frame and pack it at f32 slots
+    // 16..18 (bytes 64..75); pinned by recomputing sunDirLocal independently, NOT through the layer.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
     const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
-    // Fresh ctx (see the previous test's note): this test's own
-    // `toHaveBeenCalledTimes(1)` assertion needs its own
-    // `prepareBodySurfaceFrame` memo entry, not NEAR_CTX's shared one.
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     globe.draw(PASS_STUB, view, ctx, state);
 
@@ -448,13 +371,9 @@ describe('earthPass.draw', () => {
   });
 
   it('packs the mocked camLocal and the PBR surface params into their tail slots', () => {
-    // The other view-dependent seam: the ocean glint needs the camera in Earth's
-    // local frame (slots 20..22), and the PBR + cloud dials fill the vec3 tails /
-    // trailing scalars — roughnessBase at 19, f0 at 23, sunIrradiance at 24,
-    // cloudShadowStrength at 25, cloudShellRadius at 26. Pinning the scalars by
-    // their named source makes an argument-order swap at the pack call (e.g.
-    // f0 ↔ roughnessBase, or the cloudShadowStrength ↔ cloudShellRadius wiring)
-    // a failure here, not a visual-only regression.
+    // Ocean-glint camera in Earth's local frame (slots 20..22); roughnessBase 19, f0 23,
+    // sunIrradiance 24, cloudShadowStrength 25, cloudShellRadius 26. Pinning scalars by named source
+    // catches an argument-order swap at the pack call.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
@@ -476,25 +395,18 @@ describe('earthPass.draw', () => {
     expect(uniforms[23]).toBeCloseTo(EARTH_SURFACE_PARAMS.f0);
     expect(uniforms[24]).toBeCloseTo(EARTH_SURFACE_PARAMS.sunIrradiance);
     expect(uniforms[25]).toBeCloseTo(EARTH_SURFACE_PARAMS.cloudShadowStrength);
-    // Slot 26 is the cloud shell radius the surface shadow ray intersects — it
-    // must be the real CLOUD_SHELL_PARAMS.radiusRatio.
+    // Slot 26 is the cloud shell radius the surface shadow ray intersects.
     expect(uniforms[26]).toBeCloseTo(CLOUD_SHELL_PARAMS.radiusRatio);
-    // Slots 27..28 are the live settings overrides the layer reads from
-    // state.settings.earth — the night-side ambient floor and the open-water GGX
-    // roughness. The fixture seeds both from EARTH_SURFACE_PARAMS (a no-op
-    // override), so the packed slots equal those authored defaults; a stray
-    // ambientLight ↔ oceanRoughness swap at the pack call lands as a failure here.
+    // Slots 27..28 are the live settings overrides (night-side ambient floor, open-water GGX
+    // roughness), seeded from EARTH_SURFACE_PARAMS; catches an ambientLight ↔ oceanRoughness swap.
     expect(uniforms[27]).toBeCloseTo(EARTH_SURFACE_PARAMS.ambientLight);
     expect(uniforms[28]).toBeCloseTo(EARTH_SURFACE_PARAMS.oceanRoughness);
   });
 
   it('scales cloudShadowStrength by the descent fade as the camera nears the surface', () => {
-    // A future refactor could drop the fade multiply at the pack call and no
-    // OTHER test here would notice — the three tests above all sit far above
-    // the fade band, where the multiplier is 1 and indistinguishable from its
-    // absence. This one plants the camera INSIDE the band (the fade's own
-    // edges from CLOUD_SHELL_PARAMS, not restated literals), so the packed
-    // slot 25 must land strictly between 0 and the authored dial.
+    // The three tests above sit far above the fade band, where the multiplier is 1, so a dropped
+    // fade multiply would go unnoticed. This plants the camera INSIDE the band (edges from
+    // CLOUD_SHELL_PARAMS): slot 25 must land strictly between 0 and the authored dial.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
@@ -528,8 +440,6 @@ describe('earthPass.draw', () => {
 });
 
 describe('surfaceTilesPass', () => {
-  // A minimal stand-in for `SurfaceCutTile` — `earthPass.draw` forwards it
-  // opaquely to `surfaceTileRenderer.draw`, never reading its fields.
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
@@ -546,9 +456,7 @@ describe('surfaceTilesPass', () => {
   const ATLAS_VIEW = {} as GPUTextureView;
 
   it('is ordered immediately after the base globe in every roster that draws it', () => {
-    // The tile pipeline's depth compare needs the globe's depth already
-    // written. That used to be two adjacent statements inside one draw();
-    // it is now an ordering fact, so this is where it is pinned.
+    // The tile pipeline's depth compare needs the globe's depth already written: an ordering fact.
     const rosters = FRAME_ORDER.flatMap((step) =>
       step.kind === 'foreground'
         ? [step.bodyPasses]
@@ -569,8 +477,6 @@ describe('surfaceTilesPass', () => {
     const state = makeTileDrawState({ cut: STUB_CUT, atlasView: ATLAS_VIEW });
     const runtime = makeRuntime({ surfaceTileRenderer: { draw: tileDraw } });
 
-    // The base row runs first in a real frame; its mvp call is what the
-    // eyeRelBodyM assertion below reads back.
     earthPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
 
@@ -580,19 +486,14 @@ describe('surfaceTilesPass', () => {
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
     expect(args.heightAtlasView).toBe(HEIGHT_ATLAS_VIEW);
-    // No rebase: the tile draw's vp is the slab's own already-eye-relative
-    // f32 view (view.vp), never a freshly narrowed/rebased copy.
+    // No rebase: the tile vp is the slab's own eye-relative f32 `view.vp`.
     expect(args.vp).toBe(view.vp);
     expect(args.radiusM).toBe(SEEDED_EARTH.surface.datumRadiusM);
-    // The eyeRelBodyM the base globe's mvp/camLocal composed from — same
-    // pose, no separate re-derivation for the tile draw.
     expect(mvpMock.mock.calls[0]![1]).toBe(args.eyeRelBodyM);
   });
 
   it("packs the live debug.overlays['surface-lod-overlay'] toggle into the tile draw args", () => {
-    // The DebugPanel toggle must reach the tile renderer every draw, not just
-    // on change — the fixture's two states below stand in for a checkbox
-    // flip between frames.
+    // The debug toggle must reach the tile renderer every draw, not just on change.
     const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeTileDrawState({ cut: STUB_CUT, atlasView: ATLAS_VIEW });
@@ -609,10 +510,8 @@ describe('surfaceTilesPass', () => {
   });
 
   it('is disabled until the cut AND both atlases are live', () => {
-    // Pre-residency is the ordinary picture, not an error: the row simply
-    // does not run and the base globe alone covers the cap. The HEIGHT atlas
-    // is as load-bearing as the albedo one — every vertex position reads it,
-    // so a cut drawn without it is undefined geometry, not a degraded picture.
+    // Pre-residency the row simply does not run. The HEIGHT atlas is as load-bearing as albedo:
+    // every vertex position reads it, so a cut drawn without it is undefined geometry.
     const view = makeEarthBodyView('earth');
     const enabledWith = (input: Parameters<typeof makeTileDrawState>[0]) =>
       surfaceTilesPass(makeRuntime()).enabled(makeTileDrawState(input), NEAR_CTX, view);
@@ -626,7 +525,6 @@ describe('surfaceTilesPass', () => {
 });
 
 describe('earthPass.draw — the base globe is always drawn', () => {
-  // A minimal stand-in cut, reused from the detail-tiles suite above.
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
@@ -665,9 +563,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
   }
 
   it('draws the base globe at low altitude under a full cut', () => {
-    // The globe used to fade out below 300 km, so a leaf with no resident
-    // ancestor showed the stars. It sits at the datum's inner bound now
-    // (§7.4) and is what covers whatever the cut does not.
+    // The globe stays at the datum's inner bound (§7.4) and covers whatever the cut does not.
     const view = makeEarthBodyView('earth');
     const tileDraw = vi.fn();
     const state = makeTileDrawState({ cut: STUB_CUT, atlasView: ATLAS_VIEW });
@@ -711,16 +607,13 @@ describe('earthPass.drawPick', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.packedId).toBe(packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET));
 
-    // The mvp and camLocal MUST share one floored radius, the invariant
-    // drawFlooredSpherePick's header names, reproduced here directly against
-    // the body-slab primitives.
+    // The mvp and camLocal MUST share one floored radius (drawFlooredSpherePick's invariant).
     expect(mvpMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     const pickRadiusM = mvpMock.mock.calls[0]![2] as number;
     expect(camLocalMock.mock.calls[0]![1]).toBe(pickRadiusM);
     expect(pickRadiusM).toBeGreaterThan(SEEDED_EARTH.surface.datumRadiusM);
 
-    // Independently recomputed floor formula.
     const dM = Math.hypot(
       mvpMock.mock.calls[0]![1][0],
       mvpMock.mock.calls[0]![1][1],

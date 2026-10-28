@@ -1,8 +1,4 @@
-/**
- * The Layer's one asset row — demand + request only; its `slot` is the one
- * `create` already minted, so core folds this over its own rows
- * (Ruling 10) without ever building one.
- */
+/** The Layer's one asset row: demand + request only; `slot` comes from the runtime. */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';

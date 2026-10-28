@@ -40,10 +40,7 @@ import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 export function deriveFrameContext(
   state: EngineState,
   input: FrameContextInput,
-  /** The frame's one `renderedTargets` fact, owned by the caller so it can
-   *  hand the SAME mutable `Set` to `renderFrame` (`runFrame`'s call);
-   *  defaulted for every other caller, which never runs a view through
-   *  `executeFrame` and so never needs the identity preserved. */
+  /** The frame's one `renderedTargets` fact; `runFrame` passes its own so `renderFrame` gets the SAME mutable `Set`. */
   renderedTargets: Set<string> = new Set(),
 ): FrameContext {
   if (!isEngineReady(state)) {
@@ -51,15 +48,12 @@ export function deriveFrameContext(
   }
   const { cam, arm, altitudeMpc, nowMs, simDays } = input;
 
-  // This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes one
-  // deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call this
-  // frame returns this SAME Map by reference — no second cache, no drift.
+  // `deriveBodyStates` memoizes on `simDays`, so every later `sceneBodyStates` call
+  // this frame returns this SAME Map.
   const bodyStates = deriveBodyStates(simDays);
 
-  // Reruns the SAME roll NEAR0's own vp derivation uses (`imagePlaneBasis` is
-  // the shared seam both call, not a copy) so a body row's screen orientation
-  // matches NEAR0's — reading `cam.roll` rather than hard-coding 0 is what
-  // keeps that true once something sets a non-zero roll.
+  // Same roll as NEAR0's vp derivation (shared `imagePlaneBasis`); read `cam.roll`,
+  // never 0, so body rows stay aligned once a roll is set.
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
   // The ONE presence filter: an absent craft is parked on or in Earth, so every
@@ -70,22 +64,16 @@ export function deriveFrameContext(
   const hostlessMeshBodies = HOSTLESS_MESH_BODIES.filter((body) =>
     spacecraftPresent(body.id, simDays),
   );
-  // A banded row exists only while its band is open — the row IS the gate its
-  // consuming pass used to re-ask for (spec §2.5). Keyed on the FRAME camera,
-  // not a view's offset eye: a rig's eye separation is metres against a band
-  // measured in AU, so no view can disagree about whether the row exists.
+  // A banded row exists only while its band is open. Keyed on the FRAME camera, not a
+  // view's offset eye: eye separation is metres against a band in AU.
   const slabBodyCandidates: readonly SlabRow[] = [
     ...state.slabRows.filter((row) => slabRowActive(row, cam.position, bodyStates)),
     ...hostlessMeshBodies.map(bodySlabRowOf),
   ];
 
-  // Provider B serves ONLY the engaged body, straight from its own stored
-  // pose — no Mpc round trip. Every other body, and the whole absolute arm,
-  // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Gated on the
-  // HOST, not the frame: a rung not its own host must still fall through here.
-  // `input.cam` is an `AssembledOrbitCamera`: both bases are required, not
-  // asserted — `assembleOrbitCamera` always sets them, optional only on
-  // `OrbitCameraInit`.
+  // Provider B serves ONLY the engaged body, from its own stored pose (no Mpc round
+  // trip); everything else, and the whole absolute arm, stays on provider A. Gated on
+  // the HOST, not the frame: a rung not its own host must still fall through.
   const armBasisCtx = {
     bodies: bodyStates,
     poseBasis: cam.poseBasis,
@@ -93,13 +81,10 @@ export function deriveFrameContext(
     terrainHeightAt: state.terrain.heightAt,
   };
   const armHost = hostOf(arm.frame, armBasisCtx);
-  // UN-turned: `deriveView` turns this provider's output through `viewBodyPose`
-  // so a body arm stays metre-native in every view.
+  // UN-turned: `deriveView` turns the output through `viewBodyPose`.
   const bodyPose: BodyPoseProvider = (bodyId) => {
     if (!isWorldArm(arm) && armHost !== null && armHost.id === bodyId) {
-      // A rung BELOW its host (a site on its planet) folds up to the host's own
-      // arm first — by reference when the arm already is one, so the body arm's
-      // path is unchanged and neither crosses the Mpc seam.
+      // A rung BELOW its host (a site on its planet) folds up to the host's arm first.
       const onHost = refoldTo(arm, { body: armHost.id }, armBasisCtx);
       if (isBodyArm(onHost)) return poseFromBodyArm(onHost.pose);
     }
@@ -151,17 +136,11 @@ export function deriveFrameContext(
     focus: ZERO_FOCUS,
     focusBlend: 0,
     focusPickId: null,
-    // Fresh and empty: `runPlanSteps` fills it in as each section's plan rows
-    // run, ahead of every GPU step and every other planner reader this frame.
     plans: createFramePlannerResultStore(),
     // Forwarded by reference, not copied: the listener allocates a fresh pair
     // per pointermove and only while the debug overlay that reads it is on.
     cursorTexPx: state.picking.cursorTexPx,
-    // Fresh and empty: nothing has drawn yet this frame. `renderFrame` holds
-    // the mutable reference (threaded to `executeFrame` on `ExecuteFrameArgs`)
-    // and unions into it as every view's program opens a pass — see its own
-    // doc for why this is a SEPARATE fact from a view's per-program
-    // first-touch clear decision.
+    // Empty: `renderFrame` unions into it as every view's program opens a pass.
     renderedTargets,
   };
 }

@@ -1,20 +1,10 @@
 /**
- * texturedBodiesPass — unit tests for the `textured` branch of the body
- * partition, one `'body'`-slab content row per body.
- *
- * Load-bearing assertions:
- *
- *   1. The f64 seam — the MVP composes from the slab's `Float64Array`
- *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`
- *      (identity-pinned via a mocked `composeBodySlabMvp`), and reads the
- *      pose off `ctx.bodyPose(bodyId)` rather than re-deriving it.
- *   2. The partition gate — a row draws ONLY when its `bodyId` is in the
- *      `textured` branch (resolved AND its surface texture is resident);
- *      otherwise it is flat (drawn by `planetsPass`, not here). The
- *      cross-layer no-double-draw invariant lives in `planetsPass.test.ts`.
- *   3. The ring ratios are DATA: Saturn packs its `SCENE_RINGS` radii in
- *      planet-radius units; a ringless body packs zeros (the fragment's "no
- *      ring" sentinel). Minnaert limb darkening is the same data-gate.
+ * texturedBodiesPass — the `textured` branch of the body partition, one `'body'`-slab row per body.
+ * Pinned: the f64 seam (MVP from `view.slab.vp`, NOT the f32 `view.vp`; pose off `ctx.bodyPose`); the
+ * partition gate (a row draws ONLY when its `bodyId` is in the `textured` branch — resolved AND its
+ * surface texture resident; the no-double-draw invariant lives in `planetsPass.test.ts`); and ring
+ * ratios as DATA (Saturn packs its `SCENE_RINGS` radii in planet-radius units, a ringless body
+ * zeros; Minnaert limb darkening is the same data-gate).
  */
 
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
@@ -44,8 +34,6 @@ import type { BodyRelativePose } from '../../../../src/@types/engine/camera/Body
 import type { TextureKind } from '../../../../src/@types/data/TextureKind';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// Mock the two body-slab compose primitives — real math is covered by their
-// own test files. This suite pins the ARGUMENTS the layer feeds them.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
 vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
@@ -130,11 +118,7 @@ function makeBodyView(bodyId: SceneBodyId): SlabView {
   };
 }
 
-/**
- * A `texturedBodyRenderer` spy whose `hasMap('surface')` reports resident for
- * exactly the given ids — the fake's stand-in for "a real surface texture is
- * bound", a rendering fact asked of the renderer.
- */
+/** A `texturedBodyRenderer` spy whose `hasMap('surface')` reports resident for exactly the given ids. */
 function makeRendererSpy(residentIds: readonly string[] = []) {
   return {
     draw: vi.fn<(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array) => void>(),
@@ -144,7 +128,6 @@ function makeRendererSpy(residentIds: readonly string[] = []) {
   };
 }
 
-/** The pass over a runtime holding `renderer`, and an empty state beside the fixture bodies. */
 function makeFixture(renderer: unknown, bodies: readonly SeededPlanet[]) {
   const state = { gpu: {} } as unknown as EngineState;
   const textured = texturedBodiesPass({ texturedBodyRenderer: renderer } as unknown as BodyRuntime);

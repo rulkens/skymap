@@ -1,14 +1,8 @@
 /**
- * atmosphereDrawList — unit tests for the ONE per-frame atmosphere draw-list
- * derivation that both the sky-view bake and the shell draw consume.
- *
- * The list is the three-part predicate applied to `[earth, ...planets]`: a body
- * survives iff it has an `ATMOSPHERE_PARAMS` row (the data-gate), the camera is
- * inside the shared near-field distance edge (`FOREGROUND_MAX_DISTANCE_MPC`), and
- * its SURFACE disc resolves at/above `SUB_PIXEL_BODY_CULL_PX`. Each test below is
- * an independent reason the list could be wrong — one per branch — so a
- * regression in any single gate lands as a distinct failure rather than hiding
- * behind the others.
+ * atmosphereDrawList — the ONE per-frame atmosphere draw-list derivation the sky-view bake and the
+ * shell draw both consume: `[earth, ...planets]` filtered by an `ATMOSPHERE_PARAMS` row (data gate),
+ * camera inside `FOREGROUND_MAX_DISTANCE_MPC`, and SURFACE disc at/above `SUB_PIXEL_BODY_CULL_PX`.
+ * One test per gate so a regression lands as a distinct failure.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -32,18 +26,12 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// The derivation resolves each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it with the real states plus the Earth
-// fixture below, REUSING its own positionMpc/orientation refs — so the list
-// resolves the exact fixture values (identity-equal).
+// Stub with the real states plus the Earth fixture below, REUSING its positionMpc/orientation
+// refs so the list resolves identity-equal values.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 
-// Test fixtures pairing the identity records with the J2000 state the snapshot
-// carries — position + orientation were lifted off the record onto the derive, so
-// the fixtures supply them here (Earth's sourced from the derive so the values are
-// the real J2000 ones; refs stay stable across the mock + the assertions).
 const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
 const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
@@ -56,11 +44,8 @@ const SEEDED_EARTH: SeededBody = {
 const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(1.0 / 2));
 
 /**
- * The minimal FrameView the derivation reads: `drawCamPos` (per-body
- * sub-pixel distance source), `cam.distance` (the whole-list near-field cull),
- * `drawPxPerRad` (the sub-pixel projection), and `bodyPose` (the
- * body-slab seam the entry's camera-local fields come from). `camDistance`
- * defaults to 0 — inside the near-field edge, the common body-framed path.
+ * The minimal FrameView the derivation reads: `drawCamPos`, `cam.distance` (whole-list near-field
+ * cull), `drawPxPerRad` and `bodyPose`. `camDistance` defaults to 0, inside the near-field edge.
  */
 function makeCtx(
   drawCamPos: Vec3,
@@ -101,7 +86,6 @@ const STATE = {} as unknown as EngineState;
 
 describe('atmosphereDrawList', () => {
   it('includes a body with a row, in near-field range, and a supra-pixel disc', () => {
-    // Five Earth-radii out: a large disc, well clear of the sub-pixel floor.
     const list = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
     expect(list).toHaveLength(1);
     expect(list[0]!.body).toBe(SCENE_EARTH);
@@ -124,10 +108,8 @@ describe('atmosphereDrawList', () => {
   });
 
   it('includes Earth when the camera is deep inside the atmosphere shell', () => {
-    // Half an Earth radius out — well inside the shell, but still a supra-pixel
-    // disc and inside the near-field edge. The regression lock spec §4.6 calls
-    // for: the sub-pixel cull must not accidentally exclude a body the camera
-    // sits deep inside.
+    // Half an Earth radius out: well inside the shell, yet a supra-pixel disc. The sub-pixel cull
+    // must not exclude a body the camera sits deep inside (spec §4.6).
     const list = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
     expect(list).toHaveLength(1);
     expect(list[0]!.body).toBe(SCENE_EARTH);

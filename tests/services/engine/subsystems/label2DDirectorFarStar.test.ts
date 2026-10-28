@@ -1,28 +1,13 @@
 /**
  * label2DDirector — far-star caption/leader-line stability at Earth zoom.
  *
- * The user report: zoomed all the way to Earth (cam.distance ~1e-13 Mpc), the
- * caption and leader line of a FAR famous star (VY Canis Majoris at ~1170 pc)
- * flicker/jump frame to frame. The diagnosis is POSITIONAL: the star anchor
- * sits ~1e-3 Mpc out — tens of millions of times BEYOND the NEAR0 far plane
- * (which floors at `FAR_MIN_MPC = 3e-11` on a deep descent). The director's
- * lift stage un-projects through the INVERSE of the ill-conditioned NEAR0 vp;
- * for an anchor that far past the far plane `ndc_z ≈ 1.0` to within f64
- * round-off, so the inverse's huge depth-row elements amplify residual error
- * and the un-projected point (the drawn caption world position AND both
- * leader-line endpoints) shifts every frame as the camera — hence the
- * matrix — moves.
- *
- * Moved from `labelsNearPass.test.ts` (spec §5.2): the lift stage this
- * regression guards now lives in `label2DDirector.ts`'s `applyLift`, driven
- * here through the REAL `produceStarCaptions` producer (the star Layer's own,
- * since the famous-star map moved there) and a REAL Earth-zoom NEAR0 frustum,
- * so the ill-conditioning is genuine. The fix clamps the anchor handed to the
- * lift to just inside the far plane (direction-preserving, in the
- * camera-relative frame, so the on-screen position is unchanged) —
- * mirroring `near0SelectionRingPass`'s ring-clip clamp. After the fix the
- * un-projected geometry lands inside the well-conditioned part of the
- * frustum, so it is stable frame-to-frame and bounded by the far plane.
+ * Zoomed to Earth (cam.distance ~1e-13 Mpc), a FAR famous star's caption and leader line (VY Canis
+ * Majoris, ~1170 pc) flickered. The anchor sits ~1e-3 Mpc out, tens of millions of times BEYOND the
+ * NEAR0 far plane (floored at `FAR_MIN_MPC = 3e-11`); `applyLift` in `label2DDirector.ts` un-projects
+ * through the INVERSE of that ill-conditioned vp, where ndc_z ≈ 1.0 to f64 round-off, so residual error
+ * is amplified and the un-projected points shift every frame. The fix clamps the anchor handed to the
+ * lift to just inside the far plane (direction-preserving; mirrors `near0SelectionRingPass`'s clamp).
+ * Driven through the REAL `produceStarCaptions` and a REAL Earth-zoom NEAR0 frustum.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -140,7 +125,6 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
 const FIXTURE_FRUSTUM = symmetricFrustum(1, 1280 / 720);
 const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDown);
 
-// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
 const SCENE_BODIES = positionedBodiesOf(
   [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
   deriveBodyStates(CONST_J2000),
@@ -266,10 +250,8 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
     const len = (p: Vec3) => Math.hypot(p[0], p[1], p[2]);
     const farMpc = slab.far;
-    // The lifted geometry is derived from the anchor pulled to just inside the
-    // far plane, so — camera at the origin of the rebased frame — every point
-    // sits within the far plane. Before the clamp these lengths are the raw
-    // anchor distance (~1e-3 Mpc), tens of millions of times past the plane.
+    // The lifted geometry derives from the anchor pulled just inside the far plane, so every point sits
+    // within it (camera at the origin of the rebased frame); unclamped these are the raw ~1e-3 Mpc distance.
     expect(len(cap!.worldPos as Vec3), 'caption beyond far plane').toBeLessThanOrEqual(farMpc);
     expect(len(line!.toWorld as Vec3), 'leader top beyond far plane').toBeLessThanOrEqual(farMpc);
     expect(len(line!.fromWorld as Vec3), 'leader bottom beyond far plane').toBeLessThanOrEqual(

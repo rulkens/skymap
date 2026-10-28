@@ -2,13 +2,10 @@
  * bodyRowSlabs — which slab rows a `BodyRowSource` line expands over: a row's
  * `hosts` entry, open while this view's eye is inside its band.
  *
- * The out-of-band case is the load-bearing one: an empty list is what lets
- * `mergeAdjacent` fold the two `(hdr, NEAR0)` lines back into a single render
- * step, so the assertion runs the real expansion rather than stopping at `[]`.
- *
- * The candidate list is folded the way `deriveFrameContext` folds it, so the
- * band edges the lens is born at stay pinned through the composition of
- * `slabRowActive` and this resolver, not just inside either one.
+ * The out-of-band case is load-bearing: an empty list lets `mergeAdjacent` fold the two
+ * `(hdr, NEAR0)` lines into one render step, so the assertion runs the real expansion.
+ * Candidates are folded as `deriveFrameContext` folds them, pinning the lens band edges
+ * through `slabRowActive` and this resolver together.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -45,7 +42,6 @@ import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 const SIM_DAYS = 0;
 const LENS_SLAB_INDEX = 4;
 
-/** The real anchor position, so the band is exercised at its authored edges. */
 function camAtAuFromGalacticCentre(au: number): Vec3 {
   const anchor = deriveBodyStates(SIM_DAYS).get(GALACTIC_CENTRE_ANCHOR.id);
   if (anchor === undefined) throw new Error('deriveBodyStates carries no galactic-centre row');
@@ -162,7 +158,6 @@ describe('bodyRowSlabs', () => {
       expect(bodyRowSlabs(ctx).insideAtmosphere.includes(EARTH_SLAB_INDEX)).toBe(inside);
       return inside;
     });
-    // Both answers occur, so the agreement is not two rules stuck on one value.
     expect(shellInside[0]).toBe(true);
     expect(shellInside[4]).toBe(false);
   });

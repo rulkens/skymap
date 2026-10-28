@@ -5,8 +5,7 @@
  * The edge sits a ratio OUTSIDE the atmosphere top on purpose: the proxy-mesh
  * outside path degrades within the 128×64 proxy's facet sag (~6e-4 · R), and
  * 1.005 clears that by ~8×; above it the two paths are pixel-identical, so the
- * handoff is invisible. `fullAt: 0` makes the band non-zero exactly below the
- * edge, the old hard `<` (smoothstep saturates a few cm short of it at Earth).
+ * handoff is invisible. `fullAt: 0` makes the band non-zero exactly below the edge.
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';

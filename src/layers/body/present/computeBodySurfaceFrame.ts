@@ -14,10 +14,7 @@ export function computeBodySurfaceFrame(
   if (body === null) return null;
   const bodyState = sceneBodyStates(state, ctx).get(bodyId);
   if (bodyState === undefined) return null;
-  // The SAME pose-provider closure `deriveSlabs` was fed to build this
-  // body's slab row (see FrameView.bodyPose's doc) — reading it here
-  // instead of re-deriving the pose is what keeps this layer's eyeRelBodyM
-  // from ever drifting off the basis the slab's `vp` was actually built from.
+  // Must be the pose `deriveSlabs` built this slab's `vp` from, or eyeRelBodyM drifts off its basis.
   const pose = ctx.bodyPose(bodyId);
   if (pose === null) return null;
   return { body, bodyState, pose, radiusM: body.surface.datumRadiusM };

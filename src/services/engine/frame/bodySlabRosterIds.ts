@@ -1,8 +1,7 @@
 /**
- * bodySlabRosterIds — every scene body drawn on a body slab, whichever Layer draws it, by id:
- * `SCENE_PLANETS` and the frame's
- * present mesh bodies. `near0SphereBodies` drops these and the probe scheduler captures from
- * them, so neither depends on which pass owns a body. Static plus the snapshot: no `state`.
+ * bodySlabRosterIds — ids of every scene body drawn on a body slab, whichever Layer
+ * draws it: `SCENE_PLANETS` plus the present mesh bodies. `near0SphereBodies` drops
+ * these and the probe scheduler captures from them.
  */
 
 import type { MeshBody } from '../../../@types/scene/MeshBody';

@@ -27,8 +27,7 @@ const seededPlanet = (id: string): PlanetBody => {
 // This table (and the WGSL struct it packs into) is in km; body radii are
 // authored in metres. The boundary is crossed here and nowhere else.
 // The ground sphere is the INNER bound: a floor above a peak would leave that
-// peak outside its own atmosphere. That only composites correctly once §2's
-// depth-aware shell lands.
+// peak outside its own atmosphere.
 const seededRadiusKm = (id: string): number =>
   innerBoundRadiusM(seededPlanet(id).surface) * SCALE_UNITS.M_TO_KM;
 const EARTH_RADIUS_KM = innerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_KM;
@@ -158,15 +157,14 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     constituents: [
       {
         // [M/D] H2/He Rayleigh at the Galileo composition (x_He 0.1356) and 1-bar T (166 K).
-        // Was flat-grey [4,4,5]e-3, red:blue inverted; H2/He is derivable from first principles.
         scatter: [1.62e-3, 3.85e-3, 9.68e-3],
         absorb: [0, 0, 0],
         profile: { kind: 'exponential', scaleHeightKm: 25.8 }, // [D] kT/(mu m_u g_eff)
         phase: { kind: 'rayleigh' },
       },
       {
-        // [M] Cloud+haze retrieved as conservatively scattering (k~1e-9); old absorb 1e-3 (omega
-        // 0.75) killed the rim's colour. Jupiter's colour IS its chromophore, and the chromophore
+        // [M] Cloud+haze retrieved as conservatively scattering (k~1e-9); absorb 1e-3 (omega
+        // 0.75) kills the rim's colour. Jupiter's colour IS its chromophore, and the chromophore
         // is in the ground TEXTURE: as a uniform shell term it would delete the limb, not tint it.
         scatter: [3e-3, 3e-3, 3e-3], // [L] bracket 2-6e-3, any value here reads about the same
         absorb: [0, 0, 0],
@@ -191,7 +189,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         // +3/-6%, since He's cross section is 1/16 of H2's. Do not re-derive on the next He paper.
         scatter: [2.18e-3, 5.18e-3, 13.0e-3],
         absorb: [0, 0, 0],
-        profile: { kind: 'exponential', scaleHeightKm: 55 }, // [D] old 59.5 = pre-Cassini 3.25% He
+        profile: { kind: 'exponential', scaleHeightKm: 55 }, // [D] at the Cassini-era He fraction
         phase: { kind: 'rayleigh' },
       },
       {
@@ -200,7 +198,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         // haze m_i ~1e-3 rising to the blue vs Jupiter's ~1e-9 — the measured colour difference.
         // [L] Grey, and the only free dial here. Must stay optically THIN: the body texture is a
         // photograph of these same clouds, so a shell thick enough to grey the limb (tau_vert ~2.5)
-        // erases the banding the texture carries. Tried and rejected on screen, 2026-08-18.
+        // erases the banding the texture carries.
         scatter: [3e-3, 3e-3, 3e-3],
         absorb: [4.5e-5, 1.1e-4, 2.7e-4],
         profile: { kind: 'exponential', scaleHeightKm: 25 },
@@ -225,7 +223,7 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     // Cloud-tops-as-ground like Venus, except the offset is not free: altitude 0 is the nadir
     // tau=1 haze level 160 km up, so Titan draws 6.2% small. Do NOT close that by raising
     // `planetRadiusKm` above the rasterised radius — the fragment's ground test then reads true
-    // where no disc was drawn, amputating the limb glow (shell/fragment.wesl:176-181).
+    // where no disc was drawn, amputating the limb glow (`shell/fragment.wesl`'s ground test).
     // Textureless: no visible-light mosaic of Titan exists, so the shell sits over a flat
     // Lambert sphere. Every number here, and what the disc should composite to:
     // docs/research/atmospheres/titan.md.
@@ -284,9 +282,8 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
     exposure: 2.0,
   },
   uranus: {
-    // Cloud-tops-as-ground; the old row faked methane's red absorption with a suppressed-red
-    // Rayleigh vector. That vector was already close to right — the real gap was that methane
-    // (the thing that actually reddens/blues these planets) had no constituent at all.
+    // Cloud-tops-as-ground. Methane, which reddens/blues these planets, is its own constituent
+    // below rather than a suppressed-red Rayleigh vector.
     planetRadiusKm: seededRadiusKm('uranus'),
     atmosphereTopKm: seededRadiusKm('uranus') + 150,
     constituents: [

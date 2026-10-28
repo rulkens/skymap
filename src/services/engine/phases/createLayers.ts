@@ -63,12 +63,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   if (uiCtx === null) throw new Error('createLayers: state.gpu.uiCtx is null');
 
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
-  // Core's "a source's catalog landed" pulse, and everything core does on it
-  // (D6, Ruling 3). The running total is `galaxyPointRenderer.totalCount()` by
-  // construction — per-source last-reported count, summed, replaced on a tier
-  // swap — so the splash's ready echo needs no renderer read of its own. The
-  // echo is per-arrival, not per-boot: a catalog the user enables mid-session
-  // echoes too, where the deleted gate only subscribed to boot-enabled sources.
+  // Core's "a source's catalog landed" pulse. The running total equals
+  // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
+  // replaced on tier swap). The echo is per-arrival, so a catalog enabled mid-session
+  // echoes too.
   const countBySource = new Map<SourceType, number>();
   function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
     yield* put(engineSourceCountReported(report));
@@ -81,9 +79,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     }
   }
 
-  // Collected here (not read back off `runSaga`'s call sites) so `state.layers = instances`
-  // and `state.layerSagaTasks = layerSagaTasks` assign together below — see `RunSaga`'s
-  // doc comment for why `destroy()` needs these.
+  // Collected so `state.layers` and `state.layerSagaTasks` assign together below
+  // (`RunSaga`'s doc says why `destroy()` needs them).
   const layerSagaTasks: Task[] = [];
   const instances = deps.composition.layers.map((layer) => {
     const common = {
@@ -101,12 +98,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       store: deps.cb.store,
       requestRender,
     };
-    // Facts is erased to `undefined` at this composition boundary
-    // (`Layer<string, unknown>`), so `publish` cannot appear in a
-    // `LayerCoreDeps<undefined>` — only a Layer's own `create` sees it typed,
-    // against its literal Facts. Built into the literal rather than assigned
-    // after: `publish` is `readonly`, and the cast below is the one place that
-    // erasure boundary is bridged.
+    // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so
+    // `publish` cannot appear in `LayerCoreDeps<undefined>`; the cast below bridges it.
+    // Built into the literal because `publish` is `readonly`.
     const declaresFacts = layer.facts !== undefined;
     if (declaresFacts) {
       deps.cb.store.dispatch(
@@ -125,8 +119,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
         }
       : common;
     const instance = instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
-    // The feeds are tasks like `sagas`, on the same array, so `engine.ts`'s
-    // teardown cancels them the same way — which is what closes each iterator.
+    // Feeds are tasks on the same array as `sagas`, so teardown cancels (and closes) them alike.
     const { search, sourceCounts } = instance;
     if (search) {
       layerSagaTasks.push(deps.cb.runSaga(() => runLayerSearchSaga(layer.name, search)));
@@ -141,12 +134,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   state.layers = instances;
   state.layerSagaTasks = layerSagaTasks;
-  // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass that
-  // answers to it, and `checkFrameOrder` counts order lines rather than passes —
-  // so a core pass left behind under a name a Layer now contributes would keep
-  // drawing, silently, with the Layer's own version never reached.
-  // Every pass, compute, planner and label row is gated here, once, so the executors never see
-  // a `fade` or `label` declaration: they call what they always called.
+  // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass answering to it and
+  // `checkFrameOrder` counts lines, so a core pass left under a name a Layer contributes
+  // would keep drawing silently, the Layer's version never reached.
+  // Fade/label gating is applied here once, so executors never see those declarations.
   state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
     CONTENT_PASSES,
     ...instances.map((instance) => instance.passes),
@@ -172,11 +163,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ]),
   );
   state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
-  // Static, so read off the composition rather than the instances — `targets`
-  // is composed the same way. The ceiling sizes the GPU query set before any
-  // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
-  // headroom that reserved; a duplicate `anchorId` would give two rows one
-  // pose and one `SlabFrame.hostId`, with the second silently unreachable.
+  // Static, read off the composition. The ceiling sizes the GPU query set before any
+  // Layer exists (`slabRowCeiling.ts`), so the composition must fit its headroom; a
+  // duplicate `anchorId` would leave the second row silently unreachable.
   const slabRows = concatUniqueRows(
     'createLayers: slab rows',
     (row) => row.anchorId,
@@ -211,9 +200,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ),
   ]);
 
-  // Two directors, each owning one slab's screen-space projection — a
-  // producer names the slab whose director it registers on (`LayerGuides`'s
-  // header explains why NEAR0 vs COSMO matters).
+  // Two directors, one per slab's screen-space projection; a producer names its slab
+  // (`LayerGuides`'s header explains why NEAR0 vs COSMO matters).
   const screenLabelDirectors: Readonly<Record<number, Label2DDirector>> = {
     [NEAR0]: state.subsystems.foregroundLabelDirector,
     [COSMO]: state.subsystems.cosmoLabelDirector,

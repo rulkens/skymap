@@ -1,12 +1,11 @@
 /**
- * atmosphereDrawList — ONE derivation per frame context of which seeded bodies draw
- * an atmosphere shell, paired with its `ATMOSPHERE_PARAMS` row and the pose-dependent
- * values its consumers march along. `encodeAtmosphereSkyView`'s LUT bake and
- * `atmosphereShellPass`'s draw both read that one memoised list, so neither can work
- * off a body the other skipped — a stale table sampled with no error anywhere. The
- * memo keys on `ctx`, the object a frame IS; `state` is a live getter read through.
- * The sub-pixel cull measures the body's SURFACE diameter, NOT the atmosphere-TOP
- * one: culling on the top would hold the limb past the disc's own vanishing.
+ * atmosphereDrawList — ONE derivation per frame context of which bodies draw an
+ * atmosphere shell, with their `ATMOSPHERE_PARAMS` row and pose-dependent values.
+ * `encodeAtmosphereSkyView`'s LUT bake and `atmosphereShellPass` both read this
+ * memoised list, so neither works off a body the other skipped (a stale table
+ * sampled silently). Memo keys on `ctx`; `state` is a live getter. The sub-pixel cull
+ * measures the SURFACE diameter, NOT the atmosphere-TOP one: that would hold the limb
+ * past the disc's own vanishing.
  */
 
 import type { AtmosphereDrawEntry } from '../@types/AtmosphereDrawEntry';
@@ -35,19 +34,15 @@ export function atmosphereDrawList(
   const cached = atmosphereDrawListCache.get(ctx);
   if (cached !== undefined) return cached;
 
-  // Cached before it is filled: every exit returns this same array, so one `set`
-  // covers them all — the near-field short-circuit below included, whose empty
-  // list is this frame's answer like any other.
+  // Cached before it is filled: every exit returns this same array, the near-field short-circuit included.
   const entries: AtmosphereDrawEntry[] = [];
   atmosphereDrawListCache.set(ctx, entries);
 
-  // One scalar for the frame, so the near-field cull short-circuits the whole list.
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return entries;
 
   const candidates = [SCENE_EARTH, ...SCENE_PLANETS];
 
-  // Live position + orientation from the per-frame snapshot, not the baked record
-  // fields — the sun direction and the distance culls below are derived off them.
+  // Live position + orientation from the per-frame snapshot, not baked record fields.
   const states = sceneBodyStates(state, ctx);
 
   for (const body of candidates) {
@@ -55,14 +50,11 @@ export function atmosphereDrawList(
     if (params === undefined) continue; // the data-gate
 
     const bodyState = states.get(body.id)!;
-    // The body-slab pose seam `deriveSlabs` built this body's row from. Every
-    // derived field below hangs off it, so a poseless body is no entry at all —
-    // which is what lets the bake read an entry's fields unguarded.
+    // The pose `deriveSlabs` built this body's row from; a poseless body is no entry, so consumers read fields unguarded.
     const pose = ctx.bodyPose(body.id);
     if (pose === null) continue;
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const camLocal = bodySlabCamLocal(pose.eyeRelBodyM, atmosphereTopM);
-    // Built before the cull branches below so the two push sites cannot drift.
     const entry: AtmosphereDrawEntry = {
       body,
       params,
@@ -73,9 +65,7 @@ export function atmosphereDrawList(
       inside: hostBandOpen(atmosphereInsideBand(body.id), ctx, body.id),
     };
 
-    // A zero camera-to-centre distance means the camera is INSIDE the body, where
-    // apparentSizePx defensively returns 0 — which would read as sub-pixel, so the
-    // branch below treats it as resolved instead.
+    // Zero distance = camera INSIDE the body, where apparentSizePx returns 0 and would read as sub-pixel.
     const dx = bodyState.positionMpc[0] - ctx.drawCamPos[0];
     const dy = bodyState.positionMpc[1] - ctx.drawCamPos[1];
     const dz = bodyState.positionMpc[2] - ctx.drawCamPos[2];

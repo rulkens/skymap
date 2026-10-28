@@ -5,18 +5,12 @@ import type { SurfaceTileShading } from '../../../@types/data/SurfaceTileShading
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 
 /**
- * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is Task 2's
- * already-culled, already-residency-resolved cut (`cutSurfaceTiles`'s `cut`
- * product) -- this renderer does no further culling or ancestor fallback.
- *
- * `eyeRelBodyM` / `radiusM` are the raw f64 ingredients the renderer composes
- * ITS OWN camera-relative tile origins from (in f64, narrowed once per tile)
- * -- both already expressed in the body's fixed axes by the body-slab pose
- * seam (`bodyRelativePose`), so no separate orientation rotation is needed
- * (unlike the pre-body-slab NEAR0 path). `vp` needs no rebase either: a
- * body-m slab's vp is already built about the eye. The renderer owns neither
- * the tile atlas nor any effect map -- both are supplied here every draw (see
- * the renderer's module header).
+ * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is the already-culled,
+ * residency-resolved `cutSurfaceTiles` cut; no further culling or ancestor
+ * fallback happens here. `eyeRelBodyM` / `radiusM` are the f64 ingredients the
+ * renderer composes its camera-relative tile origins from, already in the body's
+ * fixed axes (`bodyRelativePose`), so no rotation is needed; `vp` is already built
+ * about the eye. The tile atlas and effect maps are supplied every draw, not owned.
  */
 export type SurfaceTileDrawArgs = {
   readonly tiles: readonly SurfaceCutTile[];
@@ -34,12 +28,7 @@ export type SurfaceTileDrawArgs = {
   readonly effectInputs: SurfaceEffectInputs;
   readonly shading: SurfaceTileShading;
   readonly ambientLight: number;
-  /** The `surface-lod-overlay` DebugPanel toggle (`debug.overlays['surface-lod-overlay']`) —
-   *  tints each drawn fragment by how many pyramid levels its resolved atlas
-   *  rect fell back from the leaf it's shading. Read live each frame, not
-   *  cached: the fragment derives the level delta itself from
-   *  `atlasUvScale` (see surfaceLighting.wesl), so this is the only new fact the
-   *  overlay needs. */
+  /** `debug.overlays['surface-lod-overlay']`: tints each fragment by how many pyramid levels its atlas rect fell back from the leaf (the fragment derives the delta from `atlasUvScale`, see surfaceLighting.wesl). */
   readonly debugLodOverlay: boolean;
   /** `terrain-no-displacement` debug toggle: patches flatten onto the datum,
    *  bisecting a terrain artifact without a rebuild (height vs mesh). */

@@ -3,14 +3,9 @@
  * `bodyTextures` slot family: one entry per map a textured spherical body has,
  * plus a `surface` entry per ring strip.
  *
- * Derived from the two authored tables (`BODY_TEXTURE_REGISTRY` for the bodies,
- * where each row's `kinds` names the maps that body carries; `SCENE_RINGS` for
- * the rings) rather than hand-listed, so a new textured body, a new map kind on
- * an existing body, or a new ring joins the slot family, its demand/release
- * wiring row automatically — one edit in an authored table, no third list to
- * keep in sync. This IS the iteration list `bodyTextureSlots` mints slots from
- * and `bodyAssetRows` maps `bodyTextureRow` over. Today every body
- * has only a `surface` kind, so this yields one entry per body plus the ring.
+ * Derived from `BODY_TEXTURE_REGISTRY` (each row's `kinds`) and `SCENE_RINGS`, so
+ * a new body, kind or ring joins the slot family with no third list to keep in
+ * sync. `bodyTextureSlots` mints slots from it and `bodyAssetRows` maps over it.
  */
 
 import { BODY_TEXTURE_REGISTRY } from './bodyTextureRegistry';

@@ -72,7 +72,6 @@ function contributingLayer(tag: string, assetKey: string, slot: object): Layer<s
   } as unknown as Layer<string, unknown>;
 }
 
-/** A Layer contributing only a world-space label producer, tagged `<tag>-world`. */
 function worldLabelLayer(tag: string): Layer<string, unknown> {
   return {
     name: tag,
@@ -83,7 +82,6 @@ function worldLabelLayer(tag: string): Layer<string, unknown> {
   } as unknown as Layer<string, unknown>;
 }
 
-/** A Layer contributing `count` slab rows, anchored `<tag>-slab-<i>`. */
 function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, unknown> {
   return {
     name: tag,
@@ -98,7 +96,6 @@ function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, 
   } as unknown as Layer<string, unknown>;
 }
 
-/** A Layer contributing one orbit-trail group and nothing else. */
 function orbitTrailLayer(
   tag: string,
   rows: readonly OrbitalElements[],

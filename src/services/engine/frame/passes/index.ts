@@ -17,10 +17,7 @@ import { labelsNearPass } from './labelsNearPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 
-/**
- * Core's contributed passes, as a flat set. It states no order and no grouping:
- * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
- */
+/** Core's contributed passes, as a flat set; `FRAME_ORDER` orders them. */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   horizonShellPass,
   orbitTrailsPass,

@@ -1,15 +1,12 @@
-// atmosphere/scattering.wesl — the Bruneton/Neyret (2008) + Hillaire (2020)
-// scattering core the three LUT bakes and the shell fragment compose.
+// atmosphere/scattering.wesl — Bruneton/Neyret (2008) + Hillaire (2020) scattering
+// core shared by the three LUT bakes and the shell fragment.
 //
-// Everything is passed, never captured: WESL has no global state, so a lib
-// module cannot see a consumer's '@group/@binding'. That buys a property the
-// renderer depends on — the LUT parametrisations below are built from RATIOS
-// of radii, so they are UNIT-AGNOSTIC. The bakes feed km radii and the shell
-// fragment feeds local (top == 1) radii, and the uv agrees, which is why the
-// fragment needs neither the km radii nor 'ScatteringParams'.
+// Everything is passed, never captured (a lib cannot see a consumer's bindings).
+// The LUT parametrisations are RATIOS of radii, so they are UNIT-AGNOSTIC: bakes
+// feed km radii, the shell fragment feeds local (top == 1) radii, and the uv agrees.
 //
-// Comments single-quoted, NEVER backticks (the WESL parser tokenises a
-// backtick even inside a comment). Verified VISUALLY, not by a unit test.
+// Comments single-quoted, NEVER backticks (the WESL parser tokenises a backtick
+// even inside a comment). Verified VISUALLY, not by a unit test.
 
 import package::lib::math::PI;
 import package::lib::util::raySphere;
@@ -29,20 +26,14 @@ const UNIFORM_PHASE: f32 = 1.0 / (4.0 * PI);
 // zero. Well below any real per-km coefficient.
 const EXTINCTION_EPS: f32 = 1e-7;
 
-// ── ScatteringParams ─────────────────────────────────────────────────
+// ScatteringParams — per-body constants the bakes integrate; written by
+// 'layers/body/render/packScatteringParams.ts'. Keep in lockstep: a byte-layout
+// drift raises no GPU error and iOS answers it with a dropped frame. Coefficients
+// are 1/km and radii/heights km.
 //
-// The per-body constants the bakes integrate — the WESL twin of the TypeScript
-// 'AtmosphereParams', written by 'layers/body/render/packScatteringParams.ts'. Keep the
-// two in lockstep: a byte-layout drift raises no GPU error and iOS answers it
-// with a dropped frame. Coefficients are 1/km and radii/heights are km, so the
-// bakes march in km with no conversion.
-//
-// The roles are NOT positional. A constituent carries its own scatter and
-// absorb vectors, its own density profile and its own phase function, so
-// 'molecules', 'haze' and 'ozone' are rows in a list rather than three named
-// struct members. The twilight knobs ride the per-frame 'SkyViewParams'
-// (skyViewLut.wesl), not this construction-written buffer, so they stay
-// live-tunable.
+// Roles are NOT positional: each constituent carries its own scatter/absorb
+// vectors, density profile and phase function. The twilight knobs ride the
+// per-frame 'SkyViewParams' (skyViewLut.wesl), so they stay live-tunable.
 
 const PROFILE_EXPONENTIAL: u32 = 0u;
 const PROFILE_TENT: u32 = 1u;
@@ -73,21 +64,16 @@ struct ScatteringParams {
   constituents: array<Constituent, 4>,
 };
 
-// ── MediumSample — the local optical properties at a point ───────────
-//
-// The per-step quantities every march needs, in 1/km, summed over the
-// constituents present at this altitude. 'scatterPhased' weights each
-// constituent by its OWN phase function, which is why the caller no longer
-// applies phases by name; 'scatterTotal' is the unweighted sum the isotropic
-// multiple-scattering estimate wants; 'extinction' drives 'exp(-extinction*dt)'
-// across a step.
+// MediumSample — local optical properties at a point, in 1/km, summed over the
+// constituents present. 'scatterPhased' weights each by its OWN phase function;
+// 'scatterTotal' is the unweighted sum the isotropic multi-scatter wants;
+// 'extinction' drives 'exp(-extinction*dt)'.
 struct MediumSample {
   scatterPhased: vec3<f32>,
   scatterTotal: vec3<f32>,
   extinction: vec3<f32>,
 };
 
-// ── phase functions ──────────────────────────────────────────────────
 
 // rayleighPhase — the molecular scattering phase, '3/(16*PI) * (1 + cos^2)'.
 // Gently forward-and-back symmetric; it is the reason a clear daytime sky is
@@ -113,7 +99,6 @@ fn miePhase(cosTheta: f32, g: f32) -> f32 {
   return (1.0 - g2) / (4.0 * PI * pow(max(denom, 0.0), 1.5));
 }
 
-// ── density profiles ─────────────────────────────────────────────────
 
 // densityExponential — falloff normalised to 1 at the ground, for a well-mixed
 // constituent. 'altitudeKm' is height above the ground sphere; the scale height
@@ -151,13 +136,9 @@ fn constituentPhase(c: Constituent, cosTheta: f32) -> f32 {
   return rayleighPhase(cosTheta);
 }
 
-// accumulateMedium — the optical properties at 'posKm' (a position in km,
-// planet centre at the origin), summed over the body's constituents. Altitude
-// is floored at 0 so a point a hair below the ground sphere (numerical) does
-// not blow the density past ground level.
-//
-// The accumulator starts at zero and adds in list order, which is what makes
-// this arithmetically identical to the three named terms it replaced.
+// accumulateMedium — optical properties at 'posKm' (km, planet centre at origin),
+// summed over the constituents. Altitude is floored at 0 so a point a hair below
+// the ground sphere does not blow the density past ground level.
 fn accumulateMedium(
   params: ScatteringParams,
   posKm: vec3<f32>,
@@ -200,7 +181,6 @@ fn sampleMediumIsotropic(params: ScatteringParams, posKm: vec3<f32>) -> MediumSa
   return accumulateMedium(params, posKm, 0.0, false);
 }
 
-// ── ray geometry ─────────────────────────────────────────────────────
 
 // distanceToTop — the distance from a point at radius 'r' (planet centre at the
 // origin) with view-zenith cosine 'mu' to the top-of-atmosphere sphere, along
@@ -242,14 +222,9 @@ fn marchDistance(p0: vec3<f32>, dir: vec3<f32>, bottomRadius: f32, topRadius: f3
   return tMax;
 }
 
-// ── transmittance LUT parametrisation (Bruneton/Hillaire) ────────────
-//
-// The transmittance LUT stores, per texel, the rgb transmittance from a point
-// (radius r, view-zenith cosine mu) to the top of atmosphere. The (r, mu) <->
-// uv mapping is Bruneton's, which concentrates resolution near the horizon
-// (where transmittance changes fastest). It is built entirely from radii
-// ratios, hence unit-agnostic (see the module header): pass km radii in the
-// bake, local (top == 1) radii in the fragment; the uv is identical.
+// Transmittance LUT parametrisation (Bruneton): rgb transmittance from (radius r,
+// view-zenith cosine mu) to the top, concentrating resolution near the horizon.
+// Unit-agnostic (see the module header).
 //
 //   H   = sqrt(top^2 - bottom^2)          — the horizon-grazing chord length
 //   rho = sqrt(r^2 - bottom^2)            — the ground-tangent distance at r
@@ -305,12 +280,8 @@ fn sampleTransmittanceToTop(
   return textureSampleLevel(lut, samp, uv, 0.0).rgb;
 }
 
-// ── multi-scatter LUT parametrisation ────────────────────────────────
-//
-// The multi-scatter LUT is view-INDEPENDENT: it stores the isotropic
-// multiple-scattering contribution at (sun-zenith cosine, altitude). The uv is
-// a plain linear mapping — this LUT is low-frequency, so no horizon warp is
-// needed. Unit-agnostic (altitude fraction is a ratio).
+// The multi-scatter LUT is view-INDEPENDENT: isotropic multiple scattering at
+// (sun-zenith cosine, altitude), linear uv (low-frequency, no horizon warp).
 
 // multiScatterLutParamsToUv — (sunCosZenith, r) -> uv.
 fn multiScatterLutParamsToUv(bottomRadius: f32, topRadius: f32, r: f32, sunCosZenith: f32) -> vec2<f32> {
@@ -335,14 +306,9 @@ fn sampleMultiScatter(
   return textureSampleLevel(lut, samp, uv, 0.0).rgb;
 }
 
-// ── the per-step scattering integrand ────────────────────────────────
-//
-// One march step's contribution, split from whatever accumulates it, so every
-// integrator shares ONE integrand rather than agreeing only by inspection.
-// The single-scatter source is weighted by the REAL Rayleigh + Mie phases
-// (this is a directional lookup, unlike the isotropic multi-scatter bake);
-// the precomputed multi-scatter is added with the total scattering
-// coefficient (it is already isotropic).
+// One march step's contribution, shared by every integrator. The single-scatter
+// source uses the REAL Rayleigh + Mie phases; the precomputed multi-scatter is
+// already isotropic and uses the total scattering coefficient.
 struct ScatterStep {
   // The step's source integral '(S - S*T)/extinction', BEFORE the running
   // throughput is applied. The caller accumulates 'L += throughput * inScatter'.
@@ -404,16 +370,10 @@ fn scatterStep(
   return ScatterStep(sInt, sampleTransmittance);
 }
 
-// ── sky-view LUT parametrisation (Hillaire) ──────────────────────────
-//
-// The sky-view LUT is view-DEPENDENT and rebaked per frame at the camera's
-// current altitude. Its texel is (view-zenith, azimuth-relative-to-sun). The
-// zenith axis uses Hillaire's horizon-split sqrt warp: the lower half of the
-// texture (uv.y < 0.5) covers ABOVE the horizon, the upper half BELOW it, each
-// with a sqrt distribution that packs resolution against the horizon line where
-// the sky gradient (and the sunset band) is sharpest. The azimuth axis is a
-// sqrt-warped cosine of the view-to-sun angle. All ratios of radii, hence
-// unit-agnostic: the bake feeds km radii, the fragment feeds local (top == 1).
+// The sky-view LUT is view-DEPENDENT, rebaked per frame at the camera altitude;
+// texel = (view-zenith, azimuth-relative-to-sun). Hillaire's horizon-split sqrt
+// warp: uv.y < 0.5 is ABOVE the horizon, the rest BELOW, packing resolution at
+// the horizon where the sunset band is sharpest. Azimuth is a sqrt-warped cosine.
 //
 // 'lightViewCosAngle' is cos of the azimuthal angle between the view ray and
 // the sun, both projected off the up axis; it is what makes the LUT symmetric

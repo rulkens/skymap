@@ -24,7 +24,6 @@ describe('composed slab rows', () => {
 
     expect(new Set(anchorIds).size).toBe(anchorIds.length);
     expect(layerRows.length).toBeLessThanOrEqual(LAYER_SLAB_ROW_HEADROOM);
-    // Guards the guard: Earth and every planet still own a row.
     for (const body of [SCENE_EARTH, ...SCENE_PLANETS]) expect(anchorIds).toContain(body.id);
   });
 });

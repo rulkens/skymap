@@ -1,9 +1,4 @@
-/**
- * The Layer's one asset row — demand only, no request shape (the velocity
- * cube ships as one tier-agnostic `.scfd`). Its `slot` is the one `create`
- * already minted, so core folds this over its own rows (Ruling 10) without
- * ever building one.
- */
+/** The Layer's one asset row: demand only; the velocity cube is one tier-agnostic `.scfd`. */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { FlowRuntime } from '../@types/FlowRuntime';

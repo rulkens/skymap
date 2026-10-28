@@ -6,14 +6,9 @@ function isCompanion(row: AssetWiringRow | CompanionAssetRow): row is CompanionA
 }
 
 /**
- * Fold `CompanionAssetRow`s into full `AssetWiringRow`s once, at table-build
- * time — so `reevaluateDemand` and the debug panel
- * all walk the same plain rows the demand loop runs. Own rows
- * pass through by identity; a companion's parent is looked up among the OWN
- * rows only, so a parent that is itself a companion reads as missing rather
- * than chaining — a chain would otherwise surface as a `TypeError` inside a
- * demand predicate, swallowed by the per-row guard, starving one asset
- * silently.
+ * Fold `CompanionAssetRow`s into plain `AssetWiringRow`s once, at table-build time.
+ * A companion's parent is looked up among the OWN rows only, so a chain throws here
+ * rather than as a `TypeError` swallowed by the per-row guard, silently starving an asset.
  */
 export function expandCompanionRows(
   rows: readonly (AssetWiringRow | CompanionAssetRow)[],

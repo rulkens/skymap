@@ -45,7 +45,6 @@ const EVERY_BODY = positionedBodiesOf(
 );
 const NO_SUN = EVERY_BODY.filter(({ body }) => body.id !== 'sun');
 
-/** Eye `offsetKm` along +x from `bodyId`, on a 1280×720 viewport at fovY 45°. */
 function makeCtx(
   bodyId: string,
   offsetKm: number,
@@ -60,7 +59,6 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-/** Packed sphere radii (km), which identify the bodies in the set. */
 function occluderRadiiKm(ctx: FrameView, state: EngineState = STATE): number[] {
   const { count, spheresKm } = sceneOccluderSpheres(state, ctx);
   return Array.from({ length: count }, (_, i) => spheresKm[i * 4 + 3]!);

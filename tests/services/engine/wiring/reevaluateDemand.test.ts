@@ -1,21 +1,10 @@
 /**
- * reevaluateDemand — unit tests for the guarded demand-evaluation loop.
- *
- * Tests exercise the factored-out `evaluateRows(state, rows)` with stub rows
- * and stub slots, so the loop logic is verified without the real asset
- * rows (Task 10). The behaviours under test:
- *
- *   - a row whose demand is true AND whose slot is idle triggers
- *     `slot.load(row.req(tier))`,
- *   - a row whose demand is false does not load,
- *   - a row whose slot is already loading/ready is left alone (the idle-guard
- *     that prevents a re-fetch storm when the loop re-runs on every toggle),
- *   - a non-idle slot whose request drifted reloads in place, never releases,
- *   - a throwing demand predicate is caught and does not stop later rows.
- *
- * Mocking strategy: each stub row carries its stub slot, which `state.slotsByKey`
- * also indexes under the row's numeric SourceType key (as `createLayers` does);
- * `slot.load` is a vi.fn so calls are assertable.
+ * reevaluateDemand — the guarded demand-evaluation loop, via `evaluateRows(state, rows)` with stub
+ * rows and slots. A demanded row with an idle slot triggers `slot.load(row.req(tier))`; an undemanded
+ * row does not load; a loading/ready slot is left alone (the idle-guard against a re-fetch storm); a
+ * non-idle slot whose request drifted reloads in place, never releases; a throwing predicate is caught
+ * and does not stop later rows. Each stub row carries its stub slot, also indexed in
+ * `state.slotsByKey` under the row's numeric SourceType key (as `createLayers` does).
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -40,16 +29,9 @@ import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 type StubSlot = AssetSlot<unknown, unknown> & {
   load: ReturnType<typeof vi.fn>;
   release: ReturnType<typeof vi.fn>;
-  /** Override the reported lifecycle kind so tests can pin the idle/ready guards. */
   setKind: (kind: LoadState<unknown>['kind']) => void;
 };
 
-/**
- * A stub slot whose `load` and `release` are spies. `state()` reports a mutable
- * kind (idle by default — the boot model) so tests can simulate a slot that is
- * already loading/ready and assert the idle-guard (load) or ready-guard
- * (release) fires the right edge.
- */
 function stubSlot(
   initialKind: LoadState<unknown>['kind'] = 'idle',
   lastReq: unknown = null,
@@ -80,19 +62,10 @@ function stubSlot(
   };
 }
 
-/**
- * Build a minimal EngineState with the slices evaluateRows reads transitively
- * (via buildDemandCtx): the `tier` root field, `settings`, `requests`,
- * a `points` map indexing the stub slots, and the `subsystems.assetQueue` the
- * load edge enqueues onto.
- *
- * The queue is constructed PER CALL, never shared: a queue leaked across cases
- * would carry one test's pending entries into the next. It is also mandatory
- * rather than optional — `evaluateRows` guards each row in a try/catch, so a
- * missing queue would surface as a swallowed TypeError and turn every
- * `expect(slot.load).toHaveBeenCalled()` in this file into a silent failure
- * instead of a visible crash.
- */
+/** Minimal EngineState with the slices evaluateRows reads via buildDemandCtx. The assetQueue is built
+ *  PER CALL (a shared queue would leak pending entries between cases) and is mandatory: `evaluateRows`
+ *  try/catches each row, so a missing queue would be a swallowed TypeError that turns every
+ *  `expect(slot.load)` into a silent failure. */
 function makeState(
   points: Map<SourceType, AssetSlot<unknown, unknown>>,
   assetQueue: unknown = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
@@ -102,9 +75,6 @@ function makeState(
     settings: {},
     requests: new Set(),
     subsystems: { assetQueue },
-    // buildDemandCtx assembles the camera eye from pose + projection, so both
-    // must be present. A far resting pose keeps the proximity-gated body-texture
-    // rows out of the demand set.
     terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
@@ -119,7 +89,6 @@ function makeState(
   } as unknown as EngineState;
 }
 
-/** A wiring row over a numeric (point-slot) key with overridable demand/release/req. */
 function row(
   slot: AssetSlot<unknown, unknown>,
   key: SourceType,
@@ -158,7 +127,6 @@ describe('evaluateRows', () => {
     const state = makeState(new Map([[Source.SDSS, slot]]));
     evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
-    // The request is derived from the active tier via row.req.
     expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
   });
 
@@ -226,7 +194,6 @@ describe('evaluateRows', () => {
   });
 
   it('never releases a row with no release predicate (load-once default)', () => {
-    // The 17 existing rows omit `release`; a ready slot must stay put forever.
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
     evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
@@ -316,7 +283,6 @@ describe('evaluateRows', () => {
 });
 
 describe('evaluateRows — drift edge', () => {
-  /** A slot loaded at 'small' while `makeState` sits at 'medium' ⇒ drifted. */
   const drifted = (kind: LoadState<unknown>['kind']) =>
     stubSlot(kind, { source: Source.SDSS, tier: 'small' });
 
@@ -436,8 +402,6 @@ describe('evaluateRows — drift edge', () => {
 });
 
 describe('evaluateRows — body textures at a stale tier', () => {
-  /** A body-texture row whose req clamps the tier to Earth's 'large' ceiling — so
-   *  req('small').tier === 'small'. */
   const earthRow = (slot: AssetSlot<unknown, unknown>): AssetWiringRow => ({
     key: 'earth:surface',
     slot,
@@ -446,7 +410,6 @@ describe('evaluateRows — body textures at a stale tier', () => {
     priority: 0,
   });
 
-  /** A low-ceiling body-texture row (Uranus ships only up to 'small'). */
   const uranusRow = (slot: AssetSlot<unknown, unknown>): AssetWiringRow => ({
     key: 'uranus:surface',
     slot,
@@ -455,13 +418,11 @@ describe('evaluateRows — body textures at a stale tier', () => {
     priority: 0,
   });
 
-  /** State with `slot` indexed under `key` at the given tier. */
   function makeBodyState(key: string, slot: AssetSlot<unknown, unknown>, tier: Tier): EngineState {
     return {
       tier,
       settings: {},
       requests: new Set(),
-      // Per-call queue, for the same reasons spelled out on `makeState`.
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       terrain: FLAT_TERRAIN,
       cameraRuntime: {

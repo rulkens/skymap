@@ -45,15 +45,12 @@ const PROXIMA_ID = 'sceneBody-proxima-centauri';
 const SUN_ID = 'sceneBody-sun';
 const PROXIMA_INDEX = SCENE_STARS.findIndex((star) => star.id === 'proxima-centauri');
 
-/** No survey catalog loaded — irrelevant here, since seeded picks (the Sun,
- *  the famous stars) resolve without consulting the renderer. */
 const NO_STARS_LOADED: StarRowFixture = {
   renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
 } as unknown as StarRowFixture;
 
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
-// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
 const SCENE_BODIES = positionedBodiesOf(
   [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
   deriveBodyStates(CONST_J2000),
@@ -76,7 +73,6 @@ function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
   } as unknown as FrameView;
 }
 
-/** The body records `sceneOccluderBodies`/`sceneBodyPartition` need to not throw. */
 function makeState(): EngineState {
   return {
     gpu: {},
@@ -93,7 +89,6 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-/** The value core hands for the `label:starCatalog` entry. */
 const handed = (famousStar: number, sun = 1) => ({ famousStar, sun });
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
@@ -170,17 +165,14 @@ describe('produceStarCaptions', () => {
     const at = (famousStar: number, sun: number) =>
       produceStarCaptions()(makeState(), makeCtx(EARTH_POS), handed(famousStar, sun)).labels;
 
-    // Famous-star item at 0: the map goes dark, the Sun does not.
     const famousOff = at(0, 1);
     expect(fadeAlphaOf(famousOff, PROXIMA_ID)).toBe(0);
     expect(fadeAlphaOf(famousOff, SUN_ID)).toBeGreaterThan(0);
 
-    // Sun item at 0: the Sun goes dark, the map does not.
     const sunOff = at(1, 0);
     expect(fadeAlphaOf(sunOff, SUN_ID)).toBe(0);
     expect(fadeAlphaOf(sunOff, PROXIMA_ID)).toBeGreaterThan(0);
 
-    // A clip or fade on one item dims only that item.
     const dimmed = at(0.25, 1);
     expect(fadeAlphaOf(dimmed, PROXIMA_ID)).toBeCloseTo(0.25 * fadeAlphaOf(at(1, 1), PROXIMA_ID)!);
     expect(fadeAlphaOf(dimmed, SUN_ID)).toBe(fadeAlphaOf(at(1, 1), SUN_ID));

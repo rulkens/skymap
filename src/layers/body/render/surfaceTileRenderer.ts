@@ -51,9 +51,7 @@ export function createSurfaceTileRenderer(
   reversedZ: boolean,
   resolution: number,
 ): SurfaceTileRenderer {
-  // ── Samplers ──────────────────────────────────────────────────────────
-  // baseSampler mirrors earthRenderer's whole-globe sampler (repeat u,
-  // clamp v, trilinear — these views carry the base globe's own mip chain).
+  // Mirrors earthRenderer's whole-globe sampler: these views carry the base globe's mip chain.
   const baseSampler = device.createSampler({
     label: 'surface-tile-base-sampler',
     magFilter: 'linear',
@@ -62,10 +60,8 @@ export function createSurfaceTileRenderer(
     addressModeU: 'repeat',
     addressModeV: 'clamp-to-edge',
   });
-  // atlasSampler mirrors earthRenderer's tileSampler: clamp both axes (only
-  // guards the ATLAS TEXTURE's own edge — a resolved rect's edge, one slot
-  // away from an unrelated tile's pixels, is guarded separately by the
-  // fragment's own half-texel uv clamp, see surfaceLighting.wesl), single mip level.
+  // Clamp only guards the ATLAS TEXTURE's edge; a rect's edge next to an unrelated
+  // slot is guarded by the fragment's half-texel uv clamp (surfaceLighting.wesl).
   const atlasSampler = device.createSampler({
     label: 'surface-tile-atlas-sampler',
     magFilter: 'linear',
@@ -74,7 +70,6 @@ export function createSurfaceTileRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // ── Shared template index buffer (every patch, every level) ──────────
   const indices = surfacePatchIndices(resolution);
   const indexCount = indices.length;
   const indexBuffer = device.createBuffer({
@@ -84,10 +79,6 @@ export function createSurfaceTileRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, indices);
 
-  // ── Bind group layouts (explicit, not 'auto'), one per variant ───────
-  // Binding 2 was the per-corner vertex array P6 deleted; the height atlas
-  // took the free slot. 3–9 keep their numbers so the fragment's bindings
-  // don't move (they need not be contiguous).
   const sharedLayoutEntries: readonly GPUBindGroupLayoutEntry[] = [
     {
       binding: 0,
@@ -99,9 +90,7 @@ export function createSurfaceTileRenderer(
       visibility: GPUShaderStage.VERTEX,
       buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
     },
-    // Terrain-RGB codes read with `textureLoad` from BOTH stages (vertex
-    // displaces, fragment takes its normal from the cell); no sampler ever
-    // touches it, so the binding stays unfilterable.
+    // Terrain-RGB codes are `textureLoad`ed from both stages, never sampled: unfilterable.
     {
       binding: 2,
       visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
@@ -109,9 +98,8 @@ export function createSurfaceTileRenderer(
     },
     { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
   ];
-  // 8 was the whole-globe normal map, now the base globe's alone: a patch
-  // takes its normal from the height field, and compositing both would
-  // shade the same relief twice (spec §7.2).
+  // No binding 8 (whole-globe normal map): patches take their normal from the
+  // height field, and compositing both would shade the same relief twice.
   const fragmentLayoutEntries: Readonly<Record<number, GPUBindGroupLayoutEntry>> = {
     3: { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     5: { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
@@ -145,7 +133,6 @@ export function createSurfaceTileRenderer(
         label: `surface-tile-pipeline-layout[${key}]`,
         bindGroupLayouts: [bindGroupLayout],
       }),
-      // Positions are derived from the instance record — no vertex buffers.
       vertex: { module: vsModule, entryPoint: 'vs' },
       fragment: {
         module: fsModule,
@@ -160,8 +147,6 @@ export function createSurfaceTileRenderer(
       depthStencil: {
         format: depthFormat,
         depthWriteEnabled: true,
-        // See the module header: draws over the base globe at the same
-        // nominal radius, so ties must resolve in THIS pipeline's favour.
         depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
       },
     });
@@ -169,7 +154,6 @@ export function createSurfaceTileRenderer(
   }
   const variants = new Map<string, ReturnType<typeof buildVariant>>();
 
-  // ── Uniform buffer (one record per draw call) ────────────────────────
   const uniformBuffer = device.createBuffer({
     label: 'surface-tile-uniform-buffer',
     size: SURFACE_TILE_UNIFORM_BYTES,
@@ -178,7 +162,6 @@ export function createSurfaceTileRenderer(
   const uniformScratch = new ArrayBuffer(SURFACE_TILE_UNIFORM_BYTES);
   const uniformView = new DataView(uniformScratch);
 
-  // ── Per-frame instance records (grow-only, in TILE count) ────────────
   let patchBuffer: GPUBuffer | null = null;
   let patchScratch = new ArrayBuffer(0);
   let patchScratchView = new DataView(patchScratch);
@@ -197,12 +180,10 @@ export function createSurfaceTileRenderer(
   }
 
   /**
-   * Caller invariant this pipeline relies on but does not assert: `tiles`
-   * is only ever non-empty while the tile subsystem is engaged, which is
-   * altitude-gated (near Earth). The vertex shader's local-normal
-   * reconstruction (`vertex.wesl`'s `toCentreLocal`) is f32-safe only
-   * under that invariant — a far-camera call would silently flatten every
-   * drawn tile's shading normal toward one direction rather than error.
+   * Unasserted caller invariant: `tiles` is non-empty only while the tile
+   * subsystem is engaged (altitude-gated, near Earth). `vertex.wesl`'s
+   * `toCentreLocal` is f32-safe only then; a far-camera call silently flattens
+   * every tile's shading normal.
    */
   function draw(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs): void {
     const {
@@ -244,21 +225,15 @@ export function createSurfaceTileRenderer(
 
     ensureCapacity(tileCount);
 
-    // Sampled ONCE per draw call (== once per frame; `surfaceTilesPass` calls
-    // `draw` at most once), never per tile — every tile's fade weight must
-    // read the same instant, or tiles that upload microseconds apart would
-    // visibly desync. REAL time: a fade must run even while the sim clock
-    // is paused or scaled (see `SURFACE_TILE_CROSSFADE_MS`'s doc comment).
+    // Once per draw, so every tile's fade reads the same instant. REAL time: the
+    // fade must run while the sim clock is paused or scaled.
     const nowMs = performance.now();
 
     for (let i = 0; i < tileCount; i++) {
       const tile = tiles[i]!;
 
-      // `fallback === null` means no deeper resident ancestor: the CPU-side
-      // encoding is fadeWeight forced to 1 with the fallback rect aliased to
-      // the primary one (see io.wesl's `PatchInstance` doc) — mix() at weight 1
-      // returns the primary sample exactly, so the fragment never needs to
-      // branch on "is there a fallback".
+      // No fallback ⇒ fadeWeight 1 with the fallback rect aliased to the primary, so
+      // the fragment's mix() needs no branch.
       const fallback = tile.albedo.fallback ?? tile.albedo;
       const fadeWeight =
         tile.albedo.fallback === null
@@ -266,8 +241,6 @@ export function createSurfaceTileRenderer(
           : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / SURFACE_TILE_CROSSFADE_MS));
 
       const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
-      // The leaf's sub-rect of the slot it inherited (R14), not the slot
-      // itself: at `levelDelta` 0 `originPosts` is [0, 0] and the two agree.
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
       const slotOriginY =
         Math.floor(tile.height.slot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
@@ -305,8 +278,6 @@ export function createSurfaceTileRenderer(
     writeSurfaceTileUniforms(
       uniformView,
       vp,
-      // Body-fixed frame throughout — the shader's rotCol0/1/2 slots are
-      // inert at identity, kept only for the struct's parity-tested layout.
       IDENTITY_MAT3,
       radiusM,
       resolution,
@@ -316,8 +287,7 @@ export function createSurfaceTileRenderer(
       shading.f0,
       shading.sunIrradiance,
       ambientLight,
-      // A variant without the effect never reads its field; 0 keeps the
-      // uniform layout fixed across variants.
+      // Unread by variants without the effect; 0 keeps the layout fixed.
       materialMap?.oceanRoughness ?? 0,
       cloudShadows?.strength ?? 0,
       cloudShadows?.shellRadius ?? 0,
@@ -327,10 +297,7 @@ export function createSurfaceTileRenderer(
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
-    // Bind group rebuilt every draw: the storage buffer may have grown,
-    // and the texture views are supplied fresh per call (this renderer owns
-    // neither the atlas nor any effect map — see the header). The key check
-    // above guarantees every binding the variant lists has its resource.
+    // Rebuilt every draw: the storage buffer may have grown and views arrive per call.
     const fragmentResources: Readonly<Record<number, GPUBindingResource | undefined>> = {
       3: baseSampler,
       5: surfaceAtlasView,

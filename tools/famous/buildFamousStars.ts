@@ -1,46 +1,13 @@
 #!/usr/bin/env node
 /**
- * buildFamousStars — split the curated star seeds into their runtime artefacts.
- *
- * Reads every seed in `STAR_SEEDS` (curated entries, single source of truth).
- *
- * Writes:
- *   - one committed generated `.ts` table per seed (`STAR_SEEDS.generatedPath`)
- *   - `tools/stars-rs/src/famous_ids.generated.rs` (committed generated Rust)
- *   - `public/data/famous_stars_meta.json`        (gitignored build artefact)
- *
- * Why split at build time?  The seed carries everything a curator authors — sky
- * position, render primitives, physical properties, and multi-sentence prose.
- * The runtime wants those on two very different paths.  The render + search
- * projection (position, temperature, radius, names) must be present the instant
- * the engine initialises so a star is drawable and findable synchronously, with
- * no async load at engine construction.  The narrative + physical properties (spectral
- * type, mass, age, ~100 KB of descriptions) belong off the hot path, fetched
- * lazily only when an InfoCard opens.  Emitting the two shapes at build time keeps
- * the seed legible (one file per star, all its facts together) while giving each
- * consumer exactly the fields it needs.
- *
- * Why a *committed* generated `.ts` for artefact (1) — the repo's first committed
- * codegen?  It lets init stay synchronous (ordinary `import`, no Vite JSON-import
- * config, no ArrayBuffer decode), it is validated by `tsc` on every typecheck via
- * the `readonly FamousStarRow[]` annotation, and — unlike a bundled JSON import —
- * it keeps the descriptions out of the JS bundle (those ride the sidecar instead).
- * The cost is a generated file living in `src/`; the top-of-file banner marks it
- * do-not-edit and the seed + table are always committed together, in sync.
- *
- * Artefact (2) is the same sidecar shape `buildFamous`/`buildStructures` emit,
- * written through the shared `writeMetaSidecar` helper — this is its third caller.
- *
- * Artefact (3) is the Gaia-dedup id array the Rust star-catalog builder
- * (`tools/stars-rs`) subtracts from the bin.  The TS build (`buildStars.ts`)
- * reads the seed directly for the same fact, but Rust's `Cargo.toml` carries no
- * JSON/serde dependency (the builder is deliberately dependency-light), so the
- * seed can't be parsed at Rust build time.  Committed codegen closes that gap:
- * we emit a plain `.rs` const here, `include!`d into `population.rs`, so both
- * languages derive the same dedup set from the one seed instead of hand-copying
- * a second 17-id array (the drift hazard this task removes).
- *
- * The npm script is `build-famous-stars`.
+ * buildFamousStars — split the curated `STAR_SEEDS` into runtime artefacts:
+ *   1. a committed generated `.ts` table per seed (`generatedPath`): render + search
+ *      fields, importable synchronously, kept out of the bundle's prose;
+ *   2. `public/data/famous_stars_meta.json` (gitignored): physical properties and
+ *      descriptions, fetched lazily when an InfoCard opens;
+ *   3. `tools/stars-rs/src/famous_ids.generated.rs`: the Gaia/Hipparcos dedup ids
+ *      (the Rust builder has no serde dependency, so it cannot parse the seed).
+ * npm script: `build-famous-stars`.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -77,11 +44,8 @@ export const STAR_SEEDS: readonly StarSeedArtefact[] = [
 ];
 
 /**
- * Project the seed entries onto the compact render + search rows the runtime
- * table exports.  Everything derived (world position, linear RGB, radiusM) is a
- * pure function of these primitives, computed later by the star maker, so the row
- * stays in the catalogue's own units.  `oblateness` is the sole optional key —
- * omitted entirely (never `null`/`0`) when the star is effectively spherical.
+ * Project the seed onto the compact render + search rows, in the catalogue's own
+ * units. `oblateness` is the sole optional key: omitted (never `null`/`0`) when spherical.
  */
 export function seedToGeneratedRows(entries: readonly FamousStarEntry[]): FamousStarRow[] {
   return entries.map((e) => ({
@@ -100,12 +64,9 @@ export function seedToGeneratedRows(entries: readonly FamousStarEntry[]): Famous
 }
 
 /**
- * Project the seed entries onto the InfoCard sidecar entries: the physical
- * properties + prose the card shows but the renderer never needs.  Optional
- * fields (`massSolar`/`luminositySolar`/`ageGyr`/`oblateness`/`variable`) are
- * omitted entirely when absent so the JSON never carries a `null`/`0` placeholder
- * a curator might mistake for a real measurement — the card simply drops the line.
- * Note `gaiaDr3`/`gaiaDr3Note` stay behind: they exist only for the Gaia dedup.
+ * Project the seed onto the InfoCard sidecar entries. Optional fields are omitted when
+ * absent so the JSON never carries a `null`/`0` that reads as a real measurement.
+ * `gaiaDr3`/`gaiaDr3Note` stay behind: they exist only for the Gaia dedup.
  */
 export function seedToMetaEntries(entries: readonly FamousStarEntry[]): FamousStarMetaEntry[] {
   return entries.map((e) => ({
@@ -151,11 +112,7 @@ function literal(value: unknown): string {
   throw new Error(`buildFamousStars: cannot serialise generated value ${JSON.stringify(value)}`);
 }
 
-/**
- * Emit the generated `.ts` module text.  Formatting targets prettier's repo
- * config (2-space indent, single quotes, trailing commas) so the committed file
- * survives a `prettier --write` unchanged.
- */
+/** Emit the generated `.ts` text, formatted so `prettier --write` leaves it unchanged. */
 export function serializeGeneratedTable(
   rows: readonly FamousStarRow[],
   seed: StarSeedArtefact,
@@ -190,24 +147,15 @@ const RUST_GENERATED_BANNER =
   '// namespace, exactly where the hand-maintained array used to live.\n';
 
 /**
- * Emit the generated `.rs` module text: a `[u64; N]` array of the non-null
- * `gaiaDr3` ids followed by a `[u32; M]` array of the non-null `hip` ids, each in
- * seed order and tagged with its star id as provenance (mirroring the
- * SIMBAD-sourced comments the old hand-maintained array carried).  Which entries
- * contribute lives in `selectDedupEntries` / `selectHipEntries` — their one home,
- * shared with the star-bin builders — so both languages subtract the same stars
- * from the one seed; this function owns only the Rust-text encoding.  `N` / `M`
- * are the counts of entries with a non-null gaiaDr3 / hip respectively.
+ * Emit the `.rs` text: a `[u64; N]` of non-null `gaiaDr3` ids then a `[u32; M]` of
+ * `hip` ids, in seed order, tagged with the star id. Which entries contribute lives in
+ * `selectDedupEntries` / `selectHipEntries`; this owns only the Rust-text encoding.
  */
 export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
   const gaiaMatched = selectDedupEntries(entries);
   const gaiaRows = gaiaMatched.map((e) => `    ${e.gaiaDr3}, // ${e.id}`).join('\n');
-  // FAMOUS_STAR_HIP_IDS is the seed-order union of every non-null `hip` and its
-  // `hipCompanions`. `selectHipEntries` stays the one home for "which entries
-  // carry a hip"; a companion rides directly after its entry's canonical hip and
-  // is tagged so the Rust provenance stays legible. A multi-component entry (the
-  // Alpha Centauri case: Gaia DR3 lacks both bright components, so one entry maps
-  // to two Hipparcos rows) therefore contributes more than one id.
+  // Each `hipCompanions` id rides directly after its entry's canonical hip, so one entry can
+  // contribute several ids (Alpha Centauri: Gaia DR3 lacks both bright components).
   const hipMatched = selectHipEntries(entries);
   const hipLines = hipMatched.flatMap((e) => [
     `    ${e.hip}, // ${e.id}`,
@@ -222,8 +170,6 @@ export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
 }
 
 function main(): void {
-  // Every seed's entries, in STAR_SEEDS order — the Rust dedup ids and the
-  // InfoCard sidecar are one artefact each over all of them.
   const allEntries: FamousStarEntry[] = [];
 
   for (const seed of STAR_SEEDS) {

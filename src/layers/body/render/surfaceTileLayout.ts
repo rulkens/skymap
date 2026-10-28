@@ -1,12 +1,8 @@
 /**
- * surfaceTileLayout — the CPU-side byte layout for every GPU-visible
- * record `surfaceTileRenderer` writes: the per-frame
- * `array<PatchInstance>` storage buffer (one 64-byte record per cut patch)
- * and the per-draw `SurfaceTileUniforms` uniform block. The authoritative
- * layout is each WESL struct in `shaders/surfaceTile/io.wesl`; this
- * module is the CPU's single matching statement of both, in the shape
- * `starCatalogLayout.ts` set for the star pipeline — see
- * `surfaceTileLayout.test.ts` for the parity guard between the two.
+ * surfaceTileLayout — byte layout of the records `surfaceTileRenderer` writes:
+ * the per-patch `PatchInstance` storage records and the per-draw
+ * `SurfaceTileUniforms` block. The authoritative layout is each WESL struct in
+ * `shaders/surfaceTile/io.wesl`; `surfaceTileLayout.test.ts` guards parity.
  *
  * @module
  */
@@ -19,8 +15,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
  * `fadeWeight` f32 (12..15, filling the vec3's alignment pad) + `lon0Rad`
  * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect` vec4
  * (32..47) + `fallbackRect` vec4 (48..63) + `heightSlotOrigin` vec2u
- * (64..71) + `edgeCoarser` u32 (72..75) + `heightCells` u32 (76..79, what
- * used to be the struct's trailing pad). The two vec4s must stay BEFORE
+ * (64..71) + `edgeCoarser` u32 (72..75) + `heightCells` u32 (76..79). The two vec4s must stay BEFORE
  * `heightSlotOrigin` — a vec2u declared earlier pads the record past 80.
  * Reordering the five scalars keeps the stride but re-maps offsets 12..31
  * with no compiler signal — the layout test's per-field assertions are the
@@ -29,8 +24,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 export const PATCH_INSTANCE_BYTES = 80;
 
 /**
- * Pack one `PatchInstance` block at byte `base` of `view`, in the field
- * order the WESL `struct PatchInstance` declares. `originRelEyeM` must come
+ * Pack one `PatchInstance` block at byte `base` of `view`. `originRelEyeM` must come
  * from `patchOriginRelEyeM` — the shader rebuilds the patch frame from the
  * f32 words written here, so the origin has to be derived from the same
  * rounded anchor (spec §7.1) or every patch shifts by ~0.13 m of its own.
@@ -86,27 +80,19 @@ export function writePatchInstance(
 }
 
 /**
- * Bytes of the per-draw `SurfaceTileUniforms` block — see `io.wesl`'s doc
- * comment on that struct for the full field-by-field byte table this
- * constant and `writeSurfaceTileUniforms` are the CPU statement of.
+ * Bytes of the per-draw `SurfaceTileUniforms` block; `io.wesl` holds the field table.
  */
 export const SURFACE_TILE_UNIFORM_BYTES = 176;
 
 /**
- * Pack the singleton `SurfaceTileUniforms` block, in the field order the
- * WESL struct declares. One record per draw call (there is exactly one
- * Earth), so offsets are absolute literals rather than `base +` — no array
- * stride to parameterize. Every write is a literal, hand-listed call
- * (including `vp`'s 16 floats, not a loop) so `surfaceTileLayout.test.ts`
- * can parse this function the same mechanical way it parses the
- * array-element writer above.
+ * Pack the singleton `SurfaceTileUniforms` block. Every write is a literal,
+ * hand-listed call (`vp`'s 16 floats included, no loop) because
+ * `surfaceTileLayout.test.ts` parses this function mechanically.
  */
 export function writeSurfaceTileUniforms(
   view: DataView,
   vp: Float32Array,
-  /** Identity under the body-slab frame — see the renderer's module header
-   *  for why rotCol0/1/2 are inert; kept as a parameter (rather than baked
-   *  in here) so this function stays a pure statement of the byte layout. */
+  /** Identity under the body-slab frame, so rotCol0/1/2 are inert. */
   orientation: Readonly<Mat3>,
   radiusM: number,
   /** The template's `n` — the vertex stage's `(i, j)` divisor. */

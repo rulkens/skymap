@@ -1,10 +1,7 @@
 /**
- * limbDarkeningParams — the key-resolution drift-catcher (spec §10).
- *
- * The table is eye-tuned data, so its `strength`/`exponent` values carry no test
- * (a numeric restatement would fail on every legitimate tweak). The one thing a
- * test CAN catch is a key that names no real body — a typo or a renamed seed
- * that would silently pack the identity for a body the author meant to darken.
+ * limbDarkeningParams — key-resolution drift-catcher (spec §10). The table is eye-tuned data, so
+ * its values carry no test; a key naming no real body (typo, renamed seed) would silently pack the
+ * identity.
  */
 
 import { describe, expect, it } from 'vitest';

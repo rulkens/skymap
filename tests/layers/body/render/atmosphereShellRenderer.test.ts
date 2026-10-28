@@ -14,25 +14,19 @@ import type { AtmosphereShellDepth } from '../../../../src/layers/body/@types/At
  * attenuate this body's own in-scatter by its own transmittance).
  */
 
-/** A stub GPUTexture: just enough surface for the renderer to create a view
- *  from it and destroy it, with `destroy` spied so a test can tell whether ITS
- *  specific texture (not some other body's, not a differently-sized rebuild)
- *  was the one released. */
+/** A stub GPUTexture; `destroy` is spied so a test can tell whether ITS texture (not another
+ *  body's, not a differently-sized rebuild) was released. */
 type StubTexture = { label: string; createView: () => object; destroy: ReturnType<typeof vi.fn> };
 
-/** Records what the renderer built. `descOf` maps each opaque pipeline handle
- *  back to the descriptor it came from, so a draw-order assertion can name the
- *  pipelines by what they do. `texturesByLabel` — most recent write wins — lets
- *  a `reconcile` test grab the exact `StubTexture` a label resolved to at a
- *  given point, e.g. before vs. after a resize. */
+/** Records what the renderer built. `descOf` maps each opaque pipeline handle back to its
+ *  descriptor so assertions name pipelines by what they do; `texturesByLabel` (latest write wins)
+ *  grabs the StubTexture a label resolved to before vs. after a resize. */
 type Harness = {
   device: GPUDevice;
   renderPipelines: GPURenderPipelineDescriptor[];
   shaderCode: string[];
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
   texturesByLabel: Map<string, StubTexture>;
-  /** Every bind group built so far, by label — so a `reconcile` test can say
-   *  WHICH groups were rebuilt, not merely how many. */
   bindGroupLabels: string[];
 };
 
@@ -107,7 +101,6 @@ function shellDepth(view: GPUTextureView = SCENE_DEPTH_VIEW): AtmosphereShellDep
   return { frame: null, view, viewportPx: [1280, 720], kmToLocal: 1 / 6471 };
 }
 
-/** Enough of a render pass for the shell's MULTIPLY/ADD pair. */
 function shellRenderPass(): GPURenderPassEncoder {
   return {
     setPipeline: vi.fn(),
@@ -118,7 +111,6 @@ function shellRenderPass(): GPURenderPassEncoder {
   } as unknown as GPURenderPassEncoder;
 }
 
-/** Enough of a render pass for the aerial apply's two full-screen draws. */
 function aerialRenderPass(): GPURenderPassEncoder {
   return {
     setPipeline: vi.fn(),
@@ -204,11 +196,9 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
   });
 
   it('rebuilds the bind group only when the sampled depth view changes', () => {
-    // A bind group holds a specific GPUTextureView, and `depthViewOf` hands
-    // back a NEW one once the target reallocates — a cached group would keep
-    // pointing at the destroyed texture (on iOS, a silently dropped frame).
-    // Rebuilding on every draw instead would be a per-frame allocation the
-    // shell does not need.
+    // `depthViewOf` hands back a NEW view once the target reallocates; a cached group would keep
+    // pointing at the destroyed texture (on iOS, a silently dropped frame). Rebuilding every draw would
+    // be a needless per-frame allocation.
     const { renderer, bindGroupLabels } = build();
     const uniforms = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
     renderer.draw(shellRenderPass(), 'earth', uniforms, shellDepth());
@@ -229,7 +219,6 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
     const before = texturesByLabel.get('atmosphere-skyview-lut-earth');
     const bindGroupsBefore = bindGroupLabels.length;
 
-    // Matches the construction-time default (SKY_VIEW_LUT_SIZE) — nothing to do.
     renderer.reconcile({ skyViewLutSize: [192, 108] });
 
     expect(texturesByLabel.get('atmosphere-skyview-lut-earth')).toBe(before);
@@ -253,15 +242,12 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
 
     renderer.reconcile({ skyViewLutSize: [64, 36] });
 
-    // The old texture is the one released — not left for `destroy()` to find
-    // as a stale handle later.
     expect(before.destroy).toHaveBeenCalledTimes(1);
     const after = texturesByLabel.get('atmosphere-skyview-lut-earth');
     expect(after).not.toBe(before);
-    // skyViewBindGroup (binding 5, storage output) and shellBindGroup
-    // (binding 2, sampled) reference the resized texture; the aerial apply
-    // samples it too. The two cached groups rebuild lazily, at their next draw
-    // — the SAME depth view each time, so the rebuild can only be reconcile's.
+    // skyViewBindGroup (binding 5, storage) and shellBindGroup (binding 2, sampled) reference the
+    // resized texture, as does the aerial apply; the two cached groups rebuild lazily at the next draw
+    // with the SAME depth view, so the rebuild can only be reconcile's.
     renderer.draw(
       shellRenderPass(),
       'earth',

@@ -24,7 +24,7 @@ const F32_RADIUS_M = 19;
 const F32_CAM_RIGHT = 20;
 const F32_CAM_UP = 24;
 
-/** Strip corners; the geometry is derived from `vertex_index`, no buffers. */
+/** Strip corners. */
 const QUAD_VERTEX_COUNT = 4;
 
 /**
@@ -77,11 +77,8 @@ export function createTerrainPickMarkerRenderer(
     });
   }
 
-  // `'always'` rather than a `resolveDepthCompare` intent because there is no
-  // near/far direction to get wrong: this draw deliberately ignores depth, and
-  // writes none, so it disturbs nothing drawn after it. It lays the WHOLE
-  // silhouette down dim; the pass below then covers the visible part, leaving
-  // the dim residue equal to what the terrain buries.
+  // `'always'`: deliberately depth-blind, writes none. Lays the WHOLE silhouette
+  // down dim; the pass below covers the visible part, leaving what the terrain buries.
   const occludedPipeline = markerPipeline('terrain-pick-marker-occluded-pipeline', 'fsOccluded', {
     format: depthFormat,
     depthWriteEnabled: false,

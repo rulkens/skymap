@@ -1,20 +1,10 @@
 /**
- * planetsPass — unit tests for the seeded-planets `'body'`-slab content row.
- *
- * Load-bearing assertions:
- *
- *   1. The f64 seam — the MVP composes from the slab's `Float64Array`
- *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`
- *      (identity-pinned via a mocked `composeBodySlabMvp`), and reads the
- *      pose off `ctx.bodyPose(bodyId)` rather than re-deriving it.
- *   2. The partition boundary, now re-exposed by N body-m rows: a row draws
- *      ONLY when its `bodyId` is in the partition's `flat` branch, and
- *      `texturedBodiesPass` / `planetsPass` never both draw the same body —
- *      the double-draw/z-fight bug the shared `sceneBodyPartition` exists to
- *      prevent.
- *   3. The MVP / `bodySlabCamLocal` pairing — the renderer ray-traces its
- *      silhouette from the packed camera, so it must be measured in the frame
- *      the packed MVP's model scale (`datumRadiusM`) defines.
+ * planetsPass — the seeded-planets `'body'`-slab content row. Pinned: (1) the f64 seam — MVP from
+ * `view.slab.vp`, NOT the f32 `view.vp`, with the pose off `ctx.bodyPose(bodyId)`; (2) the partition
+ * boundary — a row draws ONLY when its `bodyId` is in the `flat` branch, so `texturedBodiesPass` and
+ * `planetsPass` never both draw a body (the z-fight `sceneBodyPartition` prevents); (3) the MVP /
+ * `bodySlabCamLocal` pairing — the renderer ray-traces its silhouette from the packed camera, which
+ * must be measured in the frame the MVP's model scale (`datumRadiusM`) defines.
  */
 
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
@@ -42,10 +32,7 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// Mock the two body-slab compose primitives — real math is covered by their
-// own test files. This suite pins the ARGUMENTS the layer feeds them, and
-// lets sunDirLocal run for real so the packed sun direction reveals a
-// drift in the rotate/pack.
+// sunDirLocal runs for real so the packed sun direction reveals a drift in the rotate/pack.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
 vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
@@ -58,9 +45,6 @@ import { composeBodySlabMvp } from '../../../../src/utils/camera/composeBodySlab
 import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// Both planetsPass and texturedBodiesPass read each body's live
-// position/orientation off this per-frame snapshot — mocked once so the
-// cross-layer no-double-draw test sees consistent state through both layers.
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 // Production reads the static scene tables, so `makeCtx` pins the snapshot to the fixture bodies.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
@@ -215,8 +199,6 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
       if (texturedRenderer.draw.mock.calls.length > beforeT) drawnByTextured.add(id);
     }
 
-    // Sanity: each layer actually drew its own branch (a vacuously-true empty
-    // intersection would pass even if BOTH layers drew nothing).
     expect(drawnByPlanets).toEqual(new Set(['mercury']));
     expect(drawnByTextured).toEqual(new Set(['mars']));
     for (const id of drawnByPlanets) expect(drawnByTextured.has(id)).toBe(false);
@@ -239,8 +221,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     const call = mvpMock.mock.calls[0]!;
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
-    // Second arg is the pose's eyeRelBodyM, forwarded by reference — proof the
-    // layer read ctx.bodyPose rather than re-deriving a pose of its own.
+    // Second arg is the pose's eyeRelBodyM by reference: proof the layer read ctx.bodyPose.
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
     expect(call[2]).toBe(mercury.surface.datumRadiusM);
 
@@ -273,8 +254,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     expect(staging[22]).toBeCloseTo(expectedSun[2]);
     expect(staging[23]).toBe(0); // sunDir pad
 
-    // camPosLocal is mocked — pin the PACKED value to the mock's return, not a
-    // recompute (the pairing invariant is covered separately above).
+    // camPosLocal is mocked: pin the PACKED value to the mock's return.
     expect(staging[24]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));
     expect(staging[25]).toBe(Math.fround(MOCK_CAM_LOCAL[1]));
     expect(staging[26]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));

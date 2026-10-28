@@ -1,12 +1,10 @@
 /**
- * bodyAtlasFetcher — `Fetcher<ImageBitmap, void>` for the one all-bodies surface
- * atlas (`body-atlas.webp`, 2048x1024, ~180 KB). The request is `void` because
- * nothing varies: the build emits no per-tier atlas variants. The filename comes
- * from the generated layout module the emitter writes in the same run as the atlas
- * itself, so URL and file cannot drift apart; a hand-copied literal degrades into a
- * silent 404 neither a test nor the compiler can see. The decode is the DEFAULT
- * managed one — every atlased tile is an sRGB `surface` map, so `bodyTextureFetcher`'s
- * `colorSpaceConversion: 'none'` branch (numeric normal/material channels) is dead here.
+ * bodyAtlasFetcher — `Fetcher<ImageBitmap, void>` for the all-bodies surface atlas
+ * (`body-atlas.webp`, ~180 KB); `void` because the build emits no per-tier variants.
+ * The filename comes from the generated layout module, so URL and file cannot drift
+ * (a hand-copied literal is a silent 404). Default managed decode: every atlased tile
+ * is an sRGB `surface` map, so `bodyTextureFetcher`'s `colorSpaceConversion: 'none'`
+ * branch (numeric normal/material channels) does not apply.
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';

@@ -1,17 +1,10 @@
 /**
- * texturedBodyRenderer construction + structural tests.
- *
- * Vitest runs in Node without a WebGPU surface, so every `create*` call the
- * renderer issues returns a plausibly-shaped stand-in (mirrors
- * `earthRenderer.test.ts`). These tests pin the `Renderer` contract (non-empty
- * `label`, `destroy`), the method surface (`setMap` / `setRingTexture` /
- * `draw` callable with the right arity), the per-body resource posture (each
- * body id gets its OWN uniform buffer + bind group so no shared mid-frame
- * uniform can be clobbered), and the explicit five-binding bind-group layout
- * (surface + ring + normal). The mip-count contract is checked
- * structurally: `setMap(id, 'surface', …)` sizes the body texture with
- * `mipLevelCount(w,h)` levels and runs the downsample chain (a command encoder is
- * submitted). "Round, correctly-lit body" is the VISUAL gate deferred to Task 11.
+ * texturedBodyRenderer construction + structural tests. Node has no WebGPU surface, so every `create*`
+ * call returns a plausibly-shaped stand-in (mirrors `earthRenderer.test.ts`). Pins the `Renderer`
+ * contract, the method surface (`setMap` / `setRingTexture` / `draw` arity), per-body resources (each
+ * body id gets its OWN uniform buffer + bind group so no shared mid-frame uniform can be clobbered),
+ * the explicit bind-group layout (surface + ring + normal) and the mip-count contract (`setMap(id,
+ * 'surface', …)` sizes the texture with `mipLevelCount(w,h)` levels and submits the downsample chain).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -105,8 +98,7 @@ describe('createTexturedBodyRenderer', () => {
     expect(byBinding.get(1)!.sampler).toBeDefined();
     expect(byBinding.get(2)!.texture).toBeDefined();
     expect(byBinding.get(3)!.texture).toBeDefined();
-    // Binding 4 is the LINEAR tangent-space normal map — added by its KIND_CFG row
-    // alongside surface, so the layout grows without touching the layout builder.
+    // Binding 4 is the LINEAR tangent-space normal map.
     expect(byBinding.get(4)!.texture).toBeDefined();
   });
 
@@ -135,9 +127,7 @@ describe('createTexturedBodyRenderer', () => {
     const uniforms = new Float32Array(24);
     renderer.draw(pass, 'mars', uniforms);
     renderer.draw(pass, 'jupiter', uniforms);
-    // One uniform buffer per distinct body, never a single shared one.
     expect(uniformBufferCount.n).toBe(2);
-    // Re-drawing the same body reuses its buffer — no new allocation.
     renderer.draw(pass, 'mars', uniforms);
     expect(uniformBufferCount.n).toBe(2);
   });
@@ -167,7 +157,6 @@ describe('createTexturedBodyRenderer', () => {
     expect(bodyTex!.mipLevelCount).toBe(mipLevelCount(8, 4));
     // RENDER_ATTACHMENT is required by generateMipChain's per-level render passes.
     expect((bodyTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
-    // The downsample chain submitted at least one command buffer.
     expect(encoderCount.n).toBeGreaterThan(0);
   });
 
@@ -181,24 +170,19 @@ describe('createTexturedBodyRenderer', () => {
     );
     const bitmap = { width: 16, height: 8 } as unknown as ImageBitmap;
     renderer.setMap('moon', 'normal', bitmap);
-    // The sized (non-placeholder) normal texture — 16 wide, distinct from the 1×1
-    // flat-normal placeholder.
     const normalTex = textures.find((t) => Array.isArray(t.size) && t.size[0] === 16);
     expect(normalTex).toBeDefined();
     // LINEAR, never `-srgb`: the RG channels carry tangent-space slope data and an
     // sRGB decode would silently bend every surface normal — a runtime rule no
     // compiler check catches.
     expect(normalTex!.format).toBe('rgba8unorm');
-    // RENDER_ATTACHMENT is required by generateMipChain's per-level render passes.
     expect((normalTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
   });
 
   it('the normal placeholder is the linear flat-normal texel', () => {
-    // The per-kind placeholders are 1×1 textures written via queue.writeTexture at
-    // construction. The normal placeholder's texel is [128,128,255,255], which in
-    // LINEAR rgba8unorm decodes to (0,0,1) — the `perturbNormal` identity — so a
-    // body with no normal map shades exactly as it does today. An sRGB format
-    // would corrupt that identity, so the write must target an rgba8unorm texture.
+    // The normal placeholder texel [128,128,255,255] decodes in LINEAR rgba8unorm to (0,0,1), the
+    // `perturbNormal` identity, so a body without a normal map shades as before; an sRGB format would
+    // corrupt that.
     const device = mockDevice();
     createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
     const writeCalls = (device.queue.writeTexture as unknown as { mock: { calls: unknown[][] } })
@@ -214,7 +198,6 @@ describe('createTexturedBodyRenderer', () => {
       );
     });
     expect(flatNormalWrite).toBeDefined();
-    // The flat-normal texel lands on a LINEAR rgba8unorm placeholder, never -srgb.
     const target = (flatNormalWrite![0] as { texture: { format: GPUTextureFormat } }).texture;
     expect(target.format).toBe('rgba8unorm');
   });
@@ -226,10 +209,9 @@ describe('createTexturedBodyRenderer', () => {
   });
 
   it('sizes the ring-shadow strip with RENDER_ATTACHMENT usage', () => {
-    // copyExternalImageToTexture requires the destination to carry BOTH COPY_DST
-    // and RENDER_ATTACHMENT (a WebGPU runtime rule no compiler check catches);
-    // omitting it makes Dawn reject the upload and the ring samples a zeroed
-    // strip. This asserts the flag is present on the upload target.
+    // copyExternalImageToTexture needs BOTH COPY_DST and RENDER_ATTACHMENT on the destination (a
+    // WebGPU runtime rule no compiler check catches); without it Dawn rejects the upload and the ring
+    // samples a zeroed strip.
     const textures: GPUTextureDescriptor[] = [];
     const renderer = createTexturedBodyRenderer(
       mockDevice({ textures }),
@@ -244,31 +226,21 @@ describe('createTexturedBodyRenderer', () => {
   });
 
   it('clearMap frees a body kind and reverts it to the placeholder', () => {
-    // clearMap is the per-kind eviction inverse of setMap: releasing a body's
-    // (body,kind) bodyTextures slot must actually free its (up to ~135 MB) GPU
-    // texture, not leak it. Structural proof: after setMap the body owns a real
-    // texture whose `.destroy()` clearMap calls; the bind group is then rebuilt.
+    // clearMap must actually free the (up to ~135 MB) GPU texture, not leak it: after setMap the body
+    // owns a real texture whose `.destroy()` clearMap calls, and the bind group is rebuilt.
     const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     const bitmap = { width: 8, height: 4 } as unknown as ImageBitmap;
     renderer.setMap('mars', 'surface', bitmap);
-    // Assert clearMap is idempotent and non-throwing, and that a subsequent draw
-    // still works (the placeholder rebind succeeded) — a dangling destroyed view
-    // or a missing rebuild would throw here.
     expect(() => renderer.clearMap('mars', 'surface')).not.toThrow();
-    // Idempotent: clearing an already-cleared (or never-textured) kind is a no-op.
     expect(() => renderer.clearMap('mars', 'surface')).not.toThrow();
     expect(() => renderer.clearMap('venus', 'surface')).not.toThrow();
-    // The body still draws after its texture is freed — the bind group reverted
-    // to the shared placeholder rather than dangling at a destroyed view.
     expect(() => renderer.draw(stubPass(), 'mars', new Float32Array(24))).not.toThrow();
   });
 
   it('clearMap frees ONLY the named kind — a sibling kind survives and stays bound', () => {
-    // The regression for the tier-switch normal-map disappearance. The bodyTextures
-    // slots are per-(body,kind), so eviction of ONE kind must not collaterally
-    // destroy a sibling kind on the same body: surface and normal have independent
-    // clamped tiers, so a per-body clear that freed both left the normal map gone
-    // with no re-demand (its clamp was unchanged). clearMap must be per-kind.
+    // Eviction of ONE kind must not destroy a sibling kind on the same body: surface and normal have
+    // independent clamped tiers, so a per-body clear left the normal map gone with no re-demand. clearMap
+    // must be per-kind.
     const textures: Array<{
       id: number;
       destroy: ReturnType<typeof vi.fn>;
@@ -296,7 +268,6 @@ describe('createTexturedBodyRenderer', () => {
       }),
     } as unknown as GPUDevice;
     const renderer = createTexturedBodyRenderer(device, 'rgba16float', 'depth32float', false);
-    // Two resident kinds on one body — the Moon-at-a-tier-boundary repro shape.
     renderer.setMap('mars', 'surface', { width: 8, height: 4 } as unknown as ImageBitmap);
     renderer.setMap('mars', 'normal', { width: 16, height: 8 } as unknown as ImageBitmap);
     const surface = textures.find((t) => Array.isArray(t.desc.size) && t.desc.size[0] === 8)!;
@@ -306,22 +277,16 @@ describe('createTexturedBodyRenderer', () => {
 
     renderer.clearMap('mars', 'surface');
 
-    // The evicted kind is freed exactly once…
     expect(surface.destroy).toHaveBeenCalledTimes(1);
-    // …and the sibling kind is NOT destroyed — no collateral free on a per-kind evict.
     expect(normal.destroy).not.toHaveBeenCalled();
-    // The rebuilt bind group still binds the resident normal texture at binding 4,
-    // not the flat-normal placeholder — the normal map survives a surface eviction.
+    // The rebuilt bind group still binds the resident normal texture at binding 4, not the placeholder.
     const lastBg = bindGroups[bindGroups.length - 1]!;
     const binding4 = Array.from(lastBg.entries).find((e) => e.binding === 4)!;
     expect((binding4.resource as unknown as { __textureId: number }).__textureId).toBe(normal.id);
-    // The body still draws — the bind group is valid, no dangling destroyed view.
     expect(() => renderer.draw(stubPass(), 'mars', new Float32Array(24))).not.toThrow();
   });
 
   it('clearMap calls destroy on the body surface texture (no leak)', () => {
-    // Track the textures created so we can assert the surface texture's destroy
-    // spy fires on clear — the concrete free the slot's onRelease relies on.
     const created: Array<{ destroy: ReturnType<typeof vi.fn>; desc: GPUTextureDescriptor }> = [];
     const device = {
       ...(mockDevice() as unknown as Record<string, unknown>),

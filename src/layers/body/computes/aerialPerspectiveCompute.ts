@@ -1,9 +1,7 @@
 /**
- * aerialPerspectiveCompute — the body Layer's `aerial-perspective` row, delegating to
- * `encodeAtmosphereAerialPerspective`. `scope: 'perView'`: the froxel volume and shell
- * uniform stay one per body (`aerialPerspectiveRenderer.ts`), but each perView view is
- * its own submit, so view N's bake lands before view N's apply and after view N−1's —
- * mono's one view keeps a single bake-then-apply order.
+ * aerialPerspectiveCompute — the `aerial-perspective` row. `scope: 'perView'`: the
+ * froxel volume and shell uniform are one per body, but each view is its own submit,
+ * so view N's bake lands before view N's apply and after view N−1's.
  */
 
 import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';

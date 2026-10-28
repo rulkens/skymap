@@ -27,7 +27,6 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
-// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
 const SCENE_BODIES = positionedBodiesOf(
   [...SCENE_PLANETS, ...SCENE_MESH_BODIES],
   deriveBodyStates(CONST_J2000),
@@ -57,12 +56,10 @@ function makeState(): EngineState {
       missions: { craft: null },
       bodies: { items: makeBodyItems() },
     },
-    // The composed entries core derives the claimed bodies from.
     visibilityEntries: APP_VISIBILITY,
   } as unknown as EngineState;
 }
 
-// The values core hands each label entry: the one Spacecraft item, and every body category.
 const CRAFT_ON = { craft: 1 };
 const CRAFT_OFF = { craft: 0 };
 const BODY_FADE = { earth: 1, planet: 1 };

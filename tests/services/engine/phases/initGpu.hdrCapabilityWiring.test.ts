@@ -1,11 +1,8 @@
 /**
- * initGpu.hdrCapabilityWiring — the HDR-capability listener wiring inside
- * `initGpu`: boot dispatch, re-dispatch on a live change, and that
- * `phaseLocals.unwatchHdrCapability` survives a later throw. GPU-handle
- * reachability/teardown, formerly this file's other describe block, now
- * lives in `gpuHandles/gpuHandleRegistry.test.ts` (a construct/destroy
- * round-trip against the real `GPU_HANDLE_ROWS` table). Every renderer
- * constructor stays mocked below purely so `initGpu` completes in JSDOM.
+ * initGpu.hdrCapabilityWiring — the HDR-capability listener wiring inside `initGpu`: boot dispatch,
+ * re-dispatch on a live change, and that `phaseLocals.unwatchHdrCapability` survives a later throw.
+ * Handle reachability/teardown is `gpuHandles/gpuHandleRegistry.test.ts`'s. Every renderer
+ * constructor is mocked below purely so `initGpu` completes in JSDOM.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -13,12 +10,7 @@ import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallba
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
-// ── Module mocks ──────────────────────────────────────────────────────
-//
-// vi.mock is hoisted, so a per-mock factory stashes its spy objects in a
-// module-scoped map the tests read. Each mock returns a stub shaped
-// enough for `initGpu` to thread through: constructors return objects
-// with `.destroy`, plus the few methods `initGpu` calls synchronously.
+// vi.mock is hoisted, so a per-mock factory stashes its spies in a module-scoped map the tests read.
 
 type Stub = {
   destroy: ReturnType<typeof vi.fn>;
@@ -32,13 +24,8 @@ const stubs: Record<string, Stub> = {};
 function makeStub(name: string): Stub {
   const stub: Stub = {
     destroy: vi.fn(),
-    // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
-    // `initGpu` never calls `setLabels` itself — `labelsNearPass`
-    // uploads the live caption set on its own first draw. Kept on the stub
-    // shape because other stubbed renderers built from the same factory
-    // expose the method.
     setLabels: vi.fn(),
   };
   stubs[name] = stub;
@@ -47,13 +34,9 @@ function makeStub(name: string): Stub {
 
 vi.mock('../../../../src/services/gpu/device', () => ({
   initGpu: vi.fn(async () => ({
-    // `initGpu` constructs the real `createBloomPyramid(device, ...)` (it is not
-    // mocked like the renderer factories), which builds four shader modules,
-    // a sampler, a shared bind-group layout + pipeline layout, four render
-    // pipelines, and the per-level uniform buffers. The plain stub device needs
-    // those methods or construction throws. Each returns a minimal stub; the
-    // shader module carries `getCompilationInfo` because `createShaderModuleWithDevLog`
-    // consumes it under vitest's DEV env.
+    // `initGpu` constructs the real `createBloomPyramid(device, ...)`, so the stub device needs the
+    // shader-module/sampler/layout/pipeline/buffer methods; the shader module carries
+    // `getCompilationInfo` because `createShaderModuleWithDevLog` consumes it under vitest's DEV env.
     device: {
       __mockDevice: true,
       createShaderModule: vi.fn(() => ({
@@ -75,17 +58,13 @@ vi.mock('../../../../src/services/gpu/device', () => ({
     hdrCapable: false,
   })),
   resizeCanvasToDisplay: vi.fn(),
-  // Returns a no-op cleanup so boot doesn't need a real matchMedia listener;
-  // the dispatch-wiring tests below recover the registered callback via
-  // `.mock.calls` and invoke it directly to exercise the re-dispatch path.
+  // No-op cleanup; the dispatch-wiring tests recover the registered callback via `.mock.calls` and
+  // invoke it directly.
   watchHdrCapability: vi.fn(() => () => {}),
 }));
 
-// The canonical BGLs are constructed in initGpu by calling
-// createFadeUniformsBgl / createSourceUniformsBgl / createFocusUniformsBgl,
-// all of which call device.createBindGroupLayout. The mock device returned
-// by the gpuInitGpu mock is a plain object without WebGPU methods, so we
-// mock the BGL factories directly instead of stubbing the device.
+// initGpu builds the canonical BGLs via device.createBindGroupLayout, which the plain-object mock
+// device lacks, so the BGL factories are mocked directly.
 vi.mock('../../../../src/services/gpu/bindGroupLayouts/fadeUniforms', () => ({
   createFadeUniformsBgl: vi.fn(() => ({ __mockFadeBgl: true })),
 }));
@@ -112,8 +91,6 @@ vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer', () =>
 
 vi.mock('../../../../src/services/gpu/renderTargets', () => ({
   createRenderTargets: vi.fn(() => makeStub('renderTargets')),
-  // `composeRenderTargetRows` (real, unmocked) calls this to build its core
-  // half — the renderTargets row's construct closure now goes through it.
   renderTargetRows: vi.fn(() => []),
 }));
 
@@ -175,11 +152,8 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
 vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => ({
   createBodyPickRenderer: vi.fn(() => makeStub('bodyPickRenderer')),
 }));
-// Partial mock: orbitTrailsPass.ts
-// (loaded transitively via the frame program's registry import) reads the
-// real INSTANCE_FLOATS constant at module scope to size its staging buffer
-// (against ORBITAL_ELEMENTS.length — no fixed cap), so only the factory is
-// stubbed.
+// Partial mock: orbitTrailsPass.ts (loaded transitively via the frame program's registry) reads the
+// real INSTANCE_FLOATS at module scope to size its staging buffer, so only the factory is stubbed.
 vi.mock(
   '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer',
   async (importOriginal) => ({
@@ -205,12 +179,9 @@ vi.mock('../../../../src/services/gpu/resources/loadEnvBrdfLut', () => ({
   ),
 }));
 
-// Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
-// The mocked `watchHdrCapability` itself: the HDR-dispatch-wiring tests below
-// read `.mock.calls` to recover the callback `initGpu` actually registered,
-// so they can invoke it directly rather than trusting the mock's own no-op
-// return value.
+// The mocked `watchHdrCapability`: tests read `.mock.calls` to recover the callback `initGpu`
+// actually registered and invoke it directly.
 import { watchHdrCapability } from '../../../../src/services/gpu/device';
 import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineSlice';
 // The mocked `loadFontAtlases` itself: overridden to reject in one test below
@@ -223,12 +194,6 @@ import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFo
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
-/**
- * Build a minimal `EngineState` covering the slices `initGpu` reads and
- * writes. Every nullable `gpu.*` handle starts at `null`; the
- * `subsystems` bag carries just the facades `initGpu` calls into
- * (`cosmoLabelDirector.attachRenderers`).
- */
 function makeState(): EngineState {
   return {
     gpu: {
@@ -278,8 +243,6 @@ function makeDeps(): BootstrapDeps {
     frameRef: { current: () => {} },
     handleRef: { current: null },
     allSlots: new Map(),
-    // initGpu never reads a resolver — a resolver that always returns null
-    // is enough to satisfy the type.
     selection: {
       resolvePick: () => null,
       extractRow: () => null,
@@ -302,8 +265,6 @@ describe('initGpu — HDR capability dispatch wiring', () => {
     const deps = makeDeps();
     await initGpu(state, deps);
 
-    // The mocked `gpuInitGpu` returns `hdrCapable: false` — see the
-    // `services/gpu/device` mock factory above.
     expect(deps.cb.store.dispatch).toHaveBeenCalledWith(engineHdrCapabilityChanged(false));
   });
 
@@ -312,9 +273,6 @@ describe('initGpu — HDR capability dispatch wiring', () => {
     const deps = makeDeps();
     await initGpu(state, deps);
 
-    // Recover the real callback `initGpu` handed to `watchHdrCapability` —
-    // the mock's own `() => () => {}` body ignores it, but `.mock.calls`
-    // still records what was actually passed.
     const onChange = vi.mocked(watchHdrCapability).mock.calls[0]![0];
     onChange(true);
 

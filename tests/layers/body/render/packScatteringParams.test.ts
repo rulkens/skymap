@@ -1,15 +1,9 @@
 /**
- * ScatteringParams byte-layout guard.
- *
- * The WGSL `struct ScatteringParams` in `shaders/atmosphere/scattering.wesl` and
- * the CPU-side `packScatteringParams` must agree byte-for-byte: a mismatch
- * produces no GPU error, just a wrong (or, on iOS, silently dropped) frame.
- *
- * Every field gets a distinct dyadic sentinel (k/16 — exactly float32-
- * representable, so `toBe` stays exact; pairwise distinct, so a swapped pair is
- * caught). The two constituents differ in BOTH tags, which is what pins the
- * `u32` tag words: a packer writing them as floats, or into the wrong word,
- * fails here rather than on someone's screen.
+ * ScatteringParams byte-layout guard: the WGSL `struct ScatteringParams` in
+ * `shaders/atmosphere/scattering.wesl` and `packScatteringParams` must agree byte-for-byte; a mismatch
+ * gives no GPU error, just a wrong (on iOS, silently dropped) frame. Every field gets a distinct dyadic
+ * sentinel (k/16, float32-exact); the two constituents differ in BOTH tags, which pins the `u32` tag
+ * words (a packer writing them as floats or into the wrong word fails here).
  */
 
 import { describe, it, expect } from 'vitest';

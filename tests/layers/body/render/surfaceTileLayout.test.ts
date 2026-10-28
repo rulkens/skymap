@@ -1,25 +1,12 @@
 /**
- * surfaceTile layout parity — the CPU packer and the WESL structs must
- * agree byte-for-byte, checked here for `surfaceTileLayout.ts`'s
- * two structs (`PatchInstance`, `SurfaceTileUniforms`).
- *
- * The WESL `struct PatchInstance` / `SurfaceTileUniforms`
- * (`shaders/bodies/surfaceTile/io.wesl`) declare the field order + types
- * the GPU uses to address bytes; `surfaceTileLayout.ts`'s
- * `writePatchInstance` / `writeSurfaceTileUniforms`
- * restate those same offsets as hand-literal `view.set{Float32,Uint32}(N,
- * expr, true)` calls (the array-element writer adds a `base +`; the singleton
- * uniform writer doesn't). Nothing but this test cross-checks the two: a
- * WGSL field reorder without a matching TS move would silently scramble
- * every drawn patch's origin/frame/rects, or its shading uniforms, with no
- * compiler signal — and WebKit rejects a mislaid layout that Tint tolerates,
- * so the failure mode is "iOS presents nothing, no error".
- *
- * We read both files as TEXT (rather than importing the linked `?static`
- * WGSL) because the layout contract lives in the WESL struct's DECLARATION
- * order and the packer's offsets are literals inside the writer functions,
- * not an exported table -- parsing source is the only way to observe both
- * truths without restating either.
+ * surfaceTile layout parity: the CPU packer and the WESL structs (`PatchInstance`,
+ * `SurfaceTileUniforms` in `shaders/bodies/surfaceTile/io.wesl`) must agree byte-for-byte.
+ * `writePatchInstance` / `writeSurfaceTileUniforms` in `surfaceTileLayout.ts` restate the offsets as
+ * hand-literal `view.set{Float32,Uint32}(N, expr, true)` calls (the array-element writer adds a
+ * `base +`, the singleton uniform writer doesn't); only this test cross-checks them. A WGSL reorder
+ * without a TS move scrambles every patch silently, and WebKit rejects a mislaid layout Tint
+ * tolerates: iOS presents nothing, no error. Both files are read as TEXT because the layout lives in
+ * declaration order and in literals inside the writers, not an exported table.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -58,11 +45,9 @@ function roundUp(value: number, align: number): number {
 }
 
 /**
- * Parse `struct NAME { ... }` from the WESL text into ordered `{ name, type }`
- * fields. io.wesl's fields carry multi-line leading doc comments, so comments
- * are stripped PER PHYSICAL LINE (not per comma-split segment, which the
- * star precedent's single-line-comment shape didn't need to handle) before
- * splitting each surviving `name: type,` line on its colon.
+ * Parse `struct NAME { ... }` from the WESL text into ordered `{ name, type }` fields. io.wesl's
+ * fields carry multi-line doc comments, so comments are stripped PER PHYSICAL LINE before splitting
+ * each `name: type,` line on its colon.
  */
 function structFields(source: string, name: string): Array<{ name: string; type: string }> {
   const body = source.match(new RegExp(`struct\\s+${name}\\s*\\{([^}]*)\\}`))?.[1];
@@ -82,9 +67,8 @@ function structFields(source: string, name: string): Array<{ name: string; type:
 }
 
 /**
- * Expand a struct to the ordered scalar writes std430 demands: a vecN
- * becomes N float writes at offset+0/+4/..., a scalar one write. Returns the
- * writes plus the struct's size (rounded up to its max member alignment).
+ * Expand a struct to the ordered scalar writes std430 demands (a vecN is N float writes at
+ * offset+0/+4/...), plus the struct's size rounded up to its max member alignment.
  */
 function structLayout(fields: Array<{ name: string; type: string }>): {
   writes: ScalarWrite[];

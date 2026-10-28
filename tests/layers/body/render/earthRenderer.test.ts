@@ -1,14 +1,8 @@
 /**
- * earthRenderer construction + structural tests.
- *
- * Vitest runs in Node without a WebGPU surface, so every `create*` call the
- * renderer issues at construction returns a plausibly-shaped stand-in (mirrors
- * the mock style in `horizonShellRenderer.test.ts` / `texturedDiskRenderer`).
- * These tests pin the `Renderer` contract (non-empty `label`, `destroy`), the
- * method surface (`setTexture` / `draw` callable with the right arity), and
- * that the caller's `targetFormat` reaches the pipeline colour target. The
- * "round, correctly-textured Earth" assertion is the VISUAL gate deferred to
- * Task 13.
+ * earthRenderer construction + structural tests. Node has no WebGPU surface, so every `create*`
+ * call returns a plausibly-shaped stand-in. Pins the `Renderer` contract (non-empty `label`,
+ * `destroy`), the method surface (`setTexture` / `draw` arity), and that `targetFormat` reaches the
+ * pipeline colour target.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -72,12 +66,9 @@ describe('createEarthRenderer', () => {
     expect(typeof renderer.draw).toBe('function');
     expect(renderer.draw.length).toBe(2);
 
-    // setMap('surface', …) accepts an ImageBitmap-shaped value without throwing.
     const bitmap = { width: 4, height: 2 } as unknown as ImageBitmap;
     expect(() => renderer.setMap('surface', bitmap)).not.toThrow();
 
-    // setMap('material', …) accepts an ImageBitmap-shaped value without throwing
-    // (the linear roughness/ocean-mask map now has a real case).
     expect(() => renderer.setMap('material', bitmap)).not.toThrow();
 
     // draw writes the 112-byte EarthSurfaceUniforms record (28 f32) and records
@@ -102,11 +93,9 @@ describe('createEarthRenderer', () => {
   });
 
   it('setMap sizes the Earth texture with a full mip chain and runs the downsample passes', () => {
-    // The lit Earth now consumes a mip chain (mipmapFilter linear) so the
-    // surface stops shimmering as it shrinks toward the sub-pixel glint handoff.
-    // Structural proof: setTexture sizes the texture with mipLevelCount(w,h)
-    // levels, keeps RENDER_ATTACHMENT (required by generateMipChain's per-level
-    // passes), and submits at least one downsample command buffer.
+    // The lit Earth consumes a mip chain (mipmapFilter linear) so it stops shimmering toward the
+    // sub-pixel glint handoff: setTexture sizes the texture with mipLevelCount(w,h) levels, keeps
+    // RENDER_ATTACHMENT (generateMipChain's per-level passes), and submits a downsample command buffer.
     const textures: GPUTextureDescriptor[] = [];
     const encoderCount = { n: 0 };
     const device = mockDevice({ textures, encoderCount });
@@ -118,7 +107,6 @@ describe('createEarthRenderer', () => {
     expect(earthTex!.mipLevelCount).toBe(mipLevelCount(8, 4));
     expect((earthTex!.usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0).toBe(true);
     expect(encoderCount.n).toBeGreaterThan(0);
-    // The sampler consumes the chain (mipmapFilter linear).
     const samplerCalls = (device.createSampler as unknown as { mock: { calls: unknown[][] } }).mock
       .calls;
     const earthSampler = samplerCalls
@@ -127,8 +115,7 @@ describe('createEarthRenderer', () => {
     expect(earthSampler).toBeDefined();
   });
 
-  // Earth is the boot body, so its maps used to stay resident (~270 MB at medium)
-  // for the whole session after the camera left: release must free them.
+  // Earth's maps are ~270 MB at medium: release must free them once the camera leaves.
   it('clearMap destroys the committed map and falls back to the placeholder', () => {
     const made = new Map<string, { destroy: ReturnType<typeof vi.fn> }>();
     const device = mockDevice();

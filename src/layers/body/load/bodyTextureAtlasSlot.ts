@@ -1,12 +1,9 @@
 /**
- * bodyTextureAtlasSlot — one fetch, one placeholder seed per textured body. A
- * body's own `(bodyId, kind)` slot is proximity-gated, so a body reached before its
- * multi-megabyte map lands would draw flat; this ~180 KB atlas, fetched at
- * `priority: 0`, makes the hi-res map an upgrade rather than a prerequisite. The
- * decoded bitmap is a TRANSPORT container — each renderer crops its tile at upload
- * into an ordinary per-body texture, so the atlas never becomes a bound texture and
- * no shader, layout, sampler or UV changes. Membership and tile order come from the
- * generated `BODY_ATLAS_LAYOUT`; a hand-written list would drift from the emitted atlas.
+ * bodyTextureAtlasSlot — one fetch, one placeholder seed per textured body, so a body
+ * reached before its proximity-gated multi-MB map lands is not flat. The bitmap is a
+ * TRANSPORT container: each renderer crops its tile into an ordinary per-body texture,
+ * so no shader, layout, sampler or UV changes. Membership and tile order come from the
+ * generated `BODY_ATLAS_LAYOUT`.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
@@ -25,9 +22,7 @@ export function createBodyTextureAtlasSlot(
     name: 'body-atlas',
     fetch: bodyAtlasFetcher,
     commit: async (atlas) => {
-      // `Object.entries` widens a `Record<BodyTextureId, number>`'s keys to `string`
-      // (TS models objects as open), so the pair is re-narrowed here. Iterating the
-      // layout, not `BodyTextureId`, keeps fan-out and atlas one generated fact.
+      // `Object.entries` widens keys to `string`, hence the re-narrowing cast.
       for (const [bodyId, index] of Object.entries(BODY_ATLAS_LAYOUT) as [
         BodyTextureId,
         number,
@@ -36,16 +31,13 @@ export function createBodyTextureAtlasSlot(
           w: BODY_ATLAS_GRID.tileW,
           h: BODY_ATLAS_GRID.tileH,
         });
-        // Both sinks write the PLACEHOLDER layer, never the committed-map layer, so
-        // a hi-res map that landed first shadows the tile and a late tile cannot
-        // clobber it — no "has the hi-res arrived?" peek at slot state belongs here.
+        // Both sinks write the PLACEHOLDER layer, so a late tile cannot clobber a hi-res map that landed first.
         if (bodyId === 'earth') {
           renderers.earthRenderer.setPlaceholderMap('surface', atlas, rect);
         } else {
           renderers.texturedBodyRenderer.setPlaceholderMap(bodyId, 'surface', atlas, rect);
         }
       }
-      // Every tile is cropped into its own texture above; the 2048×1792 source is spent.
       atlas.close();
     },
     dispose: closeBitmap,

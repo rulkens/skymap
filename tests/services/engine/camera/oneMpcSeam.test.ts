@@ -1,31 +1,11 @@
 /**
- * oneMpcSeam — spec §5/§10's structural gate: the body render slabs migration
- * left exactly ONE place allowed to convert between world-space Mpc and a
- * body-slab's metre-native frame, `bodyRelativePose.ts` (not itself part of
- * the checked path below — it IS the seam). Every file that composes or draws
- * a body-slab MVP must consume `bodyRelativePose`'s already-converted output,
- * never re-derive the conversion via `SCALE_UNITS.MPC_TO_M`/`.M_TO_MPC`. A
- * second conversion site is exactly how a slab's near-plane math would
- * silently drift out of metres again — see the module header this migration
- * retired (`composeBodyMvp.ts`'s "Why compose the FULL MVP in f64" section).
- *
- * The camera-pivot work (spec §10) added a second legitimate seam,
- * `poseFrameConversion.ts`'s world-arm/body-arm pair, and put the ENGAGED
- * camera path (`services/engine/camera`, `services/camera`, `utils/camera`)
- * under the same gate as the render path above. `viewBodyPose.ts` is the third:
- * a rig view's eye offset added to either provider's metre-native pose.
- *
- * This is an import-graph assertion (ts-morph, real property-access AST
- * nodes), not a source-text grep: `conventions/testing.md` bans a substring
- * search as a BEHAVIOUR proxy, but a cross-file architectural contract like
- * "this set of files never touches these two constants" has no behavioural
- * test that could express it, which is the "cross-file contract" keep-rule
- * (same shape as `forbiddenPaths.test.ts`).
- *
- * `.wesl` shader files have no import graph in the TS sense (WESL uses
- * `package::`, not JS imports), so they get a plain occurrence scan instead —
- * still precise, since neither constant name has any legitimate reason to
- * appear in a shader source at all.
+ * oneMpcSeam — structural gate: only `bodyRelativePose.ts`, `poseFrameConversion.ts` (world-arm/
+ * body-arm pair) and `viewBodyPose.ts` may convert between world Mpc and a body-slab's
+ * metre-native frame. Every other file on the body-slab render path or the engaged camera
+ * path consumes their output, never `SCALE_UNITS.MPC_TO_M`/`.M_TO_MPC`: a second site is how
+ * near-plane math drifts out of metres. An AST assertion (ts-morph), not a source-text grep:
+ * no behavioural test can express "these files never touch these constants" (cf.
+ * `forbiddenPaths.test.ts`). `.wesl` files have no TS import graph, so get an occurrence scan.
  */
 import { describe, it, expect } from 'vitest';
 import { SyntaxKind } from 'ts-morph';
@@ -43,16 +23,9 @@ const SEAM_FILES: readonly string[] = [
   'src/services/engine/camera/viewBodyPose.ts',
 ];
 
-// The body-slab path AND the engaged camera path, DERIVED by sweeping the
-// directories the migrations actually put files in — a new file dropped into
-// any of these (a layer, a body renderer, a driver) is gated with no
-// hand-edit here. `walk` recurses, so sweeping 'frame' also covers
-// 'frame/passes', sweeping 'src/layers' covers a Layer's own passes and
-// renderers, and sweeping 'utils/camera' covers `composeBodySlabMvp.ts` and
-// `bodySlabCamLocal.ts` without naming them individually. The two
-// remaining single-file entries below aren't under any swept dir, so they
-// stay named (a rename/move of one of them is then a deliberate edit here,
-// not a silent drop from the gate).
+// The body-slab and engaged-camera paths, DERIVED by sweeping directories (`walk` recurses), so a
+// new file there is gated with no hand-edit. The single-file entries below stay named so a
+// rename is a deliberate edit, not a silent drop.
 const TS_FILES: readonly string[] = [
   ...walkFiles('src/services/engine/frame', ['.ts']),
   ...walkFiles('src/services/gpu/renderers/bodies', ['.ts']),
@@ -80,11 +53,8 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
 
 const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies', ['.wesl']);
 
-// The ONE table of "files on the body-slab path or the engaged camera path
-// allowed to bridge Mpc<->m outside the seams (SEAM_FILES), and why" (see radar findings 1+2 in
-// .superpowers/sdd/2026-08-26-body-render-slabs/radar-seams-tests.md). Each
-// entry names the category so a NEW use beyond these needs its own line —
-// keeping this a real (if per-file) gate, not a rubber stamp.
+// Files on the gated paths allowed to bridge Mpc<->m outside SEAM_FILES, and why. Each entry
+// names its category so a NEW use needs its own line.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/layers/body/passes/earthPass.ts',
@@ -170,10 +140,8 @@ function scaleUnitsMembersUsed(file: string): string[] {
 
 describe('the body-slab path never re-derives the Mpc<->metre conversion', () => {
   it('the directory sweep found real files, including each known anchor', () => {
-    // A typo'd glob dir/extension returns [] silently and every it.each below
-    // would vacuously pass with zero cases — this is the loud-failure check.
-    // Five swept dirs (~145 files); 100 leaves ample margin below the true
-    // count while still catching an empty/typo'd walk.
+    // A typo'd glob returns [] silently and every it.each would vacuously pass; 100 leaves
+    // margin below the true count (~145 files).
     expect(TS_FILES.length).toBeGreaterThan(100);
     for (const anchor of KNOWN_ANCHOR_FILES) {
       expect(TS_FILES).toContain(anchor);
@@ -190,10 +158,7 @@ describe('the body-slab path never re-derives the Mpc<->metre conversion', () =>
   it.each([...SCALE_UNITS_ALLOW_LIST.entries()])(
     '%s: every SCALE_UNITS Mpc<->metre use is the allow-listed bridge (%s)',
     (file, _justification) => {
-      // The allow-list still asserts something: the file that DOES reference
-      // these members did so on purpose. A file wrongly listed here (no
-      // actual use) would fail this, same as the sweep above catching an
-      // unlisted one.
+      // The allow-list still asserts something: a file wrongly listed here (no actual use) fails this.
       expect(scaleUnitsMembersUsed(file).length).toBeGreaterThan(0);
     },
   );

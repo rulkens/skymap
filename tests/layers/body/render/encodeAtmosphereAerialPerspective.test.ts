@@ -41,9 +41,7 @@ vi.mock('../../../../src/utils/camera/bodySlabCamLocal', () => ({
 import { encodeAtmosphereAerialPerspective } from '../../../../src/layers/body/render/encodeAtmosphereAerialPerspective';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// atmosphereDrawList reads live body positions off this per-frame snapshot
-// (unmocked — its own cull math is covered elsewhere); stub it to the fixture's
-// own positionMpc/orientation, the `atmosphereShellPass.test.ts` pattern.
+// atmosphereDrawList reads body positions off this snapshot; stub it to the fixture's own refs.
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
 // Positioned a hair off the render origin so the apparent-size cull clears
 // comfortably (apparent diameter tracks 1/distance) without real orbital math.
@@ -56,7 +54,6 @@ vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 
-/** The one compute pass the encode opens when it bakes at all. */
 const computePass = { end: vi.fn() } as unknown as GPUComputePassEncoder;
 const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => computePass);
 const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
@@ -72,10 +69,9 @@ function makeBodyPose(): BodyPoseProvider {
   return (bodyId) => (bodyId === 'earth' ? STUB_POSE : null);
 }
 
-/** A ctx comfortably inside the shared foreground gate, carrying the one
- *  body-m slab `bodyRowSlabs` resolves `insideAtmosphere` against. Array
- *  position matches the slab's own `index` field (the `FrameView.slabs`
- *  invariant), so indexing `ctx.slabs` by that field lands on this row. */
+/** A ctx inside the foreground gate carrying the one body-m slab `bodyRowSlabs` resolves
+ *  `insideAtmosphere` against; array position matches the slab's `index` (the `FrameView.slabs`
+ *  invariant). */
 function makeCtx(
   withEarthSlab: boolean,
   camDistanceMpc = FOREGROUND_MAX_DISTANCE_MPC / 2,

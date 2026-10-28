@@ -1,9 +1,7 @@
 /**
- * atmosphereShellUniforms — the entry→`AtmosphereUniforms` mapping, one contract
- * shared by every consumer of that record: a second builder is the drift
- * `packAtmosphereUniforms` exists to prevent, one level up. The MVP pair rides
- * the slab's f64 `vp` and the SAME `ctx.bodyPose` closure `deriveSlabs` built
- * that `vp` from (see `composeBodySlabMvp`).
+ * atmosphereShellUniforms — the entry→`AtmosphereUniforms` mapping shared by every
+ * consumer of that record; a second builder would drift. The MVP pair rides the slab's
+ * f64 `vp` and the SAME `ctx.bodyPose` closure `deriveSlabs` built it from.
  */
 
 import type { AtmosphereDrawEntry } from '../@types/AtmosphereDrawEntry';
@@ -27,14 +25,13 @@ export function atmosphereShellUniforms(
   // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
   const pose = ctx.bodyPose(body.id)!;
 
-  // radiusM scales the unit proxy sphere — see composeBodySlabMvp's header.
   const mvp = composeBodySlabMvp(slab.vp, pose.eyeRelBodyM, atmosphereTopM);
-  // Inverted before narrowing — see narrowMat4's header for why narrowing waits.
+  // Inverted before narrowing (see narrowMat4).
   const invMvp = mat4d.inverse(mvp);
   // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
   // atmosphere top is the unit sphere and the ground sphere has this radius.
   const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
-  // Earth alone carries a live Settings slider, read each frame so a drag overrides the limb without a reload.
+  // Earth alone has a live exposure slider.
   const exposure = body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
   // Ring annulus in LOCAL units (atmosphere top = 1); no `SCENE_RINGS` row ⇒ both
   // ratios 0, the no-ring sentinel — keeps a ring in front of the shell unblended.
@@ -43,7 +40,6 @@ export function atmosphereShellUniforms(
   const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
 
   return packAtmosphereUniforms(
-    // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
     narrowMat4(mvp),
     narrowMat4(invMvp),
     sunLocal,

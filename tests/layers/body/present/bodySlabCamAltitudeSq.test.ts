@@ -1,10 +1,6 @@
 /**
- * bodySlabCamAltitudeSq — the analytic sphere's quadratic constant, in f64.
- *
- * The one failure that matters is a loss of resolution: computed the way the
- * shader would (f32 `dot(camPosLocal, camPosLocal) − 1`), 10 m and 10.4 m above
- * Mars collapse to the same number, and the ground's depth quantises in 0.4 m
- * steps. The test pins the value at contact range.
+ * bodySlabCamAltitudeSq (f64): in f32 `dot(camPosLocal, camPosLocal) − 1`, 10 m and 10.4 m above
+ * Mars collapse to one number (0.4 m depth steps); pinned at contact range.
  */
 
 import { describe, expect, it } from 'vitest';

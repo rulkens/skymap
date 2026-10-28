@@ -1,15 +1,11 @@
 /**
- * glintBandClass — the glint pick-priority class mapping, plus the TS↔WESL parity
- * guard on the three class integers.
+ * glintBandClass — the glint pick-priority class mapping, plus the TS↔WESL parity guard.
  *
- * The class integers (0 earth, 1 planet, 2 moon) cross the language boundary:
- * `glintBandClass.ts` returns them on the CPU and writes them raw into the glint
- * instance's `bandClass` attribute; `starPointPick.wesl::vsGlint` reads that
- * attribute and compares it against `lib/pickDepthBands`'s `GLINT_CLASS_*` to pick
- * the pick-depth band. A renumber on one side without the other silently mis-maps
- * a body to the wrong priority band with NO compile error — so a parity test, not
- * the compiler, keeps them in step (same read-the-wesl-as-text pattern as
- * `selectionEncoding.test.ts` / `minPickRadiusMpc.test.ts`).
+ * The class integers (0 earth, 1 planet, 2 moon) cross the language boundary: `glintBandClass.ts`
+ * writes them raw into the glint instance's `bandClass` attribute and `starPointPick.wesl::vsGlint`
+ * compares it against `lib/pickDepthBands`'s `GLINT_CLASS_*`. A one-sided renumber silently mis-maps
+ * a body to the wrong priority band, so a parity test (reading the wesl as text, like
+ * `selectionEncoding.test.ts`) keeps them in step.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,10 +20,8 @@ import {
 
 describe('glintBandClass — id → priority class', () => {
   it('maps the focus body, a heliocentric planet, and a moon to distinct classes', () => {
-    // Earth is special-cased (class earth) even though it is heliocentric like a
-    // planet; jupiter is a heliocentric planet (focusId 'sun' → planet); io is a
-    // Jovian moon (focusId 'jupiter' → moon). A swap of the planet/moon ternary
-    // arms flips two of these.
+    // Earth is special-cased though heliocentric; jupiter is a planet (focusId 'sun'), io a Jovian
+    // moon (focusId 'jupiter').
     expect(glintBandClass('earth')).toBe(GLINT_CLASS_EARTH);
     expect(glintBandClass('jupiter')).toBe(GLINT_CLASS_PLANET);
     expect(glintBandClass('io')).toBe(GLINT_CLASS_MOON);

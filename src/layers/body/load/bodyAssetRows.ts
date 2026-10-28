@@ -1,8 +1,8 @@
 /**
  * The body Layer's asset rows — demand, release, request and priority only; each
- * `slot` is one `create` already minted. The atlas row is rank 0 and
- * never proximity-gated: it is the universal fallback the per-body rows upgrade, so
- * gating it would reinstate the "body reached before its texture" gap it closes.
+ * `slot` is one `create` minted. The atlas row is rank 0 and never proximity-gated:
+ * it is the fallback the per-body rows upgrade, so gating it would reopen the
+ * "body reached before its texture" gap.
  */
 
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
@@ -24,12 +24,7 @@ import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 
-/**
- * The host body's world position at the frame's LIVE sim instant — every host
- * MOVES, so this must come from `deriveBodyStates(ctx.simDays)` (the memoized source
- * the render layers read), never a baked epoch. A paused clock re-reads the same
- * snapshot; a tick re-solves the ~22 Kepler orbits once for all proximity rows.
- */
+/** Host position at the LIVE sim instant: hosts move, so read the memoized `deriveBodyStates(simDays)`, never a baked epoch. */
 function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly<Vec3> {
   const hostId = hostBodyId(id);
   // A texture key is not a scene id; the hosts all are, so a miss is the throw below.
@@ -40,21 +35,12 @@ function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly
   return state.positionMpc;
 }
 
-/**
- * The per-`kind` tier ceiling (a ring's is its host's). `ALL_BODY_TEXTURE_KEYS` is
- * enumerated from present `kinds` keys, so the lookup is total — hence the `!`.
- */
+/** Per-`kind` tier ceiling (a ring's is its host's); total because the keys are enumerated from present `kinds`, hence the `!`. */
 function ceilingOf(id: BodyTextureId | RingTextureId, kind: TextureKind): Tier {
   return BODY_TEXTURE_REGISTRY[hostBodyId(id)].kinds[kind]!;
 }
 
-/**
- * One demand+release row per body-texture key. DEMANDED inside the body's load
- * radius, RELEASED past twice it: `release` is deliberately not `!demand`, and the
- * band between `X` and `2X` where neither fires is the hysteresis that stops a
- * camera dithering at the boundary from thrashing a multi-MB load/free cycle. `req`
- * clamps the tier to the `(body, kind)` ceiling.
- */
+/** Demanded inside the load radius X, released past 2X; `release` is deliberately not `!demand` (see `pastTextureReleaseRadius`). */
 function bodyTextureRow(runtime: BodyRuntime, entry: BodyTextureKey): AssetWiringRow {
   const key = bodyTextureSlotKey(entry.bodyId, entry.kind);
   return {

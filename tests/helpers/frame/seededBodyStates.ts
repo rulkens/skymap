@@ -1,8 +1,8 @@
 /**
  * The frame's real body-state map with a fixture's own bodies laid over it. Production reads
- * the static scene-body tables, so a fixture can no longer swap a body in through state: it
- * pins its bodies' poses here instead (via a `sceneBodyStates` mock), and every other body
- * keeps its real pose, which a draw-list cull then drops.
+ * the static scene-body tables, so a fixture pins its bodies' poses here (via a
+ * `sceneBodyStates` mock); every other body keeps its real pose, which a draw-list cull
+ * then drops.
  */
 
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';

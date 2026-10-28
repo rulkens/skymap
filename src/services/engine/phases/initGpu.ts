@@ -32,12 +32,9 @@ import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuH
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 
 /**
- * Bootstrap phase 1: GPU device acquisition + renderer construction. Writes
- * every `GPU_HANDLE_ROWS`-owned handle except the `constructPhase: 'wireInput'`
- * rows (`pickProgram`, built by `wireInput` once `focusUniform` exists). Mints no asset slot — those
- * ride on the asset rows `createLayers` composes. Stashes `device`/`context`/`format`/`unwatchHdrCapability` on
- * `deps.phaseLocals` so `createLayers` can build each Layer's `GpuContext` and
- * `engine.ts`'s `destroy()` can remove the HDR listener.
+ * Bootstrap phase 1: writes every `GPU_HANDLE_ROWS` handle except the `'wireInput'`
+ * rows (`pickProgram`). Mints no asset slot. Stashes `device`/`context`/`format`/
+ * `unwatchHdrCapability` on `deps.phaseLocals` for `createLayers` and `destroy()`.
  */
 export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
@@ -48,8 +45,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const { device, context, format, hdrCapable } = await gpuInitGpu(canvas);
   state.gpu.memory = trackGpuMemory(device);
 
-  // Assigned now, not at the end of this throw-capable phase, so a later
-  // throw still lets `destroy()` remove the HDR listener rather than leak it.
+  // Assigned now so a later throw still lets `destroy()` remove the HDR listener.
   deps.cb.store.dispatch(engineHdrCapabilityChanged(hdrCapable));
   const unwatchHdrCapability = watchHdrCapability((capable) =>
     deps.cb.store.dispatch(engineHdrCapabilityChanged(capable)),
@@ -70,7 +66,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     TIMED_SLOTS,
   );
 
-  // Sequenced here, before `constructGpuHandles`, exactly as it always ran.
   state.gpu.uiCtx = { device, context, canvas, hdrCapable };
   // In parallel, with the manifest `wireSlots` awaits already on its way: each
   // serial request costs a round trip, ~0.3 s apiece on a slow mobile link.
@@ -88,16 +83,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     fontAtlases: state.gpu.fontAtlases!,
     envBrdfLut: state.gpu.envBrdfLut!,
   };
-  // Complement of wireInput.ts's filter below, by construction: this phase
-  // builds every row EXCEPT the ones marked `constructPhase: 'wireInput'`.
   constructGpuHandles(
     GPU_HANDLE_ROWS.filter((row: GpuHandleRow) => row.constructPhase !== 'wireInput'),
     state,
     handleDeps,
   );
 
-  // Label directors: this attach used to run only inside `buildSwapRenderers`,
-  // which no longer builds at boot — `attachLabelDirectors` is the shared
-  // table both this phase and a later swap-format rebuild call into.
+  // `attachLabelDirectors` is shared with the later swap-format rebuild.
   attachLabelDirectors(state);
 }

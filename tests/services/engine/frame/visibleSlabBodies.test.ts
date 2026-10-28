@@ -23,8 +23,6 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const FORWARD_X: Vec3 = [1, 0, 0];
 const SQUARE_90 = symmetricFrustum(Math.PI / 2, 1);
-// pxPerRad = viewportHeightPx / (tanUp − tanDown), the canonical form
-// `visibleSlabBodies` reads directly off the view.
 const PX_PER_RAD_90 = 1000 / (SQUARE_90.tanUp - SQUARE_90.tanDown);
 const FRUSTUM_60_16_9 = symmetricFrustum(Math.PI / 3, 16 / 9);
 const PX_PER_RAD_60 = 1000 / (FRUSTUM_60_16_9.tanUp - FRUSTUM_60_16_9.tanDown);
@@ -33,7 +31,6 @@ function makeState(positionMpc: Vec3 = [1000, 0, 0]): BodyState {
   return { positionMpc, orientation: [...IDENTITY] };
 }
 
-/** A body offset `offAxisDeg` from `FORWARD_X`, in the XY plane, at `distanceMpc`. */
 function offAxisPositionMpc(offAxisDeg: number, distanceMpc: number): Vec3 {
   const rad = (offAxisDeg * Math.PI) / 180;
   return [Math.cos(rad) * distanceMpc, Math.sin(rad) * distanceMpc, 0];
@@ -41,14 +38,10 @@ function offAxisPositionMpc(offAxisDeg: number, distanceMpc: number): Vec3 {
 
 describe('visibleSlabBodies', () => {
   it('drops a body below the sub-pixel floor and keeps one above it', () => {
-    // Both bodies sit at distanceMpc = 1000, on-axis, under a 90° vertical FOV
-    // and a 1000px-tall viewport, so pxPerRad = 500 and the apparent-diameter
-    // formula reduces to diameterPx = diameterKpc·5e-4. The pixel floor keys
-    // on rEffM = PROXY_SCALE·outerBoundRadiusM for a shell-less body (radar
-    // frame finding 2 — same basis the frustum cull already used), so the
-    // outer bound is pre-divided by PROXY_SCALE here: rEffM lands at 3e22
-    // (≈0.972px, just under the 1px floor) and 3.2e22 (≈1.037px, just over
-    // it) — see the task-4 report for that derivation.
+    // Both bodies sit at distanceMpc = 1000, on-axis, under a 90° vertical FOV and a 1000px-tall
+    // viewport, so pxPerRad = 500 and diameterPx = diameterKpc·5e-4. The pixel floor keys on
+    // rEffM = PROXY_SCALE·outerBoundRadiusM for a shell-less body, so the outer bound is pre-divided by
+    // PROXY_SCALE: rEffM lands at 3e22 (≈0.972px, under the 1px floor) and 3.2e22 (≈1.037px, over it).
     const belowFloor: PlanetBody = {
       id: asSceneBodyId('below'),
       label: 'Below floor',
@@ -109,13 +102,10 @@ describe('visibleSlabBodies', () => {
   });
 
   it('keeps a ringed body once the ring, not the bare disc, clears the pixel floor', () => {
-    // Radar frame finding 2: the pixel floor used to key on the body's outer
-    // bound alone while the frustum cull (below) already used the ring-inclusive
-    // bodyDrawRadiusM — a ring could still be several px across while the
-    // bare globe was sub-pixel, and the roster gate dropped the row before
-    // any per-layer gate (e.g. ringsPass's own outer-diameter cull) got a
-    // chance to disagree. Real Saturn at 1.2e11 m, on-axis: bare disc
-    // ≈0.49px (sub-pixel), ring-inclusive rEff ≈1.17px (clears the floor).
+    // The pixel floor keys on the ring-inclusive bodyDrawRadiusM like the frustum cull: a ring can be
+    // several px across while the bare globe is sub-pixel, and the roster gate would otherwise drop the
+    // row before any per-layer gate (e.g. ringsPass's outer-diameter cull) could disagree. Real Saturn
+    // at 1.2e11 m, on-axis: bare disc ≈0.49px, ring-inclusive rEff ≈1.17px (clears the floor).
     const saturn = SCENE_PLANETS.find((p) => p.id === 'saturn');
     if (saturn === undefined) throw new Error('SCENE_PLANETS is missing saturn');
     const dMm = 1.2e11;
@@ -207,12 +197,9 @@ describe('visibleSlabBodies', () => {
     });
 
     it('keeps Saturn at its real ring-outer radius, pose-A off-axis geometry (θ≈20.55°, in view)', () => {
-      // Regression guard for the saturn-vanish-investigation.md pose A: real
-      // Saturn (datum 58,232 km, ring outer 140,220 km ⇒ bodyDrawRadiusM
-      // wins over the PROXY_SCALE-inflated globe) viewed 20.55° off-axis at
-      // Titan-orbit scale (dM ≈ 1.2e9 m), under a 60° FOV / 16:9 viewport
-      // (threshold ≈ 57.2°) — well inside the frustum, must never be culled
-      // by this gate.
+      // Real Saturn (datum 58,232 km, ring outer 140,220 km ⇒ bodyDrawRadiusM wins over the
+      // PROXY_SCALE-inflated globe) 20.55° off-axis at Titan-orbit scale (dM ≈ 1.2e9 m), 60° FOV / 16:9
+      // (threshold ≈ 57.2°): well inside the frustum, never culled by this gate.
       const saturn = SCENE_PLANETS.find((p) => p.id === 'saturn');
       if (saturn === undefined) throw new Error('SCENE_PLANETS is missing saturn');
       const dMm = 1.2e9;

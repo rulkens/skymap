@@ -72,7 +72,6 @@ type Declared = { readonly name: string; readonly exported: boolean };
 const isExportedStatement = (stmt: Statement): boolean =>
   Node.isModifierable(stmt) && stmt.hasModifier(SyntaxKind.ExportKeyword);
 
-/** Top-level VALUE declarations; types are `src/@types/`'s business, not this sweep's. */
 function declarationsOf(stmt: Statement): readonly Declared[] {
   if (Node.isImportDeclaration(stmt) || Node.isExportDeclaration(stmt)) return [];
   if (Node.isTypeAliasDeclaration(stmt) || Node.isInterfaceDeclaration(stmt)) return [];
@@ -98,7 +97,6 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
 // underscores.
 const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase();
 
-/** Everything declared beside the file's own symbol (the export it is named for). */
 function strayDeclarations(path: string, base: string): readonly string[] {
   const declared = parseOnlyProject
     .addSourceFileAtPath(path)

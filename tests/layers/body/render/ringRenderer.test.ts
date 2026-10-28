@@ -1,17 +1,10 @@
 /**
- * ringRenderer construction + structural tests + the RingUniforms byte-layout
- * keep-rule.
- *
- * Vitest runs in Node without a WebGPU surface, so every `create*` call the
- * renderer issues returns a plausibly-shaped stand-in (mirrors
- * `earthRenderer.test.ts`). These pin the `Renderer` contract (non-empty
- * `label`, `destroy`), the method surface (`setTexture` / `draw` arity), and the
- * ring-specific pipeline profile (straight-alpha OVER blend, `cullMode: 'none'`,
- * depth-tested but `depthWriteEnabled: false`). The `packRingUniforms` byte
- * offsets are asserted here as the uniform-layout keep-rule — a silent drift in
- * that packing is exactly the invisible-until-iOS-drops-the-frame class the
- * struct/packer SSOT guards. "Correctly-lit, shadowed ring" is the VISUAL gate
- * (Task 11).
+ * ringRenderer construction + structural tests + the RingUniforms byte-layout keep-rule. Node has no
+ * WebGPU surface, so every `create*` call returns a plausibly-shaped stand-in (mirrors
+ * `earthRenderer.test.ts`). Pins the `Renderer` contract, the method surface (`setTexture` / `draw`
+ * arity), the ring pipeline profile (OVER blend, `cullMode: 'none'`, depth-tested but
+ * `depthWriteEnabled: false`) and the `packRingUniforms` byte offsets, whose silent drift is the
+ * invisible-until-iOS-drops-the-frame class.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -85,10 +78,9 @@ describe('createRingRenderer', () => {
   });
 
   it('sizes the ring strip with RENDER_ATTACHMENT usage', () => {
-    // copyExternalImageToTexture requires the destination to carry BOTH COPY_DST
-    // and RENDER_ATTACHMENT (a WebGPU runtime rule no compiler check catches);
-    // omitting it makes Dawn reject the upload and the ring samples a zeroed
-    // strip. This asserts the flag is present on the upload target.
+    // copyExternalImageToTexture needs BOTH COPY_DST and RENDER_ATTACHMENT on the destination (a
+    // WebGPU runtime rule no compiler check catches); without it Dawn rejects the upload and the ring
+    // samples a zeroed strip.
     const textures: GPUTextureDescriptor[] = [];
     const renderer = createRingRenderer(
       mockDevice({ textures }),
@@ -114,9 +106,7 @@ describe('createRingRenderer', () => {
     // the planet), hence 'one', not 'src-alpha'.
     expect(target!.blend!.color.srcFactor).toBe('one');
     expect(target!.blend!.color.dstFactor).toBe('one-minus-src-alpha');
-    // Two-sided annulus.
     expect(pipeline.primitive!.cullMode).toBe('none');
-    // Depth-tested against the opaque spheres, but writes no depth.
     expect(pipeline.depthStencil!.format).toBe('depth32float');
     expect(pipeline.depthStencil!.depthCompare).toBe('less');
     expect(pipeline.depthStencil!.depthWriteEnabled).toBe(false);
@@ -140,12 +130,9 @@ describe('packRingUniforms byte layout (RingUniforms keep-rule)', () => {
     const cam: [number, number, number] = [1.5, -2.5, 3.5];
     const u = packRingUniforms(mvp, sun, 0.43, cam, 0.53);
 
-    // 96 bytes = 24 f32.
     expect(u).toHaveLength(24);
     expect(u.byteLength).toBe(96);
-    // mvp at floats 0..15 (byte 0..63).
     for (let i = 0; i < 16; i++) expect(u[i]).toBe(mvp[i]);
-    // sunDirLocal at floats 16..18 (byte 64).
     expect(u[16]).toBeCloseTo(0.1);
     expect(u[17]).toBeCloseTo(0.2);
     expect(u[18]).toBeCloseTo(0.3);

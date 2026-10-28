@@ -81,7 +81,6 @@ describe('composeBodySlabCamRelVp', () => {
     ) as Float64Array;
 
     const mvp64 = composeBodySlabMvp(vp, eyeRelBodyM, MARS_RADIUS_M);
-    // The sub-eye point on the sphere, and the same point relative to the eye.
     const hitLocal: Vec3 = up;
     const camRelLocal: Vec3 = [
       up[0] - eyeRelBodyM[0] / MARS_RADIUS_M,

@@ -3,13 +3,10 @@ import { createCloudShellRenderer } from '../../../../src/layers/body/render/clo
 import { CLOUD_SHELL_UNIFORM_FLOATS } from '../../../../src/layers/body/render/packCloudShellUniforms';
 
 /**
- * The shell is a CLOSED sphere: `cullMode: 'back'` culls every triangle once
- * the camera moves inside it, with no fallback (Task 10, spec §5c). These
- * tests pin the fix's shape — a second, front-cull pipeline sharing every
- * other pipeline state, selected by `draw`'s `inside` argument — the same
- * discriminant shape `atmosphereShellRenderer`'s inside/outside pair uses.
- * `mockDevice()` mirrors that suite's harness (see
- * `tests/layers/body/render/atmosphereShellRenderer.test.ts`).
+ * The shell is a CLOSED sphere: `cullMode: 'back'` culls every triangle once the camera moves
+ * inside it, with no fallback (spec §5c). Pinned: a second, front-cull pipeline sharing every other
+ * pipeline state, selected by `draw`'s `inside` argument (the discriminant shape of
+ * `atmosphereShellRenderer`'s inside/outside pair).
  */
 
 type Harness = {

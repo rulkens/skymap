@@ -1,21 +1,10 @@
 /**
- * bodyGlintsPass — unit tests for the sub-pixel body glint content row.
- *
- * The load-bearing behaviours:
- *
- *   - The zero-brightness skip (`feedback_opacity_zero_no_render`): a body whose
- *     `brightness · fadeBand(apparentPx)` rounds to 0 — here a body turned to its
- *     unlit far side — is NOT packed into the instance batch; a mid-fade LIT body
- *     IS, with a brightness strictly in (0, 1) (the phase term + the cross-fade).
- *   - The f64 rebase seam (like `starPointsPass`): the layer hands the renderer
- *     CAMERA-RELATIVE anchors (`pos − camPos`, f64) paired with the REBASED
- *     view-projection, not the raw anchors through the f32-narrowed `view.vp`.
- *   - The migration-table row + registry membership are pinned in
- *     `passes.test.ts` (the `(hdr, NEAR0)` group).
- *
- * Fixtures are hand-placed on the +x axis so each body's apparent-size regime
- * (both sub-3 px glints) AND its phase (one lit, one on the unlit far side) are
- * unambiguous rather than round numbers a unit bug could accidentally satisfy.
+ * bodyGlintsPass — the sub-pixel body glint content row. Pinned: the zero-brightness skip
+ * (`feedback_opacity_zero_no_render`: an unlit far-side body is NOT packed, a mid-fade LIT one is,
+ * brightness strictly in (0, 1)) and the f64 rebase seam (the renderer gets CAMERA-RELATIVE
+ * anchors paired with the REBASED view-projection, not raw anchors through the f32 `view.vp`).
+ * Fixtures sit on the +x axis so apparent-size regime and phase are unambiguous rather than
+ * round numbers a unit bug could accidentally satisfy.
  */
 
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
@@ -46,17 +35,12 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
-// The layer reads each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). `makeCtx` pins it to the fixture bodies
-// (production reads the static scene tables), REUSING each record's own refs so
-// the `toBe(...)` assertions hold.
+// `makeCtx` pins the body-state snapshot to the fixture bodies, reusing each record's own
+// refs so the `toBe(...)` assertions hold.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn(),
 }));
 
-// A test fixture pairing the identity record with the J2000 state the snapshot
-// carries — position + orientation were lifted off the record onto the derive, so
-// the fixture supplies them here (keyed by id, refs reused by the mock above).
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 
 const KM = SCALE_UNITS.KM_TO_MPC;
@@ -105,7 +89,6 @@ const PASS_STUB = {
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-/** The frame view over the fixture bodies; also pins the body-state snapshot to them. */
 function makeCtx(
   camPos: Readonly<Vec3>,
   planets: readonly SeededPlanet[],
@@ -163,7 +146,6 @@ function glintsWith(renderer: unknown) {
   } as unknown as BodyRuntime);
 }
 
-/** For the gates and the pick, which never touch the glint renderer. */
 const GLINTS = glintsWith(makeRenderer());
 
 describe('bodyGlintsPass.enabled', () => {
@@ -185,18 +167,12 @@ describe('bodyGlintsPass.enabled', () => {
 
 describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
   it('stays on mid-dissolve but LEAVES the pass plan past the backdrop goneAt while still inside the foreground gate', () => {
-    // The user-reported bug: the glints have only a NEAR handoff (`bodyGlint`, the
-    // 3→1 px fade-in), so as their apparent size drops toward zero they read FULL
-    // forever and draw at full additive brightness all the way to the coarse
-    // `FOREGROUND_MAX_DISTANCE_MPC` gate — deep in Milky-Way framing, where all ~22
-    // collapse onto one bright dot. The `bodyGlintBackdrop` far-dissolve fixes it:
-    // once the band zeroes, the layer must LEAVE the pass plan (opacity 0 ⇒ no
-    // render), exactly as `starPointsPass` does with its backdrop dissolve.
+    // `bodyGlint` only has a NEAR handoff (3→1 px), so without the `bodyGlintBackdrop`
+    // far-dissolve the glints draw at full brightness out to the coarse foreground gate, all ~22
+    // collapsing onto one dot. Once the band zeroes the layer must LEAVE the pass plan.
     const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
     const dMid = (backdrop.fullAt + backdrop.goneAt) / 2; // mid fade → band in (0,1)
     const dGone = backdrop.goneAt * 2; // past goneAt → band 0
-    // The far test point is still well inside the shared foreground gate, so ONLY
-    // the new far-dissolve gate can flip `enabled` off there.
     expect(dGone).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(fadeBand(backdrop, dMid)).toBeGreaterThan(0);
     expect(fadeBand(backdrop, dGone)).toBe(0);
@@ -209,7 +185,6 @@ describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
     expect(GLINTS.enabled(STATE, makeCtx([dMid, 0, 0], [glint]), makeNear0View(CAM_POS))).toBe(
       true,
     );
-    // The bite: unfixed `enabled` has no far-dissolve check, so this reads true.
     expect(GLINTS.enabled(STATE, makeCtx([dGone, 0, 0], [glint]), makeNear0View(CAM_POS))).toBe(
       false,
     );
@@ -218,13 +193,10 @@ describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
 
 describe('bodyGlintsPass.draw — far-dissolve brightness scaling', () => {
   it('scales the packed glint brightness by the backdrop band (identical geometry, only camera-origin distance differs)', () => {
-    // Two cameras at DIFFERENT origin distances, but the body pinned the SAME small
-    // offset just beyond each (farther from the Sun → full phase at both). So the
-    // camera→body geometry — apparent size AND illuminated fraction — is identical
-    // at the two cameras and the ONLY thing that can change the packed brightness
-    // is the far-dissolve band, which keys on the camera-origin distance. The raw
-    // brightness therefore cancels in the ratio and a missing backdrop multiply
-    // would leave the two brightnesses equal.
+    // Two cameras at DIFFERENT origin distances, the body pinned the SAME small offset beyond
+    // each: camera→body geometry (size, phase) is identical, so only the far-dissolve band (keyed on
+    // camera-origin distance) can change the packed brightness; a missing backdrop multiply would
+    // leave the two equal.
     const backdrop = SCALE_FADE_BANDS.bodyGlintBackdrop;
     const OFF = 1e5 * KM; // ~2 px glint at radius 160 km, like the LIT fixture
     const dFull = backdrop.fullAt * 0.5; // full band → backdrop 1
@@ -254,17 +226,14 @@ describe('bodyGlintsPass.draw — far-dissolve brightness scaling', () => {
 
     const full = brightnessAt(dFull);
     const mid = brightnessAt(dMid);
-    // The far dissolve dims the mid-band glint; the ratio is exactly the band value.
     expect(mid).toBeLessThan(full);
     expect(mid).toBeCloseTo(full * midFade, 12);
   });
 });
 
 describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in the pick pass)', () => {
-  // With NO glints (empty partition) `enabled` is false, but the Earth caption
-  // stamp still needs to ride this layer's pick pass while the caption is on. The
-  // pick gate is therefore WIDER than the draw gate: admit when glints are present
-  // OR when Earth sits within the caption range.
+  // With NO glints `enabled` is false, but the Earth caption stamp still rides this layer's pick
+  // pass, so the pick gate is WIDER than the draw gate: glints present OR Earth within caption range.
   const earthWithinGate: SeededPlanet = {
     id: asSceneBodyId('earth'),
     label: 'Earth',
@@ -279,17 +248,13 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
 
   it('is true when Earth is seeded within the caption gate even with an empty glints branch — while enabled is false', () => {
     const view = makeNear0View(camWithin);
-    // No glints, no Earth-caption dependency on `enabled` → the VISUAL draw
-    // gate is off.
     expect(GLINTS.enabled(STATE, makeCtx(camWithin, [], [], earthWithinGate), view)).toBe(false);
-    // But the Earth caption stamp must still be recorded → pick gate admits the row.
     expect(GLINTS.pickEnabled!(STATE, makeCtx(camWithin, [], [], earthWithinGate), view)).toBe(
       true,
     );
   });
 
   it('is false beyond the caption gate with no glints', () => {
-    // Past the caption gate there is no stamp to admit the row for.
     expect(
       GLINTS.pickEnabled!(
         STATE,
@@ -310,19 +275,15 @@ describe('bodyGlintsPass.draw', () => {
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, instances, count, vpArg, viewportArg] = renderer.draw.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
-    // The unlit body added nothing → exactly one record packed.
     expect(count).toBe(1);
     // The single packed record's brightness is a strict fraction in (0, 1): the
     // phase term (full phase = 1) × size × albedo × the partial cross-fade.
     const brightness = instances[6]!;
     expect(brightness).toBeGreaterThan(0);
     expect(brightness).toBeLessThan(1);
-    // It is the LIT body, not the unlit one: its rebased +x anchor is positive
-    // (LIT sits farther from the Sun than the camera); the unlit body's would be
-    // negative. Confirms which body survived the skip.
+    // The LIT body survived: its rebased +x anchor is positive (farther from the Sun than the camera).
     expect(instances[0]!).toBeGreaterThan(0);
     expect(instances[0]!).toBeCloseTo(LIT.positionMpc[0] - CAM_POS[0], 20);
-    // Anchors span exactly one INSTANCE_FLOATS-strided record.
     expect(instances.length).toBeGreaterThanOrEqual(INSTANCE_FLOATS);
 
     // The vp is the f32 narrow of the f64 rebase — NOT the raw f32 view.vp.
@@ -333,20 +294,14 @@ describe('bodyGlintsPass.draw', () => {
 
   it('is a no-op when every glint is unlit (nothing packed → no draw)', () => {
     const renderer = makeRenderer();
-    // Only the unlit body present: its brightness rounds to 0, so the batch is
-    // empty and the additive pass submits nothing.
     glintsWith(renderer).draw(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, [UNLIT]), STATE);
     expect(renderer.draw).not.toHaveBeenCalled();
   });
 });
 
-// Glint bodies with REAL seed ids so `seedIndexOfBody(id, SCENE_PLANETS)` resolves
-// to a stable index (radius 160 km at ~1e5 km keeps both sub-3 px, so both land in
-// the glints branch). JUPITER sits farther from the Sun than the camera (lit);
-// MARS sits closer (unlit far side, brightness → 0). The pick mirrors `draw`'s
-// per-body visibility skip, so JUPITER IS picked and the invisible MARS is NOT —
-// an unlit glint renders nothing and must not stay clickable (pick follows
-// visibility). The lit sibling stays in so the skip can't over-drop.
+// Real seed ids so `seedIndexOfBody(id, SCENE_PLANETS)` resolves to a stable index. JUPITER sits
+// farther from the Sun than the camera (lit), MARS closer (unlit far side, brightness → 0); radius
+// 160 km at ~1e5 km keeps both sub-3 px.
 const JUPITER = bodyAt('jupiter', 1_100_000, [0.8, 0.8, 0.8]); // SCENE_PLANETS index 3
 const MARS = bodyAt('mars', 900_000, [0.6, 0.32, 0.23]); // SCENE_PLANETS index 2, unlit phase
 // An id absent from SCENE_PLANETS, as every mesh body's is: seedIndexOfBody returns −1,
@@ -389,12 +344,9 @@ function makePickState(bodyPickRenderer: unknown): EngineState {
 
 describe('bodyGlintsPass.drawPick', () => {
   it('WITHIN the caption gate picks BOTH the lit and the invisible (unlit) glint, dropping unknowns', () => {
-    // Bug B: the camera (CAM_POS, ~3e-14 Mpc) sits deep inside
-    // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, so every body's foreground LABEL is on
-    // and pick follows the LABEL, not the glint's own brightness. MARS is unlit
-    // here (brightness → 0) — `draw` still skips it, but its label invites the
-    // click, so the pick keeps it. JUPITER is lit and picked. UNKNOWN is not in the
-    // seed table (it rides the frame's mesh bodies) → dropped regardless.
+    // The camera sits inside SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, so every body's LABEL is on and
+    // pick follows the LABEL, not the glint's brightness: unlit MARS is still picked, as is lit JUPITER.
+    // UNKNOWN is not in the seed table (it rides the frame's mesh bodies) → dropped regardless.
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer);
     const view = makeNear0View(CAM_POS);
@@ -405,8 +357,6 @@ describe('bodyGlintsPass.drawPick', () => {
     const [passArg, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
 
-    // Both seeded bodies and Earth's caption stamp survive within the caption gate;
-    // only UNKNOWN is dropped.
     expect(args.points).toHaveLength(3);
 
     // Jupiter's packed id, hand-computed: (Source.Planet=22 << 26) | (seedIndex 3 +
@@ -419,7 +369,6 @@ describe('bodyGlintsPass.drawPick', () => {
     // A heliocentric planet carries the PLANET priority class (1) — the datum the
     // glint variant maps to its own depth band so Jupiter out-picks its moons.
     expect(jupiter.bandClass).toBe(1);
-    // Its anchor is rebased into the camera-relative frame (pos − camPos), f64.
     expect(jupiter.posRelCamMpc[0]).toBeCloseTo(JUPITER.positionMpc[0] - CAM_POS[0], 20);
 
     // The invisible (unlit) MARS IS clickable inside the caption gate — pick follows
@@ -437,12 +386,9 @@ describe('bodyGlintsPass.drawPick', () => {
   });
 
   it('BEYOND the caption gate skips the invisible (unlit) glint — pick reverts to glint visibility', () => {
-    // Past SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC no label invites the click, so the
-    // old pick-follows-glint-visibility rule holds: an unlit glint (brightness → 0)
-    // renders no pixels and must not stay clickable. Camera parked 2× the caption
-    // gate down +x; a 160 km MARS between the Sun and the camera is deeply
-    // sub-pixel (→ glints branch) AND unlit (camera beyond it along the sun ray →
-    // illuminated fraction 0), so it is skipped.
+    // Past SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC no label invites the click, so pick follows glint
+    // visibility. Camera parked 2× the caption gate down +x; a 160 km MARS between the Sun and the
+    // camera is sub-pixel (→ glints branch) AND unlit, so it is skipped.
     const marsFar: SeededPlanet = {
       id: asSceneBodyId('mars'),
       label: 'mars',
@@ -459,21 +405,15 @@ describe('bodyGlintsPass.drawPick', () => {
     GLINTS.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, [marsFar]), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
-    // No label, unlit → skipped. Beyond the caption gate there is no Earth stamp either → the batch is empty.
     expect(args.points).toHaveLength(0);
   });
 
   it('BEYOND the caption gate drops even a LIT glint once the backdrop has dissolved (far dissolve narrows pick past the label range)', () => {
-    // Past SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC no label invites the click, so pick
-    // follows the glint's DRAWN brightness — which now folds the far-dissolve
-    // backdrop. A LIT, ~2 px planet parked past the caption gate has fully
-    // dissolved (backdrop 0), so `draw` packs nothing and its pick footprint must
-    // go too — otherwise a glint that renders no pixels stays clickable. Pre-fix
-    // (the pick brightness omitted the backdrop band) the lit body's raw brightness
-    // clears GLINT_MIN and it stays pickable → the bite.
+    // Past the label range pick follows the glint's DRAWN brightness, which folds the far-dissolve
+    // backdrop: a LIT ~2 px planet past the caption gate has fully dissolved (backdrop 0), so `draw`
+    // packs nothing and its pick footprint must go too. A pick brightness omitting the backdrop would
+    // keep it clickable.
     const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
-    // Still inside the shared foreground gate, so the pick pass admits the row and
-    // only the far dissolve can drop the point.
     expect(camFar[0]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, camFar[0])).toBe(0);
     const litFar: SeededPlanet = {
@@ -503,13 +443,9 @@ describe('bodyGlintsPass.drawPick', () => {
   });
 
   it('emits the Earth stamp with the EARTH class (0) inside the caption gate, so Earth out-picks every glint', () => {
-    // Two lit io/jupiter glints plus a resolved Earth, camera inside the caption
-    // gate. Earth is not in the partition (it rides earthPass), so the layer emits
-    // its stamp gated on the caption range (distance < gate).
-    // Priority is
-    // now the per-instance bandClass — 0 (earth) beats 1 (planet) beats 2 (moon) as
-    // an unconditional depth win — NOT the list order, so the load-bearing check is
-    // the CLASS each point carries, not its index.
+    // Two lit io/jupiter glints plus a resolved Earth inside the caption gate. Earth rides
+    // earthPass, so the layer emits its stamp gated on the caption range. Priority is the per-instance
+    // bandClass (0 earth beats 1 planet beats 2 moon, an unconditional depth win), not list order.
     const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // seed index 10, lit — a MOON
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer);
@@ -523,21 +459,16 @@ describe('bodyGlintsPass.drawPick', () => {
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(args.points).toHaveLength(3);
 
-    // Look each body up by its packed id (order carries no priority now) and assert
-    // its class: Earth 0, the heliocentric Jupiter 1, the Jovian moon Io 2.
     const byId = (code: number, idx: number) =>
       args.points.find((p) => p.packedId === packSelection(code, idx + PICK_SENTINEL_OFFSET))!;
     const earthPt = byId(Source.Earth, 0);
     expect(earthPt.bandClass).toBe(0);
     expect(byId(Source.Planet, 3).bandClass).toBe(1); // Jupiter — planet
     expect(byId(Source.Planet, 10).bandClass).toBe(2); // Io — moon
-    // The Earth stamp's anchor is Earth's position rebased into the camera frame.
     expect(earthPt.posRelCamMpc[0]).toBeCloseTo(EARTH_RESOLVED.positionMpc[0] - CAM_POS[0], 20);
   });
 
   it('omits the Earth stamp when the camera is beyond the caption gate', () => {
-    // Camera beyond the caption gate (2× the gate distance) even with a seeded
-    // Earth → no label invites the click → no stamp.
     const pickRenderer2 = makePickRenderer();
     const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
     const farEarth = makePickState(pickRenderer2);
@@ -556,14 +487,10 @@ describe('bodyGlintsPass.drawPick', () => {
   });
 
   it('emits the Earth stamp beyond the 1 px sphere cull while inside the caption gate (Bug B)', () => {
-    // The core Bug B regression: Earth's sphere pick dies at the
-    // SUB_PIXEL_BODY_CULL_PX 1 px cull, but its caption stays on out to
-    // SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC — ten orders of magnitude of zoom where
-    // the label invites a click. A camera 1e-6 Mpc from a 6371 km Earth makes it
-    // ~1e-7 px across (deep sub-pixel — earthPass.enabled is FALSE here), yet
-    // 1e-6 Mpc ≪ the caption gate. No planets seeded (empty glints branch), so the
-    // Earth stamp is the ONLY pick point. On the pre-fix code (gated on
-    // earthPass.enabled) this batch is empty — the bite.
+    // Earth's sphere pick dies at the SUB_PIXEL_BODY_CULL_PX 1 px cull but its caption stays on
+    // out to SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC. 1e-6 Mpc from a 6371 km Earth is ~1e-7 px
+    // (earthPass.enabled is FALSE) yet inside the caption gate; no planets are seeded, so the Earth
+    // stamp is the ONLY pick point.
     const earthSubPixel: SeededPlanet = {
       id: asSceneBodyId('earth'),
       label: 'Earth',
@@ -594,10 +521,8 @@ describe('bodyGlintsPass.drawPick', () => {
   });
 
   it('tags a planet with class 1 and its moons with class 2 (priority is the class, not order)', () => {
-    // A planet plus two of its moons, all lit. Priority is the per-instance
-    // bandClass — the planet's 1 out-picks the moons' 2 as an unconditional depth
-    // win — so the load-bearing datum is the CLASS each carries, whatever order the
-    // list happens to be in. Classified through the element table (focusId).
+    // A planet plus two lit moons. Priority is the per-instance bandClass (planet 1 out-picks
+    // moons 2), not list order; classified through the element table (focusId).
     const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // index 10, moon of Jupiter
     const EUROPA_LIT = bodyAt('europa', 1_140_000, [0.8, 0.8, 0.8]); // index 11, moon of Jupiter
     const pickRenderer = makePickRenderer();

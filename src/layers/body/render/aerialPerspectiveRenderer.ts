@@ -88,10 +88,8 @@ export function createAerialPerspectiveRenderer(
     'atmosphere.aerialPerspective.fragment',
   );
 
-  // Mirrors the fragment's `@group(0)`: the shell's five (hoisted by importing
-  // `sampleShellSegment`) plus `ScatteringParams`, the two volumes and scene depth.
-  // Binding 0 is FRAGMENT-only here — the covering triangle reads no uniform,
-  // so the vertex stage has no resource interface at all.
+  // Mirrors the fragment's `@group(0)`. Binding 0 is FRAGMENT-only: the covering
+  // triangle reads no uniform.
   const applyBgl = device.createBindGroupLayout({
     label: 'atmosphere-aerial-bgl',
     entries: [
@@ -233,21 +231,16 @@ export function createAerialPerspectiveRenderer(
   }
 
   function bake(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void {
-    // The write rides the queue timeline (ordered ahead of the submit) even
-    // though the pass is already open — the `dispatchSkyView` argument.
     const binding = bindingFor(bodyId);
     device.queue.writeBuffer(binding.shellUniformBuffer, 0, uniforms);
     pass.setPipeline(bakePipeline);
     pass.setBindGroup(0, binding.bakeGroup);
-    // z is the shader's own slice loop, so one invocation owns a whole column.
     pass.dispatchWorkgroups(bakeDispatchX, bakeDispatchY, 1);
   }
 
   function draw(pass: GPURenderPassEncoder, bodyId: string, depthView: GPUTextureView): void {
     const binding = bindingFor(bodyId);
 
-    // Same bind-group-cache-by-view-identity pattern as orbitTrailRenderer.ts's
-    // `bindGroup` local — see its comment for why.
     if (binding.applyGroup === null || binding.applyGroup.depthView !== depthView) {
       binding.applyGroup = {
         depthView,

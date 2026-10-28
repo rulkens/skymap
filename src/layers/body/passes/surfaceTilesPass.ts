@@ -1,19 +1,11 @@
 /**
- * surfaceTilesPass — the resident virtual-texture detail patches over the
- * base globe `earthPass` stamps, into the same `foreground:0` target.
- *
- * Its own row rather than a second draw inside `earthPass` for two reasons:
- * the patches get a render toggle and a GPU timing slot of their own, and the
- * "tiles after the globe" ordering the tile pipeline's depth compare relies on
- * becomes a named line in `FRAME_ORDER` instead of two adjacent statements in
- * one function. Both rows read the SAME `prepareBodySurfaceFrame` memo, so the
- * split costs no extra per-frame derivation.
- *
- * An empty cut or a not-yet-engaged atlas is the ordinary pre-residency
- * picture, not an error: `enabled` returns false and the base globe alone
- * covers the cap. The engaged body's `SURFACE_TILE_REGISTRY` row is the
- * predicate and picks the shading; the effect maps come from `earthRenderer`,
- * the only body whose maps exist today.
+ * surfaceTilesPass: the resident virtual-texture detail patches over the base globe
+ * `earthPass` stamps, into the same `foreground:0` target. Its own row so the patches
+ * get a render toggle and GPU timing slot, and "tiles after the globe" is a named
+ * line in `FRAME_ORDER`; both rows read the SAME `prepareBodySurfaceFrame` memo. An
+ * empty cut or unengaged atlas is the ordinary pre-residency picture: `enabled`
+ * returns false and the globe covers the cap. The engaged body's
+ * `SURFACE_TILE_REGISTRY` row picks the shading; effect maps come from `earthRenderer`.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -46,9 +38,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const tiles = state.subsystems.surfaceTiles;
       if (tiles === undefined || tiles === null) return false;
-      // The height atlas is as load-bearing as the albedo one: every vertex
-      // position reads it, so a cut drawn without it would be a flat sphere at
-      // best and garbage at worst.
+      // Every vertex position reads the height atlas, so a cut without it is garbage.
       return (
         tiles.plan.cut.length > 0 &&
         tiles.stream.getAtlasView() !== null &&
@@ -82,17 +72,14 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         ...(has('cloudShadows') && {
           cloudShadows: {
             view: earthRenderer.getMapView('clouds'),
-            // The same descent fade the deck itself uses, from the same
-            // range — the shadow on a patch and on the base globe dissolve
-            // together.
+            // The shadow on a patch and on the base globe dissolve together.
             strength:
               EARTH_SURFACE_PARAMS.cloudShadowStrength *
               cloudDeckFade(
                 bodyCameraDistanceMpc(bodyState.positionMpc, ctx.drawCamPos),
                 radiusM * SCALE_UNITS.M_TO_MPC,
               ),
-            // Unit-sphere radius of the SAME shell cloudShellPass draws, so
-            // the cast shadow and the drawn deck agree by construction.
+            // The SAME shell cloudShellPass draws.
             shellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
           },
         }),
@@ -100,8 +87,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
 
       runtime.surfaceTileRenderer.draw(pass, {
         tiles: surfaceTiles.plan.cut,
-        // The slab vp is already eye-relative by construction (body-m rows build
-        // vp about the eye) — no rebase, unlike the old NEAR0 path.
+        // Already eye-relative (body-m rows build vp about the eye): no rebase.
         vp: view.vp,
         eyeRelBodyM: pose.eyeRelBodyM,
         radiusM,

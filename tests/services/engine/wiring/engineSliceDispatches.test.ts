@@ -19,8 +19,6 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
-// ── Module mocks needed for wiring helpers ──────────────────────────────────
-
 // loadProgressAggregator: capture the emit callback so we can fire it
 // manually in the installLoadProgress tests.
 let capturedProgressEmitFn: ((snapshot: unknown) => void) | null = null;
@@ -32,12 +30,8 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
   }),
 }));
 
-// ── Post-mock imports ───────────────────────────────────────────────────────
-
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
-
-// ── Shared helpers ──────────────────────────────────────────────────────────
 
 function makeProgressState(): EngineState {
   const stubSlot = <T, Req>(name: string): AssetSlot<T, Req> => ({
@@ -60,8 +54,6 @@ function makeProgressState(): EngineState {
   } as unknown as EngineState;
 }
 
-// ── installLoadProgress: engineLoadProgressChanged ─────────────────────────
-
 describe('installLoadProgress → engineLoadProgressChanged', () => {
   beforeEach(() => {
     capturedProgressEmitFn = null;
@@ -79,8 +71,6 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
       frameRef: { current: () => {} },
       handleRef: { current: null },
       allSlots: new Map(),
-      // installLoadProgress never reads a resolver — a resolver that always
-      // returns null is enough to satisfy the type.
       selection: {
         resolvePick: () => null,
         extractRow: () => null,
@@ -91,7 +81,6 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
 
     installLoadProgress(state, deps);
 
-    // The mock captured the emit callback — fire it with a real snapshot.
     const snapshot: LoadProgressState = { loadedBytes: 50, totalBytes: 100, inFlightCount: 2 };
     capturedProgressEmitFn!(snapshot);
 

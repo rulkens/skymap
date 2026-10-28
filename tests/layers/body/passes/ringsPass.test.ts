@@ -1,20 +1,10 @@
 /**
- * ringsPass — unit tests for the translucent planetary-ring row, one
- * `'body'`-slab content row per host body.
- *
- * Load-bearing assertions:
- *
- *   1. The row profile: `slab: 'body'`, `(foreground:0)`, blend 'over'.
- *   2. The gate: a row draws only when `SCENE_RINGS` has an entry for THIS
- *      row's `bodyId` AND that ring's strip is resident — the required
- *      "ringsPass draws only for a body with a ring row" case: an earth row
- *      and a saturn row, exactly one draw, on saturn.
- *   3. The f64 seam: the ring MVP composes from the slab's `Float64Array`
- *      view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`,
- *      scaled to the ring's OUTER radius, with the pose off `ctx.bodyPose`.
- *   4. The two-radius asymmetry: `bodySlabCamLocal` is measured at the
- *      PLANET's radius, NOT the ring's outer radius — inherited unchanged
- *      from the pre-body-slabs layer (see the layer's module header).
+ * ringsPass — the translucent planetary-ring row, one `'body'`-slab row per host body. Pinned: the
+ * profile (`slab: 'body'`, `(foreground:0)`, blend 'over'); the gate (draws only when `SCENE_RINGS` has
+ * an entry for THIS row's `bodyId` AND its strip is resident: earth row + saturn row, one draw, on
+ * saturn); the f64 seam (MVP from `view.slab.vp`, NOT `view.vp`, scaled to the ring's OUTER radius,
+ * pose off `ctx.bodyPose`); and the two-radius asymmetry: `bodySlabCamLocal` is measured at the
+ * PLANET's radius, not the ring's outer radius.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -39,8 +29,6 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// Mock the two body-slab compose primitives — real math is covered by their
-// own test files. This suite pins the ARGUMENTS the layer feeds them.
 const MOCK_MVP = new Float64Array(16);
 const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
 vi.mock('../../../../src/utils/camera/composeBodySlabMvp', () => ({
@@ -246,8 +234,7 @@ describe('ringsPass.draw', () => {
     expect(u[19]).toBeCloseTo(
       (saturn.surface.datumRadiusM * SCALE_UNITS.M_TO_KM) / SATURN_RING.outerRadiusKm,
     );
-    // camPosLocal is mocked — pin the PACKED value to the mock's return, the
-    // pairing/frame invariant is covered by the dedicated test above.
+    // camPosLocal is mocked: pin the PACKED value to the mock's return.
     expect(u[20]).toBe(Math.fround(MOCK_CAM_LOCAL[0]));
     expect(u[21]).toBe(Math.fround(MOCK_CAM_LOCAL[1]));
     expect(u[22]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));

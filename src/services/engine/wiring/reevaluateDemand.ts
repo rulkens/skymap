@@ -16,77 +16,46 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { QueueEntry } from '../../../@types/loading/QueueEntry';
 
-/**
- * Evaluate a specific set of rows against `state`. The public
- * `reevaluateDemand` calls this with the real `state.assetRows`; tests call it
- * with a stub array to exercise the guarded loop in isolation.
- */
+/** Evaluate `rows` against `state`; tests pass a stub array to exercise the guarded loop. */
 export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]): void {
   const ctx = buildDemandCtx(state);
   const queue = state.subsystems.assetQueue;
-  // Collected across the whole walk and submitted in ONE call at the end.
-  // Enqueueing inside the loop would start the first `ASSET_QUEUE_CONCURRENCY`
-  // demanded rows the instant they were walked — in composed-row array order,
-  // before a better-ranked row further down the table had even been evaluated —
-  // leaving `priority` to govern only the slots that free later. See
-  // `PriorityQueue.enqueueMany`.
+  // Submitted in ONE call at the end: enqueueing inside the loop would start the first
+  // `ASSET_QUEUE_CONCURRENCY` demanded rows in array order, before a better-ranked row
+  // further down was evaluated (`PriorityQueue.enqueueMany`).
   const batch: QueueEntry<void>[] = [];
   for (const row of rows) {
     try {
       const { slot } = row;
       const kind = slot.state().kind;
       const lastRequest = slot.lastRequest();
-      // The queue dedups by string key. `AssetKey` is a union of numeric
-      // `Source` codes and string keys, and no string `AssetKey` is a bare
-      // numeral, so stringifying cannot collide the two spaces.
+      // The queue dedups by string key; no string `AssetKey` is a bare numeral, so
+      // stringifying cannot collide it with a numeric `Source` code.
       const queueKey = String(row.key);
-      // ── Enqueue edge ─────────────────────────────────────────────────────
-      // Queue only an idle slot whose demand is true. A loading/ready/error
-      // slot is left alone — see the module docstring on why the idle-guard
-      // lives here rather than inside load() (which stays a re-fetch
-      // primitive).
+      // Enqueue edge: only an idle slot with demand; load() stays a re-fetch primitive.
       if (kind === 'idle' && row.demand(ctx)) {
         batch.push({
           key: queueKey,
-          // NEGATED on purpose. `popHighestPriority` pops the LARGEST
-          // `priority` because the queue's other caller ranks galaxy
-          // thumbnails by on-screen pixel size, where bigger-first is the
-          // natural reading. The wiring rank table reads the other way round
-          // (lower is fetched first), so the flip belongs here, at the one
-          // site whose table disagrees, rather than inside a queue that would
-          // then be wrong for thumbnails.
+          // NEGATED: `popHighestPriority` pops the LARGEST (thumbnails rank by pixel
+          // size), but the wiring table fetches lower first; flip at this one site.
           priority: -row.priority,
           fetcher: async () => {
-            // The SAME idle + demand predicates the enqueue decision used,
-            // evaluated at the other moment that matters: the queue puts a gap
-            // between decision and action, and during that gap the drift edge's
-            // direct `.load()` may have claimed the slot, or a tier swap may
-            // have excluded a source whose file does not exist. One predicate
-            // pair at two moments, not two copies of a policy.
+            // Re-check at fetch time: in the queue gap the drift edge's `.load()` may
+            // have claimed the slot, or a tier swap excluded a source with no file.
             if (slot.state().kind !== 'idle' || !row.demand(buildDemandCtx(state))) return;
-            // `state` is live, so building the request HERE yields the request
-            // for the tier in force when the fetch actually runs, not the one
-            // current when it was queued.
+            // Built HERE so it carries the tier in force when the fetch runs, not when queued.
             await slot.load(row.req(state.tier));
           },
           onResult: () => {},
         });
       }
-      // ── Drop edge ────────────────────────────────────────────────────────
-      // An idle slot whose demand went false may still be sitting in the
-      // queue, unstarted. Nothing else can retract it: `release()` only ever
-      // runs on a slot holding a committed value (see below), and a pending
-      // entry's slot is idle. See the module docstring for why this is its
-      // own edge.
+      // Drop edge: an idle slot whose demand went false may still sit unstarted in the
+      // queue, and `release()` only runs on a committed slot, so nothing else retracts it.
       else if (kind === 'idle') {
         queue.drop(queueKey);
       }
-      // ── Evict edge ───────────────────────────────────────────────────────
-      // The optional `release` predicate (omitted ⇒ never evict, so every
-      // load-once row is untouched) is separate from `demand` to encode
-      // hysteresis — load inside X, evict outside 2X (see AssetWiringRow). It
-      // drops the slot to idle, which hands it to the drop edge above on the
-      // next pass.
+      // Evict edge: `release` is separate from `demand` to encode hysteresis (load
+      // inside X, evict outside 2X); omitted ⇒ never evict. Idle slots go to the drop edge.
       else if (
         (kind === 'ready' || kind === 'error') &&
         slot.committed() !== null &&
@@ -94,14 +63,9 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       ) {
         slot.release();
       }
-      // ── Drift edge ───────────────────────────────────────────────────────
-      // A non-idle slot loaded with a request the row no longer asks for
-      // reloads in place. Ordered after the evict edge so a row with both
-      // reasons evicts rather than re-fetching at a distance it is leaving.
-      // Called directly, not queued — see the module docstring.
-      // A null `lastRequest()` is never drift: a slot that has never loaded has
-      // nothing to have drifted from. Tested before `req(tier)`, which
-      // allocates on every row of every frame.
+      // Drift edge: reload in place, directly, not queued. After evict so a row with
+      // both reasons evicts. Null `lastRequest()` is never drift, and is tested before
+      // `req(tier)`, which allocates on every row of every frame.
       else if (
         row.demand(ctx) &&
         lastRequest !== null &&
@@ -110,15 +74,11 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
         void slot.load(row.req(state.tier));
       }
     } catch (err) {
-      // Contain the failure to this row so later rows still evaluate: a bad
-      // predicate, release or drift reload costs one asset, not the whole table.
+      // A bad predicate costs one asset, not the whole table.
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }
-  // Outside the per-row guard on purpose: everything policy-shaped (the demand
-  // predicate, release, drift reload) ran inside it, and all that is left here is
-  // a map insert per entry plus the queue's own scheduling — a throw from that
-  // is an engine bug worth surfacing, not one row's failure to contain.
+  // Outside the per-row guard: a throw from queue scheduling is an engine bug to surface.
   queue.enqueueMany(batch);
 }
 

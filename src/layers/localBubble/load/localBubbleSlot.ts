@@ -1,8 +1,4 @@
-/**
- * localBubbleSlot — factory for the shell's asset slot: its own fetcher and
- * its own renderer target. Construction-pure — builds and returns; the
- * Layer's asset row carries it.
- */
+/** localBubbleSlot — factory for the shell's asset slot (own fetcher and renderer target). */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { localBubbleFetcher } from './localBubbleFetcher';

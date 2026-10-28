@@ -1,19 +1,12 @@
 /**
- * produceSceneBodyCaptions — candidate math for the true-scale foreground
- * bodies core captions (Earth, the planets), read beside the missions Layer's
- * craft captions where a case needs a mesh body, and the blackHoles Layer's
- * Galactic Centre caption where a case needs a control whose reach is not the
- * solar system's. The seeded
- * stars and the Sun moved to the star Layer's `produceStarCaptions` —
- * `produceStarCaptions.test.ts` covers their kind routing, pick ids and
- * clip-channel split; the shared fade-band / occlusion / registry-ramp
- * mechanics stay covered here, once, on core's bodies.
+ * produceSceneBodyCaptions — candidate math for the true-scale foreground bodies core captions (Earth,
+ * the planets), read beside the missions Layer's craft captions where a case needs a mesh body, and the
+ * blackHoles Layer's Galactic Centre caption where a case needs a control whose reach is not the
+ * solar system's. Seeded-star kind routing is `produceStarCaptions.test.ts`'s; the shared fade-band /
+ * occlusion / registry-ramp mechanics are covered once here.
  *
- * Cases moved from `labelsNearPass.test.ts` (Task 4, spec §12): the
- * producer emits EVERY candidate caption every frame — declutter and the
- * temporal envelope moved to the director — so each case now reads the
- * candidate's `fadeAlpha` (the producer's TARGET) instead of asking whether
- * the id survived into the drawn/decluttered set.
+ * The producer emits EVERY candidate caption every frame (declutter and the temporal envelope are the
+ * director's), so each case reads the candidate's `fadeAlpha`, the producer's TARGET.
  */
 
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
@@ -64,7 +57,6 @@ function worldPosOf(id: string): Vec3 {
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
-// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
 const SCENE_BODIES = positionedBodiesOf(
   [...SCENE_PLANETS, ...SCENE_MESH_BODIES, ...Object.values(SEEDED_STAR_CATALOGS).flat()],
   deriveBodyStates(CONST_J2000),
@@ -128,7 +120,6 @@ function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined
   return labels.find((l) => l.id === id)?.fadeAlpha;
 }
 
-/** Core's captions and the craft's, from the missions Layer's producer, every item on. */
 function captionsAt(ctx: FrameView): readonly Label2D[] {
   return [
     ...produceSceneBodyCaptions(makeState(), ctx, fadeOf()).labels,
@@ -136,7 +127,6 @@ function captionsAt(ctx: FrameView): readonly Label2D[] {
   ];
 }
 
-/** The Galactic Centre caption, from its own Layer's producer. */
 function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
   return fadeAlphaOf(
     produceBlackHoleCaptions()(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
@@ -205,20 +195,14 @@ describe('produceSceneBodyCaptions', () => {
       pot.worldPos[2],
     ];
 
-    // At the mesh body's own 2-radii standoff — the pose an approach parks at.
     expect(fadeAlphaOf(captionsAt(makeCtx(camAt(2))), PETUNIAS_LABEL_ID)).toBe(0);
-    // Backed off, the same caption is untouched by the rule.
     expect(fadeAlphaOf(captionsAt(makeCtx(camAt(100))), PETUNIAS_LABEL_ID)).toBe(1);
   });
 
   it('holds a seeded reveal caption dark until the approach, leaving an unbanded one lit', () => {
-    // The petunias author `captionRevealM`; Sgr A* — 8 kpc away, so untouched
-    // by a camera nudge measured in Earth-orbit metres, and carrying no reveal
-    // band — is the control read from the SAME two poses, so only the band
-    // can explain a difference. (Earth itself is the wrong control here: the
-    // pot orbits 400 km up, so a camera this close to it is also close enough
-    // to Earth's own disc to overflow Earth's caption — see the viewport-
-    // overflow case above.)
+    // The petunias author `captionRevealM`; Sgr A* (8 kpc away, no reveal band) is the control read from
+    // the SAME two poses, so only the band can explain a difference. Earth is the wrong control: the pot
+    // orbits 400 km up, close enough to Earth's disc to overflow Earth's caption (see the overflow case).
     const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
     const revealMpc =
       SCENE_MESH_BODIES.find((b) => b.id === 'petunias')!.captionRevealM! * SCALE_UNITS.M_TO_MPC;
@@ -226,7 +210,6 @@ describe('produceSceneBodyCaptions', () => {
       makeCtx([pot.worldPos[0] + distMpc, pot.worldPos[1], pot.worldPos[2]]);
     const labelsAt = (distMpc: number): readonly Label2D[] => captionsAt(ctxAt(distMpc));
 
-    // Past twice the reveal distance the pot's name is gone; at it, full.
     expect(fadeAlphaOf(labelsAt(3 * revealMpc), PETUNIAS_LABEL_ID)).toBe(0);
     expect(fadeAlphaOf(labelsAt(revealMpc), PETUNIAS_LABEL_ID)).toBe(1);
     expect(sgrAStarAlpha(makeState(), ctxAt(3 * revealMpc))).toBe(1);
@@ -298,7 +281,6 @@ describe('produceSceneBodyCaptions occlude weight', () => {
   const MOON_LABEL_ID = 'sceneBody-moon';
   const EARTH_POS = worldPosOf(EARTH_LABEL_ID);
 
-  /** Unit vector from `a` to `b`, in the Mpc frame the captions live in. */
   function direction(a: Vec3, b: Vec3): Vec3 {
     const d: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     const n = Math.hypot(d[0], d[1], d[2]);

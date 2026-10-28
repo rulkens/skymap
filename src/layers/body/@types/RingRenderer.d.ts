@@ -1,21 +1,10 @@
 /**
- * RingRenderer — the translucent planetary-ring renderer (Saturn's rings).
- *
- * The other half of the ring system: `texturedBodyRenderer` draws the ring's
- * shadow cast ON the planet; this draws the ring ITSELF — a two-sided
- * translucent annulus in the host body's equatorial plane, textured by a radial
- * alpha strip, with the planet's shadow cast ON the ring (analytic ray-sphere,
- * no shadow map).
- *
- * One shared renderer serves every ring the scene draws (Saturn alone today):
- * its geometry is a ring-agnostic unit disc, and each per-draw `RingUniforms`
- * record punches the hole, rescales for the shadow, and rides the host body's
- * `composeBodyMvp` frame — so `draw` needs no ring identity, just the packed
- * uniforms. `setTexture` swaps in the resident radial strip as an N×1
- * `texture_2d` (never `texture_1d`, which WebKit rejects).
- *
- * Extends `Renderer` for the `label` + `destroy` contract every renderer
- * satisfies.
+ * RingRenderer: the translucent planetary ring (Saturn's) as a two-sided annulus
+ * in the host's equatorial plane, textured by a radial alpha strip, with the
+ * planet's shadow cast analytically on it. One ring-agnostic unit disc serves
+ * every ring; `RingUniforms` carries the hole, shadow rescale and
+ * `composeBodyMvp` frame. The strip is an N x1 `texture_2d` (WebKit rejects
+ * `texture_1d`).
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';

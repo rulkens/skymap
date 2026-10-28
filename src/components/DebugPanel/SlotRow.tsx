@@ -1,21 +1,9 @@
 /**
- * SlotRow — one asset slot's line in the debug panel: fetch rank, name,
- * lifecycle state, byte progress, start/finish offsets, and the reload/cancel
- * actions.
- *
- * ### Why two timestamps rather than just "ready"
- *
- * Terminal state alone cannot answer "did the queue fetch these in rank
- * order?". A 26 MB catalog dequeued first still turns green after a 12 MB one,
- * so a panel showing only completion makes a correctly-ordered queue look
- * broken. The `start → done` pair separates the two orderings: `start` is when
- * the bounded queue popped the entry and called `load()`
- * (`slot.startedAtMs()`), `done` is the commit (`state.loadedAtMs`). Both are
- * shown as seconds since the FIRST slot started, so the column reads as a
- * timeline rather than as wall-clock noise.
- *
- * The request payload rides in the row's `title` tooltip rather than a second
- * line, so a busy loading session doesn't blow out the panel's height.
+ * SlotRow — one asset slot's debug-panel line: rank, name, state, byte progress,
+ * start/done offsets, reload/cancel. Two timestamps because completion alone
+ * cannot show queue order (a 26 MB catalog popped first still finishes after a
+ * 12 MB one): `start` is `slot.startedAtMs()`, `done` is `state.loadedAtMs`, both
+ * in seconds since the FIRST slot started. The request rides in the `title` tooltip.
  */
 
 import { useState, type ReactNode } from 'react';
@@ -38,9 +26,7 @@ export type SlotRowProps = {
 function SlotRow({ name, state, slot, rank, timelineOriginMs }: SlotRowProps): ReactNode {
   const [hover, setHover] = useState(false);
   const colorClass = loadStateColorClass(state.kind);
-  // The request payload (`req`) is `unknown` on every non-idle state; we
-  // stringify defensively and truncate so a fat request object can't blow
-  // out the panel width.
+  // `req` is `unknown`: stringify defensively and truncate to keep the panel narrow.
   const reqJson =
     state.kind === 'idle'
       ? '—'
@@ -103,12 +89,7 @@ function describe(state: LoadState<unknown>): string {
   }
 }
 
-/**
- * `start → done`, both in seconds from the timeline origin. An unstarted slot
- * renders blank (there is no order to report yet) and an in-flight one renders
- * its start with an open-ended arrow, so a row that began first but is still
- * downloading reads as early rather than as missing.
- */
+/** `start → done` in seconds from the timeline origin; in-flight shows `start→…`, unstarted is blank. */
 function timing(
   slot: AssetSlot<unknown, unknown>,
   state: LoadState<unknown>,

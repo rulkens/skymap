@@ -77,7 +77,6 @@ describe('aerialPerspectivePass.enabled', () => {
 
     expect(pass.enabled(STATE, makeCtx(EYE_INSIDE_M), view)).toBe(true);
 
-    // Outside, the proxy-mesh `atmosphere-shell` row owns this body instead.
     expect(pass.enabled(STATE, makeCtx(EYE_OUTSIDE_M), view)).toBe(false);
   });
 });

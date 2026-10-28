@@ -1,11 +1,10 @@
 /**
  * encodeAtmosphereAerialPerspective — the per-frame froxel-volume bake for the
- * one body whose shell encloses the camera: the frame's
- * ONLY write of that body's shell uniform record, sharing `bodyRowSlabs`'
- * `insideAtmosphere` row and so the same `slab.vp` the apply draw reads. No
- * inside body ⇒ no pass, no timing claim (mirrors `encodeAtmosphereSkyView`).
- * The row's band carries no foreground-distance gate and the draw list does,
- * so an open line can still find no entry: that too bakes nothing.
+ * one body whose shell encloses the camera: the frame's ONLY write of that body's
+ * shell uniform record, from `bodyRowSlabs`' `insideAtmosphere` row, so the same
+ * `slab.vp` the apply draw reads. No inside body ⇒ no pass, no timing claim. The
+ * row's band has no foreground-distance gate but the draw list does, so an open
+ * line can still find no entry: that bakes nothing too.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';

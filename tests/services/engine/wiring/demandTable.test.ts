@@ -1,45 +1,13 @@
 /**
  * demandTable — data-driven regression net for `reevaluateDemand`.
  *
- * The scattered-trigger consolidation (Task 10) puts every asset's load policy
- * in the composed asset rows. This file is the regression net: one test that drives
- * `reevaluateDemand(state)` against the REAL registry for representative
- * engine states, then asserts the EXACT set of slot `load` spies that fired.
- * A future edit that moves a predicate or breaks a row lands here as a
- * failing test before it silently starves an asset of its load trigger.
- *
- * ### Stub-state shape
- *
- * `buildDemandCtx(state)` reads:
- *   - `state.settings`             — predicate leaf values, including each
- *                                    galaxy catalog's `galaxyCatalogs.items[id].enabled`
- *                                    (the intent bit galaxy catalog demand reads)
- *   - `state.tier`                 — passed to `req(tier)` by `reevaluateDemand`
- *   - `state.ui`                   — `UiState`; `paletteOpen` is the pgcAlias trigger
- *   - `state.slotsByKey`           — `slotState` lookup target
- *
- * All other `EngineState` fields are irrelevant to the demand loop; they
- * are `as unknown as` cast so tests don't need a fully-constructed engine.
- *
- * ### famousGalaxiesMeta boot-case modelling
- *
- * `famousGalaxiesMeta.demand(ctx)` is true when `slotState(Famous) !== 'idle'`. At boot
- * the Famous POINT row evaluates first (Famous is enabled), finds the
- * slot idle, and loads it; the loop's idle-guard then leaves it alone, but the
- * stub's `load()` flips its reported kind idle → 'loading'. The later
- * famousGalaxiesMeta row sees `slotState(Famous) === 'loading'` and demands. The stub
- * auto-transition (see `stubSlot`) reproduces this two-phase truth in a single
- * `reevaluateDemand` pass — a stub frozen at one kind could only satisfy one of
- * the two rows under the idle-guard.
- *
- * ### MCPM at boot
- *
- * The demand predicate for `mcpm` reads
- * `ctx.settings.cosmicWebDensity.items.mcpm.enabled`. The Layer's `initialState`
- * literal seeds that record from boot, so `mcpm`'s enabled bit is `true` at
- * boot — symmetric with the `galaxyCatalogs.items[id].enabled` seed that
- * galaxy catalog demand reads. MCPM therefore IS in the boot demand set —
- * `polyphorm-2mrs` is NOT (seeded `enabled: false`).
+ * Drives `reevaluateDemand(state)` against the REAL composed asset rows for representative engine
+ * states and asserts the EXACT set of slot `load` spies that fired, so a moved predicate or broken row
+ * fails here before it silently starves an asset. `buildDemandCtx` reads `state.settings` (incl.
+ * `galaxyCatalogs.items[id].enabled`, `cosmicWebDensity.items[id].enabled`), `state.tier`, `state.ui`
+ * (`paletteOpen` triggers pgcAlias) and `state.slotsByKey`; the rest is `as unknown as` cast.
+ * famousGalaxiesMeta needs a two-phase boot, reproduced by `stubSlot` (see there). mcpm boots enabled,
+ * polyphorm-2mrs does not.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -69,26 +37,12 @@ import { structureAssetRows } from '../../../../src/layers/structure/load/struct
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
-// ── Stub slot factory ────────────────────────────────────────────────────────
-
 type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> };
 
-/**
- * Stub slot whose `load` is a vi.fn spy; `state()` returns a controllable
- * kind so `slotState` reads resolve correctly in demand predicates.
- *
- * Calling `load()` flips the reported kind from 'idle' to 'loading' — the same
- * transition the real slot makes. This is what lets a single `reevaluateDemand`
- * pass model the two-phase boot truth: the Famous point row sees an idle slot
- * and loads it (under the loop's idle-guard), then the later famousGalaxiesMeta row
- * sees the now-'loading' Famous slot and demands. A stub frozen at 'loading'
- * would suppress the point row's load under the idle-guard; a stub frozen at
- * 'idle' would suppress famousGalaxiesMeta. The transition models reality and resolves
- * both.
- *
- * Pass a non-idle `kind` (e.g. 'error') to pin a slot that was NOT freshly
- * loaded this pass — those don't auto-transition (already past idle).
- */
+/** Stub slot whose `load` is a spy and whose `state()` kind is controllable. `load()` flips
+ *  idle→'loading' like the real slot, so one pass models the two-phase boot (the Famous point row loads
+ *  it under the idle-guard, then the famousGalaxiesMeta row sees it 'loading'); a stub frozen at either
+ *  kind would starve one row. A non-idle `kind` (e.g. 'error') does not auto-transition. */
 function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
   let current = kind;
   const load = vi.fn(() => {
@@ -109,13 +63,6 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
   };
 }
 
-// ── Realistic settings stubs ─────────────────────────────────────────────────
-
-/**
- * The subset of EngineSettingsState that demand predicates read. Constructed
- * as a partial and cast through `unknown` — predicates only touch the leaves
- * they declare, so the full ~12-field bag is unnecessary in tests.
- */
 type SettingsLeaves = {
   structures?: {
     enabled: boolean;
@@ -123,34 +70,14 @@ type SettingsLeaves = {
   };
 };
 
-/**
- * Volume-field params keyed by id. Demand predicates read
- * `ctx.settings.cosmicWebDensity.items[id].enabled`, so `makeState` injects this
- * record directly into the settings bag.
- */
 type VolumeFieldLeaves = EngineSettingsState['cosmicWebDensity']['items'];
 
-/**
- * Default-at-boot volume fields, matching the Layer's `initialState` literal:
- * mcpm enabled, the other two disabled. Taken from `INITIAL_SETTINGS` rather
- * than hand-copied, so a drift in the real defaults fails here too.
- */
+/** Default-at-boot volume fields from `INITIAL_SETTINGS` (mcpm enabled, others disabled), so a drift
+ *  in the real defaults fails here too. */
 const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = INITIAL_SETTINGS.cosmicWebDensity.items;
 
-/**
- * Per-galaxy catalog visibility keyed by galaxy catalog id. Galaxy catalog demand reads
- * `ctx.settings.galaxyCatalogs.items[id]?.enabled` — intent, the same field
- * `setSourceVisible` writes — so `makeState` injects this record into
- * `settings.galaxyCatalogs.items`. An absent row reads as not enabled.
- */
 type GalaxyCatalogItemLeaves = Partial<Record<GalaxyCatalogId, { enabled: boolean }>>;
 
-/**
- * Default-at-boot settings: all structure categories visible.
- *
- * These match the engine's real initial state as documented in
- * `data/defaults.ts` and `EngineSettingsState`.
- */
 const BOOT_SETTINGS: SettingsLeaves = {
   structures: {
     enabled: true,
@@ -163,27 +90,17 @@ const BOOT_SETTINGS: SettingsLeaves = {
   },
 };
 
-/**
- * Default-at-boot galaxy catalog items, matching the Layer's `initialState`
- * literal: every catalog enabled except the DESI patches
- * (DesiDeep / DesiWedge / DesiSgw).
- */
 const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   sdss: { enabled: true },
   '2mrs': { enabled: true },
   glade: { enabled: true },
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
-  // DesiDeep + DesiWedge + DesiSgw boot hidden — specialist DESI drill
-  // patches, not part of the default all-sky scene — so their
-  // point rows are NOT demanded at boot. Symmetric with polyphorm-2mrs among
-  // the volume fields: boots `enabled: false` → absent from the boot set.
+  // DesiDeep/Wedge/Sgw boot hidden (specialist drill patches), so their point rows are NOT demanded at boot.
   desiDeep: { enabled: false },
   desiWedge: { enabled: false },
   desiSgw: { enabled: false },
 };
-
-// ── Stub state builder ───────────────────────────────────────────────────────
 
 type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
 type NamedSlotOverrides = Partial<{
@@ -194,22 +111,13 @@ type NamedSlotOverrides = Partial<{
 
 type MakeStateOptions = {
   settings?: SettingsLeaves;
-  /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot. */
   galaxyCatalogItems?: GalaxyCatalogItemLeaves;
-  /** Volume-field params; injected into `settings.cosmicWebDensity.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
-  /** `ui.paletteOpen` — the pgcAlias row's demand trigger. Defaults to closed. */
   paletteOpen?: boolean;
-  /** Per-source point slots. Defaults to a fresh idle stub for every Source. */
   pointSlots?: PointSlotOverrides;
-  /** Named asset slots. Each defaults to a fresh idle stub. */
   namedSlots?: NamedSlotOverrides;
 };
 
-/**
- * All source codes that appear in the asset rows as point rows, each needing a
- * stub slot on the runtime its rows read.
- */
 const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.SDSS,
   Source.TwoMRS,
@@ -231,8 +139,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     namedSlots = {},
   } = opts;
 
-  // Build the points map: every source gets either the caller's override or a
-  // fresh idle stub.
   const points = new Map<SourceType, AssetSlot<unknown, unknown>>(
     ALL_POINT_SOURCES.map((src) => [
       src,
@@ -242,7 +148,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   const structureRuntime = {
     slot: namedSlots.structureCatalog ?? stubSlot(),
   } as unknown as StructureRuntime;
-  // The Layer's rows carry these same slots.
   const galaxyRuntime = {
     points,
     famousGalaxiesMeta: namedSlots.famousGalaxiesMeta ?? stubSlot(),
@@ -256,11 +161,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;
 
   const state = {
-    // tier feeds `req(state.tier)`; it lives in its own root field on EngineState.
     tier: 'medium',
-    // Inject galaxy catalog + volume items directly into the settings bag — demand
-    // predicates read `ctx.settings.galaxyCatalogs.items[id]?.enabled` and
-    // `ctx.settings.cosmicWebDensity.items[id].enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       galaxyCatalogs: { items: galaxyCatalogItems },
@@ -300,13 +201,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   return state;
 }
 
-// ── Key → spy collector ──────────────────────────────────────────────────────
-
-/**
- * The set of `AssetKey`s whose `load` spy has fired at least once. The mapping
- * from spy to key is `state.slotsByKey` — we inspect `load.mock.calls.length > 0`
- * for each stub (the mesh rows' real slots are never demanded here).
- */
 function collectFired(state: EngineState): Set<AssetKey> {
   const fired = new Set<AssetKey>();
 
@@ -317,28 +211,11 @@ function collectFired(state: EngineState): Set<AssetKey> {
   return fired;
 }
 
-/**
- * Drive `reevaluateDemand(state)` to a fixpoint and report which rows fired.
- *
- * Two things this has to do that a naive single synchronous call would miss.
- *
- * **Drain.** `reevaluateDemand` doesn't call `slot.load()` itself; it
- * enqueues, and the queue starts at most `ASSET_QUEUE_CONCURRENCY` fetchers
- * before the call returns. Reading the spies straight after one call would
- * report only the first two rows and turn this demand table into a concurrency
- * table. The drain settles in microtasks because the stub `load` is synchronous.
- *
- * **Re-run.** `famousGalaxiesMeta`'s demand reads "the Famous slot is no longer idle",
- * so it is satisfied only after the Famous row has actually STARTED. The queue
- * defers that start past the pass that enqueued it whenever Famous is outranked
- * by two other demanded rows, which is the case at full boot. In production the
- * frame loop re-runs the whole evaluation every frame and picks it up on the
- * next one; here we re-run until nothing new fires, so the table keeps stating
- * the settled demand set rather than a one-pass snapshot.
- *
- * The loop terminates because spies never un-fire: the set only grows, and it
- * is bounded by the number of rows.
- */
+/** Drive `reevaluateDemand(state)` to a fixpoint and report which rows fired. Drains the asset queue
+ *  (it starts at most `ASSET_QUEUE_CONCURRENCY` fetchers per call, so one read would give a
+ *  concurrency table) and re-runs until nothing new fires: famousGalaxiesMeta is satisfied only after
+ *  the Famous row has STARTED, which the queue may defer past the enqueuing pass (production re-runs
+ *  every frame). Terminates because spies never un-fire. */
 async function firedKeys(state: EngineState): Promise<Set<AssetKey>> {
   let fired = new Set<AssetKey>();
   for (;;) {
@@ -350,30 +227,16 @@ async function firedKeys(state: EngineState): Promise<Set<AssetKey>> {
   }
 }
 
-// ── Test cases ───────────────────────────────────────────────────────────────
-
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe('reevaluateDemand demand-table regression', () => {
-  /**
-   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all boot enabled.
-   * DesiDeep + DesiWedge + DesiSgw boot `enabled: false`, so their point
-   * rows are NOT demanded at boot — symmetric with polyphorm-2mrs among the
-   * volume fields. Famous slot is modelled
-   * as 'loading' (it was just triggered by its own demand row before
-   * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
-   * loads because every structure category is visible by default. mcpm IS
-   * demanded: the predicate checks `ctx.settings.cosmicWebDensity.items.mcpm.enabled`,
-   * which boots true. polyphorm-2mrs is NOT (seeded enabled:false).
-   * pgcAlias: palette closed. `hiResFamous` demands
-   * unconditionally — its "fetch" is a GPU allocation, not a download.
-   */
+  /** Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas enabled; DesiDeep/Wedge/Sgw not demanded. Famous is
+   *  'loading' by the time famousGalaxiesMeta evaluates, so it is demanded; structureCatalog loads (every
+   *  category visible); mcpm demanded (boots true), polyphorm-2mrs not; pgcAlias not (palette closed);
+   *  `hiResFamous` demands unconditionally (its fetch is a GPU allocation). */
   it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + hiResFamous + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {
-    // Famous starts idle: its point row loads it (idle-guard passes), flipping
-    // the stub to 'loading', so the later famousGalaxiesMeta row sees Famous non-idle
-    // and demands. This is the honest two-phase boot model.
     const state = makeState();
 
     const fired = await firedKeys(state);
@@ -393,15 +256,8 @@ describe('reevaluateDemand demand-table regression', () => {
     );
   });
 
-  /**
-   * Structures all hidden: every category's ring AND label set to false in
-   * `structures.items`. Bug-fix pin: structureCatalog must NOT appear. This
-   * verifies the consolidated predicate reading the per-category item rows.
-   *
-   * Famous starts idle and is enabled, so its point row loads it and
-   * famousGalaxiesMeta follows (the two-phase boot). The pin under test is the cluster
-   * predicate, asserted independently below.
-   */
+  /** Structures all hidden (every ring AND label false): structureCatalog must NOT appear; Famous still
+   *  loads and famousGalaxiesMeta follows. */
   it('structures all hidden: no structureCatalog (bug-fix pin)', async () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
@@ -419,68 +275,42 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = await firedKeys(state);
 
-    // structureCatalog must be absent.
     expect(fired.has('structureCatalog')).toBe(false);
-    // The three visible galaxy catalogs are still demanded.
     expect(fired.has(Source.SDSS)).toBe(true);
     expect(fired.has(Source.TwoMRS)).toBe(true);
     expect(fired.has(Source.Glade)).toBe(true);
     expect(fired.has(Source.FamousGalaxy)).toBe(true);
   });
 
-  /**
-   * An all-failed boot: every galaxy catalog slot is driven to 'error'. The
-   * errored rows are still demanded (still visible) but NOT idle, so the
-   * idle-guard skips them — the no-retry-storm behaviour (a re-eval must not
-   * abort + re-fetch failed galaxy catalogs). famousGalaxiesMeta still demands
-   * because Famous slot !== 'idle'; structureCatalog is still demanded.
-   */
+  /** An all-failed boot: errored rows are still demanded but NOT idle, so the idle-guard skips them (no
+   *  retry storm on re-eval). famousGalaxiesMeta still demands (Famous !== 'idle'). */
   it('errored galaxy catalogs are not retried on re-evaluation', async () => {
     const pointSlots: PointSlotOverrides = {
       [Source.SDSS]: stubSlot('error'),
       [Source.TwoMRS]: stubSlot('error'),
       [Source.Glade]: stubSlot('error'),
       [Source.Milliquas]: stubSlot('error'),
-      // Famous errored too — but it's curated, not a GALAXY_CATALOG_POINT_SOURCE.
-      // famousGalaxiesMeta demands because Famous slot !== 'idle'.
       [Source.FamousGalaxy]: stubSlot('error'),
     };
     const state = makeState({ pointSlots });
 
     const fired = await firedKeys(state);
 
-    // famousGalaxiesMeta is demanded (Famous slot !== 'idle').
     expect(fired.has('famousGalaxiesMeta')).toBe(true);
-    // structureCatalog still demanded (structure visibility unchanged).
     expect(fired.has('structureCatalog')).toBe(true);
-    // The errored galaxy catalog point rows are demanded (still visible) but NOT idle,
-    // so the idle-guard leaves them alone — no retry storm on re-evaluation.
     expect(fired.has(Source.SDSS)).toBe(false);
     expect(fired.has(Source.TwoMRS)).toBe(false);
     expect(fired.has(Source.Glade)).toBe(false);
-    // Milliquas is visible (enabled in settings) but errored (non-idle) like
-    // the other galaxy catalogs, so the idle-guard skips it too — no retry storm.
     expect(fired.has(Source.Milliquas)).toBe(false);
-    // Famous's point row is demanded but errored (non-idle) — not re-loaded.
     expect(fired.has(Source.FamousGalaxy)).toBe(false);
   });
 
-  /**
-   * Companion join in a single pass: when ONLY Famous is enabled (its
-   * galaxy catalog items row set, all other galaxy catalogs + categories off), one
-   * `reevaluateDemand` loads BOTH the Famous point slot AND famousGalaxiesMeta.
-   * The Famous point row
-   * evaluates first, finds the slot idle, and loads it — which synchronously
-   * flips the stub to 'loading' (mirroring the real slot's load-started
-   * dispatch). The later famousGalaxiesMeta row then reads `slotState(Famous) ===
-   * 'loading'` and demands. This pins the ordering fact `setSourceVisible`
-   * relies on: toggling Famous visible fetches both in the same pass.
-   */
+  /** Companion join in one pass: with ONLY Famous enabled, one `reevaluateDemand` loads BOTH the Famous
+   *  point slot and famousGalaxiesMeta (the point row's load flips the stub to 'loading', which the later
+   *  row reads). `setSourceVisible` relies on this ordering. */
   it('famous-only visible: one pass loads Famous + famousGalaxiesMeta together', async () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
-      // Hide every structure category so structureCatalog stays out of the set
-      // and the assertion is purely the Famous companion join.
       structures: {
         enabled: true,
         items: {
@@ -496,8 +326,6 @@ describe('reevaluateDemand demand-table regression', () => {
       ...BOOT_VOLUME_FIELDS,
       mcpm: { ...BOOT_VOLUME_FIELDS.mcpm, enabled: false },
     };
-    // Only Famous carries an enabled row — every other galaxy catalog is absent and
-    // reads as not enabled.
     const state = makeState({
       settings,
       volumeFields,
@@ -506,7 +334,6 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = await firedKeys(state);
 
-    // `hiResFamous` demands unconditionally.
     expect(fired).toEqual(
       new Set<AssetKey>([Source.FamousGalaxy, 'famousGalaxiesMeta', 'hiResFamous']),
     );

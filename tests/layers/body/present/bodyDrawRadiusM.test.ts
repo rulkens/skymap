@@ -22,19 +22,16 @@ describe('bodyDrawRadiusM', () => {
 
   it("returns Saturn's ring outer edge", () => {
     const saturn = findPlanet('saturn');
-    // Hand-computed from sceneRings.ts:36 — outerRadiusKm 140_220 → metres.
+    // Hand-computed from sceneRings: outerRadiusKm 140_220 → metres.
     const result = bodyDrawRadiusM(saturn);
     expect(result).toBe(140_220_000);
     expect(result).toBeGreaterThan(outerBoundRadiusM(saturn.surface));
   });
 
   it("returns Earth's atmosphere top, not its cloud shell — the cloud shell still comes from the envelope row", () => {
-    // Derived from the same table bodyDrawRadiusM reads (atmosphereParams.ts),
-    // not a restated literal — F2's relief moved Earth's inner bound off the
-    // datum. Must beat the cloud shell (BODY_DRAW_ENVELOPES's 'earth' row,
-    // footprint * radiusRatio) — a missing km->m conversion on the
-    // atmosphere branch would make the cloud shell win instead, a 1000x
-    // wrong near plane.
+    // Derived from the table bodyDrawRadiusM reads, not a restated literal. Must beat the cloud shell
+    // (BODY_DRAW_ENVELOPES 'earth', footprint * radiusRatio): a missing km->m on the atmosphere branch
+    // would let the cloud shell win, a 1000x wrong near plane.
     const result = bodyDrawRadiusM(SCENE_EARTH);
     expect(result).toBe(ATMOSPHERE_PARAMS.earth!.atmosphereTopKm * SCALE_UNITS.KM_TO_M);
     const cloudShellM = outerBoundRadiusM(SCENE_EARTH.surface) * CLOUD_SHELL_PARAMS.radiusRatio;

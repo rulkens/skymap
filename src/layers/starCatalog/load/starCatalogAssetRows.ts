@@ -1,9 +1,6 @@
 /**
- * The Layer's authored asset rows: one demand+req row per streamed survey
- * catalog (today, Gaia alone — the three seeded catalogs ship no `.bin`), plus
- * the famous-star meta sidecar. Each `slot` is one `create` already minted, so
- * core folds companions over these and core's own rows once without ever
- * building one.
+ * The Layer's authored asset rows: one per streamed survey catalog (Gaia alone;
+ * the seeded catalogs ship no `.bin`), plus the famous-star meta sidecar.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -35,9 +32,7 @@ export function starCatalogAssetRows(runtime: StarCatalogRuntime): readonly Asse
 
   return [
     ...surveyRows,
-    // Eager rather than a companion join: the famous stars are a seeded
-    // catalog compiled into the bundle, so there is no sibling `.bin` to key
-    // demand off, and no tier to embed in the request either.
+    // Eager, not a companion join: seeded into the bundle, so no sibling `.bin` to key off.
     {
       key: 'famousStarsMeta',
       slot: runtime.famousStarsMeta,

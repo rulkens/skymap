@@ -16,13 +16,10 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
   return {
     settings: state.settings,
     ui: state.ui,
-    // An absent slot has never been asked to load — exactly what `idle` means.
     slotState: (k: AssetKey): LoadState<unknown>['kind'] =>
       state.slotsByKey.get(k)?.state().kind ?? 'idle',
-    // Previous frame's DISPLAYED world eye, in Mpc, derived through the SAME
-    // `assembleOrbitCamera` call shape the frame runs for `drawCamPos`, so a
-    // proximity predicate's read agrees with the draw camera. Demand reevaluation
-    // is a read at rest, so the steady orientation frame is the correct basis.
+    // Previous frame's DISPLAYED world eye, in Mpc, via the same `assembleOrbitCamera`
+    // call shape as `drawCamPos`; a read at rest, so the steady orientation frame.
     cameraPosMpc: assembleOrbitCamera(
       liveWorldPose(state),
       state.cameraRuntime.outputs.projection,

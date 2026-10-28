@@ -1,8 +1,6 @@
 /**
- * The Layer's one asset row — demand + request only; its `slot` is the one
- * `create` already minted. Distance-gated on the camera's
- * proximity to the Sun: the ~11 MB `.shell` file stays off the boot path
- * until the camera nears the solar neighbourhood.
+ * The Layer's one asset row. Distance-gated on the camera's proximity to the Sun:
+ * the ~11 MB `.shell` file stays off the boot path until the camera nears it.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';

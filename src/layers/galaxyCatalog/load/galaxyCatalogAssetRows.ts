@@ -1,8 +1,4 @@
-/**
- * The Layer's authored asset rows — demand + request only; every `slot` is one
- * `create` already minted, so core folds companions over these and
- * core's own rows once (Ruling 10) without ever building one.
- */
+/** The Layer's authored asset rows: demand + request only; every `slot` comes from the runtime. */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
@@ -19,7 +15,6 @@ import { tierTarget } from '../../../data/tierTargets';
 import type { Tier } from '../../../@types/data/Tier';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
 
-/** One demand+req row per galaxy-catalog entry, derived from the fields it already carries. */
 function pointRow(
   runtime: GalaxyCatalogRuntime,
   entry: GalaxyCatalogRegistryEntry,
@@ -46,8 +41,7 @@ export function galaxyCatalogAssetRows(
   return [
     ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, SOURCE_REGISTRY[code])),
 
-    // Loads once the Famous slot leaves `idle`, so the InfoCard text rides in
-    // alongside the binary rather than racing ahead of it.
+    // Loads once the Famous slot leaves `idle`.
     {
       key: 'famousGalaxiesMeta',
       slot: runtime.famousGalaxiesMeta,
@@ -64,9 +58,8 @@ export function galaxyCatalogAssetRows(
       priority: 90, // last: nothing renders from it, and it tolerates a wait
     },
 
-    // `priority: 1` puts a synchronous GPU allocation at the head of the bounded
-    // queue ahead of every download — it holds its pipe for microseconds, and the
-    // alternative is a second "allocate outside the queue" mechanism for one row.
+    // `priority: 1`: a synchronous GPU allocation that holds its pipe for microseconds,
+    // so it heads the queue rather than needing a second mechanism.
     {
       key: 'hiResFamous',
       slot: runtime.hiResFamous,

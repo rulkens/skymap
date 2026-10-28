@@ -1,26 +1,12 @@
 /**
- * planetRenderer construction + structural tests.
+ * planetRenderer construction + structural tests. Node has no WebGPU surface, so every `create*` call
+ * returns a plausibly-shaped stand-in (mirrors `earthRenderer.test.ts`). Pins the `Renderer` contract,
+ * the `draw(pass, bodyId, instance)` arity, per-body instancing (one `writeBuffer` into THAT body's own
+ * buffer + one `drawIndexed(indexCount, 1)`) and the opaque foreground pipeline profile.
  *
- * Vitest runs in Node without a WebGPU surface, so every `create*` call the
- * renderer issues at construction returns a plausibly-shaped stand-in
- * (mirrors `earthRenderer.test.ts`). These tests pin the `Renderer`
- * contract (non-empty `label`, `destroy`), the `draw(pass, bodyId, instance)`
- * arity, the per-body instancing mechanism (one `writeBuffer` of the caller's
- * record into THAT body's own buffer + one `drawIndexed(indexCount, 1)`),
- * and the opaque foreground pipeline profile (caller's `targetFormat` on the
- * colour target, depth state present).
- *
- * `bodyPickRenderer.test.ts` carries the load-bearing regression this file's
- * "own buffer per body" tests exist alongside: two same-submit `draw` calls
- * for DIFFERENT bodies must never share a write target (the writeBuffer-vs-
- * submit race `planetsPass`'s per-row calls resurrected — see the module
- * header).
- *
- * The two failures worth pinning here are the silent ones, both cross-file
- * contracts with no compiler check: the vertex-attribute layout drifting from
- * the `@location` declarations in the linked WESL, and an `entryPoint` string
- * naming a function the shader no longer declares. Both fail only when a
- * browser builds the pipeline.
+ * The two silent failures are cross-file contracts with no compiler check: the vertex-attribute layout
+ * drifting from the `@location` declarations in the linked WESL, and an `entryPoint` naming a function
+ * the shader no longer declares. Both fail only when a browser builds the pipeline.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -45,9 +31,8 @@ function mockDevice(opts?: {
     }),
     createBuffer: vi.fn((desc: BufferDesc) => {
       opts?.buffers?.push(desc);
-      // Carries the label onto the returned stand-in (mirrors
-      // bodyPickRenderer.test.ts's mock) so a test can trace a writeBuffer
-      // target or a bound vertex buffer back to the body it belongs to.
+      // Carries the label onto the stand-in so a test can trace a writeBuffer target or vertex buffer
+      // back to its body.
       return { label: desc.label, destroy: vi.fn() };
     }),
     createBindGroupLayout: vi.fn(() => ({})),
@@ -73,10 +58,8 @@ function mockPass(): GPURenderPassEncoder {
 
 describe('createPlanetRenderer', () => {
   it('allocates the geometry buffers but no instance buffer at construction', () => {
-    // Position + index geometry is fixed-size (one uv-sphere mesh) and
-    // allocated eagerly. The instance buffer has nothing to size against
-    // until a caller says how many planets it has — deferred to the first
-    // draw, mirroring starPointRenderer's setStars.
+    // Position + index geometry is fixed-size and allocated eagerly; the instance buffer is deferred
+    // to the first draw, since it has nothing to size against until a caller says how many planets.
     const buffers: BufferDesc[] = [];
     createPlanetRenderer(mockDevice({ buffers }), 'rgba16float', 'depth32float', false);
     expect(buffers.find((b) => b.label === 'planet-position-vbo')).toBeDefined();
@@ -91,7 +74,6 @@ describe('createPlanetRenderer', () => {
     const instance = new Float32Array(INSTANCE_FLOATS);
     expect(() => renderer.draw(pass, asSceneBodyId('jupiter'), instance)).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
-    // drawIndexed(indexCount, instanceCount): a body-m row draws exactly one.
     expect((pass.drawIndexed as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(1);
   });
 
@@ -112,20 +94,16 @@ describe('createPlanetRenderer', () => {
     expect(dataOffset).toBe(0);
     expect(size).toBe(INSTANCE_FLOATS);
 
-    // Both vertex buffers bound (per-vertex position + per-instance record).
     expect((pass.setVertexBuffer as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
       0, 1,
     ]);
-    // No bind group — the pipeline reads nothing from the uniform space.
     expect(pass.setBindGroup).not.toHaveBeenCalled();
   });
 
   it('two different bodies drawn in one submit get DISTINCT instance buffers (no clobber)', () => {
-    // The writeBuffer-vs-submit regression: `planetsPass` calls `draw` once
-    // PER BODY-M SLAB ROW, all inside one encoder + submit. A single shared
-    // instance buffer would let mars' writeBuffer clobber mercury's bytes
-    // before the GPU ran either draw, so both rows must land in DIFFERENT
-    // buffers at DIFFERENT vertex-buffer bindings.
+    // `planetsPass` calls `draw` once PER BODY-M SLAB ROW inside one encoder + submit. A single shared
+    // instance buffer would let mars' writeBuffer clobber mercury's bytes before the GPU ran either draw,
+    // so both rows must land in DIFFERENT buffers at DIFFERENT vertex-buffer bindings.
     const device = mockDevice();
     const renderer = createPlanetRenderer(device, 'rgba16float', 'depth32float', false);
     const pass = mockPass();
@@ -164,14 +142,12 @@ describe('createPlanetRenderer', () => {
     const desc = renderPipelines[0]!;
     const target = Array.from(desc.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
-    // Opaque replace — no blend descriptor on the colour target.
     expect(target!.blend).toBeUndefined();
     expect(desc.depthStencil).toMatchObject({
       format: 'depth32float',
       depthWriteEnabled: true,
       depthCompare: 'less',
     });
-    // Two vertex buffers: per-vertex position + per-instance records.
     const vbs = Array.from(desc.vertex.buffers!);
     expect(vbs).toHaveLength(2);
     expect(vbs[1]!.stepMode).toBe('instance');
@@ -209,13 +185,10 @@ describe('createPlanetRenderer', () => {
   });
 
   it('every vertex attribute is declared by the linked WESL, and the records tile the stride', () => {
-    // The layout is a byte-for-byte contract between the pipeline descriptor
-    // here and the `@location` list in planet/vertex.wesl, and nothing checks
-    // it: a slot added on one side alone reads garbage (or silently shifts the
-    // fields after it), which shows up as a mis-lit or mis-placed planet, not an
-    // error. So: the shader must declare exactly the locations the descriptor
-    // binds, at matching widths, and the instance record must tile its stride
-    // with no gap and no overlap.
+    // The layout is a byte-for-byte contract between the pipeline descriptor and the `@location` list
+    // in planet/vertex.wesl: a slot added on one side alone reads garbage, showing up as a mis-lit planet,
+    // not an error. So the shader must declare exactly the locations the descriptor binds, at matching
+    // widths, and the instance record must tile its stride with no gap and no overlap.
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     const shaderCode: string[] = [];
     createPlanetRenderer(
@@ -248,8 +221,6 @@ describe('createPlanetRenderer', () => {
       bound.map((a) => a.shaderLocation).sort((a, b) => a - b),
     );
 
-    // The instance record tiles its stride exactly — no hole a forgotten field
-    // could hide in, and no overlap.
     const instance = Array.from(vbs[1]!.attributes).sort((a, b) => a.offset - b.offset);
     let cursor = 0;
     for (const attr of instance) {

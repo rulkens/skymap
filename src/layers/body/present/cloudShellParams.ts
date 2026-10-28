@@ -1,108 +1,23 @@
 /**
- * cloudShellParams — the named tunable constants for the translucent cloud shell
- * drawn just above Earth's opaque surface (spec §11).
+ * cloudShellParams: the tunable dials of the cloud shell above Earth's surface,
+ * shared by `cloudShellPass`, `earthPass` and both uniform packers (the surface
+ * casts the deck's shadow from the same `radiusRatio`).
  *
- * One home for the two shell dials, shared by three consumers so they can never
- * drift onto separate literals:
- *
- *   1. **The shell scale** (`cloudShellPass`): `radiusRatio` scales the unit
- *      sphere the shell rides, lifting it from the surface (unit radius 1.0) to
- *      just above the cloud tops, so the deck floats over the globe instead of
- *      z-fighting the surface it co-registers with.
- *   2. **The shell opacity uniform** (`cloudShellPass` → `packCloudShellUniforms`):
- *      `opacity` is the coverage-to-alpha multiplier folded into the shell's
- *      straight-alpha output — a global dimmer over the map's per-texel `.a`.
- *   3. **The surface shadow radius** (`earthPass` → `packEarthSurfaceUniforms`):
- *      the surface pass casts the cloud deck's shadow using the SAME shell radius,
- *      so the shadow geometry and the drawn shell agree by construction (wired in
- *      Task 7 — earthPass currently passes a literal placeholder there).
- *   4. **The descent fade band** (`cloudDeckFade`, consumed by both
- *      `cloudShellPass` and `earthPass`): `fadeStartAltitudeRadii` and
- *      `fadeEndAltitudeRadii` bound the altitude-above-surface range over which
- *      the deck (and the shadow it casts) dissolves as the camera descends
- *      toward streamed surface tiles — see that util's header for why altitude,
- *      not the tile planner's `zWin`, drives the fade.
- *
- * ## radiusRatio — why ≈1.002
- *
- * The shell radius is expressed in the body's unit-sphere local units, where the
- * surface sits at radius 1.0. Cloud tops top out around ~12.7 km (deep-convective
- * anvils); Earth's mean radius is ~6371 km. So the shell sits at
- * `1 + cloudTopKm / earthRadiusKm ≈ 1 + 12.7 / 6371 ≈ 1.002` — a hair above the
- * surface, enough to clear the depth test against the opaque globe without the
- * gap reading as a visible float at close range. The literal is baked here (not
- * recomputed from km) because it is a look dial, not a measured quantity: the
- * visual pass nudges it if the deck z-fights or floats.
- *
- * ## opacity — neutral start
- *
- * `1.0` passes the map's authored coverage `.a` through untouched — the neutral
- * starting point before the visual pass tunes the deck's overall density against
- * the Blue Marble cloud map. The 1×1 transparent placeholder reports `.a = 0`, so
- * at `opacity = 1.0` the placeholder shell still draws nothing until the real map
- * lands.
- *
- * ## fadeStartAltitudeRadii / fadeEndAltitudeRadii — the descent fade band
- *
- * The whole-globe cloud map is coarse next to the surface tiles the camera
- * descends toward, so the deck fades out on approach rather than smearing over
- * detail sharp enough to inspect. The band is calibrated against
- * `cutSurfaceTiles`'s own thresholds, not chosen independently.
- *
- * `cutSurfaceTiles` refines a patch at level `z` while its projected size
- * `screenPx` needs a finer level, and settles at the first level where
- * `screenPx <= 2 · tilePx` (that threshold falls out of
- * `SURFACE_TILE_LOD_BIAS = 1`: the planner refines while
- * `ceil(log2(screenPx / tilePx)) - lodBias > 0`). A level-`z` tile spans
- * `2πR / 2^z` of ground (`surfaceTileColumns` puts `2^z` tiles around the
- * equator), and at altitude `h` a viewport `H` px tall spans `2h·tan(fovY/2)`
- * of world, so `screenPx = (2πR / 2^z) · H / (2h·tan(fovY/2))`. Solving for the
- * altitude at which a level settles:
- *
- *     h(z) = π · R · H / (2^z · 2·tilePx · tan(fovY/2))
- *
- * Plugging in Earth's radius (6371 km), the app's real default vertical
- * FOV — `DEFAULT_FOV_Y_RAD` = 60°
- * (`src/services/engine/camera/cameraFraming.ts`; NOT the 40° an earlier
- * draft of this comment assumed — that gave a band 1.77× too high, fading the
- * deck out around z5 instead of across z6→z7) — `tilePx = 512`
- * (`SURFACE_TILE_PX`), and a representative 900 px-tall viewport: z6 settles
- * around 476 km and z7 around 238 km. Expressed in Earth radii that is
- * `476 / 6371 ≈ 0.075` and `238 / 6371 ≈ 0.037` — the fade starts at the z6
- * altitude (still coarse tiles, so the whole-globe deck is doing its normal
- * job) and completes by the z7 altitude (fine tiles now worth looking at, so
- * the deck must be gone). Both fields are altitude ABOVE the surface —
- * `cameraDistance / bodyRadius - 1` — not the shell's own `radiusRatio`
- * offset, which places the shell geometry rather than gating its visibility.
- * See `cloudDeckFade` for the curve these feed.
- *
- * This is a CALIBRATION against a default viewport, not an identity: `h`
- * scales linearly with viewport height `H`, so a taller window shifts every
- * level's settling altitude upward (at `H = 1000` the z6 altitude is ~529 km,
- * not ~476 km), and the tier's base level plus `SURFACE_TILE_LOD_BIAS` also
- * move where the planner actually settles for a given session. The band
- * therefore tracks the tile levels approximately and by intent, not exactly —
- * which is fine, because it is a look dial, and it is the same reason the
- * fade keys off altitude rather than reading the planner's `zWin` directly
- * (see `cloudDeckFade`'s header for that rationale — not repeated here).
- *
- * ## `fadeEndAltitudeRadii` re-tune (Task 10, spec §5c)
- *
- * The z7 floor (0.037, ~238 km) sat well ABOVE the shell's own radius
- * (`radiusRatio − 1 = 0.002`, ~12.7 km): the deck was fully faded long before
- * a descending camera ever reached the shell it floats on, which is what
- * hid the closed-sphere cull bug — there was never any opacity left for the
- * fix to make visible. Lowered to 0.0005 (~3.2 km), well inside the shell
- * radius, so the deck stays visible through the whole inside-the-shell
- * descent and only fades out close to the ground, where the streamed
- * surface tiles are already the higher-resolution truth.
+ * The fade band is calibrated against `cutSurfaceTiles`: a level settles at
+ * altitude `h(z) = pi * R * H / (2^z * 2*tilePx * tan(fovY/2))`. With R = 6371 km,
+ * `DEFAULT_FOV_Y_RAD` = 60 deg, `SURFACE_TILE_PX` = 512, H = 900 px: z6 = 476 km
+ * (0.075 R, fade start), z7 = 238 km. `h` scales with H, so the band is a look dial.
  */
 
 export const CLOUD_SHELL_PARAMS: {
-  readonly radiusRatio: number; // shell radius in unit-sphere local units (≈ 1 + cloudTopKm/earthRadiusKm)
-  readonly opacity: number; // coverage-to-alpha multiplier into the shell's straight-alpha output
-  readonly fadeStartAltitudeRadii: number; // altitude (body radii) where the descent fade begins (≈ z6, 476 km)
-  readonly fadeEndAltitudeRadii: number; // altitude (body radii) where the descent fade completes (Task 10: ≈3.2 km, inside the shell radius)
+  /** Shell radius in unit-sphere local units: 1 + 12.7 km cloud tops / 6371 km. */
+  readonly radiusRatio: number;
+  /** Coverage-to-alpha multiplier into the shell's straight-alpha output. */
+  readonly opacity: number;
+  /** Altitude (body radii above the surface) where the descent fade begins. */
+  readonly fadeStartAltitudeRadii: number;
+  /** Altitude where it completes: ~3.2 km, inside the shell radius (0.002), so the deck stays visible through the inside-the-shell descent. */
+  readonly fadeEndAltitudeRadii: number;
 } = {
   radiusRatio: 1.002,
   opacity: 1.0,
