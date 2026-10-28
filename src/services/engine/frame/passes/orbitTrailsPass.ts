@@ -4,7 +4,8 @@
  * inside COSMO's 0.01 Mpc near plane, while still accumulating into HDR.
  *
  * No pass-level `fade`: each trail group carries its own show key (core's `orbitTrails`, the
- * S-stars' `sStarTrails`), so one switch cannot hide the other group's trails.
+ * S-stars' `sStarTrails`), so one switch cannot hide the other group's trails. Each group's
+ * value carries its entry's `foreground` band, so the pass is off past the foreground gate.
  *
  * HARD INVARIANT: `composeOrbitConic` takes `view.slab.vp`, NOT `view.vp`. It
  * assembles and INVERTS the homography in f64 to resolve the cancellation between
@@ -26,7 +27,6 @@ import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 
 // Reused across frames so the hot path allocates nothing. The roster is composed
 // at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
@@ -38,8 +38,7 @@ export const orbitTrailsPass: ContentPass = {
 
   enabled(state, ctx, _view) {
     if (state.gpu.orbitTrailRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    if (state.orbitTrailGroups.every((group) => group.fade(ctx.snapshot) === 0)) return false;
+    if (state.orbitTrailGroups.every((group) => group.fade(ctx) === 0)) return false;
     // Whole-layer sub-pixel cull: the per-orbit CULL_PX test in `draw`, bounded
     // once per region at the camera's NEAREST possible distance to any of that
     // region's orbit points. Keyed on the eye (`drawCamPos`), NOT `cam.distance`,
@@ -85,7 +84,7 @@ export const orbitTrailsPass: ContentPass = {
     //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
     let count = 0;
     for (const group of groups) {
-      const fade = group.fade(ctx.snapshot);
+      const fade = group.fade(ctx);
       if (fade === 0) continue;
       const rows = group.rows;
       for (let i = 0; i < rows.length; i++) {

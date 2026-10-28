@@ -24,6 +24,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
+import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassByFade';
+import { gateOrbitTrailGroup } from '../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/index';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
@@ -220,18 +223,6 @@ describe('starPointsPass.enabled', () => {
     expect(pass.enabled(makeState(), nearCtx, VIEW_STUB, ALL_ON)).toBe(true);
   });
 
-  it('is disabled beyond the foreground gate even with point stars present', () => {
-    // A decade beyond the gate (cosmic scale) the whole neighbourhood is far
-    // below a pixel: the shared gate turns the backdrop off before the
-    // sort is even run, so the (hdr, NEAR0) step can be skipped
-    // wholesale. Derived from the gate so a farther seed growing it carries.
-    const pass = starPointsPass(makeRuntime(makeRenderer()));
-    const state = makeState();
-    expect(
-      pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB, ALL_ON),
-    ).toBe(false);
-  });
-
   it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
     // Just past the backdrop band's goneAt but still WELL inside the shared
     // foreground gate: the additive sprite field has faded to black, so the
@@ -252,7 +243,17 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     // early (hdr, NEAR0) step that draws star-points + orbit-trails BEFORE the
     // tone-map. Above the gate this group must come back empty too — not just
     // the (foreground:0, NEAR0) body group — for the skip to be wholesale.
-    const pointsPass = starPointsPass(makeRuntime(makeRenderer()));
+    // The Layer rows yield through their entries' `foreground` band, so they are
+    // walked as core walks them: gated by the handed value, which this gate
+    // state resolves over the real entries with every fade at 1.
+    const gateState = {
+      visibilityEntries: APP_VISIBILITY,
+      subsystems: {
+        fades: { opacityOf: () => 1 },
+        clipPlayer: { clipOpacityOf: () => 1 },
+      },
+    } as unknown as EngineState;
+    const pointsPass = gatePassByFade(starPointsPass(makeRuntime(makeRenderer())), gateState);
     const state = {
       gpu: {
         orbitTrailRenderer: { draw: vi.fn() },
@@ -280,7 +281,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         orbitTrails: { enabled: true },
         missionTrails: { enabled: false },
       },
-      orbitTrailGroups: [{ show: 'orbitTrails', rows: [], fade: () => 1 }],
+      orbitTrailGroups: [gateOrbitTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     // The (hdr, NEAR0) roster, read off the order lines that draw it — three

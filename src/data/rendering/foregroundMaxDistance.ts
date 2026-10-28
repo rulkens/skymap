@@ -1,8 +1,10 @@
 /**
  * FOREGROUND_MAX_DISTANCE_MPC — the camera-distance gate every NEAR0 foreground
- * layer ANDs into its `enabled`, so all four NEAR0 encoder steps fall away
- * wholesale at galaxy zoom: `executeFrame` already skips an empty layer group
- * and a composite whose source target went untouched.
+ * pass yields at, so all four NEAR0 encoder steps fall away wholesale at galaxy
+ * zoom: `executeFrame` already skips an empty layer group and a composite whose
+ * source target went untouched. A Layer pass declares it as its entry's
+ * `FOREGROUND_RECEDE` band, applied by core; core's body passes still AND it
+ * into `enabled` by hand until the body Layers take them over.
  *
  * It maxes over region EXTENTS — a scale, matching `ctx.cam.distance`, which is
  * camera-to-TARGET. No anchor POSITION enters, so seeding a region 8 kpc out

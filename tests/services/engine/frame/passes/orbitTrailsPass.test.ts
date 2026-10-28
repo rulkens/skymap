@@ -28,6 +28,8 @@ import { mat4d } from 'wgpu-matrix';
 
 import { INSTANCE_FLOATS } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 import { orbitTrailsPass } from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
+import { gateOrbitTrailGroup } from '../../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { APP_VISIBILITY } from '../../../../../src/compositions/appVisibility';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -302,21 +304,29 @@ describe('orbitTrailsPass.enabled', () => {
     expect(enabledWith(0, 0)).toBe(false);
   });
 
-  it('gates on the renderer handle + the foreground distance over the boot-composed roster', () => {
-    const state = makeState(makeRendererSpy());
+  it('gates on the renderer handle + the foreground band over the boot-composed roster', () => {
     const view = makeNear0View();
-    // Null handle (pre-bootstrap): the handle check short-circuits before the
-    // ctx.cam read, so a bare ctx is safe.
+    // Null handle (pre-bootstrap): the handle check short-circuits before any
+    // ctx read, so a bare ctx is safe.
     expect(orbitTrailsPass.enabled(makeState(null), CTX_STUB, view)).toBe(false);
-    // Handle present, camera inside the shared foreground gate.
-    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), view)).toBe(
-      true,
-    );
-    // Beyond the gate the AU-to-lunar-scale trails are deep sub-pixel: off, so
-    // the (hdr, NEAR0) step can be skipped wholesale at galaxy zoom. Gate edge +
-    // a decade beyond, both derived so a farther seed growing the gate carries.
-    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), view)).toBe(false);
-    expect(orbitTrailsPass.enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), view)).toBe(
+    // The group as core composes it: its value carries the `orbitTrails` entry's
+    // `foreground` band, read at the view's eye. Beyond the gate the AU-to-lunar
+    // trails are deep sub-pixel: off, so the (hdr, NEAR0) step can be skipped
+    // wholesale at galaxy zoom. Gate edge + a decade beyond, both derived so a
+    // farther seed growing the gate carries.
+    const gateState = {
+      visibilityEntries: APP_VISIBILITY,
+      subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
+    } as unknown as EngineState;
+    const groups = [
+      gateOrbitTrailGroup({ show: 'orbitTrails', rows: CORE_TRAIL_ELEMENTS }, gateState),
+    ];
+    const state = makeState(makeRendererSpy(), { groups });
+    const atEye = (distance: number): FrameView =>
+      ({ ...makeCtx(distance), drawCamPos: [0, 0, distance] }) as unknown as FrameView;
+    expect(orbitTrailsPass.enabled(state, atEye(1e-10), view)).toBe(true);
+    expect(orbitTrailsPass.enabled(state, atEye(FOREGROUND_MAX_DISTANCE_MPC), view)).toBe(false);
+    expect(orbitTrailsPass.enabled(state, atEye(FOREGROUND_MAX_DISTANCE_MPC * 10), view)).toBe(
       false,
     );
   });
