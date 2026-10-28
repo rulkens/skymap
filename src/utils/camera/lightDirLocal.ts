@@ -1,11 +1,11 @@
 /**
- * sunDirLocal — the Sun's light direction at a body, expressed in the body's
- * own local frame.
+ * lightDirLocal — the direction toward a body's light source, expressed in the
+ * body's own local frame.
  *
- *   body position + render origin + baked orientation  →  local sun direction
+ *   body position + light position + baked orientation  →  local light direction
  *
- * The Sun sits at the heliocentric render origin, so the world-space direction
- * from a body toward the Sun is simply `normalize(renderOrigin − bodyPos)`.
+ * The light is the body's star (`lightSourceMpc`): the Sun at the render origin
+ * for the solar system, the host star for an exoplanet.
  *
  * ### Why transpose the orientation
  *
@@ -30,13 +30,12 @@ import type { Vec3 } from '../../@types/math/Vec3';
 
 export function lightDirLocal(
   bodyPosMpc: Readonly<Vec3>,
-  renderOriginMpc: Readonly<Vec3>,
+  lightMpc: Readonly<Vec3>,
   orientation: Readonly<Mat3>,
 ): Vec3 {
-  // World-space direction from the body toward the Sun (the render origin).
-  let wx = renderOriginMpc[0] - bodyPosMpc[0];
-  let wy = renderOriginMpc[1] - bodyPosMpc[1];
-  let wz = renderOriginMpc[2] - bodyPosMpc[2];
+  let wx = lightMpc[0] - bodyPosMpc[0];
+  let wy = lightMpc[1] - bodyPosMpc[1];
+  let wz = lightMpc[2] - bodyPosMpc[2];
   const len = Math.hypot(wx, wy, wz);
   if (len > 0) {
     wx /= len;

@@ -34,6 +34,8 @@ vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: () =>
     new Map([
+      // The light source: Earth hangs off the Sun at the render origin.
+      ['sun', { positionMpc: [0, 0, 0], orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] }],
       [
         'earth',
         {

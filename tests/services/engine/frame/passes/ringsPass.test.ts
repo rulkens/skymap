@@ -54,6 +54,8 @@ type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
+    // The light source: every body here hangs off the Sun at the render origin.
+    m.set('sun', { positionMpc: [0, 0, 0], orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] } as BodyState);
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
     }

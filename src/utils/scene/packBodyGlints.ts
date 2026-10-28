@@ -15,6 +15,7 @@ import { BODY_GLINT_INSTANCE_FLOATS } from '../../data/rendering/bodyGlintInstan
 import { bodyApparentDiameterPx } from './bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
 import { bodyGlintBrightnessOf } from './bodyGlintBrightnessOf';
+import { lightSourceMpc } from './lightSourceMpc';
 
 /** Packs each glint above GLINT_MIN_BRIGHTNESS into `staging`; returns the count. */
 export function packBodyGlints(
@@ -43,6 +44,7 @@ export function packBodyGlints(
     const brightness = bodyGlintBrightnessOf(
       body.albedo,
       positionMpc,
+      lightSourceMpc(body.id, states),
       camPosMpc,
       diameterPx,
       backdropFade,

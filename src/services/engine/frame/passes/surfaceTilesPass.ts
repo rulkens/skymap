@@ -21,13 +21,14 @@ import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
 import type { SurfaceEffectInputs } from '../../../../@types/rendering/SurfaceEffectInputs';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { BODY_AMBIENT_LIGHT } from '../../../../data/bodies/bodyAmbientLight';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
+import { lightSourceMpc } from '../../../../utils/scene/lightSourceMpc';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from '../prepareBodySurfaceFrame';
@@ -70,7 +71,11 @@ export const surfaceTilesPass: ContentPass = {
     if (prepared === null) return;
     const { bodyState, pose, radiusM } = prepared;
 
-    const sun = lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    const sun = lightDirLocal(
+      bodyState.positionMpc,
+      lightSourceMpc(hostId, sceneBodyStates(state, ctx)),
+      bodyState.orientation,
+    );
     const has = (effect: SurfaceEffect) => spec.effects.includes(effect);
     // `maps` is null only for an effects-free row (returned above otherwise).
     const effectInputs: SurfaceEffectInputs =

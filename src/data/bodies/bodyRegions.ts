@@ -11,7 +11,8 @@
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../utils/math/distanceMpc';
 import { CONST_J2000 } from '../time/constJ2000';
-import { POSITION_DRIVERS, bodyHostId, positionDriverById } from './positionDrivers';
+import { POSITION_DRIVERS, positionDriverById } from './positionDrivers';
+import { rootBodyIdOf } from '../../utils/scene/rootBodyIdOf';
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
@@ -28,21 +29,13 @@ const GALACTIC_CENTRE_ID = GALACTIC_CENTRE_ANCHOR.id;
 // are set by static star anchors and semi-major axes, so no instant moves them.
 const STATES_J2000 = deriveBodyStates(CONST_J2000);
 
-// The anchor a body ultimately hangs off, walking `bodyHostId` (orbit focus or site host).
-// `deriveBodyStates` resolves the same graph at its module load and throws there on a cycle
-// or a dangling focus, so this recursion is known to bottom out by the time it runs.
-const rootIdOf = (id: PositionedId): PositionedId => {
-  const host = bodyHostId(id);
-  return host === null ? id : rootIdOf(host);
-};
-
 // A body sits in the regime it anchors: an anchor joins its own subtree, so the Sun sits in
 // the solar system while merely anchoring the neighbourhood's distances. A landing site
 // joins the region its HOST sits in — a rover is in the solar system by being on Mars.
 // Members are filtered to ids the snapshot holds, so an anchor seeded ahead of its rows reads
 // as an empty region rather than resolving a position that does not exist.
 const anchoredMemberIds = (anchorId: PositionedId): readonly PositionedId[] =>
-  POSITION_DRIVERS.filter((driver) => rootIdOf(driver.id) === anchorId)
+  POSITION_DRIVERS.filter((driver) => rootBodyIdOf(driver.id) === anchorId)
     .map((driver) => driver.id)
     .filter((id) => STATES_J2000.has(id));
 

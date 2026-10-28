@@ -63,13 +63,13 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { bodyTextureSlotKey } from '../../../../utils/bodyTextures/bodyTextureSlotKey';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
+import { lightSourceMpc } from '../../../../utils/scene/lightSourceMpc';
 import { packRingUniforms } from '../../../../utils/gpu/packRingUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
@@ -151,7 +151,11 @@ export const ringsPass: ContentPass = {
     const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, outerRadiusM);
     // Sun rotated into the host body's local frame, co-framed with the
     // fragment's two-sided Lambert + shadow ray.
-    const sun = lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    const sun = lightDirLocal(
+      bodyState.positionMpc,
+      lightSourceMpc(body.id, sceneBodyStates(state, ctx)),
+      bodyState.orientation,
+    );
     // Camera in the body's local frame, in PLANET radii (not ring-outer
     // radii) — see the module header's "two different radius units" note.
     const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.surface.datumRadiusM);

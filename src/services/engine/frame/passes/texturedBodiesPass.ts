@@ -48,7 +48,6 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { LIMB_DARKENING_PARAMS } from '../../../../data/bodies/limbDarkeningParams';
@@ -57,6 +56,7 @@ import { composeBodySlabCamRelVp } from '../../../../utils/camera/composeBodySla
 import { bodySlabCamAltitudeSq } from '../../../../utils/camera/bodySlabCamAltitudeSq';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
+import { lightSourceMpc } from '../../../../utils/scene/lightSourceMpc';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -121,7 +121,11 @@ export const texturedBodiesPass: ContentPass = {
     // Rotate the sun direction into the body's local frame (its orientation
     // carries any axial tilt) so the fragment's Lambert term stays a plain
     // co-framed dot product — the same rotate earth/planets do.
-    const sun = lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    const sun = lightDirLocal(
+      bodyState.positionMpc,
+      lightSourceMpc(body.id, sceneBodyStates(state, ctx)),
+      bodyState.orientation,
+    );
     const { inner, outer } = ringRatios(body, radiusM);
     // Minnaert limb-darkening: the per-body strength/exponent (identity for a
     // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's

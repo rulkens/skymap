@@ -40,13 +40,13 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { lightDirLocal } from '../../../../utils/camera/lightDirLocal';
+import { lightSourceMpc } from '../../../../utils/scene/lightSourceMpc';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { coreSceneBodyPartition } from '../coreSceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -105,7 +105,11 @@ export const planetsPass: ContentPass = {
     // seam moved to the metre-native body-slab primitives.
     const bodyState = sceneBodyStates(state, ctx).get(planet.id)!;
     const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.surface.datumRadiusM);
-    const sun = lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+    const sun = lightDirLocal(
+      bodyState.positionMpc,
+      lightSourceMpc(planet.id, sceneBodyStates(state, ctx)),
+      bodyState.orientation,
+    );
     // The analytic ray's ORIGIN, in the frame where this body is the unit
     // sphere — a PAIR with the mvp above, both built from the same datum radius.
     const cam = bodySlabCamLocal(pose.eyeRelBodyM, planet.surface.datumRadiusM);

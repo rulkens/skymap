@@ -80,6 +80,7 @@ import { glintBandClass } from '../../../../utils/picking/glintBandClass';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 import { bodyGlintBrightnessOf } from '../../../../utils/scene/bodyGlintBrightnessOf';
+import { lightSourceMpc } from '../../../../utils/scene/lightSourceMpc';
 import { bodyGlintBackdropFade } from '../../../../utils/scene/bodyGlintBackdropFade';
 import { packBodyGlints } from '../../../../utils/scene/packBodyGlints';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -306,6 +307,7 @@ export const bodyGlintsPass: ContentPass = {
       const brightness = bodyGlintBrightnessOf(
         body.albedo,
         positionMpc,
+        lightSourceMpc(body.id, states),
         camPos,
         diameterPx,
         backdropFade,

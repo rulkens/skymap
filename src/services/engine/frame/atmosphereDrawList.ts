@@ -12,12 +12,12 @@
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
 import { isInsideAtmosphereShell } from '../../../utils/camera/isInsideAtmosphereShell';
 import { lightDirLocal } from '../../../utils/camera/lightDirLocal';
+import { lightSourceMpc } from '../../../utils/scene/lightSourceMpc';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
@@ -67,7 +67,11 @@ export function atmosphereDrawList(
       params,
       atmosphereTopM,
       camLocal,
-      sunLocal: lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
+      sunLocal: lightDirLocal(
+        bodyState.positionMpc,
+        lightSourceMpc(body.id, states),
+        bodyState.orientation,
+      ),
       inside: isInsideAtmosphereShell(camLocal),
     };
 

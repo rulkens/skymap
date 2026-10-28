@@ -13,12 +13,12 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
-import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../utils/camera/composeMeshMvp';
 import { lightDirLocal } from '../../../utils/camera/lightDirLocal';
+import { lightSourceMpc } from '../../../utils/scene/lightSourceMpc';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { packMeshBodyUniforms } from '../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
@@ -52,6 +52,9 @@ export function drawMeshBodiesOnRow(
 
   for (const body of bodies) {
     const bodyState = bodyStates.get(body.id)!;
+    // The light and the eclipse geometry share one source; `sunRadiusM` holds because
+    // every mesh body today orbits in the solar system.
+    const lightMpc = lightSourceMpc(body.id, bodyStates);
     const { posM, rotM } = bodyStateInHostFrame(bodyState, hostState);
     // A self-hosted body casts no host shadow on itself, and `sunVisibleFraction`
     // returns NaN at zero separation. Unshadowed Sun instead.
@@ -62,11 +65,11 @@ export function drawMeshBodiesOnRow(
       packMeshBodyUniforms({
         // Narrow here, at the uniform write — the compose above is f64.
         mvp: narrowMat4(composeMeshMvp(view.slab.vp, posM, hostPose.eyeRelBodyM, rotM)),
-        sunDirLocal: lightDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, hostState.orientation),
+        sunDirLocal: lightDirLocal(bodyState.positionMpc, lightMpc, hostState.orientation),
         sunVisibleFraction: umbraHost
           ? sunVisibleFraction({
               bodyPosMpc: bodyState.positionMpc,
-              sunPosMpc: RENDER_ORIGIN_MPC,
+              sunPosMpc: lightMpc,
               hostPosMpc: hostState.positionMpc,
               sunRadiusM,
               hostRadiusM: innerBoundRadiusM(umbraHost.surface),
@@ -78,11 +81,7 @@ export function drawMeshBodiesOnRow(
           hostPose.eyeRelBodyM[1] - posM[1],
           hostPose.eyeRelBodyM[2] - posM[2],
         ],
-        sinSunAngularRadius: sinSunAngularRadius(
-          bodyState.positionMpc,
-          RENDER_ORIGIN_MPC,
-          sunRadiusM,
-        ),
+        sinSunAngularRadius: sinSunAngularRadius(bodyState.positionMpc, lightMpc, sunRadiusM),
       }),
     );
   }

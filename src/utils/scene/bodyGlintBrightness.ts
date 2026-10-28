@@ -40,10 +40,10 @@ export function bodyGlintBrightness(input: {
   albedo: Readonly<Vec3>;
   positionMpc: Readonly<Vec3>;
   camPosMpc: Readonly<Vec3>;
-  renderOriginMpc: Readonly<Vec3>;
+  lightMpc: Readonly<Vec3>;
   apparentDiameterPx: number;
 }): number {
-  const { albedo, positionMpc, camPosMpc, renderOriginMpc, apparentDiameterPx } = input;
+  const { albedo, positionMpc, camPosMpc, lightMpc, apparentDiameterPx } = input;
 
   // Apparent-size factor in [0, 1): normalise by the glint-regime ceiling.
   const sizeFactor = Math.min(Math.max(apparentDiameterPx, 0) / BODY_GLINT_MAX_PX, 1);
@@ -52,9 +52,9 @@ export function bodyGlintBrightness(input: {
   const lum = LUMA_R * albedo[0] + LUMA_G * albedo[1] + LUMA_B * albedo[2];
 
   // Illuminated fraction from the Sun–body–camera geometry (frame-invariant).
-  const sx = renderOriginMpc[0] - positionMpc[0];
-  const sy = renderOriginMpc[1] - positionMpc[1];
-  const sz = renderOriginMpc[2] - positionMpc[2];
+  const sx = lightMpc[0] - positionMpc[0];
+  const sy = lightMpc[1] - positionMpc[1];
+  const sz = lightMpc[2] - positionMpc[2];
   const sLen = Math.hypot(sx, sy, sz);
   const cx = camPosMpc[0] - positionMpc[0];
   const cy = camPosMpc[1] - positionMpc[1];

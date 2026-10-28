@@ -49,6 +49,8 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
+    // The light source: every body here hangs off the Sun at the render origin.
+    m.set('sun', { positionMpc: [0, 0, 0], orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] } as BodyState);
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
     }
@@ -238,7 +240,11 @@ describe('encodeAtmosphereSkyView', () => {
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     const camLocal = bodySlabCamLocal(EYE_REL_BODY_M, atmosphereTopM);
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
-    const sun = lightDirLocal(SEEDED_EARTH.positionMpc, RENDER_ORIGIN_MPC, SEEDED_EARTH.orientation);
+    const sun = lightDirLocal(
+      SEEDED_EARTH.positionMpc,
+      RENDER_ORIGIN_MPC,
+      SEEDED_EARTH.orientation,
+    );
     const expectedViewHeightKm = radius * params.atmosphereTopKm;
     const expectedSunZenithCos =
       (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius;

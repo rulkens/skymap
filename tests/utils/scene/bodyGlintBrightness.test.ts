@@ -25,7 +25,7 @@ describe('bodyGlintBrightness', () => {
       albedo: [1, 1, 1],
       positionMpc: [1, 0, 0],
       camPosMpc: [2, 0, 0],
-      renderOriginMpc: ORIGIN,
+      lightMpc: ORIGIN,
       apparentDiameterPx: BODY_GLINT_MAX_PX, // max size — still 0, phase dominates
     });
     expect(brightness).toBeCloseTo(0, 12);
@@ -39,7 +39,7 @@ describe('bodyGlintBrightness', () => {
       albedo: [0.5, 0.5, 0.5],
       positionMpc: [1, 0, 0],
       camPosMpc: [0.5, 0, 0],
-      renderOriginMpc: ORIGIN,
+      lightMpc: ORIGIN,
       apparentDiameterPx: BODY_GLINT_MAX_PX / 2,
     });
     expect(brightness).toBeCloseTo(0.25, 6);
@@ -49,7 +49,7 @@ describe('bodyGlintBrightness', () => {
     const common = {
       positionMpc: [1, 0, 0] as Vec3,
       camPosMpc: [0.5, 0, 0] as Vec3, // full phase for both
-      renderOriginMpc: ORIGIN,
+      lightMpc: ORIGIN,
       apparentDiameterPx: BODY_GLINT_MAX_PX / 2, // same size
     };
     // Venus — bright, high-albedo cloud deck; Neptune — dim, deep blue.
