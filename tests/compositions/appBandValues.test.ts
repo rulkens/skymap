@@ -4,6 +4,7 @@ import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
 import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf';
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
+import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import type { FrameView } from '../../src/@types/engine/frame/FrameView';
 
 function valueAt(key: string, distanceMpc: number, item?: string): number {
@@ -27,5 +28,17 @@ describe('band items scoping', () => {
     expect(valueAt('structureRing', MILKY_WAY_RADIUS_MPC * 2, 'nebula')).toBe(1);
     expect(valueAt('structureRing', FOREGROUND_MAX_DISTANCE_MPC, 'nebula')).toBe(0);
     expect(valueAt('structureRing', FOREGROUND_MAX_DISTANCE_MPC, 'galaxy-cluster')).toBe(1);
+  });
+});
+
+// One astronomical unit from the Sun: the home view's distance from the render origin.
+const HOME_DISTANCE_MPC = SCALE_UNITS.AU_TO_MPC;
+
+// Pins that the extragalactic overlays cannot draw over the home view: a band removed
+// from either entry puts filaments or flow ribbons in front of Earth again.
+describe('extragalactic overlays at the home view', () => {
+  it.each(['flow', 'cosmicWebFilaments'])('%s is gone at home and full in the survey', (key) => {
+    expect(valueAt(key, HOME_DISTANCE_MPC)).toBe(0);
+    expect(valueAt(key, 1)).toBe(1);
   });
 });
