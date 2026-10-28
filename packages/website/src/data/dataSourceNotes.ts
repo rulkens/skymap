@@ -587,6 +587,10 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'A map of the dust within 1.25 kiloparsecs of the Sun, in three dimensions.',
   },
+  'nasa-exoplanet-archive': {
+    description:
+      'Known planets and their stars from NASA’s Exoplanet Archive: where each system is, and the orbits of TRAPPIST-1’s seven planets.',
+  },
   'planck-cmb': {
     title: 'Planck CMB map',
     description:

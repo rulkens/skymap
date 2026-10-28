@@ -107,6 +107,21 @@ growth.**
 - **Slab precision:** body slabs are built per body in f64. The S-stars already draw at 8 kpc.
 - **Foreground gate:** `FOREGROUND_MAX_DISTANCE_MPC` already spans the neighbourhood.
 
+**Found during execution** (the first shots of the pilot drew an empty sky):
+
+- **G3. Distance gates key on the root anchor, not the region.** Two gates measured the camera's
+  distance from a region anchor:
+  - the orbit-trail cull (`ORBIT_REACH_BY_REGION`), from each region's anchor;
+  - the glint far-dissolve (`bodyGlintBackdropFade`), from the solar system's anchor.
+
+  The neighbourhood's anchor is the Sun, so both culled TRAPPIST-1 from 12 pc away. Both now
+  measure from each body's root anchor: `ORBIT_REACH_BY_ROOT`, and a per-glint dissolve. The Sun
+  and the Galactic Centre are their own roots, so existing behaviour is unchanged.
+- **G4. Host and star share one position.** The famous-star row had rounded RA/Dec to four
+  decimals and the structure seed to six. At 12.4 pc that difference is 0.45 au, seven times the
+  system, so the focus framed empty sky. The star row now carries the seed's values, and a test
+  pins every body-backed host to its star within 1% of the system.
+
 ## 5. Rulings
 
 1. **The node angle is a convention.** Inclination fixes the plane's tilt to our sky. Its spin about

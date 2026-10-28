@@ -602,6 +602,39 @@ unclear, and no entry here reads them as a licence.
   (the reference: authors, title, volume and page).
 - **Not verified:** the journal's terms; our table against the paper's.
 
+### NASA Exoplanet Archive
+
+<!-- attribution: id=nasa-exoplanet-archive; hosts=exoplanetarchive.ipac.caltech.edu -->
+
+- **What:** Rows of the Planetary Systems Composite Parameters table
+  (`pscomppars`). They supply the exoplanet-system anchors' positions, distances,
+  planet counts and discovery years; their orbit diagrams (semi-major axis,
+  period, transit midpoint, stellar luminosity); and TRAPPIST-1's seven planets
+  as scene bodies (also eccentricity, inclination and radius).
+- **By:** The NASA Exoplanet Archive, operated by the California Institute of
+  Technology under contract with NASA, from the papers each row cites.
+- **Licence:** Not stated on the pages read. The archive asks users to
+  acknowledge it.
+- **Use:** No licence stated
+- **Attribution:** "This research has made use of the NASA Exoplanet Archive,
+  which is operated by the California Institute of Technology, under contract
+  with the National Aeronautics and Space Administration under the Exoplanet
+  Exploration Program."
+- **Upstream:** <https://exoplanetarchive.ipac.caltech.edu/TAP/> (TAP queries,
+  2026-10-28)
+- **Enters skymap:** typed from TAP query results into
+  `data/seeds/structure_anchors.seed.json`,
+  `src/layers/structure/data/exoplanetOrbits.ts`,
+  `src/data/bodies/exoplanetPlanets.ts` and TRAPPIST-1's row of
+  `data/seeds/famous_stars.seed.json`.
+- **Modified:** The habitable zone is derived from `st_lum`, and each planet's
+  elements are converted to the sky-plane frame (spec
+  `2026-10-28-exoplanet-bodies-design.md`).
+- **Checked:** 2026-10-28: the TAP results themselves.
+- **Not verified:** the acknowledgement wording against the archive's current
+  page (quoted from its standard request), and per-row licences of the cited
+  papers.
+
 ### JPL Solar System Dynamics: orbital elements
 
 <!-- attribution: id=jpl-elements; hosts=ssd.jpl.nasa.gov -->

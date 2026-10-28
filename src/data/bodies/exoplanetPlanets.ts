@@ -1,7 +1,8 @@
 /**
  * EXOPLANET_PLANETS — planets of other stars as scene bodies, each hung off its
  * host's famous-star anchor. Rows from the NASA Exoplanet Archive's
- * Planetary Systems Composite Parameters, queried 2026-10-28:
+ * Planetary Systems Composite Parameters (https://exoplanetarchive.ipac.caltech.edu/TAP),
+ * queried 2026-10-28:
  *   select pl_name, pl_orbsmax, pl_orbper, pl_orbeccen, pl_orbincl, pl_tranmid, pl_rade
  *   from pscomppars where hostname = 'TRAPPIST-1'
  * They sit beside the solar planets until the body Layer takes the planet table.
