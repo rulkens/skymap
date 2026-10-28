@@ -1,18 +1,12 @@
 /**
  * sStar — one transcribed Gillessen+ 2017 line (`sStarElements.ts`) → canonical
- * `OrbitalElements`, and the one site of this feature's unit/frame conversions.
- *
- * BOTH sky angles convert — `Ω_frame = 90° − Ω` AND `i_frame = 180° − i`; ω
- * alone passes through, which is what makes dropping the i flip look internally
- * consistent while mirroring all 39 orbits with every invariant intact.
+ * `OrbitalElements`: this table's units (arcsec at R₀) and trail tint; the sky
+ * angles convert in `skyOrbitElements`, shared with the visual binaries.
  */
 
 import { SCALE_UNITS } from '../../scaleUnits';
-import { degToRad } from '../../../utils/math/degToRad';
-import { meanAnomalyAtJ2000 } from '../../../utils/orbit/meanAnomalyAtJ2000';
-import { skyInclinationToFrameInclination } from '../../../utils/orbit/skyInclinationToFrameInclination';
-import { skyPositionAngleToFrameAngle } from '../../../utils/orbit/skyPositionAngleToFrameAngle';
 import { planeFrameFromPole } from '../orbitPlaneFrames';
+import { skyOrbitElements } from './skyOrbitElements';
 import { GALACTIC_CENTRE_ANCHOR } from '../../places/galacticCentre';
 import { sStarAppearance } from '../sStarAppearance';
 import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
@@ -20,7 +14,6 @@ import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { OrbitPlaneFrame } from '../../../@types/scene/OrbitPlaneFrame';
 import type { SStarSeed } from '../../../@types/scene/SStarSeed';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 /**
  * The plane of the sky at Sgr A*: pole = line of sight, so `xAxis` is East,
@@ -33,7 +26,6 @@ export const GALACTIC_CENTRE_SKY_FRAME: OrbitPlaneFrame = planeFrameFromPole(266
 const GC_R0_PC = 8178;
 const GC_ARCSEC_TO_MPC = GC_R0_PC * SCALE_UNITS.AU_TO_MPC;
 
-const YEARS_PER_JULIAN_CENTURY = 100;
 
 /**
  * The trail carries its own star's blackbody hue, the way `palette.ts` says a
@@ -54,17 +46,17 @@ function sStarTrailTint(row: SStarSeed): Vec3 {
 }
 
 export function sStar(row: SStarSeed): OrbitalElements {
-  return {
-    id: asSceneBodyId(row.id),
+  return skyOrbitElements({
+    id: row.id,
     focusId: GALACTIC_CENTRE_ANCHOR.id,
+    plane: GALACTIC_CENTRE_SKY_FRAME,
     semiMajorMpc: row.semiMajorArcsec * GC_ARCSEC_TO_MPC,
     eccentricity: row.eccentricity,
-    inclinationRad: skyInclinationToFrameInclination(row.inclinationDeg),
-    ascendingNodeRad: skyPositionAngleToFrameAngle(row.ascendingNodeDeg),
-    argPeriapsisRad: degToRad(row.argPeriapsisDeg),
-    meanAnomalyRad: meanAnomalyAtJ2000(row.periapsisEpochYr, row.periodYr),
-    meanAnomalyRateRadPerCty: (2 * Math.PI * YEARS_PER_JULIAN_CENTURY) / row.periodYr,
+    inclinationDeg: row.inclinationDeg,
+    ascendingNodeDeg: row.ascendingNodeDeg,
+    argPeriapsisDeg: row.argPeriapsisDeg,
+    periapsisEpochYr: row.periapsisEpochYr,
+    periodYr: row.periodYr,
     color: sStarTrailTint(row),
-    plane: GALACTIC_CENTRE_SKY_FRAME,
-  };
+  });
 }
