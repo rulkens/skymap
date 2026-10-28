@@ -69,9 +69,6 @@ vi.mock('../../../../src/services/gpu/device', () => ({
       // wraps both create calls on whatever device `gpu/device`'s mocked
       // `initGpu` hands back, so the stub needs this method too.
       createTexture: vi.fn(() => ({ destroy: vi.fn() })),
-      // surfaceTileRenderer uploads its shared template index buffer at
-      // construction, so a queue is part of the construction-time surface now.
-      queue: { writeBuffer: vi.fn() },
     } as unknown as GPUDevice,
     context: { __mockContext: true } as unknown as GPUCanvasContext,
     format: 'bgra8unorm' as GPUTextureFormat,
@@ -172,73 +169,13 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
 
-// The earth renderer keeps its `?static` WESL imports out of JSDOM; mock it
-// so the `earthRenderer` row's construct closure (gpuHandleRegistry.ts)
-// lands a stub on `state.gpu.earthRenderer` (the un-awaited Blue Marble
-// fetch it fires runs after initGpu resolves and fails harmlessly in the
-// test env).
-vi.mock('../../../../src/layers/body/render/earthRenderer', () => ({
-  createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
-}));
-
-// The anchor renderers likewise keep their `?static` WESL imports out of
-// JSDOM. createPlanetRenderer is called ONCE — a single dynamic-offset
-// renderer draws every seeded planet (see EngineGpuHandles) — so the shared
-// `stubs.planetRenderer` key is the constructed instance.
-// The shared textured-body renderer keeps its `?static` WESL imports out of
-// JSDOM; mock it so the `texturedBodyRenderer` row's construct closure
-// lands a stub on `state.gpu.texturedBodyRenderer`.
-vi.mock('../../../../src/layers/body/render/texturedBodyRenderer', () => ({
-  createTexturedBodyRenderer: vi.fn(() => makeStub('texturedBodyRenderer')),
-}));
-// The ring renderer keeps its `?static` WESL imports out of JSDOM; mock it so
-// the `ringRenderer` row's construct closure lands a stub on `state.gpu.ringRenderer`.
-vi.mock('../../../../src/layers/body/render/ringRenderer', () => ({
-  createRingRenderer: vi.fn(() => makeStub('ringRenderer')),
-}));
-// Earth's cloud-shell renderer keeps its `?static` WESL imports out of JSDOM;
-// mock it so the `cloudShellRenderer` row's construct closure lands a stub on
-// `state.gpu.cloudShellRenderer`.
-vi.mock('../../../../src/layers/body/render/cloudShellRenderer', () => ({
-  createCloudShellRenderer: vi.fn(() => makeStub('cloudShellRenderer')),
-}));
-// Earth's atmosphere-shell renderer bakes LUTs against the full device API (compute
-// pipelines + storage textures) the plain stub device can't service, and keeps its
-// `?static` WESL imports out of JSDOM; mock it so the `atmosphereShellRenderer`
-// row's construct closure lands a stub on `state.gpu.atmosphereShellRenderer`.
-// That row passes the whole `ATMOSPHERE_PARAMS` record (a real data import —
-// no mock needed for it).
-vi.mock('../../../../src/layers/body/render/atmosphereShellRenderer', () => ({
-  createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
-}));
-// Partial mock: planetsPass.ts imports the real INSTANCE_FLOATS constant at
-// module scope to size its staging buffer (against SCENE_PLANETS.length —
-// no fixed cap), so only the factory is stubbed — passing INSTANCE_FLOATS
-// through keeps that sizing real.
-vi.mock('../../../../src/layers/body/render/planetRenderer', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../../src/layers/body/render/planetRenderer')>()),
-  createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
-}));
-// Partial mock, same rationale as planetRenderer's below: bodyGlintsPass.ts
-// (loaded transitively via the frame program's registry import) reads the real
-// MAX_GLINTS / INSTANCE_FLOATS constants at module scope to size its staging
-// buffer, so only the factory is stubbed.
-vi.mock(
-  '../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer',
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import('../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer')
-    >()),
-    createBodyGlintRenderer: vi.fn(() => makeStub('bodyGlintRenderer')),
-  }),
-);
 // The body pick renderer builds two r32uint pick pipelines (a dynamic-offset
 // sphere path + an instanced point path) against the full device API the plain
 // stub device can't service, so mock the factory like the other pick providers.
 vi.mock('../../../../src/services/gpu/renderers/bodies/bodyPickRenderer', () => ({
   createBodyPickRenderer: vi.fn(() => makeStub('bodyPickRenderer')),
 }));
-// Partial mock, same rationale as planetRenderer's above: orbitTrailsPass.ts
+// Partial mock: orbitTrailsPass.ts
 // (loaded transitively via the frame program's registry import) reads the
 // real INSTANCE_FLOATS constant at module scope to size its staging buffer
 // (against ORBITAL_ELEMENTS.length — no fixed cap), so only the factory is
@@ -312,18 +249,9 @@ function makeState(): EngineState {
       proceduralDiskRenderer: null,
       horizonShellRenderer: null,
       pickDebugOverlay: null,
-      earthRenderer: null,
-      planetRenderer: null,
-      texturedBodyRenderer: null,
-      ringRenderer: null,
-      cloudShellRenderer: null,
-      atmosphereShellRenderer: null,
       bodyPickRenderer: null,
-      bodyGlintRenderer: null,
       orbitTrailRenderer: null,
     },
-    // The real seeded stores: planets draw through a single instanced
-    // planetRenderer fed by bodies.planets.
     data: createEngineData(),
     // Read by the `renderTargets` row's construct closure via
     // `composeRenderTargetRows`; no Layer targets in this fixture.

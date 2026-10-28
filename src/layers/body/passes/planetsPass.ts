@@ -34,12 +34,12 @@
  *
  * ### When it draws — the partition's flat branch, this row's body only
  *
- * `enabled` gates on the `planetRenderer` GPU handle (null pre-bootstrap),
- * the shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`), AND
- * this row's `bodyId` appearing in the partition's `flat` branch.
+ * `enabled` gates on the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`) AND this row's `bodyId` appearing in the partition's `flat` branch.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { Source } from '../../../data/sources';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
@@ -48,7 +48,7 @@ import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { coreSceneBodyPartition } from '../present/coreSceneBodyPartition';
+import { bodySceneBodyPartition } from '../present/bodySceneBodyPartition';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { INSTANCE_FLOATS } from '../render/planetRenderer';
 import { seedIndexOfBody } from '../../../utils/picking/seedIndexOfBody';
@@ -60,101 +60,98 @@ import { bodySlabFlooredPick } from '../../../services/engine/helpers/bodySlabFl
 // staging array).
 const staging = new Float32Array(INSTANCE_FLOATS);
 
-export const planetsPass: ContentPass = {
-  name: 'planets',
+export function planetsPass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'planets',
 
-  enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m') return false;
-    // Handle first, distance second, partition last: the handle check
-    // short-circuits so pre-bootstrap fixtures (null renderer, bare ctx, no
-    // bodies bag) never touch ctx or state.data.
-    if (state.gpu.planetRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const bodyId = view.slab.frame.hostId;
-    return coreSceneBodyPartition(state, ctx).flat.some((p) => p.id === bodyId);
-  },
+    enabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      // Distance before partition: the partition is the costly read.
+      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+      const bodyId = view.slab.frame.hostId;
+      return bodySceneBodyPartition(state, ctx, runtime).flat.some((p) => p.id === bodyId);
+    },
 
-  // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
-  // whole planet source (`flat ∪ textured`; `texturedBodiesPass` carries no
-  // pick aspect — see `drawPick`'s header), so a textured-only row (a lone
-  // textured Saturn before its untextured moons resolve into `flat`) must stay
-  // pickable while its visual row leaves the pass plan. See `ContentPass.pickEnabled`.
-  pickEnabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m') return false;
-    if (state.gpu.planetRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const bodyId = view.slab.frame.hostId;
-    const { flat, textured } = coreSceneBodyPartition(state, ctx);
-    return flat.some((p) => p.id === bodyId) || textured.some((p) => p.id === bodyId);
-  },
+    // Pick gate — WIDER than `enabled`: this layer is the sole pick site for the
+    // whole planet source (`flat ∪ textured`; `texturedBodiesPass` carries no
+    // pick aspect — see `drawPick`'s header), so a textured-only row (a lone
+    // textured Saturn before its untextured moons resolve into `flat`) must stay
+    // pickable while its visual row leaves the pass plan. See `ContentPass.pickEnabled`.
+    pickEnabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+      const bodyId = view.slab.frame.hostId;
+      const { flat, textured } = bodySceneBodyPartition(state, ctx, runtime);
+      return flat.some((p) => p.id === bodyId) || textured.some((p) => p.id === bodyId);
+    },
 
-  draw(pass, view, ctx, state) {
-    const renderer = state.gpu.planetRenderer;
-    if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.hostId;
-    const planet = coreSceneBodyPartition(state, ctx).flat.find((p) => p.id === bodyId);
-    if (planet === undefined) return;
-    // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
-    // `view.slab.vp` — reading it here instead of re-deriving the pose is what
-    // keeps this layer's eyeRelBodyM from ever drifting off that basis.
-    const pose = ctx.bodyPose(bodyId);
-    if (pose === null) return;
+    draw(pass, view, ctx, state) {
+      if (view.slab.frame.kind !== 'body-m') return;
+      const bodyId = view.slab.frame.hostId;
+      const planet = bodySceneBodyPartition(state, ctx, runtime).flat.find((p) => p.id === bodyId);
+      if (planet === undefined) return;
+      // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
+      // `view.slab.vp` — reading it here instead of re-deriving the pose is what
+      // keeps this layer's eyeRelBodyM from ever drifting off that basis.
+      const pose = ctx.bodyPose(bodyId);
+      if (pose === null) return;
 
-    // Live position + orientation from the per-frame snapshot (keyed by id) —
-    // sunDirLocal still reads Mpc/orientation directly; only the mvp/camLocal
-    // seam moved to the metre-native body-slab primitives.
-    const bodyState = sceneBodyStates(state, ctx).get(planet.id)!;
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.surface.datumRadiusM);
-    const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
-    // The analytic ray's ORIGIN, in the frame where this body is the unit
-    // sphere — a PAIR with the mvp above, both built from the same datum radius.
-    const cam = bodySlabCamLocal(pose.eyeRelBodyM, planet.surface.datumRadiusM);
+      // Live position + orientation from the per-frame snapshot (keyed by id) —
+      // sunDirLocal still reads Mpc/orientation directly; only the mvp/camLocal
+      // seam moved to the metre-native body-slab primitives.
+      const bodyState = sceneBodyStates(state, ctx).get(planet.id)!;
+      const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.surface.datumRadiusM);
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+      // The analytic ray's ORIGIN, in the frame where this body is the unit
+      // sphere — a PAIR with the mvp above, both built from the same datum radius.
+      const cam = bodySlabCamLocal(pose.eyeRelBodyM, planet.surface.datumRadiusM);
 
-    // Narrow here, at the staging-buffer write — composeBodySlabMvp returns f64.
-    staging.set(narrowMat4(mvp), 0);
-    staging[16] = planet.albedo[0];
-    staging[17] = planet.albedo[1];
-    staging[18] = planet.albedo[2];
-    staging[19] = 0; // albedo pad — kept zeroed across frames
-    staging[20] = sun[0];
-    staging[21] = sun[1];
-    staging[22] = sun[2];
-    staging[23] = 0; // sunDir pad — kept zeroed across frames
-    staging[24] = cam[0];
-    staging[25] = cam[1];
-    staging[26] = cam[2];
-    staging[27] = 0; // camPosLocal pad — kept zeroed across frames
-    renderer.draw(pass, bodyId, staging);
-  },
+      // Narrow here, at the staging-buffer write — composeBodySlabMvp returns f64.
+      staging.set(narrowMat4(mvp), 0);
+      staging[16] = planet.albedo[0];
+      staging[17] = planet.albedo[1];
+      staging[18] = planet.albedo[2];
+      staging[19] = 0; // albedo pad — kept zeroed across frames
+      staging[20] = sun[0];
+      staging[21] = sun[1];
+      staging[22] = sun[2];
+      staging[23] = 0; // sunDir pad — kept zeroed across frames
+      staging[24] = cam[0];
+      staging[25] = cam[1];
+      staging[26] = cam[2];
+      staging[27] = 0; // camPosLocal pad — kept zeroed across frames
+      runtime.planet.draw(pass, bodyId, staging);
+    },
 
-  // Pick aspect — stamps this row's body into the r32uint pick pass when it is
-  // EITHER flat or textured (the union `pickEnabled` admits). The packed id
-  // carries the body's STABLE `SCENE_PLANETS` index, NOT its slot in any
-  // resolved subset — see `seedIndexOfBody`. A planet id absent from the seed
-  // table returns −1 and is skipped: a packed id from −1 would alias body 0.
-  drawPick(pass, view, ctx, state) {
-    const pickRenderer = state.gpu.bodyPickRenderer;
-    if (pickRenderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.hostId;
-    const { flat, textured } = coreSceneBodyPartition(state, ctx);
-    const planet = flat.find((p) => p.id === bodyId) ?? textured.find((p) => p.id === bodyId);
-    if (planet === undefined) return;
-    const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
-    if (seedIndex < 0) return; // unknown id: a packed id from −1 would alias body 0.
-    const pose = ctx.bodyPose(bodyId);
-    if (pose === null) return;
+    // Pick aspect — stamps this row's body into the r32uint pick pass when it is
+    // EITHER flat or textured (the union `pickEnabled` admits). The packed id
+    // carries the body's STABLE `SCENE_PLANETS` index, NOT its slot in any
+    // resolved subset — see `seedIndexOfBody`. A planet id absent from the seed
+    // table returns −1 and is skipped: a packed id from −1 would alias body 0.
+    drawPick(pass, view, ctx, state) {
+      const pickRenderer = state.gpu.bodyPickRenderer;
+      if (pickRenderer === null || view.slab.frame.kind !== 'body-m') return;
+      const bodyId = view.slab.frame.hostId;
+      const { flat, textured } = bodySceneBodyPartition(state, ctx, runtime);
+      const planet = flat.find((p) => p.id === bodyId) ?? textured.find((p) => p.id === bodyId);
+      if (planet === undefined) return;
+      const seedIndex = seedIndexOfBody(planet.id, SCENE_PLANETS);
+      if (seedIndex < 0) return; // unknown id: a packed id from −1 would alias body 0.
+      const pose = ctx.bodyPose(bodyId);
+      if (pose === null) return;
 
-    const { mvp, camPosLocal } = bodySlabFlooredPick(
-      view.slab.vp,
-      pose.eyeRelBodyM,
-      planet.surface.datumRadiusM,
-      ctx.drawPxPerRad,
-    );
+      const { mvp, camPosLocal } = bodySlabFlooredPick(
+        view.slab.vp,
+        pose.eyeRelBodyM,
+        planet.surface.datumRadiusM,
+        ctx.drawPxPerRad,
+      );
 
-    pickRenderer.drawSphere(pass, {
-      mvp,
-      camPosLocal,
-      packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
-    });
-  },
-};
+      pickRenderer.drawSphere(pass, {
+        mvp,
+        camPosLocal,
+        packedId: packSelection(Source.Planet, seedIndex + PICK_SENTINEL_OFFSET),
+      });
+    },
+  };
+}

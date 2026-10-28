@@ -1,106 +1,37 @@
 /**
- * ASSET_WIRING — core's half of the fetchable-asset registry, AUTHORED: companion
- * rows are folded by `createLayers`, over these plus every Layer's, into
+ * ASSET_WIRING — core's half of the fetchable-asset registry: one row per mesh body
+ * (the mesh slots stay core's, beside the one mesh renderer every body-bearing Layer
+ * draws through). `createLayers` folds these with every Layer's rows into
  * `state.assetRows`. Each `demand(ctx)` is a pure predicate over `DemandCtx`, re-run
- * whole on any state change, so no edge (tier flip while hidden, toggle mid-flight)
- * can be missed. `built: 'external'` rows are minted in `wireSlots` and appear here
- * only for demand + `req(tier)`; their `factory` throws if the construction pass
- * calls it.
+ * whole on any state change, so no edge can be missed. The slots are minted in
+ * `wireSlots`, so a row's `factory` throws if the construction pass calls it.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
-import { createBodyTextureAtlasSlot } from '../../../layers/body/load/bodyTextureAtlasSlot';
-import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { MESH_PRESENTATIONS } from '../../../data/bodies/meshPresentations';
-import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
 import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
-import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
-import { pastTextureReleaseRadius } from '../frame/pastTextureReleaseRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
-import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
-import type { RingTextureId } from '../../../@types/data/RingTextureId';
-import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
-import type { TextureKind } from '../../../@types/data/TextureKind';
-import type { Tier } from '../../../@types/data/Tier';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
-import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
   throw new Error(
-    'assetWiring: externally-built rows (built: "external" — body textures, mesh bodies) are minted outside this registry; the construction pass must not build them',
+    'assetWiring: mesh body slots (built: "external") are minted in wireSlots; the construction pass must not build them',
   );
 };
 
 /**
- * The host body's world position at the frame's LIVE sim instant — every host
- * MOVES, so this must come from `deriveBodyStates(ctx.simDays)` (the memoized source
- * the render layers read), never a baked epoch. A paused clock re-reads the same
- * snapshot; a tick re-solves the ~22 Kepler orbits once for all proximity rows.
- */
-function bodyPosOf(id: BodyTextureId | RingTextureId, simDays: number): Readonly<Vec3> {
-  const hostId = hostBodyId(id);
-  // A texture key is not a scene id; the hosts all are, so a miss is the throw below.
-  const state = isSceneBodyId(hostId) ? deriveBodyStates(simDays).get(hostId) : undefined;
-  if (state === undefined) {
-    throw new Error(`bodyPosOf: texture host '${hostId}' has no derived body state`);
-  }
-  return state.positionMpc;
-}
-
-/**
- * The per-`kind` tier ceiling (a ring's is its host's). `ALL_BODY_TEXTURE_KEYS` is
- * enumerated from present `kinds` keys, so the lookup is total — hence the `!`.
- */
-function ceilingOf(id: BodyTextureId | RingTextureId, kind: TextureKind): Tier {
-  return BODY_TEXTURE_REGISTRY[hostBodyId(id)].kinds[kind]!;
-}
-
-/**
- * One demand+release row per body-texture family key. DEMANDED inside the body's
- * load radius, RELEASED past twice it: `release` is deliberately not `!demand`, and
- * the band between `X` and `2X` where neither fires is the hysteresis that stops a
- * camera dithering at the boundary from thrashing a multi-MB load/free cycle. `req`
- * clamps the tier to the `(body, kind)` ceiling.
- */
-function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
-  return {
-    key: bodyTextureSlotKey(entry.bodyId, entry.kind),
-    built: 'external',
-    factory: externalFactory,
-    req: (tier) => ({
-      bodyId: entry.bodyId,
-      kind: entry.kind,
-      tier: clampTier(tier, ceilingOf(entry.bodyId, entry.kind)),
-    }),
-    demand: (ctx) =>
-      distanceMpc(ctx.cameraPosMpc, bodyPosOf(entry.bodyId, ctx.simDays)) <
-      loadRadiusMpc(entry.bodyId),
-    release: (ctx) =>
-      pastTextureReleaseRadius(
-        entry.bodyId,
-        ctx.cameraPosMpc,
-        bodyPosOf(entry.bodyId, ctx.simDays),
-      ),
-    priority: 10, // one rank for the family; they are rarely co-demanded with each other
-  };
-}
-
-/**
- * One demand+release row per mesh body. Same proximity hysteresis as
- * `bodyTextureRow` (demanded inside `loadRadiusMpc`, released past twice it),
- * SIMPLER: a mesh body is in the body-state snapshot whatever drives it, so its
- * position comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
- * indirection for a ring-style host.
+ * One demand+release row per mesh body: demanded inside `loadRadiusMpc`, released
+ * past twice it — the band between is the hysteresis that stops a camera dithering
+ * at the boundary from thrashing a load/free cycle. A mesh body is in the body-state
+ * snapshot whatever drives it, so its position comes straight off `deriveBodyStates`.
  */
 function meshBodyRow(body: MeshPresentation): AssetWiringRow {
   const bodyPos = (simDays: number): Readonly<Vec3> => {
@@ -129,22 +60,6 @@ function meshBodyRow(body: MeshPresentation): AssetWiringRow {
 }
 
 export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
-  // ── Low-resolution all-bodies surface atlas ──────────────────────
-  // Rank 0 and deliberately NOT proximity-gated: it is the universal fallback the
-  // per-body rows upgrade, so gating it would reinstate the "body reached before its
-  // texture" gap it closes. Registry-built — its commit fans out to several renderers,
-  // so there is none to co-mint it beside.
-  {
-    key: 'bodyTextureAtlas',
-    factory: (deps) => createBodyTextureAtlasSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: () => true,
-    priority: 0,
-  },
-
-  // ── Body-surface textures (proximity-demanded + released) ────────
-  ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
-
   // ── Mesh bodies (whale, petunias, …) ─────────────────────────────
   ...MESH_PRESENTATIONS.map(meshBodyRow),
 ];

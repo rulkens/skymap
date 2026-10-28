@@ -89,7 +89,7 @@ function makeState(): EngineState {
     selection: { hover: null, select: null },
     selectionKindRows: [],
     // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
-    gpu: { texturedBodyRenderer: null },
+    gpu: {},
     data: {
       bodies: {
         earth: SCENE_EARTH,

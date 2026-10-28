@@ -1,6 +1,6 @@
 /**
  * meshSlotRegistry — mints the `meshBodies` slot family, one `AssetSlot` per
- * `MESH_PRESENTATIONS` entry. Un-keyed, unlike `bodyTextureSlotRegistry.ts`: one
+ * `MESH_PRESENTATIONS` entry, keyed by body id alone (no per-kind split): one
  * fetch resolves a mesh body's whole `MeshAsset` (geometry + three textures).
  */
 

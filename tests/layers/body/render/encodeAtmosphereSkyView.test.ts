@@ -30,6 +30,7 @@ import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal'
 import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import type { AtmosphereShellRenderer } from '../../../../src/layers/body/@types/AtmosphereShellRenderer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
@@ -82,20 +83,21 @@ const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => compu
 const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
 
 /** A spy atmosphere renderer — only `dispatchSkyView` is exercised here. */
-function spyRenderer(): { dispatchSkyView: ReturnType<typeof vi.fn> } {
-  return { dispatchSkyView: vi.fn() };
+function spyRenderer(): AtmosphereShellRenderer & { dispatchSkyView: ReturnType<typeof vi.fn> } {
+  return { dispatchSkyView: vi.fn() } as unknown as AtmosphereShellRenderer & {
+    dispatchSkyView: ReturnType<typeof vi.fn>;
+  };
 }
 
 /**
- * Assemble the minimal EngineState the encode reads: the renderer handle off
- * `gpu` and the seeded bodies off `data.bodies`. The twilight softness + intensity
+ * Assemble the minimal EngineState the encode reads: the seeded bodies off
+ * `data.bodies`. The twilight softness + intensity
  * come from each body's `AtmosphereParams` row, so no settings are read.
  * `atmosphereDrawList` spreads `bodies.planets`, so seed it empty (only Earth
  * carries an atmosphere row today).
  */
-function makeState(init: { renderer: unknown; earth?: EarthBody | null }): EngineState {
+function makeState(init: { earth?: EarthBody | null } = {}): EngineState {
   return {
-    gpu: { atmosphereShellRenderer: init.renderer },
     data: {
       bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] },
     },
@@ -163,9 +165,10 @@ describe('encodeAtmosphereSkyView', () => {
       timestampWrites: writes as unknown as GPUComputePassTimestampWrites,
     }));
     encodeAtmosphereSkyView(
+      renderer,
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-      makeState({ renderer }),
+      makeState(),
       claim,
     );
     expect(beginComputePass).toHaveBeenCalledTimes(1);
@@ -178,9 +181,10 @@ describe('encodeAtmosphereSkyView', () => {
   it('claims no timing slot and opens no pass when no body carries an atmosphere', () => {
     const claim = vi.fn(() => ({}));
     encodeAtmosphereSkyView(
+      spyRenderer(),
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-      makeState({ renderer: spyRenderer(), earth: null }),
+      makeState({ earth: null }),
       claim,
     );
     expect(beginComputePass).not.toHaveBeenCalled();
@@ -190,12 +194,13 @@ describe('encodeAtmosphereSkyView', () => {
   it('is a no-op when the camera is beyond the near-field distance gate', () => {
     const renderer = spyRenderer();
     encodeAtmosphereSkyView(
+      renderer,
       encoder,
       makeCtx({
         bodyPose: makeBodyPose(EYE_REL_BODY_M),
         camDistance: FOREGROUND_MAX_DISTANCE_MPC,
       }),
-      makeState({ renderer }),
+      makeState(),
     );
     expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
   });
@@ -203,9 +208,10 @@ describe('encodeAtmosphereSkyView', () => {
   it('is a no-op when bodies.earth is unseeded', () => {
     const renderer = spyRenderer();
     encodeAtmosphereSkyView(
+      renderer,
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-      makeState({ renderer, earth: null }),
+      makeState({ earth: null }),
     );
     expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
   });
@@ -213,9 +219,10 @@ describe('encodeAtmosphereSkyView', () => {
   it('bakes the SkyViewParams from ctx.bodyPose (the M1 body-slab pose seam), via bodySlabCamLocal', () => {
     const renderer = spyRenderer();
     encodeAtmosphereSkyView(
+      renderer,
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-      makeState({ renderer }),
+      makeState(),
     );
 
     expect(renderer.dispatchSkyView).toHaveBeenCalledTimes(1);
@@ -256,9 +263,10 @@ describe('encodeAtmosphereSkyView', () => {
     const fartherPose: Vec3 = [0, 0, 20 * SEEDED_EARTH.surface.datumRadiusM];
     const fartherRenderer = spyRenderer();
     encodeAtmosphereSkyView(
+      fartherRenderer,
       encoder,
       makeCtx({ bodyPose: makeBodyPose(fartherPose) }),
-      makeState({ renderer: fartherRenderer }),
+      makeState(),
     );
     const fartherUniforms = fartherRenderer.dispatchSkyView.mock.calls[0]![2] as Float32Array;
     expect(fartherUniforms[0]).toBeGreaterThan(uniforms[0]!);

@@ -64,7 +64,7 @@ export const PRELUDE: FrameSection = {
     // The reflection probe of this frame's one subject mesh body, after the sky
     // line so its blit samples a `solarSystem` bake this frame may have written.
     // Its roster is the sky blit plus the subject's HOST body row, and no more:
-    // `mission-meshes` / `core-mesh-bodies` / `earth-scene-meshes` are excluded because the
+    // `mission-meshes` / `body-meshes` / `earth-scene-meshes` are excluded because the
     // subject would draw into its own probe; `star-spheres` / `field-star-sphere` because
     // the Sun stays analytic (a sub-pixel Sun would smear through the prefilter
     // into a false highlight); `body-glints` / `mission-glints` / `earth-scene-glints` /
@@ -233,7 +233,7 @@ export const SCENE: FrameSection = {
     // sphere and only the shells' own fragments are overdrawn — which is also what
     // leaves the mesh's own distance in the depth the aerial line below samples,
     // so a rover silhouetted against Mars sky is fogged at its range, not space's.
-    // `mission-meshes`, `core-mesh-bodies`, `earth-scene-meshes` keeps each row's draw order:
+    // `mission-meshes`, `body-meshes`, `earth-scene-meshes` keeps each row's draw order:
     // the craft, the shape-model moons, then Søndermarken.
     {
       kind: 'foreground',
@@ -260,7 +260,7 @@ export const SCENE: FrameSection = {
         // the shell the depth it exists to read (one marker per roster).
         { sampleDepth: ['contact-shadows', 'atmosphere-shell'] },
         'mission-meshes',
-        'core-mesh-bodies',
+        'body-meshes',
         'earth-scene-meshes',
       ],
     },

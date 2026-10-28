@@ -16,25 +16,24 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
+import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { atmosphereDrawList } from '../present/atmosphereDrawList';
 
 export function encodeAtmosphereSkyView(
+  renderer: AtmosphereShellRenderer,
   encoder: GPUCommandEncoder,
   ctx: FrameView,
   state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {
-  const renderer = state.gpu.atmosphereShellRenderer;
-  if (renderer === null) return;
-
   const entries = atmosphereDrawList(state, ctx);
   if (entries.length === 0) return;
 
   const pass = encoder.beginComputePass({
     label: 'atmosphere-skyview-pass',
-    // Claimed only now, past both gates: a slot claimed on a frame that opens
+    // Claimed only now, past the gate: a slot claimed on a frame that opens
     // no pass reports the ticks it last held (see `ClaimTimestampWrites`).
     ...(claimTimestampWrites?.() ?? {}),
   });

@@ -13,18 +13,7 @@ import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
-import { createEarthRenderer } from '../../../layers/body/render/earthRenderer';
-import { createSurfaceTileRenderer } from '../../../layers/body/render/surfaceTileRenderer';
-import { createTerrainPickMarkerRenderer } from '../../../layers/body/render/terrainPickMarkerRenderer';
-import { SURFACE_TILE_MESH_RESOLUTION } from '../../../data/bodies/surfaceTileParams';
-import { createTexturedBodyRenderer } from '../../../layers/body/render/texturedBodyRenderer';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
-import { createRingRenderer } from '../../../layers/body/render/ringRenderer';
-import { createCloudShellRenderer } from '../../../layers/body/render/cloudShellRenderer';
-import { createAtmosphereShellRenderer } from '../../../layers/body/render/atmosphereShellRenderer';
-import { ATMOSPHERE_PARAMS } from '../../../layers/body/present/atmosphereParams';
-import { createPlanetRenderer } from '../../../layers/body/render/planetRenderer';
-import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
 import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -173,26 +162,6 @@ export const GPU_HANDLE_ROWS = [
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createBloomPyramid(deps.ctx.device, HDR_TARGET_FORMAT),
   },
-  // ── Sphere-body renderers: draw into the `foreground:0` render-target row ──
-  // (also earthRenderer through atmosphereShellRenderer further down). Their
-  // pipeline formats share HDR_TARGET_FORMAT/FOREGROUND_DEPTH_FORMAT
-  // (data/renderTargetFormats.ts) with that row's format/depth in
-  // renderTargets.ts, so the two can't drift apart.
-  {
-    key: 'planetRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createPlanetRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
-  {
-    key: 'bodyGlintRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
   {
     // Draws into a probe's cube (`meshBodyRenderer` mints it in this format).
     key: 'cubeFaceBlitRenderer',
@@ -216,52 +185,10 @@ export const GPU_HANDLE_ROWS = [
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
-  // Foreground-target invariant continues here — see the starRenderer/
-  // planetRenderer comment above.
-  {
-    key: 'earthRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createEarthRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
-  {
-    key: 'surfaceTileRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createSurfaceTileRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-        SURFACE_TILE_MESH_RESOLUTION,
-      ),
-  },
-  {
-    key: 'terrainPickMarkerRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createTerrainPickMarkerRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
-  {
-    key: 'texturedBodyRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createTexturedBodyRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
   {
     // Mesh bodies ride their host's NEAR0 body slab, so they share the sphere
-    // bodies' foreground:0 formats and depth convention exactly.
+    // bodies' foreground:0 formats and depth convention exactly: its pipeline
+    // formats are the `foreground:0` row's own (data/renderTargetFormats.ts).
     key: 'meshBodyRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMeshBodyRenderer({
@@ -271,31 +198,6 @@ export const GPU_HANDLE_ROWS = [
         reversedZ: SLAB_REVERSED_Z[NEAR0]!,
         envBrdfLut: deps.envBrdfLut,
       }),
-  },
-  {
-    key: 'ringRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createRingRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
-  {
-    key: 'cloudShellRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createCloudShellRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
-  {
-    key: 'atmosphereShellRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAtmosphereShellRenderer(deps.ctx.device, HDR_TARGET_FORMAT, ATMOSPHERE_PARAMS),
   },
 
   // ── wireInput.ts-phase rows, declared LAST ───────────────────────────────

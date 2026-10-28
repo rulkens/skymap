@@ -11,7 +11,7 @@ import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
+import { hostBodyId } from '../present/hostBodyId';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 

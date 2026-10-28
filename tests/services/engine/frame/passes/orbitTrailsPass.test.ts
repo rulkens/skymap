@@ -265,7 +265,7 @@ function makeState(
   opts: { impostorOn?: boolean; groups?: EngineState['orbitTrailGroups'] } = {},
 ): EngineState {
   return {
-    gpu: { orbitTrailRenderer, texturedBodyRenderer: null },
+    gpu: { orbitTrailRenderer },
     // The seeded body bag `sceneOccluderSpheres` reads beside the frame's
     // scene bodies (every catalog admitted, `sceneBodiesAt`), so the occluder
     // set is decided by apparent size alone.

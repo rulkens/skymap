@@ -1,4 +1,4 @@
-import type { Tier } from '../../@types/data/Tier';
+import type { Tier } from '../../../@types/data/Tier';
 
 /** Sky-view LUT texels per tier — Adreno bisection found the 33 ms/frame cost is
  *  fetch-issue stalls in a ROLLED compute loop, not bandwidth (4-texel-pinned

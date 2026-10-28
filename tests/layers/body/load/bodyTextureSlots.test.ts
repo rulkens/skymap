@@ -1,0 +1,154 @@
+/**
+ * bodyTextureSlots — commit-dispatch tests for the body Layer's texture slots: commit
+ * routes each entry to its renderers — `'earth'` to `earth.setMap(kind, …)`, every
+ * other (non-ring) body to `texturedBody.setMap(bodyId, kind, …)`, a ring strip to
+ * its three consumers — and a non-Earth body's onRelease frees its texture via
+ * `texturedBody.clearMap(bodyId, kind)`, per-kind so the slot's `kind` flows
+ * through. Driven through the real slot machinery with a stubbed fetch + decode.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createBodyTextureSlots } from '../../../../src/layers/body/load/bodyTextureSlots';
+import { useFetchMock } from '../../../setup/fetchMock';
+import type { BodyTextureSinks } from '../../../../src/layers/body/@types/BodyTextureSinks';
+
+const fetch = useFetchMock();
+
+function makeSinks() {
+  return {
+    earth: { setMap: vi.fn(), clearMap: vi.fn() },
+    cloudShell: { setTexture: vi.fn(), clearTexture: vi.fn() },
+    texturedBody: { setMap: vi.fn(), clearMap: vi.fn(), setRingTexture: vi.fn() },
+    ring: { setTexture: vi.fn() },
+    atmosphere: { setRingTexture: vi.fn() },
+  };
+}
+
+describe('createBodyTextureSlots', () => {
+  let originalCreateImageBitmap: typeof globalThis.createImageBitmap | undefined;
+  let bitmap: ImageBitmap;
+
+  beforeEach(() => {
+    bitmap = { __bitmap: true, close: vi.fn() } as unknown as ImageBitmap;
+    originalCreateImageBitmap = globalThis.createImageBitmap;
+    globalThis.createImageBitmap = vi
+      .fn()
+      .mockResolvedValue(bitmap) as unknown as typeof globalThis.createImageBitmap;
+    fetch.mock.mockResolvedValue(
+      new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
+    );
+  });
+
+  afterEach(() => {
+    globalThis.createImageBitmap = originalCreateImageBitmap!;
+  });
+
+  it("the 'earth:clouds' slot's commit fans ONE bitmap to both the surface renderer and the cloud shell", async () => {
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('earth:clouds')!;
+    slot.load({ bodyId: 'earth', kind: 'clouds', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    // One committed cloud bitmap reaches BOTH resident consumers: the surface
+    // pipeline (shadow + night occlusion) and the translucent shell.
+    expect(sinks.earth.setMap).toHaveBeenCalledTimes(1);
+    expect(sinks.earth.setMap).toHaveBeenCalledWith('clouds', bitmap);
+    expect(sinks.cloudShell.setTexture).toHaveBeenCalledTimes(1);
+    expect(sinks.cloudShell.setTexture).toHaveBeenCalledWith(bitmap);
+  });
+
+  it("the 'moon:normal' slot's commit routes to texturedBody.setMap('moon','normal', …)", async () => {
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('moon:normal')!;
+    slot.load({ bodyId: 'moon', kind: 'normal', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    // The Prep-B kind routing must carry the NEW `normal` kind through verbatim —
+    // this fails the moment the commit collapses `kind` back to `'surface'`.
+    expect(sinks.texturedBody.setMap).toHaveBeenCalledTimes(1);
+    expect(sinks.texturedBody.setMap).toHaveBeenCalledWith('moon', 'normal', bitmap);
+    expect(sinks.texturedBody.setMap).not.toHaveBeenCalledWith('moon', 'surface', bitmap);
+    // The Moon is not Earth's — Earth's renderer stays untouched.
+    expect(sinks.earth.setMap).not.toHaveBeenCalled();
+  });
+
+  it("a non-'earth' body slot's onRelease frees its texture via texturedBody.clearMap(bodyId, kind)", async () => {
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('mars:surface')!;
+    slot.load({ bodyId: 'mars', kind: 'surface', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    // Eviction: releasing the slot must actually free Mars's GPU texture — and
+    // per-KIND, so the slot's `kind` flows through. This fails the moment the
+    // release collapses to a per-body clear that would destroy a sibling kind.
+    slot.release();
+    expect(sinks.texturedBody.clearMap).toHaveBeenCalledTimes(1);
+    expect(sinks.texturedBody.clearMap).toHaveBeenCalledWith('mars', 'surface');
+  });
+
+  it("releasing 'earth:clouds' frees both copies: Earth's map and the cloud shell's", async () => {
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('earth:clouds')!;
+    slot.load({ bodyId: 'earth', kind: 'clouds', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    slot.release();
+
+    expect(sinks.earth.clearMap).toHaveBeenCalledWith('clouds');
+    expect(sinks.cloudShell.clearTexture).toHaveBeenCalledOnce();
+    expect(sinks.texturedBody.clearMap).not.toHaveBeenCalled();
+  });
+
+  // Every sink copies the bitmap into its own texture, so a decoded copy kept past
+  // commit (up to 128 MiB at 8k) only doubles the map's footprint.
+  it('closes the bitmap once every sink has copied it', async () => {
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('earth:clouds')!;
+    slot.load({ bodyId: 'earth', kind: 'clouds', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    const closedAt = (bitmap.close as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
+    expect(sinks.cloudShell.setTexture.mock.invocationCallOrder[0]!).toBeLessThan(closedAt);
+  });
+
+  it('closes a bitmap superseded before it reached any sink', async () => {
+    const stale = { close: vi.fn() } as unknown as ImageBitmap;
+    vi.mocked(globalThis.createImageBitmap)
+      .mockResolvedValueOnce(stale)
+      .mockResolvedValueOnce(bitmap);
+    // One Response per call: a body can be read once.
+    fetch.mock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
+      ),
+    );
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get('mars:surface')!;
+    void slot.load({ bodyId: 'mars', kind: 'surface', tier: 'small' });
+    await slot.load({ bodyId: 'mars', kind: 'surface', tier: 'medium' });
+
+    expect(stale.close).toHaveBeenCalledOnce();
+    expect(sinks.texturedBody.setMap).not.toHaveBeenCalledWith('mars', 'surface', stale);
+  });
+
+  it('the ring strip lands in the ring, textured-body and atmosphere renderers', async () => {
+    const sinks = makeSinks();
+    const slot = createBodyTextureSlots(sinks as unknown as BodyTextureSinks).get(
+      'saturn-ring:surface',
+    )!;
+    slot.load({ bodyId: 'saturn-ring', kind: 'surface', tier: 'small' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    // The ring strip binds to its HOST body (saturn) via setRingTexture — the
+    // sphere setMap path is untouched, and Earth's renderer stays clear.
+    expect(sinks.texturedBody.setRingTexture).toHaveBeenCalledTimes(1);
+    expect(sinks.texturedBody.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
+    // …to the translucent overlay itself…
+    expect(sinks.ring.setTexture).toHaveBeenCalledWith(bitmap);
+    // …and fans out to the atmosphere shell's ring-in-front occlusion binding,
+    // keyed on the same host body.
+    expect(sinks.atmosphere.setRingTexture).toHaveBeenCalledTimes(1);
+    expect(sinks.atmosphere.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
+    expect(sinks.texturedBody.setMap).not.toHaveBeenCalled();
+    expect(sinks.earth.setMap).not.toHaveBeenCalled();
+  });
+});

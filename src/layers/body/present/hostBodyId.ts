@@ -1,6 +1,6 @@
-import type { BodyTextureId } from '../../@types/data/BodyTextureId';
-import type { RingTextureId } from '../../@types/data/RingTextureId';
-import { SCENE_RINGS } from '../../data/bodies/sceneRings';
+import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
+import type { RingTextureId } from '../../../@types/data/RingTextureId';
+import { SCENE_RINGS } from '../../../data/bodies/sceneRings';
 
 /**
  * hostBodyId — the spherical body a texture key rides on.

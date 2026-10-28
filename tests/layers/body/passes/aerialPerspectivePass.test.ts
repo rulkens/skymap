@@ -12,6 +12,7 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
@@ -66,31 +67,20 @@ function makeBodyView(bodyId: SceneBodyId): SlabView {
   };
 }
 
-function makeState(renderer: unknown): EngineState {
-  return {
-    gpu: { atmosphereShellRenderer: renderer },
-    data: { bodies: { earth: SCENE_EARTH, planets: [] } },
-  } as unknown as EngineState;
-}
+const STATE = {
+  data: { bodies: { earth: SCENE_EARTH, planets: [] } },
+} as unknown as EngineState;
 
 describe('aerialPerspectivePass.enabled', () => {
   it('is true only for a body whose shell encloses the camera', () => {
-    const state = makeState({ drawAerialPerspective: vi.fn() });
+    const pass = aerialPerspectivePass({
+      atmosphere: { drawAerialPerspective: vi.fn() },
+    } as unknown as BodyRuntime);
     const view = makeBodyView(asSceneBodyId('earth'));
 
-    expect(aerialPerspectivePass.enabled(state, makeCtx(EYE_INSIDE_M), view)).toBe(true);
+    expect(pass.enabled(STATE, makeCtx(EYE_INSIDE_M), view)).toBe(true);
 
     // Outside, the proxy-mesh `atmosphere-shell` row owns this body instead.
-    expect(aerialPerspectivePass.enabled(state, makeCtx(EYE_OUTSIDE_M), view)).toBe(false);
-  });
-
-  it('is false while the atmosphereShellRenderer handle is null, even for a bare ctx', () => {
-    expect(
-      aerialPerspectivePass.enabled(
-        makeState(null),
-        {} as FrameView,
-        makeBodyView(asSceneBodyId('earth')),
-      ),
-    ).toBe(false);
+    expect(pass.enabled(STATE, makeCtx(EYE_OUTSIDE_M), view)).toBe(false);
   });
 });

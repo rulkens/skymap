@@ -12,17 +12,8 @@ const BODY_TEXTURE_KEY_SET: ReadonlySet<string> = new Set(
 );
 
 /**
- * isBodyTextureKey — type guard splitting the `bodyTextures` family keys out of
- * the wider `AssetKey` union.
- *
- * The family's slots live in the keyed `state.assetSlots.bodyTextures` Map, not
- * as named fields like the other sidecar assets, so `slotFor` and
- * `installLoadProgress` must route a body-texture key to the Map and every other
- * string key to its named field. Because the two homes are structurally
- * different, a runtime membership check alone is not enough — the guard's
- * `key is BodyTextureSlotKey` narrowing is what lets the else-branch index the
- * named fields without a cast, preserving the compile-time drift protection (a
- * sidecar key with no matching `EngineAssetSlots` field fails to compile).
+ * isBodyTextureKey — type guard splitting the body Layer's texture keys out of the
+ * wider `AssetKey` union, so the named-field slot walks can skip them without a cast.
  */
 export function isBodyTextureKey(key: AssetKey): key is BodyTextureSlotKey {
   return typeof key === 'string' && BODY_TEXTURE_KEY_SET.has(key);

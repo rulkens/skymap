@@ -4,13 +4,12 @@
  * this mints core's own and then lets the demand loop decide what loads:
  *
  *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
- *      the composed rows (sidecars: the body-texture atlas, the volume overlays).
+ *      the composed rows.
  *      Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
- *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
- *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
- *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
+ *   3. The mesh body family (`wireMeshBodySlots`) — minted here, not by
+ *      `buildSlotsFromRegistry` (its rows carry `built: 'external'`).
  *   4. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
  *      virtual texture, and every visibility identity at its boot target
  *      (`installVisibilityGates` later subscribes its gating slots, so a
@@ -37,9 +36,7 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.{bodyTextureAtlas,…}`
- *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
- *     `.meshBodies` (via `wireMeshBodySlots`).
+ *   - `state.assetSlots.meshBodies` (via `wireMeshBodySlots`).
  *   - `state.subsystems.{loadProgress, surfaceTiles}`.
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
@@ -57,7 +54,6 @@ import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
-import { wireBodyTextureSlots } from '../../../layers/body/load/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';
@@ -81,11 +77,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   const slots = buildSlotsFromRegistry(state.assetRows, { state, cb });
   installSlots(state, slots);
 
-  // The keyed families: their `ASSET_WIRING` rows carry `built: 'external'`, so
+  // The mesh body family: its `ASSET_WIRING` rows carry `built: 'external'`, so
   // `buildSlotsFromRegistry` above skips them and they're minted here directly.
   // Must run before `installLoadProgress` (enumerates them into `allSlots`) and
   // `reevaluateDemand` (triggers their loads).
-  wireBodyTextureSlots(state);
   wireMeshBodySlots(state);
 
   // The surface virtual texture. A subsystem, not a renderer — it owns

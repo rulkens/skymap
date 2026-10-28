@@ -7,7 +7,7 @@
  * chain resolves without a real image decoder.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bodyTextureFetcher } from '../../../../src/services/loading/fetchers/bodyTextureFetcher';
+import { bodyTextureFetcher } from '../../../../src/layers/body/load/bodyTextureFetcher';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 const fetch = useFetchMock();

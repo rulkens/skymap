@@ -47,9 +47,8 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the `ringRenderer` handle (null pre-bootstrap), the
- * shared near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`), AND this
- * row's `bodyId` having a resident `SCENE_RINGS` entry whose outer diameter
+ * `enabled` gates on the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`) AND this row's `bodyId` having a resident `SCENE_RINGS` entry whose outer diameter
  * clears the shared sub-pixel floor — redundant with the host body-m row's
  * own visibility cull (which floors on the PLANET's raw radius, not the
  * ring's wider footprint) but cheap, and keeps this gate honest if the layer
@@ -58,6 +57,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
@@ -87,14 +87,12 @@ function ringDrawForBody(
   state: PassState,
   ctx: FrameView,
   bodyId: PositionedId,
+  runtime: BodyRuntime,
 ): { readonly ring: RingSpec; readonly body: PlanetBody; readonly pose: BodyRelativePose } | null {
   const ring = SCENE_RINGS.find((r) => r.bodyId === bodyId);
   if (ring === undefined) return null;
   // Resident iff the ring's surface strip slot holds a committed bitmap.
-  if (
-    state.assetSlots.bodyTextures.get(bodyTextureSlotKey(ring.textureId, 'surface'))?.current() ==
-    null
-  )
+  if (runtime.textureSlots.get(bodyTextureSlotKey(ring.textureId, 'surface'))?.current() == null)
     return null;
   const body = state.data.bodies.planets.find((b) => b.id === bodyId);
   if (body === undefined) return null;
@@ -121,48 +119,49 @@ function ringDrawForBody(
   return { ring, body, pose };
 }
 
-export const ringsPass: ContentPass = {
-  name: 'rings',
+export function ringsPass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'rings',
 
-  enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m') return false;
-    // Handle first: the check short-circuits so pre-bootstrap fixtures (null
-    // renderer, bare ctx) never touch ctx or the ring inputs.
-    if (state.gpu.ringRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    return ringDrawForBody(state, ctx, view.slab.frame.hostId) !== null;
-  },
+    enabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+      return ringDrawForBody(state, ctx, view.slab.frame.hostId, runtime) !== null;
+    },
 
-  draw(pass, view, ctx, state) {
-    const renderer = state.gpu.ringRenderer;
-    if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const drawInputs = ringDrawForBody(state, ctx, view.slab.frame.hostId);
-    if (drawInputs === null) return;
-    const { ring, body, pose } = drawInputs;
+    draw(pass, view, ctx, state) {
+      if (view.slab.frame.kind !== 'body-m') return;
+      const drawInputs = ringDrawForBody(state, ctx, view.slab.frame.hostId, runtime);
+      if (drawInputs === null) return;
+      const { ring, body, pose } = drawInputs;
 
-    // Live position + orientation from the per-frame snapshot — sunDirLocal
-    // still reads Mpc/orientation directly; only the mvp/camLocal seam moved
-    // to the metre-native body-slab primitives.
-    const bodyState = sceneBodyStates(state, ctx).get(body.id)!;
+      // Live position + orientation from the per-frame snapshot — sunDirLocal
+      // still reads Mpc/orientation directly; only the mvp/camLocal seam moved
+      // to the metre-native body-slab primitives.
+      const bodyState = sceneBodyStates(state, ctx).get(body.id)!;
 
-    // Scale the unit ring disc to the ring's OUTER radius, in metres — the
-    // body-m slab frame's own unit.
-    const outerRadiusM = ring.outerRadiusKm * SCALE_UNITS.KM_TO_M;
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, outerRadiusM);
-    // Sun rotated into the host body's local frame, co-framed with the
-    // fragment's two-sided Lambert + shadow ray.
-    const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
-    // Camera in the body's local frame, in PLANET radii (not ring-outer
-    // radii) — see the module header's "two different radius units" note.
-    const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.surface.datumRadiusM);
-    // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
-    // radius): the planet's size in disc units, and the hole's inner edge.
-    // The ring table is authored in km, the body in metres — hence the
-    // conversion inside this otherwise unit-free ratio.
-    const planetRadiusRatio =
-      (body.surface.datumRadiusM * SCALE_UNITS.M_TO_KM) / ring.outerRadiusKm;
-    const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
-    // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
-    renderer.draw(pass, packRingUniforms(narrowMat4(mvp), sun, planetRadiusRatio, cam, innerRatio));
-  },
-};
+      // Scale the unit ring disc to the ring's OUTER radius, in metres — the
+      // body-m slab frame's own unit.
+      const outerRadiusM = ring.outerRadiusKm * SCALE_UNITS.KM_TO_M;
+      const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, outerRadiusM);
+      // Sun rotated into the host body's local frame, co-framed with the
+      // fragment's two-sided Lambert + shadow ray.
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+      // Camera in the body's local frame, in PLANET radii (not ring-outer
+      // radii) — see the module header's "two different radius units" note.
+      const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.surface.datumRadiusM);
+      // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
+      // radius): the planet's size in disc units, and the hole's inner edge.
+      // The ring table is authored in km, the body in metres — hence the
+      // conversion inside this otherwise unit-free ratio.
+      const planetRadiusRatio =
+        (body.surface.datumRadiusM * SCALE_UNITS.M_TO_KM) / ring.outerRadiusKm;
+      const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
+      // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
+      runtime.ring.draw(
+        pass,
+        packRingUniforms(narrowMat4(mvp), sun, planetRadiusRatio, cam, innerRatio),
+      );
+    },
+  };
+}

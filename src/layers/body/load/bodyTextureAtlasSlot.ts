@@ -10,14 +10,17 @@
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
-import { bodyAtlasFetcher } from '../../../services/loading/fetchers/bodyAtlasFetcher';
+import { bodyAtlasFetcher } from './bodyAtlasFetcher';
 import { BODY_ATLAS_GRID, BODY_ATLAS_LAYOUT } from '../../../data/bodies/bodyAtlas.generated';
 import { atlasTileRect } from '../../../utils/gpu/atlasTileRect';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
-import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import type { BodyRuntime } from '../@types/BodyRuntime';
 
-export const createBodyTextureAtlasSlot: SlotFactory<ImageBitmap, void> = (state, _cb) => {
+export function createBodyTextureAtlasSlot(
+  renderers: Pick<BodyRuntime, 'earth' | 'texturedBody'>,
+): AssetSlot<ImageBitmap, void> {
   const slot = createAssetSlot({
     name: 'body-atlas',
     fetch: bodyAtlasFetcher,
@@ -36,12 +39,10 @@ export const createBodyTextureAtlasSlot: SlotFactory<ImageBitmap, void> = (state
         // Both sinks write the PLACEHOLDER layer, never the committed-map layer, so
         // a hi-res map that landed first shadows the tile and a late tile cannot
         // clobber it — no "has the hi-res arrived?" peek at slot state belongs here.
-        // The `?.` is destroy-race posture (StrictMode teardown), not an ordering
-        // guard: `initGpu` builds both renderers before `wireSlots` mints this slot.
         if (bodyId === 'earth') {
-          state.gpu.earthRenderer?.setPlaceholderMap('surface', atlas, rect);
+          renderers.earth.setPlaceholderMap('surface', atlas, rect);
         } else {
-          state.gpu.texturedBodyRenderer?.setPlaceholderMap(bodyId, 'surface', atlas, rect);
+          renderers.texturedBody.setPlaceholderMap(bodyId, 'surface', atlas, rect);
         }
       }
       // Every tile is cropped into its own texture above; the 2048×1792 source is spent.
@@ -55,4 +56,4 @@ export const createBodyTextureAtlasSlot: SlotFactory<ImageBitmap, void> = (state
     }
   });
   return slot;
-};
+}

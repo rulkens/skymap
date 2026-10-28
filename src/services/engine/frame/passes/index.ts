@@ -12,19 +12,8 @@ import { near0SelectionRingPass } from './near0SelectionRingPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsCosmoPass } from './labelsCosmoPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
-import { earthPass } from '../../../../layers/body/passes/earthPass';
-import { surfaceTilesPass } from '../../../../layers/body/passes/surfaceTilesPass';
-import { terrainPickMarkerPass } from '../../../../layers/body/passes/terrainPickMarkerPass';
-import { cloudShellPass } from '../../../../layers/body/passes/cloudShellPass';
-import { planetsPass } from '../../../../layers/body/passes/planetsPass';
-import { texturedBodiesPass } from '../../../../layers/body/passes/texturedBodiesPass';
-import { coreMeshBodiesPass } from '../../../../layers/body/passes/coreMeshBodiesPass';
-import { ringsPass } from '../../../../layers/body/passes/ringsPass';
-import { bodyGlintsPass } from '../../../../layers/body/passes/bodyGlintsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { labelsNearPass } from './labelsNearPass';
-import { atmosphereShellPass } from '../../../../layers/body/passes/atmosphereShellPass';
-import { aerialPerspectivePass } from '../../../../layers/body/passes/aerialPerspectivePass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 
@@ -35,23 +24,12 @@ import { domeResamplePass } from './domeResamplePass';
 export const CONTENT_PASSES: readonly ContentPass[] = [
   horizonShellPass,
   orbitTrailsPass,
-  bodyGlintsPass,
   selectionRingPass,
   near0SelectionRingPass,
   markerLinesPass,
   labelsCosmoPass,
-  earthPass,
-  surfaceTilesPass,
-  terrainPickMarkerPass,
-  cloudShellPass,
-  planetsPass,
-  texturedBodiesPass,
-  coreMeshBodiesPass,
-  ringsPass,
   labelsNearPass,
   clipPathDebugPass,
-  atmosphereShellPass,
-  aerialPerspectivePass,
   skyCubemapBlitPass,
   domeResamplePass,
 ];

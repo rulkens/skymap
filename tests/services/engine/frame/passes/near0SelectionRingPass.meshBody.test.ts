@@ -140,7 +140,6 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     gpu: {
       meshBodyRenderer: { hasMesh: () => true, draw: meshDraw },
       selectionRingRenderer: { draw: ringDraw },
-      texturedBodyRenderer: null,
     },
     data: { bodies: { earth, planets: [], meshBodies: SCENE_MESH_BODIES } },
     selectionRows: { select: row, focus: row, hover: null },

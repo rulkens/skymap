@@ -43,7 +43,7 @@ export function positionDriverById(id: string): PositionDriver {
 
 /**
  * The body this one hangs off: an orbit's focus, a sampled craft's Sun, a site's host. Anchors hang
- * off nothing. Not `utils/bodyTextures/hostBodyId`, which resolves a TEXTURE key's host.
+ * off nothing. Not the body Layer's `hostBodyId`, which resolves a TEXTURE key's host.
  */
 export function bodyHostId(id: string): PositionedId | null {
   const driver = positionDriverById(id);

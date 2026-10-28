@@ -373,7 +373,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
     expect(namesOf(steps[first + 2])).toEqual([
       'mission-meshes',
-      'core-mesh-bodies',
+      'body-meshes',
       'earth-scene-meshes',
     ]);
   });

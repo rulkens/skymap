@@ -248,9 +248,9 @@ describe('createLayers composition', () => {
   it('throws at boot when a Layer mints a slot key core already owns', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    const layer = contributingLayer('a', 'bodyTextureAtlas', () => ({}));
+    const layer = contributingLayer('a', 'mesh:curiosity', () => ({}));
 
-    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/bodyTextureAtlas/);
+    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/mesh:curiosity/);
   });
 
   it('routes a screen label producer to the director owning its named slab, and throws for one naming an unknown slab', async () => {

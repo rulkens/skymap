@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { coreSceneBodyPartition } from '../../../../src/layers/body/present/coreSceneBodyPartition';
+import { bodySceneBodyPartition } from '../../../../src/layers/body/present/bodySceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
@@ -16,6 +16,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
@@ -38,7 +39,6 @@ const STATE = {
     galaxyPickRenderer: {},
     renderTargets: {},
     compositor: {},
-    texturedBodyRenderer: null,
   },
   terrain: FLAT_TERRAIN,
   subsystems: {
@@ -152,18 +152,16 @@ const meshAt = (id: string, radiusM: number, distanceM: number): PositionedScene
 });
 
 /** The frame's mesh bodies are the meshes given; `sceneBodies` may hold more. Planet ids are
- *  `SCENE_PLANETS` ids, so core counts them as its own. */
+ *  `SCENE_PLANETS` ids, so the body Layer counts them as its own. */
 function partition(
   own: readonly PositionedSceneBody[],
   resident: (id: string) => boolean,
   extra: readonly PositionedSceneBody[] = [],
 ) {
   const state = {
-    gpu: {
-      texturedBodyRenderer: { hasMap: (id: string) => resident(id) },
-      meshBodyRenderer: { hasMesh: (id: string) => resident(id) },
-    },
+    gpu: { meshBodyRenderer: { hasMesh: (id: string) => resident(id) } },
   } as unknown as PassState;
+  const runtime = { texturedBody: { hasMap: (id: string) => resident(id) } };
   const ctx = {
     snapshot: {
       meshBodies: own.filter((p) => 'meshKey' in p.body).map((p) => p.body),
@@ -172,7 +170,7 @@ function partition(
     drawCamPos: CAM,
     drawPxPerRad: PX_PER_RAD,
   } as unknown as FrameView;
-  return coreSceneBodyPartition(state, ctx);
+  return bodySceneBodyPartition(state, ctx, runtime as unknown as BodyRuntime);
 }
 const bodiesOf = (bodies: readonly PositionedSceneBody[]) => bodies.map((p) => p.body);
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((b) => b.id);

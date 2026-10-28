@@ -13,8 +13,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineLoadProgressChanged } from '../../../../src/state/engine/engineSlice';
 import { Source } from '../../../../src/data/sources';
-import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { EngineAssetSlots } from '../../../../src/@types/engine/state/EngineAssetSlots';
@@ -56,21 +54,10 @@ function makeProgressState(): EngineState {
     cancel: () => {},
     release: () => {},
   });
-  // Typed as the real bag, not cast: `isCoreSlotFieldKey` tests `key in slots`
-  // at RUNTIME, so a fixture carrying fields production dropped would still walk
-  // — and pin a shape that no longer exists.
-  const assetSlots: EngineAssetSlots = {
-    bodyTextureAtlas: stubSlot('body-texture-atlas'),
-    // Empty keyed families: installLoadProgress walks them like layerSlots.
-    bodyTextures: new Map(),
-    meshBodies: new Map(),
-  };
+  const assetSlots: EngineAssetSlots = { meshBodies: new Map() };
   return {
     assetSlots,
     subsystems: { loadProgress: null },
-    // The composed lists `createLayers` would have written; over an empty layer
-    // tuple they are core's own registry, and no Layer owns a slot.
-    assetRows: expandCompanionRows(ASSET_WIRING),
     // A member, so the per-source Layer-slot walk is exercised (the starCatalog
     // Layer's Gaia slot is the real-world example this fixture stands in for).
     layerSlots: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),

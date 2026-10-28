@@ -26,7 +26,6 @@
  * of slot types, which TS widens to the erased shape on return.
  */
 
-import { isBodyTextureKey } from '../../../utils/bodyTextures/isBodyTextureKey';
 import { isMeshBodyKey } from '../../../utils/meshBodies/isMeshBodyKey';
 import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
@@ -34,7 +33,7 @@ import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 export function slotFor(
-  state: EngineState,
+  state: Pick<EngineState, 'layerSlots' | 'assetSlots'>,
   key: AssetKey,
 ): AssetSlot<unknown, unknown> | undefined {
   // A Layer's own slots first: a Layer owns its key outright, and
@@ -44,15 +43,6 @@ export function slotFor(
   // Numeric = Source code. Every per-source catalog is a Layer's and was
   // already returned above; core keeps no numeric-keyed slot map of its own.
   if (typeof key === 'number') return undefined;
-  // A body-texture family key routes through the keyed `bodyTextures` Map (the
-  // third slot home, alongside per-Layer slots / named sidecar fields). The
-  // guard narrows `key` so the else-branch below can index the named
-  // sidecar fields without a cast.
-  if (isBodyTextureKey(key)) {
-    return (state.assetSlots.bodyTextures.get(key) ?? undefined) as
-      | AssetSlot<unknown, unknown>
-      | undefined;
-  }
   // A mesh body key routes through the keyed `meshBodies` Map, un-prefixed —
   // the Map itself is keyed by the plain body id, the `mesh:` prefix exists
   // only to keep this branch's `AssetKey` member distinct (see `AssetKey.d.ts`).

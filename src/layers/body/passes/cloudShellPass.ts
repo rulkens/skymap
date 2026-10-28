@@ -44,8 +44,7 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the `cloudShellRenderer` handle (null pre-bootstrap),
- * this row being Earth's own body-m row, the shared near-field distance gate
+ * `enabled` gates on this row being Earth's own body-m row, the shared near-field distance gate
  * (`FOREGROUND_MAX_DISTANCE_MPC`) — the same near-field gate `earthPass`
  * applies, so the shell appears exactly when the surface does — AND the
  * clouds slot being RESIDENT and `cloudDeckFade` (see its header) being above
@@ -60,6 +59,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EarthBody } from '../../../@types/scene/EarthBody';
@@ -102,12 +102,13 @@ function cloudShellDraw(
   state: PassState,
   ctx: FrameView,
   bodyId: PositionedId,
+  runtime: BodyRuntime,
 ): CloudShellDraw | null {
   const earth = state.data.bodies.earth;
   if (earth === null || earth.id !== bodyId) return null;
   // Resident iff the clouds slot holds a committed bitmap; otherwise the shell
   // would draw a fully transparent sphere (placeholder alpha 0) — drop the row.
-  if (state.assetSlots.bodyTextures.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)
+  if (runtime.textureSlots.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)
     return null;
   // Live position from the per-frame snapshot (keyed by id) — not the baked
   // record field; the record still gates presence + residency and carries the
@@ -140,66 +141,64 @@ function cloudShellDraw(
   return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade, insideShell } : null;
 }
 
-export const cloudShellPass: ContentPass = {
-  name: 'cloud-shell',
+export function cloudShellPass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'cloud-shell',
 
-  enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m') return false;
-    // Handle first: the check short-circuits so pre-bootstrap fixtures (null
-    // renderer, bare ctx) never touch ctx or the body inputs.
-    if (state.gpu.cloudShellRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    // A row that would draw nothing (no resident map / sub-pixel) must leave the
-    // pass plan: mirror draw's branch with the SAME derivation.
-    return cloudShellDraw(state, ctx, view.slab.frame.hostId) !== null;
-  },
+    enabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+      // A row that would draw nothing (no resident map / sub-pixel) must leave the
+      // pass plan: mirror draw's branch with the SAME derivation.
+      return cloudShellDraw(state, ctx, view.slab.frame.hostId, runtime) !== null;
+    },
 
-  draw(pass, view, ctx, state) {
-    const renderer = state.gpu.cloudShellRenderer;
-    if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.hostId);
-    if (drawInputs === null) return;
-    const { earth, deckFade, insideShell } = drawInputs;
-    // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
-    // `view.slab.vp` — reading it here instead of re-deriving the pose is what
-    // keeps this layer's eyeRelBodyM from ever drifting off that basis. The
-    // row's own `bodyId` (not `earth.id`, a plain `string`) is what
-    // `BodyPoseProvider` accepts.
-    const pose = ctx.bodyPose(view.slab.frame.hostId);
-    if (pose === null) return;
+    draw(pass, view, ctx, state) {
+      if (view.slab.frame.kind !== 'body-m') return;
+      const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.hostId, runtime);
+      if (drawInputs === null) return;
+      const { earth, deckFade, insideShell } = drawInputs;
+      // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
+      // `view.slab.vp` — reading it here instead of re-deriving the pose is what
+      // keeps this layer's eyeRelBodyM from ever drifting off that basis. The
+      // row's own `bodyId` (not `earth.id`, a plain `string`) is what
+      // `BodyPoseProvider` accepts.
+      const pose = ctx.bodyPose(view.slab.frame.hostId);
+      if (pose === null) return;
 
-    // Live position + orientation from the per-frame snapshot (keyed by id) — not
-    // the baked record fields; radius stays authored identity on the record.
-    const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
+      // Live position + orientation from the per-frame snapshot (keyed by id) — not
+      // the baked record fields; radius stays authored identity on the record.
+      const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
 
-    // Scale the unit sphere to the shell radius — just above the surface — in
-    // metres, the body-m slab frame's own unit (the datum is already metres, so
-    // no Mpc conversion crosses this seam). The deck stays a RATIO of the datum
-    // here; F3 re-expresses it as an altitude above the outer bound, so a peak
-    // can never rise through it.
-    const shellRadiusM = earth.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio;
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, shellRadiusM);
-    // Sun rotated into Earth's local frame (its resolved orientation carries the
-    // axial tilt), so the fragment's Lambert dim on the night side stays co-framed
-    // with the surface.
-    const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
-    // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
-    // uses (single source of truth), so clouds — the brightest real feature — are
-    // not dimmer than the ground beneath them. The ambient floor is likewise the
-    // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
-    // the deck's night side dims in lockstep with the ground. `deckFade` folds
-    // the descent fade into the opacity multiplier; it is always > 0 here.
-    renderer.draw(
-      pass,
-      packCloudShellUniforms(
-        // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
-        narrowMat4(mvp),
-        sun,
-        CLOUD_SHELL_PARAMS.opacity * deckFade,
-        EARTH_SURFACE_PARAMS.sunIrradiance,
-        state.settings.earth.ambientLight,
-      ),
-      insideShell,
-    );
-  },
-};
+      // Scale the unit sphere to the shell radius — just above the surface — in
+      // metres, the body-m slab frame's own unit (the datum is already metres, so
+      // no Mpc conversion crosses this seam). The deck stays a RATIO of the datum
+      // here; F3 re-expresses it as an altitude above the outer bound, so a peak
+      // can never rise through it.
+      const shellRadiusM = earth.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio;
+      const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, shellRadiusM);
+      // Sun rotated into Earth's local frame (its resolved orientation carries the
+      // axial tilt), so the fragment's Lambert dim on the night side stays co-framed
+      // with the surface.
+      const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
+      // Scale the shell's direct (sun-lit) term by the SAME irradiance the surface
+      // uses (single source of truth), so clouds — the brightest real feature — are
+      // not dimmer than the ground beneath them. The ambient floor is likewise the
+      // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
+      // the deck's night side dims in lockstep with the ground. `deckFade` folds
+      // the descent fade into the opacity multiplier; it is always > 0 here.
+      runtime.cloudShell.draw(
+        pass,
+        packCloudShellUniforms(
+          // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
+          narrowMat4(mvp),
+          sun,
+          CLOUD_SHELL_PARAMS.opacity * deckFade,
+          EARTH_SURFACE_PARAMS.sunIrradiance,
+          state.settings.earth.ambientLight,
+        ),
+        insideShell,
+      );
+    },
+  };
+}

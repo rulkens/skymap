@@ -80,7 +80,7 @@ function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
 /** The body records `sceneOccluderBodies`/`sceneBodyPartition` need to not throw. */
 function makeState(): EngineState {
   return {
-    gpu: { texturedBodyRenderer: null },
+    gpu: {},
     data: { bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES } },
     settings: {
       starCatalogs: {

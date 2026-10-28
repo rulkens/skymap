@@ -10,36 +10,41 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../@types/BodyRuntime';
 import { atmosphereDrawList } from '../present/atmosphereDrawList';
 import { atmosphereShellUniforms } from '../present/atmosphereShellUniforms';
 import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepthBinding';
 
-export const atmosphereShellPass: ContentPass = {
-  name: 'atmosphere-shell',
+export function atmosphereShellPass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'atmosphere-shell',
 
-  enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m') return false;
-    // Handle first, so pre-bootstrap fixtures (null renderer, bare ctx) never touch body inputs.
-    if (state.gpu.atmosphereShellRenderer === null) return false;
-    const bodyId = view.slab.frame.hostId;
-    return atmosphereDrawList(state, ctx).some(
-      (entry) => entry.body.id === bodyId && !entry.inside,
-    );
-  },
+    enabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      const bodyId = view.slab.frame.hostId;
+      return atmosphereDrawList(state, ctx).some(
+        (entry) => entry.body.id === bodyId && !entry.inside,
+      );
+    },
 
-  draw(pass, view, ctx, state) {
-    const renderer = state.gpu.atmosphereShellRenderer;
-    if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.hostId;
-    const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
-    if (entry === undefined) return;
-    // The depth this row's opaque passes stamped: every ray the fragment
-    // classifies ends at it, in the sampled row's own frame scaled to km.
-    renderer.draw(pass, entry.body.id, atmosphereShellUniforms(entry, view.slab, ctx, state), {
-      ...sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
-      viewportPx: view.viewportPx,
-      // The fragment marches in atmosphere-top units; the depth reconstructs km.
-      kmToLocal: 1 / entry.params.atmosphereTopKm,
-    });
-  },
-};
+    draw(pass, view, ctx, state) {
+      if (view.slab.frame.kind !== 'body-m') return;
+      const bodyId = view.slab.frame.hostId;
+      const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
+      if (entry === undefined) return;
+      // The depth this row's opaque passes stamped: every ray the fragment
+      // classifies ends at it, in the sampled row's own frame scaled to km.
+      runtime.atmosphere.draw(
+        pass,
+        entry.body.id,
+        atmosphereShellUniforms(entry, view.slab, ctx, state),
+        {
+          ...sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
+          viewportPx: view.viewportPx,
+          // The fragment marches in atmosphere-top units; the depth reconstructs km.
+          kmToLocal: 1 / entry.params.atmosphereTopKm,
+        },
+      );
+    },
+  };
+}

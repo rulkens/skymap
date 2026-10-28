@@ -44,7 +44,6 @@ import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPic
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
 import { inputConsumed } from '../../../state/input/inputSlice';
-import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
  * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
@@ -84,10 +83,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.gpu.renderTargets?.reconcile(state, {
     width: deps.canvas.width,
     height: deps.canvas.height,
-  });
-
-  state.gpu.atmosphereShellRenderer?.reconcile({
-    skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
   });
 
   // The frame's ONE store snapshot. The camera step runs before

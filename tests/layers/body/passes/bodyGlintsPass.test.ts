@@ -36,6 +36,7 @@ import { makeSlab } from '../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
@@ -122,8 +123,6 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as FrameView;
-
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
@@ -166,36 +165,33 @@ function makeRenderer() {
   };
 }
 
-function makeState(bodyGlintRenderer: unknown, planets: readonly PlanetBody[]): EngineState {
+function makeState(planets: readonly PlanetBody[]): EngineState {
   return {
-    gpu: { bodyGlintRenderer },
+    gpu: {},
     data: { bodies: { planets, meshBodies: [] } },
-    // Empty texture family → nothing resident; the glints branch is decided by
-    // apparent size before residency anyway.
-    assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
   } as unknown as EngineState;
 }
 
-describe('bodyGlintsPass.enabled', () => {
-  it('is false while the renderer handle is null (short-circuits before ctx / state.data)', () => {
-    expect(
-      bodyGlintsPass.enabled(
-        { gpu: { bodyGlintRenderer: null } } as unknown as EngineState,
-        CTX_STUB,
-        makeNear0View(CAM_POS),
-      ),
-    ).toBe(false);
-  });
+/** The pass over a runtime holding `renderer`; no surface map is resident (the
+ *  glints branch is decided by apparent size before residency anyway). */
+function glintsWith(renderer: unknown) {
+  return bodyGlintsPass({
+    glint: renderer,
+    texturedBody: { hasMap: () => false },
+  } as unknown as BodyRuntime);
+}
 
+/** For the gates and the pick, which never touch the glint renderer. */
+const GLINTS = glintsWith(makeRenderer());
+
+describe('bodyGlintsPass.enabled', () => {
   it('is true below the gate with a sub-pixel body, false beyond the foreground gate', () => {
-    const state = makeState(makeRenderer(), [LIT, UNLIT]);
-    expect(bodyGlintsPass.enabled(state, makeCtx(CAM_POS, state), makeNear0View(CAM_POS))).toBe(
-      true,
-    );
+    const state = makeState([LIT, UNLIT]);
+    expect(GLINTS.enabled(state, makeCtx(CAM_POS, state), makeNear0View(CAM_POS))).toBe(true);
     // At galaxy scale the whole neighbourhood is far below a pixel: the shared
     // gate turns the glints off before the partition even matters.
     expect(
-      bodyGlintsPass.enabled(
+      GLINTS.enabled(
         state,
         makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC], state),
         makeNear0View(CAM_POS),
@@ -226,15 +222,13 @@ describe('bodyGlintsPass.enabled — far dissolve (the bite)', () => {
     // astronomically farther out), so it sits in the glints branch either way and
     // the far-dissolve band is the sole thing that flips `enabled`.
     const glint = bodyAt('mars', 1, [0.6, 0.32, 0.23]);
-    const state = makeState(makeRenderer(), [glint]);
+    const state = makeState([glint]);
 
-    expect(
-      bodyGlintsPass.enabled(state, makeCtx([dMid, 0, 0], state), makeNear0View(CAM_POS)),
-    ).toBe(true);
+    expect(GLINTS.enabled(state, makeCtx([dMid, 0, 0], state), makeNear0View(CAM_POS))).toBe(true);
     // The bite: unfixed `enabled` has no far-dissolve check, so this reads true.
-    expect(
-      bodyGlintsPass.enabled(state, makeCtx([dGone, 0, 0], state), makeNear0View(CAM_POS)),
-    ).toBe(false);
+    expect(GLINTS.enabled(state, makeCtx([dGone, 0, 0], state), makeNear0View(CAM_POS))).toBe(
+      false,
+    );
   });
 });
 
@@ -268,11 +262,11 @@ describe('bodyGlintsPass.draw — far-dissolve brightness scaling', () => {
         orientation: IDENTITY,
       };
       const renderer = makeRenderer();
-      bodyGlintsPass.draw(
+      glintsWith(renderer).draw(
         PASS_STUB,
         makeNear0View(camPos),
-        makeCtx(camPos, makeState(renderer, [body])),
-        makeState(renderer, [body]),
+        makeCtx(camPos, makeState([body])),
+        makeState([body]),
       );
       const [, instances, count] = renderer.draw.mock.calls[0]!;
       expect(count).toBe(1);
@@ -303,9 +297,8 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
   };
   function stampState(earth: PlanetBody | null): EngineState {
     return {
-      gpu: { bodyGlintRenderer: {} },
+      gpu: {},
       data: { bodies: { planets: [], meshBodies: [], earth } },
-      assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
     } as unknown as EngineState;
   }
   const camWithin: Vec3 = [1e-6, 0, 0]; // inside the caption gate
@@ -316,14 +309,14 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     const view = makeNear0View(camWithin);
     // No glints, no Earth-caption dependency on `enabled` → the VISUAL draw
     // gate is off.
-    expect(bodyGlintsPass.enabled(state, makeCtx(camWithin, state), view)).toBe(false);
+    expect(GLINTS.enabled(state, makeCtx(camWithin, state), view)).toBe(false);
     // But the Earth caption stamp must still be recorded → pick gate admits the row.
-    expect(bodyGlintsPass.pickEnabled!(state, makeCtx(camWithin, state), view)).toBe(true);
+    expect(GLINTS.pickEnabled!(state, makeCtx(camWithin, state), view)).toBe(true);
   });
 
   it('is false with no Earth and no glints, and false beyond the caption gate', () => {
     expect(
-      bodyGlintsPass.pickEnabled!(
+      GLINTS.pickEnabled!(
         stampState(null),
         makeCtx(camWithin, stampState(null)),
         makeNear0View(camWithin),
@@ -331,7 +324,7 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     ).toBe(false);
     // Earth seeded but the camera is past the caption gate → no stamp to admit for.
     expect(
-      bodyGlintsPass.pickEnabled!(
+      GLINTS.pickEnabled!(
         stampState(earthWithinGate),
         makeCtx(camBeyond, stampState(earthWithinGate)),
         makeNear0View(camBeyond),
@@ -343,10 +336,10 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
 describe('bodyGlintsPass.draw', () => {
   it('skips the zero-brightness (unlit far side) body and packs only the lit mid-fade one', () => {
     const renderer = makeRenderer();
-    const state = makeState(renderer, [LIT, UNLIT]);
+    const state = makeState([LIT, UNLIT]);
     const view = makeNear0View(CAM_POS);
 
-    bodyGlintsPass.draw(PASS_STUB, view, makeCtx(CAM_POS, state), state);
+    glintsWith(renderer).draw(PASS_STUB, view, makeCtx(CAM_POS, state), state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [passArg, instances, count, vpArg, viewportArg] = renderer.draw.mock.calls[0]!;
@@ -376,8 +369,8 @@ describe('bodyGlintsPass.draw', () => {
     const renderer = makeRenderer();
     // Only the unlit body present: its brightness rounds to 0, so the batch is
     // empty and the additive pass submits nothing.
-    const state = makeState(renderer, [UNLIT]);
-    bodyGlintsPass.draw(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
+    const state = makeState([UNLIT]);
+    glintsWith(renderer).draw(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
     expect(renderer.draw).not.toHaveBeenCalled();
   });
 });
@@ -428,20 +421,12 @@ const EARTH_RESOLVED: SeededPlanet = {
 function makePickState(
   bodyPickRenderer: unknown,
   planets: readonly PlanetBody[],
-  opts?: { earth?: PlanetBody | null; earthRenderer?: unknown },
+  opts?: { earth?: PlanetBody | null },
 ): EngineState {
   return {
-    // earthRenderer defaults to a truthy stand-in so `earthPass.enabled` (which
-    // short-circuits on a null handle) is exercised by the earth+distance test,
-    // not skipped. Distinguish "not provided" (→ {}) from an explicit `null` — a
-    // `?? {}` fallback would collapse the pre-bootstrap null-handle case. earth
-    // defaults to null → no Earth stamp (the pre-Earth-stamp tests keep theirs).
-    gpu: {
-      bodyPickRenderer,
-      earthRenderer: opts && 'earthRenderer' in opts ? opts.earthRenderer : {},
-    },
+    // earth defaults to null → no Earth stamp (the pre-Earth-stamp tests keep theirs).
+    gpu: { bodyPickRenderer },
     data: { bodies: { planets, meshBodies: [], earth: opts?.earth ?? null } },
-    assetSlots: { bodyTextures: new Map(), meshBodies: new Map() },
   } as unknown as EngineState;
 }
 
@@ -458,7 +443,7 @@ describe('bodyGlintsPass.drawPick', () => {
     Object.assign(state.data.bodies, { meshBodies: [UNKNOWN] });
     const view = makeNear0View(CAM_POS);
 
-    bodyGlintsPass.drawPick!(PASS_STUB, view, makeCtx(CAM_POS, state), state);
+    GLINTS.drawPick!(PASS_STUB, view, makeCtx(CAM_POS, state), state);
 
     expect(pickRenderer.drawPoints).toHaveBeenCalledTimes(1);
     const [passArg, args] = pickRenderer.drawPoints.mock.calls[0]!;
@@ -514,7 +499,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [marsFar]);
 
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, state), state);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, state), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     // No label, unlit → skipped. No Earth seeded → the batch is empty.
@@ -546,7 +531,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [litFar]);
 
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, state), state);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, state), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(args.points).toHaveLength(0);
@@ -555,7 +540,7 @@ describe('bodyGlintsPass.drawPick', () => {
   it('requests the glint pick variant (so glints collapse onto the shallow priority band)', () => {
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [JUPITER]);
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(args.variant).toBe('glint');
   });
@@ -571,7 +556,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const IO_LIT = bodyAt('io', 1_120_000, [0.8, 0.8, 0.8]); // seed index 10, lit — a MOON
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [JUPITER, IO_LIT], { earth: EARTH_RESOLVED });
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(args.points).toHaveLength(3);
@@ -592,7 +577,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const pickRenderer = makePickRenderer();
     // earth null → no stamp (only the lit Jupiter).
     const noEarth = makePickState(pickRenderer, [JUPITER], { earth: null });
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, noEarth), noEarth);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, noEarth), noEarth);
     const [, argsA] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(
       argsA.points.some(
@@ -602,12 +587,11 @@ describe('bodyGlintsPass.drawPick', () => {
     expect(argsA.points).toHaveLength(1);
 
     // Camera beyond the caption gate (2× the gate distance) even with a seeded
-    // Earth → no label invites the click → no stamp. The stamp is no longer coupled
-    // to earthRenderer's handle (pick draws via bodyPickRenderer, not earthRenderer).
+    // Earth → no label invites the click → no stamp.
     const pickRenderer2 = makePickRenderer();
     const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
     const farEarth = makePickState(pickRenderer2, [], { earth: EARTH_RESOLVED });
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, farEarth), farEarth);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(camFar), makeCtx(camFar, farEarth), farEarth);
     const [, argsB] = pickRenderer2.drawPoints.mock.calls[0]!;
     expect(
       argsB.points.some(
@@ -638,7 +622,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [], { earth: earthSubPixel });
 
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(camMid), makeCtx(camMid, state), state);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(camMid), makeCtx(camMid, state), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     const earthPt = args.points.find(
@@ -658,7 +642,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const EUROPA_LIT = bodyAt('europa', 1_140_000, [0.8, 0.8, 0.8]); // index 11, moon of Jupiter
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [JUPITER, IO_LIT, EUROPA_LIT]);
-    bodyGlintsPass.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, state), state);
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     const classOf = (idx: number) =>

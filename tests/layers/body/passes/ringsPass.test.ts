@@ -30,6 +30,7 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -112,8 +113,6 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as FrameView;
-
 function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
@@ -137,22 +136,20 @@ function makeBodyView(bodyId: SceneBodyId): SlabView {
 }
 
 /**
- * State with a `ringRenderer` handle, a seeded body list, and a `bodyTextures`
- * slot Map reporting the given ids resident (`current()` non-null).
+ * The pass over a runtime holding `renderer` and texture slots reporting the given
+ * ids resident (`current()` non-null), and a state with a seeded body list.
  */
-function makeState(
+function makeFixture(
   renderer: unknown,
   bodies: readonly PlanetBody[],
   residentIds: readonly string[],
-): EngineState {
-  const bodyTextures = new Map(
+) {
+  const textureSlots = new Map(
     residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
   );
-  return {
-    gpu: { ringRenderer: renderer },
-    data: { bodies: { planets: bodies } },
-    assetSlots: { bodyTextures },
-  } as unknown as EngineState;
+  const state = { data: { bodies: { planets: bodies } } } as unknown as EngineState;
+  const rings = ringsPass({ ring: renderer, textureSlots } as unknown as BodyRuntime);
+  return { state, rings };
 }
 
 function makeRendererSpy() {
@@ -160,15 +157,10 @@ function makeRendererSpy() {
 }
 
 describe('ringsPass.enabled', () => {
-  it('is false while the ringRenderer handle is null (bare ctx short-circuits)', () => {
-    const state = makeState(null, [], []);
-    expect(ringsPass.enabled(state, CTX_STUB, makeBodyView(asSceneBodyId('saturn')))).toBe(false);
-  });
-
   it('is false beyond the foreground gate even with a resident resolved ring', () => {
-    const state = makeState(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
+    const { state, rings } = makeFixture(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
     expect(
-      ringsPass.enabled(
+      rings.enabled(
         state,
         makeCtx(FOREGROUND_MAX_DISTANCE_MPC),
         makeBodyView(asSceneBodyId('saturn')),
@@ -177,26 +169,30 @@ describe('ringsPass.enabled', () => {
   });
 
   it('is false when the ring strip is NOT resident', () => {
-    const state = makeState(makeRendererSpy(), [saturnBody()], []);
-    expect(ringsPass.enabled(state, makeCtx(), makeBodyView(asSceneBodyId('saturn')))).toBe(false);
+    const { state, rings } = makeFixture(makeRendererSpy(), [saturnBody()], []);
+    expect(rings.enabled(state, makeCtx(), makeBodyView(asSceneBodyId('saturn')))).toBe(false);
   });
 
   it('draws only for a body with a ring row: false for earth, true for saturn', () => {
-    const state = makeState(makeRendererSpy(), [earthBody(), saturnBody()], ['saturn-ring']);
+    const { state, rings } = makeFixture(
+      makeRendererSpy(),
+      [earthBody(), saturnBody()],
+      ['saturn-ring'],
+    );
     const ctx = makeCtx();
-    expect(ringsPass.enabled(state, ctx, makeBodyView(asSceneBodyId('earth')))).toBe(false);
-    expect(ringsPass.enabled(state, ctx, makeBodyView(asSceneBodyId('saturn')))).toBe(true);
+    expect(rings.enabled(state, ctx, makeBodyView(asSceneBodyId('earth')))).toBe(false);
+    expect(rings.enabled(state, ctx, makeBodyView(asSceneBodyId('saturn')))).toBe(true);
   });
 });
 
 describe('ringsPass.draw', () => {
   it('draws exactly once across an earth row and a saturn row — the saturn row only', () => {
     const renderer = makeRendererSpy();
-    const state = makeState(renderer, [earthBody(), saturnBody()], ['saturn-ring']);
+    const { state, rings } = makeFixture(renderer, [earthBody(), saturnBody()], ['saturn-ring']);
     const ctx = makeCtx();
 
-    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('earth')), ctx, state);
-    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), ctx, state);
+    rings.draw(PASS_STUB, makeBodyView(asSceneBodyId('earth')), ctx, state);
+    rings.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
@@ -207,9 +203,9 @@ describe('ringsPass.draw', () => {
     const renderer = makeRendererSpy();
     const view = makeBodyView(asSceneBodyId('saturn'));
     const saturn = saturnBody();
-    const state = makeState(renderer, [saturn], ['saturn-ring']);
+    const { state, rings } = makeFixture(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, view, makeCtx(), state);
+    rings.draw(PASS_STUB, view, makeCtx(), state);
 
     expect(mvpMock).toHaveBeenCalledTimes(1);
     const call = mvpMock.mock.calls[0]!;
@@ -223,9 +219,9 @@ describe('ringsPass.draw', () => {
     camLocalMock.mockClear();
     const renderer = makeRendererSpy();
     const saturn = saturnBody();
-    const state = makeState(renderer, [saturn], ['saturn-ring']);
+    const { state, rings } = makeFixture(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), makeCtx(), state);
+    rings.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), makeCtx(), state);
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
@@ -241,9 +237,9 @@ describe('ringsPass.draw', () => {
   it('packs the host sun@16..18, planetRadiusRatio@19, camPosLocal@20..22 and innerRatio@23', () => {
     const renderer = makeRendererSpy();
     const saturn = saturnBody();
-    const state = makeState(renderer, [saturn], ['saturn-ring']);
+    const { state, rings } = makeFixture(renderer, [saturn], ['saturn-ring']);
 
-    ringsPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), makeCtx(), state);
+    rings.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), makeCtx(), state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const [pass, u] = renderer.draw.mock.calls[0]!;

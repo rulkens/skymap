@@ -9,6 +9,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
+import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { atmosphereDrawList } from '../present/atmosphereDrawList';
@@ -16,14 +17,12 @@ import { atmosphereShellUniforms } from '../present/atmosphereShellUniforms';
 import { bodyRowSlabs } from '../../../services/engine/frame/bodyRowSlabs';
 
 export function encodeAtmosphereAerialPerspective(
+  renderer: AtmosphereShellRenderer,
   encoder: GPUCommandEncoder,
   ctx: FrameView,
   state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {
-  const renderer = state.gpu.atmosphereShellRenderer;
-  if (renderer === null) return;
-
   const insideRows = bodyRowSlabs(ctx).insideAtmosphere;
   if (insideRows.length === 0) return;
 

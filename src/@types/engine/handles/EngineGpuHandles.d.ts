@@ -23,16 +23,7 @@ import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { EarthRenderer } from '../../../layers/body/@types/EarthRenderer';
-import type { SurfaceTileRenderer } from '../../../layers/body/@types/SurfaceTileRenderer';
-import type { TerrainPickMarkerRenderer } from '../../../layers/body/@types/TerrainPickMarkerRenderer';
-import type { PlanetRenderer } from '../../../layers/body/@types/PlanetRenderer';
-import type { TexturedBodyRenderer } from '../../../layers/body/@types/TexturedBodyRenderer';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
-import type { RingRenderer } from '../../../layers/body/@types/RingRenderer';
-import type { CloudShellRenderer } from '../../../layers/body/@types/CloudShellRenderer';
-import type { AtmosphereShellRenderer } from '../../../layers/body/@types/AtmosphereShellRenderer';
-import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
@@ -272,64 +263,6 @@ export type EngineGpuHandles = {
    */
   pickDebugOverlay: PickDebugOverlay | null;
   /**
-   * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
-   * render-target row (Plan 02 — zoom-to-Earth).  Same UV-sphere mesh as the
-   * star/planet renderers below, but shaded by sampling an equirectangular
-   * Blue Marble bitmap. Its pipeline formats MUST match the `foreground:0`
-   * row's `format` / `depth` — see `renderTargetFormats.ts` for the shared
-   * constants both sides read. Constructed in `initGpu`, which also
-   * mints its surface texture into the `bodyTextures` slot family (key
-   * `'earth'`); that slot is proximity-demanded on descent and its commit calls
-   * `setTexture`. Until the bitmap lands the renderer draws a plain mid-blue
-   * placeholder sphere.  Excluded
-   * from `isEngineReady` and null-checked at use by `earthPass`.  Null until
-   * `initGpu` constructs it; released and re-nulled by `destroy()` (releases
-   * the position + uv VBOs, index IBO, uniform buffer, and the Earth texture).
-   */
-  earthRenderer: EarthRenderer | null;
-  /**
-   * Instanced draw of the resident surface-tile detail patches
-   * (`cutSurfaceTiles`'s `cut` product) over the base globe — the OTHER half
-   * of the surface virtual texture, replacing the earlier page-table blend
-   * inside `earthRenderer`'s own fragment. Owns neither the tile atlas
-   * (`surfaceTileStream`) nor the base globe's material/night/normal/cloud
-   * maps (`earthRenderer.getMapView`); both arrive as views on every
-   * `draw()` call. Excluded from `isEngineReady`, null-checked at use by
-   * `earthPass`. Null until `initGpu` constructs it; released and
-   * re-nulled by `destroy()`.
-   */
-  surfaceTileRenderer: SurfaceTileRenderer | null;
-  /**
-   * The `terrain-pick-marker` debug overlay's analytic sphere, drawn into the
-   * same `foreground:0` body step (and against the same depth) as
-   * `surfaceTileRenderer`, so the terrain occludes it. Null until `initGpu`
-   * constructs it; nothing reads it unless that toggle is on.
-   */
-  terrainPickMarkerRenderer: TerrainPickMarkerRenderer | null;
-  /**
-   * Flat-lit albedo planets — a SINGLE renderer instance, drawn one body-m
-   * slab row at a time: `planetsPass` packs each row's MVP + albedo into a
-   * per-instance vertex-buffer record and hands it to `draw` keyed by that
-   * row's `bodyId`, so every body gets its OWN grow-only instance buffer (no
-   * shared buffer for a later same-submit row's `writeBuffer` to clobber —
-   * see `planetRenderer`'s header). Same `foreground:0` format invariant as
-   * the other sphere bodies. Excluded from `isEngineReady` and null-checked
-   * at use. Null until `initGpu` constructs it; released and re-nulled by
-   * `destroy()`.
-   */
-  planetRenderer: PlanetRenderer | null;
-  /**
-   * The shared textured-sphere renderer for every non-Earth textured body — one
-   * UV-sphere pipeline whose per-body `Map` gives each body its own uniform buffer
-   * + bind group + surface texture, so no shared uniform can be clobbered
-   * mid-frame. `texturedBodiesPass` draws the `textured` branch of
-   * `sceneBodyPartition` through it; the `bodyTextures` family's commit
-   * routes each bitmap to `setMap` and its per-kind onRelease to `clearMap`. Same
-   * `foreground:0` format invariant as `earthRenderer` / `planetRenderer`
-   * (see `renderTargetFormats.ts`); excluded from `isEngineReady`.
-   */
-  texturedBodyRenderer: TexturedBodyRenderer | null;
-  /**
    * The shared lit triangle-mesh renderer for every mesh body — real authored
    * geometry in metres, per-mesh buffers/textures/uniform behind a `Map` keyed by
    * mesh id. Every mesh pass (`drawMeshBodiesOnRow`) draws the resident mesh bodies attached to the
@@ -340,60 +273,6 @@ export type EngineGpuHandles = {
    * use. Null until `initGpu` constructs it; released and re-nulled by `destroy()`.
    */
   meshBodyRenderer: MeshBodyRenderer | null;
-  /**
-   * The translucent planetary-ring renderer (Saturn's rings) — the overlay half
-   * of the ring system, drawn LAST in the `(foreground:0, NEAR0)` group as a
-   * two-sided translucent annulus that depth-tests against the opaque spheres
-   * but writes no depth and blends straight-alpha OVER. Its pipeline formats
-   * match the `foreground:0` row like the sphere bodies (see
-   * `renderTargetFormats.ts`). `ringsPass` draws each resident
-   * `SCENE_RINGS` entry through it; the `bodyTextures` family's
-   * `saturn-ring` commit routes the radial strip to
-   * `setTexture` (alongside `texturedBodyRenderer.setRingTexture` for the
-   * ring-on-planet shadow half). Excluded from `isEngineReady` and null-checked
-   * at use. Null until `initGpu` constructs it; released and re-nulled by
-   * `destroy()` (releases the disc VBO/IBO, uniform buffer, and strip texture).
-   */
-  ringRenderer: RingRenderer | null;
-  /**
-   * The body-agnostic translucent cloud shell — a thin closed sphere drawn just
-   * ABOVE the opaque surface in the `(foreground:0, NEAR0)` group, immediately
-   * after `earthPass`: `foreground:0` formats (see `renderTargetFormats.ts`),
-   * depth-tested against the globe but no depth write, straight-alpha OVER,
-   * the same profile as `ringRenderer`. The `bodyTextures` family's
-   * `earth:clouds` commit routes the colour+coverage map to `setTexture`;
-   * until one lands a 1×1 transparent placeholder keeps the shell invisible.
-   * Excluded from `isEngineReady`.
-   */
-  cloudShellRenderer: CloudShellRenderer | null;
-  /**
-   * The physically-based in-scatter atmosphere, one bundle per `ATMOSPHERE_PARAMS`
-   * row — the LAST `(foreground:0, NEAR0)` row: a translucent proxy sphere at the
-   * atmosphere-top radius drawn AFTER every opaque sphere and the rings/cloud
-   * shell, depth-tested but writing no depth, straight-alpha OVER. It owns three
-   * LUT textures — transmittance + multi-scatter baked once at construction,
-   * sky-view re-baked each frame by the `sky-view` compute step.
-   * Non-pickable: a translucent halo has no clickable silhouette. Excluded from
-   * `isEngineReady`.
-   */
-  atmosphereShellRenderer: AtmosphereShellRenderer | null;
-  /**
-   * The sub-pixel scene bodies (the `glints` branch of
-   * `sceneBodyPartition`) as brightness-scaled additive point sprites
-   * into the depthless HDR target — the far half of the body LOD (`body-glints`
-   * layer, sharing the frame program's `(hdr, NEAR0)` render step with
-   * `star-points`).  Its brightness encodes apparent size x albedo x phase, and
-   * cross-fades with the resolved mesh over 1-3 px so bodies stop popping in/out
-   * on descent.  The close sibling of the starCatalog Layer's point renderer —
-   * a separate renderer for this feature by design (the fold candidate is
-   * deferred, spec §14).  No
-   * depth format: the hdr row has no depth attachment.  Needs no data-delivery
-   * step: `bodyGlintsPass` packs and hands the whole batch every frame.
-   * Excluded from `isEngineReady` and null-checked at use.  Null until `initGpu`
-   * constructs it; released and re-nulled by `destroy()` (releases the instance +
-   * uniform buffers).
-   */
-  bodyGlintRenderer: BodyGlintRenderer | null;
   /**
    * The covering-triangle cube blit `skyCubemapBlitPass` lays the solar-system
    * sky under a probe capture with. Draws into a probe's own cube, whose

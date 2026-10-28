@@ -14,8 +14,9 @@ import { describe, it, expect } from 'vitest';
 import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { bodyLayer } from '../../../../src/layers/body/layer';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
@@ -23,9 +24,9 @@ import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
 
-// Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
+// Unlike a pass or compute row, a `plan` line's planner is never
 // optional (Global Constraints), so PRELUDE's and SCENE's Layer-owned rows need
-// a stand-in here — this file checks core's artifacts alone, never the full
+// a stand-in here — this file checks core's artifacts and the body computes, never the full
 // `createLayers` composition.
 const LAYER_PLANNER_STUBS = [...stubPlannersFor(PRELUDE), ...stubPlannersFor(SCENE)];
 
@@ -44,7 +45,8 @@ describe('checkFrameOrder — boot', () => {
       checkFrameOrder(
         Object.values(VIEW_RIGS).map((rig) => rig.program),
         CONTENT_PASSES,
-        CORE_COMPUTES,
+        // The body Layer's two computes, whose scopes must match their lines.
+        bodyLayer.computes!({} as BodyRuntime),
         LAYER_PLANNER_STUBS,
         targets,
       ),

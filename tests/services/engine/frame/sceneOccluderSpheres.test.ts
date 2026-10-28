@@ -31,7 +31,7 @@ const STATES = deriveBodyStates(CONST_J2000);
 
 function makeState(meshBodies: readonly MeshBody[]): EngineState {
   return {
-    gpu: { texturedBodyRenderer: null, meshBodyRenderer: { hasMesh: () => true } },
+    gpu: { meshBodyRenderer: { hasMesh: () => true } },
     data: {
       bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies },
     },

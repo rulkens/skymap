@@ -24,7 +24,6 @@ import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import { foregroundChainOrder } from '../../../../src/services/engine/frame/slabs';
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
@@ -571,14 +570,11 @@ function makeInput(
           // the foreground:0→swap composite is touched-set-skipped. These
           // fixtures stay a pure cosmological-frame trace (see the
           // null-handle skip test below).
-          earthRenderer: null,
-          planetRenderer: null,
           // No mesh renderer → the probe scheduler idles before reading `data`.
           meshBodyRenderer: null,
           // Near-field handle null → atmosphereShellPass reports enabled=false
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).
-          atmosphereShellRenderer: null,
           orbitTrailRenderer: null,
           labelRendererNear: null,
           // Every `ContentPass.draw` reads its renderer straight off
@@ -670,7 +666,7 @@ function makeInput(
           milkyWayUpsamplePass(milkyWayRuntime),
           milkyWayPass(milkyWayRuntime),
         ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
-        computes: CORE_COMPUTES,
+        computes: [],
         planners: STUB_PLANNERS,
       } as never,
       device,

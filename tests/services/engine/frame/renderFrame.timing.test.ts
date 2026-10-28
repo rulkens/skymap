@@ -26,7 +26,6 @@ import { gatePassByFade } from '../../../../src/services/engine/layer/gatePassBy
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
@@ -359,13 +358,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // The only near-field rows left are the Milky-Way cloud's three, whose
         // handles ARE wired below (point-sprites, the three cloud rows,
         // hdr→swap).
-        earthRenderer: null,
-        planetRenderer: null,
         // No mesh renderer → the probe scheduler idles before reading `data`.
         meshBodyRenderer: null,
         // Near-field handle null → atmosphereShellPass disabled AND the
         // atmosphereSkyView compute step early-outs, so it bills no work.
-        atmosphereShellRenderer: null,
         orbitTrailRenderer: null,
         labelRendererNear: null,
         // Every `ContentPass.draw` reads its renderer straight off
@@ -445,7 +441,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         milkyWayUpsamplePass(milkyWayRuntime),
         milkyWayPass(milkyWayRuntime),
       ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
-      computes: CORE_COMPUTES,
+      computes: [],
       planners: STUB_PLANNERS,
     } as never,
     device,

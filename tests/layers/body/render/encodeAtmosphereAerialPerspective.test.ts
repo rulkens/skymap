@@ -5,11 +5,9 @@
  * covered by their own test files. The stub pose's metre-scale eye is what puts
  * Earth's row inside its band, so the aerial line is open.
  *
- * The load-bearing assertions are the gates: no inside body and a null
- * renderer both skip the pass AND the timing claim (a claimed-but-unopened
- * slot reports stale ticks — see `encodeAtmosphereSkyView`'s header), and the
- * null-renderer case must short-circuit before any body input is touched, so
- * a bare/pre-bootstrap ctx never throws.
+ * The load-bearing assertions are the gates: no inside body skips the pass AND
+ * the timing claim (a claimed-but-unopened slot reports stale ticks — see
+ * `encodeAtmosphereSkyView`'s header).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -19,6 +17,7 @@ import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmospher
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { makeSlab } from '../../../fixtures/makeSlab';
+import type { AtmosphereShellRenderer } from '../../../../src/layers/body/@types/AtmosphereShellRenderer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
@@ -71,8 +70,9 @@ const computePass = { end: vi.fn() } as unknown as GPUComputePassEncoder;
 const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => computePass);
 const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
 
-function spyRenderer(): { bakeAerialPerspective: ReturnType<typeof vi.fn> } {
-  return { bakeAerialPerspective: vi.fn() };
+type SpyRenderer = AtmosphereShellRenderer & { bakeAerialPerspective: ReturnType<typeof vi.fn> };
+function spyRenderer(): SpyRenderer {
+  return { bakeAerialPerspective: vi.fn() } as unknown as SpyRenderer;
 }
 
 const STUB_POSE = { eyeRelBodyM: [1, 2, 3] as Vec3, basisM: IDENTITY_MAT3 };
@@ -102,9 +102,8 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-function makeState(init: { renderer: unknown; earth?: EarthBody | null }): EngineState {
+function makeState(init: { earth?: EarthBody | null } = {}): EngineState {
   return {
-    gpu: { atmosphereShellRenderer: init.renderer },
     slabRows: [],
     data: { bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] } },
     settings: { earth: { atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure } },
@@ -116,9 +115,10 @@ describe('encodeAtmosphereAerialPerspective', () => {
     beginComputePass.mockClear();
     const claim = vi.fn(() => ({}));
     encodeAtmosphereAerialPerspective(
+      spyRenderer(),
       encoder,
       makeCtx(false),
-      makeState({ renderer: spyRenderer(), earth: null }),
+      makeState({ earth: null }),
       claim,
     );
     expect(beginComputePass).not.toHaveBeenCalled();
@@ -130,7 +130,7 @@ describe('encodeAtmosphereAerialPerspective', () => {
     const renderer = spyRenderer();
     const claim = vi.fn(() => ({}));
 
-    encodeAtmosphereAerialPerspective(encoder, makeCtx(true), makeState({ renderer }), claim);
+    encodeAtmosphereAerialPerspective(renderer, encoder, makeCtx(true), makeState(), claim);
 
     expect(beginComputePass).toHaveBeenCalledTimes(1);
     expect(beginComputePass.mock.calls[0]![0]).toMatchObject({ label: 'atmosphere-aerial-bake' });
@@ -154,21 +154,9 @@ describe('encodeAtmosphereAerialPerspective', () => {
     const ctx = makeCtx(true, FOREGROUND_MAX_DISTANCE_MPC);
 
     expect(() =>
-      encodeAtmosphereAerialPerspective(encoder, ctx, makeState({ renderer }), vi.fn()),
+      encodeAtmosphereAerialPerspective(renderer, encoder, ctx, makeState(), vi.fn()),
     ).not.toThrow();
     expect(beginComputePass).not.toHaveBeenCalled();
     expect(renderer.bakeAerialPerspective).not.toHaveBeenCalled();
-  });
-
-  it('short-circuits on a null renderer before touching a bare ctx’s body inputs', () => {
-    beginComputePass.mockClear();
-    const claim = vi.fn(() => ({}));
-    const bareCtx = {} as FrameView;
-
-    expect(() =>
-      encodeAtmosphereAerialPerspective(encoder, bareCtx, makeState({ renderer: null }), claim),
-    ).not.toThrow();
-    expect(beginComputePass).not.toHaveBeenCalled();
-    expect(claim).not.toHaveBeenCalled();
   });
 });

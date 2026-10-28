@@ -1,44 +1,47 @@
 /**
- * bodyTextureSlotRegistry — mints the keyed `bodyTextures` slot family and owns its
- * per-key commit/release dispatch. The slots are minted in `wireSlots`, not by the
- * `ASSET_WIRING` construction pass — their rows carry `built: 'external'`, and the
- * demand loop triggers and evicts the already-minted slots through them. Dispatch
- * reads the structured `(entry.bodyId, entry.kind)` pair, never a parse of the
- * composite key; every `state.gpu.*` handle is re-read and null-guarded, since it
- * can be null mid-bootstrap or after a StrictMode teardown and the slot must still
- * settle.
+ * bodyTextureSlots — the body Layer's `(bodyId, kind)` texture slots and their per-key
+ * commit/release dispatch. `create` mints them once its renderers exist, so every sink
+ * is the runtime's own non-null renderer; the asset rows hand these slots back to the
+ * demand loop. Dispatch reads the structured `(entry.bodyId, entry.kind)` pair, never a
+ * parse of the composite key.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
-import { bodyTextureFetcher } from '../../../services/loading/fetchers/bodyTextureFetcher';
+import { bodyTextureFetcher } from './bodyTextureFetcher';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
-import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
+import { hostBodyId } from '../present/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
-import { isTexturedBodyKey } from '../../../utils/bodyTextures/isTexturedBodyKey';
+import { isTexturedBodyKey } from '../present/isTexturedBodyKey';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
 import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
+import type { BodyTextureSlotKey } from '../../../@types/data/BodyTextureSlotKey';
+import type { BodyTextureSinks } from '../@types/BodyTextureSinks';
 
-/** Route a committed bitmap to every resident renderer that consumes `entry`. */
-function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: ImageBitmap): void {
+/** Route a committed bitmap to every renderer that consumes `entry`. */
+function commitBodyTexture(
+  sinks: BodyTextureSinks,
+  entry: BodyTextureKey,
+  bitmap: ImageBitmap,
+): void {
   if (entry.bodyId === 'earth') {
-    state.gpu.earthRenderer?.setMap(entry.kind, bitmap);
+    sinks.earth.setMap(entry.kind, bitmap);
     // One cloud bitmap, two consumers: the surface pipeline samples it for the ring
     // shadow + night occlusion (spec §7.3), the shell draws it as the translucent
     // layer. Same shape as the ring commit below.
-    if (entry.kind === 'clouds') state.gpu.cloudShellRenderer?.setTexture(bitmap);
+    if (entry.kind === 'clouds') sinks.cloudShell.setTexture(bitmap);
   } else if (isTexturedBodyKey(entry.bodyId)) {
-    state.gpu.texturedBodyRenderer?.setMap(entry.bodyId, entry.kind, bitmap);
+    sinks.texturedBody.setMap(entry.bodyId, entry.kind, bitmap);
   } else {
     // One ring strip, three consumers: the ring-on-planet SHADOW (binding 3 of the
     // host sphere — `hostBodyId` keeps the ring→host link in SCENE_RINGS alone), the
     // translucent OVERLAY, and the atmosphere shell's ring-in-front occlusion
     // (binding 4, so the shell's over-blend can't darken a ring in front of it).
-    state.gpu.texturedBodyRenderer?.setRingTexture(hostBodyId(entry.bodyId), bitmap);
-    state.gpu.ringRenderer?.setTexture(bitmap);
-    state.gpu.atmosphereShellRenderer?.setRingTexture(hostBodyId(entry.bodyId), bitmap);
+    sinks.texturedBody.setRingTexture(hostBodyId(entry.bodyId), bitmap);
+    sinks.ring.setTexture(bitmap);
+    sinks.atmosphere.setRingTexture(hostBodyId(entry.bodyId), bitmap);
   }
 }
 
@@ -50,22 +53,19 @@ function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: Im
  * sibling kind's still-demanded texture. Ring strips stay resident: three small
  * copies, not worth a clear surface on each consumer.
  */
-function releaseBodyTexture(state: EngineState, entry: BodyTextureKey): void {
+function releaseBodyTexture(sinks: BodyTextureSinks, entry: BodyTextureKey): void {
   if (entry.bodyId === 'earth') {
-    state.gpu.earthRenderer?.clearMap(entry.kind);
-    if (entry.kind === 'clouds') state.gpu.cloudShellRenderer?.clearTexture();
+    sinks.earth.clearMap(entry.kind);
+    if (entry.kind === 'clouds') sinks.cloudShell.clearTexture();
   } else if (isTexturedBodyKey(entry.bodyId)) {
-    state.gpu.texturedBodyRenderer?.clearMap(entry.bodyId, entry.kind);
+    sinks.texturedBody.clearMap(entry.bodyId, entry.kind);
   }
 }
 
-/**
- * Mint one asset slot per `(bodyId, kind)` family entry into
- * `state.assetSlots.bodyTextures`. Must run before `installLoadProgress`
- * enumerates the family into `allSlots`; renderer construction order does not
- * matter.
- */
-export function wireBodyTextureSlots(state: EngineState): void {
+export function createBodyTextureSlots(
+  sinks: BodyTextureSinks,
+): ReadonlyMap<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>> {
+  const slots = new Map<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>();
   for (const entry of ALL_BODY_TEXTURE_KEYS) {
     const key = bodyTextureSlotKey(entry.bodyId, entry.kind);
     const slot = createAssetSlot<ImageBitmap, BodyTextureReq>({
@@ -75,12 +75,13 @@ export function wireBodyTextureSlots(state: EngineState): void {
       // (up to 128 MiB at 8k) once they have; the slot keeps the closed handle as
       // its "resident" marker, which ringsPass/cloudShellPass test for presence only.
       commit: async (bitmap) => {
-        commitBodyTexture(state, entry, bitmap);
+        commitBodyTexture(sinks, entry, bitmap);
         bitmap.close();
       },
       dispose: closeBitmap,
-      onRelease: () => releaseBodyTexture(state, entry),
+      onRelease: () => releaseBodyTexture(sinks, entry),
     });
-    state.assetSlots.bodyTextures.set(key, slot);
+    slots.set(key, slot);
   }
+  return slots;
 }

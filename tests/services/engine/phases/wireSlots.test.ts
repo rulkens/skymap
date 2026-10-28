@@ -56,9 +56,8 @@ vi.mock('../../../../src/layers/cosmicWebFilaments/load/filamentFetcher', () => 
   })),
 }));
 
-// famousStarsMeta demands unconditionally at boot (like bodyTextureAtlas
-// below), so its fetcher fires inside every wireSlots run; mock it so the
-// test doesn't network.
+// famousStarsMeta demands unconditionally at boot, so its fetcher fires inside
+// every wireSlots run; mock it so the test doesn't network.
 vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () => ({
   famousStarsMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
@@ -78,17 +77,6 @@ vi.mock('../../../../src/layers/structure/load/structureCatalogFetcher', () => (
     },
     meta: [],
   })),
-}));
-
-// The body-texture atlas row demands unconditionally at boot (`demand: () => true`),
-// so its fetcher fires inside every wireSlots run. The real fetcher hits node's
-// `fetch` with the RELATIVE dataUrl `/data/images/textures/body-atlas.webp`,
-// which undici rejects ("Failed to parse URL" — no base). Mock it to a hollow
-// bitmap: the slot's commit fans out to `earthRenderer`/`texturedBodyRenderer`
-// (both absent in this fixture, so optional-chained to no-ops), so the value is
-// never read here — it just needs to resolve so the slot reaches `ready`.
-vi.mock('../../../../src/services/loading/fetchers/bodyAtlasFetcher', () => ({
-  bodyAtlasFetcher: vi.fn(async () => ({}) as unknown as ImageBitmap),
 }));
 
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
@@ -415,9 +403,6 @@ function makeState(
       // slots here, so the fixture must carry the destination.
       starCatalogs: new Map(),
       filaments: null,
-      // Real (empty) map: installLoadProgress walks it, and the body-texture
-      // rows are `built: 'external'` so the construction pass skips them.
-      bodyTextures: new Map(),
       meshBodies: new Map(),
     },
     // The composed lists `createLayers` would have written: core's registries

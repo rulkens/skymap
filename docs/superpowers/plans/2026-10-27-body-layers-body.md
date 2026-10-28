@@ -495,7 +495,7 @@ export type BodyRuntime = {
 **Done:** `npx tsc --noEmit` clean; `grep -rnE "gpu\??\.(earthRenderer|surfaceTileRenderer|terrainPickMarkerRenderer|texturedBodyRenderer|planetRenderer|ringRenderer|cloudShellRenderer|atmosphereShellRenderer|bodyGlintRenderer)\b|core-mesh-bodies|CORE_SCENE_BODY_IDS|CORE_COMPUTES|assetSlots\.bodyTextures" src tests` is empty;
 boot passes `concatUniqueRows` and `checkFrameOrder`; the DebugPanel render toggles list `body-meshes`.
 
-- [ ] Task 3
+- [x] Task 3
 
 ### Task 4: core's emptied slot machinery goes; `ASSET_WIRING` becomes the mesh rows
 

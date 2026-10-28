@@ -27,7 +27,7 @@ import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
 import { bodyTextureFilename } from '../../../utils/bodyTextures/bodyTextureFilename';
 import { isLinearTextureKind } from '../../../utils/bodyTextures/isLinearTextureKind';
-import { dataUrl } from '../fetchWithProgress';
+import { dataUrl } from '../../../services/loading/fetchWithProgress';
 
 export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (req, signal) => {
   const url = dataUrl(`images/textures/${bodyTextureFilename(req.bodyId, req.kind, req.tier)}`);

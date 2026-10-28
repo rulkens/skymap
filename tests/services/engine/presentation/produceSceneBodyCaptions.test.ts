@@ -110,7 +110,7 @@ function makeState(): EngineState {
     // `sceneOccluderBodies` (the per-caption depth gate) reads the real seed
     // tables off the state, so the fixture carries them rather than a stub:
     // the captions' occlude weights are then the genuine J2000 geometry.
-    gpu: { texturedBodyRenderer: null },
+    gpu: {},
     data: {
       bodies: {
         earth: SCENE_EARTH,

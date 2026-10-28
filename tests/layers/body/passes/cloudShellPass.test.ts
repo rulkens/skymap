@@ -36,6 +36,7 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -128,34 +129,33 @@ function ctxAtAltitude(altitudeRadii: number): FrameView {
   } as unknown as FrameView;
 }
 
-/** State with a `cloudShellRenderer` handle, the seeded Earth, and clouds residency. */
-function makeState(renderer: unknown, resident: boolean): EngineState {
-  const bodyTextures = new Map(
+/** The pass over a runtime holding `renderer` and the clouds residency, and a state
+ *  with the seeded Earth. */
+function makeFixture(renderer: unknown, resident: boolean) {
+  const textureSlots = new Map(
     resident
       ? [[bodyTextureSlotKey('earth', 'clouds'), { current: () => ({}) as ImageBitmap }] as const]
       : [],
   );
-  return {
-    gpu: { cloudShellRenderer: renderer },
+  const state = {
     data: { bodies: { earth: EARTH } },
-    assetSlots: { bodyTextures },
     settings: { earth: { ambientLight: 0.08 } },
   } as unknown as EngineState;
+  const pass = cloudShellPass({ cloudShell: renderer, textureSlots } as unknown as BodyRuntime);
+  return { state, pass };
 }
 
 describe('cloudShellPass.enabled', () => {
   it('is false while the clouds slot is not resident, even well above the fade band', () => {
-    const state = makeState({ draw: vi.fn() }, false);
-    expect(
-      cloudShellPass.enabled(state, ctxAtAltitude(10), makeBodyView(asSceneBodyId('earth'))),
-    ).toBe(false);
+    const { state, pass } = makeFixture({ draw: vi.fn() }, false);
+    expect(pass.enabled(state, ctxAtAltitude(10), makeBodyView(asSceneBodyId('earth')))).toBe(
+      false,
+    );
   });
 
   it('is true when resident and well above the fade band', () => {
-    const state = makeState({ draw: vi.fn() }, true);
-    expect(
-      cloudShellPass.enabled(state, ctxAtAltitude(10), makeBodyView(asSceneBodyId('earth'))),
-    ).toBe(true);
+    const { state, pass } = makeFixture({ draw: vi.fn() }, true);
+    expect(pass.enabled(state, ctxAtAltitude(10), makeBodyView(asSceneBodyId('earth')))).toBe(true);
   });
 
   it('is false once the camera descends below the fade-out altitude — resident and well above sub-pixel notwithstanding', () => {
@@ -167,21 +167,17 @@ describe('cloudShellPass.enabled', () => {
     // this back to true. Half the fade-end altitude, not the edge itself, to
     // stay clear of the roundoff a distance→altitude round trip introduces
     // right at the boundary (see cloudDeckFade's own tests).
-    const state = makeState({ draw: vi.fn() }, true);
+    const { state, pass } = makeFixture({ draw: vi.fn() }, true);
     const belowFadeFloor = ctxAtAltitude(CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii / 2);
-    expect(
-      cloudShellPass.enabled(state, belowFadeFloor, makeBodyView(asSceneBodyId('earth'))),
-    ).toBe(false);
+    expect(pass.enabled(state, belowFadeFloor, makeBodyView(asSceneBodyId('earth')))).toBe(false);
   });
 
   it('is false for a body-m row that is not Earth’s own, even resident and well above the fade band', () => {
     // CLOUD_SHELL_PARAMS carries no per-body table — the deliberate lean
     // choice (atmosphereShellPass's header) — so every non-Earth row must
     // leave the pass plan regardless of how favourable its OTHER gates are.
-    const state = makeState({ draw: vi.fn() }, true);
-    expect(
-      cloudShellPass.enabled(state, ctxAtAltitude(10), makeBodyView(asSceneBodyId('mars'))),
-    ).toBe(false);
+    const { state, pass } = makeFixture({ draw: vi.fn() }, true);
+    expect(pass.enabled(state, ctxAtAltitude(10), makeBodyView(asSceneBodyId('mars')))).toBe(false);
   });
 });
 
@@ -189,13 +185,13 @@ describe('cloudShellPass.draw', () => {
   it('scales the packed opacity by the descent fade partway through the band', () => {
     const drawSpy =
       vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();
-    const state = makeState({ draw: drawSpy }, true);
+    const { state, pass } = makeFixture({ draw: drawSpy }, true);
     const midAltitudeRadii =
       (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
     const ctx = ctxAtAltitude(midAltitudeRadii);
     const view = makeBodyView(asSceneBodyId('earth'));
 
-    cloudShellPass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state);
 
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const [, uniforms] = drawSpy.mock.calls[0]!;
@@ -209,15 +205,15 @@ describe('cloudShellPass.draw', () => {
   it('passes insideShell as the third draw() argument — false above the shell radius, true below it', () => {
     const drawSpy =
       vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();
-    const state = makeState({ draw: drawSpy }, true);
+    const { state, pass } = makeFixture({ draw: drawSpy }, true);
     const view = makeBodyView(asSceneBodyId('earth'));
 
     // Well above CLOUD_SHELL_PARAMS.radiusRatio (1.002) — the outside pipeline.
-    cloudShellPass.draw(PASS_STUB, view, ctxAtAltitude(10), state);
+    pass.draw(PASS_STUB, view, ctxAtAltitude(10), state);
     // Below radiusRatio − 1 (0.002) but still above the re-tuned fade floor
     // (0.0005) — the deck is still visible AND the camera is inside the shell,
     // exactly the case Task 10's cull fix exists for.
-    cloudShellPass.draw(PASS_STUB, view, ctxAtAltitude(0.001), state);
+    pass.draw(PASS_STUB, view, ctxAtAltitude(0.001), state);
 
     expect(drawSpy).toHaveBeenCalledTimes(2);
     expect(drawSpy.mock.calls[0]![2]).toBe(false);
@@ -229,10 +225,10 @@ describe('cloudShellPass.draw', () => {
     mvpMock.mockClear();
     const drawSpy =
       vi.fn<(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean) => void>();
-    const state = makeState({ draw: drawSpy }, true);
+    const { state, pass } = makeFixture({ draw: drawSpy }, true);
     const view = makeBodyView(asSceneBodyId('earth'));
 
-    cloudShellPass.draw(PASS_STUB, view, ctxAtAltitude(10), state);
+    pass.draw(PASS_STUB, view, ctxAtAltitude(10), state);
 
     expect(mvpMock).toHaveBeenCalledTimes(1);
     const call = mvpMock.mock.calls[0]!;
@@ -248,8 +244,8 @@ describe('cloudShellPass.draw', () => {
 
   it('is a no-op for a body-m row that is not Earth’s own', () => {
     const drawSpy = vi.fn();
-    const state = makeState({ draw: drawSpy }, true);
-    cloudShellPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctxAtAltitude(10), state);
+    const { state, pass } = makeFixture({ draw: drawSpy }, true);
+    pass.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctxAtAltitude(10), state);
     expect(drawSpy).not.toHaveBeenCalled();
   });
 });

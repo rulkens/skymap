@@ -67,7 +67,6 @@ function makeState(resident: readonly string[]): EngineState {
   return {
     gpu: {
       meshBodyRenderer: { hasMesh: (id: string) => resident.includes(id) },
-      texturedBodyRenderer: null,
     },
     data: { bodies: { planets: [], meshBodies: [CURIOSITY, VOYAGER] } },
     cubemapCaptures: makeCubemapCaptureRuntimes(),

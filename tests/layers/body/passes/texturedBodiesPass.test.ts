@@ -34,6 +34,7 @@ import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -102,8 +103,6 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as FrameView;
-
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
@@ -145,25 +144,21 @@ function makeRendererSpy(residentIds: readonly string[] = []) {
   };
 }
 
-function makeState(renderer: unknown, bodies: readonly PlanetBody[]): EngineState {
-  return {
-    gpu: { texturedBodyRenderer: renderer },
+/** The pass over a runtime holding `renderer`, and a state with a seeded body list. */
+function makeFixture(renderer: unknown, bodies: readonly PlanetBody[]) {
+  const state = {
+    gpu: {},
     data: { bodies: { planets: bodies, meshBodies: [] } },
   } as unknown as EngineState;
+  const textured = texturedBodiesPass({ texturedBody: renderer } as unknown as BodyRuntime);
+  return { state, textured };
 }
 
 describe('texturedBodiesPass.enabled', () => {
-  it('is false while the texturedBodyRenderer handle is null (bare ctx short-circuits)', () => {
-    const state = makeState(null, []);
-    expect(texturedBodiesPass.enabled(state, CTX_STUB, makeBodyView(asSceneBodyId('mars')))).toBe(
-      false,
-    );
-  });
-
   it('is false beyond the foreground gate even for a resident resolved body', () => {
-    const state = makeState(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
+    const { state, textured } = makeFixture(makeRendererSpy(['mars']), [bodyAt('mars', 3390000)]);
     expect(
-      texturedBodiesPass.enabled(
+      textured.enabled(
         state,
         makeCtx(state, FOREGROUND_MAX_DISTANCE_MPC),
         makeBodyView(asSceneBodyId('mars')),
@@ -172,22 +167,20 @@ describe('texturedBodiesPass.enabled', () => {
   });
 
   it('is false for a registry body that is NOT resident (it is flat, drawn by planetsPass)', () => {
-    const state = makeState(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
-    expect(
-      texturedBodiesPass.enabled(state, makeCtx(state), makeBodyView(asSceneBodyId('mars'))),
-    ).toBe(false);
+    const { state, textured } = makeFixture(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
+    expect(textured.enabled(state, makeCtx(state), makeBodyView(asSceneBodyId('mars')))).toBe(
+      false,
+    );
   });
 
   it('is true for a resident row, false for a different body`s row', () => {
-    const state = makeState(makeRendererSpy(['mars']), [
+    const { state, textured } = makeFixture(makeRendererSpy(['mars']), [
       bodyAt('mars', 3390000),
       bodyAt('jupiter', 69911000),
     ]);
     const ctx = makeCtx(state);
-    expect(texturedBodiesPass.enabled(state, ctx, makeBodyView(asSceneBodyId('mars')))).toBe(true);
-    expect(texturedBodiesPass.enabled(state, ctx, makeBodyView(asSceneBodyId('jupiter')))).toBe(
-      false,
-    );
+    expect(textured.enabled(state, ctx, makeBodyView(asSceneBodyId('mars')))).toBe(true);
+    expect(textured.enabled(state, ctx, makeBodyView(asSceneBodyId('jupiter')))).toBe(false);
   });
 });
 
@@ -196,11 +189,11 @@ describe('texturedBodiesPass.draw', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
     const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
-    const state = makeState(makeRendererSpy(['mars']), [mars]);
+    const { state, textured } = makeFixture(makeRendererSpy(['mars']), [mars]);
     const ctx = makeCtx(state);
     const view = makeBodyView(asSceneBodyId('mars'));
 
-    texturedBodiesPass.draw(PASS_STUB, view, ctx, state);
+    textured.draw(PASS_STUB, view, ctx, state);
 
     expect(mvpMock).toHaveBeenCalledTimes(1);
     const call = mvpMock.mock.calls[0]!;
@@ -221,14 +214,14 @@ describe('texturedBodiesPass.draw', () => {
     const mars = bodyAt('mars', 3390000);
     const jupiter = bodyAt('jupiter', 69911000);
     const renderer = makeRendererSpy(['mars', 'jupiter']);
-    const state = makeState(renderer, [mars, jupiter]);
+    const { state, textured } = makeFixture(renderer, [mars, jupiter]);
     const ctx = makeCtx(state);
 
-    texturedBodiesPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     expect(renderer.draw.mock.calls[0]![1]).toBe('mars');
 
-    texturedBodiesPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('jupiter')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('jupiter')), ctx, state);
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(renderer.draw.mock.calls[1]![1]).toBe('jupiter');
   });
@@ -238,11 +231,11 @@ describe('texturedBodiesPass.draw', () => {
     const marsRadiusM = innerBoundRadiusM(mars.surface);
     const jupiter = bodyAt('jupiter', 69911000); // has a LIMB_DARKENING_PARAMS row
     const renderer = makeRendererSpy(['mars', 'jupiter']);
-    const state = makeState(renderer, [mars, jupiter]);
+    const { state, textured } = makeFixture(renderer, [mars, jupiter]);
     const ctx = makeCtx(state);
 
-    texturedBodiesPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
-    texturedBodiesPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('jupiter')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('jupiter')), ctx, state);
 
     const u0 = renderer.draw.mock.calls[0]![2];
     expect(u0).toBeInstanceOf(Float32Array);
@@ -278,11 +271,11 @@ describe('texturedBodiesPass.draw', () => {
     const saturn = bodyAt('saturn', 58232000);
     const mars = bodyAt('mars', 3390000);
     const renderer = makeRendererSpy(['saturn', 'mars']);
-    const state = makeState(renderer, [saturn, mars]);
+    const { state, textured } = makeFixture(renderer, [saturn, mars]);
     const ctx = makeCtx(state);
 
-    texturedBodiesPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), ctx, state);
-    texturedBodiesPass.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('saturn')), ctx, state);
+    textured.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state);
 
     const ring = SCENE_RINGS.find((r) => r.bodyId === 'saturn')!;
     const saturnU = renderer.draw.mock.calls[0]![2];

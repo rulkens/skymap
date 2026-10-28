@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { pastTextureReleaseRadius } from '../../../../src/services/engine/frame/pastTextureReleaseRadius';
-import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
+import { pastTextureReleaseRadius } from '../../../../src/layers/body/load/pastTextureReleaseRadius';
+import { loadRadiusMpc } from '../../../../src/layers/body/load/bodyTextureLoadRadius';
 
 // The band between the load radius and twice it is the hysteresis: release there
 // and a camera parked at the load edge frees and refetches ~135 MB every frame.

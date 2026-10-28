@@ -16,6 +16,8 @@ import { describe, it, expect } from 'vitest';
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
+import { bodyLayer } from '../../../../src/layers/body/layer';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starSpheresPass';
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
@@ -112,12 +114,13 @@ describe('bodyRowSlabs', () => {
     expect(slabs.lens).toEqual([]);
 
     const tone: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
-    // The starCatalog Layer's own foreground rows join core's in the real
-    // program (`createLayers`) — folded in here too, or the `foreground:0`
-    // step this test locates via its name comes back empty and drops.
+    // The starCatalog and body Layers' rows join core's in the real program
+    // (`createLayers`) — folded in here too, or the `foreground:0` step this
+    // test locates via its name comes back empty and drops.
     const starRuntime = {} as StarCatalogRuntime;
     const passes = [
       ...CONTENT_PASSES,
+      ...bodyLayer.passes({} as BodyRuntime),
       starSpheresPass(starRuntime),
       fieldStarSpherePass(starRuntime),
     ];

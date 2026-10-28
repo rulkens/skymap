@@ -7,18 +7,19 @@
  */
 
 import { bodyTextureSlotKey } from './bodyTextureSlotKey';
+import { slotFor } from '../../services/engine/wiring/slotFor';
 
-import type { PassState } from '../../@types/engine/frame/PassState';
+import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { SceneBodyId } from '../../@types/scene/SceneBodyId';
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { Tier } from '../../@types/data/Tier';
+import type { BodyTextureReq } from '../../@types/loading/BodyTextureReq';
 
 export function bodySurfaceTier(
-  state: Pick<PassState, 'assetSlots' | 'tier'>,
+  state: Pick<EngineState, 'layerSlots' | 'assetSlots' | 'tier'>,
   bodyId: SceneBodyId,
 ): Tier {
-  const slot = state.assetSlots.bodyTextures.get(
-    bodyTextureSlotKey(bodyId as BodyTextureId, 'surface'),
-  );
-  return slot?.committed()?.req.tier ?? state.tier;
+  const slot = slotFor(state, bodyTextureSlotKey(bodyId as BodyTextureId, 'surface'));
+  // `slotFor` erases the request type; a body-texture slot's is a `BodyTextureReq`.
+  return (slot?.committed()?.req as BodyTextureReq | undefined)?.tier ?? state.tier;
 }

@@ -38,14 +38,14 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the `texturedBodyRenderer` GPU handle (null
- * pre-bootstrap), the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`), AND this row's `bodyId` appearing in the
+ * `enabled` gates on the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`) AND this row's `bodyId` appearing in the
  * partition's `textured` branch. This layer carries no pick aspect of its
  * own — `planetsPass` is the sole pick site for `flat ∪ textured`.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -60,7 +60,7 @@ import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { packTexturedBodyUniforms } from '../render/packTexturedBodyUniforms';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { coreSceneBodyPartition } from '../present/coreSceneBodyPartition';
+import { bodySceneBodyPartition } from '../present/bodySceneBodyPartition';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 
@@ -90,58 +90,58 @@ function limbParams(body: PlanetBody): { strength: number; exponent: number } {
   return LIMB_DARKENING_PARAMS[body.id] ?? { strength: 0, exponent: 1 };
 }
 
-export const texturedBodiesPass: ContentPass = {
-  name: 'textured-bodies',
+export function texturedBodiesPass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'textured-bodies',
 
-  enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m') return false;
-    // Handle first: the check short-circuits so pre-bootstrap fixtures (null
-    // renderer, bare ctx) never touch ctx or the partition inputs.
-    if (state.gpu.texturedBodyRenderer === null) return false;
-    if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const bodyId = view.slab.frame.hostId;
-    return coreSceneBodyPartition(state, ctx).textured.some((b) => b.id === bodyId);
-  },
+    enabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+      const bodyId = view.slab.frame.hostId;
+      return bodySceneBodyPartition(state, ctx, runtime).textured.some((b) => b.id === bodyId);
+    },
 
-  draw(pass, view, ctx, state) {
-    const renderer = state.gpu.texturedBodyRenderer;
-    if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.hostId;
-    const body = coreSceneBodyPartition(state, ctx).textured.find((b) => b.id === bodyId);
-    if (body === undefined) return;
-    // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
-    // `view.slab.vp` — reading it here instead of re-deriving the pose is what
-    // keeps this layer's eyeRelBodyM from ever drifting off that basis.
-    const pose = ctx.bodyPose(bodyId);
-    if (pose === null) return;
+    draw(pass, view, ctx, state) {
+      if (view.slab.frame.kind !== 'body-m') return;
+      const bodyId = view.slab.frame.hostId;
+      const body = bodySceneBodyPartition(state, ctx, runtime).textured.find(
+        (b) => b.id === bodyId,
+      );
+      if (body === undefined) return;
+      // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
+      // `view.slab.vp` — reading it here instead of re-deriving the pose is what
+      // keeps this layer's eyeRelBodyM from ever drifting off that basis.
+      const pose = ctx.bodyPose(bodyId);
+      if (pose === null) return;
 
-    const bodyState = sceneBodyStates(state, ctx).get(body.id)!;
-    const radiusM = innerBoundRadiusM(body.surface);
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, radiusM);
-    // Rotate the sun direction into the body's local frame (its orientation
-    // carries any axial tilt) so the fragment's Lambert term stays a plain
-    // co-framed dot product — the same rotate earth/planets do.
-    const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
-    const { inner, outer } = ringRatios(body, radiusM);
-    // Minnaert limb-darkening: the per-body strength/exponent (identity for a
-    // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's
-    // local frame the fragment's view cosine needs.
-    const { strength, exponent } = limbParams(body);
-    const cam = bodySlabCamLocal(pose.eyeRelBodyM, radiusM);
-    // Narrow here, at the GPU uniform write — both composes return f64.
-    const uniforms = packTexturedBodyUniforms(
-      narrowMat4(mvp),
-      sun,
-      inner,
-      outer,
-      strength,
-      exponent,
-      cam,
-      bodySlabCamAltitudeSq(pose.eyeRelBodyM, radiusM),
-      narrowMat4(composeBodySlabCamRelVp(view.slab.vp, radiusM)),
-    );
-    // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
-    // `textured`, so the string id IS a BodyTextureId the renderer accepts.
-    renderer.draw(pass, body.id as BodyTextureId, uniforms);
-  },
-};
+      const bodyState = sceneBodyStates(state, ctx).get(body.id)!;
+      const radiusM = innerBoundRadiusM(body.surface);
+      const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, radiusM);
+      // Rotate the sun direction into the body's local frame (its orientation
+      // carries any axial tilt) so the fragment's Lambert term stays a plain
+      // co-framed dot product — the same rotate earth/planets do.
+      const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
+      const { inner, outer } = ringRatios(body, radiusM);
+      // Minnaert limb-darkening: the per-body strength/exponent (identity for a
+      // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's
+      // local frame the fragment's view cosine needs.
+      const { strength, exponent } = limbParams(body);
+      const cam = bodySlabCamLocal(pose.eyeRelBodyM, radiusM);
+      // Narrow here, at the GPU uniform write — both composes return f64.
+      const uniforms = packTexturedBodyUniforms(
+        narrowMat4(mvp),
+        sun,
+        inner,
+        outer,
+        strength,
+        exponent,
+        cam,
+        bodySlabCamAltitudeSq(pose.eyeRelBodyM, radiusM),
+        narrowMat4(composeBodySlabCamRelVp(view.slab.vp, radiusM)),
+      );
+      // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
+      // `textured`, so the string id IS a BodyTextureId the renderer accepts.
+      runtime.texturedBody.draw(pass, body.id as BodyTextureId, uniforms);
+    },
+  };
+}

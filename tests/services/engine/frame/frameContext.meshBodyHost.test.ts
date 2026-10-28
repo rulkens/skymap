@@ -37,7 +37,6 @@ const STATE = {
     galaxyPickRenderer: {},
     renderTargets: {},
     compositor: {},
-    texturedBodyRenderer: null,
   },
   terrain: FLAT_TERRAIN,
   subsystems: { texturedDisks: {} },

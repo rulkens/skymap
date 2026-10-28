@@ -9,6 +9,8 @@ import { describe, it, expect } from 'vitest';
 import { timedSlotsOf } from '../../../../../src/services/engine/frame/timing/timedSlotsOf';
 import { expandFrameOrder } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
+import { bodyLayer } from '../../../../../src/layers/body/layer';
+import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { blackHoleLensingPass } from '../../../../../src/layers/blackHoles/passes/blackHoleLensingPass';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
@@ -29,6 +31,7 @@ const MILKY_WAY_STUB_PASSES: readonly ContentPass[] = [
 ].map((name) => ({ name }) as unknown as ContentPass);
 const PASSES = [
   ...CONTENT_PASSES,
+  ...bodyLayer.passes({} as BodyRuntime),
   blackHoleLensingPass({} as BlackHolesRuntime),
   ...MILKY_WAY_STUB_PASSES,
 ];

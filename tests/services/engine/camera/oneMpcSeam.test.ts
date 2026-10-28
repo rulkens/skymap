@@ -107,7 +107,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'candidacy-math precedent — the pixel-floor/frustum roster gate runs entirely in Mpc (camPosMpc, positionMpc); ruled correct in radar-seams-tests.md finding 1, not a re-derivation of a slab MVP',
   ],
   [
-    'src/services/engine/frame/bodyTextureLoadRadius.ts',
+    'src/layers/body/load/bodyTextureLoadRadius.ts',
     'candidacy-math precedent — converts a body radius to an Mpc load-distance threshold for the texture-demand gate, no slab MVP involved',
   ],
   [

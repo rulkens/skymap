@@ -47,7 +47,11 @@ function stateWith(input: {
             },
     });
   }
-  return { tier: input.tier, assetSlots: { bodyTextures } } as unknown as EngineState;
+  return {
+    tier: input.tier,
+    layerSlots: bodyTextures,
+    assetSlots: { meshBodies: new Map() },
+  } as unknown as EngineState;
 }
 
 describe('bodySurfaceTier', () => {

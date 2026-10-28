@@ -72,7 +72,7 @@ describe('rendering rows and the constants behind them', () => {
     expect(tables).toContain(`(${by(sourceNumbers(SHELL, 'MULTI_SCATTER_LUT_SIZE'))})`);
     expect(tables).toContain(`at ${by(sourceNumbers(SHELL, 'SKY_VIEW_LUT_SIZE'))},`);
     expect(tables).toContain(
-      `or ${by(sourceNumbers('src/data/bodies/skyViewLutSizeByTier.ts', 'small'))} at the small data size`,
+      `or ${by(sourceNumbers('src/layers/body/present/skyViewLutSizeByTier.ts', 'small'))} at the small data size`,
     );
     const haze = 'src/layers/body/present/froxelVolume.ts';
     const aerial = text('render-aerial');

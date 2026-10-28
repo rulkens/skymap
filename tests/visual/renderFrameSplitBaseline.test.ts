@@ -27,7 +27,6 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
 import { PRELUDE } from '../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameContentPlanner';
@@ -481,12 +480,9 @@ describe('renderFrame visual baseline', () => {
           // nothing, and the foreground:0→swap composite is
           // touched-set-skipped. The recorded draw sequence + pass-boundary
           // counts stay the pure cosmological shape this baseline pins.
-          earthRenderer: null,
-          planetRenderer: null,
           // Near-field handle null → atmosphereShellPass disabled AND the
           // atmosphereSkyView compute step early-outs, so the recorded draw
           // sequence stays the pure cosmological shape this baseline pins.
-          atmosphereShellRenderer: null,
           // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
@@ -575,7 +571,7 @@ describe('renderFrame visual baseline', () => {
           milkyWayUpsamplePass(milkyWayRuntime),
           milkyWayPass(milkyWayRuntime),
         ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
-        computes: CORE_COMPUTES,
+        computes: [],
         planners: STUB_PLANNERS,
       } as never,
       device,

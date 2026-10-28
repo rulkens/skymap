@@ -185,18 +185,9 @@ export function createEngine(
       // so a null handle silently drops the whole bloom sub-program.
       bloomPyramid: null,
       pickDebugOverlay: null,
-      earthRenderer: null,
-      surfaceTileRenderer: null,
-      terrainPickMarkerRenderer: null,
-      planetRenderer: null,
-      texturedBodyRenderer: null,
       // Lit triangle-mesh bodies attached to a host body's slab;
       // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
       meshBodyRenderer: null,
-      ringRenderer: null,
-      cloudShellRenderer: null,
-      atmosphereShellRenderer: null,
-      bodyGlintRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,
       bodyPickRenderer: null,
@@ -267,18 +258,11 @@ export function createEngine(
     // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
-    // The Maps are declared up-front so consumers can reach a slot without a null
-    // check, but the slots themselves are minted in `wireSlots`: their commit
-    // closures re-read GPU handles at call time and null-guard, rather than assuming
-    // `initGpu` already assigned them.
+    // Declared up-front so consumers can reach a slot without a null check; the
+    // mesh body slots (whale, petunias, …) are minted in `wireSlots`, their commit
+    // closures re-reading the mesh handle at call time.
     assetSlots: {
-      bodyTextures: new Map(),
-      // Keyed mesh body family (whale, petunias, …), minted in wireSlots.
-      // Empty map at construction — mirrors `bodyTextures`, un-keyed.
       meshBodies: new Map(),
-      // One boot fetch seeding every body's placeholder, so no body ever draws
-      // untextured while its own map loads.
-      bodyTextureAtlas: null,
     },
     // Both empty until `createLayers` runs (D8); see EngineState.d.ts for why
     // `selectionKindRows` is not named `selectionRows` (that getter, above, is

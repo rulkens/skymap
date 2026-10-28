@@ -430,8 +430,8 @@ describe('evaluateRows — drift edge', () => {
   });
 });
 
-describe('evaluateRows — bodyTextures at a stale tier', () => {
-  /** A body-texture row (key routes through the bodyTextures map) whose req
+describe('evaluateRows — body textures at a stale tier', () => {
+  /** A body-texture row (a body Layer key, so its slot sits in `layerSlots`) whose req
    *  clamps the tier to Earth's 'large' ceiling — so req('small').tier === 'small'. */
   const earthRow: AssetWiringRow = {
     key: 'earth:surface',
@@ -450,13 +450,13 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
     priority: 0,
   };
 
-  /** State with `slot` in the keyed bodyTextures map under `key` at the given tier. */
+  /** State with `slot` in the Layer-owned slots under `key` at the given tier. */
   function makeBodyState(key: string, slot: AssetSlot<unknown, unknown>, tier: Tier): EngineState {
     return {
       tier,
       settings: {},
       requests: new Set(),
-      assetSlots: { points: new Map(), bodyTextures: new Map([[key, slot]]) },
+      assetSlots: { meshBodies: new Map() },
       // Per-call queue, for the same reasons spelled out on `makeState`.
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
       terrain: FLAT_TERRAIN,
@@ -469,8 +469,7 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
           upBasis: ORIENTATION_FRAMES.ecliptic,
         },
       },
-      // `slotFor` consults the Layer-owned slots first; none here.
-      layerSlots: new Map(),
+      layerSlots: new Map([[key, slot]]),
     } as unknown as EngineState;
   }
 

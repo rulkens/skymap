@@ -85,7 +85,7 @@ export type Layer<
   /** Appended after `CONTENT_PASSES` in `createLayers`; names are globally unique —
    * a duplicate throws at boot. */
   passes(runtime: Runtime): readonly ContentPass[];
-  /** Appended after `CORE_COMPUTES` in `createLayers`; names are globally unique —
+  /** Composed across Layers in `createLayers`; names are globally unique —
    * a duplicate throws at boot, and a name `FRAME_ORDER` never lists just never runs. */
   computes?(runtime: Runtime): readonly ContentCompute[];
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
