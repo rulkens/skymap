@@ -3,7 +3,7 @@
  * view, apply it to the stream, and keep the result on the runtime, where the passes,
  * capture faces and the terrain seam read it (a capture face's plans store is empty).
  * The value is unused; the wake vote carries a manifest or tile fetch through. While
- * the DebugPanel is open it publishes the tile readout, throttled: a dispatch per
+ * the DebugPanel is open it publishes the tile readouts, throttled: a dispatch per
  * frame would re-render the panel at the loop's rate.
  */
 
@@ -14,6 +14,10 @@ import { planSurfaceTiles } from './subsystems/surfaceTiles/planSurfaceTiles';
 import { surfaceTileOverOf } from './subsystems/surfaceTiles/surfaceTileOverOf';
 import { surfaceTileDebugSnapshotOf } from './subsystems/surfaceTiles/surfaceTileDebugSnapshotOf';
 import { bodySurfaceTier } from './load/bodySurfaceTier';
+import {
+  NO_TERRAIN_PICK_MARKER_READOUT,
+  terrainPickMarkerReadoutOf,
+} from './present/terrainPickMarkerReadoutOf';
 
 /** The rate every textual DebugPanel readout refreshes at. */
 const READOUT_INTERVAL_MS = 250;
@@ -32,7 +36,15 @@ export function surfaceTilePlanner(
       );
       tiles.stream.apply(tiles.plan);
       if (runtime.debugPanelOpen() && readoutGate(snapshot.nowMs)) {
-        runtime.publish({ surfaceTileDebug: surfaceTileDebugSnapshotOf(tiles) });
+        const eyeView = views[0];
+        runtime.publish({
+          surfaceTileDebug: surfaceTileDebugSnapshotOf(tiles),
+          // The pick marches the terrain: a cost only the overlay's reader pays.
+          terrainPickMarker:
+            state.settings.debug.overlays['terrain-pick-marker'] && eyeView !== undefined
+              ? terrainPickMarkerReadoutOf(tiles, eyeView, snapshot.cursorTexPx)
+              : NO_TERRAIN_PICK_MARKER_READOUT,
+        });
       }
       return { value: undefined, awake: tiles.plan.awake, settling: false };
     },

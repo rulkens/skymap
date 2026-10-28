@@ -5,8 +5,8 @@
  * name captions, orbit trails, the Solar System exhibit and the Earth and planet slab
  * rows. It draws Earth, the planets, moons and rings: its own renderers, texture slots,
  * passes and the two atmosphere computes. It streams and plans the surface tiles, is
- * the ground core's camera reads, and publishes the tile readout. The shape-model moons
- * draw through core's one mesh handle (the mesh slots stay core's).
+ * the ground core's camera reads, and publishes the DebugPanel's tile readouts. The
+ * shape-model moons draw through core's one mesh handle (the mesh slots stay core's).
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -42,7 +42,9 @@ import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBo
 import { surfaceTilePlanner } from './frame';
 import { surfaceTileTerrain } from './subsystems/surfaceTiles/surfaceTileTerrain';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTiles/surfaceTileStream';
+import { NO_TERRAIN_PICK_MARKER_READOUT } from './present/terrainPickMarkerReadoutOf';
 import SurfaceTileAtlasSectionContainer from './ui/SurfaceTileAtlasSectionContainer';
+import TerrainPickMarkerTuningSectionContainer from './ui/TerrainPickMarkerTuningSectionContainer';
 import type { BodyFacts } from './@types/BodyFacts';
 
 export const bodyLayer = defineLayer({
@@ -53,7 +55,10 @@ export const bodyLayer = defineLayer({
   visibility: bodyVisibility,
   exhibits: bodyLayerExhibits,
   slabs: BODY_SLAB_ROWS,
-  facts: { surfaceTileDebug: EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } as BodyFacts,
+  facts: {
+    surfaceTileDebug: EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+    terrainPickMarker: NO_TERRAIN_PICK_MARKER_READOUT,
+  } as BodyFacts,
   create,
   destroy,
   passes: (runtime) => [
@@ -89,6 +94,7 @@ export const bodyLayer = defineLayer({
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },
     { slot: 'debug', content: SurfaceTileAtlasSectionContainer },
+    { slot: 'debug', content: TerrainPickMarkerTuningSectionContainer },
     {
       slot: 'detailCard',
       content: { type: 'body', Detail: BodyDetailCardContainer, Compact: CompactBodyCard },

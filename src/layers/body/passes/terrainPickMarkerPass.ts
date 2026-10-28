@@ -6,13 +6,12 @@
  * toggle off. A MISS draws nothing: `latchSurfaceGesture`'s datum fallback is camera feel.
  */
 
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { frustumFovYRad } from '../../../utils/camera/frustumFovYRad';
-import { terrainPickAt } from '../../../utils/camera/terrainPickAt';
 import { isSurfaceTileBodyId } from '../subsystems/surfaceTiles/isSurfaceTileBodyId';
+import { terrainPickUnderCursor } from '../present/terrainPickUnderCursor';
 
 export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
   return {
@@ -36,27 +35,17 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
       const pose = ctx.bodyPose(bodyId);
       if (pose === null) return;
 
-      // The body arm as `cursorRayBodyLocal` reads it, rebuilt from the SAME provider the
-      // slab's `vp` came from. Anchored at the body centre, so `eyeRelAnchorM` IS `eyeRelBodyM`.
-      const eyeM = pose.eyeRelBodyM;
-      const arm: BodyFixedPose = {
+      const pick = terrainPickUnderCursor({
+        tiles: runtime.surfaceTiles,
         bodyId,
-        anchorLocalM: [0, 0, 0],
-        eyeRelAnchorM: [eyeM[0], eyeM[1], eyeM[2]],
-        basisLocal: [...pose.basisM],
-      };
-      const pick = terrainPickAt({
-        arm,
+        pose,
         cursorPx: cursorTexPx,
         viewportPx: view.viewportPx,
         fovYRad: frustumFovYRad(ctx.frustum),
-        terrainHeightAt: (b, d) => {
-          const tiles = runtime.surfaceTiles;
-          return tiles.stream.heightAt(b, d, tiles.plan.params);
-        },
       });
       if (pick === null) return;
 
+      const eyeM = pose.eyeRelBodyM;
       const centreRelEyeM: Vec3 = [
         pick.pointM[0] - eyeM[0],
         pick.pointM[1] - eyeM[1],

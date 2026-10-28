@@ -677,7 +677,7 @@ uses (`terrainPickMarkerPass.ts:55-65`), never written from a draw; `levelAtEye`
 
 **Tests:** none new (UI re-plumbing; the publisher gate is pinned by Task 8).
 
-- [ ] Task 9
+- [x] Task 9
 
 ---
 
