@@ -22,6 +22,10 @@ import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import {
+  setEasedDuration,
+  setFocusMoveStyle,
+} from '../../../src/state/settings/core/focusMovesSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -98,5 +102,19 @@ describe('watchGoHomeSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
     expect(store.getState()[selectionRoute].select).toBeNull();
     expect(store.getState()[selectionRoute].focus).toBeNull();
+  });
+
+  it('stays eased under the geodesic style and follows the eased duration', async () => {
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(setEasedDuration(1234));
+
+    store.dispatch(goHome());
+    await flush();
+
+    expect(store.getState()[cameraRoute].tween!.motion).toEqual({
+      style: 'eased',
+      durationMs: 1234,
+      ease: 'easeOutCubic',
+    });
   });
 });

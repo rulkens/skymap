@@ -22,8 +22,7 @@ function makeDescriptor(): CameraTweenDescriptor {
   return {
     from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
     to: { target: [10, 0, 0], yaw: 1.0, pitch: 0.2, distance: 50 },
-    durationMs: 600,
-    easing: 'easeOutCubic',
+    motion: { style: 'eased', durationMs: 600, ease: 'easeOutCubic' },
     frame: 'equatorial',
   };
 }

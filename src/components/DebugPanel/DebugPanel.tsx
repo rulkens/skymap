@@ -17,6 +17,7 @@ import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import MemorySectionContainer from '../containers/MemorySectionContainer';
 import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSectionContainer';
+import FocusMovesTuningSectionContainer from '../containers/FocusMovesTuningSectionContainer';
 import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMarkerTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
@@ -61,6 +62,7 @@ function DebugPanel({
       ))}
       <DebugOverlaysSectionContainer />
       <SurfaceTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
+      <FocusMovesTuningSectionContainer />
       <TerrainPickMarkerTuningSectionContainer engineHandleRef={engineHandleRef} />
       <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />
