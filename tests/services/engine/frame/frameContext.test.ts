@@ -44,8 +44,6 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
@@ -101,7 +99,6 @@ function makeState(
     // table, matching what every assertion in this file was written against.
     slabRows: [],
     visibilityEntries: [],
-    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       bodies: { items: {} },
     },
@@ -366,14 +363,11 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
 });
 
 describe('deriveFrameContext — scene-body admission', () => {
-  const MARS = findByIdOrThrow(SCENE_PLANETS, 'mars', 'test');
-
   /** The frame's admitted ids with the Sun's raw fade and the `starCatalog` clip as given. */
   function admittedIds(sunFade: number, starClip = 1): readonly string[] {
     const state = {
       ...makeState(),
       visibilityEntries: APP_VISIBILITY,
-      data: { bodies: { earth: null, planets: [MARS], meshBodies: [] } },
       subsystems: {
         texturedDisks: {},
         fades: {

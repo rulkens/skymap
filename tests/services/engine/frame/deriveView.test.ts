@@ -74,7 +74,6 @@ function makeState(): EngineState {
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
     visibilityEntries: [],
-    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       bodies: { items: {} },
     },
@@ -380,7 +379,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
       visibilityEntries: [],
-      data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       terrain: FLAT_TERRAIN,
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
@@ -714,7 +712,6 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
     const base = makeState();
     const state = {
       ...base,
-      data: { bodies: { earth: null, planets: [MERCURY], meshBodies: [] } },
     } as unknown as EngineState;
     const snapshot = deriveFrameContext(state, {
       cam,

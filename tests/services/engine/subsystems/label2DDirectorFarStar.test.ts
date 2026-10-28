@@ -40,7 +40,6 @@ import { computeForegroundViewProj } from '../../../../src/utils/camera/computeF
 import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -90,14 +89,6 @@ function makeState(): EngineState {
     selectionKindRows: [],
     // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
     gpu: {},
-    data: {
-      bodies: {
-        earth: SCENE_EARTH,
-        planets: SCENE_PLANETS,
-        meshBodies: SCENE_MESH_BODIES,
-        sceneBodies: SCENE_BODIES,
-      },
-    },
     settings: {
       labels: { focusedOnly: false },
       bodies: { items: makeBodyItems() },

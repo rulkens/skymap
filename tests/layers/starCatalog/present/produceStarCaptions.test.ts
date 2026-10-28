@@ -12,7 +12,6 @@ import { describe, it, expect } from 'vitest';
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -81,7 +80,6 @@ function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
 function makeState(): EngineState {
   return {
     gpu: {},
-    data: { bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES } },
     settings: {
       starCatalogs: {
         enabled: true,

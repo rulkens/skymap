@@ -37,12 +37,6 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
 
-// A hosted rover (rides Mars's row) and a hostless probe (owns its row).
-const CURIOSITY = SCENE_MESH_BODIES.find((body) => body.id === 'curiosity')!;
-const VOYAGER = SCENE_MESH_BODIES.find((body) => body.id === 'voyager1')!;
-const WHALE = SCENE_MESH_BODIES.find((body) => body.id === 'whale')!;
-const PETUNIAS = SCENE_MESH_BODIES.find((body) => body.id === 'petunias')!;
-
 // 600-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 600 / (2 * Math.tan(1 / 2));
 
@@ -68,7 +62,6 @@ function makeState(resident: readonly string[]): EngineState {
     gpu: {
       meshBodyRenderer: { hasMesh: (id: string) => resident.includes(id) },
     },
-    data: { bodies: { planets: [], meshBodies: [CURIOSITY, VOYAGER] } },
     cubemapCaptures: makeCubemapCaptureRuntimes(),
   } as unknown as EngineState;
 }
@@ -124,7 +117,6 @@ describe('scheduleProbeCapture', () => {
     // A paused, still scene wakes for nothing else, so the loser of the tie
     // would sit on a zero cube until the next input.
     const state = makeState(['whale', 'petunias']);
-    (state.data.bodies as { meshBodies: unknown }).meshBodies = [WHALE, PETUNIAS];
     const probe = state.cubemapCaptures.probe;
 
     expect(scheduleProbeCapture({ state, ctx: ctxAt('whale') })).not.toBeNull();

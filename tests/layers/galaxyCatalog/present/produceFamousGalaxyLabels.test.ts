@@ -8,7 +8,6 @@ import {
   LEADER_LINE_PADDING_PX,
   MIN_LABEL_CLEARANCE_PX,
 } from '../../../../src/services/engine/presentation/leaderLineStyle';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { Source } from '../../../../src/data/sources';
 import {
@@ -60,7 +59,6 @@ function makeState(
 ): EngineState {
   layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
-    data: createEngineData(),
     gpu: { fontAtlases: { metricsByFont: {} } },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
     settings: { labels: { focusedOnly: opts.focusedOnly ?? false } },

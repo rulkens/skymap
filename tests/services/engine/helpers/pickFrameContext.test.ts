@@ -86,7 +86,6 @@ function makeState(
     // `deriveFrameContext` needs this now.
     slabRows: [],
     visibilityEntries: [],
-    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },

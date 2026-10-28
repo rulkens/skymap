@@ -74,9 +74,7 @@ const EARTH_SLAB = makeSlab({
   frame: { kind: 'body-m', hostId: SCENE_EARTH.id },
 });
 const EARTH_INSIDE_EDGE_MPC = atmosphereInsideBand(SCENE_EARTH.id)!.goneAt;
-const EARTH_STATE = {
-  data: { bodies: { earth: SCENE_EARTH, planets: [] } },
-} as unknown as PassState;
+const EARTH_STATE = {} as unknown as PassState;
 
 /** This view's eye `rMpc` from Earth's centre, Earth's own row in the slab table;
  *  `drawCamPos` and `cam.distance` keep Earth past the draw list's culls. */

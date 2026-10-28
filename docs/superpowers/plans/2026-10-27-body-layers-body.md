@@ -530,7 +530,7 @@ tables: `frameContext.ts:63-68,135-136,149` (`SCENE_EARTH`, `SCENE_PLANETS`, `SC
 
 **Done:** `grep -rnE "data\.bodies|createEngineData|BodyStore|earth === null" src tests` is empty.
 
-- [ ] Task 5
+- [x] Task 5
 
 ### Task 6: docs for PR 1
 

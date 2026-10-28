@@ -10,8 +10,6 @@ import { produceMissionCaptions } from '../../../../src/layers/missions/present/
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -49,7 +47,6 @@ const STATE = {
   visibilityEntries: APP_VISIBILITY,
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
-  data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
   settings: {
     bodies: { items: makeBodyItems() },
     missions: { craft: null },

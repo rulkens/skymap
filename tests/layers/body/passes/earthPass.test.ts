@@ -18,7 +18,7 @@
  * non-degenerate `position`/`target` fields, not just the bare `{ distance }`
  * shape the pre-body-slab fixtures got away with.
  *
- * The layer also gates on the seeded `bodies.earth` record, AND on the shared
+ * The layer also gates on the shared
  * near-field distance gate (`FOREGROUND_MAX_DISTANCE_MPC`),
  * AND on the view's slab actually being Earth's own `body-m` row. This suite
  * carries the representative executor-group check: above the gate the whole
@@ -37,6 +37,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/fore
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
@@ -58,8 +59,7 @@ import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
-import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
+import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -83,26 +83,14 @@ import { prepareBodySurfaceFrame } from '../../../../src/layers/body/present/pre
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The layer reads each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to a map built from
-// state.data.bodies.earth AND .planets — REUSING each fixture's own
-// positionMpc/orientation refs — so the layer sees the exact fixture values
-// (identity-equal), keeping toBe(...) assertions intact while the reads move
-// off the baked record fields. Generic over id (not earth-only) so the
-// second-bodyId memo test below has a real second body to resolve.
+// body-state snapshot (keyed by id). Stub it to the fixtures below — REUSING each
+// one's own positionMpc/orientation refs — so the layer sees the exact fixture
+// values (identity-equal), keeping toBe(...) assertions intact. Mars is seeded
+// too, so the second-bodyId memo test below has a real second body to resolve.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    const bodies = state.data.bodies as unknown as {
-      earth: SeededBody | null;
-      planets: readonly SeededBody[];
-    };
-    if (bodies.earth) m.set(bodies.earth.id, toBodyState(bodies.earth));
-    for (const p of bodies.planets) m.set(p.id, toBodyState(p));
-    return m;
-  }),
+  sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH, SEEDED_MARS])),
 }));
 
-type SeededBody = (EarthBody | PlanetBody) & Pick<BodyState, 'positionMpc' | 'orientation'>;
 function toBodyState(b: SeededBody): BodyState {
   return { positionMpc: b.positionMpc, orientation: b.orientation };
 }
@@ -134,7 +122,7 @@ const BODY_STATES_BY_ID = new Map<string, BodyState>([
  * imagePlaneBasis/frameUp at roll 0, then `bodyRelativePose` per body) so
  * `ctx.bodyPose` here exercises the SAME seam `earthPass.ts` now reads
  * (Task 9 fix round 1, B2) instead of a bespoke double. Resolves both earth
- * and mars unconditionally — a given test's `state.data.bodies` (via the
+ * and mars unconditionally — a given test's seeded bodies (via the
  * mocked `sceneBodyStates` above) is the actual per-test gate on which body
  * a call succeeds for.
  */
@@ -163,9 +151,6 @@ const PASS_STUB = {
   setBindGroup: vi.fn(),
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
-
-// Bare ctx for the unseeded draw case: draw returns before reading it.
-const CTX_STUB = {} as FrameView;
 
 /**
  * A ctx whose camera sits `distance` Mpc from Earth's centre along +x,
@@ -232,11 +217,9 @@ function makeRuntime(parts: { earth?: unknown; surfaceTile?: unknown } = {}): Bo
   } as unknown as BodyRuntime;
 }
 
-/** State whose `bodies.earth` record is `earth`. */
-function makeState(earth: EarthBody | null): EngineState {
+function makeState(): EngineState {
   return {
     gpu: {},
-    data: { bodies: { earth, planets: [], meshBodies: [] } },
     // The tile subsystem is absent until `wireSlots` builds it, and a session
     // that never approaches Earth never engages it — so `null` here is the
     // shipped identity case, in which the packed page-table window is all-zero
@@ -273,7 +256,7 @@ function makeTileDrawState(input: {
   readonly heightAtlasView?: GPUTextureView | null;
 }): EngineState {
   return {
-    ...makeState(SEEDED_EARTH),
+    ...makeState(),
     subsystems: {
       surfaceTiles: {
         plan: { cut: input.cut },
@@ -294,7 +277,7 @@ const VIEW_STUB = makeEarthBodyView('earth');
 
 describe('earthPass.enabled', () => {
   it('is false when the view is not Earth’s own body-m row', () => {
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     const worldMpcView = makeSlab({ frame: { kind: 'world-mpc', originRelative: true } });
     expect(
       earthPass(makeRuntime()).enabled(state, NEAR_CTX, {
@@ -313,14 +296,8 @@ describe('earthPass.enabled', () => {
     );
   });
 
-  it('is false while bodies.earth is null; true once it is seeded', () => {
-    const globe = earthPass(makeRuntime());
-    expect(globe.enabled(makeState(null), NEAR_CTX, VIEW_STUB)).toBe(false);
-    expect(globe.enabled(makeState(SEEDED_EARTH), NEAR_CTX, VIEW_STUB)).toBe(true);
-  });
-
   it('is disabled beyond the foreground gate and enabled below it', () => {
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     // Below the gate → the handle + body gates decide (both pass).
     expect(
       earthPass(makeRuntime()).enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), VIEW_STUB),
@@ -345,7 +322,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
     // never opens the foreground render pass, and the untouched foreground:0
     // source then skips its composite too. Earth is seeded; no other body is in
     // the frame's snapshot and no texture is resident.
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     const passes = bodyLayer.passes({
       ...makeRuntime(),
       texturedBody: { hasMap: () => false },
@@ -372,17 +349,10 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
 });
 
 describe('prepareBodySurfaceFrame', () => {
-  it('returns null when bodies.earth is null', () => {
-    const state = makeState(null);
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
-    expect(prepareBodySurfaceFrame(state, ctx, makeEarthBodyView('earth'))).toBeNull();
-  });
-
   it('memoizes per (ctx, body): same object for a repeat call, a DIFFERENT object and pose for a second bodyId on the same ctx', () => {
     mvpMock.mockClear();
     const state: EngineState = {
-      ...makeState(SEEDED_EARTH),
-      data: { bodies: { earth: SEEDED_EARTH, planets: [SEEDED_MARS], meshBodies: [] } },
+      ...makeState(),
     } as unknown as EngineState;
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     const earthView = makeEarthBodyView('earth');
@@ -409,7 +379,7 @@ describe('earthPass.draw', () => {
     camLocalMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
 
     // A camera comfortably inside the shared foreground gate, well above the
@@ -451,7 +421,7 @@ describe('earthPass.draw', () => {
     // drift in the layer's rotate/pack lands as a failure here.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
 
     // Fresh ctx (see the previous test's note): this test's own
@@ -482,7 +452,7 @@ describe('earthPass.draw', () => {
     // a failure here, not a visual-only regression.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
 
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
@@ -522,7 +492,7 @@ describe('earthPass.draw', () => {
     // slot 25 must land strictly between 0 and the authored dial.
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
-    const state = makeState(SEEDED_EARTH);
+    const state = makeState();
     const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
     const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const midAltitudeRadii =
@@ -549,12 +519,6 @@ describe('earthPass.draw', () => {
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
     expect(uniforms[25]).toBeGreaterThan(0);
     expect(uniforms[25]).toBeLessThan(EARTH_SURFACE_PARAMS.cloudShadowStrength);
-  });
-
-  it('is a no-op when bodies.earth is null (unseeded)', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeState(null);
-    expect(() => earthPass(makeRuntime()).draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 });
 
@@ -728,7 +692,7 @@ describe('earthPass.drawPick', () => {
     // for (see minPickRadiusMpc's header).
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     const state = {
-      ...makeState(SEEDED_EARTH),
+      ...makeState(),
       gpu: { bodyPickRenderer: { drawSphere } },
     } as unknown as EngineState;
 
@@ -762,16 +726,5 @@ describe('earthPass.drawPick', () => {
       (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM,
     );
     expect(pickRadiusM).toBeCloseTo(expectedFloor, 6);
-  });
-
-  it('is a no-op when bodies.earth is null (unseeded)', () => {
-    const view = makeEarthBodyView('earth');
-    const state = {
-      ...makeState(null),
-      gpu: { bodyPickRenderer: { drawSphere: vi.fn() } },
-    } as unknown as EngineState;
-    expect(() =>
-      earthPass(makeRuntime()).drawPick!(PASS_STUB, view, NEAR_CTX, state),
-    ).not.toThrow();
   });
 });

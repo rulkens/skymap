@@ -25,6 +25,8 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundM
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { atmosphereDrawListCache } from './atmosphereDrawListCache';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
 export function atmosphereDrawList(
   state: PassState,
@@ -42,9 +44,7 @@ export function atmosphereDrawList(
   // One scalar for the frame, so the near-field cull short-circuits the whole list.
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return entries;
 
-  const earth = state.data.bodies.earth;
-  const candidates =
-    earth === null ? state.data.bodies.planets : [earth, ...state.data.bodies.planets];
+  const candidates = [SCENE_EARTH, ...SCENE_PLANETS];
 
   // Live position + orientation from the per-frame snapshot, not the baked record
   // fields — the sun direction and the distance culls below are derived off them.

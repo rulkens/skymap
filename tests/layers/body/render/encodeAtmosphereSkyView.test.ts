@@ -34,9 +34,8 @@ import type { AtmosphereShellRenderer } from '../../../../src/layers/body/@types
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
-import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
-import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
@@ -48,29 +47,15 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 // fixture's own positionMpc/orientation refs, keeping the sun-direction
 // recompute bit-for-bit.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
-    }
-    const earth = state.data.bodies.earth as SeededEarth | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-      });
-    return m;
-  }),
+  sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 
 // Test fixtures pairing the identity records with the J2000 state the snapshot
 // carries — position + orientation were lifted off the record onto the derive, so
 // the fixtures supply them here (Earth's sourced from the derive so the values are
 // the real J2000 ones; refs stay stable across the mock + the recompute).
-type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
-const SEEDED_EARTH: SeededEarth = {
+const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
   positionMpc: EARTH_STATE.positionMpc,
   orientation: EARTH_STATE.orientation,
@@ -89,19 +74,9 @@ function spyRenderer(): AtmosphereShellRenderer & { dispatchSkyView: ReturnType<
   };
 }
 
-/**
- * Assemble the minimal EngineState the encode reads: the seeded bodies off
- * `data.bodies`. The twilight softness + intensity
- * come from each body's `AtmosphereParams` row, so no settings are read.
- * `atmosphereDrawList` spreads `bodies.planets`, so seed it empty (only Earth
- * carries an atmosphere row today).
- */
-function makeState(init: { earth?: EarthBody | null } = {}): EngineState {
-  return {
-    data: {
-      bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] },
-    },
-  } as unknown as EngineState;
+/** The encode reads only ctx and the static scene tables; `state` is the pass-state it is handed. */
+function makeState(): EngineState {
+  return {} as unknown as EngineState;
 }
 
 /** A `BodyPoseProvider` stub returning one fixed pose for 'earth', null otherwise. */
@@ -178,13 +153,16 @@ describe('encodeAtmosphereSkyView', () => {
   // Claiming a slot marks it LIVE for the frame, and a query set holds its last
   // write — so a claim on a frame that opens no pass makes the panel report the
   // ticks from whenever the atmosphere was last in view, as if it still were.
-  it('claims no timing slot and opens no pass when no body carries an atmosphere', () => {
+  it('claims no timing slot and opens no pass when no body is in range', () => {
     const claim = vi.fn(() => ({}));
     encodeAtmosphereSkyView(
       spyRenderer(),
       encoder,
-      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-      makeState({ earth: null }),
+      makeCtx({
+        bodyPose: makeBodyPose(EYE_REL_BODY_M),
+        camDistance: FOREGROUND_MAX_DISTANCE_MPC,
+      }),
+      makeState(),
       claim,
     );
     expect(beginComputePass).not.toHaveBeenCalled();
@@ -201,17 +179,6 @@ describe('encodeAtmosphereSkyView', () => {
         camDistance: FOREGROUND_MAX_DISTANCE_MPC,
       }),
       makeState(),
-    );
-    expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
-  });
-
-  it('is a no-op when bodies.earth is unseeded', () => {
-    const renderer = spyRenderer();
-    encodeAtmosphereSkyView(
-      renderer,
-      encoder,
-      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-      makeState({ earth: null }),
     );
     expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
   });

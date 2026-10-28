@@ -63,7 +63,6 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
-import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
@@ -86,6 +85,7 @@ import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../data/labels/solarS
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
 import { MAX_GLINTS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
 // the renderer's cap; each glint's 7-float record (camera-relative position +
@@ -101,8 +101,8 @@ const staging = new Float32Array(MAX_GLINTS * BODY_GLINT_INSTANCE_FLOATS);
  * gate then can't make the two diverge (admit-the-row-but-emit-no-stamp, a dead
  * pick frame, or the reverse).
  */
-function earthCaptionPickable(state: PassState, ctx: FrameView): boolean {
-  return state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
+function earthCaptionPickable(ctx: FrameView): boolean {
+  return ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
 }
 
 export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
@@ -122,7 +122,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
     },
 
     // Pick gate — WIDER than `enabled`: this layer also carries Earth's caption-
-    // range pick stamp (see `drawPick`), which lives on `bodies.earth` rather than
+    // range pick stamp (see `drawPick`), which belongs to `SCENE_EARTH` rather than
     // the glints partition. So the pick pass must admit the row whenever the Earth
     // caption invites a click, EVEN with an empty `glints` branch — otherwise a
     // sub-pixel Earth with a visible label but no other glints would drop out of
@@ -132,7 +132,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
     pickEnabled(state, ctx, _view) {
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       if (bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) return true;
-      return earthCaptionPickable(state, ctx);
+      return earthCaptionPickable(ctx);
     },
 
     draw(pass, view, ctx, state) {
@@ -202,7 +202,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
     // NOT its slot in the glints partition (which shifts as a body crosses
     // `BODY_GLINT_MAX_PX` — see `seedIndexOfBody`); a body id absent from the seed
     // table returns −1 and is dropped (a packed id from −1 would alias body 0). Earth
-    // is not in this partition (it rides its own `bodies.earth` / `earthPass`), but
+    // is not in this partition (it rides `SCENE_EARTH` / `earthPass`), but
     // its glint-scale pick footprint IS emitted here as a `Source.Earth` stamp (see
     // the Earth-stamp note in the body). Anchors are rebased into the camera-relative
     // frame in f64 before narrowing, the SAME seam `draw` uses.
@@ -238,7 +238,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       // glint band, so Earth out-picks the Moon and every planet at glint scale
       // regardless of nearness or list position (the class, not draw order, decides —
       // see the `'glint'` variant below and `lib/pickDepthBands.wesl`). Earth is not
-      // in `sceneBodyPartition` (it rides `bodies.earth` / `earthPass`), so without
+      // in `sceneBodyPartition` (it rides `SCENE_EARTH` / `earthPass`), so without
       // this stamp its only glint-scale pick coverage is its sub-pixel sphere — the
       // Moon's 18 px footprint would own the area and steal the click.
       //
@@ -255,8 +255,8 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       // cross-layer coupling to `earthPass`. Unlike the per-body glint brightness
       // skip below, the Earth stamp is NOT brightness-gated (it is not a partition
       // glint).
-      const earth = state.data.bodies.earth;
-      if (earth !== null && earthCaptionPickable(state, ctx)) {
+      const earth = SCENE_EARTH;
+      if (earthCaptionPickable(ctx)) {
         const earthPos = states.get(earth.id)!.positionMpc;
         pickPoints.push({
           posRelCamMpc: [

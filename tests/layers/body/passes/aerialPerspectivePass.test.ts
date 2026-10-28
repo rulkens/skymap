@@ -18,6 +18,8 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Well under / well over the 1.005 × atmosphere-top band edge (~6,500 km at Earth).
@@ -28,15 +30,12 @@ const EYE_OUTSIDE_M: Vec3 = [0, 0, 2e7];
 // only `inside` decides the row, close enough that no pose magnitude is large.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: () =>
-    new Map([
-      [
-        'earth',
-        {
-          positionMpc: [-1e-15, 0, 0],
-          orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-          meanAnomalyRad: 0,
-        },
-      ],
+    seededBodyStates(0, [
+      {
+        ...SCENE_EARTH,
+        positionMpc: [-1e-15, 0, 0],
+        orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'],
+      },
     ]),
 }));
 
@@ -67,9 +66,7 @@ function makeBodyView(bodyId: SceneBodyId): SlabView {
   };
 }
 
-const STATE = {
-  data: { bodies: { earth: SCENE_EARTH, planets: [] } },
-} as unknown as EngineState;
+const STATE = {} as unknown as EngineState;
 
 describe('aerialPerspectivePass.enabled', () => {
   it('is true only for a body whose shell encloses the camera', () => {

@@ -32,6 +32,8 @@ import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
@@ -52,20 +54,12 @@ import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal'
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+// A fixture's bodies ride on the state under a test-only `seeded` key: production reads
+// the static scene tables, so this mock is what poses them.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
-    }
-    const earth = state.data.bodies.earth as SeededPlanet | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-      });
-    return m;
-  }),
+  sceneBodyStates: vi.fn((state: PassState) =>
+    seededBodyStates(0, (state as unknown as { seeded: readonly SeededPlanet[] }).seeded),
+  ),
 }));
 
 const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
@@ -147,7 +141,7 @@ function makeFixture(
   const textureSlots = new Map(
     residentIds.map((id) => [`${id}:surface`, { current: () => ({}) as ImageBitmap }]),
   );
-  const state = { data: { bodies: { planets: bodies } } } as unknown as EngineState;
+  const state = { seeded: bodies } as unknown as EngineState;
   const rings = ringsPass({ ring: renderer, textureSlots } as unknown as BodyRuntime);
   return { state, rings };
 }

@@ -34,6 +34,8 @@ import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverage
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
+import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -60,12 +62,10 @@ export function deriveFrameContext(
   // keeps that true once something sets a non-zero roll.
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
-  const { planets } = state.data.bodies;
+  const planets = SCENE_PLANETS;
   // The ONE presence filter: an absent craft is parked on or in Earth, so every
   // consumer (slab rows, partition, glints, picks) reads this list, never the store's.
-  const meshBodies = state.data.bodies.meshBodies.filter((body) =>
-    spacecraftPresent(body.id, simDays),
-  );
+  const meshBodies = SCENE_MESH_BODIES.filter((body) => spacecraftPresent(body.id, simDays));
   // A mesh body whose driver hangs off something with no row of its own gets
   // one here, off the STORE roster rather than the static table, so the two
   // stay the same list. Every other row is a Layer's (`state.slabRows`).

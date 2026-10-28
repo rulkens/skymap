@@ -26,64 +26,30 @@ import type { BodySurface } from '../../../../src/@types/scene/BodySurface';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
-import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
-import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The derivation resolves each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to a map built from the SeededBody
-// fixtures, REUSING each fixture's own positionMpc/orientation refs — so the list
-// resolves the exact fixture values (identity-equal), keeping the assertions below
-// intact while the reads move off the baked record fields.
+// body-state snapshot (keyed by id). Stub it with the real states plus the Earth
+// fixture below, REUSING its own positionMpc/orientation refs — so the list
+// resolves the exact fixture values (identity-equal).
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
-    }
-    const earth = state.data.bodies.earth as SeededEarth | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-      });
-    return m;
-  }),
+  sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 
 // Test fixtures pairing the identity records with the J2000 state the snapshot
 // carries — position + orientation were lifted off the record onto the derive, so
 // the fixtures supply them here (Earth's sourced from the derive so the values are
 // the real J2000 ones; refs stay stable across the mock + the assertions).
-type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
-const SEEDED_EARTH: SeededEarth = {
+const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
   positionMpc: EARTH_STATE.positionMpc,
   orientation: EARTH_STATE.orientation,
 };
-
-/**
- * The minimal EngineState the derivation reads: the seeded Earth + planet list
- * off `data.bodies`. Nothing else on `state` is touched.
- */
-function makeState(init: {
-  earth?: EarthBody | null;
-  planets?: readonly PlanetBody[];
-}): EngineState {
-  return {
-    data: {
-      bodies: {
-        earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH,
-        planets: init.planets ?? [],
-      },
-    },
-  } as unknown as EngineState;
-}
 
 // 1080-px viewport, fovYRad 1.0, tangent-exact — matches `symmetricFrustum`'s
 // form so the fixture's `drawPxPerRad` is what `deriveView` would have set.
@@ -130,39 +96,21 @@ function camRadiiOut(body: { positionMpc: Vec3; surface: BodySurface }, radii: n
   ];
 }
 
-/** A body with no ATMOSPHERE_PARAMS row today — a synthetic id absent from the table. */
-const NO_ROW_PLANET: SeededPlanet = {
-  id: asSceneBodyId('atmosphereless-test-body'),
-  label: 'No Atmosphere',
-  positionMpc: SEEDED_EARTH.positionMpc,
-  resolvePx: 3,
-  surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
-  albedo: [0.5, 0.5, 0.5],
-  orientation: [...IDENTITY_MAT3] as Mat3,
-};
+// The list reads only ctx and the static scene tables; `state` is the pass-state it is handed.
+const STATE = {} as unknown as EngineState;
 
 describe('atmosphereDrawList', () => {
   it('includes a body with a row, in near-field range, and a supra-pixel disc', () => {
     // Five Earth-radii out: a large disc, well clear of the sub-pixel floor.
-    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
+    const list = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
     expect(list).toHaveLength(1);
-    expect(list[0]!.body).toBe(SEEDED_EARTH);
+    expect(list[0]!.body).toBe(SCENE_EARTH);
     expect(list[0]!.params).toBe(ATMOSPHERE_PARAMS['earth']);
-  });
-
-  it('excludes a body with no ATMOSPHERE_PARAMS row', () => {
-    // Earth unseeded so the only candidate is the row-less planet; supra-pixel,
-    // in range — the data-gate is the sole reason it is dropped.
-    const list = atmosphereDrawList(
-      makeState({ earth: null, planets: [NO_ROW_PLANET] }),
-      makeCtx(camRadiiOut(NO_ROW_PLANET, 5)),
-    );
-    expect(list).toHaveLength(0);
   });
 
   it('excludes a body beyond FOREGROUND_MAX_DISTANCE_MPC', () => {
     const list = atmosphereDrawList(
-      makeState({}),
+      STATE,
       makeCtx(camRadiiOut(SEEDED_EARTH, 5), FOREGROUND_MAX_DISTANCE_MPC),
     );
     expect(list).toHaveLength(0);
@@ -171,13 +119,8 @@ describe('atmosphereDrawList', () => {
   it('excludes a body whose disc is sub-pixel', () => {
     // ~3000 radii out drops the disc under one pixel at this fov/height, while
     // the camera stays inside the near-field edge (still a sub-picometre Mpc).
-    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 3000)));
+    const list = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 3000)));
     expect(list).toHaveLength(0);
-  });
-
-  it('skips a null earth without throwing', () => {
-    const list = atmosphereDrawList(makeState({ earth: null, planets: [] }), makeCtx([0, 0, 0]));
-    expect(list).toEqual([]);
   });
 
   it('includes Earth when the camera is deep inside the atmosphere shell', () => {
@@ -185,23 +128,23 @@ describe('atmosphereDrawList', () => {
     // disc and inside the near-field edge. The regression lock spec §4.6 calls
     // for: the sub-pixel cull must not accidentally exclude a body the camera
     // sits deep inside.
-    const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
+    const list = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
     expect(list).toHaveLength(1);
-    expect(list[0]!.body).toBe(SEEDED_EARTH);
+    expect(list[0]!.body).toBe(SCENE_EARTH);
   });
 
   it('flags the entry inside when the camera is within the shell handoff ratio', () => {
     // The flag selects the shell's full-screen render path, so it must track the
     // camera. Half an Earth radius out is 0.5 × 6371/6471 ≈ 0.49 atmosphere-top
     // radii — under the 1.005 handoff; five radii out is ≈ 4.92, far over it.
-    const near = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
+    const near = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
     expect(near[0]!.inside).toBe(true);
-    const far = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
+    const far = atmosphereDrawList(STATE, makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
     expect(far[0]!.inside).toBe(false);
   });
 
   it('derives one list per frame context, and re-derives for the next', () => {
-    const state = makeState({});
+    const state = STATE;
     const ctxA = makeCtx(camRadiiOut(SEEDED_EARTH, 5));
     // The identity every consumer leans on: they walk the SAME array, so a memo
     // keyed on anything per-call would hand them separate answers.
@@ -216,7 +159,7 @@ describe('atmosphereDrawList', () => {
     // The derived fields all hang off the pose, so a poseless body cannot be an
     // entry at all — which is what lets both consumers drop their own guard.
     const list = atmosphereDrawList(
-      makeState({}),
+      STATE,
       makeCtx(camRadiiOut(SEEDED_EARTH, 5), 0, () => null),
     );
     expect(list).toEqual([]);

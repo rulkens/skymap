@@ -48,7 +48,6 @@ import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalEle
 import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -269,9 +268,6 @@ function makeState(
     // The seeded body bag `sceneOccluderSpheres` reads beside the frame's
     // scene bodies (every catalog admitted, `sceneBodiesAt`), so the occluder
     // set is decided by apparent size alone.
-    data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: [] },
-    },
     settings: {
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },

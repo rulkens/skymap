@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 
 import { sceneOccluderSpheres } from '../../../../src/services/engine/frame/sceneOccluderSpheres';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
@@ -20,7 +19,6 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { PositionedSceneBody } from '../../../../src/@types/engine/frame/PositionedSceneBody';
@@ -29,16 +27,13 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 const STATES = deriveBodyStates(CONST_J2000);
 
-function makeState(meshBodies: readonly MeshBody[]): EngineState {
+function makeState(): EngineState {
   return {
     gpu: { meshBodyRenderer: { hasMesh: () => true } },
-    data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies },
-    },
   } as unknown as EngineState;
 }
 
-const STATE = makeState([]);
+const STATE = makeState();
 
 // 720-px viewport, 45° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
@@ -100,10 +95,9 @@ describe('sceneOccluderSpheres', () => {
     const hasWhale = (radiiKm: readonly number[]): boolean =>
       radiiKm.some((r) => Math.abs(r - whaleRadiusKm) < 1e-8);
 
-    // 20 m out the whale spans ~600 px, so nothing but its presence in
-    // `data.bodies.meshBodies` could put it in the set.
+    // 20 m out the whale spans ~600 px, so only being a mesh body keeps it out of the set.
     const ctx = makeCtx('whale', 20 * SCALE_UNITS.M_TO_KM);
-    expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES)))).toBe(false);
+    expect(hasWhale(occluderRadiiKm(ctx))).toBe(false);
   });
 
   const sunRadiusKm =

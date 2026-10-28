@@ -141,7 +141,6 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       meshBodyRenderer: { hasMesh: () => true, draw: meshDraw },
       selectionRingRenderer: { draw: ringDraw },
     },
-    data: { bodies: { earth, planets: [], meshBodies: SCENE_MESH_BODIES } },
     selectionRows: { select: row, focus: row, hover: null },
     settings: { galaxyCatalogs: { sizePx: 2 } },
   } as unknown as EngineState;

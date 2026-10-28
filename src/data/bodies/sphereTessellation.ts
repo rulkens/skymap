@@ -9,7 +9,7 @@
  *   the silhouette a viewer sees, so the counts here are that renderer's drawn
  *   error. It is the last mesh-silhouette body path, and nothing it draws is
  *   drawn by anything else: the star and planet tables are disjoint collections
- *   (`SEEDED_STAR_CATALOGS` holds the stars, `bodies.planets` the planets), so no
+ *   (`SEEDED_STAR_CATALOGS` holds the stars, `SCENE_PLANETS` the planets), so no
  *   body ever crosses between two body renderers and there is no cross-renderer
  *   shape agreement to keep.
  * - `planetRenderer`, `texturedBodyRenderer` and `bodyPickRenderer` ray-trace an

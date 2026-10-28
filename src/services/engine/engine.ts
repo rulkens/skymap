@@ -21,7 +21,6 @@ import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
 import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
 import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
@@ -121,8 +120,6 @@ export function createEngine(
 
   const store = cb.store;
 
-  const engineData = createEngineData();
-
   const state: EngineState = {
     // These getters delegate straight to the store: sagas and sub-handle
     // setters own the writes, per-frame readers reach the authoritative object
@@ -142,7 +139,6 @@ export function createEngine(
     get ui() {
       return store.getState().ui;
     },
-    data: engineData,
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,

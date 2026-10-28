@@ -256,10 +256,6 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     const state = {
       gpu: {
         orbitTrailRenderer: { draw: vi.fn() },
-        // Explicit null so bodyGlintsPass.enabled (a member of the same
-        // (hdr, NEAR0) group this filter walks) short-circuits on its strict
-        // `=== null` handle check rather than reading state.data.bodies.planets,
-        // which this star-focused fixture does not carry.
       },
       // The milky-way impostor also rides this group now (its slab moved to
       // NEAR0), but its visibility window is far WIDER than the foreground

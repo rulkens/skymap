@@ -27,6 +27,8 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/fore
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../fixtures/makeSlab';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
 import type { AtmosphereShellDepth } from '../../../../src/layers/body/@types/AtmosphereShellDepth';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -34,8 +36,6 @@ import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
-import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -58,25 +58,11 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // atmosphereDrawList (unmocked — its own cull math is covered by
 // atmosphereDrawList.test.ts) reads live body positions off this per-frame
-// snapshot. Stub it to each fixture's own positionMpc/orientation refs, the
-// same pattern earthPass.test.ts uses, so the layer sees the exact fixture
-// values.
-type SeededBody = (EarthBody | PlanetBody) & Pick<BodyState, 'positionMpc' | 'orientation'>;
+// snapshot. Stub it to each fixture's own positionMpc/orientation refs so the
+// layer sees the exact fixture values.
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    const bodies = state.data.bodies as unknown as {
-      earth: SeededBody | null;
-      planets: readonly SeededBody[];
-    };
-    if (bodies.earth) m.set(bodies.earth.id, toBodyState(bodies.earth));
-    for (const p of bodies.planets) m.set(p.id, toBodyState(p));
-    return m;
-  }),
+  sceneBodyStates: vi.fn(() => seededBodyStates(0, SEEDED_BODIES)),
 }));
-function toBodyState(b: SeededBody): BodyState {
-  return { positionMpc: b.positionMpc, orientation: b.orientation };
-}
 
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
 
@@ -155,8 +141,9 @@ function makeBodyView(bodyId: SceneBodyId): SlabView {
   };
 }
 
+const SEEDED_BODIES = [SEEDED_EARTH, SEEDED_MARS, SEEDED_MOON];
+
 const STATE = {
-  data: { bodies: { earth: SEEDED_EARTH, planets: [SEEDED_MARS, SEEDED_MOON] } },
   settings: { earth: { atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure } },
 } as unknown as EngineState;
 

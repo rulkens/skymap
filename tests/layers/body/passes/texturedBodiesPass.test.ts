@@ -36,6 +36,9 @@ import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
+import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
@@ -57,14 +60,12 @@ import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal'
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+// A fixture's bodies ride on the state under a test-only `seeded` key: production reads
+// the static scene tables, so this mock is what poses them.
+type Seeded = { planets: readonly SeededPlanet[]; meshBodies: readonly SceneBody[] };
+const seededOf = (state: PassState) => (state as unknown as { seeded: Seeded }).seeded;
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
-    }
-    return m;
-  }),
+  sceneBodyStates: vi.fn((state: PassState) => seededBodyStates(0, seededOf(state).planets)),
 }));
 
 const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
@@ -107,7 +108,7 @@ const PASS_STUB = {
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
 function makeCtx(state: EngineState, distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
-  const { planets, meshBodies } = state.data.bodies;
+  const { planets, meshBodies } = seededOf(state);
   return {
     snapshot: { meshBodies, sceneBodies: positionedBodiesOf([...planets, ...meshBodies]) },
     cam: { distance },
@@ -148,7 +149,7 @@ function makeRendererSpy(residentIds: readonly string[] = []) {
 function makeFixture(renderer: unknown, bodies: readonly PlanetBody[]) {
   const state = {
     gpu: {},
-    data: { bodies: { planets: bodies, meshBodies: [] } },
+    seeded: { planets: bodies, meshBodies: [] },
   } as unknown as EngineState;
   const textured = texturedBodiesPass({ texturedBody: renderer } as unknown as BodyRuntime);
   return { state, textured };

@@ -32,13 +32,15 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
 import { makeSlab } from '../../../fixtures/makeSlab';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 
@@ -53,19 +55,8 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Stub the per-frame body-state snapshot to the seeded fixture's own
 // positionMpc/orientation refs, mirroring earthPass.test.ts.
-type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
-
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    const earth = state.data.bodies.earth as SeededEarth | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-      });
-    return m;
-  }),
+  sceneBodyStates: vi.fn(() => seededBodyStates(0, [EARTH])),
 }));
 
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
@@ -75,11 +66,8 @@ const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orien
 // radius-scale camera offset from a 1 Mpc position would lose the offset
 // entirely to roundoff. At the origin, `0 - distanceMpc` is exact for any
 // distanceMpc, so the altitude fixtures below are precision-clean.
-const EARTH: SeededEarth = {
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  resolvePx: 3,
-  surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
+const EARTH: SeededBody = {
+  ...SCENE_EARTH,
   positionMpc: [0, 0, 0],
   orientation: IDENTITY_MAT3,
 };
@@ -138,7 +126,6 @@ function makeFixture(renderer: unknown, resident: boolean) {
       : [],
   );
   const state = {
-    data: { bodies: { earth: EARTH } },
     settings: { earth: { ambientLight: 0.08 } },
   } as unknown as EngineState;
   const pass = cloudShellPass({ cloudShell: renderer, textureSlots } as unknown as BodyRuntime);

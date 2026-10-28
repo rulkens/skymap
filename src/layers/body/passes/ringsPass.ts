@@ -58,7 +58,6 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
-import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../@types/scene/RingSpec';
@@ -77,6 +76,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundM
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
+import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 
 /**
  * This row's ring, if `bodyId` hosts one AND its radial strip is resident AND
@@ -84,7 +84,6 @@ import type { PositionedId } from '../../../@types/scene/PositionedId';
  * feeds both `enabled` and `draw`, so the gate and the draw can never disagree.
  */
 function ringDrawForBody(
-  state: PassState,
   ctx: FrameView,
   bodyId: PositionedId,
   runtime: BodyRuntime,
@@ -94,7 +93,7 @@ function ringDrawForBody(
   // Resident iff the ring's surface strip slot holds a committed bitmap.
   if (runtime.textureSlots.get(bodyTextureSlotKey(ring.textureId, 'surface'))?.current() == null)
     return null;
-  const body = state.data.bodies.planets.find((b) => b.id === bodyId);
+  const body = SCENE_PLANETS.find((b) => b.id === bodyId);
   if (body === undefined) return null;
   // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
   // `view.slab.vp` — reading it here instead of re-deriving the pose is what
@@ -126,12 +125,12 @@ export function ringsPass(runtime: BodyRuntime): ContentPass {
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      return ringDrawForBody(state, ctx, view.slab.frame.hostId, runtime) !== null;
+      return ringDrawForBody(ctx, view.slab.frame.hostId, runtime) !== null;
     },
 
     draw(pass, view, ctx, state) {
       if (view.slab.frame.kind !== 'body-m') return;
-      const drawInputs = ringDrawForBody(state, ctx, view.slab.frame.hostId, runtime);
+      const drawInputs = ringDrawForBody(ctx, view.slab.frame.hostId, runtime);
       if (drawInputs === null) return;
       const { ring, body, pose } = drawInputs;
 

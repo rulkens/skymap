@@ -10,7 +10,7 @@ export function computeBodySurfaceFrame(
   ctx: FrameView,
   bodyId: PositionedId,
 ): PreparedBodySurfaceFrame | null {
-  const body = sceneBodyForId(state, bodyId);
+  const body = sceneBodyForId(bodyId);
   if (body === null) return null;
   const bodyState = sceneBodyStates(state, ctx).get(bodyId);
   if (bodyState === undefined) return null;

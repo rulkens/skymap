@@ -25,7 +25,6 @@ import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCat
 import { BODY_SOURCE_IDS } from '../../../../src/data/bodies/bodySourceIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
@@ -289,7 +288,6 @@ function makeState(
   for (const cat of STRUCTURE_IDS) {
     structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
   }
-  const data = createEngineData();
   // Pull the singleton-overlay + star-catalog clusters from `INITIAL_SETTINGS`
   // so the demand loop's `settings.flow.enabled` /
   // `settings.constellations.enabled` / `settings.starCatalogs.enabled` reads
@@ -352,7 +350,6 @@ function makeState(
     bias: {} as never,
     // The demand loop reads one-shot request flags off this set.
     requests: new Set(),
-    data,
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots

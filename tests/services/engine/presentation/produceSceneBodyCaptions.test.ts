@@ -28,7 +28,6 @@ import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
@@ -111,14 +110,6 @@ function makeState(): EngineState {
     // tables off the state, so the fixture carries them rather than a stub:
     // the captions' occlude weights are then the genuine J2000 geometry.
     gpu: {},
-    data: {
-      bodies: {
-        earth: SCENE_EARTH,
-        planets: SCENE_PLANETS,
-        meshBodies: SCENE_MESH_BODIES,
-        sceneBodies: SCENE_BODIES,
-      },
-    },
     settings: {
       missions: { craft: null },
       starCatalogs: {

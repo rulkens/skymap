@@ -14,7 +14,7 @@
  * The runtime wants those on two very different paths.  The render + search
  * projection (position, temperature, radius, names) must be present the instant
  * the engine initialises so a star is drawable and findable synchronously, with
- * no `createEngineData` async churn.  The narrative + physical properties (spectral
+ * no async load at engine construction.  The narrative + physical properties (spectral
  * type, mass, age, ~100 KB of descriptions) belong off the hot path, fetched
  * lazily only when an InfoCard opens.  Emitting the two shapes at build time keeps
  * the seed legible (one file per star, all its facts together) while giving each

@@ -11,7 +11,7 @@
  * row's body has a cloud-shell row", which today still means Earth alone
  * (`CLOUD_SHELL_PARAMS.radiusRatio` is one shared constant, not a per-body
  * table — the lean choice while Earth is the only textured cloud deck). The
- * seeded `bodies.earth` record is composed as a unit sphere scaled to
+ * `SCENE_EARTH` record is composed as a unit sphere scaled to
  * `earth.surface.datumRadiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
  * in the body's own eye-relative frame, with the orientation resolved this
  * frame from the `BodyState` snapshot. The shared `cloudShellRenderer`
@@ -78,6 +78,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundM
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
+import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
 /** The Earth body, its resolved descent-fade multiplier, and whether the camera
  *  sits inside the shell radius this frame (Task 10: `cloudShellRenderer.draw`
@@ -104,8 +105,8 @@ function cloudShellDraw(
   bodyId: PositionedId,
   runtime: BodyRuntime,
 ): CloudShellDraw | null {
-  const earth = state.data.bodies.earth;
-  if (earth === null || earth.id !== bodyId) return null;
+  const earth = SCENE_EARTH;
+  if (earth.id !== bodyId) return null;
   // Resident iff the clouds slot holds a committed bitmap; otherwise the shell
   // would draw a fully transparent sphere (placeholder alpha 0) — drop the row.
   if (runtime.textureSlots.get(bodyTextureSlotKey('earth', 'clouds'))?.current() == null)

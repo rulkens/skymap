@@ -35,6 +35,9 @@ import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
+import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
@@ -60,14 +63,12 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 // position/orientation off this per-frame snapshot — mocked once so the
 // cross-layer no-double-draw test sees consistent state through both layers.
 type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+// Production reads the static scene tables, so a fixture's bodies ride on the state
+// under a test-only `seeded` key for this mock to pose.
+type Seeded = { planets: readonly SeededPlanet[]; meshBodies: readonly SceneBody[] };
+const seededOf = (state: PassState) => (state as unknown as { seeded: Seeded }).seeded;
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
-    }
-    return m;
-  }),
+  sceneBodyStates: vi.fn((state: PassState) => seededBodyStates(0, seededOf(state).planets)),
 }));
 
 const mvpMock = composeBodySlabMvp as unknown as ReturnType<typeof vi.fn>;
@@ -109,7 +110,7 @@ const PASS_STUB = {
 
 /** A ctx comfortably inside the shared foreground gate, with a fixed pose for every body. */
 function makeCtx(state: EngineState, distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
-  const { planets, meshBodies } = state.data.bodies;
+  const { planets, meshBodies } = seededOf(state);
   return {
     snapshot: { meshBodies, sceneBodies: positionedBodiesOf([...planets, ...meshBodies]) },
     cam: { distance },
@@ -156,7 +157,7 @@ function makePartitionFixture() {
   };
   const state = {
     gpu: {},
-    data: { bodies: { planets: [flat, textured, glint], meshBodies: [] } },
+    seeded: { planets: [flat, textured, glint], meshBodies: [] },
   } as unknown as EngineState;
   return { state, runtime, planets: planetsPass(runtime as unknown as BodyRuntime) };
 }
@@ -229,7 +230,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     const renderer = runtime.planet;
     const ctx = makeCtx(state);
     const view = makeBodyView(asSceneBodyId('mercury'));
-    const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
+    const mercury = seededOf(state).planets[0]!;
 
     planets.draw(PASS_STUB, view, ctx, state);
 
@@ -253,7 +254,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     const { state, runtime, planets } = makePartitionFixture();
     const renderer = runtime.planet;
     const ctx = makeCtx(state);
-    const mercury = (state.data.bodies.planets as SeededPlanet[])[0]!;
+    const mercury = seededOf(state).planets[0]!;
 
     planets.draw(PASS_STUB, makeBodyView(asSceneBodyId('mercury')), ctx, state);
 
@@ -310,7 +311,7 @@ describe('planetsPass.drawPick', () => {
     const pickRenderer = { drawSphere: vi.fn() };
     const state = {
       gpu: { bodyPickRenderer: pickRenderer },
-      data: { bodies: { planets: [flat, textured, glint], meshBodies: [] } },
+      seeded: { planets: [flat, textured, glint], meshBodies: [] },
     } as unknown as EngineState;
     const planets = planetsPass({
       planet: makeRendererSpy(),
@@ -340,11 +341,9 @@ describe('planetsPass.drawPick', () => {
     } as unknown as BodyRuntime);
     const state = {
       gpu: { bodyPickRenderer: { drawSphere: vi.fn() } },
-      data: {
-        bodies: {
-          planets: [{ ...bodyAt('mercury', radiusM), positionMpc: [0, 0, 0] }],
-          meshBodies: [],
-        },
+      seeded: {
+        planets: [{ ...bodyAt('mercury', radiusM), positionMpc: [0, 0, 0] }],
+        meshBodies: [],
       },
     } as unknown as EngineState;
     const ctx = {

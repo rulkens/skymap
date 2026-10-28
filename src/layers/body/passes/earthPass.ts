@@ -38,10 +38,9 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
   return {
     name: 'earth',
 
-    enabled(state, ctx, view) {
+    enabled(_state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== 'earth') return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      return state.data.bodies.earth !== null;
+      return ctx.cam.distance < FOREGROUND_MAX_DISTANCE_MPC;
     },
 
     draw(pass, view, ctx, state) {

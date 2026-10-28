@@ -53,9 +53,6 @@ function makeCtx(camPos: Vec3, distance: number): FrameView {
 function makeState(): EngineState {
   return {
     gpu: {},
-    data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES },
-    },
     settings: {
       missions: { craft: null },
       bodies: { items: makeBodyItems() },

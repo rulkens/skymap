@@ -974,7 +974,6 @@ describe('runFrame — the label-director wake fold', () => {
       },
       slabRows: [],
       visibilityEntries: [],
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
       // iterates this every ready frame (04b Task 12).
@@ -1085,7 +1084,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
       },
       slabRows: [],
       visibilityEntries: [],
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers: [],
       cubemapCaptures: makeCubemapCaptureRuntimes(),

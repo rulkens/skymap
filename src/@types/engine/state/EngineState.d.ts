@@ -11,7 +11,6 @@ import type { Task } from 'redux-saga';
 import type { Tier } from '../../data/Tier';
 import type { ViewRigKey } from '../frame/ViewRigKey';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
-import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
@@ -49,8 +48,6 @@ export type EngineState = {
   selectionRows: SelectionRowsState;
   /** A getter onto `store.getState().ui`, the same shape as `selection` above. */
   ui: UiState;
-  /** Per-type data stores — the authoritative app-side home for each. See `EngineData`. */
-  data: EngineData;
   picking: EnginePickingState;
   gpu: EngineGpuHandles;
   subsystems: EngineSubsystemHandles;

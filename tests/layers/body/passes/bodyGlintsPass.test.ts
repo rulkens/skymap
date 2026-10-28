@@ -39,39 +39,27 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // The layer reads each body's live position/orientation from the per-frame
-// body-state snapshot (keyed by id). Stub it to a map built from the fixture
-// bodies, REUSING each record's own positionMpc/orientation refs — so the layer
-// sees the exact fixture values (identity-equal), keeping the `toBe(...)`
-// assertions below intact while the reads move off the baked record fields.
+// body-state snapshot (keyed by id). Stub it to the fixture bodies the state
+// carries under `seeded` (a test-only key: production reads the static scene
+// tables), REUSING each record's own refs so the `toBe(...)` assertions hold.
+type Seeded = {
+  planets: readonly SeededPlanet[];
+  meshBodies: readonly SceneBody[];
+  earth?: SeededPlanet | null;
+};
+const seededOf = (state: PassState) => (state as unknown as { seeded: Seeded }).seeded;
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: PassState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    // The 'solar-system' region's anchor (sceneAnchors.ts authors the Sun at
-    // [0, 0, 0]) — an absent entry reads as Infinity, not 0 (see
-    // regionRelativeDistanceMpc's header), so every case needs it regardless of
-    // which planets it seeds. Orientation is inlined rather than reusing the
-    // module's IDENTITY const: this factory is hoisted above IDENTITY's
-    // declaration and runs at first import, a TDZ hazard.
-    m.set('sun', {
-      positionMpc: [0, 0, 0],
-      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
-    });
-    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
-    }
-    const earth = state.data.bodies.earth as SeededPlanet | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-      });
-    return m;
+    const { planets, earth } = seededOf(state);
+    return seededBodyStates(0, earth ? [...planets, earth] : planets);
   }),
 }));
 
@@ -127,7 +115,7 @@ const PASS_STUB = {
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
 function makeCtx(camPos: Readonly<Vec3>, state: EngineState): FrameView {
-  const { planets, meshBodies } = state.data.bodies;
+  const { planets, meshBodies } = seededOf(state);
   return {
     snapshot: { meshBodies, sceneBodies: positionedBodiesOf([...planets, ...meshBodies]) },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
@@ -168,7 +156,7 @@ function makeRenderer() {
 function makeState(planets: readonly PlanetBody[]): EngineState {
   return {
     gpu: {},
-    data: { bodies: { planets, meshBodies: [] } },
+    seeded: { planets, meshBodies: [] },
   } as unknown as EngineState;
 }
 
@@ -298,7 +286,7 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
   function stampState(earth: PlanetBody | null): EngineState {
     return {
       gpu: {},
-      data: { bodies: { planets: [], meshBodies: [], earth } },
+      seeded: { planets: [], meshBodies: [], earth },
     } as unknown as EngineState;
   }
   const camWithin: Vec3 = [1e-6, 0, 0]; // inside the caption gate
@@ -314,15 +302,8 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     expect(GLINTS.pickEnabled!(state, makeCtx(camWithin, state), view)).toBe(true);
   });
 
-  it('is false with no Earth and no glints, and false beyond the caption gate', () => {
-    expect(
-      GLINTS.pickEnabled!(
-        stampState(null),
-        makeCtx(camWithin, stampState(null)),
-        makeNear0View(camWithin),
-      ),
-    ).toBe(false);
-    // Earth seeded but the camera is past the caption gate → no stamp to admit for.
+  it('is false beyond the caption gate with no glints', () => {
+    // Past the caption gate there is no stamp to admit the row for.
     expect(
       GLINTS.pickEnabled!(
         stampState(earthWithinGate),
@@ -426,7 +407,7 @@ function makePickState(
   return {
     // earth defaults to null → no Earth stamp (the pre-Earth-stamp tests keep theirs).
     gpu: { bodyPickRenderer },
-    data: { bodies: { planets, meshBodies: [], earth: opts?.earth ?? null } },
+    seeded: { planets, meshBodies: [], earth: opts?.earth ?? null },
   } as unknown as EngineState;
 }
 
@@ -440,7 +421,7 @@ describe('bodyGlintsPass.drawPick', () => {
     // seed table (it rides the frame's mesh bodies) → dropped regardless.
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer, [JUPITER, MARS]);
-    Object.assign(state.data.bodies, { meshBodies: [UNKNOWN] });
+    Object.assign(seededOf(state), { meshBodies: [UNKNOWN] });
     const view = makeNear0View(CAM_POS);
 
     GLINTS.drawPick!(PASS_STUB, view, makeCtx(CAM_POS, state), state);
@@ -449,8 +430,9 @@ describe('bodyGlintsPass.drawPick', () => {
     const [passArg, args] = pickRenderer.drawPoints.mock.calls[0]!;
     expect(passArg).toBe(PASS_STUB);
 
-    // Both seeded bodies survive within the caption gate; only UNKNOWN is dropped.
-    expect(args.points).toHaveLength(2);
+    // Both seeded bodies and Earth's caption stamp survive within the caption gate;
+    // only UNKNOWN is dropped.
+    expect(args.points).toHaveLength(3);
 
     // Jupiter's packed id, hand-computed: (Source.Planet=22 << 26) | (seedIndex 3 +
     // PICK_SENTINEL_OFFSET 1) = 1476395008 | 4 = 1476395012.
@@ -548,7 +530,7 @@ describe('bodyGlintsPass.drawPick', () => {
   it('emits the Earth stamp with the EARTH class (0) inside the caption gate, so Earth out-picks every glint', () => {
     // Two lit io/jupiter glints plus a resolved Earth, camera inside the caption
     // gate. Earth is not in the partition (it rides earthPass), so the layer emits
-    // its stamp gated on the caption range (earth !== null && distance < gate).
+    // its stamp gated on the caption range (distance < gate).
     // Priority is
     // now the per-instance bandClass — 0 (earth) beats 1 (planet) beats 2 (moon) as
     // an unconditional depth win — NOT the list order, so the load-bearing check is
@@ -573,19 +555,7 @@ describe('bodyGlintsPass.drawPick', () => {
     expect(earthPt.posRelCamMpc[0]).toBeCloseTo(EARTH_RESOLVED.positionMpc[0] - CAM_POS[0], 20);
   });
 
-  it('omits the Earth stamp when earth is null OR the camera is beyond the caption gate', () => {
-    const pickRenderer = makePickRenderer();
-    // earth null → no stamp (only the lit Jupiter).
-    const noEarth = makePickState(pickRenderer, [JUPITER], { earth: null });
-    GLINTS.drawPick!(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS, noEarth), noEarth);
-    const [, argsA] = pickRenderer.drawPoints.mock.calls[0]!;
-    expect(
-      argsA.points.some(
-        (p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
-      ),
-    ).toBe(false);
-    expect(argsA.points).toHaveLength(1);
-
+  it('omits the Earth stamp when the camera is beyond the caption gate', () => {
     // Camera beyond the caption gate (2× the gate distance) even with a seeded
     // Earth → no label invites the click → no stamp.
     const pickRenderer2 = makePickRenderer();

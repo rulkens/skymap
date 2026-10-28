@@ -17,12 +17,13 @@ import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmospher
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { makeSlab } from '../../../fixtures/makeSlab';
+import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
+import type { SeededBody } from '../../../helpers/frame/seededBodyStates';
 import type { AtmosphereShellRenderer } from '../../../../src/layers/body/@types/AtmosphereShellRenderer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // 720-px viewport, 60° fovY, tangent-exact — the apparent-size gate's scale.
@@ -43,26 +44,16 @@ import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 // atmosphereDrawList reads live body positions off this per-frame snapshot
 // (unmocked — its own cull math is covered elsewhere); stub it to the fixture's
 // own positionMpc/orientation, the `atmosphereShellPass.test.ts` pattern.
-type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
 // Positioned a hair off the render origin so the apparent-size cull clears
 // comfortably (apparent diameter tracks 1/distance) without real orbital math.
-const SEEDED_EARTH: SeededEarth = {
+const SEEDED_EARTH: SeededBody = {
   ...SCENE_EARTH,
   positionMpc: [-1e-15, 0, 0],
   orientation: IDENTITY_MAT3,
 };
 vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
-  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
-    const m = new Map<string, BodyState>();
-    const earth = state.data.bodies.earth as SeededEarth | null;
-    if (earth)
-      m.set(earth.id, {
-        positionMpc: earth.positionMpc,
-        orientation: earth.orientation,
-      });
-    return m;
-  }),
+  sceneBodyStates: vi.fn(() => seededBodyStates(0, [SEEDED_EARTH])),
 }));
 
 /** The one compute pass the encode opens when it bakes at all. */
@@ -102,10 +93,9 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-function makeState(init: { earth?: EarthBody | null } = {}): EngineState {
+function makeState(): EngineState {
   return {
     slabRows: [],
-    data: { bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] } },
     settings: { earth: { atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure } },
   } as unknown as EngineState;
 }
@@ -114,13 +104,7 @@ describe('encodeAtmosphereAerialPerspective', () => {
   it('opens no compute pass and never claims the timing slot when no body is inside the shell', () => {
     beginComputePass.mockClear();
     const claim = vi.fn(() => ({}));
-    encodeAtmosphereAerialPerspective(
-      spyRenderer(),
-      encoder,
-      makeCtx(false),
-      makeState({ earth: null }),
-      claim,
-    );
+    encodeAtmosphereAerialPerspective(spyRenderer(), encoder, makeCtx(false), makeState(), claim);
     expect(beginComputePass).not.toHaveBeenCalled();
     expect(claim).not.toHaveBeenCalled();
   });

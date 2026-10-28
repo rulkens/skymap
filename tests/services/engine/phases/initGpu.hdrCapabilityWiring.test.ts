@@ -217,9 +217,6 @@ import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineS
 // to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
 // happens AFTER the listener is registered but before `initGpu` returns.
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
-// The real seeded data bag: the seeded planet list drives planetsPass, so
-// the state fixture carries the real construction-time seeds.
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 // The registry itself: derives the expected non-null / null key sets for the
 // phase-split assertion below, rather than a hand-written key list that
 // could drift from GPU_HANDLE_ROWS.
@@ -252,7 +249,6 @@ function makeState(): EngineState {
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
     },
-    data: createEngineData(),
     // Read by the `renderTargets` row's construct closure via
     // `composeRenderTargetRows`; no Layer targets in this fixture.
     layerTargets: [],
