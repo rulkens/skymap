@@ -37,7 +37,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
+- [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
+- [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:783`, and neither `runFrame` nor the scheduler's `tick` catches, so trace where the throw is lost.
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
 - [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **`DragMode` consumers test `=== 'pan'`, a new variant falls silently into orbit** `ready` — five sites hand-pick one string literal instead of an exhaustive switch, and the workbenches' `attachOrbitControls.ts` keeps its own local `DragMode` type distinct from the shared one. → [details](backlog/2026-09-29-dragmode-binary-pan-tests.md)

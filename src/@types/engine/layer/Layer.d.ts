@@ -44,7 +44,6 @@ export type Layer<
   /** Folded into the app's slice list by `appSettingsSlices`. Absent = no knobs. */
   readonly settings?: Settings;
 
-  // Static contributions: plain data, readable without booting anything.
   /** Appended after core's `renderTargetRows` by the `renderTargets` GPU-handle
    * row (`composeRenderTargetRows`); ids are globally unique — a duplicate
    * throws at boot. */
@@ -73,19 +72,17 @@ export type Layer<
    * which imports the same tuple from the Layer's `visibility.ts`, never from here. */
   readonly visibility?: readonly VisibilityEntry[];
 
-  // Lifecycle. Every member below is invoked from exactly one place —
-  // `instantiateLayer` — which is where to look to see the call shapes together.
+  // Every member below is invoked from `instantiateLayer`.
   /** Mints the private Runtime, after `initGpu` and before `wireSlots`. */
   create(deps: LayerCoreDeps<Facts>): Runtime;
   /** Run at teardown via the instance closure. WebGPU frees nothing on GC: release
    * what `create` took, subsystems before the renderers they hold. */
   destroy(runtime: Runtime): void;
 
-  // Runtime-bound contributions: closures over the Layer's own state.
   /** Appended after `CONTENT_PASSES` in `createLayers`; names are globally unique —
    * a duplicate throws at boot. */
   passes(runtime: Runtime): readonly ContentPass[];
-  /** Appended after `CORE_COMPUTES` in `createLayers`; names are globally unique —
+  /** Composed across Layers in `createLayers`; names are globally unique —
    * a duplicate throws at boot, and a name `FRAME_ORDER` never lists just never runs. */
   computes?(runtime: Runtime): readonly ContentCompute[];
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
@@ -110,7 +107,6 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
-  /** The ground core's camera reads. One provider per composition, counting
-   *  core's surface-tile provider (until the body Layer takes it over); boot throws on two. */
+  /** The ground core's camera reads. One provider per composition, counting core's; boot throws on two. */
   terrain?(runtime: Runtime): LayerTerrain;
 };

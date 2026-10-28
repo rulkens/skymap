@@ -59,8 +59,7 @@ function makeState(
     settings: writes.reduce((s, p) => settingsReducer(s, setVisibility(p)), INITIAL_SETTINGS),
     subsystems: { fades },
     visibilityEntries: APP_VISIBILITY,
-    assetRows: Object.entries(gated).map(([key, gates]) => ({ key, gates })),
-    layerSlots: new Map(Object.entries(slots)),
+    assetRows: Object.entries(gated).map(([key, gates]) => ({ key, gates, slot: slots[key] })),
   } as unknown as EngineState;
   state.visibilityGates = collectVisibilityGates(state);
   seedVisibilityFades(state);
