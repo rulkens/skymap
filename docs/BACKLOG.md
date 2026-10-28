@@ -106,6 +106,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **f32 half-ulp sightline nudge at the body-arm flip** `needs-verification` — ~4 mas, in two narrow `h/R` windows. → [details](backlog/2026-09-11-camera-f32-half-ulp-sightline-nudge-at-arm-flip.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
+- [ ] **Follow-approach and Home on the geodesic** `ready` — PR 2 of geodesic focus moves; the endpoint moves every frame. → [details](backlog/2026-10-27-geodesic-follow-and-home.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel mesh bodies can't be picked** `ready` — an unresolved mesh body sits in `glints`, but the glint pick stamps only `SCENE_PLANETS` rows (`bodyGlintsPass.ts:345-346`).
 

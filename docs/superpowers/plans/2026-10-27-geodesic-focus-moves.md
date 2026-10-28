@@ -511,8 +511,8 @@ review: yes
   - Home's hand-off to the follow driver (`watchGoHomeSaga.ts` header).
 - **No test.**
 
-- [ ] Write both files.
-- [ ] Commit: `docs(backlog): follow-approach and Home on the geodesic (PR 2)`.
+- [x] Write both files.
+- [x] Commit: `docs(backlog): follow-approach and Home on the geodesic (PR 2)`.
 
 ---
 
