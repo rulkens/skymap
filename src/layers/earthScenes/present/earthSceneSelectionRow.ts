@@ -14,13 +14,13 @@ import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 
-type EarthSceneRef = Extract<SelectionRef, { type: 'earthScene' }>;
-
 const isEarthSceneId = (id: string): id is SceneBodyId =>
   isSceneBodyId(id) && EARTH_SCENE_BODY_IDS.has(id);
 
-export function earthSceneSelectionRow(): SelectionKindRow<EarthSceneRef> {
-  const decode = (id: string): EarthSceneRef | null => {
+export function earthSceneSelectionRow(): SelectionKindRow<
+  Extract<SelectionRef, { type: 'earthScene' }>
+> {
+  const decode = (id: string): Extract<SelectionRef, { type: 'earthScene' }> | null => {
     if (!id.startsWith(BODY_FOCUS_PREFIX)) return null;
     const sceneId = id.slice(BODY_FOCUS_PREFIX.length);
     return isEarthSceneId(sceneId) ? { type: 'earthScene', id: sceneId } : null;

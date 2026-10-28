@@ -11,8 +11,7 @@ import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenL
 import type { CaptionKind } from './captionPriority';
 import { sceneBodyLabels } from './sceneBodyLabels';
 import { SCENE_BODY_CAPTION_LABEL } from '../../../data/labels/sceneBodyCaptionLabel';
-import { EARTH_ENTRY } from '../../../data/sources/earth';
-import { PLANET_ENTRY } from '../../../data/sources/planet';
+import { SOURCE_REGISTRY, Source } from '../../../data/sources';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
@@ -21,7 +20,7 @@ import { composeForegroundCaption } from '../../../utils/labels/composeForegroun
 // the source entry the kind's bodies caption under.
 const BODY_CAPTION_ITEM: Readonly<
   Partial<Record<CaptionKind, LabelItemOf<typeof SCENE_BODY_CAPTION_LABEL>>>
-> = { earth: EARTH_ENTRY.id, planet: PLANET_ENTRY.id };
+> = { earth: SOURCE_REGISTRY[Source.Earth].id, planet: SOURCE_REGISTRY[Source.Planet].id };
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.

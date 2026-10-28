@@ -1,5 +1,5 @@
-import type { BodySourceEntry } from '../../@types/data/body/BodySourceEntry';
-import { Source } from '../source';
+import type { BodySourceEntry } from '../../../@types/data/body/BodySourceEntry';
+import { Source } from '../../../data/source';
 
 export const EARTH_ENTRY = {
   type: 'body',

@@ -12,7 +12,7 @@ import { selectionToFocusId } from '../../../src/services/url/focusUrl';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { craftSelectionRow } from '../../../src/layers/missions/present/craftSelectionRow';
 import { earthSceneSelectionRow } from '../../../src/layers/earthScenes/present/earthSceneSelectionRow';
 import type { CraftInfo } from '../../../src/@types/engine/CraftInfo';
@@ -91,7 +91,7 @@ describe('URL_HASH_FOR', () => {
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
     const resolver = composeSelectionRows(
-      () => [...coreSelectionRows(), craftSelectionRow()],
+      () => [bodySelectionRow(), craftSelectionRow()],
       () => ALL_KINDS_ENABLED,
     );
     const id = URL_HASH_FOR.craft(hubble);
@@ -107,7 +107,7 @@ describe('URL_HASH_FOR', () => {
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
     const resolver = composeSelectionRows(
-      () => [...coreSelectionRows(), earthSceneSelectionRow()],
+      () => [bodySelectionRow(), earthSceneSelectionRow()],
       () => ALL_KINDS_ENABLED,
     );
     const id = URL_HASH_FOR.earthScene(park);

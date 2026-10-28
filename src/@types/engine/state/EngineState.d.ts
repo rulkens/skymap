@@ -129,9 +129,8 @@ export type EngineState = {
   /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
   terrain: LayerTerrain;
   /**
-   * The one selection-row array core owns (D5, Ruling 4): `[]` here,
-   * populated by Task 8's core rows and appended to once, by `createLayers`,
-   * with each Layer's own rows. Named distinctly from `selectionRows` above —
+   * The one selection-row array (D5, Ruling 4): `[]` until `createLayers`
+   * fills it once with every Layer's rows (core owns no kind's row). Named distinctly from `selectionRows` above —
    * that field is the UNRELATED saga-reconciled display cache
    * (`SelectionRowsState`); this one holds `SelectionKindRow`s, the composed
    * resolver's dispatch table.

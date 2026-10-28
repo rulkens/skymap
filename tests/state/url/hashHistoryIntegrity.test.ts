@@ -129,7 +129,7 @@ describe('hash history integrity', () => {
   /**
    * The real store, the real root saga, the real URL seam — registering the
    * context is what releases the hash bridge, so this call IS the arrival read.
-   * `NOOP_SAGA_CONTEXT.selection` composes the real core rows over an empty
+   * `NOOP_SAGA_CONTEXT.selection` composes the real body and structure rows over an empty
    * structure store, so a body deep link resolves off the static `SCENE_BODIES`
    * table with no engine resource in the path. The camera is live so the
    * arrival can land, and the boot waits for it: until then every publish

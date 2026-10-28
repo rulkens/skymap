@@ -42,7 +42,7 @@ import {
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { galaxyRowRuntime } from '../../support/selectionResolverOver';
@@ -92,7 +92,7 @@ describe('watchTierSaga', () => {
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
       selection: composeSelectionRows(
-        () => [...coreSelectionRows(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
+        () => [bodySelectionRow(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
         () => ALL_KINDS_ENABLED,
       ),
     });

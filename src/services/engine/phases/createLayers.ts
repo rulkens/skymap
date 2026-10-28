@@ -239,9 +239,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   }
   state.layerSlots = layerSlots;
 
-  state.selectionKindRows = [
-    ...state.selectionKindRows,
-    ...instances.flatMap((instance) => instance.selection),
-  ];
+  state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
 }

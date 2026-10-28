@@ -1,5 +1,5 @@
 /**
- * composeSelectionRows, driven through the six core rows via
+ * composeSelectionRows, driven through the real selection rows via
  * `selectionResolverOver` — the composed resolver's dispatch and its
  * claim-then-decode focus-id contract. One describe per resolver
  * subject (pick, pick table, row extraction, focus id); the last describes pin

@@ -1,5 +1,5 @@
 /**
- * detailCardTable — folds core's three FocusableTarget arms with every Layer's
+ * detailCardTable — folds core's two FocusableTarget arms with every Layer's
  * `detailCard` ui-slot contribution into the `DetailCardTable` InfoCard
  * dispatches on. Called once at module load (`InfoCard.tsx`), so a missing arm
  * throws at boot naming the union member nobody claimed — a composition
@@ -27,26 +27,16 @@ import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCar
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
-import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
-import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
 import CompactStarCard from './CompactStarCard/CompactStarCard';
 
-/** The three focusable kinds core still owns outright — no Layer claims them.
- * `zoneOfAvoidance`, `milkyWay` and `structure` are the arms missing here: they
- * arrive via `layerUiContents`, from their own Layer's `ui` entry. */
+/** The two focusable kinds core still owns outright — no Layer claims them.
+ * Every other arm arrives via `layerUiContents`, from its own Layer's `ui` entry. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
     Detail: GalaxyDetailCard,
     Compact: CompactCard,
-  },
-  body: {
-    // Detail renders through a store container: a focused body's distance is
-    // time-dependent, re-derived live off the throttled time pub, which a
-    // presentational card cannot read (store-boundary rule).
-    Detail: BodyDetailCardContainer,
-    Compact: CompactBodyCard,
   },
   starCatalog: {
     Detail: StarDetailCard,

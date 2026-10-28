@@ -58,7 +58,7 @@ The manifest is written last, after every file it names, so a page load can neve
 
 Boot fetches `<dataBaseUrl>/data/manifest.json` once with `cache: 'no-cache'` ([`dataManifest.ts`](../src/services/loading/dataManifest.ts)); every subsequent [`dataUrl(filename)`](../src/services/loading/fetchWithProgress.ts) call resolves the logical name through it, falling back to the identity path when the manifest doesn't name it (an unbuilt worktree, or the unhashed `images/` tree). [`dataBaseUrl()`](../src/utils/network/dataBaseUrl.ts) is empty in dev (Vite serves `public/data/*` at `/data/*`) and points at the R2 custom domain in production. See [docs/DEPLOY.md](DEPLOY.md) for how that env var is set.
 
-Galaxy catalogs ship in three [`Tier`](../src/@types/data/Tier.d.ts) presets the user can hot-swap at runtime: `small` (~300k galaxies, mobile), `medium` (~600k, desktop default), `large` (~2.5M, opt-in full catalog). Per-source caps live on each entry's `tierTargets` in [`src/data/sources.ts`](../src/data/sources.ts) / `src/data/sources/*.ts` (galaxy catalogs: `src/layers/galaxyCatalog/sources/*.ts`); [`tierTargets.ts`](../src/data/tierTargets.ts) is the single place both the fetcher and the builder read for the (source, tier) → filename mapping, so the URL and the on-disk layout can't drift apart.
+Galaxy catalogs ship in three [`Tier`](../src/@types/data/Tier.d.ts) presets the user can hot-swap at runtime: `small` (~300k galaxies, mobile), `medium` (~600k, desktop default), `large` (~2.5M, opt-in full catalog). Per-source caps live on each entry's `tierTargets` in each Layer's `sources/` rows (galaxy catalogs: `src/layers/galaxyCatalog/sources/*.ts`), folded by [`src/data/sources.ts`](../src/data/sources.ts); [`tierTargets.ts`](../src/data/tierTargets.ts) is the single place both the fetcher and the builder read for the (source, tier) → filename mapping, so the URL and the on-disk layout can't drift apart.
 
 For a fresh checkout, `npm run fetch-data` pulls the deployed `manifest.json` and everything it currently names (`--dry-run` lists the selection without downloading). It is the fastest path to real data. Everything from here on is for building the binaries yourself from raw catalog downloads, needed if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
 
@@ -184,7 +184,7 @@ The Rust port, `npm run build-stars-rs` (requires a Rust toolchain), still emits
 
 ## Cosmic-web volumes
 
-All three share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/data/sources/*.ts`).
+All three share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/layers/cosmicWebDensity/sources/*.ts`).
 
 - **MCPM Cosmic Web** (`mcpm`): three tiered `.scfd` from the SDSS DR17 Cosmic Slime VAC. The Python extraction happens once per VAC release; contributors curl the pre-extracted `.npy` tiers and run `npm run build-mcpm`. Full flow in [`data/raw/mcpm/README.md`](../data/raw/mcpm/README.md).
 - **Polyphorm (2MRS)** (`polyphorm-2mrs`, hidden by default): a locally-run Polyphorm export converted by `tools/volumes/extractPolyphormExport.py` into d8/d4/d2 tiers, then imported per tier with `buildRhizomeVolume.ts --clamp 0.2`. The clamp zeroes packed voxels below that log-normalised threshold; 0.2 sits below the renderer's default visibility deadband and shrinks the large tier's gzipped size by two orders of magnitude at no visible cost.

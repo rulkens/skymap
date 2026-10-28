@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../../src/layers/body/present/bodySelectionRow';
 import { craftSelectionRow } from '../../../../src/layers/missions/present/craftSelectionRow';
 import { craftPickId } from '../../../../src/layers/missions/present/craftPickId';
 import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missionCraftIds';
@@ -15,7 +15,7 @@ import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 
 const resolver = composeSelectionRows(
-  () => [...coreSelectionRows(), craftSelectionRow()],
+  () => [bodySelectionRow(), craftSelectionRow()],
   () => ALL_KINDS_ENABLED,
 );
 

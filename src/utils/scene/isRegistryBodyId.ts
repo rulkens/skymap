@@ -2,7 +2,7 @@
  * isRegistryBodyId — is `id` a non-star scene body: Earth, a planet or moon, or
  * any mesh body, whichever Layer owns it? `decodeFramedPose`'s `#pose=` body arm
  * reads it, since a pose may sit at a craft as well as a planet. The narrower
- * `isCoreBodyId` is the `body` selection kind's own claim.
+ * `isBodyKindId` is the `body` selection kind's own claim.
  *
  * Not `SCENE_BODIES`: that still lists the seeded stars for the camera and
  * occluder readers, but a star's identity is a `starCatalog` ref, so

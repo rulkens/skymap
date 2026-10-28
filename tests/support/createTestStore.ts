@@ -36,7 +36,7 @@
 
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../src/layers/structure/present/structureSelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
@@ -73,12 +73,12 @@ const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: ()
 export const NOOP_SAGA_CONTEXT: SagaContext = {
   nextFrame: () => Promise.resolve(),
   reconcile: NOOP_RECONCILE,
-  // The real core and structure rows, over the empty store above: a static id
+  // The real body and structure rows, over the empty store above: a static id
   // (body/star/cluster/…) resolves off its table exactly as the running app
   // does, while a catalog-backed id (galaxy) still resolves to null with no
   // engine resource in the path.
   selection: composeSelectionRows(
-    () => [...coreSelectionRows(), structureSelectionRow(EMPTY_STRUCTURES)],
+    () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES)],
     () => ALL_KINDS_ENABLED,
   ),
   // Null is the same answer the engine gives pre-bootstrap and post-destroy, and

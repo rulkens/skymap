@@ -3,15 +3,14 @@
  *
  * The registry of every data source skymap loads, keyed by `Source` code;
  * see `SourceEntry.d.ts` for the twelve `type` kinds it discriminates over.
- * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`,
- * or under `layers/<name>/sources/` once that family is a formed Layer.
+ * `Source` lives in `./source`; each row lives under its Layer's `sources/`, one
+ * file per row, and folds in here through that Layer's rows array.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SourceType } from '../@types/data/SourceType';
 import type { Tier } from '../@types/data/Tier';
 
-import { Source } from './source';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { STRUCTURE_SOURCE_ROWS } from '../layers/structure/sources/structureSourceRows';
 import { sourceRecordOf } from '../utils/data/sourceRecordOf';
@@ -20,8 +19,7 @@ import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/con
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import { MILKY_WAY_SOURCE_ROWS } from '../layers/milkyWay/sources/milkyWaySourceRows';
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
-import { PLANET_ENTRY } from './sources/planet';
-import { EARTH_ENTRY } from './sources/earth';
+import { BODY_SOURCE_ROWS } from '../layers/body/sources/bodySourceRows';
 import { MISSIONS_SOURCE_ROWS } from '../layers/missions/sources/missionsSourceRows';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
 import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
@@ -61,13 +59,7 @@ export { Source } from './source';
  * either renumbering codes (forbidden — codes are append-only by value) or a
  * separate display-order mechanism; neither is a decision this file makes.
  */
-const UNFORMED_SOURCE_REGISTRY = {
-  [Source.Planet]: PLANET_ENTRY,
-  [Source.Earth]: EARTH_ENTRY,
-} as const;
-
 export const SOURCE_REGISTRY = {
-  ...UNFORMED_SOURCE_REGISTRY,
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(STAR_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
@@ -77,6 +69,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
   ...sourceRecordOf(COSMIC_WEB_DENSITY_SOURCE_ROWS),
   ...sourceRecordOf(BLACK_HOLE_SOURCE_ROWS),
+  ...sourceRecordOf(BODY_SOURCE_ROWS),
   ...sourceRecordOf(MISSIONS_SOURCE_ROWS),
   ...sourceRecordOf(STRUCTURE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;

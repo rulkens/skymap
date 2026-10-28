@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
+import { bodyLayer } from '../../src/layers/body/layer';
 import { missionsLayer } from '../../src/layers/missions/layer';
 import { earthScenesLayer } from '../../src/layers/earthScenes/layer';
 import { MISSION_CRAFT_IDS } from '../../src/layers/missions/present/missionCraftIds';
@@ -16,14 +16,14 @@ import { SCENE_BODIES } from '../../src/data/bodies/sceneBodies';
 import { SCENE_SUN } from '../../src/data/bodies/sceneSun';
 import { SCENE_STARS } from '../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../src/data/bodies/sceneSStars';
-import { isCoreBodyId } from '../../src/utils/scene/isCoreBodyId';
+import { isBodyKindId } from '../../src/layers/body/present/isBodyKindId';
 import { ALL_KINDS_ENABLED } from '../support/allKindsEnabled';
 
 const STAR_IDS = new Set<string>([...SCENE_SUN, ...SCENE_STARS, ...SCENE_S_STARS].map((s) => s.id));
 
 const resolver = composeSelectionRows(
   () => [
-    ...coreSelectionRows(),
+    ...bodyLayer.selection!(undefined as never),
     ...missionsLayer.selection!(undefined as never),
     ...earthScenesLayer.selection!(undefined as never),
   ],
@@ -39,7 +39,7 @@ describe('body-<id> focus claims', () => {
         ? 'craft'
         : EARTH_SCENE_BODY_IDS.has(id)
           ? 'earthScene'
-          : isCoreBodyId(id)
+          : isBodyKindId(id)
             ? 'body'
             : null;
       if (kind === null) {

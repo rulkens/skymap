@@ -14,7 +14,7 @@ import { inputSourceSaga } from '../../../src/state/input/inputSourceSaga';
 import { watchFocusSelectedSaga } from '../../../src/state/selection/watchFocusSelectedSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
@@ -31,7 +31,7 @@ describe('double-tap focus', () => {
     const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.setContext({
       selection: composeSelectionRows(
-        () => [...coreSelectionRows(), milkyWaySelectionRow()],
+        () => [bodySelectionRow(), milkyWaySelectionRow()],
         () => ALL_KINDS_ENABLED,
       ),
       cameraRuntime: () => ({
