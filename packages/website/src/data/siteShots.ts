@@ -539,7 +539,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'features-desi',
-    link: 'pose=a,0,0,0,0.9,0.55,9500,0,0.2,0.12',
+    // Looks straight down on the fan's plane (its pole is at RA 57.5°, Dec +59.4°) at mid-fan, rolled to lay it across 16:9.
+    link: 'pose=a,-1479.2,-2321.8,1631.3,2.7856,0.6666,6000,1.3',
     settings: {
       hideLabels: true,
       hideStructures: true,
@@ -553,7 +554,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'The DESI survey wedge',
     drawn: 'Each point is one catalogued object from DESI’s first data release. The fan is the band of sky those data cover.',
-    alt: 'A long thin fan of points, blue-white far out and orange near its tip, on a black background.',
+    alt: 'A broad fan of points opening from a tip at the left, orange near the tip and blue-white far out, on a black background.',
   },
   {
     id: 'features-everest',
