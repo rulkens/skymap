@@ -15,6 +15,8 @@ import { OPEN_CLUSTER_ENTRY } from './openCluster';
 import { GLOBULAR_CLUSTER_ENTRY } from './globularCluster';
 import { NEBULA_ENTRY } from './nebula';
 import { GC_CLUSTER_ENTRY } from './gcCluster';
+import { EXOPLANET_SYSTEM_ENTRY } from './exoplanetSystem';
+import { TRANSIENT_ENTRY } from './transient';
 
 export const STRUCTURE_SOURCE_ROWS = [
   [Source.GalaxyCluster, GALAXY_CLUSTER_ENTRY],
@@ -25,4 +27,6 @@ export const STRUCTURE_SOURCE_ROWS = [
   [Source.GlobularCluster, GLOBULAR_CLUSTER_ENTRY],
   [Source.Nebula, NEBULA_ENTRY],
   [Source.GcCluster, GC_CLUSTER_ENTRY],
+  [Source.ExoplanetSystem, EXOPLANET_SYSTEM_ENTRY],
+  [Source.Transient, TRANSIENT_ENTRY],
 ] as const satisfies readonly (readonly [SourceType, SourceEntry])[];

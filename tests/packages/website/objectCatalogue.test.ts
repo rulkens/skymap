@@ -59,6 +59,8 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   'globular-cluster': (id) => structureIds.has(id),
   nebula: (id) => structureIds.has(id),
   'gc-cluster': (id) => structureIds.has(id),
+  'exoplanet-system': (id) => structureIds.has(id),
+  transient: (id) => structureIds.has(id),
   'galaxy-group': (id) => structureIds.has(id),
   'galaxy-cluster': (id) => structureIds.has(id),
   supercluster: (id) => structureIds.has(id),
@@ -112,10 +114,12 @@ describe('object catalogue', () => {
         'globular-cluster',
         'nebula',
         'gc-cluster',
+        'exoplanet-system',
         'galaxy-group',
         'galaxy-cluster',
         'supercluster',
         'void',
+        'transient',
       ),
     ).toEqual([...structureIds].sort());
     expect(ids('exhibit')).toEqual(Object.keys(APP_EXHIBITS).sort());

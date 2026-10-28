@@ -15,6 +15,8 @@ export type ObjectKind =
   | 'globular-cluster'
   | 'nebula'
   | 'gc-cluster'
+  | 'exoplanet-system'
+  | 'transient'
   | 'galaxy-group'
   | 'galaxy-cluster'
   | 'supercluster'

@@ -476,6 +476,24 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         state: 'structures.items.gc-cluster.enabled',
         firstValue: true,
       },
+      {
+        name: 'Exoplanet systems',
+        control: 'switch',
+        does: 'Shows the marker of each star with known planets.',
+        values: SWITCH,
+        first: ON,
+        state: 'structures.items.exoplanet-system.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Transients',
+        control: 'switch',
+        does: 'Shows the marker of each transient: gravitational-wave, neutrino, fast radio burst, gamma-ray burst and supernova events.',
+        values: SWITCH,
+        first: ON,
+        state: 'structures.items.transient.enabled',
+        firstValue: true,
+      },
     ],
   },
   {
@@ -522,6 +540,8 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
+      label('Exoplanet systems', 'structures.items.exoplanet-system.labelEnabled', 'the stars with known planets'),
+      label('Transients', 'structures.items.transient.labelEnabled', 'the transients'),
       {
         name: 'S-star trails',
         control: 'switch',

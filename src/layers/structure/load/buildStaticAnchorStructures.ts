@@ -134,6 +134,10 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
       return { ...common, category: 'nebula', nebulaKind: a.nebulaKind! };
     case 'gc-cluster':
       return { ...common, category: 'gc-cluster' };
+    case 'exoplanet-system':
+      return { ...common, category: 'exoplanet-system' };
+    case 'transient':
+      return { ...common, category: 'transient' };
   }
 }
 

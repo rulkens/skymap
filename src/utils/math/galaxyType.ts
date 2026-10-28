@@ -84,6 +84,8 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.GlobularCluster:
     case Source.Nebula:
     case Source.GcCluster:
+    case Source.ExoplanetSystem:
+    case Source.Transient:
     case Source.Filaments:
     case Source.Mcpm:
     case Source.Polyphorm2MRS:

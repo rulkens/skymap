@@ -244,11 +244,17 @@ export const Source = {
   /**
    * Milky Way structure markers — parsec-scale places inside our own galaxy,
    * drawn by the NEAR0 marker pass. Same encoding as GalaxyCluster; seed-only. Appended
-   * at 33..36 — after these rows, codes 37..62 remain before the 6-bit
-   * pick-source field needs a wider layout.
+   * at 33..36.
    */
   OpenCluster: 33,
   GlobularCluster: 34,
   Nebula: 35,
   GcCluster: 36,
+  /**
+   * Prototype seed-only categories: exoplanet host systems (parsec scale) and
+   * multi-messenger transients (Mpc scale). Appended at 37..38 — codes 39..62
+   * remain before the 6-bit pick-source field needs a wider layout.
+   */
+  ExoplanetSystem: 37,
+  Transient: 38,
 } as const;

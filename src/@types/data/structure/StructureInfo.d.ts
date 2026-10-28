@@ -127,6 +127,12 @@ type GcClusterRecord = StructureBase & {
   readonly category: 'gc-cluster';
 };
 
+/** A star hosting confirmed exoplanets. */
+type ExoplanetSystemRecord = StructureBase & { readonly category: 'exoplanet-system' };
+
+/** The host of a multi-messenger or transient event (GW, neutrino, FRB, GRB, TDE). */
+type TransientRecord = StructureBase & { readonly category: 'transient' };
+
 /**
  * An extended structure record.  `category` is a `StructureId`; famous
  * galaxies are not structures and are absent from this union.
@@ -139,4 +145,6 @@ export type StructureInfo =
   | OpenClusterRecord
   | GlobularClusterRecord
   | NebulaRecord
-  | GcClusterRecord;
+  | GcClusterRecord
+  | ExoplanetSystemRecord
+  | TransientRecord;

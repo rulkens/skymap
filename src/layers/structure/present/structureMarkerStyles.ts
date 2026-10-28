@@ -149,6 +149,30 @@ export const STRUCTURE_MARKER_STYLES = {
     haloColor: hexToGl('#B8B8C842'),
     ringColor: hexToGl('#B8B8C8'),
   },
+  'exoplanet-system': {
+    ...MILKY_WAY_STYLE,
+    labelColor: hexToGl('#7FE0B8'),
+    worldEmMpc: 2e-6,
+    haloColor: hexToGl('#4FB08842'),
+    ringColor: hexToGl('#4FB088'),
+  },
+  // Magenta sits off the warm scale-ladder ramp and the cyan void: an event,
+  // not a structure. Small worldEm — a transient is a point, not a region.
+  transient: {
+    labelColor: hexToGl('#F28CE0'),
+    minPixelSize: 35,
+    maxPixelSize: 150,
+    worldEmMpc: 1.0,
+    pixelWidth: 2,
+    haloColor: hexToGl('#C060B042'),
+    ringColor: hexToGl('#C060B0'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
+    markerMinApparentRadiusPx: 12,
+    markerMinApparentFadeBandPx: 8,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
+  },
 } as const satisfies Readonly<Record<StructureId, StructureMarkerStyle>>;
 
 /**

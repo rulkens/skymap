@@ -90,6 +90,13 @@ export const OBJECT_SECTIONS: readonly ObjectSection[] = [
     many: 'Galactic Centre clusters',
   },
   {
+    id: 'exoplanet-systems',
+    title: 'Exoplanet systems',
+    kinds: ['exoplanet-system'],
+    one: 'exoplanet system',
+    many: 'exoplanet systems',
+  },
+  {
     id: 'named-galaxies',
     title: 'Named galaxies',
     kinds: ['galaxy'],
@@ -119,6 +126,7 @@ export const OBJECT_SECTIONS: readonly ObjectSection[] = [
     many: 'superclusters',
   },
   { id: 'voids', title: 'Voids', kinds: ['void'], one: 'void', many: 'voids' },
+  { id: 'transients', title: 'Transients', kinds: ['transient'], one: 'transient', many: 'transients' },
   { id: 'exhibits', title: 'Exhibits', kinds: ['exhibit'], one: 'exhibit', many: 'exhibits' },
   { id: 'tours', title: 'Tours', kinds: ['tour'], one: 'tour', many: 'tours' },
 ];
@@ -284,11 +292,13 @@ export const OBJECT_ROWS: readonly ObjectRow[] = [
   ...sorted(structures, 'globular-cluster'),
   ...sorted(structures, 'nebula'),
   ...sorted(structures, 'gc-cluster'),
+  ...sorted(structures, 'exoplanet-system'),
   ...galaxies.sort(byName),
   ...sorted(structures, 'galaxy-group'),
   ...sorted(structures, 'galaxy-cluster'),
   ...sorted(structures, 'supercluster'),
   ...sorted(structures, 'void'),
+  ...sorted(structures, 'transient'),
   ...exhibits.sort(byName),
   ...tours,
 ];

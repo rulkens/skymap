@@ -265,6 +265,18 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
     names: 'A star cluster near the centre of the Milky Way.',
   },
   {
+    form: 'exoplanet-system-<name>',
+    prefix: 'exoplanet-system-',
+    example: 'exoplanet-system-trappist-1',
+    names: 'A star with known planets.',
+  },
+  {
+    form: 'transient-<name>',
+    prefix: 'transient-',
+    example: 'transient-gw170817',
+    names: 'A transient: a gravitational-wave, neutrino, radio-burst, gamma-ray-burst or supernova event.',
+  },
+  {
     form: 'blackhole-sgr-a-star',
     prefix: 'blackhole-',
     example: 'blackhole-sgr-a-star',
