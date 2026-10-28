@@ -13,4 +13,5 @@ export const SELECTION_KINDS = [
   'craft',
   'starCatalog',
   'blackHole',
+  'satellite',
 ] as const;

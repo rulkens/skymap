@@ -5,6 +5,7 @@ import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourc
 import type { BodyInfo } from './BodyInfo';
 import type { CraftInfo } from './CraftInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
+import type { SatelliteInfo } from './SatelliteInfo';
 import type { Vec3 } from '../math/Vec3';
 
 /**
@@ -57,4 +58,6 @@ export type SelectionRow =
     }
   // A black hole poses from its PLACE (`driver.poseId`), not a body table. Its
   // card fields ride the row so the card builds without reaching into the Layer.
-  | (BlackHoleInfo & { readonly driver: DriverGeometry });
+  | (BlackHoleInfo & { readonly driver: DriverGeometry })
+  // A satellite poses from its transient position (`transientPositions`), which the clock moves.
+  | (SatelliteInfo & { readonly driver: DriverGeometry });

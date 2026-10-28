@@ -40,6 +40,7 @@ const PICK_BAND_AND_GALAXIES = {
     structure: false,
     milkyWay: false,
     blackHole: false,
+    satellite: false,
   },
 };
 

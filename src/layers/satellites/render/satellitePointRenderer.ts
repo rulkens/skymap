@@ -2,18 +2,27 @@
  * satellitePointRenderer — the satellites as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1;
  * ours is binding 2). One instance = one satellite: its TEME state at the last sweep, packed
- * densely from the valid objects, so a decayed object costs no vertex work.
+ * densely from the valid objects, so a decayed object costs no vertex work. `drawPick` stamps the
+ * same instances into the overlay pick target (r32uint), wider than the dot so it can be clicked;
+ * it has its own uniform and bind group, so a pick never rewrites what the frame drew with.
  * @module
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { SatellitePointRenderer } from '../@types/SatellitePointRenderer';
 import type { SatelliteSweep } from '../@types/SatelliteSweep';
+import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
 import vsCode from '../../../services/gpu/shaders/satellites/points/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/satellites/points/fragment.wesl?static';
+import pickCode from '../../../services/gpu/shaders/satellites/points/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { SATELLITE_POINT_STYLE } from '../../../data/satellites/satellitePointStyle';
+import { NEAR0, SLAB_REVERSED_Z } from '../../../services/engine/frame/slabs';
+import { pickDepthFormat } from '../../../services/engine/frame/pickProgram';
+import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { Source } from '../../../data/source';
 import {
   OCCLUDER_UNIFORM_BYTES,
   createTrailOcclusionUniforms,
@@ -42,6 +51,7 @@ export const SATELLITE_UNIFORM_OFFSETS = {
   temeToWorld2: 128,
   color: 144,
   classOpacity: 160,
+  pickBase: 172,
 } as const;
 export const SATELLITE_UNIFORM_BYTES = 176;
 
@@ -54,18 +64,7 @@ export function createSatellitePointRenderer({
 }): SatellitePointRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'satellitePoints.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'satellitePoints.fragment');
-
-  const occluderBuffer = device.createBuffer({
-    label: 'satellite-points-occluder-uniform',
-    size: OCCLUDER_UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const occluderUniforms = createTrailOcclusionUniforms();
-  const uniformBuffer = device.createBuffer({
-    label: 'satellite-points-uniform',
-    size: SATELLITE_UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  const pickModule = createShaderModuleWithDevLog(device, pickCode, 'satellitePoints.pick');
 
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'satellite-points-bgl',
@@ -79,23 +78,19 @@ export function createSatellitePointRenderer({
       },
     ],
   });
+  const layout = device.createPipelineLayout({
+    label: 'satellite-points-pipeline-layout',
+    bindGroupLayouts: [bindGroupLayout],
+  });
+  const instances: GPUVertexBufferLayout = {
+    arrayStride: SATELLITE_INSTANCE_STRIDE,
+    stepMode: 'instance',
+    attributes: [...SATELLITE_INSTANCE_ATTRIBUTES],
+  };
   const pipeline = device.createRenderPipeline({
     label: 'satellite-points-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'satellite-points-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: SATELLITE_INSTANCE_STRIDE,
-          stepMode: 'instance',
-          attributes: [...SATELLITE_INSTANCE_ATTRIBUTES],
-        },
-      ],
-    },
+    layout,
+    vertex: { module: vsModule, entryPoint: 'vs', buffers: [instances] },
     // No depthStencil: the hdr target has no depth attachment.
     fragment: {
       module: fsModule,
@@ -104,12 +99,91 @@ export function createSatellitePointRenderer({
     },
     primitive: { topology: 'triangle-list', cullMode: 'none' },
   });
+  const pickPipeline = device.createRenderPipeline({
+    label: 'satellite-points-pick-pipeline',
+    layout,
+    vertex: { module: pickModule, entryPoint: 'vsPick', buffers: [instances] },
+    fragment: { module: pickModule, entryPoint: 'fsPick', targets: [{ format: 'r32uint' }] },
+    primitive: { topology: 'triangle-list', cullMode: 'none' },
+    depthStencil: {
+      format: pickDepthFormat(NEAR0),
+      depthWriteEnabled: true,
+      depthCompare: resolveDepthCompare('nearer', SLAB_REVERSED_Z[NEAR0]!),
+    },
+  });
+
+  const drawBinding = createBinding('satellite-points', SATELLITE_POINT_STYLE.radiusPx);
+  const pickBinding = createBinding('satellite-points-pick', SATELLITE_POINT_STYLE.pickRadiusPx);
 
   let instanceBuffer: GPUBuffer | null = null;
   let instanceCount = 0;
   let sweep: SatelliteSweep | null = null;
   const uniformScratch = new Float32Array(SATELLITE_UNIFORM_BYTES / 4);
-  let bindGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
+  new Uint32Array(uniformScratch.buffer)[SATELLITE_UNIFORM_OFFSETS.pickBase / 4] = packSelection(
+    Source.Satellite,
+    PICK_SENTINEL_OFFSET,
+  );
+
+  /** One uniform + occluder buffer pair and its bind group, rebuilt when the depth view changes. */
+  function createBinding(label: string, sizePx: number) {
+    const occluderBuffer = device.createBuffer({
+      label: `${label}-occluder-uniform`,
+      size: OCCLUDER_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const uniformBuffer = device.createBuffer({
+      label: `${label}-uniform`,
+      size: SATELLITE_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const occluderUniforms = createTrailOcclusionUniforms();
+    let cached: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
+    return {
+      bind(frame: SatellitePointFrame): GPUBindGroup {
+        occluderUniforms.write(frame.occluders, frame.depth.frame, frame.viewportPx);
+        device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
+        writeUniforms(uniformBuffer, frame, sizePx);
+        if (cached === null || cached.depthView !== frame.depth.view) {
+          cached = {
+            depthView: frame.depth.view,
+            group: device.createBindGroup({
+              label: `${label}-bg`,
+              layout: bindGroupLayout,
+              entries: [
+                { binding: 0, resource: { buffer: occluderBuffer } },
+                { binding: 1, resource: frame.depth.view },
+                { binding: 2, resource: { buffer: uniformBuffer } },
+              ],
+            }),
+          };
+        }
+        return cached.group;
+      },
+      destroy(): void {
+        occluderBuffer.destroy();
+        uniformBuffer.destroy();
+      },
+    };
+  }
+
+  function writeUniforms(buffer: GPUBuffer, frame: SatellitePointFrame, sizePx: number): void {
+    const o = SATELLITE_UNIFORM_OFFSETS;
+    const u = uniformScratch;
+    const m = frame.temeToWorld;
+    u.set(frame.vp, o.viewProj / 4);
+    u.set(frame.viewportPx, o.viewportPx / 4);
+    u[o.pxPerRad / 4] = frame.pxPerRad;
+    u.set(frame.earthKm, o.earthKm / 4);
+    u[o.dtSec / 4] = (frame.simMs - sweep!.simMs) / 1000;
+    u.set(m.slice(0, 3), o.temeToWorld0 / 4);
+    u.set(m.slice(3, 6), o.temeToWorld1 / 4);
+    u.set(m.slice(6, 9), o.temeToWorld2 / 4);
+    u[o.opacity / 4] = frame.opacity;
+    u.set(frame.classOpacity, o.classOpacity / 4);
+    u[o.sizePx / 4] = sizePx;
+    u.set(SATELLITE_POINT_STYLE.color, o.color / 4);
+    device.queue.writeBuffer(buffer, 0, u);
+  }
 
   function upload(next: SatelliteSweep, classCode: Uint8Array): void {
     const n = next.valid.length;
@@ -126,16 +200,15 @@ export function createSatellitePointRenderer({
       words[at + 7] = classCode[k]!;
       at += SATELLITE_INSTANCE_STRIDE / 4;
     }
-    const data = floats;
-    if (instanceBuffer === null || instanceBuffer.size < data.byteLength) {
+    if (instanceBuffer === null || instanceBuffer.size < floats.byteLength) {
       instanceBuffer?.destroy();
       instanceBuffer = device.createBuffer({
         label: 'satellite-points-instances',
-        size: data.byteLength,
+        size: floats.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
     }
-    device.queue.writeBuffer(instanceBuffer, 0, data);
+    device.queue.writeBuffer(instanceBuffer, 0, floats);
     instanceCount = live;
     sweep = next;
   }
@@ -147,55 +220,23 @@ export function createSatellitePointRenderer({
     sweep = null;
   }
 
-  function draw(
+  function record(
     pass: GPURenderPassEncoder,
-    frame: Parameters<SatellitePointRenderer['draw']>[1],
+    frame: SatellitePointFrame,
+    binding: ReturnType<typeof createBinding>,
+    target: GPURenderPipeline,
   ): void {
     if (instanceBuffer === null || sweep === null || instanceCount === 0) return;
-    const { depth, temeToWorld: m } = frame;
-    occluderUniforms.write(frame.occluders, depth.frame, frame.viewportPx);
-    device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
-    if (bindGroup === null || bindGroup.depthView !== depth.view) {
-      bindGroup = {
-        depthView: depth.view,
-        group: device.createBindGroup({
-          label: 'satellite-points-bg',
-          layout: bindGroupLayout,
-          entries: [
-            { binding: 0, resource: { buffer: occluderBuffer } },
-            { binding: 1, resource: depth.view },
-            { binding: 2, resource: { buffer: uniformBuffer } },
-          ],
-        }),
-      };
-    }
-
-    const o = SATELLITE_UNIFORM_OFFSETS;
-    const u = uniformScratch;
-    u.set(frame.vp, o.viewProj / 4);
-    u.set(frame.viewportPx, o.viewportPx / 4);
-    u[o.pxPerRad / 4] = frame.pxPerRad;
-    u.set(frame.earthKm, o.earthKm / 4);
-    u[o.dtSec / 4] = (frame.simMs - sweep.simMs) / 1000;
-    u.set(m.slice(0, 3), o.temeToWorld0 / 4);
-    u.set(m.slice(3, 6), o.temeToWorld1 / 4);
-    u.set(m.slice(6, 9), o.temeToWorld2 / 4);
-    u[o.opacity / 4] = frame.opacity;
-    u.set(frame.classOpacity, o.classOpacity / 4);
-    u[o.sizePx / 4] = SATELLITE_POINT_STYLE.radiusPx;
-    u.set(SATELLITE_POINT_STYLE.color, o.color / 4);
-    device.queue.writeBuffer(uniformBuffer, 0, u);
-
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup.group);
+    pass.setPipeline(target);
+    pass.setBindGroup(0, binding.bind(frame));
     pass.setVertexBuffer(0, instanceBuffer);
     pass.draw(6, instanceCount);
   }
 
   function destroy(): void {
     clear();
-    occluderBuffer.destroy();
-    uniformBuffer.destroy();
+    drawBinding.destroy();
+    pickBinding.destroy();
   }
 
   const renderer: SatellitePointRenderer = {
@@ -203,7 +244,8 @@ export function createSatellitePointRenderer({
     upload,
     uploaded: () => sweep,
     clear,
-    draw,
+    draw: (pass, frame) => record(pass, frame, drawBinding, pipeline),
+    drawPick: (pass, frame) => record(pass, frame, pickBinding, pickPipeline),
     destroy,
   };
   renderer satisfies Renderer;

@@ -104,6 +104,7 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     case 'craft':
     case 'starCatalog':
     case 'blackHole':
+    case 'satellite':
       return bodyLikeFraming(
         row.positionMpc,
         row.driver.footprintRadiusM,

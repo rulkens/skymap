@@ -21,6 +21,7 @@ import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
 import { BODY_FOCUS_PREFIX } from './bodyFocusId';
 import { encodeStarFocusId } from './encodeStarFocusId';
 import { encodeBlackHoleFocusId } from '../../layers/blackHoles/present/encodeBlackHoleFocusId';
+import { encodeSatelliteFocusId } from '../../layers/satellites/present/encodeSatelliteFocusId';
 
 export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => string | null> = {
   // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID → pos@).
@@ -51,4 +52,5 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
       : null,
   // The Layer's own encoder, the one its `focusId` row uses: one spelling of the prefix.
   blackHole: (t) => (t.type === 'blackHole' ? encodeBlackHoleFocusId(t.id) : null),
+  satellite: (t) => (t.type === 'satellite' ? encodeSatelliteFocusId(t.noradId) : null),
 };

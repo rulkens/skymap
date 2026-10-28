@@ -21,17 +21,23 @@ const io = readFileSync(
 describe('satellites/points/io.wesl parity', () => {
   it('SatelliteInstance locations and offsets match the attribute table', () => {
     const body = io.match(/struct SatelliteInstance \{([\s\S]*?)\n\};/)![1]!;
-    const fields = [...body.matchAll(/@location\((\d+)\)\s+(\w+)\s*:\s*vec3<f32>,/g)].map((m) =>
-      Number(m[1]),
+    const formatOf: Record<string, [GPUVertexFormat, number]> = {
+      'vec3<f32>': ['float32x3', 12],
+      u32: ['uint32', 4],
+    };
+    let at = 0;
+    const fields = [...body.matchAll(/@location\((\d+)\)\s+\w+\s*:\s*(vec3<f32>|u32),/g)].map(
+      (m) => {
+        const [format, size] = formatOf[m[2]!]!;
+        const row = [Number(m[1]), at, format];
+        at += size;
+        return row;
+      },
     );
-    expect(fields).toEqual([0, 1]);
     expect(
       SATELLITE_INSTANCE_ATTRIBUTES.map((a) => [a.shaderLocation, a.offset, a.format]),
-    ).toEqual([
-      [0, 0, 'float32x3'],
-      [1, 12, 'float32x3'],
-    ]);
-    expect(SATELLITE_INSTANCE_STRIDE).toBe(24);
+    ).toEqual(fields);
+    expect(SATELLITE_INSTANCE_STRIDE).toBe(at);
   });
 
   it('SatelliteUniforms lays out where the renderer writes it', () => {
@@ -40,10 +46,11 @@ describe('satellites/points/io.wesl parity', () => {
       CameraUniforms: [16, 80],
       'vec3<f32>': [16, 12],
       f32: [4, 4],
+      u32: [4, 4],
     };
     const offsets: Record<string, number> = {};
     let at = 0;
-    for (const m of body.matchAll(/(\w+)\s*:\s*(CameraUniforms|vec3<f32>|f32),/g)) {
+    for (const m of body.matchAll(/(\w+)\s*:\s*(CameraUniforms|vec3<f32>|f32|u32),/g)) {
       const [align, size] = sizes[m[2]!]!;
       at = Math.ceil(at / align) * align;
       offsets[m[1]!] = at;

@@ -12,6 +12,7 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
+import { NO_SELECTION } from '../../../support/noSelection';
 
 // The row reads no runtime field — only `factory` closes over the slot, and
 // nothing here calls it.
@@ -25,6 +26,7 @@ function makeCtx(over: { settings: unknown }): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
+    selection: NO_SELECTION,
   };
 }
 

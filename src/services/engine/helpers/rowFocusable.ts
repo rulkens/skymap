@@ -19,4 +19,5 @@ export const ROW_FOCUSABLE: Record<SelectionRow['type'], boolean> = {
   craft: true,
   starCatalog: true,
   blackHole: true,
+  satellite: true,
 };

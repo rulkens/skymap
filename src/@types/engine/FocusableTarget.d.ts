@@ -6,6 +6,7 @@ import type { BodyInfo } from './BodyInfo';
 import type { CraftInfo } from './CraftInfo';
 import type { StarInfo } from './StarInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
+import type { SatelliteInfo } from './SatelliteInfo';
 
 /**
  * FocusableTarget — TAGGED discriminated union of the things the camera can
@@ -17,7 +18,7 @@ import type { BlackHoleInfo } from './BlackHoleInfo';
  * body (`type: 'body'` — the BodyInfo arm: Earth, a planet, a mesh body), a
  * craft (`type: 'craft'` — the CraftInfo arm, the missions Layer's), or a
  * star (`type: 'starCatalog'` — the StarInfo arm, one for every catalog, named
- * or anonymous), or a black hole (`type: 'blackHole'`).
+ * or anonymous), a black hole (`type: 'blackHole'`), or an Earth satellite (`type: 'satellite'`).
  *
  * The union is tagged on `type: FocusableTargetType`, so dispatch is a `type`
  * narrow or a table lookup on the tag (`DETAIL_CARD[t.type]`,
@@ -35,4 +36,5 @@ export type FocusableTarget =
   | BodyInfo
   | CraftInfo
   | StarInfo
-  | BlackHoleInfo;
+  | BlackHoleInfo
+  | SatelliteInfo;

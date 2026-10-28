@@ -18,6 +18,7 @@ export const pickingInitialState: PickingSettings = {
     craft: true,
     starCatalog: true,
     blackHole: true,
+    satellite: true,
   },
 };
 

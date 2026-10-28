@@ -16,4 +16,5 @@ export const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
   craft: true,
   starCatalog: true,
   blackHole: true,
+  satellite: true,
 };

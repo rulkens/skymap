@@ -14,4 +14,6 @@ export type SatellitePointRenderer = Renderer & {
   uploaded(): SatelliteSweep | null;
   clear(): void;
   draw(pass: GPURenderPassEncoder, frame: SatellitePointFrame): void;
+  /** The same dots as pick ids, into the overlay pick target; `frame` is the pick window's. */
+  drawPick(pass: GPURenderPassEncoder, frame: SatellitePointFrame): void;
 };

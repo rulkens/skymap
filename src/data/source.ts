@@ -251,4 +251,10 @@ export const Source = {
   GlobularCluster: 34,
   Nebula: 35,
   GcCluster: 36,
+  /**
+   * The satellites Layer's points: one code for all of them, its pick index running over the
+   * day's catalog (`satellitesSelectionRow` resolves it). Value 37 stays stable: it is baked into
+   * pick words.
+   */
+  Satellite: 37,
 } as const;

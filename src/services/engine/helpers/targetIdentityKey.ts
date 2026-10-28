@@ -26,4 +26,5 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   // part of the key rather than a redundant prefix.
   starCatalog: (t) => (t.type === 'starCatalog' ? `starCatalog:${t.source}:${t.index}` : ''),
   blackHole: (t) => (t.type === 'blackHole' ? `blackHole:${t.id}` : ''),
+  satellite: (t) => (t.type === 'satellite' ? `satellite:${t.noradId}` : ''),
 };

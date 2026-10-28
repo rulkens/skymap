@@ -591,6 +591,7 @@ describe('composeSelectionRows — picking gate', () => {
         craft: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
@@ -606,6 +607,7 @@ describe('composeSelectionRows — picking gate', () => {
         craft: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(structureDisabled.resolvePick(pick)).toBeNull();
@@ -623,6 +625,7 @@ describe('composeSelectionRows — picking gate', () => {
         craft: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);

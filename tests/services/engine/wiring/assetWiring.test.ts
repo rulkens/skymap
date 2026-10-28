@@ -28,6 +28,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { NO_SELECTION } from '../../../support/noSelection';
 
 // Core's half of the rows as the demand loop sees them; each Layer's own are
 // folded in beside these by `createLayers`, and tested beside their Layer.
@@ -65,6 +66,7 @@ function makeCtx(over: {
     // moves the clock.
     simDays: over.simDays ?? CONST_J2000,
     tier: 'medium',
+    selection: NO_SELECTION,
   };
 }
 

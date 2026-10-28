@@ -12,6 +12,7 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
+import { NO_SELECTION } from '../../../support/noSelection';
 
 // The row reads neither the renderer nor the slot — only `factory` closes over
 // the runtime, and nothing here calls it.
@@ -25,6 +26,7 @@ function makeCtx(settings: unknown): DemandCtx {
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
     tier: 'medium',
+    selection: NO_SELECTION,
   };
 }
 

@@ -90,6 +90,7 @@ export const voyagerMissions: Exhibit = {
         milkyWay: false,
         zoneOfAvoidance: false,
         blackHole: true,
+        satellite: false,
       },
     },
   },

@@ -1,7 +1,8 @@
 /**
- * The Layer's one asset row: demand while the show toggle is on and the camera is near Earth,
- * release when it goes off or the camera is well away (spec §5.5). Earth's position comes from the
- * same instant the last frame derived its bodies at.
+ * The Layer's one asset row: demand while a class is shown and the camera is near Earth, the
+ * palette is open or a satellite is selected; release when every class is off or none of those
+ * holds (spec §5.5). The selection arm is what lets a deep link to a satellite resolve from far
+ * away. Earth's position comes from the same instant the last frame derived its bodies at.
  */
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
@@ -22,6 +23,9 @@ const cameraEarthKm = (ctx: DemandCtx): number =>
   distanceMpc(ctx.cameraPosMpc, deriveBodyStates(ctx.simDays).get(SCENE_EARTH.id)!.positionMpc) /
   SCALE_UNITS.KM_TO_MPC;
 
+const satelliteSelected = (ctx: DemandCtx): boolean =>
+  ctx.selection.select?.type === 'satellite' || ctx.selection.focus?.type === 'satellite';
+
 const anyClassShown = (ctx: DemandCtx): boolean =>
   SATELLITE_CLASSES.some((cls) => visibilitySwitchOf(ctx.settings, SHOW_ENTRY, cls));
 
@@ -31,8 +35,17 @@ export function satellitesAssetRows(runtime: SatellitesRuntime): readonly AssetW
       key: 'satellites',
       factory: () => runtime.slot,
       req: () => undefined,
-      demand: (ctx) => anyClassShown(ctx) && cameraEarthKm(ctx) < SATELLITE_FADES.loadWithinKm,
-      release: (ctx) => !anyClassShown(ctx) || cameraEarthKm(ctx) > SATELLITE_FADES.releaseBeyondKm,
+      // An open palette loads it too, so a satellite can be searched for from anywhere.
+      demand: (ctx) =>
+        anyClassShown(ctx) &&
+        (ctx.ui.paletteOpen ||
+          satelliteSelected(ctx) ||
+          cameraEarthKm(ctx) < SATELLITE_FADES.loadWithinKm),
+      release: (ctx) =>
+        !anyClassShown(ctx) ||
+        (!ctx.ui.paletteOpen &&
+          !satelliteSelected(ctx) &&
+          cameraEarthKm(ctx) > SATELLITE_FADES.releaseBeyondKm),
       priority: 84, // next free rung after the Local Bubble (83)
       gates: 'satellites',
     },

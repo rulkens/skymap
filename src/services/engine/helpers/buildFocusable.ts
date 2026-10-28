@@ -84,6 +84,7 @@ const BUILD_FOCUSABLE: {
     };
   },
   blackHole: ({ driver: _driver, ...info }) => info,
+  satellite: ({ driver: _driver, ...info }) => info,
 };
 
 export function buildFocusable(

@@ -27,6 +27,16 @@ struct SatelliteUniforms {
   temeToWorld2: vec3<f32>,
   color: vec3<f32>,
   classOpacity: vec3<f32>,
+  // Pick only: the packed pick word of catalog index 0 (source code and sentinel offset folded in
+  // on the CPU).
+  pickBase: u32,
+};
+
+struct PickOut {
+  @builtin(position) clip: vec4<f32>,
+  @location(0) relKm: vec3<f32>,
+  @location(1) corner: vec2<f32>,
+  @location(2) @interpolate(flat) word: u32,
 };
 
 struct VSOut {
