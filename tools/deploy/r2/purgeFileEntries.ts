@@ -1,7 +1,11 @@
 import r2Cors from '../r2Cors.json';
 import type { CachePurgeFile } from '../@types/CachePurgeFile';
 
-const CORS_ORIGINS = r2Cors.rules.flatMap((rule) => rule.allowed.origins);
+// A wildcard pattern (the branch and commit previews) is no browser's Origin
+// value, so it has no cached copy to name: preview copies age out on their TTL.
+const CORS_ORIGINS = r2Cors.rules
+  .flatMap((rule) => rule.allowed.origins)
+  .filter((origin) => !origin.includes('*'));
 
 /**
  * Expand URLs into purge entries covering every cached variant. The CDN keys a

@@ -14,8 +14,8 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 
-// Only `factory` closes over the runtime, and nothing here calls it.
-const ROWS = cosmicWebDensityAssetRows({} as CosmicWebDensityRuntime);
+// Only `slot` reads the runtime, and nothing here inspects it.
+const ROWS = cosmicWebDensityAssetRows({ slots: {} } as unknown as CosmicWebDensityRuntime);
 
 function makeCtx(polyphormEnabled: boolean, mcpmEnabled: boolean): DemandCtx {
   const items = {

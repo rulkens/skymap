@@ -1,11 +1,7 @@
 /**
  * DebugPanel — the umbrella for the dev panel, mounted on the `d` shortcut.
- * Every section that touches the store owns its own container, so this
- * component takes only the engine-handle props `DebugPanelContainer` unpacks,
- * and section-level visibility is each section's own concern.
- *
- * `memo` is load-bearing: this is the memo boundary for the panel, so an
- * unrelated App re-render doesn't cascade into every section's store reads.
+ * `memo` is load-bearing: it is the panel's boundary, so an unrelated App
+ * re-render doesn't cascade into every section's store reads.
  */
 
 import { memo } from 'react';
@@ -37,15 +33,9 @@ export type DebugPanelProps = {
   frameStats: () => FrameStats;
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
-  /**
-   * Authored `ASSET_WIRING` fetch rank per slot name, from the engine handle's
-   * `debug.assetPriorities`. A getter, not a Map, because slots are minted by
-   * the async bootstrap long after the handle is built.
-   */
+  /** Fetch rank per slot name (`debug.assetPriorities`); a getter because slots are minted after the handle is built. */
   assetPriorities: () => ReadonlyMap<string, number>;
-  /** Engine-handle ref, threaded to the sections that read engine-only data:
-   *  `debug.surfaceTiles` / `debug.flyToLonLat` (atlas), `debug.cameraDebug`
-   *  (camera readout, terrain-pick marker readouts). */
+  /** Threaded to the sections that read engine-only data (`debug.surfaceTiles`, `debug.cameraDebug`). */
   engineHandleRef: RefObject<EngineHandle | null>;
 };
 
@@ -61,8 +51,6 @@ function DebugPanel({
     <div className={styles.root}>
       <div className={styles.title}>Skymap Debug</div>
       <AssetLoadingSection slots={slots} assetPriorities={assetPriorities} />
-      {/* Always shown — its numbers need no GPU query, so it sits above the
-          GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
       <GpuTimingsSection service={timingService} />
       <MemorySectionContainer engineHandleRef={engineHandleRef} />
