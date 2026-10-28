@@ -28,7 +28,7 @@ import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { focusMoveClip } from './focusMoveClip';
 import { focusMoveDurationMs } from './focusMoveDurationMs';
-import { focusMoveEase } from './focusMoveEase';
+import { focusMotionRowOf } from './focusMotionRowOf';
 import { EASE } from '../animation/ease';
 import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
@@ -337,7 +337,8 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         return { pose: framed, memory: settledMemory(mem) };
       // Clips author no offset channel, so the start pose's eases out here, on
       // the same ease the clip gives every other term.
-      const keep = 1 - EASE[focusMoveEase(tween)](ctx.elapsedMs / focusMoveDurationMs(tween));
+      const keep =
+        1 - EASE[focusMotionRowOf(tween).easeOf(tween)](ctx.elapsedMs / focusMoveDurationMs(tween));
       const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
         pose: absoluteArm({ ...framed.pose, lookOffset }),

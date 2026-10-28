@@ -4,8 +4,9 @@
  * its window is a clash: the evaluator would let the composite silently win.
  * Channels it does not declare (a flyPath's roll) stay open to base writers.
  * Two composites overlapping on a channel clash the same way, and a body-framed
- * segment may not share a channel with one: the hand-off is in Mpc. It also pins the declaration to the sample's actual keys, so `channels` and
- * `sample` can never drift: the evaluator trusts `channels` to pick writers.
+ * segment may not share a channel with one: the hand-off is in Mpc. It also pins
+ * the declaration to the sample's actual keys, so `channels` and `sample` can
+ * never drift: the evaluator trusts `channels` to pick writers.
  */
 
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';

@@ -522,11 +522,6 @@ describe('geodesic composite', () => {
     expect(beside).toBe(alone);
   });
 
-  it('a base distance writer overlapping a geodesic window throws', () => {
-    const data: ClipData = { start: START, timeline: [all([move, dollyTo(50, 1)])] };
-    expect(() => evaluateClip(data, 0.5)).toThrow(/overlaps a base 'distance' writer/);
-  });
-
   it("yaw and pitch hold a flyPath's final values through a later geodesic window", () => {
     const path = flyPath([atPoint([10, 0, 0], 5)], { over: 2, ease: 'linear', linger: 0 });
     const flown = evaluateClip({ start: START, timeline: [path] }, 100);

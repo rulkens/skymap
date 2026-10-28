@@ -1,10 +1,20 @@
-/** The Geodesic focus move's knobs. Durations are seconds on screen; the component converts to ms. */
+/** The focus-move knobs, Eased first, then Geodesic. Durations are seconds on screen; the component converts to ms. */
 
 import type { SliderField } from '../../@types/data/SliderField';
 
-
-
-export const GEODESIC_SLIDER_FIELDS: readonly SliderField<'rho' | 'velocity' | 'minS' | 'maxS'>[] = [
+export const FOCUS_MOVE_SLIDER_FIELDS: readonly SliderField<
+  'easedS' | 'rho' | 'velocity' | 'minS' | 'maxS'
+>[] = [
+  {
+    key: 'easedS',
+    label: 'Eased duration',
+    min: 0.1,
+    max: 3,
+    step: 0.05,
+    format: (s) => `${s.toFixed(2)} s`,
+    title:
+      'Duration of an Eased focus move. Also drives Home and the planet approach, under either style.',
+  },
   {
     key: 'rho',
     label: 'Geodesic ρ',

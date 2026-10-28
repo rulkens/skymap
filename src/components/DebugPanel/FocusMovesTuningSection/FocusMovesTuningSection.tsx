@@ -7,18 +7,11 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
 import DebugTuningSection from '../DebugTuningSection';
-import { EASED_SLIDER_FIELDS } from '../../../data/camera/easedSliderFields';
-import { GEODESIC_SLIDER_FIELDS } from '../../../data/camera/geodesicSliderFields';
+import { FOCUS_MOVE_SLIDER_FIELDS } from '../../../data/camera/focusMoveSliderFields';
 import { GEODESIC_EASES } from '../../../data/camera/focusMoveDefaults';
-import type { SliderField } from '../../../@types/data/SliderField';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { FocusMoveSettings } from '../../../@types/settings/FocusMoveSettings';
 import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
-
-const FIELDS: readonly SliderField<'easedS' | 'rho' | 'velocity' | 'minS' | 'maxS'>[] = [
-  ...EASED_SLIDER_FIELDS,
-  ...GEODESIC_SLIDER_FIELDS,
-];
 
 export type FocusMovesTuningSectionProps = {
   readonly moves: FocusMoveSettings;
@@ -56,7 +49,7 @@ function FocusMovesTuningSection({
   return (
     <DebugTuningSection
       title="Focus moves"
-      fields={FIELDS}
+      fields={FOCUS_MOVE_SLIDER_FIELDS}
       values={values}
       onSliderChange={onSliderChange}
     >
