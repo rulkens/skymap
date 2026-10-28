@@ -138,7 +138,7 @@ None needed, because each candidate is already a seam or belongs to this Layer a
 3. Pick, palette search (`class: 'catalog'`, names only into Redux), detail card, class toggles.
 4. Orbit rings for fast time.
 
-Each step is a PR; whether 1 rides with 2 is asked at the checkpoint.
+Each step is its own PR (ruled 2026-10-28: step 1 does not ride with step 2).
 
 ## 8. Left to the builder
 
