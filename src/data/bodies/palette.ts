@@ -20,6 +20,10 @@ export const PLUTO_TAN: Vec3 = [0.38, 0.34, 0.26];
 export const CHARON_GREY: Vec3 = [0.4, 0.34, 0.42];
 export const MOON_GREY: Vec3 = [0.35, 0.35, 0.4];
 
+// Shared across exoplanets: a system's trails read apart by spacing, and no two systems
+// share a view.
+export const EXOPLANET_TRAIL: Vec3 = [0.4, 0.42, 0.5];
+
 // Shared across moons: their trails cluster too tightly to read apart tint by tint.
 export const SAT_ROCK: Vec3 = [0.35, 0.34, 0.32];
 export const SAT_ICE: Vec3 = [0.45, 0.47, 0.5];

@@ -97,6 +97,14 @@ export const OBJECT_SECTIONS: readonly ObjectSection[] = [
     many: 'exoplanet systems',
   },
   {
+    id: 'exoplanets',
+    title: 'Exoplanets',
+    kinds: ['exoplanet'],
+    one: 'exoplanet',
+    many: 'exoplanets',
+    split: 'parent',
+  },
+  {
     id: 'named-galaxies',
     title: 'Named galaxies',
     kinds: ['galaxy'],
@@ -158,6 +166,9 @@ const orbiting = ORBITAL_ELEMENTS.flatMap((orbit) => {
   return body ? [{ body, round: orbit.focusId }] : [];
 });
 const sunId = [...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].find((row) => row.id === 'sun')!.stars[0]!.id;
+const starIds = new Set<string>(
+  [...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].flatMap((row) => row.stars.map((star) => star.id)),
+);
 
 const planets = orbiting
   .filter(({ round }) => round === sunId)
@@ -170,8 +181,20 @@ const planets = orbiting
     }),
   );
 
+// A body round another star is an exoplanet; round a planet, a moon.
+const exoplanets = orbiting
+  .filter(({ round }) => round !== sunId && starIds.has(round))
+  .map(({ body, round }) =>
+    focusRow({
+      name: body.label,
+      kind: 'exoplanet',
+      id: `${BODY_FOCUS_PREFIX}${body.id}`,
+      parent: labels.get(round),
+    }),
+  );
+
 const moons = orbiting
-  .filter(({ round }) => round !== sunId)
+  .filter(({ round }) => !starIds.has(round))
   .map(({ body, round }) =>
     focusRow({
       name: body.label,
@@ -293,6 +316,7 @@ export const OBJECT_ROWS: readonly ObjectRow[] = [
   ...sorted(structures, 'nebula'),
   ...sorted(structures, 'gc-cluster'),
   ...sorted(structures, 'exoplanet-system'),
+  ...exoplanets,
   ...galaxies.sort(byName),
   ...sorted(structures, 'galaxy-group'),
   ...sorted(structures, 'galaxy-cluster'),

@@ -14,6 +14,7 @@ import {
   MARS_DATUM_RADIUS_M,
 } from './marsSurfaceParams';
 import { satelliteBody } from './makers/satelliteBody';
+import { EXOPLANET_PLANETS } from './exoplanetPlanets';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 
 export const SCENE_PLANETS: readonly PlanetBody[] = [
@@ -193,4 +194,6 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     datumRadiusM: 170000,
     albedo: [0.155, 0.155, 0.155],
   }),
+  // Planets of other stars: appended last, so every solar planet keeps its pick seed index.
+  ...EXOPLANET_PLANETS.map((planet) => planet.body),
 ];

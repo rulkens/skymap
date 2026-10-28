@@ -48,6 +48,7 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   sStar: (id) => decodeStarFocusId(id, false) !== null,
   planet: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   moon: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  exoplanet: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   spacecraft: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   model: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   milkyWay: (id) => id === MILKY_WAY_FOCUS_ID,
@@ -101,7 +102,7 @@ describe('object catalogue', () => {
   it('lists every body, named star, place, structure, exhibit and tour the app has', () => {
     const prefixed = (prefix: string, rows: readonly { id: string }[]) =>
       rows.map((row) => `${prefix}${row.id}`).sort();
-    expect(ids('planet', 'moon', 'spacecraft', 'model')).toEqual(
+    expect(ids('planet', 'moon', 'exoplanet', 'spacecraft', 'model')).toEqual(
       prefixed(BODY_FOCUS_PREFIX, [...Object.values(BODY_PICK_ROWS).flat(), ...SCENE_MESH_BODIES]),
     );
     expect(ids('sun', 'star', 'sStar')).toEqual(

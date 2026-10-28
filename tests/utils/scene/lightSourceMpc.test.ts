@@ -13,4 +13,9 @@ describe('lightSourceMpc', () => {
       expect(lightSourceMpc(asSceneBodyId(id), states)).toEqual(RENDER_ORIGIN_MPC);
     }
   });
+
+  it("lights a star's planet from that star", () => {
+    const star = states.get(asSceneBodyId('trappist-1'))!.positionMpc;
+    expect(lightSourceMpc(asSceneBodyId('trappist-1-e'), states)).toEqual(star);
+  });
 });

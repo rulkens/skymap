@@ -34,6 +34,7 @@ import {
 } from './palette';
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
+import { EXOPLANET_PLANETS } from './exoplanetPlanets';
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
@@ -803,4 +804,5 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // roster). Their focus is the `galactic-centre` place, so they join the `galactic-centre` region by existing.
   ...S_STAR_ORBITAL_ELEMENTS,
   ...LAYER_BODY_ROWS.flatMap((row) => (row.position.kind === 'orbit' ? [row.position.elements] : [])),
+  ...EXOPLANET_PLANETS.map((planet) => planet.elements),
 ];
