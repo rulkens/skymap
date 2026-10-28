@@ -63,6 +63,7 @@ function makeSnapshot(
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },
       zoneOfAvoidance: { ...f.zoneOfAvoidance, enabled: !f.zoneOfAvoidance.enabled },
       lightTime: { ...f.lightTime, enabled: !f.lightTime.enabled },
+      skyGrid: { ...f.skyGrid, enabled: !f.skyGrid.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },

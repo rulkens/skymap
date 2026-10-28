@@ -125,6 +125,7 @@ export const SCENE: FrameSection = {
         'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',
         'horizon-shell',
+        'sky-grid',
         'structure-markers-cosmo',
       ],
     },

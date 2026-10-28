@@ -104,6 +104,7 @@ describe('Settings page', () => {
     /^milkyWay\.(enabled|starSizeScale|exposure|starPxMin|starPxMax|softness|lodApparent|aggregateDivisor|starCount)$/,
     /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
+    /^skyGrid\.frames\./,
   ];
 
   it('starts every setting where the app does', () => {

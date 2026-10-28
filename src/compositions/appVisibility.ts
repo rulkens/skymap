@@ -23,6 +23,7 @@ import { missionsVisibility } from '../layers/missions/visibility';
 import { starCatalogVisibility } from '../layers/starCatalog/visibility';
 import { structureVisibility } from '../layers/structure/visibility';
 import { zoneOfAvoidanceVisibility } from '../layers/zoneOfAvoidance/visibility';
+import { skyGridVisibility } from '../layers/skyGrid/visibility';
 
 export const APP_VISIBILITY = [
   ...galaxyCatalogVisibility,
@@ -32,6 +33,7 @@ export const APP_VISIBILITY = [
   ...flowVisibility,
   ...missionsVisibility,
   ...zoneOfAvoidanceVisibility,
+  ...skyGridVisibility,
   ...localBubbleVisibility,
   ...lightTimeVisibility,
   ...constellationsVisibility,

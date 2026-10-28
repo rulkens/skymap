@@ -23,6 +23,7 @@ import { missionsLayer } from '../layers/missions/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
 import { structureLayer } from '../layers/structure/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
+import { skyGridLayer } from '../layers/skyGrid/layer';
 
 export const APP_COMPOSITION = {
   layers: [
@@ -33,6 +34,7 @@ export const APP_COMPOSITION = {
     flowLayer,
     missionsLayer,
     zoneOfAvoidanceLayer,
+    skyGridLayer,
     localBubbleLayer,
     lightTimeLayer,
     constellationsLayer,
@@ -52,6 +54,7 @@ export const APP_COMPOSITION = {
     typeof flowLayer,
     typeof missionsLayer,
     typeof zoneOfAvoidanceLayer,
+    typeof skyGridLayer,
     typeof localBubbleLayer,
     typeof lightTimeLayer,
     typeof constellationsLayer,

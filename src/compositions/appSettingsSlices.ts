@@ -17,6 +17,7 @@ import { starCatalogLayerSettings } from '../layers/starCatalog/state/slices';
 import { structureLayerSettings } from '../layers/structure/state/slices';
 import { cosmicWebDensityLayerSettings } from '../layers/cosmicWebDensity/state/slices';
 import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/slices';
+import { skyGridLayerSettings } from '../layers/skyGrid/state/slices';
 import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
 
@@ -33,6 +34,7 @@ export const APP_SETTINGS_SLICES = [
   ...structureLayerSettings,
   ...cosmicWebDensityLayerSettings,
   ...zoneOfAvoidanceLayerSettings,
+  ...skyGridLayerSettings,
   ...lightTimeLayerSettings,
   ...missionsLayerSettings,
 ] as const;

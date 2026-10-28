@@ -570,6 +570,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: true,
       },
       {
+        name: 'Coordinate grids',
+        control: 'switch',
+        does: 'Draws the equatorial and galactic coordinate grids on the sky.',
+        values: SWITCH,
+        first: OFF,
+        state: 'skyGrid.enabled',
+        firstValue: false,
+      },
+      {
         name: 'Local Bubble',
         control: 'switch',
         does: 'Shows the surface of the Local Bubble, the cavity in the gas and dust round the Sun. Its file is fetched the first time the switch goes on.',
