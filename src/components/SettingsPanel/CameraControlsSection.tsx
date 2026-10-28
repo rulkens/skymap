@@ -10,7 +10,6 @@ import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
 import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
-import { parseFocusMoveStyle } from '../../utils/storage/parseFocusMoveStyle';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
@@ -65,8 +64,10 @@ function CameraControlsSection({
           className={styles.modeSelect}
           value={focusMoveStyle}
           onChange={(e) => {
-            const style = parseFocusMoveStyle(e.target.value);
-            if (style !== null) onFocusMoveStyleChange(style);
+            const style = e.target.value;
+            if (Object.hasOwn(FOCUS_MOVE_STYLE_LABELS, style)) {
+              onFocusMoveStyleChange(style as FocusMoveStyle);
+            }
           }}
         >
           {Object.entries(FOCUS_MOVE_STYLE_LABELS).map(([style, label]) => (

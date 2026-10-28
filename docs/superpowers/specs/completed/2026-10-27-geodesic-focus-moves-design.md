@@ -19,15 +19,15 @@ The fix is van Wijk & Nuij's optimal zoom/pan path (IEEE InfoVis 2003). It moves
 from the path's length.
 
 The owner wants to compare the two styles on screen, so **both ship as first-class styles** with
-a persisted toggle between them:
+a toggle between them:
 
 - **Eased:** today's behaviour, with its duration now tunable.
 - **Geodesic:** the van Wijk & Nuij path.
 
 ### Goals
 
-- A **Focus moves** select (`Eased` / `Geodesic`) in Settings → Camera controls. It persists
-  across reloads, and tours and takeovers never touch it.
+- A **Focus moves** select (`Eased` / `Geodesic`) in Settings → Camera controls. It resets
+  to Eased on reload, and tours and takeovers never touch it.
 - A **Focus moves** section in the DebugPanel with two groups:
   - Eased: duration.
   - Geodesic: ρ, V, the minimum and maximum duration, and the ease.
@@ -265,7 +265,7 @@ The new `Effect` variant:
 - **`watchFlyToLonLatSaga`** builds `{ style: 'eased', durationMs, ease: 'easeOutCubic' }`
   directly and never calls `resolveFocusMotion`.
 
-### 3.5 Settings, persistence, UI
+### 3.5 Settings, UI
 
 - **Default style.** `DEFAULT_FOCUS_MOVES.style` is `'eased'` until the owner has judged
   Geodesic on screen and rules the switch (agreed in brainstorming). This also keeps every
@@ -273,9 +273,8 @@ The new `Effect` variant:
 - **Slice.** `src/state/settings/core/focusMovesSlice.ts` holds `FocusMoveSettings`, seeded from
   `DEFAULT_FOCUS_MOVES` in `src/data/camera/`. Reducers: `setFocusMoveStyle`,
   `setEasedDuration`, `setGeodesicTuning(Partial<GeodesicTuning>)`.
-- **Persistence.** A `FOCUS_MOVE_STYLE` row in `PERSISTED_VALUES` persists **the style only**.
-  The tuning resets to the calibrated defaults on reload, like the other DebugPanel tuning
-  boards (my call).
+- **No persistence.** Nothing is stored: the style and the tuning both reset to the defaults
+  (Eased, calibrated tuning) on reload (owner ruling, PR #945).
 - **Kept out of tours.** `CORE_SNAPSHOT_CLUSTERS` is an allow-list, so the slice stays out of
   tour snapshots with no edit.
 - **Settings select.** `CameraControlsSection` gets a "Focus moves" select, shown under both
@@ -347,7 +346,7 @@ commits.
 - a `geodesic` row in `FOCUS_MOTIONS`;
 - an `Effect` variant plus one `compileClip` case;
 - the ported pure files;
-- a settings slice plus a persisted row;
+- a settings slice;
 - a DebugPanel section and a select;
 - a `FollowMemory` field.
 
@@ -359,7 +358,7 @@ commits.
 | a second style's clip and duration              | bolt-on  | fixed `durationMs` plus ease hardcoded at `tweenToClip.ts:65-75` and `cameraDrivers.ts:334` |
 | end check                                       | bolt-on  | reads the stored `durationMs` (`stepCameraRuntime.ts:285`)      |
 | `geodesic` effect                               | growth   | `compileClip`'s exhaustive switch                               |
-| settings slice + persisted style                | growth   | `coreSettingsSlices`, `PERSISTED_VALUES`                        |
+| settings slice                                 | growth   | `coreSettingsSlices`                                            |
 | tour exclusion                                  | growth   | `CORE_SNAPSHOT_CLUSTERS` is an allow-list                       |
 | Settings select / DebugPanel section            | growth   | `CameraControlsSection`, `DebugTuningSection` + field tables    |
 | follow duration                                 | growth   | `FollowMemory` field; `ctx.state` already carries settings      |
@@ -422,7 +421,6 @@ Follow `testing.md`. Port #531's tests and adapt them.
 - The saga's descriptor carries the motion `resolveFocusMotion` returns for the store's
   settings at dispatch.
 - `flyToLonLat` and Home are always eased, and Home follows the Eased duration slider.
-- The persisted style round-trips, and garbage parses to the default.
 
 **Follow:** a duration captured at activation survives a later settings change mid-approach.
 
@@ -439,7 +437,7 @@ Follow `testing.md`. Port #531's tests and adapt them.
 
 - **One PR.** Commits: prep 1, prep 2, the ported geodesic core with its tests, the `geodesic`
   effect and `buildGeodesicTrack`, the `geodesic` row with `resolveFocusMotion` and the
-  producers, the settings slice with persistence, the follow duration, then the UI (select and
+  producers, the settings slice, the follow duration, then the UI (select and
   DebugPanel section).
 - **Visual check.** Before/after pairs (Eased against Geodesic) on galaxy → galaxy,
   MW → Virgo and star → Milky Way, with deep links.

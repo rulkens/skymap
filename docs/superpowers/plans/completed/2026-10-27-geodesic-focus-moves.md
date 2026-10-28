@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship a second focus-move style, Geodesic (van Wijk & Nuij's zoom/pan path), beside today's Eased tween. A persisted Settings toggle picks the style, and a DebugPanel section tunes both styles live.
+**Goal:** Ship a second focus-move style, Geodesic (van Wijk & Nuij's zoom/pan path), beside today's Eased tween. A Settings toggle (reset to Eased on reload) picks the style, and a DebugPanel section tunes both styles live.
 
 **Architecture:**
 - Two behaviour-preserving prep commits create the joints:
@@ -30,8 +30,7 @@
 - **Units:** durations are **ms** everywhere (`durationMs`, `minMs`, `maxMs`). Sliders display
   seconds.
 - **Default style:** `DEFAULT_FOCUS_MOVES.style = 'eased'`.
-- **Persistence:** only the style persists, under key `skymap.focusMoveStyle.v1`. Tuning resets on
-  reload.
+- **No persistence:** the style and the tuning both reset to the defaults on reload.
 - **Ease select:** monotone eases only, `linear` plus the In/Out/InOut variants of Sine, Quad,
   Cubic, Quart, Quint, Expo and Circ. Never `*Back`, `*Elastic` or `*Bounce`.
 - **Always eased, regardless of the toggle:** Home, `flyToLonLat` (which keeps its own
@@ -319,7 +318,7 @@ review: yes
 - [x] Run `npx vitest run tests/services/engine/animation tests/services/engine/camera/evaluateClip` → green.
 - [x] Commit: `feat(animation): the geodesic effect — one composite writer over target and distance`.
 
-### Task 5: the `focusMoves` settings slice and the persisted style
+### Task 5: the `focusMoves` settings slice
 
 review: yes
 
@@ -327,16 +326,13 @@ review: yes
 - Create:
   - `src/@types/settings/FocusMoveSettings.d.ts`
   - `src/state/settings/core/focusMovesSlice.ts`
-  - `src/utils/storage/parseFocusMoveStyle.ts`
 - Modify:
   - `src/data/camera/focusMoveDefaults.ts` (add `DEFAULT_FOCUS_MOVES`)
   - `src/state/settings/coreSettingsSlices.ts`
   - `src/state/settings/selectors.ts`
-  - `src/state/persistedValues.ts`
   - the settings fixture (`tests/state/settings/` fixture helper, if it enumerates clusters)
 - Test:
   - `tests/state/settings/core/focusMovesSlice.test.ts`
-  - `tests/utils/storage/parseFocusMoveStyle.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -347,22 +343,16 @@ review: yes
   export const { setFocusMoveStyle, setEasedDuration, setGeodesicTuning } // payloads: FocusMoveStyle, number (ms), Partial<GeodesicTuning>
   export const selectFocusMoves: (s: RootState) => FocusMoveSettings;
   export const selectFocusMoveStyle: (s: RootState) => FocusMoveStyle;
-  export const FOCUS_MOVE_STYLE: PersistedValue<FocusMoveStyle>; // key 'skymap.focusMoveStyle.v1', select selectFocusMoveStyle
-  export function parseFocusMoveStyle(raw: string): FocusMoveStyle | null;
   ```
 
 **Behaviour:**
-- **Seeding.** The initial state is `DEFAULT_FOCUS_MOVES` with `style` seeded from
-  `readPersisted(FOCUS_MOVE_STYLE)`. This is the `cameraControlsSlice.ts:17` pattern.
-- **Parsing.** `parseFocusMoveStyle` validates against a `Record<FocusMoveStyle, true>`, so a
-  new style fails to compile until it is accepted. It returns null on garbage, which seeds the
-  default.
+- **Seeding.** The initial state is plain `DEFAULT_FOCUS_MOVES`: the style is not persisted, so
+  every reload starts on Eased.
 - **Kept out of tours.** `CORE_SNAPSHOT_CLUSTERS` is not touched; it is an allow-list, so the
   slice stays out of tour snapshots.
 
-- [x] Test `parseFocusMoveStyle round-trips both styles and rejects garbage`.
 - [x] Test `focusMovesSlice > setGeodesicTuning merges one knob without touching the others`.
-- [x] Implement, and append `FOCUS_MOVE_STYLE` to `PERSISTED_VALUES`.
+- [x] Implement.
 - [x] Run `npm run typecheck:fast` and `npx vitest run tests/state/settings tests/utils/storage` → green.
 - [x] Commit: `feat(settings): focusMoves — the style toggle and both styles' tuning`.
 
@@ -519,13 +509,13 @@ review: yes
 ## Definition of Done
 
 **Deliverables:**
-- `zoomPanGeodesic`, `geodesicPath`, `resolveFocusMotion` and `parseFocusMoveStyle` (one file each
+- `zoomPanGeodesic`, `geodesicPath` and `resolveFocusMotion` (one file each
   in `utils/`).
 - `buildGeodesicTrack`, `FOCUS_MOTIONS`, `focusMoveClip`, `focusMoveDurationMs`,
   `focusMoveEase` and `easedFocusClip`.
 - `CompositeTrack` and `CompositeSample`.
 - The `geodesic` Effect variant.
-- The `focusMoves` slice, with `FOCUS_MOVE_STYLE` persisted.
+- The `focusMoves` slice (not persisted).
 - The "Focus moves" select in Settings → Camera controls.
 - The "Focus moves" DebugPanel section.
 - The backlog entry for PR 2.
@@ -538,7 +528,7 @@ review: yes
   - galaxy → galaxy, MW → Virgo and star → Milky Way fly the coupled path at an even pace with
     an easeOutQuint arrival;
   - long moves take up to 2.2 s.
-- **Persistence:** the toggle survives a reload; a tour leaves it untouched.
+- **No persistence:** the toggle resets to Eased on reload; a tour leaves it untouched.
 - **Freezing:** flipping the toggle, or dragging a slider, mid-flight leaves the current move
   alone; the next click uses the new value.
 - **Eased duration slider:** it changes galaxy clicks, Home and a planet approach alike.
