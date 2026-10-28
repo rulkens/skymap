@@ -2,7 +2,7 @@
 
 **Readiness:** `needs-design` (needs its own spec section first; see below).
 
-PR 1 of geodesic focus moves (`specs/2026-10-27-geodesic-focus-moves-design.md`) ships the
+PR 1 of geodesic focus moves (`specs/completed/2026-10-27-geodesic-focus-moves-design.md`) ships the
 Eased/Geodesic toggle, but two moves stay Eased under either value: the planet follow-approach and
 Home. Both end on a body the sim clock moves. PR 2 puts them on the geodesic.
 

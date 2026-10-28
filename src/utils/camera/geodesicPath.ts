@@ -2,7 +2,7 @@
  * geodesicPath — camera-domain wrapper around `zoomPanGeodesic`: the only place
  * that converts `(target, distance)` to and from the geodesic's `(u, w)`, and
  * derives a duration from arc length. Spec §2.1 (units), §2.4 (the reverse
- * geodesic): docs/superpowers/specs/2026-10-27-geodesic-focus-moves-design.md
+ * geodesic): docs/superpowers/specs/completed/2026-10-27-geodesic-focus-moves-design.md
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';

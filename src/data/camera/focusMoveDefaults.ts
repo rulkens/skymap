@@ -2,7 +2,7 @@
  * focusMoveDefaults — the calibration a focus move starts from, before the
  * DebugPanel sliders re-tune it. The Geodesic numbers were settled by eye, not
  * derived; the working is in spec §5,
- * docs/superpowers/specs/2026-10-27-geodesic-focus-moves-design.md
+ * docs/superpowers/specs/completed/2026-10-27-geodesic-focus-moves-design.md
  */
 
 import type { GeodesicTuning } from '../../@types/camera/GeodesicTuning';

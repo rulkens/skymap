@@ -3,7 +3,7 @@
  * eq. 9), parametrised by arc length in their perceptual metric
  * ds² = (ρ²/w²)du² + (1/(ρ²w²))dw², so constant ds/dt is constant perceived
  * velocity. `u` and `w` must share ONE world unit: spec §2.1,
- * docs/superpowers/specs/2026-10-27-geodesic-focus-moves-design.md
+ * docs/superpowers/specs/completed/2026-10-27-geodesic-focus-moves-design.md
  */
 
 import type { ZoomPanGeodesic } from '../../@types/camera/ZoomPanGeodesic';
