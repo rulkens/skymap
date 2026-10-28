@@ -157,7 +157,7 @@ export function ringsPass(runtime: BodyRuntime): ContentPass {
         (body.surface.datumRadiusM * SCALE_UNITS.M_TO_KM) / ring.outerRadiusKm;
       const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
       // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
-      runtime.ring.draw(
+      runtime.ringRenderer.draw(
         pass,
         packRingUniforms(narrowMat4(mvp), sun, planetRadiusRatio, cam, innerRatio),
       );

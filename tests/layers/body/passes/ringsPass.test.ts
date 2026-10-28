@@ -140,7 +140,7 @@ function makeFixture(
   );
   vi.mocked(sceneBodyStates).mockReturnValue(seededBodyStates(0, bodies));
   const state = {} as EngineState;
-  const rings = ringsPass({ ring: renderer, textureSlots } as unknown as BodyRuntime);
+  const rings = ringsPass({ ringRenderer: renderer, textureSlots } as unknown as BodyRuntime);
   return { state, rings };
 }
 

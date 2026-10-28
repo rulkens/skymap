@@ -10,13 +10,13 @@ import type { BodyRuntime } from './@types/BodyRuntime';
 export function destroy(runtime: BodyRuntime): void {
   runtime.atlasSlot.cancel();
   for (const slot of runtime.textureSlots.values()) slot.cancel();
-  runtime.glint.destroy();
-  runtime.atmosphere.destroy();
-  runtime.cloudShell.destroy();
-  runtime.ring.destroy();
-  runtime.planet.destroy();
-  runtime.texturedBody.destroy();
-  runtime.terrainPickMarker.destroy();
-  runtime.surfaceTile.destroy();
-  runtime.earth.destroy();
+  runtime.bodyGlintRenderer.destroy();
+  runtime.atmosphereShellRenderer.destroy();
+  runtime.cloudShellRenderer.destroy();
+  runtime.ringRenderer.destroy();
+  runtime.planetRenderer.destroy();
+  runtime.texturedBodyRenderer.destroy();
+  runtime.terrainPickMarkerRenderer.destroy();
+  runtime.surfaceTileRenderer.destroy();
+  runtime.earthRenderer.destroy();
 }

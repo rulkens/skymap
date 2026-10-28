@@ -19,7 +19,7 @@ import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { BodyTextureSinks } from '../@types/BodyTextureSinks';
 
 export function createBodyTextureAtlasSlot(
-  renderers: Pick<BodyTextureSinks, 'earth' | 'texturedBody'>,
+  renderers: Pick<BodyTextureSinks, 'earthRenderer' | 'texturedBodyRenderer'>,
 ): AssetSlot<ImageBitmap, void> {
   const slot = createAssetSlot({
     name: 'body-atlas',
@@ -40,9 +40,9 @@ export function createBodyTextureAtlasSlot(
         // a hi-res map that landed first shadows the tile and a late tile cannot
         // clobber it — no "has the hi-res arrived?" peek at slot state belongs here.
         if (bodyId === 'earth') {
-          renderers.earth.setPlaceholderMap('surface', atlas, rect);
+          renderers.earthRenderer.setPlaceholderMap('surface', atlas, rect);
         } else {
-          renderers.texturedBody.setPlaceholderMap(bodyId, 'surface', atlas, rect);
+          renderers.texturedBodyRenderer.setPlaceholderMap(bodyId, 'surface', atlas, rect);
         }
       }
       // Every tile is cropped into its own texture above; the 2048×1792 source is spent.

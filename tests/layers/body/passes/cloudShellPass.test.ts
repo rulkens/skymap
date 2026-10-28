@@ -128,7 +128,10 @@ function makeFixture(renderer: unknown, resident: boolean) {
   const state = {
     settings: { earth: { ambientLight: 0.08 } },
   } as unknown as EngineState;
-  const pass = cloudShellPass({ cloudShell: renderer, textureSlots } as unknown as BodyRuntime);
+  const pass = cloudShellPass({
+    cloudShellRenderer: renderer,
+    textureSlots,
+  } as unknown as BodyRuntime);
   return { state, pass };
 }
 

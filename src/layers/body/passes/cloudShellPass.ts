@@ -186,7 +186,7 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
       // SAME live user setting the surface reads (`settings.earth.ambientLight`), so
       // the deck's night side dims in lockstep with the ground. `deckFade` folds
       // the descent fade into the opacity multiplier; it is always > 0 here.
-      runtime.cloudShell.draw(
+      runtime.cloudShellRenderer.draw(
         pass,
         packCloudShellUniforms(
           // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.

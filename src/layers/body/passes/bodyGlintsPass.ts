@@ -161,7 +161,14 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp` —
       // narrowed HERE, at the GPU-upload boundary.
       const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
-      runtime.glint.draw(pass, staging, count, rebasedVp, view.viewportPx, ctx.drawPxPerRad);
+      runtime.bodyGlintRenderer.draw(
+        pass,
+        staging,
+        count,
+        rebasedVp,
+        view.viewportPx,
+        ctx.drawPxPerRad,
+      );
     },
 
     // Pick aspect — stamps the sub-pixel `glints` bodies into the NEAR0 r32uint pick

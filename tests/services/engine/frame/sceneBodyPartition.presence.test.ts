@@ -158,7 +158,7 @@ function partition(
   const state = {
     gpu: { meshBodyRenderer: { hasMesh: (id: string) => resident(id) } },
   } as unknown as PassState;
-  const runtime = { texturedBody: { hasMap: (id: string) => resident(id) } };
+  const runtime = { texturedBodyRenderer: { hasMap: (id: string) => resident(id) } };
   const ctx = {
     snapshot: {
       meshBodies: own.filter((p) => 'meshKey' in p.body).map((p) => p.body),

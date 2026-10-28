@@ -210,10 +210,15 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
 }
 
 /** A runtime whose Earth and surface-tile renderers are the given stubs. */
-function makeRuntime(parts: { earth?: unknown; surfaceTile?: unknown } = {}): BodyRuntime {
+function makeRuntime(
+  parts: { earthRenderer?: unknown; surfaceTileRenderer?: unknown } = {},
+): BodyRuntime {
   return {
-    earth: parts.earth ?? { draw: vi.fn(), getMapView: vi.fn(() => ({}) as GPUTextureView) },
-    surfaceTile: parts.surfaceTile ?? { draw: vi.fn() },
+    earthRenderer: parts.earthRenderer ?? {
+      draw: vi.fn(),
+      getMapView: vi.fn(() => ({}) as GPUTextureView),
+    },
+    surfaceTileRenderer: parts.surfaceTileRenderer ?? { draw: vi.fn() },
   } as unknown as BodyRuntime;
 }
 
@@ -325,7 +330,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
     const state = makeState();
     const passes = bodyLayer.passes({
       ...makeRuntime(),
-      texturedBody: { hasMap: () => false },
+      texturedBodyRenderer: { hasMap: () => false },
       textureSlots: new Map(),
     } as unknown as BodyRuntime);
     // The group VIEW_STUB's body-m row resolves: the foreground line's BODY
@@ -380,7 +385,7 @@ describe('earthPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
-    const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
+    const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
     // A camera comfortably inside the shared foreground gate, well above the
     // cloud-shadow descent-fade band (see the note on NEAR_CTX). Fresh per
@@ -422,7 +427,7 @@ describe('earthPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
-    const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
+    const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
     // Fresh ctx (see the previous test's note): this test's own
     // `toHaveBeenCalledTimes(1)` assertion needs its own
@@ -453,7 +458,7 @@ describe('earthPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
-    const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
+    const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     globe.draw(PASS_STUB, view, ctx, state);
@@ -493,7 +498,7 @@ describe('earthPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState();
-    const globe = earthPass(makeRuntime({ earth: { draw: drawSpy } }));
+    const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
     const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const midAltitudeRadii =
       (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
@@ -562,7 +567,7 @@ describe('surfaceTilesPass', () => {
     const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeTileDrawState({ cut: STUB_CUT, atlasView: ATLAS_VIEW });
-    const runtime = makeRuntime({ surfaceTile: { draw: tileDraw } });
+    const runtime = makeRuntime({ surfaceTileRenderer: { draw: tileDraw } });
 
     // The base row runs first in a real frame; its mvp call is what the
     // eyeRelBodyM assertion below reads back.
@@ -591,7 +596,7 @@ describe('surfaceTilesPass', () => {
     const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeTileDrawState({ cut: STUB_CUT, atlasView: ATLAS_VIEW });
-    const runtime = makeRuntime({ surfaceTile: { draw: tileDraw } });
+    const runtime = makeRuntime({ surfaceTileRenderer: { draw: tileDraw } });
 
     surfaceTilesPass(runtime).draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
@@ -668,8 +673,8 @@ describe('earthPass.draw — the base globe is always drawn', () => {
     const state = makeTileDrawState({ cut: STUB_CUT, atlasView: ATLAS_VIEW });
     const baseDraw = vi.fn();
     const runtime = makeRuntime({
-      earth: { draw: baseDraw, getMapView: vi.fn(() => ({}) as GPUTextureView) },
-      surfaceTile: { draw: tileDraw },
+      earthRenderer: { draw: baseDraw, getMapView: vi.fn(() => ({}) as GPUTextureView) },
+      surfaceTileRenderer: { draw: tileDraw },
     });
 
     const ctx = makeAltitudeCtx(1);

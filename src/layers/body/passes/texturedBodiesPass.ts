@@ -141,7 +141,7 @@ export function texturedBodiesPass(runtime: BodyRuntime): ContentPass {
       );
       // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
       // `textured`, so the string id IS a BodyTextureId the renderer accepts.
-      runtime.texturedBody.draw(pass, body.id as BodyTextureId, uniforms);
+      runtime.texturedBodyRenderer.draw(pass, body.id as BodyTextureId, uniforms);
     },
   };
 }

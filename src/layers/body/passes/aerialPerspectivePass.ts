@@ -27,7 +27,11 @@ export function aerialPerspectivePass(runtime: BodyRuntime): ContentPass {
       const bodyId = view.slab.frame.hostId;
       const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
       if (entry === undefined) return;
-      runtime.atmosphere.drawAerialPerspective(pass, entry.body.id, view.sampledDepth!.view);
+      runtime.atmosphereShellRenderer.drawAerialPerspective(
+        pass,
+        entry.body.id,
+        view.sampledDepth!.view,
+      );
     },
   };
 }

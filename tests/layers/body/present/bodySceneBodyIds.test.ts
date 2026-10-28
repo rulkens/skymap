@@ -29,7 +29,7 @@ const STATES = deriveBodyStates(SIM_DAYS);
 const STATE = {
   gpu: { meshBodyRenderer: { hasMesh: () => true } },
 } as unknown as PassState;
-const NO_MAPS = { texturedBody: { hasMap: () => false } } as unknown as BodyRuntime;
+const NO_MAPS = { texturedBodyRenderer: { hasMap: () => false } } as unknown as BodyRuntime;
 
 function ctxAt(camPosMpc: Readonly<Vec3>, pxPerRad: number): FrameView {
   return {

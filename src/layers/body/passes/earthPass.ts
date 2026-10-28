@@ -74,7 +74,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       );
       const cloudShadowStrength = EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade;
 
-      runtime.earth.draw(
+      runtime.earthRenderer.draw(
         pass,
         packEarthSurfaceUniforms(
           mvp,

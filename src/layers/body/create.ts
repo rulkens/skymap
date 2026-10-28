@@ -27,36 +27,50 @@ export function create(deps: LayerCoreDeps): BodyRuntime {
   const { device } = deps.ctx;
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const renderers = {
-    earth: createEarthRenderer(device, HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT, reversedZ),
-    surfaceTile: createSurfaceTileRenderer(
+    earthRenderer: createEarthRenderer(
+      device,
+      HDR_TARGET_FORMAT,
+      FOREGROUND_DEPTH_FORMAT,
+      reversedZ,
+    ),
+    surfaceTileRenderer: createSurfaceTileRenderer(
       device,
       HDR_TARGET_FORMAT,
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
       SURFACE_TILE_MESH_RESOLUTION,
     ),
-    terrainPickMarker: createTerrainPickMarkerRenderer(
+    terrainPickMarkerRenderer: createTerrainPickMarkerRenderer(
       device,
       HDR_TARGET_FORMAT,
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
     ),
-    texturedBody: createTexturedBodyRenderer(
+    texturedBodyRenderer: createTexturedBodyRenderer(
       device,
       HDR_TARGET_FORMAT,
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
     ),
-    planet: createPlanetRenderer(device, HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT, reversedZ),
-    ring: createRingRenderer(device, HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT, reversedZ),
-    cloudShell: createCloudShellRenderer(
+    planetRenderer: createPlanetRenderer(
       device,
       HDR_TARGET_FORMAT,
       FOREGROUND_DEPTH_FORMAT,
       reversedZ,
     ),
-    atmosphere: createAtmosphereShellRenderer(device, HDR_TARGET_FORMAT, ATMOSPHERE_PARAMS),
-    glint: createBodyGlintRenderer(device, HDR_TARGET_FORMAT),
+    ringRenderer: createRingRenderer(device, HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT, reversedZ),
+    cloudShellRenderer: createCloudShellRenderer(
+      device,
+      HDR_TARGET_FORMAT,
+      FOREGROUND_DEPTH_FORMAT,
+      reversedZ,
+    ),
+    atmosphereShellRenderer: createAtmosphereShellRenderer(
+      device,
+      HDR_TARGET_FORMAT,
+      ATMOSPHERE_PARAMS,
+    ),
+    bodyGlintRenderer: createBodyGlintRenderer(device, HDR_TARGET_FORMAT),
   };
   return {
     ...renderers,

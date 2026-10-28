@@ -16,11 +16,11 @@ const fetch = useFetchMock();
 
 function makeSinks() {
   return {
-    earth: { setMap: vi.fn(), clearMap: vi.fn() },
-    cloudShell: { setTexture: vi.fn(), clearTexture: vi.fn() },
-    texturedBody: { setMap: vi.fn(), clearMap: vi.fn(), setRingTexture: vi.fn() },
-    ring: { setTexture: vi.fn() },
-    atmosphere: { setRingTexture: vi.fn() },
+    earthRenderer: { setMap: vi.fn(), clearMap: vi.fn() },
+    cloudShellRenderer: { setTexture: vi.fn(), clearTexture: vi.fn() },
+    texturedBodyRenderer: { setMap: vi.fn(), clearMap: vi.fn(), setRingTexture: vi.fn() },
+    ringRenderer: { setTexture: vi.fn() },
+    atmosphereShellRenderer: { setRingTexture: vi.fn() },
   };
 }
 
@@ -51,10 +51,10 @@ describe('createBodyTextureSlots', () => {
 
     // One committed cloud bitmap reaches BOTH resident consumers: the surface
     // pipeline (shadow + night occlusion) and the translucent shell.
-    expect(sinks.earth.setMap).toHaveBeenCalledTimes(1);
-    expect(sinks.earth.setMap).toHaveBeenCalledWith('clouds', bitmap);
-    expect(sinks.cloudShell.setTexture).toHaveBeenCalledTimes(1);
-    expect(sinks.cloudShell.setTexture).toHaveBeenCalledWith(bitmap);
+    expect(sinks.earthRenderer.setMap).toHaveBeenCalledTimes(1);
+    expect(sinks.earthRenderer.setMap).toHaveBeenCalledWith('clouds', bitmap);
+    expect(sinks.cloudShellRenderer.setTexture).toHaveBeenCalledTimes(1);
+    expect(sinks.cloudShellRenderer.setTexture).toHaveBeenCalledWith(bitmap);
   });
 
   it("the 'moon:normal' slot's commit routes to texturedBody.setMap('moon','normal', …)", async () => {
@@ -65,11 +65,11 @@ describe('createBodyTextureSlots', () => {
 
     // The Prep-B kind routing must carry the NEW `normal` kind through verbatim —
     // this fails the moment the commit collapses `kind` back to `'surface'`.
-    expect(sinks.texturedBody.setMap).toHaveBeenCalledTimes(1);
-    expect(sinks.texturedBody.setMap).toHaveBeenCalledWith('moon', 'normal', bitmap);
-    expect(sinks.texturedBody.setMap).not.toHaveBeenCalledWith('moon', 'surface', bitmap);
+    expect(sinks.texturedBodyRenderer.setMap).toHaveBeenCalledTimes(1);
+    expect(sinks.texturedBodyRenderer.setMap).toHaveBeenCalledWith('moon', 'normal', bitmap);
+    expect(sinks.texturedBodyRenderer.setMap).not.toHaveBeenCalledWith('moon', 'surface', bitmap);
     // The Moon is not Earth's — Earth's renderer stays untouched.
-    expect(sinks.earth.setMap).not.toHaveBeenCalled();
+    expect(sinks.earthRenderer.setMap).not.toHaveBeenCalled();
   });
 
   it("a non-'earth' body slot's onRelease frees its texture via texturedBody.clearMap(bodyId, kind)", async () => {
@@ -81,8 +81,8 @@ describe('createBodyTextureSlots', () => {
     // per-KIND, so the slot's `kind` flows through. This fails the moment the
     // release collapses to a per-body clear that would destroy a sibling kind.
     slot.release();
-    expect(sinks.texturedBody.clearMap).toHaveBeenCalledTimes(1);
-    expect(sinks.texturedBody.clearMap).toHaveBeenCalledWith('mars', 'surface');
+    expect(sinks.texturedBodyRenderer.clearMap).toHaveBeenCalledTimes(1);
+    expect(sinks.texturedBodyRenderer.clearMap).toHaveBeenCalledWith('mars', 'surface');
   });
 
   it("releasing 'earth:clouds' frees both copies: Earth's map and the cloud shell's", async () => {
@@ -92,9 +92,9 @@ describe('createBodyTextureSlots', () => {
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     slot.release();
 
-    expect(sinks.earth.clearMap).toHaveBeenCalledWith('clouds');
-    expect(sinks.cloudShell.clearTexture).toHaveBeenCalledOnce();
-    expect(sinks.texturedBody.clearMap).not.toHaveBeenCalled();
+    expect(sinks.earthRenderer.clearMap).toHaveBeenCalledWith('clouds');
+    expect(sinks.cloudShellRenderer.clearTexture).toHaveBeenCalledOnce();
+    expect(sinks.texturedBodyRenderer.clearMap).not.toHaveBeenCalled();
   });
 
   // Every sink copies the bitmap into its own texture, so a decoded copy kept past
@@ -107,7 +107,7 @@ describe('createBodyTextureSlots', () => {
 
     expect(bitmap.close).toHaveBeenCalledOnce();
     const closedAt = (bitmap.close as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
-    expect(sinks.cloudShell.setTexture.mock.invocationCallOrder[0]!).toBeLessThan(closedAt);
+    expect(sinks.cloudShellRenderer.setTexture.mock.invocationCallOrder[0]!).toBeLessThan(closedAt);
   });
 
   it('closes a bitmap superseded before it reached any sink', async () => {
@@ -127,7 +127,7 @@ describe('createBodyTextureSlots', () => {
     await slot.load({ bodyId: 'mars', kind: 'surface', tier: 'medium' });
 
     expect(stale.close).toHaveBeenCalledOnce();
-    expect(sinks.texturedBody.setMap).not.toHaveBeenCalledWith('mars', 'surface', stale);
+    expect(sinks.texturedBodyRenderer.setMap).not.toHaveBeenCalledWith('mars', 'surface', stale);
   });
 
   it('the ring strip lands in the ring, textured-body and atmosphere renderers', async () => {
@@ -140,15 +140,15 @@ describe('createBodyTextureSlots', () => {
 
     // The ring strip binds to its HOST body (saturn) via setRingTexture — the
     // sphere setMap path is untouched, and Earth's renderer stays clear.
-    expect(sinks.texturedBody.setRingTexture).toHaveBeenCalledTimes(1);
-    expect(sinks.texturedBody.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
+    expect(sinks.texturedBodyRenderer.setRingTexture).toHaveBeenCalledTimes(1);
+    expect(sinks.texturedBodyRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
     // …to the translucent overlay itself…
-    expect(sinks.ring.setTexture).toHaveBeenCalledWith(bitmap);
+    expect(sinks.ringRenderer.setTexture).toHaveBeenCalledWith(bitmap);
     // …and fans out to the atmosphere shell's ring-in-front occlusion binding,
     // keyed on the same host body.
-    expect(sinks.atmosphere.setRingTexture).toHaveBeenCalledTimes(1);
-    expect(sinks.atmosphere.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
-    expect(sinks.texturedBody.setMap).not.toHaveBeenCalled();
-    expect(sinks.earth.setMap).not.toHaveBeenCalled();
+    expect(sinks.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledTimes(1);
+    expect(sinks.atmosphereShellRenderer.setRingTexture).toHaveBeenCalledWith('saturn', bitmap);
+    expect(sinks.texturedBodyRenderer.setMap).not.toHaveBeenCalled();
+    expect(sinks.earthRenderer.setMap).not.toHaveBeenCalled();
   });
 });

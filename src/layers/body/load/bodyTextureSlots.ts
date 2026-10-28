@@ -27,21 +27,21 @@ function commitBodyTexture(
   bitmap: ImageBitmap,
 ): void {
   if (entry.bodyId === 'earth') {
-    sinks.earth.setMap(entry.kind, bitmap);
+    sinks.earthRenderer.setMap(entry.kind, bitmap);
     // One cloud bitmap, two consumers: the surface pipeline samples it for the ring
     // shadow + night occlusion (spec §7.3), the shell draws it as the translucent
     // layer. Same shape as the ring commit below.
-    if (entry.kind === 'clouds') sinks.cloudShell.setTexture(bitmap);
+    if (entry.kind === 'clouds') sinks.cloudShellRenderer.setTexture(bitmap);
   } else if (isTexturedBodyKey(entry.bodyId)) {
-    sinks.texturedBody.setMap(entry.bodyId, entry.kind, bitmap);
+    sinks.texturedBodyRenderer.setMap(entry.bodyId, entry.kind, bitmap);
   } else {
     // One ring strip, three consumers: the ring-on-planet SHADOW (binding 3 of the
     // host sphere — `hostBodyId` keeps the ring→host link in SCENE_RINGS alone), the
     // translucent OVERLAY, and the atmosphere shell's ring-in-front occlusion
     // (binding 4, so the shell's over-blend can't darken a ring in front of it).
-    sinks.texturedBody.setRingTexture(hostBodyId(entry.bodyId), bitmap);
-    sinks.ring.setTexture(bitmap);
-    sinks.atmosphere.setRingTexture(hostBodyId(entry.bodyId), bitmap);
+    sinks.texturedBodyRenderer.setRingTexture(hostBodyId(entry.bodyId), bitmap);
+    sinks.ringRenderer.setTexture(bitmap);
+    sinks.atmosphereShellRenderer.setRingTexture(hostBodyId(entry.bodyId), bitmap);
   }
 }
 
@@ -55,10 +55,10 @@ function commitBodyTexture(
  */
 function releaseBodyTexture(sinks: BodyTextureSinks, entry: BodyTextureKey): void {
   if (entry.bodyId === 'earth') {
-    sinks.earth.clearMap(entry.kind);
-    if (entry.kind === 'clouds') sinks.cloudShell.clearTexture();
+    sinks.earthRenderer.clearMap(entry.kind);
+    if (entry.kind === 'clouds') sinks.cloudShellRenderer.clearTexture();
   } else if (isTexturedBodyKey(entry.bodyId)) {
-    sinks.texturedBody.clearMap(entry.bodyId, entry.kind);
+    sinks.texturedBodyRenderer.clearMap(entry.bodyId, entry.kind);
   }
 }
 

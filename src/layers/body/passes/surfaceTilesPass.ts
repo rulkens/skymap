@@ -63,7 +63,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
       const hostId = view.slab.frame.hostId;
       const spec = surfaceTileSpecOf(hostId);
       if (spec === null) return;
-      const maps = runtime.earth;
+      const earthRenderer = runtime.earthRenderer;
 
       const prepared = prepareBodySurfaceFrame(state, ctx, view);
       if (prepared === null) return;
@@ -74,14 +74,14 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
       const effectInputs: SurfaceEffectInputs = {
         ...(has('materialMap') && {
           materialMap: {
-            view: maps.getMapView('material'),
+            view: earthRenderer.getMapView('material'),
             oceanRoughness: state.settings.earth.oceanRoughness,
           },
         }),
-        ...(has('nightLights') && { nightLights: { view: maps.getMapView('night') } }),
+        ...(has('nightLights') && { nightLights: { view: earthRenderer.getMapView('night') } }),
         ...(has('cloudShadows') && {
           cloudShadows: {
-            view: maps.getMapView('clouds'),
+            view: earthRenderer.getMapView('clouds'),
             // The same descent fade the deck itself uses, from the same
             // range — the shadow on a patch and on the base globe dissolve
             // together.
@@ -98,7 +98,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         }),
       };
 
-      runtime.surfaceTile.draw(pass, {
+      runtime.surfaceTileRenderer.draw(pass, {
         tiles: surfaceTiles.plan.cut,
         // The slab vp is already eye-relative by construction (body-m rows build
         // vp about the eye) — no rebase, unlike the old NEAR0 path.

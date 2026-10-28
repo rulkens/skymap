@@ -120,7 +120,7 @@ export function planetsPass(runtime: BodyRuntime): ContentPass {
       staging[25] = cam[1];
       staging[26] = cam[2];
       staging[27] = 0; // camPosLocal pad — kept zeroed across frames
-      runtime.planet.draw(pass, bodyId, staging);
+      runtime.planetRenderer.draw(pass, bodyId, staging);
     },
 
     // Pick aspect — stamps this row's body into the r32uint pick pass when it is

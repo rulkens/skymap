@@ -149,7 +149,7 @@ const STATE = {
 
 /** The pass over a runtime whose atmosphere renderer is `renderer`, and the shared state. */
 function makeFixture(renderer: unknown) {
-  const pass = atmosphereShellPass({ atmosphere: renderer } as unknown as BodyRuntime);
+  const pass = atmosphereShellPass({ atmosphereShellRenderer: renderer } as unknown as BodyRuntime);
   return { state: STATE, pass };
 }
 

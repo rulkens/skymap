@@ -71,7 +71,7 @@ const STATE = {} as unknown as EngineState;
 describe('aerialPerspectivePass.enabled', () => {
   it('is true only for a body whose shell encloses the camera', () => {
     const pass = aerialPerspectivePass({
-      atmosphere: { drawAerialPerspective: vi.fn() },
+      atmosphereShellRenderer: { drawAerialPerspective: vi.fn() },
     } as unknown as BodyRuntime);
     const view = makeBodyView(asSceneBodyId('earth'));
 

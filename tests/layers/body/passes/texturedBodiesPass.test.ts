@@ -147,7 +147,7 @@ function makeRendererSpy(residentIds: readonly string[] = []) {
 /** The pass over a runtime holding `renderer`, and an empty state beside the fixture bodies. */
 function makeFixture(renderer: unknown, bodies: readonly SeededPlanet[]) {
   const state = { gpu: {} } as unknown as EngineState;
-  const textured = texturedBodiesPass({ texturedBody: renderer } as unknown as BodyRuntime);
+  const textured = texturedBodiesPass({ texturedBodyRenderer: renderer } as unknown as BodyRuntime);
   return { state, bodies, textured };
 }
 

@@ -34,7 +34,7 @@ export function atmosphereShellPass(runtime: BodyRuntime): ContentPass {
       if (entry === undefined) return;
       // The depth this row's opaque passes stamped: every ray the fragment
       // classifies ends at it, in the sampled row's own frame scaled to km.
-      runtime.atmosphere.draw(
+      runtime.atmosphereShellRenderer.draw(
         pass,
         entry.body.id,
         atmosphereShellUniforms(entry, view.slab, ctx, state),

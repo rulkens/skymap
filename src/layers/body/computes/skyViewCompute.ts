@@ -14,8 +14,16 @@ export function skyViewCompute(runtime: BodyRuntime): ContentCompute {
     name: 'sky-view',
     scope: 'once',
     encode(encoder, ctx, state, claimTimestampWrites) {
-      runtime.atmosphere.reconcile({ skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier] });
-      encodeAtmosphereSkyView(runtime.atmosphere, encoder, ctx, state, claimTimestampWrites);
+      runtime.atmosphereShellRenderer.reconcile({
+        skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
+      });
+      encodeAtmosphereSkyView(
+        runtime.atmosphereShellRenderer,
+        encoder,
+        ctx,
+        state,
+        claimTimestampWrites,
+      );
     },
   };
 }

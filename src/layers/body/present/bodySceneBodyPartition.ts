@@ -16,7 +16,7 @@ import { sceneBodyPartition } from '../../../services/engine/frame/sceneBodyPart
 export function bodySceneBodyPartition(
   state: PassState,
   ctx: FrameView,
-  runtime: Pick<BodyRuntime, 'texturedBody'>,
+  runtime: Pick<BodyRuntime, 'texturedBodyRenderer'>,
 ): SceneBodyPartition {
   return sceneBodyPartition(
     state,
@@ -24,6 +24,6 @@ export function bodySceneBodyPartition(
     BODY_SCENE_BODY_IDS,
     (bodyId) =>
       bodyTextureSpec(bodyId) !== null &&
-      runtime.texturedBody.hasMap(bodyId as BodyTextureId, 'surface'),
+      runtime.texturedBodyRenderer.hasMap(bodyId as BodyTextureId, 'surface'),
   );
 }

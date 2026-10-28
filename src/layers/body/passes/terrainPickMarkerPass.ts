@@ -78,7 +78,7 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
       if (!(radiusM > 0) || radiusM >= Math.hypot(...centreRelEyeM)) return;
 
       const basis = pose.basisM;
-      runtime.terrainPickMarker.draw(pass, {
+      runtime.terrainPickMarkerRenderer.draw(pass, {
         // The body-m slab's vp is already eye-relative by construction, the same
         // frame `surfaceTile/vertex.wesl` projects through — so the marker's
         // analytic depth and the terrain's rasterised depth are the same number

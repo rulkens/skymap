@@ -16,7 +16,7 @@ export function aerialPerspectiveCompute(runtime: BodyRuntime): ContentCompute {
     scope: 'perView',
     encode: (encoder, ctx, state, claimTimestampWrites) =>
       encodeAtmosphereAerialPerspective(
-        runtime.atmosphere,
+        runtime.atmosphereShellRenderer,
         encoder,
         ctx,
         state,

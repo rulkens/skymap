@@ -148,8 +148,8 @@ function makePartitionFixture() {
   const textured = bodyAt('mars', 3390000);
   const glint = glintBodyAt('moon', 1737000);
   const runtime = {
-    planet: makeRendererSpy(),
-    texturedBody: {
+    planetRenderer: makeRendererSpy(),
+    texturedBodyRenderer: {
       draw: vi.fn(),
       hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
     },
@@ -182,7 +182,7 @@ describe('planetsPass.enabled', () => {
 describe('planetsPass.draw — one body per row (partition boundary)', () => {
   it('draws only the flat-branch body matching this row', () => {
     const { state, bodies, runtime, planets } = makePartitionFixture();
-    const renderer = runtime.planet;
+    const renderer = runtime.planetRenderer;
     const ctx = makeCtx(bodies);
 
     planets.draw(PASS_STUB, makeBodyView(asSceneBodyId('mars')), ctx, state); // textured row
@@ -197,8 +197,8 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
   it('texturedBodiesPass and planetsPass never both draw the same body', () => {
     const { state, bodies, runtime, planets } = makePartitionFixture();
     const textured = texturedBodiesPass(runtime as unknown as BodyRuntime);
-    const planetsRenderer = runtime.planet;
-    const texturedRenderer = runtime.texturedBody;
+    const planetsRenderer = runtime.planetRenderer;
+    const texturedRenderer = runtime.texturedBodyRenderer;
     const ctx = makeCtx(bodies);
 
     const drawnByPlanets = new Set<string>();
@@ -228,7 +228,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
     const { state, bodies, runtime, planets } = makePartitionFixture();
-    const renderer = runtime.planet;
+    const renderer = runtime.planetRenderer;
     const ctx = makeCtx(bodies);
     const view = makeBodyView(asSceneBodyId('mercury'));
     const mercury = bodies[0]!;
@@ -253,7 +253,7 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
 
   it('packs albedo@16..18, sunDirLocal@20..22 and camPosLocal@24..26 into a 28-float record', () => {
     const { state, bodies, runtime, planets } = makePartitionFixture();
-    const renderer = runtime.planet;
+    const renderer = runtime.planetRenderer;
     const ctx = makeCtx(bodies);
     const mercury = bodies[0]!;
 
@@ -313,8 +313,10 @@ describe('planetsPass.drawPick', () => {
     const state = { gpu: { bodyPickRenderer: pickRenderer } } as unknown as EngineState;
     const bodies = [flat, textured, glint];
     const planets = planetsPass({
-      planet: makeRendererSpy(),
-      texturedBody: { hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface' },
+      planetRenderer: makeRendererSpy(),
+      texturedBodyRenderer: {
+        hasMap: (id: string, kind: string) => id === 'mars' && kind === 'surface',
+      },
     } as unknown as BodyRuntime);
     const ctx = makeCtx(bodies);
 
@@ -335,8 +337,8 @@ describe('planetsPass.drawPick', () => {
     const pxPerRad = 720 / (2 * Math.tan(Math.PI / 6));
     const pose: BodyRelativePose = { eyeRelBodyM: [dM, 0, 0], basisM: IDENTITY_MAT3 };
     const planets = planetsPass({
-      planet: makeRendererSpy(),
-      texturedBody: { hasMap: () => false },
+      planetRenderer: makeRendererSpy(),
+      texturedBodyRenderer: { hasMap: () => false },
     } as unknown as BodyRuntime);
     const state = { gpu: { bodyPickRenderer: { drawSphere: vi.fn() } } } as unknown as EngineState;
     const bodies: SeededPlanet[] = [{ ...bodyAt('mercury', radiusM), positionMpc: [0, 0, 0] }];

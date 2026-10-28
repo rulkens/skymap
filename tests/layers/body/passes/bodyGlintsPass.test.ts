@@ -158,8 +158,8 @@ const STATE = { gpu: {} } as unknown as EngineState;
  *  glints branch is decided by apparent size before residency anyway). */
 function glintsWith(renderer: unknown) {
   return bodyGlintsPass({
-    glint: renderer,
-    texturedBody: { hasMap: () => false },
+    bodyGlintRenderer: renderer,
+    texturedBodyRenderer: { hasMap: () => false },
   } as unknown as BodyRuntime);
 }
 
