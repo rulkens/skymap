@@ -23,4 +23,9 @@ export type DriverGeometry = {
   readonly standoffRadii: number;
   /** Fixed radius multiple to arrive at, overriding the screen-fill distance. */
   readonly focusDistanceRadii?: number;
+  /**
+   * The sim clock moves `poseId` though no body table says so: a transient object
+   * (`transientPositions`). Bodies leave it unset; `bodyFollowsSimClock` answers for them.
+   */
+  readonly followsSimClock?: true;
 };

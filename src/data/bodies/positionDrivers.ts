@@ -41,6 +41,11 @@ export function positionDriverById(id: string): PositionDriver {
   return driver;
 }
 
+/** As `positionDriverById`, for an id that may be transient (`transientPositions`): no row is null. */
+export function positionDriverOrNull(id: string): PositionDriver | null {
+  return BY_ID.get(id) ?? null;
+}
+
 /**
  * The body this one hangs off: an orbit's focus, a sampled craft's Sun, a site's host. Anchors hang
  * off nothing. Not `utils/bodyTextures/hostBodyId`, which resolves a TEXTURE key's host.
