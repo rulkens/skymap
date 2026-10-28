@@ -45,7 +45,7 @@ export type EngineDebugHandle = {
   /** Rolling CPU-side frame stats (fps + JS-body ms + idle) — no GPU query. */
   readonly frameStats: () => FrameStats;
   readonly passOverrides: PassOverridesHandle;
-  /** Authored fetch rank per slot name (lower fetches first), from `ASSET_WIRING`. */
+  /** Authored fetch rank per slot name (lower fetches first), from the composed asset rows. */
   readonly assetPriorities: () => ReadonlyMap<string, number>;
   /**
    * Earth surface tile atlas residency. Returns a quiet empty snapshot

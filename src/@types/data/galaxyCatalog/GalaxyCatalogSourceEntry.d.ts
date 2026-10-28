@@ -83,7 +83,7 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    * set a very large value to disable the fade.
    */
   readonly falloffHalfMpc: number;
-  /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
+  /** Fetch rank of the asset row minted here; see `AssetWiringRow.priority`. */
   readonly priority: number;
   /** The durable id kind this source's `objIDs` carry; absent when they carry none a URL may name. */
   readonly durableId?: GalaxyDurableIdClaim;

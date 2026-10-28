@@ -1,33 +1,14 @@
 /**
- * slotFor — resolve an `AssetKey` to its `AssetSlot`, unifying the homes a slot
- * can live in: a Layer's own `state.layerSlots`, else core's own.
- *
- * Core stores its own slots in structurally different places:
- *
- *   - The keyed body-texture and mesh body families live in their own maps.
- *   - The auxiliary assets named by `AssetKey` (the cluster catalog, the
- *     body-texture atlas) are named fields on `state.assetSlots`.
- *   - A Layer's own slots (incl. every per-source star/galaxy catalog) live in
- *     `state.layerSlots`, consulted first.
- *
- * `AssetKey` is the union of the key spaces — a numeric `SourceType` OR one of
- * the string keys. A single `slotFor(state, key)` lets demand predicates and
- * the demand loop ask "what's the slot for this key?" without every caller
- * re-deriving the branch. Single-sourcing it here keeps the mapping in one
- * place rather than duplicated at each call site.
- *
- * A numeric key resolves to `undefined` here: every per-source catalog slot is
- * a Layer's and was already returned above. Slots covered by no home resolve
- * to `undefined` too, which callers treat as "idle / not minted".
- *
- * Returns `AssetSlot<unknown, unknown> | undefined`: the slot's payload and
- * request types are erased because callers here only consult `state().kind`
- * and `load(req)` generically. The single named-field branch carries a union
- * of slot types, which TS widens to the erased shape on return.
+ * slotFor — resolve an `AssetKey` to its `AssetSlot` across the two homes a slot
+ * can live in: a Layer's own `state.layerSlots` (every catalog, texture and
+ * overlay slot), else core's mesh body family. One function, so demand
+ * predicates and the demand loop never re-derive the branch. A key with no
+ * minted slot resolves to `undefined`, which callers treat as "idle / not
+ * minted". The payload and request types are erased: callers only consult
+ * `state().kind` and `load(req)` generically.
  */
 
 import { isMeshBodyKey } from '../../../utils/meshBodies/isMeshBodyKey';
-import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -40,18 +21,10 @@ export function slotFor(
   // `createLayers` throws on a key core also claims, so this cannot shadow.
   const layerSlot = state.layerSlots.get(key);
   if (layerSlot !== undefined) return layerSlot;
-  // Numeric = Source code. Every per-source catalog is a Layer's and was
-  // already returned above; core keeps no numeric-keyed slot map of its own.
-  if (typeof key === 'number') return undefined;
-  // A mesh body key routes through the keyed `meshBodies` Map, un-prefixed —
-  // the Map itself is keyed by the plain body id, the `mesh:` prefix exists
-  // only to keep this branch's `AssetKey` member distinct (see `AssetKey.d.ts`).
-  if (isMeshBodyKey(key)) {
-    return (state.assetSlots.meshBodies.get(key.slice('mesh:'.length)) ?? undefined) as
-      | AssetSlot<unknown, unknown>
-      | undefined;
-  }
-  // A string key with no named field is a Layer's (returned above) or unminted.
-  if (!isCoreSlotFieldKey(state.assetSlots, key)) return undefined;
-  return (state.assetSlots[key] ?? undefined) as AssetSlot<unknown, unknown> | undefined;
+  if (!isMeshBodyKey(key)) return undefined;
+  // The Map is keyed by the plain body id; the `mesh:` prefix exists only to
+  // keep this `AssetKey` member distinct (see `AssetKey.d.ts`).
+  return (state.assetSlots.meshBodies.get(key.slice('mesh:'.length)) ?? undefined) as
+    | AssetSlot<unknown, unknown>
+    | undefined;
 }

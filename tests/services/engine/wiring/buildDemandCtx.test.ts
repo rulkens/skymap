@@ -13,14 +13,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildDemandCtx } from '../../../../src/services/engine/wiring/buildDemandCtx';
-import { Source } from '../../../../src/data/sources';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 
 /**
@@ -32,19 +31,25 @@ import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
 function makeState(
   opts: {
     paletteOpen?: boolean;
-    points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousGalaxiesMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
     simDays?: number;
   } = {},
 ): EngineState {
-  const famousGalaxiesMeta =
+  // A Layer's slot, so it sits where `slotFor` looks first.
+  const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>(
     opts.famousGalaxiesMetaState === undefined
-      ? null
-      : ({ state: () => ({ kind: opts.famousGalaxiesMetaState }) } as unknown as AssetSlot<
-          unknown,
-          unknown
-        >);
+      ? []
+      : [
+          [
+            'famousGalaxiesMeta',
+            { state: () => ({ kind: opts.famousGalaxiesMetaState }) } as unknown as AssetSlot<
+              unknown,
+              unknown
+            >,
+          ],
+        ],
+  );
   const pose = opts.pose ?? {
     target: [0, 0, 0],
     yaw: 0,
@@ -58,10 +63,7 @@ function makeState(
       cosmicWebDensity: { items: {} },
     },
     ui: { paletteOpen: opts.paletteOpen ?? false } as UiState,
-    assetSlots: {
-      points: opts.points ?? new Map(),
-      famousGalaxiesMeta,
-    },
+    assetSlots: { meshBodies: new Map() },
     terrain: FLAT_TERRAIN,
     cameraRuntime: {
       register: { pose: absoluteArm(pose) },
@@ -72,8 +74,7 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    // `slotFor` consults the Layer-owned slots first; none here.
-    layerSlots: new Map(),
+    layerSlots,
     subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }

@@ -20,7 +20,7 @@ import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../../src/d
 import type { Tier } from '../../../../src/@types/data/Tier';
 import type { TexturedDiskRenderer } from '../../../../src/@types/rendering/TexturedDiskRenderer';
 
-/** The hi-res row's request, mirroring `ASSET_WIRING`'s `req` for that row. */
+/** The hi-res row's request, mirroring that asset row's `req`. */
 const reqFor = (tier: Tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] });
 
 /** Hoisted so the `vi.mock` factories (evaluated before this module's body) can reach it. */

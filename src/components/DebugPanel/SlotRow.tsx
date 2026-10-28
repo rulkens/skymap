@@ -29,7 +29,7 @@ export type SlotRowProps = {
   readonly name: string;
   readonly state: LoadState<unknown>;
   readonly slot: AssetSlot<unknown, unknown>;
-  /** Authored `ASSET_WIRING` rank (lower fetches first); `null` for unranked slots. */
+  /** Authored asset-row rank (lower fetches first); `null` for unranked slots. */
   readonly rank: number | null;
   /** Earliest `startedAtMs` across all slots — the timeline's zero. */
   readonly timelineOriginMs: number | null;
@@ -59,7 +59,7 @@ function SlotRow({ name, state, slot, rank, timelineOriginMs }: SlotRowProps): R
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <span className={styles.rank} title="ASSET_WIRING fetch rank — lower fetches first">
+      <span className={styles.rank} title="Fetch rank — lower fetches first">
         {rank ?? '—'}
       </span>
       <span className={cx(styles.dot, colorClass)}>●</span>

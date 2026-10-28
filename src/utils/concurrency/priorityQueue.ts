@@ -79,7 +79,7 @@ export class PriorityQueue<T = ImageBitmap | null> {
    * slot that frees LATER — the head of the queue is chosen by iteration order,
    * not by rank.  That is exactly how a rank-60 all-sky survey took one of the
    * boot's two pipes for 22 seconds ahead of every rank-10 asset the opening
-   * view actually draws: it merely sat second in `ASSET_WIRING`.
+   * view actually draws: it merely sat second in the asset rows.
    *
    * Admitting every entry into `pending` first and calling `tryStart` once
    * restores the invariant callers assume: the first `limit` tasks started are

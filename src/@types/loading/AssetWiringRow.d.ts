@@ -1,7 +1,7 @@
 /**
  * AssetWiringRow — one fetchable asset's lifecycle contract. `createLayers`
- * composes core's rows with every Layer's into `state.assetRows`; `wireSlots`
- * walks that list to build the slot table. A row that tracks a sibling's
+ * composes core's rows with every Layer's into `state.assetRows`, and the demand
+ * loop walks that list. A row that tracks a sibling's
  * demand/priority/request is a `CompanionAssetRow`, folded into one of these.
  */
 
@@ -15,8 +15,8 @@ import type { VisibilityAddress } from '../animation/VisibilityAddress';
 export type AssetWiringRow<T = unknown, R = unknown> = {
   key: AssetKey;
   /**
-   * Pure constructor: builds + subscribes + RETURNS the slot. Must NOT write
-   * `state.assetSlots` and must NOT call `slot.load()` — `wireSlots` does both.
+   * Hands back the slot, called once by `createLayers` for a Layer's row. Must
+   * NOT call `slot.load()`: `reevaluateDemand` owns when a slot loads.
    */
   factory: (deps: SlotDeps) => AssetSlot<T, R>;
   /** Build the request from the current tier (void/empty for tier-agnostic). */
@@ -35,12 +35,6 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
    * in the band between load and evict radius, which `!demand` cannot encode.
    */
   release?: (ctx: DemandCtx) => boolean;
-  /**
-   * `'external'` when the slot is minted outside the registry (point sources,
-   * body textures — built directly in `wireSlots`). The construction pass
-   * skips these; the demand loop still evaluates their `demand`/`req`.
-   */
-  built?: 'external';
   /**
    * The visibility address (and item) this slot's data draws. Its target stays 0 until the
    * slot has a committed value, and every notification from the slot recomputes it, so a

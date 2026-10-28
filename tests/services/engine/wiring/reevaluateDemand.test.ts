@@ -2,8 +2,8 @@
  * reevaluateDemand — unit tests for the guarded demand-evaluation loop.
  *
  * Tests exercise the factored-out `evaluateRows(state, rows)` with stub rows
- * and stub slots, so the loop logic is verified without the real ASSET_WIRING
- * registry (Task 10). The behaviours under test:
+ * and stub slots, so the loop logic is verified without the real asset
+ * rows (Task 10). The behaviours under test:
  *
  *   - a row whose demand is true AND whose slot is idle triggers
  *     `slot.load(row.req(tier))`,

@@ -29,10 +29,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export function installLoadProgress(state: EngineState, deps: BootstrapDeps): void {
   const { cb, allSlots } = deps;
 
-  // Mesh-body slots (minted in wireSlots, keyed in the meshBodies map). Their
-  // ASSET_WIRING rows carry `mesh:`-prefixed string keys
-  // but live in this keyed map rather than a named field, so they are
-  // gathered here and skipped in the string-keyed sidecar walk below.
+  // Core's mesh body slots, minted in wireSlots.
   for (const [, slot] of state.assetSlots.meshBodies) {
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }

@@ -116,7 +116,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { MESH_ASSET_WIRING } from '../../../../src/services/engine/wiring/meshAssetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
@@ -398,18 +398,12 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    assetSlots: {
-      // Real (empty) map: installSlots routes the registry-built star-catalog
-      // slots here, so the fixture must carry the destination.
-      starCatalogs: new Map(),
-      filaments: null,
-      meshBodies: new Map(),
-    },
+    assetSlots: { meshBodies: new Map() },
     // The composed lists `createLayers` would have written: core's registries
     // plus the Layers' rows, with their slots in `layerSlots` —
     // wireSlots itself no longer mints any of them.
     assetRows: expandCompanionRows([
-      ...ASSET_WIRING,
+      ...MESH_ASSET_WIRING,
       ...galaxyCatalogAssetRows(galaxyRuntime),
       ...cosmicWebDensityAssetRows(densityRuntime),
       ...structureAssetRows(structureRuntime),

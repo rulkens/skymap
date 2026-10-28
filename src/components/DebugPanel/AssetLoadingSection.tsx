@@ -6,12 +6,12 @@
  *
  * The engine's slot Map is insertion-ordered by which bootstrap phase minted
  * each slot, so reading fetch order off the panel meant knowing the wiring
- * table by heart. Sorting by the authored `ASSET_WIRING` rank — and showing
+ * table by heart. Sorting by the authored asset-row rank — and showing
  * that rank in its own column — makes the intended order the panel's default
  * reading, and any row whose start time disagrees with its rank stands out.
  *
  * `sortSlotsByFetchRank` owns the tiebreak (whole families share a rank), and
- * the rank map is derived from `ASSET_WIRING` by
+ * the rank map is derived from the composed asset rows by
  * `assetPriorityBySlotName` — this component never restates a rank.
  *
  * ### Subscription

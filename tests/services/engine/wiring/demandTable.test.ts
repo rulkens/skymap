@@ -2,7 +2,7 @@
  * demandTable — data-driven regression net for `reevaluateDemand`.
  *
  * The scattered-trigger consolidation (Task 10) puts every asset's load policy
- * in `ASSET_WIRING`. This file is the regression net: one test that drives
+ * in the composed asset rows. This file is the regression net: one test that drives
  * `reevaluateDemand(state)` against the REAL registry for representative
  * engine states, then asserts the EXACT set of slot `load` spies that fired.
  * A future edit that moves a predicate or breaks a row lands here as a
@@ -62,7 +62,7 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { MESH_ASSET_WIRING } from '../../../../src/services/engine/wiring/meshAssetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
@@ -175,7 +175,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
   // DesiDeep + DesiWedge + DesiSgw boot hidden — specialist DESI drill
-  // patches, not part of the default all-sky scene — so their ASSET_WIRING
+  // patches, not part of the default all-sky scene — so their
   // point rows are NOT demanded at boot. Symmetric with polyphorm-2mrs among
   // the volume fields: boots `enabled: false` → absent from the boot set.
   desiDeep: { enabled: false },
@@ -207,7 +207,7 @@ type MakeStateOptions = {
 };
 
 /**
- * All source codes that appear in ASSET_WIRING as point rows. Ensures every
+ * All source codes that appear in the asset rows as point rows. Ensures every
  * expected-key slot is reachable via `slotFor`.
  */
 const ALL_POINT_SOURCES: readonly SourceType[] = [
@@ -310,7 +310,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // registry plus the Layers', folded once, with the Layers' slots in the map
     // `slotFor` consults first.
     assetRows: expandCompanionRows([
-      ...ASSET_WIRING,
+      ...MESH_ASSET_WIRING,
       ...galaxyCatalogAssetRows(galaxyRuntime),
       ...cosmicWebDensityAssetRows(densityRuntime),
       ...structureAssetRows(structureRuntime),

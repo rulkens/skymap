@@ -11,7 +11,7 @@
  * arbitrary in a way that is stable across runs and obvious on sight.
  *
  * Unranked slots (the DEV synthetic-volume fixtures, which have no
- * `ASSET_WIRING` row) sort last as a block rather than being dropped — the
+ * asset row) sort last as a block rather than being dropped — the
  * panel is an inventory, and a row silently missing from it is worse than a row
  * with a blank rank.
  *

@@ -38,7 +38,7 @@ export type DebugPanelProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
   /**
-   * Authored `ASSET_WIRING` fetch rank per slot name, from the engine handle's
+   * Authored asset-row fetch rank per slot name, from the engine handle's
    * `debug.assetPriorities`. A getter, not a Map, because slots are minted by
    * the async bootstrap long after the handle is built.
    */

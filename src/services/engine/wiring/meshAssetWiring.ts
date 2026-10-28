@@ -1,10 +1,10 @@
 /**
- * ASSET_WIRING — core's half of the fetchable-asset registry: one row per mesh body
- * (the mesh slots stay core's, beside the one mesh renderer every body-bearing Layer
- * draws through). `createLayers` folds these with every Layer's rows into
- * `state.assetRows`. Each `demand(ctx)` is a pure predicate over `DemandCtx`, re-run
- * whole on any state change, so no edge can be missed. The slots are minted in
- * `wireSlots`, so a row's `factory` throws if the construction pass calls it.
+ * MESH_ASSET_WIRING — core's asset rows: one per mesh body (the mesh slots stay
+ * core's, beside the one mesh renderer every body-bearing Layer draws through).
+ * `createLayers` folds these with every Layer's rows into `state.assetRows`. Each
+ * `demand(ctx)` is a pure predicate over `DemandCtx`, re-run whole on any state
+ * change, so no edge can be missed. `wireSlots` mints the slots, so a row's
+ * `factory` is never called and throws if it is.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -20,11 +20,8 @@ import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 
-/** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
-const externalFactory = (): never => {
-  throw new Error(
-    'assetWiring: mesh body slots (built: "external") are minted in wireSlots; the construction pass must not build them',
-  );
+const neverCalledFactory = (): never => {
+  throw new Error('meshAssetWiring: mesh body slots are minted in wireSlots, never by a row');
 };
 
 /**
@@ -43,8 +40,7 @@ function meshBodyRow(body: MeshPresentation): AssetWiringRow {
   };
   return {
     key: meshBodySlotKey(body.id),
-    built: 'external',
-    factory: externalFactory,
+    factory: neverCalledFactory,
     req: (tier) => ({
       meshKey: body.meshKey,
       tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
@@ -59,7 +55,7 @@ function meshBodyRow(body: MeshPresentation): AssetWiringRow {
   };
 }
 
-export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
+export const MESH_ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // ── Mesh bodies (whale, petunias, …) ─────────────────────────────
   ...MESH_PRESENTATIONS.map(meshBodyRow),
 ];

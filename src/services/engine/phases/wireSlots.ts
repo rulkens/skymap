@@ -3,27 +3,22 @@
  * orchestrator. Every Layer's slots already exist (`createLayers` minted them);
  * this mints core's own and then lets the demand loop decide what loads:
  *
- *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
- *      the composed rows.
- *      Pure: no state writes, no loads.
- *   2. `installSlots` — the single mutation site that writes each built slot
- *      onto its named `state.assetSlots` field.
- *   3. The mesh body family (`wireMeshBodySlots`) — minted here, not by
- *      `buildSlotsFromRegistry` (its rows carry `built: 'external'`).
- *   4. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
+ *   1. `wireMeshBodySlots` — core's own slots, the mesh body family (the mesh
+ *      slots stay beside the one mesh renderer every body-bearing Layer uses).
+ *   2. `createSurfaceTileStream` / `seedVisibilityFades` — the surface
  *      virtual texture, and every visibility identity at its boot target
  *      (`installVisibilityGates` later subscribes its gating slots, so a
  *      commit or release retargets that identity's fade).
- *   5. `installLoadProgress` — the flat `allSlots` registry + load-progress
+ *   3. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over core's slots and every Layer's.
- *   6. `installSlotReadyWake` — one subscription per slot wakes the render
+ *   4. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
  *      `installFormatVersionAlert` shares the same window and shape: the first
  *      time any slot's error is a `FormatVersionError`, it dispatches a
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
  *      visitor's `seenVersion` already hid the splash, so the alert needs
  *      both to actually reach them.
- *   7. `reevaluateDemand` — the single place loads start, awaited on
+ *   5. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
  *      with its tier-derived request. The same loop re-runs on every state
@@ -49,8 +44,6 @@
  *   - Mutates `deps.allSlots` — populated with every installed slot.
  */
 
-import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
-import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
@@ -70,16 +63,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
 
-  // Build every core, non-external slot from the composed rows, then install
-  // them in one mutation pass. The keyed families are skipped here
-  // (built: 'external' — minted below); a Layer's rows are skipped because
-  // `createLayers` already minted their slots.
-  const slots = buildSlotsFromRegistry(state.assetRows, { state, cb });
-  installSlots(state, slots);
-
-  // The mesh body family: its `ASSET_WIRING` rows carry `built: 'external'`, so
-  // `buildSlotsFromRegistry` above skips them and they're minted here directly.
-  // Must run before `installLoadProgress` (enumerates them into `allSlots`) and
+  // Before `installLoadProgress` (enumerates them into `allSlots`) and
   // `reevaluateDemand` (triggers their loads).
   wireMeshBodySlots(state);
 

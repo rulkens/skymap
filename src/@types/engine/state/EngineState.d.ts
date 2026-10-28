@@ -95,7 +95,7 @@ export type EngineState = {
   /**
    * The composed contributions: core's constants followed by each Layer's, in
    * tuple order, assembled once by `createLayers`. Every runtime reader walks
-   * these rather than `CONTENT_PASSES` / `ASSET_WIRING`, which are core's
+   * these rather than `CONTENT_PASSES` / `MESH_ASSET_WIRING`, which are core's
    * authored halves only; every compute row is a Layer's. `assetRows` is the
    * COMPANION-EXPANDED fold over both halves; `layerSlots` holds the slot each
    * Layer asset row's factory minted, consulted by `slotFor` ahead of core's

@@ -514,7 +514,7 @@ boot passes `concatUniqueRows` and `checkFrameOrder`; the DebugPanel render togg
 
 **Done:** `grep -rnE "buildSlotsFromRegistry|installSlots|isCoreSlotFieldKey|isBodyTextureKey|\bASSET_WIRING\b" src tests` is empty.
 
-- [ ] Task 4
+- [x] Task 4
 
 ### Task 5: the constant body store goes (O9)
 

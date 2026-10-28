@@ -1,6 +1,6 @@
 /**
  * expandCompanionRows — the fold from `CompanionAssetRow` to a full
- * `AssetWiringRow`, run once where `ASSET_WIRING` is built. Pins
+ * `AssetWiringRow`, run once where `createLayers` composes the asset rows. Pins
  * the derivation arithmetic and the two failure modes a chained or missing
  * parent would otherwise surface as a swallowed `TypeError` inside a demand
  * predicate, starving one asset silently.
@@ -51,7 +51,6 @@ describe('expandCompanionRows', () => {
     expect(expanded!.demand(ctxWithSlotState('loading'))).toBe(true);
     expect(expanded!.demand(ctxWithSlotState('idle'))).toBe(false);
     expect(expanded!.priority).toBe(21);
-    expect(expanded!.built).toBeUndefined();
   });
 
   it('a companion whose parent is absent or is itself a companion throws at expansion', () => {

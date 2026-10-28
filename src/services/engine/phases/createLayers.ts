@@ -43,7 +43,7 @@ import { gateWorldLabelProducer } from '../layer/gateWorldLabelProducer';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
-import { ASSET_WIRING } from '../wiring/assetWiring';
+import { MESH_ASSET_WIRING } from '../wiring/meshAssetWiring';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -170,7 +170,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // `expandCompanionRows` is only correct over a list holding both.
   state.assetRows = expandCompanionRows(
     concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
-      ASSET_WIRING,
+      MESH_ASSET_WIRING,
       ...instances.map((instance) => instance.assets),
     ]),
   );
