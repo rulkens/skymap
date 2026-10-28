@@ -18,7 +18,6 @@ import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
@@ -91,15 +90,7 @@ function fadeOf(
 function makeState(): EngineState {
   return {
     // Real seed tables, so `sceneOccluderBodies` yields genuine J2000 occlude weights.
-    gpu: { texturedBodyRenderer: null },
-    data: {
-      bodies: {
-        earth: SCENE_EARTH,
-        planets: SCENE_PLANETS,
-        meshBodies: SCENE_MESH_BODIES,
-        sceneBodies: SCENE_BODIES,
-      },
-    },
+    gpu: {},
     settings: {
       missions: { craft: null },
       starCatalogs: {
@@ -118,7 +109,6 @@ function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined
   return labels.find((l) => l.id === id)?.fadeAlpha;
 }
 
-/** Core's captions and the craft's, from the missions Layer's producer, every item on. */
 function captionsAt(ctx: FrameView): readonly Label2D[] {
   return [
     ...produceSceneBodyCaptions(makeState(), ctx, fadeOf()).labels,
@@ -126,7 +116,6 @@ function captionsAt(ctx: FrameView): readonly Label2D[] {
   ];
 }
 
-/** The Galactic Centre caption, from its own Layer's producer. */
 function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
   return fadeAlphaOf(
     produceBlackHoleCaptions()(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
@@ -267,7 +256,6 @@ describe('produceSceneBodyCaptions occlude weight', () => {
   const MOON_LABEL_ID = 'sceneBody-moon';
   const EARTH_POS = worldPosOf(EARTH_LABEL_ID);
 
-  /** Unit vector from `a` to `b`, in the Mpc frame the captions live in. */
   function direction(a: Vec3, b: Vec3): Vec3 {
     const d: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     const n = Math.hypot(d[0], d[1], d[2]);

@@ -1,13 +1,10 @@
 /**
- * Visual baseline — renderFrame's draw-command sequence, independent of how many
- * `beginRenderPass` blocks host those draws, so a pass-split refactor must still
- * hash byte-identically. Boundaries are excluded on purpose: a split changes their
- * count, which would fail the baseline by definition.
+ * Visual baseline — renderFrame's draw-command sequence, independent of how many `beginRenderPass`
+ * blocks host the draws, so a pass-split refactor must still hash byte-identically. Boundaries are
+ * excluded on purpose: a split changes their count.
  *
- * Recorded at the renderer-mock entry point, not `pass.draw` on the encoder — the
- * mocks short-circuit first, so "what did the orchestrator dispatch?" is the only
- * observable granularity. The horizon shell is excluded: its fade band mirrors the
- * Milky Way's, so the two never co-exist in one frame.
+ * Recorded at the renderer-mock entry point (the mocks short-circuit before `pass.draw`). The horizon
+ * shell is excluded: its fade band mirrors the Milky Way's, so the two never co-exist in one frame.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -27,7 +24,6 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
 import { PRELUDE } from '../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameContentPlanner';
@@ -48,13 +44,6 @@ import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilame
 import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 
-// ── Recording harness ──────────────────────────────────────────────────────
-//
-// Every interesting event the orchestrator emits is pushed onto a single
-// `DrawRecord[]`.  We use a discriminated `kind` so the snapshot reader can
-// tell renderer draws apart from boundary events at a glance, and so the
-// per-pass filter (drop boundary events from the hash) is one .filter() call.
-
 type DrawRecord =
   | { kind: 'beginRenderPass' }
   | { kind: 'passEnd' }
@@ -62,20 +51,8 @@ type DrawRecord =
   | { kind: 'queueSubmit' }
   | { kind: 'rendererDraw'; renderer: string; argShape: string };
 
-/**
- * Cheap, allocation-light "argument shape" stringifier.  We don't snapshot
- * raw values — those vary with the per-frame derived numbers (pxPerRad,
- * canvas size).  Instead we stringify the TYPE + LENGTH of each argument:
- * - `pass` (the GPURenderPassEncoder mock) → `'pass'`
- * - typed arrays / arrays → `'<TypedArrayName>[<length>]'`
- * - objects → `'object'`
- * - numbers → `'number'`
- * - everything else → typeof
- *
- * This captures "the call site delivered N args of these kinds" which is
- * what the visual-equivalence claim actually cares about — Task 8 splits
- * the render pass boundaries, NOT the per-renderer call signatures.
- */
+/** Stringifies each argument's TYPE + LENGTH (not raw values, which vary with per-frame numbers): 'pass'
+ *  for the mock encoder, `'<TypedArrayName>[<length>]'` for arrays, otherwise typeof. */
 function describeArg(arg: unknown): string {
   if (arg === null) return 'null';
   if (arg === undefined) return 'undefined';
@@ -87,7 +64,6 @@ function describeArg(arg: unknown): string {
   if (arg instanceof Uint32Array) return `Uint32Array[${arg.length}]`;
   if (Array.isArray(arg)) return `Array[${arg.length}]`;
   if (typeof arg === 'object') {
-    // Detect the pass-encoder sentinel we stuff into our mock pass.
     const rec = arg as Record<string, unknown>;
     if (rec.__kind === 'pass') return 'pass';
     return 'object';
@@ -99,11 +75,7 @@ function describeArgs(args: ReadonlyArray<unknown>): string {
   return args.map(describeArg).join(',');
 }
 
-// ── WebGPU mock fabricators ────────────────────────────────────────────────
-
 function makeFakeRenderPass(records: DrawRecord[]) {
-  // The pass object is identified by a __kind tag so describeArg can
-  // collapse it to the short label `'pass'` instead of `'object'`.
   return {
     __kind: 'pass',
     end: vi.fn(() => {
@@ -150,12 +122,6 @@ function makeFakeContext(): GPUCanvasContext {
   } as unknown as GPUCanvasContext;
 }
 
-// ── Renderer mocks that log into the records array ─────────────────────────
-//
-// Each renderer mock's `.draw` (or `.render`) pushes a `rendererDraw` event
-// carrying its own short name + the stringified arg shape.  This is the
-// SEQUENCE the snapshot pins.
-
 function makeLoggingRenderer(records: DrawRecord[], name: string, method = 'draw') {
   const mock = vi.fn((...args: unknown[]) => {
     records.push({ kind: 'rendererDraw', renderer: name, argShape: describeArgs(args) });
@@ -164,9 +130,6 @@ function makeLoggingRenderer(records: DrawRecord[], name: string, method = 'draw
 }
 
 function makeRenderTargets(): any {
-  // The offscreen target table — the executor resolves the hdr + density
-  // colour attachments via viewOf(id); the tone-map blit is the FRAME
-  // program's `hdr→swap` composite (see makeCompositor).
   const views: Record<string, GPUTextureView> = {
     hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
     'cosmic-web-density': { __id: 'density-view' } as unknown as GPUTextureView,
@@ -237,8 +200,6 @@ function makeRenderTargets(): any {
 }
 
 function makeCompositor(records: DrawRecord[]): any {
-  // The FRAME program's single composite step: the Compositor tone-maps the
-  // HDR target onto the swap chain inside a render pass the executor opens.
   return {
     label: 'compositor',
     draw: vi.fn((...args: unknown[]) => {
@@ -251,8 +212,6 @@ function makeCompositor(records: DrawRecord[]): any {
     destroy: vi.fn(),
   };
 }
-
-// ── Domain fixture helpers (camera, point cloud) ───────────────────────────
 
 // Fixture camera optics — the ctx built in the test body mirrors these.
 // SCENE's `plan` row names 'structure-markers' by string — a stub with an
@@ -275,20 +234,14 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
 const FIXTURE_CANVAS_HEIGHT_PX = 720;
 
-// Camera distance DERIVED from the Milky-Way fade knobs: at this distance
-// the disc's apparent diameter is twice MILKY_WAY_FADE_FULL_PX under the
-// fixture optics, so milkyWayFadeAlpha is 1 by construction and the
-// milky-way entry stays in the baseline draw sequence. A visual-gate
-// re-tune of the fade band moves this distance instead of silently
-// dropping the pass from the snapshot.
+// Camera distance DERIVED from the Milky-Way fade knobs: the disc's apparent diameter is twice
+// MILKY_WAY_FADE_FULL_PX under the fixture optics, so milkyWayFadeAlpha is 1 by construction and a
+// fade re-tune moves this distance instead of silently dropping the pass from the snapshot.
 const MW_ALIVE_DIST_MPC =
   (2 * MILKY_WAY_RADIUS_MPC * (FIXTURE_CANVAS_HEIGHT_PX / (2 * Math.tan(FIXTURE_FOV_Y_RAD / 2)))) /
   (2 * MILKY_WAY_FADE_FULL_PX);
 
 function makeCam(): OrbitCamera {
-  // Camera close enough that the Milky-Way disc sits safely above its FULL
-  // apparent size (MW_ALIVE_DIST_MPC), so milkyWayPass.draw computes
-  // fadeAlpha > 0 and dispatches the impostor.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
     distance: MW_ALIVE_DIST_MPC,
@@ -302,8 +255,6 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-// ── Test ───────────────────────────────────────────────────────────────────
-
 describe('renderFrame visual baseline', () => {
   it('renderFrame draw-command sequence remains stable across pass-split', () => {
     const records: DrawRecord[] = [];
@@ -312,7 +263,6 @@ describe('renderFrame visual baseline', () => {
     const device = makeFakeDevice(records, encoder);
     const context = makeFakeContext();
 
-    // Renderer mocks — each draw lands on the same `records` array.
     const galaxyPointRenderer = makeLoggingRenderer(records, 'point-sprites');
     // The cloud renderer has two entry points because its two passes target two
     // different textures: the additive stars into the reduced-resolution
@@ -322,13 +272,7 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    // The upsample handle milkyWayUpsamplePass.draw calls through
-    // `runtime.aggregateUpsample`, the twin of the density upsample below —
-    // wired with a logging draw so the snapshot captures the offscreen's
-    // merge back into HDR.
     const aggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
-    // The milkyWay Layer's passes close over their own runtime — the same
-    // logging renderers above ride it instead of `state.gpu`.
     const milkyWayRuntime = {
       cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
       cloudRenderer: milkyWayCloudRenderer,
@@ -348,8 +292,6 @@ describe('renderFrame visual baseline', () => {
         });
       }),
     };
-    // The density Layer's upsample handle, wired with a logging draw so the
-    // snapshot captures the upsample step.
     const densityUpsample = {
       draw: vi.fn((...args: unknown[]) => {
         records.push({
@@ -378,18 +320,13 @@ describe('renderFrame visual baseline', () => {
     const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
     const viewProj = new Float32Array(16) as unknown as Mat4;
     const drawPxPerRad = canvasHeight / (2 * Math.tan(cam.fovYRad / 2));
-    // The HDR encoders resolve one SlabView (COSMO) before the layer loop
-    // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
-    // directly — this fixture needs a real row there, not the pre-slab
-    // `slabs: []` shape.
+    // The HDR encoders index `ctx.slabs[COSMO]` via `slabViewOf`, so the fixture needs a real row there.
     const cosmoSlab: Slab = makeCosmoSlab({
       vp: Float64Array.from(viewProj as unknown as Float32Array),
     });
 
-    // Subsystems with non-empty lastOutput so the LOD-1 / LOD-2 passes'
-    // enabled() gates report true.  We populate one item in each list —
-    // the exact instance shape doesn't matter because our renderer mocks
-    // log only the arg-shape, not the per-element contents.
+    // Non-empty lastOutput so the LOD-1 / LOD-2 passes' enabled() gates report true; the mocks log only
+    // arg shapes, so one item per list suffices.
     const proceduralDisksSubsystem = {
       lastOutput: { instances: [{ stub: true }] as unknown[] },
     };
@@ -400,8 +337,6 @@ describe('renderFrame visual baseline', () => {
       hasInFlightWork: () => false,
     };
 
-    // The galaxy passes close over their Layer's runtime, so the same logging
-    // renderers and planner stubs ride it instead of `state.gpu`/`state.subsystems`.
     const galaxyRuntime = {
       pointRenderer: galaxyPointRenderer,
       proceduralDiskRenderer,
@@ -410,7 +345,6 @@ describe('renderFrame visual baseline', () => {
       texturedDisks: texturedDisksSubsystem,
     } as unknown as GalaxyCatalogRuntime;
 
-    // Shared by identity with the `renderFrame()` call's own `renderedTargets` below.
     const renderedTargets = new Set<string>();
     const ctx = {
       snapshot: {
@@ -420,14 +354,9 @@ describe('renderFrame visual baseline', () => {
         // The handed value's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
         focusBlend: 0,
-        // No body rows in this scene: the two slabs above are cosmological.
         slabBodyCandidates: [],
         bodyStates: new Map(),
-        // The executor resolves hdr/density attachments — and the density
-        // upsample its source texture — via ctx.snapshot.renderTargets.viewOf(id).
         renderTargets,
-        // Frame-wide: which targets hold this frame's content — the executor
-        // unions into this as it opens each render step; a later pass reads it.
         renderedTargets,
       },
       cam,
@@ -460,12 +389,8 @@ describe('renderFrame visual baseline', () => {
 
     renderFrame({
       canvas: ctx,
-      // Mono's own contract: the frame's one view is the canvas itself.
       views: [ctx],
-      // Engine state with every optional renderer wired in — this is what
-      // makes all eight HDR passes fire.
       state: {
-        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
         viewRig: 'mono',
         gpu: {
           labelRendererCosmo: labelRenderer,
@@ -474,41 +399,23 @@ describe('renderFrame visual baseline', () => {
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
           selectionRingRenderer: null,
-          // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
-          // Near-field handles null → the program's (hdr, NEAR0) render,
-          // foreground:0 render, and NEAR0 caption render all select
-          // nothing, and the foreground:0→swap composite is
-          // touched-set-skipped. The recorded draw sequence + pass-boundary
-          // counts stay the pure cosmological shape this baseline pins.
-          earthRenderer: null,
-          planetRenderer: null,
-          // Near-field handle null → atmosphereShellPass disabled AND the
-          // atmosphereSkyView compute step early-outs, so the recorded draw
-          // sequence stays the pure cosmological shape this baseline pins.
-          atmosphereShellRenderer: null,
+          // Near-field handles null: the near-field steps select nothing and the atmosphereShellPass /
+          // atmosphereSkyView compute are disabled, so the recorded sequence and boundary counts stay the pure
+          // cosmological shape this baseline pins.
           // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
           labelRendererNear: null,
-          // Every `ContentPass.draw` reads its renderer straight off
-          // `state.gpu.*` — this is the ONLY place these mock instances are
-          // wired in (no top-level `renderFrame` input field duplication;
-          // see `RenderFrameInput`'s slimmed shape). The local names below
-          // (`horizonShellRenderer`, `proceduralDiskRenderer`,
-          // `texturedDiskRenderer`) are the same logging-renderer instances
-          // declared above, so their `argShape` entries land in `records`.
-          // The milkyWay Layer's renderers reach their passes through
-          // `milkyWayRuntime` instead, not through `state.gpu`.
+          // Every `ContentPass.draw` reads its renderer off `state.gpu.*`; the local names below are the logging
+          // renderers declared above, so their `argShape` entries land in `records`. The milkyWay Layer's
+          // renderers ride `milkyWayRuntime` instead.
           horizonShellRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
-        // A null slot → slotReady false → not loaded.
-        // The encoders read the renderer-toggle override bag off
-        // `settings.debug.disabledPasses`; empty so every pass fires.
         settings: {
           galaxyCatalogs: {
             sizePx: settings.pointSizePx,
@@ -535,8 +442,6 @@ describe('renderFrame visual baseline', () => {
           debug: { disabledPasses: {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
-        // Pick-throttle bag; the content passes don't touch it, but the
-        // engine-state shape carries it.
         picking: {
           pickInFlight: false,
         },
@@ -554,8 +459,6 @@ describe('renderFrame visual baseline', () => {
           clipPlayer: { clipOpacityOf: () => 1 },
           cosmoLabelDirector: { labels: () => Array.from({ length: 12 }) },
         },
-        // The cubemap-capture bookkeeping — see the matching fixture comment
-        // in renderFrame.test.ts.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
         // The COMPOSED list `createLayers` writes: core's registry plus each
         // Layer's passes, whose draws this baseline records. Array position is
@@ -575,7 +478,7 @@ describe('renderFrame visual baseline', () => {
           milkyWayUpsamplePass(milkyWayRuntime),
           milkyWayPass(milkyWayRuntime),
         ].map((pass) => gatePassByFade(pass, PASS_GATE_STATE)),
-        computes: CORE_COMPUTES,
+        computes: [],
         planners: STUB_PLANNERS,
       } as never,
       device,
@@ -586,12 +489,8 @@ describe('renderFrame visual baseline', () => {
       renderedTargets,
     });
 
-    // The hash payload — only renderer-level draws, with the order they
-    // were emitted.  Render-pass boundaries (beginRenderPass / passEnd),
-    // encoder.finish, and queue.submit are deliberately filtered out, so
-    // this test stays stable across encoder-shape changes (e.g. the
-    // `FRAME_ORDER`'s density render line opening its own pass before the
-    // HDR render step).
+    // The hash payload: only renderer-level draws in emission order. Render-pass boundaries, encoder.finish
+    // and queue.submit are filtered out so this stays stable across encoder-shape changes.
     const drawSequence = records
       .filter((r): r is Extract<DrawRecord, { kind: 'rendererDraw' }> => r.kind === 'rendererDraw')
       .map((r) => ({ renderer: r.renderer, argShape: r.argShape }));
@@ -649,19 +548,11 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Boundary-event count for the no-timing 'merged' path: SIX begin/end
-    // pairs — one per non-empty render step's target group plus the composite.
-    // In FRAME-program order: the density raymarch pass, the (hdr, COSMO)
-    // mega-pass, the (mw-aggregate, NEAR0) pass (the cloud's additive star
-    // billboards into their own reduced-resolution offscreen), the
-    // (hdr, NEAR0) pass (the cloud's upsample + dust, on their own slab since
-    // the fixed COSMO near plane clipped the disc mid-descent), the hdr→swap
-    // composite pass, and the swap-chain overlay pass (marker-lines +
-    // labels). The tone-map's beginRenderPass is not hidden inside a bespoke
-    // blit helper — the executor opens the composite pass, so it appears
-    // here. Counts are asserted SEPARATELY from the inline snapshot:
-    // drawSequence captures the renderer-dispatch invariant, these counts
-    // capture the pass-boundary structure.
+    // Boundary-event count for the no-timing 'merged' path: SIX begin/end pairs, in FRAME-program order:
+    // the density raymarch pass, the (hdr, COSMO) mega-pass, the (mw-aggregate, NEAR0) cloud star pass, the
+    // (hdr, NEAR0) cloud upsample + dust pass (own slab since the fixed COSMO near plane clipped the disc
+    // mid-descent), the hdr→swap composite, and the swap-chain overlay pass. Asserted SEPARATELY from the
+    // inline snapshot: drawSequence captures the dispatch invariant, these counts the pass-boundary structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
     expect(beginCount).toBe(6);
