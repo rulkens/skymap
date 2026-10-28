@@ -8,7 +8,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLayers } from '../../../src/services/engine/phases/createLayers';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { bodyLayer } from '../../../src/layers/body/layer';
+import { bodyLayerWithoutGpu } from '../../helpers/engine/bodyLayerWithoutGpu';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
@@ -19,7 +19,6 @@ import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../src/@types/engine/BootstrapDeps';
-import type { Layer } from '../../../src/@types/engine/layer/Layer';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -66,7 +65,7 @@ describe('the body selection kind at boot', () => {
     await createLayers(state, {
       canvas: {},
       cb: { store, runSaga: handle.runSaga },
-      composition: { layers: [bodyLayer as unknown as Layer<string, unknown>] },
+      composition: { layers: [bodyLayerWithoutGpu] },
       phaseLocals: { device: {}, context: {}, format: 'bgra8unorm' },
     } as unknown as BootstrapDeps);
     store.dispatch(engineStatusChanged({ kind: 'loading' }));

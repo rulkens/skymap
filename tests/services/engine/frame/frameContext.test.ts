@@ -1,20 +1,15 @@
 /**
- * frameContext — unit tests for the per-FRAME derived snapshot: one camera,
- * one body-state sample, one clock. The caller assembles the `OrbitCamera`
- * now, so `ctx.cam` is the one it passed; view-shaped assertions (`vp`,
- * `slabs`, `drawPxPerRad`, the turned `bodyPose`) go through the canvas view.
- * Fixtures reuse one basis (`BASIS`) throughout — the poseBasis/upBasis split
- * is `runFrame.test.ts`'s orientation-frame-roll suite's job.
+ * frameContext — the per-FRAME derived snapshot: one camera, one body-state sample, one clock.
+ * `ctx.cam` is the caller-passed `OrbitCamera`; view-shaped assertions (`vp`, `slabs`,
+ * `drawPxPerRad`, the turned `bodyPose`) go through the canvas view. Fixtures reuse one basis
+ * (`BASIS`); the poseBasis/upBasis split is `runFrame.test.ts`'s job.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
-// Wraps the REAL `deriveSlabs` in a spy so this file's identity test can
-// assert `deriveView` fed it the SAME `bodyPose` closure it forwards onto
-// `FrameView.bodyPose` — the branch's central seam (six layer headers assert
-// it; nothing else in the suite can fail if a refactor mints a second
-// closure). Every other test in this file calls the real implementation
-// through the spy, so their assertions are unaffected.
+// Spy wrapping the REAL `deriveSlabs`: the identity test asserts `deriveView` fed it the SAME
+// `bodyPose` closure it forwards onto `FrameView.bodyPose`; nothing else fails if a refactor
+// mints a second closure.
 vi.mock('../../../../src/services/engine/frame/slabs', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../../../src/services/engine/frame/slabs')>();
@@ -44,8 +39,6 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
@@ -55,18 +48,11 @@ const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
 const CANVAS: Size = { width: 1920, height: 1080 };
 
-// Identity basis: the frame-local decode is already world space, so every case
-// below reproduces the pre-feature (basis-free) geometry exactly.
+// Identity basis: the frame-local decode is already world space.
 const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-/**
- * Build an `EngineState`-shaped fixture with the two `isEngineReady` guard
- * fields (`gpu.renderTargets`, `gpu.compositor`) plus `booted` populated by
- * default. Each test can clear any one to exercise the not-ready branch. The
- * `galaxyPointRenderer`/`galaxyPickRenderer`/`texturedDisks` fields are
- * ordinary (non-gating, D13) `EngineState` shape, kept here only because
- * `deriveSlabs`/`visibleSlabBodies` read past them unconditionally.
- */
+/** `isEngineReady` guard fields populated by default (clear one for the not-ready branch); the
+ *  other renderer fields are non-gating but `deriveSlabs`/`visibleSlabBodies` read past them. */
 function makeState(
   overrides: {
     booted?: boolean;
@@ -91,17 +77,11 @@ function makeState(
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     terrain: FLAT_TERRAIN,
     subsystems: { texturedDisks },
-    // No focused pivot in these fixtures — the input's `altitudeMpc` below is
-    // the raw cam.distance, the near-field bracket every arithmetic assertion
-    // was written against.
+    // No focused pivot: the input's `altitudeMpc` is the raw cam.distance.
     selectionRows: { hover: null, select: null, focus: null },
-    // No seeded bodies and no covered stars — `visibleSlabBodies` and the
-    // scene-body roster (both read unconditionally past the ready gate) get an
-    // empty registry, so every fixture below stays a 2-row (NEAR0+COSMO) slab
-    // table, matching what every assertion in this file was written against.
+    // No seeded bodies or covered stars: every fixture stays a 2-row (NEAR0+COSMO) slab table.
     slabRows: [],
     visibilityEntries: [],
-    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       bodies: { items: {} },
     },
@@ -109,7 +89,6 @@ function makeState(
   } as unknown as EngineState;
 }
 
-/** The input bag `runFrame` assembles: the camera, its arm, and the clock. */
 function frameInput(
   pose: CameraPose,
   over: {
@@ -162,8 +141,6 @@ describe('deriveFrameContext — ready branch', () => {
     expect(deriveFrameContext(makeState(), input).isReady).toBe(true);
     // The canvas view's camera is the TURNED one: same projection and orbit
     // distance (the foreground gates read it), pose carried by its bases.
-    // The pose-true camera itself is never published on the snapshot (K2) —
-    // `input.cam` is its one home, threaded explicitly into `deriveView`.
     const canvas = canvasView(makeState(), input);
     expect(canvas.cam.fovYRad).toBeCloseTo(1.2, 12);
     expect(canvas.cam.aspect).toBeCloseTo(2, 12);
@@ -191,9 +168,6 @@ describe('deriveFrameContext — ready branch', () => {
     const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
     const canvas = canvasView(makeState(), frameInput(pose));
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
-    // The fixture seeds no bodies/stars, so every new deriveSlabs input beyond
-    // cam/cosmoVp/altitudeMpc is inert (empty registry, no star spheres) —
-    // matching what `deriveView` itself derives from `makeState()`.
     const expected = deriveSlabs({
       cam,
       frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
@@ -219,10 +193,8 @@ describe('deriveFrameContext — ready branch', () => {
   });
 
   it('stamps simDays onto the ready context (the frame epoch every body reader shares)', () => {
-    // simDays is a separate axis from nowMs: it is scene time (where the planets
-    // are), threaded through so `sceneBodyStates(state, ctx)` evaluates the body
-    // snapshot at one agreed instant. A non-J2000 value proves it is the passed
-    // argument, not a re-derive.
+    // simDays is scene time (where the planets are), distinct from nowMs; a non-J2000 value proves
+    // it is the passed argument, not re-derived.
     const SCRUBBED = 2_460_000.25;
     const ctx = deriveFrameContext(makeState(), frameInput(RESTING_POSE, { simDays: SCRUBBED }));
     expect(ctx.isReady).toBe(true);
@@ -267,30 +239,21 @@ describe('deriveFrameContext — roll threads into camBasisWorld (P5)', () => {
 
 describe('deriveView — bodyPose identity seam (m1)', () => {
   it('feeds deriveSlabs the SAME bodyPose closure it forwards onto ctx.bodyPose', () => {
-    // `deriveSlabs` is the named import above — vi.mock intercepts module
-    // resolution, so this IS the spy-wrapped version.
     const deriveSlabsSpy = vi.mocked(deriveSlabs);
     deriveSlabsSpy.mockClear();
 
     const canvas = canvasView(makeState(), frameInput(RESTING_POSE));
 
     expect(deriveSlabsSpy).toHaveBeenCalledTimes(1);
-    // Reference equality, not "produces the same answer" — a refactor that
-    // mints a SECOND closure with identical behaviour would pass a
-    // value-equality check but reintroduce the drift this seam exists to
-    // prevent (a future pose provider swap, or a caching layer, could then
-    // change one without the other).
+    // Reference equality: a second closure with identical behaviour would pass a value check but
+    // reintroduce the drift this seam exists to prevent.
     expect(deriveSlabsSpy.mock.calls[0]![0]!.pose).toBe(canvas.bodyPose);
   });
 });
 
-/**
- * The world camera position and basis `frameContext.ts` itself derives from a
- * `CameraPose` — the SAME `assembleOrbitCamera` + `cameraBasisWorld`
- * composition, so a test built from it exercises the seam's ROUTING (does the
- * right provider fire for the right body?), not a second copy of the world
- * decode arithmetic (already pinned by poseFrameConversion.test.ts).
- */
+/** The world camera position and basis `frameContext.ts` derives from a `CameraPose`, so a test
+ *  built from it exercises the seam's ROUTING, not a copy of the world decode arithmetic
+ *  (pinned by poseFrameConversion.test.ts). */
 function worldCamera(
   pose: CameraPose,
   projection: CameraProjection,
@@ -366,14 +329,10 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
 });
 
 describe('deriveFrameContext — scene-body admission', () => {
-  const MARS = findByIdOrThrow(SCENE_PLANETS, 'mars', 'test');
-
-  /** The frame's admitted ids with the Sun's raw fade and the `starCatalog` clip as given. */
   function admittedIds(sunFade: number, starClip = 1): readonly string[] {
     const state = {
       ...makeState(),
       visibilityEntries: APP_VISIBILITY,
-      data: { bodies: { earth: null, planets: [MARS], meshBodies: [] } },
       subsystems: {
         texturedDisks: {},
         fades: {
@@ -396,7 +355,6 @@ describe('deriveFrameContext — scene-body admission', () => {
     expect(admittedIds(0)).not.toContain('sun');
     // A raw fade of 1 under a clip at 0 hands 0: the clip hides it too.
     expect(admittedIds(1, 0)).not.toContain('sun');
-    // A body no entry covers is always admitted.
     expect(admittedIds(0)).toContain('mars');
     expect(admittedIds(1, 0)).toContain('mars');
   });
