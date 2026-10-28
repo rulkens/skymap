@@ -34,15 +34,13 @@ describe('band items scoping', () => {
 // Pins that the near-field Layer rows yield at the foreground gate, where core skips their
 // passes: a band dropped from any of these entries draws a NEAR0 pass at galaxy zoom again.
 describe('near-field entries at the foreground gate', () => {
-  it.each([
-    ['starCatalog', 'sun'],
-    ['sStarTrails', undefined],
-    ['missionTrails', undefined],
-    ['orbitTrails', undefined],
-  ])('%s is full inside the gate and gone at it', (key, item) => {
-    expect(valueAt(key, FOREGROUND_MAX_DISTANCE_MPC / 4, item)).toBe(1);
-    expect(valueAt(key, FOREGROUND_MAX_DISTANCE_MPC, item)).toBe(0);
-  });
+  it.each(['sStarTrails', 'missionTrails', 'orbitTrails'])(
+    '%s is full inside the gate and gone at it',
+    (key) => {
+      expect(valueAt(key, FOREGROUND_MAX_DISTANCE_MPC / 4)).toBe(1);
+      expect(valueAt(key, FOREGROUND_MAX_DISTANCE_MPC)).toBe(0);
+    },
+  );
 });
 
 // One astronomical unit from the Sun: the home view's distance from the render origin.

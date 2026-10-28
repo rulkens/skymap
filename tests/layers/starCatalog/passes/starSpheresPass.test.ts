@@ -105,8 +105,9 @@ function makeCtx(
   } as unknown as FrameView;
 }
 
-// A camera 5 kpc down +z: parsecs beyond every seeded star (the Sun included),
-// so nothing resolves to a sphere.
+// A below-gate camera 5 kpc down +z: inside FOREGROUND_MAX_DISTANCE_MPC
+// (~10 kpc), so the distance gate passes — yet still parsecs beyond every
+// seeded star (the Sun included), so nothing resolves to a sphere.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
 /**
@@ -168,6 +169,18 @@ describe('starSpheresPass.enabled', () => {
     const [mars] = positionedOf(SCENE_PLANETS.filter((p) => p.id === 'mars'));
     const ctx = makeCtx(halfAuFrom(mars!.positionMpc), [mars!]);
     expect(pass.enabled(makeState(), ctx, VIEW_STUB, ALL_ON)).toBe(false);
+  });
+
+  it('is disabled beyond the foreground gate', () => {
+    // At galaxy scale the Sun sphere is a deep-sub-pixel speck: the shared
+    // gate turns the row off before the partition is computed, so the
+    // (foreground:0, NEAR0) step can be skipped wholesale.
+    const pass = starSpheresPass(makeRuntime({ draw: vi.fn() }));
+    const state = makeState();
+    expect(pass.enabled(state, makeCtx([0, 0, 0.43]), VIEW_STUB, ALL_ON)).toBe(false);
+    expect(
+      pass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC]), VIEW_STUB, ALL_ON),
+    ).toBe(false);
   });
 });
 

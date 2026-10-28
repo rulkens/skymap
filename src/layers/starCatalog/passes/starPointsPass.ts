@@ -58,20 +58,20 @@
  *
  * ### When it draws
  *
- * The entry's `foreground` band (`FOREGROUND_RECEDE`, applied by core) is the shared
- * near-field gate: at zero core skips the pass. `enabled` gates on the backdrop-dissolve
- * band (`STAR_BACKDROP_DISSOLVE` > 0) AND an unresolved seeded star —
+ * `enabled` gates on the shared near-field distance gate
+ * (`FOREGROUND_MAX_DISTANCE_MPC`), the backdrop-dissolve band
+ * (`STAR_BACKDROP_DISSOLVE` > 0), AND an unresolved seeded star —
  * the same sort `draw` consumes, so the enable gate and the uploaded
  * set cannot disagree. The backdrop is a minimum-size additive sprite field,
  * so at galaxy framing the whole roster collapses onto a few pixels into one
  * bright blob; the `STAR_BACKDROP_DISSOLVE` band dissolves it smoothly (its rgb scaled
- * per frame in `draw`) and completes STRICTLY inside the foreground band, so that
- * band's edge lands on already-black sprites and never pops. Once the dissolve
+ * per frame in `draw`) and completes STRICTLY inside the shared gate, so the
+ * gate's hard cut lands on already-black sprites and never pops. Once the band
  * hits 0 the layer disables outright — the "opacity 0 ⇒ no render" house rule
  * — which also empties the `(hdr, NEAR0)` render step the executor then skips.
- * The band runs before the sort so it is not run at all when the camera is far.
- * The sort is bound at `ctx.drawCamPos` (absolute frame) while `draw` rebases at
- * `view.camPos` (NEAR0's origin-relative frame);
+ * The distance gate and the band run before the sort so it is not run at all
+ * when the camera is far. The sort is bound at `ctx.drawCamPos` (absolute
+ * frame) while `draw` rebases at `view.camPos` (NEAR0's origin-relative frame);
  * the two coincide because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  */
 
@@ -88,6 +88,7 @@ import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { STAR_BACKDROP_DISSOLVE } from '../data/starBackdropDissolve';
 import { starExposureRamp } from '../../../utils/star/starExposureRamp';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
@@ -111,12 +112,16 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
   return {
     name: 'star-points',
     fade: 'starCatalog',
-    // Deliberately OFF the sky-cubemap capture roster: the S-stars need
-    // finite-distance lensing rather than an at-infinity cubemap — see
-    // `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
+    // Deliberately OFF the sky-cubemap capture roster: the capture face pose
+    // carries a placeholder `distance: 1` Mpc (`cubemapCaptureFrame.ts`'s pose)
+    // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
+    // anything. The S-stars need finite-distance lensing rather than an
+    // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
 
-    // Backdrop band first, sort last — see the module header's gate note.
+    // Distance first, backdrop-band second, sort last — see the module
+    // header's gate note.
     enabled(state, ctx, _view) {
+      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       // Once the dissolve band has zeroed the backdrop, DISABLE the layer rather
       // than draw black sprites — the "opacity 0 ⇒ no render" house rule, which
       // also empties the (hdr, NEAR0) step so the executor skips it. Keyed on the

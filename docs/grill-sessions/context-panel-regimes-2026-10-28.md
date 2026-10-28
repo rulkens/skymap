@@ -128,7 +128,7 @@ Band gaps that R1 turns into work (ground preparation candidates):
 |---|---|---|
 | flow | **done** (this branch): `SURVEY_DEEP_ZOOM` on the entry | outer edge still to decide |
 | cosmicWebFilaments | **done** (this branch): `SURVEY_DEEP_ZOOM` on the entry | outer edge still to decide |
-| starCatalog | **done** (this branch): `FOREGROUND_RECEDE` on `starCatalog` and `sStarTrails`, the two pass gates deleted | the Galactic Centre sits inside the gate, so no `from` was needed |
+| starCatalog | `sStarTrails` **done** (this branch). `starCatalog` keeps its two pass gates: the entry carries `bodies`, and scene-body admission runs once per frame with no view, so it cannot read a band (`appVisibility.test.ts` pins it) | admission needs a view-aware reading before the star catalog can declare its band; the panel's star rows read the gate until then |
 | body (orbit trails) | **done** (this branch): `FOREGROUND_RECEDE` on `orbitTrails`; the group's value now carries the band | |
 | missions (trails, craft labels) | **done** (this branch) for the trails; the 9.2 kpc caption cut stays | |
 | blackHoles | hard gate; lens 100–500 AU from the GC; no show entry at all | a show entry needs a switch (`settings.blackHoles.items[id].enabled`) that does not exist; whether the Sgr A* marker becomes toggleable is a design question, so its two gates stay |
