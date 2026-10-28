@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
+import { serializeShaderLoads } from './tools/utils/vite/serializeShaderLoads.ts';
 import react from '@vitejs/plugin-react';
 
 // Vitest doesn't auto-inherit plugins from vite.config.ts in our setup,
@@ -13,13 +14,10 @@ import react from '@vitejs/plugin-react';
 // Vitest can transform .tsx component files — without it, JSX syntax in
 // test files triggers a parse error in the SSR pipeline.
 export default defineConfig({
-  plugins: [react(), viteWesl({ extensions: [staticBuildExtension] })],
+  plugins: [react(), serializeShaderLoads(viteWesl({ extensions: [staticBuildExtension] }))],
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    setupFiles: [
-      'tests/setup/webgpuGlobals.ts',
-      'tests/setup/reactTestEnv.ts',
-    ],
+    setupFiles: ['tests/setup/webgpuGlobals.ts', 'tests/setup/reactTestEnv.ts'],
   },
 });

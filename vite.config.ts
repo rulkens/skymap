@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
+import { serializeShaderLoads } from './tools/utils/vite/serializeShaderLoads.ts';
 
 import { DEV_PORTS } from './tools/utils/io/devPorts.ts';
 import { distDir } from './tools/utils/io/distDir.ts';
@@ -64,7 +65,7 @@ function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer }
 // dropped, but it's harmless until then.
 export default defineConfig(({ command }) => ({
   plugins: [
-    viteWesl({ extensions: [staticBuildExtension] }),
+    serializeShaderLoads(viteWesl({ extensions: [staticBuildExtension] })),
     minifyStaticWgslPlugin(),
     react(),
     inlineEntryCssPlugin(),

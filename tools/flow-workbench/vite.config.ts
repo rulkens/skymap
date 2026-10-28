@@ -32,6 +32,7 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
+import { serializeShaderLoads } from '../utils/vite/serializeShaderLoads.ts';
 
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
 import { distDir } from '../utils/io/distDir.ts';
@@ -49,10 +50,12 @@ export default defineConfig(({ command }) => ({
   build: { outDir: resolve(distDir, toolPages.flowWorkbench), emptyOutDir: true },
   server: { port: DEV_PORTS.flowWorkbench },
   plugins: [
-    viteWesl({
-      extensions: [staticBuildExtension],
-      weslToml: resolve(import.meta.dirname, 'wesl.toml'),
-    }),
+    serializeShaderLoads(
+      viteWesl({
+        extensions: [staticBuildExtension],
+        weslToml: resolve(import.meta.dirname, 'wesl.toml'),
+      }),
+    ),
     react(),
   ],
 }));
