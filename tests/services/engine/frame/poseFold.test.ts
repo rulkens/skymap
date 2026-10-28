@@ -74,7 +74,7 @@ import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyAr
 import { isSiteArm } from '../../../../src/services/engine/camera/rungs/isSiteArm';
 import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
 import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
-import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
+import { DEFAULT_FOCUS_MOVES } from '../../../../src/data/camera/focusMoveDefaults';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
@@ -206,7 +206,7 @@ function parkAtCuriositySite(h: ReturnType<typeof makeHarness>): void {
   h.seedPose(absoluteArm(parked));
   h.focus('curiosity');
   h.tick(0);
-  h.tick(FOCUS_TWEEN_MS + 16);
+  h.tick(DEFAULT_FOCUS_MOVES.eased.durationMs + 16);
 }
 
 function commitCalls(spy: { mock: { calls: readonly (readonly unknown[])[] } }): unknown[] {
@@ -283,8 +283,7 @@ describe('runFrame — the regime fold', () => {
       startCameraTween({
         from: FROM,
         to: TO,
-        durationMs: 4000,
-        easing: 'linear',
+        motion: { style: 'eased', durationMs: 4000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -576,7 +575,7 @@ describe('runFrame — the regime fold', () => {
     // owed rides the follow target instead of the rung. The settle leaves the
     // eye at the rover's framing (10.73 m), hence the longer climb.
     h.tick(0);
-    h.tick(FOCUS_TWEEN_MS + 16);
+    h.tick(DEFAULT_FOCUS_MOVES.eased.durationMs + 16);
 
     const eyeStepM: number[] = [];
     const offRover: number[] = [];
@@ -833,7 +832,7 @@ describe('runFrame — the regime fold', () => {
     h.frame(1);
     expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
 
-    h.frame(60); // past FOCUS_TWEEN_MS: the debt is settled at Earth's framing
+    h.frame(60); // past the Eased duration: the debt is settled at Earth's framing
     diveUntilEngaged(h, { body: 'earth' });
     const engaged = h.state.cameraRuntime.register.pose;
     expect(engaged.frame).toEqual(EARTH_ARM);
@@ -867,7 +866,12 @@ describe('runFrame — the regime fold', () => {
     h.seedPose(absoluteArm(parked));
     h.focus('curiosity');
 
-    const frames = [0, FOCUS_TWEEN_MS, FOCUS_TWEEN_MS + 16, FOCUS_TWEEN_MS + 32].map((nowMs) => {
+    const frames = [
+      0,
+      DEFAULT_FOCUS_MOVES.eased.durationMs,
+      DEFAULT_FOCUS_MOVES.eased.durationMs + 16,
+      DEFAULT_FOCUS_MOVES.eased.durationMs + 32,
+    ].map((nowMs) => {
       h.tick(nowMs);
       return frameKey(h.store.getState().camera.base.frame);
     });

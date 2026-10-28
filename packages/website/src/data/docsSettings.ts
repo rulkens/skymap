@@ -794,6 +794,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: 'skymap',
       },
       {
+        name: 'Focus moves',
+        control: 'list',
+        does: 'Chooses how the camera flies to something you focus on. Eased keeps every part of the move on one curve over a fixed time. Geodesic flies the zoom and the pan together at an even pace, and takes longer for longer journeys. Planets and Home always use Eased.',
+        values: 'Eased, Geodesic',
+        first: 'Eased',
+        state: 'focusMoves.style',
+        firstValue: 'eased',
+      },
+      {
         name: 'Orbit friction',
         control: 'switch',
         does: 'Slows the orbit to a stop after you let go. Off, the camera keeps orbiting. Shown in the OpenSpace scheme only.',
