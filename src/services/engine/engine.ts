@@ -358,7 +358,11 @@ export function createEngine(
   const playClip = createPlayClip({
     store,
     clipPlayer: state.subsystems.clipPlayer,
-    getLivePose: () => liveWorldPose(state),
+    // The drawn lens rides as `fov`, so a `fov` track starts from what is on screen.
+    getLivePose: () => ({
+      ...liveWorldPose(state),
+      fov: state.cameraRuntime.outputs.projection.fovYRad,
+    }),
   });
 
   // `sampleCount` must cover the WAYPOINT-DENSEST clip, not the sparse demo path: a

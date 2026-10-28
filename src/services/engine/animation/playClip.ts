@@ -19,7 +19,7 @@ type PlayClipDeps = {
 
   clipPlayer: Pick<ClipPlayer, 'stop' | 'registerEndResolver'>;
 
-  /** Live produced camera pose, in world Mpc. */
+  /** Live produced camera pose, in world Mpc, with the drawn lens as `fov`. */
   getLivePose: () => CameraPose;
 };
 

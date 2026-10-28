@@ -44,6 +44,7 @@ export function seedCameraRuntime(args: {
     scheme: settings.cameraControls.scheme,
     own: {},
     pivotBody: null,
+    drivenLens: null,
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,
