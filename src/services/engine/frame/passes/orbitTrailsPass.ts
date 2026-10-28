@@ -14,9 +14,9 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
+import { ORBIT_REACH_BY_ROOT } from '../../../../data/bodies/orbitReachByRoot';
 import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
-import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
+import { distanceMpc } from '../../../../utils/math/distanceMpc';
 import { keplerianPositionMpc } from '../../../../utils/orbit/keplerianPositionMpc';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
@@ -41,14 +41,14 @@ export const orbitTrailsPass: ContentPass = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     if (state.orbitTrailGroups.every((group) => group.fade(ctx.snapshot) === 0)) return false;
     // Whole-layer sub-pixel cull: the per-orbit CULL_PX test in `draw`, bounded
-    // once per region at the camera's NEAREST possible distance to any of that
-    // region's orbit points. Keyed on the eye (`drawCamPos`), NOT `cam.distance`,
+    // once per root anchor (the Sun, the Galactic Centre, a planet host) at the
+    // camera's NEAREST possible distance to any of that root's orbit points. Keyed on the eye (`drawCamPos`), NOT `cam.distance`,
     // which measures to the orbit TARGET. Failing here lets the executor skip the
     // whole (hdr, NEAR0) step instead of packing zero records.
     const states = sceneBodyStates(state, ctx);
-    for (const [region, reachMpc] of ORBIT_REACH_BY_REGION) {
+    for (const [rootId, reachMpc] of ORBIT_REACH_BY_ROOT) {
       const nearestMpc = Math.max(
-        regionRelativeDistanceMpc(ctx.drawCamPos, region, states) - reachMpc,
+        distanceMpc(ctx.drawCamPos, states.get(rootId)!.positionMpc) - reachMpc,
         0,
       );
       if (nearestMpc === 0) return true;
