@@ -33,8 +33,11 @@ import {
   flyPath,
   atPoint,
   atFocus,
+  geodesic,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
 
 // ---------------------------------------------------------------------------
 // Test 1 — seq accumulates windows
@@ -345,5 +348,36 @@ describe('compileClip flyPath', () => {
     expect(() => validateCompositeExclusivity(baseTracks, [track])).toThrow(
       /declares channels \[target, distance\] but its sample writes \[target, distance, yaw\]/,
     );
+  });
+});
+
+describe('compileClip composites and their neighbours', () => {
+  const START = { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 1 };
+  const path = flyPath([atPoint([10, 0, 0], 10)], { over: 2, linger: 0 });
+
+  it('a body-framed writer on a composite channel throws', () => {
+    const framed = tween('distance', {
+      to: 5e6,
+      over: 1,
+      frame: { body: asSceneBodyId('earth') },
+    });
+    expect(() => compileClip({ start: START, timeline: [seq([path, framed])] })).toThrow(
+      /frame-tagged base 'distance' writer/,
+    );
+  });
+
+  it('two composites overlapping on a channel throw', () => {
+    const move = geodesic({ target: [5, 0, 0], distance: 3 }, DEFAULT_GEODESIC_TUNING, 0.9, 1);
+    expect(() => compileClip({ start: START, timeline: [all([path, move])] })).toThrow(
+      /both write 'target'/,
+    );
+  });
+
+  it("a path after a looping spin starts on the spin's yaw at that second", () => {
+    const loopSpin = spin('yaw', { by: 1, over: 2, ease: 'linear', loop: true });
+    const data: ClipData = { start: START, timeline: [all([loopSpin, seq([wait(5), path])])] };
+    // A loop keeps turning past its window, so this is not the spin's one-window `by`.
+    const spun = evaluateClip({ start: START, timeline: [loopSpin] }, 5).yaw;
+    expect(compileClip(data).compositeTracks[0]!.sample(0).yaw).toBeCloseTo(spun, 12);
   });
 });

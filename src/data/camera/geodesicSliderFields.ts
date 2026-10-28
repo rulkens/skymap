@@ -2,13 +2,13 @@
 
 import type { SliderField } from '../../@types/data/SliderField';
 
-export type GeodesicSliderKey = 'rho' | 'velocity' | 'minS' | 'maxS';
 
-export const GEODESIC_SLIDER_FIELDS: readonly SliderField<GeodesicSliderKey>[] = [
+
+export const GEODESIC_SLIDER_FIELDS: readonly SliderField<'rho' | 'velocity' | 'minS' | 'maxS'>[] = [
   {
     key: 'rho',
-    label: 'geodesic ρ',
-    min: 0.001,
+    label: 'Geodesic ρ',
+    min: 0.01,
     max: 2,
     step: 0.01,
     format: (v) => v.toFixed(3),
@@ -16,7 +16,7 @@ export const GEODESIC_SLIDER_FIELDS: readonly SliderField<GeodesicSliderKey>[] =
   },
   {
     key: 'velocity',
-    label: 'geodesic V',
+    label: 'Geodesic V',
     min: 1,
     max: 100,
     step: 1,
@@ -25,7 +25,7 @@ export const GEODESIC_SLIDER_FIELDS: readonly SliderField<GeodesicSliderKey>[] =
   },
   {
     key: 'minS',
-    label: 'geodesic min',
+    label: 'Geodesic min',
     min: 0.1,
     max: 5,
     step: 0.05,
@@ -34,7 +34,7 @@ export const GEODESIC_SLIDER_FIELDS: readonly SliderField<GeodesicSliderKey>[] =
   },
   {
     key: 'maxS',
-    label: 'geodesic max',
+    label: 'Geodesic max',
     min: 0.1,
     max: 5,
     step: 0.05,

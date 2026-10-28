@@ -151,10 +151,10 @@ export type Effect =
     }
   | {
       /**
-       * geodesic — van Wijk & Nuij's zoom/pan path out of the clip start to
-       * `to`, one composite writer over `target` + `distance`; yaw and pitch
-       * stay open to base tweens. `over` (seconds) omitted ⇒ the arc-length
-       * duration from `tuning`. See `buildGeodesicTrack`.
+       * geodesic — van Wijk & Nuij's zoom/pan path out of the running pose at
+       * its start to `to`, one composite writer over `target` + `distance`;
+       * yaw and pitch stay open to base tweens. `over` (seconds) omitted ⇒ the
+       * arc-length duration from `tuning`. See `buildGeodesicTrack`.
        */
       readonly kind: 'geodesic';
       readonly to: { readonly target: Vec3; readonly distance: number };

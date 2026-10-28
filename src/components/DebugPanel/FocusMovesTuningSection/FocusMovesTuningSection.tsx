@@ -61,7 +61,7 @@ function FocusMovesTuningSection({
       onSliderChange={onSliderChange}
     >
       <label title="Ease of the Geodesic arrival. Monotone eases only; an overshoot would fly past the target.">
-        geodesic ease{' '}
+        Geodesic ease{' '}
         <select
           value={geodesic.ease}
           onChange={(e) => onGeodesicChange({ ease: e.target.value as Ease })}

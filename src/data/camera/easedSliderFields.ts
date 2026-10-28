@@ -5,7 +5,7 @@ import type { SliderField } from '../../@types/data/SliderField';
 export const EASED_SLIDER_FIELDS: readonly SliderField<'easedS'>[] = [
   {
     key: 'easedS',
-    label: 'eased duration',
+    label: 'Eased duration',
     min: 0.1,
     max: 3,
     step: 0.05,

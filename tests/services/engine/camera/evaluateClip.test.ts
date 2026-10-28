@@ -32,6 +32,7 @@ import { compileClip } from '../../../../src/services/engine/animation/compileCl
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
 import { neighbourhoodFlythrough } from '../../../../src/data/animation/tours/grandTour/neighbourhoodFlythrough';
 import { relErr } from '../../../support/relErr';
+import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -589,6 +590,8 @@ describe('a move after a composite continues from where it ended', () => {
     const compiled = compileClip(data);
     const pathEnd = evaluateClip(data, compiled.compositeTracks[0]!.endSec).yaw;
     const clipEnd = evaluateClip(data, compiled.durationSec).yaw;
-    expect(relErr(clipEnd - pathEnd, ((2 * Math.PI) / 45) * 6)).toBeLessThan(1e-9);
+    const drift = { ...dwellDrift(6), start: START };
+    const driftTurn = evaluateClip(drift, 6).yaw - evaluateClip(drift, 0).yaw;
+    expect(relErr(clipEnd - pathEnd, driftTurn)).toBeLessThan(1e-9);
   });
 });

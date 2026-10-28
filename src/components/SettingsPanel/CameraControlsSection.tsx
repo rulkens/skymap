@@ -10,6 +10,7 @@ import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
 import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
+import { parseFocusMoveStyle } from '../../utils/storage/parseFocusMoveStyle';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
@@ -19,6 +20,11 @@ const FRICTION_TOGGLES: readonly { group: FrictionGroup; label: string }[] = [
   { group: 'zoom', label: 'Zoom' },
   { group: 'roll', label: 'Look & roll' },
 ];
+
+const FOCUS_MOVE_STYLE_LABELS: Readonly<Record<FocusMoveStyle, string>> = {
+  eased: 'Eased',
+  geodesic: 'Geodesic',
+};
 
 export type CameraControlsSectionProps = {
   readonly controls: CameraControlsSettings;
@@ -58,10 +64,16 @@ function CameraControlsSection({
           id="focus-move-style"
           className={styles.modeSelect}
           value={focusMoveStyle}
-          onChange={(e) => onFocusMoveStyleChange(e.target.value as FocusMoveStyle)}
+          onChange={(e) => {
+            const style = parseFocusMoveStyle(e.target.value);
+            if (style !== null) onFocusMoveStyleChange(style);
+          }}
         >
-          <option value="eased">Eased</option>
-          <option value="geodesic">Geodesic</option>
+          {Object.entries(FOCUS_MOVE_STYLE_LABELS).map(([style, label]) => (
+            <option key={style} value={style}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 

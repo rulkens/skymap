@@ -1,6 +1,6 @@
 # Follow-approach and Home on the geodesic
 
-**Readiness:** `ready` (needs its own spec section first; see below).
+**Readiness:** `needs-design` (needs its own spec section first; see below).
 
 PR 1 of geodesic focus moves (`specs/2026-10-27-geodesic-focus-moves-design.md`) ships the
 Eased/Geodesic toggle, but two moves stay Eased under either value: the planet follow-approach and
@@ -16,6 +16,20 @@ the hand-off.
 
 The fix #531's `followBody` took: re-measure the geodesic against the body's current pose every
 frame, so the path bends toward the moving end instead of aiming at a stale one.
+
+## The snap lives in the pin
+
+Main's follow rows (`followApproach`, `followHold` in `cameraDrivers.ts`) declare
+`pivotsOnFocusedBody: true`. The pin sets `target = body + panOffset` absolutely after the driver
+runs, so it would overwrite every geodesic target the approach writes, and the pivot would snap.
+#531 opted `followBody` out of the pin and added `panOffset` itself, as `clip` and `tween` do
+(#531 spec §1). The accepted cost is that a drag mid-approach snaps the pivot.
+
+## Tuning frozen with the duration
+
+#531 re-read the tuning (`selectGlideTuning`) every approach frame, so a ρ slider drag mid-approach
+re-shaped the path. That breaks PR 1's rule that a move is frozen at the click. PR 2 captures the
+whole `GeodesicTuning` in `FollowMemory` at activation, beside `durationMs`.
 
 ## Duration frozen at activation
 
