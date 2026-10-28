@@ -66,4 +66,14 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
     seconds: 5,
     width: 960,
   },
+  // The Features page's Milky Way and cosmic web films, each on the picture it replaces. Sixteen years is S2's orbit, so S2 closes; the other S-stars jump where it repeats.
+  {
+    id: 'features-s-stars',
+    shot: 'features-s-stars',
+    motion: { clockDays: 16 * 365.25 },
+    seconds: 5,
+    width: 960,
+  },
+  // The ribbons run on the wall clock and never come back, so the film's end is blended into its start.
+  { id: 'features-flow', shot: 'features-flow', motion: 'live', seconds: 4, width: 960 },
 ];
