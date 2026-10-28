@@ -54,7 +54,7 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
   {
     id: 'features-time-voyager',
     shot: 'features-time-voyager',
-    motion: { clockDays: 20 * 365.25 },
+    motion: { clockDays: 20 * 365.25, swayDeg: 4 },
     seconds: 5,
     width: 960,
   },
@@ -62,8 +62,8 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
   {
     id: 'features-time-planets',
     shot: 'features-time-planets',
-    motion: { clockDays: 8 * 365.25 },
-    seconds: 8,
+    motion: { clockDays: 8 * 365.25, swayDeg: 4 },
+    seconds: 5,
     width: 960,
   },
 ];
