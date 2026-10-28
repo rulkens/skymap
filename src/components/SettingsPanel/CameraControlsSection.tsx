@@ -6,6 +6,7 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
+import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
 import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
@@ -21,6 +22,8 @@ const FRICTION_TOGGLES: readonly { group: FrictionGroup; label: string }[] = [
 
 export type CameraControlsSectionProps = {
   readonly controls: CameraControlsSettings;
+  readonly focusMoveStyle: FocusMoveStyle;
+  readonly onFocusMoveStyleChange: (style: FocusMoveStyle) => void;
   readonly onSchemeChange: (scheme: ControlSchemeId) => void;
   readonly onFrictionChange: (friction: number) => void;
   readonly onFrictionOnChange: (group: FrictionGroup, on: boolean) => void;
@@ -28,6 +31,8 @@ export type CameraControlsSectionProps = {
 
 function CameraControlsSection({
   controls,
+  focusMoveStyle,
+  onFocusMoveStyleChange,
   onSchemeChange,
   onFrictionChange,
   onFrictionOnChange,
@@ -44,6 +49,19 @@ function CameraControlsSection({
         >
           <option value="skymap">Skymap</option>
           <option value="openspace">OpenSpace</option>
+        </select>
+      </div>
+
+      <div className={styles.panelRow}>
+        <label htmlFor="focus-move-style">Focus moves</label>
+        <select
+          id="focus-move-style"
+          className={styles.modeSelect}
+          value={focusMoveStyle}
+          onChange={(e) => onFocusMoveStyleChange(e.target.value as FocusMoveStyle)}
+        >
+          <option value="eased">Eased</option>
+          <option value="geodesic">Geodesic</option>
         </select>
       </div>
 

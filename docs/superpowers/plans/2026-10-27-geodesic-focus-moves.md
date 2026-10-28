@@ -488,12 +488,12 @@ review: yes
   - The ease `<select>` lists `GEODESIC_EASES`. The `StarCatalogTuningSection` pattern applies:
     the select is a child of the section.
 
-- [ ] Test `FocusMovesTuningSection > dragging the eased duration dispatches milliseconds`.
+- [x] Test `FocusMovesTuningSection > dragging the eased duration dispatches milliseconds`.
       This is the unit seam, and a ×1000 slip would otherwise ship silently.
-- [ ] Test `FocusMovesTuningSection > the ease select offers no overshoot or bounce eases`.
-- [ ] Implement, and wire the section into `DebugPanel.tsx`.
-- [ ] Run `npx vitest run tests/components` → green.
-- [ ] Commit: `feat(ui): Focus moves select and DebugPanel tuning board`.
+- [x] Test `FocusMovesTuningSection > the ease select offers no overshoot or bounce eases`.
+- [x] Implement, and wire the section into `DebugPanel.tsx`.
+- [x] Run `npx vitest run tests/components` → green.
+- [x] Commit: `feat(ui): Focus moves select and DebugPanel tuning board`.
 
 ### Task 9: docs and the PR 2 backlog entry
 
