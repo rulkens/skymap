@@ -20,7 +20,7 @@ export function satellitesAssetRows(runtime: SatellitesRuntime): readonly AssetW
   return [
     {
       key: 'satellites',
-      factory: () => runtime.slot,
+      slot: runtime.slot,
       req: () => undefined,
       demand: (ctx) =>
         ctx.settings.satellites.enabled && cameraEarthKm(ctx) < SATELLITE_FADES.loadWithinKm,
