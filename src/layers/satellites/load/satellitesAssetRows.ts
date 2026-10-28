@@ -47,7 +47,8 @@ export function satellitesAssetRows(runtime: SatellitesRuntime): readonly AssetW
           !satelliteSelected(ctx) &&
           cameraEarthKm(ctx) > SATELLITE_FADES.releaseBeyondKm),
       priority: 84, // next free rung after the Local Bubble (83)
-      gates: 'satellites',
+      // No `gates`: one file holds every class, and a gate names one item's whole data. The pass
+      // draws nothing until a sweep lands, so the dots still wait for the catalog.
     },
   ];
 }

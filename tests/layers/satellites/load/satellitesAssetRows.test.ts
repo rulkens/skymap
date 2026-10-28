@@ -10,6 +10,10 @@ import { satellitesAssetRows } from '../../../../src/layers/satellites/load/sate
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { NO_SELECTION } from '../../../support/noSelection';
+import { satellitesVisibility } from '../../../../src/layers/satellites/visibility';
+import { fadeIdentitiesOf } from '../../../../src/utils/visibility/fadeIdentitiesOf';
+import { fadeIdentityKey } from '../../../../src/utils/visibility/fadeIdentityKey';
+import { gateIdentityOf } from '../../../../src/utils/visibility/gateIdentityOf';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
@@ -54,5 +58,13 @@ describe('satellitesAssetRows', () => {
   ] as const)('loads and holds the catalog for a %s satellite far from Earth', (_label, sel) => {
     expect(row.demand(farCtx(sel))).toBe(true);
     expect(row.release?.(farCtx(sel))).toBe(false);
+  });
+
+  // The fade registry throws on an identity it does not hold, and it throws from inside the
+  // slot's first state change, so a stale gate silently stops the catalog from ever loading.
+  it('gates only a fade identity the Layer declares', () => {
+    if (row.gates === undefined) return;
+    const declared = satellitesVisibility.flatMap(fadeIdentitiesOf).map(fadeIdentityKey);
+    expect(declared).toContain(fadeIdentityKey(gateIdentityOf(row.gates)));
   });
 });
