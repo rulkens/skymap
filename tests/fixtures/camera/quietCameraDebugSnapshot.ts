@@ -38,5 +38,4 @@ export const QUIET_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   activeDriverId: 'resting',
   gestureMode: null,
   gestureCursorHit: null,
-  terrainPickHeightM: null,
 };

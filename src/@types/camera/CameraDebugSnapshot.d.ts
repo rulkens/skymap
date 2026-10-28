@@ -47,10 +47,4 @@ export type CameraDebugSnapshot = {
   readonly gestureMode: string | null;
   /** Whether the latched gesture holds a cursor ground hit; null without a latch. */
   readonly gestureCursorHit: boolean | null;
-  /**
-   * Terrain height above the datum under the `terrain-pick-marker` overlay's
-   * own pick, metres — the number the marker is standing on. Null without that
-   * overlay (no cursor is carried otherwise), off a body arm, or on a miss.
-   */
-  readonly terrainPickHeightM: number | null;
 };

@@ -19,13 +19,11 @@ import type { PoseFrame } from '../../../@types/camera/PoseFrame';
 import type { SurfaceGesture } from '../../../@types/camera/SurfaceGesture';
 import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import type { TimeState } from '../../../@types/time/TimeState';
-import type { Vec2 } from '../../../@types/math/Vec2';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
-import { terrainPickAt } from '../../../utils/camera/terrainPickAt';
 import { bodyRelativePose } from './bodyRelativePose';
 import { hostOf } from './rungs/hostOf';
 import { isBodyArm } from './rungs/isBodyArm';
@@ -54,15 +52,9 @@ export function cameraDebugSnapshotOf(input: {
   readonly tuning: CameraTuning;
   /** `readOrientDeltas()` — measured in the frame loop, never re-derived here. */
   readonly deltas: OrientDeltas;
-  /** `SurfaceTileStream.heightAt`, bound by the caller (engine.ts)
+  /** `state.terrainHeightAt`, the composed Layer `heightAt`
    *  — the eye-to-ground row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
-  /** Live cursor in texture pixels — non-null ONLY while the
-   *  `terrain-pick-marker` overlay is on, which is what gates the pick row. */
-  readonly cursorTexPx: Readonly<Vec2> | null;
-  /** The viewport `cursorTexPx` is measured in, and the FOV it was drawn with. */
-  readonly viewportPx: Readonly<Vec2>;
-  readonly fovYRad: number;
 }): CameraDebugSnapshot {
   const {
     storedFrame,
@@ -81,9 +73,6 @@ export function cameraDebugSnapshotOf(input: {
     tuning,
     deltas,
     terrainHeightAt,
-    cursorTexPx,
-    viewportPx,
-    fovYRad,
   } = input;
   const renderedFrame = renderedPose.frame;
   const dofs = cameraDofAnglesOf({
@@ -120,20 +109,6 @@ export function cameraDebugSnapshotOf(input: {
     bodyId !== null && eyeRelBodyM !== null ? terrainHeightAt(bodyId, eyeRelBodyM) : 0;
 
   const engagedPose = isBodyArm(renderedPose) ? renderedPose.pose : null;
-  // The `terrain-pick-marker` overlay's own pick, recomputed from arguments at
-  // this 4 Hz poll rather than read back from the pass that draws it: the
-  // camera path holds no pick state (user ruling 2026-09-17), and a cursor is
-  // only carried while that overlay is on, so this is dead with it off.
-  const pick =
-    cursorTexPx !== null && engagedPose !== null
-      ? terrainPickAt({
-          arm: engagedPose,
-          cursorPx: cursorTexPx,
-          viewportPx,
-          fovYRad,
-          terrainHeightAt,
-        })
-      : null;
   const sitePose = isSiteArm(renderedPose) ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
   const epochDeltaEpsDays = Math.abs(
@@ -162,9 +137,5 @@ export function cameraDebugSnapshotOf(input: {
     activeDriverId,
     gestureMode: gesture === null ? null : gesture === 'down' ? 'down (unlatched)' : gesture.mode,
     gestureCursorHit: gesture === null || gesture === 'down' ? null : gesture.anchorLocalM !== null,
-    terrainPickHeightM:
-      pick === null || engagedPose === null
-        ? null
-        : terrainHeightAt(engagedPose.bodyId, pick.pointM),
   };
 }

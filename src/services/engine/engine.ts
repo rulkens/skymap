@@ -450,13 +450,6 @@ export function createEngine(
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: state.terrainHeightAt,
-          // Null unless the `terrain-pick-marker` overlay is on — its listener
-          // is the only writer, so the pick row is dead with the toggle off.
-          cursorTexPx: state.picking.cursorTexPx,
-          viewportPx: [canvas.width, canvas.height],
-          // What the last frame DREW with (`FrameOutputs`), the same rule this
-          // whole snapshot follows — a mid-poll resize must not retro-change it.
-          fovYRad: outputs.projection.fovYRad,
         });
       },
     },
