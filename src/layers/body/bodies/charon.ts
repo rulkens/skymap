@@ -10,7 +10,7 @@ export const CHARON: LayerBody = {
     datumRadiusM: 606000, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
     albedo: [0.4, 0.39, 0.38],
   }),
-  // Charon comes from a different page than every satellite() row above: JPL
+  // Charon comes from a different page than the other moons' satellite() rows: JPL
   // sats/elem/sep.html "Satellites of Pluto" (mean EQUATORIAL orbital elements, epoch
   // 2000-01-01.5 TDB, ephemeris PLU060; Brozović & Jacobson 2024, AJ 167:256).
   position: {
@@ -22,10 +22,11 @@ export const CHARON: LayerBody = {
       // Papsis/Pnode are published "-" (undefined, not 0.000): e=0.000 and i=0.0 leave periapsis
       // and node geometrically meaningless. Passed as 0, which moonRatesFromPeriods's
       // MIN_PRECESSION_YEARS guard freezes to zero drift — the same degenerate case as
-      // Deimos/Dione/Tethys above. LANDMINE: the legend calls P "sidereal period", the word that
-      // routes the Moon through moonRatesFromSiderealPeriods instead, but with both precession
-      // rates frozen meanAnomalyRate = meanLongitudeRate − 0 − 0, so the two readings of P
-      // coincide for THIS row only. Revisit if JPL ever publishes nonzero e/i.
+      // Deimos/Dione/Tethys (deimos.ts, dione.ts, tethys.ts). LANDMINE: the legend calls P
+      // "sidereal period", the word that routes the Moon through moonRatesFromSiderealPeriods
+      // instead, but with both precession rates frozen meanAnomalyRate = meanLongitudeRate − 0 − 0,
+      // so the two readings of P coincide for THIS row only. Revisit if JPL ever publishes nonzero
+      // e/i.
       id: 'charon',
       focusId: 'pluto',
       semiMajorKm: 19600,
@@ -39,8 +40,8 @@ export const CHARON: LayerBody = {
       apsidalPrecessionYears: 0.0,
       nodalPrecessionYears: 0.0,
       // Pluto's IAU pole (WGCCRE 2015), not a Charon one: the pair is mutually tidally locked,
-      // so the poles coincide exactly — see `rotationElements.ts` for the same lock's other
-      // three shared numbers.
+      // so the poles coincide exactly — see this file's `rotation` and pluto.ts's for the same
+      // lock's other three shared numbers.
       poleRaDeg: 132.993,
       poleDecDeg: -6.163,
       // LANDMINE — do not "fix": Pluto stays pinned at its heliocentric position
@@ -55,7 +56,7 @@ export const CHARON: LayerBody = {
   // LANDMINE — what this row shares with Pluto's is physics, not copy-paste: mutual tidal lock
   // means one spin axis (identical pole), each prime meridian is the sub-companion one (W₀
   // exactly 180° apart), and rotation and orbit are one quantity measured twice (Ẇ =
-  // 360°/6.387222 d, Charon's period in `orbitalElements.ts`; 56.3625225 × 6.387222 =
+  // 360°/6.387222 d, Charon's period in this file's orbit row; 56.3625225 × 6.387222 =
   // 359.99994°, the residual being their rounding).
   rotation: {
     id: 'charon',

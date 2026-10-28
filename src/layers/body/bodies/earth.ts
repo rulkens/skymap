@@ -13,7 +13,7 @@ export const EARTH: LayerBody = {
   body: {
     id: asSceneBodyId('earth'),
     label: 'Earth',
-    // Mariana Trench to Everest, against the WGS84-ish datum above (spec §7.4).
+    // Mariana Trench to Everest, against the WGS84-ish datum (EARTH_DATUM_RADIUS_M, spec §7.4).
     // F3 replaces this from the compiled §3.4e grid.
     surface: { datumRadiusM: EARTH_DATUM_RADIUS_M, reliefM: [-430, 8849] },
     resolvePx: BODY_GLINT_MAX_PX,

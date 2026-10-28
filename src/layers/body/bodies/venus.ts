@@ -40,7 +40,7 @@ export const VENUS: LayerBody = {
       color: VENUS_CREAM,
     },
   },
-  // Retrograde, so Ẇ is negative under the planet convention — contrast Pluto below.
+  // Retrograde, so Ẇ is negative under the planet convention — contrast Pluto (pluto.ts).
   rotation: {
     id: 'venus',
     poleRaDeg: 272.76,

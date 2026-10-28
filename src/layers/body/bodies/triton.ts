@@ -13,7 +13,7 @@ export const TRITON: LayerBody = {
   }),
   // Neptune's moons. JPL sats/elem (epoch 2000-01-01.5 TDB, NEP097) for Triton and Proteus, each
   // on its own Laplace plane; Nereid (NEP105) is on the ecliptic at 2020-01-01.0 and is moved back
-  // to J2000 by hand below, because `satellite()` assumes J2000.
+  // to J2000 by hand in nereid.ts, because `satellite()` assumes J2000.
   position: {
     kind: 'orbit',
     elements: satellite({

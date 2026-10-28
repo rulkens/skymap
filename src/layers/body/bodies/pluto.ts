@@ -18,10 +18,10 @@ export const PLUTO: LayerBody = {
   position: {
     kind: 'orbit',
     elements: {
-      // Pluto, heliocentric. Same Table 1 as every planet row above, but read from its reprint
-      // in the Explanatory Supplement to the Astronomical Almanac, 3rd ed. (2013), §8.10 Table
-      // 8.10.2 — the approx_pos.html web edition dropped Pluto and the PDF it replaced now
-      // redirects there. L = 238.92903833°, ϖ = 224.06891629°, Ω = 110.30393684°.
+      // Pluto, heliocentric. Same Table 1 as the other planets' rows (mercury.ts … neptune.ts),
+      // but read from its reprint in the Explanatory Supplement to the Astronomical Almanac, 3rd
+      // ed. (2013), §8.10 Table 8.10.2 — the approx_pos.html web edition dropped Pluto and the PDF
+      // it replaced now redirects there. L = 238.92903833°, ϖ = 224.06891629°, Ω = 110.30393684°.
       id: asSceneBodyId('pluto'),
       focusId: asSceneBodyId('sun'),
       semiMajorMpc: 39.48211675 * SCALE_UNITS.AU_TO_MPC,
@@ -45,9 +45,10 @@ export const PLUTO: LayerBody = {
       color: PLUTO_TAN,
     },
   },
-  // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
-  // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
-  // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.
+  // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the Archinal+18 tables
+  // the other bodies' rotation rows use. Minor-body pole convention: the "positive" pole, so Ẇ is
+  // positive despite the retrograde spin — unlike Uranus/Venus (uranus.ts, venus.ts), which keep
+  // the planet convention and go negative.
   rotation: {
     id: 'pluto',
     poleRaDeg: 132.993,
