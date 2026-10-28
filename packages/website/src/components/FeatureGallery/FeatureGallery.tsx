@@ -4,15 +4,15 @@
  * itself every 9 s, waits while the reader is at the thumbnails, and fetches a later view only once warmed.
  * Each picture opens its own view in the app; only the current one can be reached, as the others sit
  * under `visibility: hidden`. Before the page's script runs the first view and its label stand.
- * With `films` (loop ids) each view is that loop's wide film in place of its picture: only the current
- * one plays, a later one is fetched once it first becomes current, and the thumbnails and labels are
- * those of the loop's still.
+ * A view whose id is a loop's (data/siteLoops.ts) is that loop's wide film in place of its picture: only
+ * the current one plays, a later one is fetched once it first becomes current, and its thumbnail and label
+ * are those of the loop's still. Any other id is a picture of the shot manifest.
  */
 import type { KeyboardEvent } from 'react';
 import { useCallback, useRef } from 'react';
 
 import { appLink } from '../../data/appLink.ts';
-import { siteLoop } from '../../data/siteLoop.ts';
+import { SITE_LOOPS } from '../../data/siteLoops.ts';
 import { siteShot } from '../../data/siteShot.ts';
 import { cx } from '../../utils/cx.ts';
 import { galleryKeyTarget } from '../../utils/galleryKeyTarget.ts';
@@ -31,10 +31,8 @@ type FeatureGalleryProps = {
   href: string;
   label: string;
   side?: 'left' | 'right';
-  // Shot ids from data/siteShots.ts, the first one standing before the script runs.
-  views?: readonly string[];
-  // Or loop ids from data/siteLoops.ts, shown as films.
-  films?: readonly string[];
+  // Shot ids from data/siteShots.ts, or loop ids from data/siteLoops.ts to show a film; the first one stands before the script runs.
+  views: readonly string[];
   // How wide the large picture is drawn (the page's `big`).
   sizes: string;
   // Whether each label carries the sentence under its title.
@@ -44,13 +42,13 @@ type FeatureGalleryProps = {
 const THUMB_SIZES = '6rem';
 
 function FeatureGallery({
-  views: pictures,
-  films,
+  views: slides,
   sizes,
   sentences = true,
   ...section
 }: FeatureGalleryProps) {
-  const views = films?.map((id) => siteLoop(id).shot) ?? pictures!;
+  const films = slides.map((id) => SITE_LOOPS.find((loop) => loop.id === id));
+  const views = slides.map((id, i) => films[i]?.shot ?? id);
   const gallery = useGallery(views.map((id) => ({ id })));
   const { at, live, byReader, choose, marksRef, layers, warmed } = gallery;
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -120,9 +118,9 @@ function FeatureGallery({
                     !warmed(i) && styles.cold,
                   )}
                 >
-                  {films ? (
+                  {films[i] ? (
                     <FeatureFilm
-                      film={films[i]!}
+                      film={films[i].id}
                       sizes={sizes}
                       wide
                       active={current(i)}
