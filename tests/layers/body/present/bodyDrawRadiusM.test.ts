@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { bodyDrawRadiusM } from '../../../../src/layers/body/present/bodyDrawRadiusM';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams';
+import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../src/data/bodies/cloudShellParams';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

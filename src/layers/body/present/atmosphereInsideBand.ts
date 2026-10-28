@@ -10,7 +10,7 @@
  */
 
 import type { FadeBand } from '../../../@types/math/FadeBand';
-import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
+import { ATMOSPHERE_PARAMS } from './atmosphereParams';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 export const INSIDE_PATH_ENTER_RATIO = 1.005;

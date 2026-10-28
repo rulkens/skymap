@@ -17,7 +17,7 @@
  * here.
  *
  * `TexturedBodyUniforms` — the sibling that extends the lit prefix — has its own
- * parity guard in `tests/utils/gpu/packTexturedBodyUniforms.test.ts`.
+ * parity guard in `tests/layers/body/render/packTexturedBodyUniforms.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';

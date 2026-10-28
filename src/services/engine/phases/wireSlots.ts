@@ -57,7 +57,7 @@ import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
-import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
+import { wireBodyTextureSlots } from '../../../layers/body/load/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileStream } from '../subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../data/bodies/idleSurfaceTilePlan';

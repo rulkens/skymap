@@ -1,0 +1,275 @@
+/**
+ * encodeAtmosphereSkyView — unit tests for the per-frame sky-view LUT bake.
+ *
+ * Two load-bearing assertions. First the `SkyViewParams` packing contract
+ * (AtmosphereShellRenderer.d.ts): the renderer writes the 16-byte record
+ * VERBATIM, so a mis-pack silently mis-indexes the LUT (the GPU never reports
+ * it; on iOS it drops the frame). Slots 0-3 are recomputed here from the
+ * contract's own formulae, so a slot swap, a dropped `× atmosphereTopKm`, or a
+ * surface-vs-atmosphere-top radius choice fails here.
+ *
+ * Second, the SOURCE of the camera altitude (the M1 fix): the bake packs the
+ * entry's `camLocal`/`sunLocal`, off the body-slab pose seam, NOT a second
+ * Mpc-side re-derivation from `ctx.drawCamPos`/`state.cam.position`. The packing
+ * test recomputes them from the pose fixture, so any other source fails here.
+ *
+ * The bake fixture is sized supra-pixel because `atmosphereDrawList` applies a
+ * sub-pixel disc cull, so the packing case reaches an entry at all.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { encodeAtmosphereSkyView } from '../../../../src/layers/body/render/encodeAtmosphereSkyView';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
+import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
+import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
+import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
+import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
+import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+
+// The bake resolves each body's live position/orientation from the per-frame
+// body-state snapshot (keyed by id, via `atmosphereDrawList`) for `sunDirLocal`
+// — unrelated to the M1 fix (the camera altitude now comes from `ctx.bodyPose`
+// instead). Stub it to a map built from the SeededBody fixtures, REUSING each
+// fixture's own positionMpc/orientation refs, keeping the sun-direction
+// recompute bit-for-bit.
+vi.mock('../../../../src/services/engine/frame/sceneBodyStates', () => ({
+  sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
+    const m = new Map<string, BodyState>();
+    for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
+    }
+    const earth = state.data.bodies.earth as SeededEarth | null;
+    if (earth)
+      m.set(earth.id, {
+        positionMpc: earth.positionMpc,
+        orientation: earth.orientation,
+      });
+    return m;
+  }),
+}));
+
+// Test fixtures pairing the identity records with the J2000 state the snapshot
+// carries — position + orientation were lifted off the record onto the derive, so
+// the fixtures supply them here (Earth's sourced from the derive so the values are
+// the real J2000 ones; refs stay stable across the mock + the recompute).
+type SeededEarth = EarthBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+type SeededPlanet = PlanetBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
+const EARTH_STATE = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!;
+const SEEDED_EARTH: SeededEarth = {
+  ...SCENE_EARTH,
+  positionMpc: EARTH_STATE.positionMpc,
+  orientation: EARTH_STATE.orientation,
+};
+
+/** The ONE compute pass the encode opens for the whole draw list — the shape
+ *  that lets the step bill a single GPU-timing slot. */
+const computePass = { end: vi.fn() } as unknown as GPUComputePassEncoder;
+const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => computePass);
+const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
+
+/** A spy atmosphere renderer — only `dispatchSkyView` is exercised here. */
+function spyRenderer(): { dispatchSkyView: ReturnType<typeof vi.fn> } {
+  return { dispatchSkyView: vi.fn() };
+}
+
+/**
+ * Assemble the minimal EngineState the encode reads: the renderer handle off
+ * `gpu` and the seeded bodies off `data.bodies`. The twilight softness + intensity
+ * come from each body's `AtmosphereParams` row, so no settings are read.
+ * `atmosphereDrawList` spreads `bodies.planets`, so seed it empty (only Earth
+ * carries an atmosphere row today).
+ */
+function makeState(init: { renderer: unknown; earth?: EarthBody | null }): EngineState {
+  return {
+    gpu: { atmosphereShellRenderer: init.renderer },
+    data: {
+      bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] },
+    },
+  } as unknown as EngineState;
+}
+
+/** A `BodyPoseProvider` stub returning one fixed pose for 'earth', null otherwise. */
+function makeBodyPose(eyeRelBodyM: Vec3): BodyPoseProvider {
+  return (bodyId) =>
+    bodyId === 'earth' ? { eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 } : null;
+}
+
+// 1080-px viewport, fovYRad π/4, tangent-exact.
+const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(Math.PI / 4 / 2));
+
+/**
+ * The minimal FrameView the encode reads: `bodyPose` (the M1 seam the
+ * camera altitude now derives from), `drawCamPos` + `cam.distance` (still read
+ * by `atmosphereDrawList`'s OWN near-field + sub-pixel disc culls, decoupled
+ * from the sky-view math itself), and `drawPxPerRad` (that same
+ * cull). `camDistance` defaults to 0 — inside the near-field edge, the common
+ * Earth-framed path. `drawCamPos` is sized so Earth's disc resolves well above
+ * sub-pixel, clearing the cull the bake shares with the draw.
+ */
+function makeCtx(input: {
+  bodyPose: BodyPoseProvider;
+  drawCamPos?: Vec3;
+  camDistance?: number;
+}): FrameView {
+  return {
+    bodyPose: input.bodyPose,
+    drawCamPos: input.drawCamPos ?? DRAW_CAM_POS,
+    cam: { distance: input.camDistance ?? 0 },
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
+}
+
+// Clears `atmosphereDrawList`'s sub-pixel disc cull — a few Earth radii off the
+// centre, along +x, in Mpc (unrelated to the pose fixture below: this only
+// feeds the CULL, not the sky-view math).
+const DRAW_CAM_POS: Vec3 = [
+  SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
+  SEEDED_EARTH.positionMpc[1],
+  SEEDED_EARTH.positionMpc[2],
+];
+
+// The rendered pose (what `atmosphereShellPass`'s fragment sees): the camera
+// 5 Earth radii out along the body's local +x axis, in METRES — already in the
+// body-fixed frame the seam promises, so the recompute below needs no
+// orientation matrix multiply of its own.
+const EYE_REL_BODY_M: Vec3 = [5 * SEEDED_EARTH.surface.datumRadiusM, 0, 0];
+
+describe('encodeAtmosphereSkyView', () => {
+  beforeEach(() => {
+    beginComputePass.mockClear();
+  });
+
+  // The step owns ONE GPU-timing slot, so it must open ONE compute pass however
+  // many bodies bake — per-body passes would each write that slot's two query
+  // indices and the last body would silently decide what the panel reports.
+  it('opens one compute pass for the draw list, carrying the claimed timestamp writes', () => {
+    const renderer = spyRenderer();
+    const writes = { querySet: {}, beginningOfPassWriteIndex: 4, endOfPassWriteIndex: 5 };
+    const claim = vi.fn(() => ({
+      timestampWrites: writes as unknown as GPUComputePassTimestampWrites,
+    }));
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
+      makeState({ renderer }),
+      claim,
+    );
+    expect(beginComputePass).toHaveBeenCalledTimes(1);
+    expect(beginComputePass.mock.calls[0]![0]).toMatchObject({ timestampWrites: writes });
+  });
+
+  // Claiming a slot marks it LIVE for the frame, and a query set holds its last
+  // write — so a claim on a frame that opens no pass makes the panel report the
+  // ticks from whenever the atmosphere was last in view, as if it still were.
+  it('claims no timing slot and opens no pass when no body carries an atmosphere', () => {
+    const claim = vi.fn(() => ({}));
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
+      makeState({ renderer: spyRenderer(), earth: null }),
+      claim,
+    );
+    expect(beginComputePass).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when the camera is beyond the near-field distance gate', () => {
+    const renderer = spyRenderer();
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({
+        bodyPose: makeBodyPose(EYE_REL_BODY_M),
+        camDistance: FOREGROUND_MAX_DISTANCE_MPC,
+      }),
+      makeState({ renderer }),
+    );
+    expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when bodies.earth is unseeded', () => {
+    const renderer = spyRenderer();
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
+      makeState({ renderer, earth: null }),
+    );
+    expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
+  });
+
+  it('bakes the SkyViewParams from ctx.bodyPose (the M1 body-slab pose seam), via bodySlabCamLocal', () => {
+    const renderer = spyRenderer();
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
+      makeState({ renderer }),
+    );
+
+    expect(renderer.dispatchSkyView).toHaveBeenCalledTimes(1);
+    const [passArg, bodyIdArg, uniforms] = renderer.dispatchSkyView.mock.calls[0]! as [
+      GPUComputePassEncoder,
+      string,
+      Float32Array,
+    ];
+    expect(passArg).toBe(computePass);
+    expect(bodyIdArg).toBe(SEEDED_EARTH.id);
+    expect(uniforms).toBeInstanceOf(Float32Array);
+    expect(uniforms).toHaveLength(4);
+
+    // Independent recompute from the contract's formula, using the SAME
+    // `bodySlabCamLocal` util the encode (and `atmosphereShellPass`'s
+    // fragment-facing draw) calls — the camera is expressed in
+    // ATMOSPHERE-TOP-radius units (NOT surface radius); its length ×
+    // the atmosphere-top km recovers the camera radius in km.
+    const params = ATMOSPHERE_PARAMS['earth']!;
+    const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
+    const camLocal = bodySlabCamLocal(EYE_REL_BODY_M, atmosphereTopM);
+    const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
+    const sun = sunDirLocal(SEEDED_EARTH.positionMpc, RENDER_ORIGIN_MPC, SEEDED_EARTH.orientation);
+    const expectedViewHeightKm = radius * params.atmosphereTopKm;
+    const expectedSunZenithCos =
+      (camLocal[0] * sun[0] + camLocal[1] * sun[1] + camLocal[2] * sun[2]) / radius;
+
+    // The encode narrows this exact f64 expression once at the Float32Array
+    // write, so the slot equals Math.fround of the recomputed value bit-for-bit
+    // (the values are ~3e4 km, where toBeCloseTo's absolute tolerance is
+    // meaningless — the same posture earthPass.test uses for bodySlabCamLocal).
+    expect(uniforms[0]).toBe(Math.fround(expectedViewHeightKm));
+    expect(uniforms[1]).toBe(Math.fround(expectedSunZenithCos));
+
+    // A different pose (20 Earth radii out, along local +z) must pack a
+    // strictly different, larger view height — pins that the packed value
+    // actually tracks `ctx.bodyPose`, not a fixed/ignored input.
+    const fartherPose: Vec3 = [0, 0, 20 * SEEDED_EARTH.surface.datumRadiusM];
+    const fartherRenderer = spyRenderer();
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(fartherPose) }),
+      makeState({ renderer: fartherRenderer }),
+    );
+    const fartherUniforms = fartherRenderer.dispatchSkyView.mock.calls[0]![2] as Float32Array;
+    expect(fartherUniforms[0]).toBeGreaterThan(uniforms[0]!);
+
+    // The camera five radii out sits well above the surface, so the LUT's view
+    // height must clear the ground radius — a guard against a surface-radius
+    // mis-scale that would collapse the altitude.
+    expect(uniforms[0]!).toBeGreaterThan(params.planetRadiusKm);
+    // Slots 2 + 3 carry the body's `AtmosphereParams` twilight softness + intensity
+    // — packed from the params row for every body.
+    expect(uniforms[2]).toBe(Math.fround(params.twilightSoftness));
+    expect(uniforms[3]).toBe(Math.fround(params.twilightIntensity));
+  });
+});

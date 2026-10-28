@@ -44,20 +44,19 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/expandFrameOrder': 5,
   'frame/near0LabelProjection': 1,
   'frame/pickProgram': 5,
-  'frame/prepareBodySurfaceFrame': 1,
   'frame/projectFramePose': 1,
   'frame/runBloom': 1,
   'frame/runFrame': 3,
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
-  'frame/passes/bodyGlintsPass': 2,
-  'frame/passes/cloudShellPass': 1,
   'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
-  'frame/passes/planetsPass': 1,
-  'frame/passes/ringsPass': 1,
-  'frame/passes/texturedBodiesPass': 2,
+  'layers/body/passes/bodyGlintsPass': 2,
+  'layers/body/passes/cloudShellPass': 1,
+  'layers/body/passes/planetsPass': 1,
+  'layers/body/passes/ringsPass': 1,
+  'layers/body/passes/texturedBodiesPass': 2,
   'layers/milkyWay/passes/milkyWayPass': 1,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
   'layers/starCatalog/passes/starPointsPass': 2,
@@ -117,17 +116,14 @@ describe.each([
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
-  ['frame/computes', FRAME_DIR + 'computes/'] as const,
   ['frame/surfaceTilePlanner', FRAME_DIR + 'surfaceTilePlanner/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
-  // `passes/index.ts` and `computes/index.ts` are
-  // registry barrels, not rows; the other dirs have no barrel and CLAUDE.md
-  // forbids adding one.
+  // `passes/index.ts` is a registry barrel, not a row; the other dirs have no
+  // barrel and CLAUDE.md forbids adding one. `frame/computes/` holds only its
+  // own `index.ts` since the body computes moved into the Layer, so it is unswept.
   const files = readdirSync(dir).filter(
-    (f) =>
-      f.endsWith('.ts') &&
-      !((label === 'frame/passes' || label === 'frame/computes') && f === 'index.ts'),
+    (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
   );
   expect(files.length).toBeGreaterThan(0);
 

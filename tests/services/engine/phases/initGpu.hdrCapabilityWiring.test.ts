@@ -177,7 +177,7 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
 // lands a stub on `state.gpu.earthRenderer` (the un-awaited Blue Marble
 // fetch it fires runs after initGpu resolves and fails harmlessly in the
 // test env).
-vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
+vi.mock('../../../../src/layers/body/render/earthRenderer', () => ({
   createEarthRenderer: vi.fn(() => makeStub('earthRenderer')),
 }));
 
@@ -188,18 +188,18 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
 // The shared textured-body renderer keeps its `?static` WESL imports out of
 // JSDOM; mock it so the `texturedBodyRenderer` row's construct closure
 // lands a stub on `state.gpu.texturedBodyRenderer`.
-vi.mock('../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer', () => ({
+vi.mock('../../../../src/layers/body/render/texturedBodyRenderer', () => ({
   createTexturedBodyRenderer: vi.fn(() => makeStub('texturedBodyRenderer')),
 }));
 // The ring renderer keeps its `?static` WESL imports out of JSDOM; mock it so
 // the `ringRenderer` row's construct closure lands a stub on `state.gpu.ringRenderer`.
-vi.mock('../../../../src/services/gpu/renderers/bodies/ringRenderer', () => ({
+vi.mock('../../../../src/layers/body/render/ringRenderer', () => ({
   createRingRenderer: vi.fn(() => makeStub('ringRenderer')),
 }));
 // Earth's cloud-shell renderer keeps its `?static` WESL imports out of JSDOM;
 // mock it so the `cloudShellRenderer` row's construct closure lands a stub on
 // `state.gpu.cloudShellRenderer`.
-vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () => ({
+vi.mock('../../../../src/layers/body/render/cloudShellRenderer', () => ({
   createCloudShellRenderer: vi.fn(() => makeStub('cloudShellRenderer')),
 }));
 // Earth's atmosphere-shell renderer bakes LUTs against the full device API (compute
@@ -208,17 +208,15 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/cloudShellRenderer', () =
 // row's construct closure lands a stub on `state.gpu.atmosphereShellRenderer`.
 // That row passes the whole `ATMOSPHERE_PARAMS` record (a real data import —
 // no mock needed for it).
-vi.mock('../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer', () => ({
+vi.mock('../../../../src/layers/body/render/atmosphereShellRenderer', () => ({
   createAtmosphereShellRenderer: vi.fn(() => makeStub('atmosphereShellRenderer')),
 }));
 // Partial mock: planetsPass.ts imports the real INSTANCE_FLOATS constant at
 // module scope to size its staging buffer (against SCENE_PLANETS.length —
 // no fixed cap), so only the factory is stubbed — passing INSTANCE_FLOATS
 // through keeps that sizing real.
-vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import('../../../../src/services/gpu/renderers/bodies/planetRenderer')
-  >()),
+vi.mock('../../../../src/layers/body/render/planetRenderer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../src/layers/body/render/planetRenderer')>()),
   createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
 }));
 // Partial mock, same rationale as planetRenderer's below: bodyGlintsPass.ts

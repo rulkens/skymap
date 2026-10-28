@@ -4,7 +4,7 @@
  */
 
 import type { ContentCompute } from '../../../../@types/engine/frame/ContentCompute';
-import { aerialPerspectiveCompute } from './aerialPerspectiveCompute';
-import { skyViewCompute } from './skyViewCompute';
+import { aerialPerspectiveCompute } from '../../../../layers/body/computes/aerialPerspectiveCompute';
+import { skyViewCompute } from '../../../../layers/body/computes/skyViewCompute';
 
 export const CORE_COMPUTES: readonly ContentCompute[] = [skyViewCompute, aerialPerspectiveCompute];

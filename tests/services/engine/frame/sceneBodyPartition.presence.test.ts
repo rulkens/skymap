@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { coreSceneBodyPartition } from '../../../../src/services/engine/frame/coreSceneBodyPartition';
+import { coreSceneBodyPartition } from '../../../../src/layers/body/present/coreSceneBodyPartition';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { bodySlabRosterIds } from '../../../../src/services/engine/frame/bodySlabRosterIds';
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';

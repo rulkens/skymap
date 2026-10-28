@@ -101,7 +101,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'method-atmosphere-earth',
     text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols have a scale height of 1.2 kilometres, and ozone absorbs in a layer centred 25 kilometres up. The other eight tables mix published values, values derived from them and values adjusted by eye; the file marks which is which.',
-    source: `${REPO_BLOB}/src/data/bodies/atmosphereParams.ts`,
+    source: `${REPO_BLOB}/src/layers/body/present/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },

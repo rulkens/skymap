@@ -1,5 +1,5 @@
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
+import { ATMOSPHERE_PARAMS } from './atmosphereParams';
 import { SCENE_RINGS } from '../../../data/bodies/sceneRings';
 import { BODY_DRAW_ENVELOPES } from './bodyDrawEnvelopes';
 import type { SceneBody } from '../../../@types/scene/SceneBody';

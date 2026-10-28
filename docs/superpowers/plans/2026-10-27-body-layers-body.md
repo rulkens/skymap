@@ -413,7 +413,7 @@ other Layers mint it). Core wiring (`gpuHandleRegistry.ts`, `passes/index.ts`, `
 `frame/passes/{bodyGlints,cloudShell,planets,rings,texturedBodies}Pass` (`:54-60`) re-keyed to
 `layers/body/passes/…`, `frame/prepareBodySurfaceFrame` (`:47`) deleted.
 
-- [ ] Task 2
+- [x] Task 2
 
 ### Task 3: the body runtime owns its renderers, texture slots, passes and computes
 

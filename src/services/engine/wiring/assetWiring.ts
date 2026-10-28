@@ -10,7 +10,7 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
-import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
+import { createBodyTextureAtlasSlot } from '../../../layers/body/load/bodyTextureAtlasSlot';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { MESH_PRESENTATIONS } from '../../../data/bodies/meshPresentations';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';

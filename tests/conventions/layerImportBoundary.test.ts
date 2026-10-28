@@ -86,7 +86,15 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {};
+// Body Layers Task 2 moved the body files in before Task 3 hands their wiring to the Layer;
+// these rows go away with that wiring.
+const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
+  'services/engine/frame/computes/index': 2,
+  'services/engine/frame/passes/index': 11,
+  'services/engine/gpuHandles/gpuHandleRegistry': 9,
+  'services/engine/phases/wireSlots': 1,
+  'services/engine/wiring/assetWiring': 1,
+};
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
   const files = [...walk('src/services/engine'), ...walk('src/state')];

@@ -184,7 +184,7 @@ struct LitBodyUniforms {
 //   total: 176 bytes.
 //
 // The CPU side uploads 44 f32s. The single source of truth for that packing is
-// 'utils/gpu/packTexturedBodyUniforms.ts', which reuses 'packLitBodyUniforms'
+// 'layers/body/render/packTexturedBodyUniforms.ts', which reuses 'packLitBodyUniforms'
 // for the shared 80-byte prefix so the two layouts can never drift.
 
 struct TexturedBodyUniforms {
@@ -242,7 +242,7 @@ struct TexturedBodyUniforms {
 //   total: 96 bytes.
 //
 // The CPU side uploads 24 f32s. The single source of truth for that packing is
-// 'utils/gpu/packRingUniforms.ts'.
+// 'layers/body/render/packRingUniforms.ts'.
 
 struct RingUniforms {
   mvp: mat4x4<f32>,
@@ -320,7 +320,7 @@ struct RingUniforms {
 //   total: 128 bytes.
 //
 // The CPU side uploads 32 f32s. The single source of truth for that packing is
-// 'utils/gpu/packEarthSurfaceUniforms.ts', which reuses 'packLitBodyUniforms'
+// 'layers/body/render/packEarthSurfaceUniforms.ts', which reuses 'packLitBodyUniforms'
 // for the shared 80-byte prefix.
 
 struct EarthSurfaceUniforms {
@@ -379,7 +379,7 @@ struct EarthSurfaceUniforms {
 //   total: 96 bytes.
 //
 // The CPU side uploads 24 f32s. The single source of truth for that packing is
-// 'utils/gpu/packCloudShellUniforms.ts', which reuses 'packLitBodyUniforms' for
+// 'layers/body/render/packCloudShellUniforms.ts', which reuses 'packLitBodyUniforms' for
 // the shared 80-byte prefix. 'cloudOpacity' is sourced from
 // 'CLOUD_SHELL_PARAMS.opacity'; 'sunIrradiance' + 'ambientLight' from
 // 'EARTH_SURFACE_PARAMS'.
@@ -450,7 +450,7 @@ struct CloudShellUniforms {
 // 'TexturedBodyUniforms' uses -- so every ringless body short-circuits.
 //
 // The CPU side uploads 44 f32s. The single source of truth for that packing is
-// 'utils/gpu/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
+// 'layers/body/render/packAtmosphereUniforms.ts', which reuses 'packLitBodyUniforms' for
 // the shared 80-byte prefix.
 
 struct AtmosphereUniforms {

@@ -26,7 +26,7 @@ import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blac
 import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
 import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { atmosphereDrawList } from '../../../../src/services/engine/frame/atmosphereDrawList';
+import { atmosphereDrawList } from '../../../../src/layers/body/present/atmosphereDrawList';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { atmosphereInsideBand } from '../../../../src/layers/body/present/atmosphereInsideBand';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
