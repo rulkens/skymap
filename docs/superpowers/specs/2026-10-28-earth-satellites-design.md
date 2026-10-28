@@ -45,7 +45,7 @@ data refreshed daily. A user can find a satellite in the palette, pick it, and r
 ## 3. Shape
 
 ```
-GitHub Action (daily) ── CelesTrak OMM JSON ──▶ tools/satellites/buildSatellites.ts ──▶ R2 satellites/gp.bin
+GitHub Action (daily) ── CelesTrak OMM JSON ──▶ tools/satellites/buildSatellites.ts ──▶ R2 satellite-catalog/v1/satellites.bin
                                                                                              │ fetch (max-age 1 h)
 src/layers/satellites/
   load/satellitesAsset.ts       `assets?` row: demand = shown and near Earth; the committed value is the
@@ -59,7 +59,7 @@ src/layers/satellites/
 
 ## 4. How it works
 
-**Data file.** `gp.bin` (magic `SATG`, versioned like `spacecraftTracks.bin`) holds one record per
+**Data file.** `satellites.bin` (magic `SATG`, under `satellite-catalog/v1/`) holds one record per
 object: the SGP4 mean elements at f64 (epoch, mean motion, eccentricity, inclination, node, argument of
 perigee, mean anomaly, B*), the NORAD id, a class byte, and the name and COSPAR id as strings. About
 1.5 MB for 20k objects, less gzipped. The header carries the fetch time, which drives §5.3.
@@ -98,7 +98,7 @@ the fallback if `npm run phone` disagrees.
    approval to redistribute, so it is a follow-up. CelesTrak states no republishing terms, so the
    ATTRIBUTIONS.md entry is "Ask the holder" until CelesTrak confirms a daily copy on R2 is fine. The Action
    downloads each group once a day, inside CelesTrak's one-download-per-update policy.
-2. **Refresh: a scheduled GitHub Action → R2.** It runs `npm run build-satellites` and uploads `gp.bin` to a
+2. **Refresh: a scheduled GitHub Action → R2.** It runs `npm run build-satellites` and uploads `satellites.bin` to a
    fixed key with `Cache-Control: max-age=3600`, outside the manifest and `DATA_FAMILIES`, the way the
    hand-uploaded site video is. It needs one new secret, an R2 write token. A failed run fails visibly in
    GitHub. Dev runs the same script into `public/data/satellites/` (gitignored, untracked by the drift guard).
@@ -111,7 +111,7 @@ the fallback if `npm run phone` disagrees.
    static data and the sim time. The worker sends the ring parameters once. The exact detent is the
    builder's, measured.
 5. **The worker exists only while the Layer is active, and sweeps only while it draws.** Two gates:
-   - *Existence* is the demand loop's, like the body textures' proximity loads. The `gp.bin` asset row
+   - *Existence* is the demand loop's, like the body textures' proximity loads. The `satellites.bin` asset row
      demands while the show toggle is on and the camera is inside a load radius of Earth, and releases when
      the toggle goes off or the camera passes a larger evict radius (hysteresis, so hovering at the edge
      does not thrash). Loading fetches the file and spawns the worker; the committed value is the worker
