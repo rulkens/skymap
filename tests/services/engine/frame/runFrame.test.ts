@@ -300,8 +300,7 @@ describe('runFrame — camera drivers (regression)', () => {
       startCameraTween({
         from: BASE,
         to: { target: [0, 0, 0], yaw: 1.5, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );

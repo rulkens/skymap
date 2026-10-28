@@ -97,6 +97,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: `${PANEL}/SurfaceTileAtlasSection.tsx`,
   },
   {
+    heading: 'Focus moves',
+    shows:
+      'The duration of an Eased focus move, and the Geodesic move’s pan-against-zoom balance, speed, shortest and longest duration and arrival ease. A move already in flight keeps the values it started with.',
+    file: `${PANEL}/FocusMovesTuningSection/FocusMovesTuningSection.tsx`,
+  },
+  {
     heading: 'Terrain pick marker',
     shows:
       'The size of the marker drawn where the pointer meets the ground, and the height of the terrain under it.',

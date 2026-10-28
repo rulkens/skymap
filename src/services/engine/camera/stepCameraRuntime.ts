@@ -41,6 +41,7 @@ import { reencodePose } from '../../../utils/camera/reencodePose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
+import { focusMoveDurationMs } from './focusMoveDurationMs';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
@@ -282,7 +283,7 @@ export function stepCameraRuntime(
   if (
     winnerId === 'tween' &&
     rootState.camera.tween !== null &&
-    elapsedMs(epochs.tween, nowMs) >= rootState.camera.tween.durationMs
+    elapsedMs(epochs.tween, nowMs) >= focusMoveDurationMs(rootState.camera.tween)
   ) {
     actions.push(cancelCameraTween());
   }
