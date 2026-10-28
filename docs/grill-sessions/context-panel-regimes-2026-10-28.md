@@ -102,7 +102,7 @@ Edges sit on constants the engine already keys on where one exists; the other tw
 | surface | Surface | < 1,000 km | readout m → km | terrain tiles, cloud deck (3–478 km altitude), Earth scenes, rover sites, craft at mesh scale |
 | planet | Planet | 1,000 km – 0.05 AU | judgment: above every body framing (Jupiter 303,000 km), below the Sun's 0.02 AU and the first light-minute shell | bodies, rings, atmospheres, moons' orbits, body labels, 1 ls light-time shell |
 | solarSystem | Solar system | 0.05 AU – 1,000 AU | `solarSystemSky` goneAt; 1.5× is the sky-bake release | planets as glints (backdrop dissolves 60–300 AU), orbit trails, mission trails, Voyager cruise, light-minute to light-day shells; at Sgr A*: the lens (100–500 AU) and S-star trails |
-| stars | Stars | 1,000 AU – 2 kpc | `SURVEY_DEEP_ZOOM.in[0]`; the solar-neighbourhood extent is 2.3 kpc | seeded stars, constellations (out 1–10 kpc), Local Bubble (in 0.4–1 kpc), light-year shells, star captions; the Milky Way disc starts at 200 pc |
+| stars | Stars | 1,000 AU – 2 kpc | `SURVEY_DEEP_ZOOM.in[0]`; the solar-neighbourhood extent is 2.3 kpc | seeded stars, constellations (out 1–10 kpc), Local Bubble (in 0.4–1 kpc), the galactic structures (open clusters, nebulae, globulars; rings by apparent size, out only at 35–230 kpc), light-year shells, star captions; the Milky Way disc starts at 200 pc |
 | galaxy | Galaxy | 2 kpc – 230 kpc | `FOREGROUND_MAX_DISTANCE_MPC` (the NEAR0 hard gate) | Milky Way disc, Milky Way places (globulars, open clusters, nebulae, Galactic Centre), Zone of Avoidance fading in (35–175 kpc), Gaia fading out (8–25 kpc), "You are here" fading in |
 | localGroup | Local group | 230 kpc – 3 Mpc | judgment: between the famous-galaxy framings (150–400 kpc) and Virgo's 4.7 Mpc; "You are here" is gone at 2 Mpc, the Milky Way cloud at ≈ 2.3–3.4 Mpc | famous galaxies at framing, galaxy-group rings, Zone of Avoidance at full, the Milky Way as a cloud, 1–10 Mly shells |
 | cosmicWeb | Cosmic web | 3 Mpc – 300 Mpc | judgment: Laniakea 63, Coma 24, Boötes 39, the cosmicWeb exhibit 251 all sit inside; the horizon shell starts at 715 | survey points, cluster / supercluster / void rings, density, filaments, flow (R2), 10 Mly–1 Gly shells |
@@ -158,7 +158,7 @@ Legend: ● the band is full somewhere inside the rung · ◐ the band only fade
 | Cosmic web filaments › master, Intensity | `cosmicWebFilaments` | ? | ? | ? | ? | ? | ? | ● | ◐ |
 | Flow › master, Intensity | `flow` | ? | ? | ? | ? | ? | ? | ● | ◐ |
 | Structures › Galaxy clusters, Superclusters, Voids, Galaxy groups | `structureRing` cosmic items | ○ | ○ | ○ | ○ | ◐ | ● | ● | ◐ |
-| Structures › Open clusters, Globulars, Nebulae, Galactic Centre | `structureRing` Milky Way items | ● | ● | ● | ● | ◐ | ○ | ○ | ○ |
+| Structures › Open clusters, Globulars, Nebulae, Galactic Centre | `structureRing` Milky Way items | ● | ● | ● | ● | ● (to 35 kpc) | ○ | ○ | ○ |
 
 ### Labels & guides rows
 
@@ -210,7 +210,7 @@ Legend: ● the band is full somewhere inside the rung · ◐ the band only fade
 | Surface | Hubble (20 m), Voyager 1 and 2 (7 m), the four rovers (~10 m), the 18 Earth places (1.5–12 km) |
 | Planet | all 15 Solar System tab bodies (1,000–303,000 km), Sun (0.02 AU), the 11 star cards (0.003–15 AU) |
 | Solar system | Sgr A* (2.6 AU), the Solar System and Voyager exhibits |
-| Stars | none today |
+| Stars | none today. The data has the Milky Way places (open clusters, nebulae, globulars, the Galactic Centre cluster), and no card, exhibit or tour targets any of them |
 | Galaxy | Milky Way (60 kpc), Cosmic Flows exhibit, both tours |
 | Local group | all 15 Galaxies tab cards (150–400 kpc), Local Group (0.74 Mpc), M81 Group (0.83), Zone of Avoidance exhibit |
 | Cosmic web | Virgo (4.7), Coma (24), Boötes (39), Laniakea (63), Cosmic Web exhibit (251) |
@@ -264,7 +264,7 @@ The first twelve were put in chat before the sweep; Q1 and Q4 of that set are an
 
 **The question:** Accept the eight rungs and the two judgment edges (0.05 AU, 3 Mpc)? And what is the Stars rung's landmark, given no card or exhibit lands there?
 
-**Considerations:** Candidates for Stars: a Sun focus pulled back to 1 pc; a Local Bubble exhibit (the Layer exists, off by default); a constellations exhibit (backlog `constellation-interactivity`). The Milky Way card's capture at 60 kpc is Galaxy, not Stars.
+**Considerations:** Candidates for Stars: a Sun focus pulled back to 1 pc; a Local Bubble exhibit (the Layer exists, off by default); a constellations exhibit (backlog `constellation-interactivity`); a focus on one of the galactic structures already in the structure Layer (the Pleiades, the Orion Nebula, Omega Centauri), none of which has a card today. The Milky Way card's capture at 60 kpc is Galaxy, not Stars.
 
 The Stars rung is also the widest, 5.6 decades from 1,000 AU to 2 kpc, against about 2 for Galaxy and Cosmic web. The Local Bubble (full 1–4 kpc), the disc's onset (200 pc) and the Gaia crowd all sit in its upper decade. A split at about 100 pc into "Nearest stars" and "Neighbourhood" would give the Local Bubble a rung of its own as that rung's guide and landmark; nine rungs instead of eight.
 
