@@ -2,8 +2,8 @@
  * createUpsamplePass tests — the shared factory behind the four HDR upsample
  * ContentPasses (volume, star-aggregate, milky-way, zone-of-avoidance).
  * `enabled`/`name`/`slab` are forwarded verbatim from the row (untested here
- * — trivial passthrough); these tests cover `draw`'s two independent halves:
- * the blit, guarded by the row's handle.
+ * — trivial passthrough); these tests cover `draw`: the blit, guarded by the
+ * row's handle.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createUpsamplePass } from '../../../../../src/services/engine/frame/passes/createUpsamplePass';
