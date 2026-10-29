@@ -2,7 +2,7 @@
  * ring.module.css — the ring, the site's only control: the marker the app draws around objects,
  * plus a label; it dresses links (ObjLink), the menu's `summary` and the few real buttons alike.
  * A vocabulary, not a component: no `.root`; take a class with
- * `composes: ring from '../../styles/ring.module.css'`. The variants (`ring-big`, `ring-small`,
+ * `composes: ring from '../../../../styles/ring.module.css'`. The variants (`ring-big`, `ring-small`,
  * `ring-hang`) are composed together with `ring`. They are prefixed because every module in this
  * folder compiles to `styles-{class}`, and type.module.css already owns `small`.
  * `glyph` goes on the drawing (Icon) inside a ring, `glyph-ring` on a link that is not a ring.
@@ -75,7 +75,7 @@
 
 /*
  * A navigation link carries a drawing of its destination where the marker
- * would be (components/Icon/Icon.tsx). The ring is still the selection: it is
+ * would be (components/shared/links/Icon/Icon.tsx). The ring is still the selection: it is
  * drawn around the drawing when the link is pointed at, focused or the page
  * you are on. Padding and border are taken back by the margin, so the ring
  * costs no room and the label does not move.

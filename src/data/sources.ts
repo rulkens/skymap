@@ -5,7 +5,6 @@
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SourceType } from '../@types/data/SourceType';
-import type { Tier } from '../@types/data/Tier';
 
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { STRUCTURE_SOURCE_ROWS } from '../layers/structure/sources/structureSourceRows';
@@ -23,8 +22,6 @@ import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCata
 import { BLACK_HOLE_SOURCE_ROWS } from '../layers/blackHoles/sources/blackHoleSourceRows';
 
 export { Source } from './source';
-
-// ─── Registry ───────────────────────────────────────────────────────────────
 
 /**
  * `as const satisfies` keeps each entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]`
@@ -47,24 +44,3 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(SATELLITES_SOURCE_ROWS),
   ...sourceRecordOf(STRUCTURE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
-
-// ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
-
-/**
- * `texture_2d_array` holding Famous-galaxy thumbnails at curator resolution. Cost is
- * `N * layerSide² * 4 bytes`: 32 MB at 1024² (medium/large), 8 MB at 512² (small, downsampled at
- * decode). `docs/adrs/0002-tiered-thumbnail-textures.md` and the fade-band math assume these.
- */
-export const HI_RES_LAYER_COUNT = 8 as const;
-
-export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
-  small: 512,
-  medium: 1024,
-  large: 1024,
-} as const;
-
-// ─── Iteration order ────────────────────────────────────────────────────────
-
-/** Galaxy catalog codes, `GALAXY_CATALOG_SOURCE_ROWS` order — see that file. */
-export const GALAXY_CATALOG_SOURCES: readonly (typeof GALAXY_CATALOG_SOURCE_ROWS)[number][0][] =
-  GALAXY_CATALOG_SOURCE_ROWS.map(([code]) => code);

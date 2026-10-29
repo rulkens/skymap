@@ -50,6 +50,10 @@ jobs:
       - name: Check website links
         run: npm run site:links
 
+      # Each landing page's structure file names the headings the built page has.
+      - name: Check page structure files
+        run: npm run site:structure
+
       # No sourced sentence stands in full on more pages than the worst did
       # when the check was written; the limit only goes down.
       - name: Check repeated fact rows

@@ -1,5 +1,5 @@
 ---
-/* The classroom page: its text and front matter are content/pages/classroom.mdx. */
+/* The classroom page: its text and front matter are content/pages/classroom/classroom.mdx. */
 import { getEntry, render } from 'astro:content';
 
 import Base from '../layouts/Base.astro';
@@ -7,8 +7,9 @@ import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 
 const entry = (await getEntry('pages', 'classroom'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', 'classroom'))!.data;
 ---
 
-<Base {...entry.data} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Classrooms', path: '/classroom/' }])]}>
+<Base {...entry.data} {...structure} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Classrooms', path: '/classroom/' }])]}>
   <Content />
 </Base>

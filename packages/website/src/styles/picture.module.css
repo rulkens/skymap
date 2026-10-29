@@ -1,7 +1,7 @@
 /*
  * picture.module.css — the shared parts of a picture's words: the label along the foot of a
  * full-width picture and the cell a gallery's words share. A vocabulary, not a component: no
- * `.root`; take a class with `composes: caption from '../../styles/picture.module.css'`.
+ * `.root`; take a class with `composes: caption from '../../../../styles/picture.module.css'`.
  */
 
 /*

@@ -3,8 +3,9 @@
  * (packages/website/src/dev/review). `__review`: one JSON file per page under `.superpowers/`
  * (gitignored): a cutter or the first PUT writes it, GET hands it to the page (404 until
  * then, and the page starts empty), and PUT stores the owner's rulings back whole. `__job`:
- * PUT writes the page's job into the front matter of its text under src/content, the one
- * place a job lives. Registered for `astro dev` only, like feedbackPlugin.
+ * PUT writes the page's job into the structure file of a landing page or the front matter of
+ * a docs page, under src/content, the one place a job lives. Registered for `astro dev` only,
+ * like feedbackPlugin.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -15,6 +16,7 @@ import { docsReviewStem } from './utils/docsReviewStem';
 import { isDocsReview } from './utils/isDocsReview';
 import { pageSourceFile } from './utils/pageSourceFile';
 import { setFrontMatterJob } from './utils/setFrontMatterJob';
+import { setStructureJob } from './utils/setStructureJob';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const REVIEW_DIR = join(REPO_ROOT, '.superpowers/sdd/2026-10-05-companion-website/review');
@@ -72,9 +74,10 @@ async function answerJob(req: IncomingMessage): Promise<[number, object]> {
   if (typeof body?.job !== 'string') return [400, { error: 'no job' }];
   const rel = pageSourceFile(page);
   const file = rel && join(CONTENT_DIR, rel);
-  if (!file || !existsSync(file)) return [404, { error: 'no front matter for this page' }];
+  if (!file || !existsSync(file)) return [404, { error: 'no job file for this page' }];
   try {
-    writeFileSync(file, setFrontMatterJob(readFileSync(file, 'utf8'), body.job));
+    const set = file.endsWith('.yaml') ? setStructureJob : setFrontMatterJob;
+    writeFileSync(file, set(readFileSync(file, 'utf8'), body.job));
   } catch (error) {
     return [409, { error: String(error) }];
   }
