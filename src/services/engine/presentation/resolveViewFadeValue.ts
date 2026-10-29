@@ -1,7 +1,8 @@
 /**
  * The handed value for a per-view consumer: `resolveFadeValue` times the address's distance
- * band at this view. Once-scope consumers and scene-body admission keep `resolveFadeValue`:
- * one result there serves every view, so no one view's distance may enter it. Memoised per
+ * band at this view. Once-scope planners and scene-body admission keep `resolveFadeValue`:
+ * one result there serves every view, so no one view's distance may enter it (a once-scope
+ * compute is the exception, see `gateComputeByFade`). Memoised per
  * view and address, since `gatePassByFade` asks up to four times per pass per view; a view is
  * minted per frame, so the memo never outlives the snapshot it read.
  */

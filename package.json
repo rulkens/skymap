@@ -124,6 +124,7 @@
     "site:check": "npm run check --workspace @skymap/website",
     "site:media": "tsx tools/site/buildHeroMedia.ts",
     "site:links": "tsx --import ./tools/site/stubCssImports.mjs tools/site/checkSiteLinks.ts",
+    "site:structure": "tsx tools/site/checkPageStructure.ts",
     "site:external": "tsx tools/site/checkExternalLinks.ts",
     "site:repeats": "vitest run tests/packages/website/factRepeats.test.ts",
     "site:compare": "tsx tools/site/compareSite.ts",
@@ -175,6 +176,8 @@
     "pngjs": "7.0.0",
     "prettier": "3.8.3",
     "sharp": "0.35.5",
+    "smol-toml": "1.9.0",
+    "tinyglobby": "0.2.17",
     "ts-morph": "28.0.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
@@ -182,11 +185,11 @@
     "vite": "8.2.1",
     "vitest": "4.1.12",
     "wesl": "0.7.26",
-    "wesl-plugin": "0.6.74",
     "wgslender": "1.4.1",
     "wrangler": "4.151.1",
     "ws": "8.22.0",
-    "xatlas-wasm": "0.1.3"
+    "xatlas-wasm": "0.1.3",
+    "yaml": "2.9.1"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",

@@ -82,8 +82,7 @@ export const SCENE: FrameSection = {
     // inside the hdr COSMO step below, so this render must precede that step.
     { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
     // Twin of the density render, into a 1/5-res offscreen merged by
-    // `zone-of-avoidance-upsample`. The layer also draws the band's full-res curved
-    // lettering straight into HDR: MSDF text blurs on a reduced-res offscreen.
+    // `zone-of-avoidance-upsample`.
     { kind: 'render', target: 'zoa', slab: COSMO, passes: ['zone-of-avoidance'] },
     // Cosmological HDR accumulation. Additive blending commutes, so order is a listing
     // choice except that the two upsample rows must follow the offscreen renders.
@@ -99,6 +98,9 @@ export const SCENE: FrameSection = {
         'flow',
         'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',
+        // After the upsample so the lettering lands on the composited band at full res:
+        // MSDF text blurs on a reduced-res offscreen.
+        'labels-world',
         'horizon-shell',
         'structure-markers-cosmo',
       ],
@@ -230,7 +232,7 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails', 'satellites'],
+      passes: ['orbit-trails', 'mission-trails', 'satellite-orbits', 'satellites'],
       slot: 'POST_FOREGROUND',
     },
   ],

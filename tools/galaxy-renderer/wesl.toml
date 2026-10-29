@@ -67,7 +67,7 @@
 # 'package::lib::fullscreenTri' import resolves the same way any other
 # shared lib import does.
 #
-# wesl-plugin locates this file from the explicit 'weslToml' option in
+# weslStaticPlugin locates this file from the explicit 'weslToml' option in
 # vite.config.ts — NOT from the Vite 'root'. By default the plugin reads
 # '<process.cwd()>/wesl.toml', and 'npm run galaxy-renderer' keeps cwd at
 # the repo root, so without the explicit path the plugin would pick up the

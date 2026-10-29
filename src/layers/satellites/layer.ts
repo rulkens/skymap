@@ -1,8 +1,7 @@
 /**
  * The satellites Layer: the ~20k objects CelesTrak publishes, as points around Earth
- * (docs/superpowers/specs/completed/2026-10-28-earth-satellites-design.md). One asset slot whose commit
- * runs the SGP4 worker, one planner that pulls sweeps, one renderer,
- * one pass, one show entry with a switch per class, and its Settings section.
+ * (docs/superpowers/specs/completed/2026-10-28-earth-satellites-design.md): dots from a point
+ * renderer, and the selected satellites' orbit rings from an orbit-trail renderer.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -14,6 +13,7 @@ import { satellitesAssetRows } from './load/satellitesAssetRows';
 import { satellitesSourceCounts } from './load/satellitesSourceCounts';
 import { satellitesPlanner } from './frame';
 import { satellitesPass } from './passes/satellitesPass';
+import { satelliteOrbitsPass } from './passes/satelliteOrbitsPass';
 import SatellitesSectionContainer from './ui/SatellitesSectionContainer';
 import SatelliteDetailCard from './ui/SatelliteDetailCard/SatelliteDetailCard';
 import CompactSatelliteCard from './ui/CompactSatelliteCard/CompactSatelliteCard';
@@ -29,7 +29,7 @@ export const satellitesLayer = defineLayer({
   create,
   destroy,
   planners: (runtime) => [satellitesPlanner(runtime)],
-  passes: (runtime) => [satellitesPass(runtime)],
+  passes: (runtime) => [satellitesPass(runtime), satelliteOrbitsPass(runtime)],
   assets: satellitesAssetRows,
   sourceCounts: satellitesSourceCounts,
   selection: (runtime) => [satellitesSelectionRow(runtime)],

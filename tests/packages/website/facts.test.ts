@@ -43,7 +43,7 @@ describe('website facts', () => {
       'utils/heroVideoUrl.ts',
     ]);
     expect(importers(/from '[./]+\/(data\/objectCatalogue|utils\/objectCount)(\.ts)?'/)).toEqual([
-      'components/ObjectList/ObjectList.tsx',
+      'components/docs/ObjectList/ObjectList.tsx',
       'content/docs/reference/objects.mdx',
       'utils/objectCount.ts',
       'utils/objectSectionCounts.ts',
