@@ -109,15 +109,13 @@ function makeCtx(
       focus,
       sceneBodies: sceneBodiesOf(catalogs),
     },
-    cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 
-// A below-gate camera 5 kpc down +z: well inside FOREGROUND_MAX_DISTANCE_MPC
-// (~0.23 Mpc) AND inside the backdrop-dissolve band's live range (goneAt ~0.023 Mpc),
-// so both the distance gate and the band pass — yet still parsecs beyond every
+// A camera 5 kpc down +z, inside the backdrop-dissolve band's live range (goneAt ~0.023 Mpc)
+// — yet still parsecs beyond every
 // seeded star, so all 24 non-Sun neighbours stay sub-pixel points.
 const NEAR_FIELD_CAM: Readonly<Vec3> = [0, 0, 5e-3];
 
@@ -199,14 +197,11 @@ describe('starPointsPass.enabled', () => {
     expect(pass.enabled(makeState(), makeCtx(NEAR_FIELD_CAM), VIEW_STUB, seededOff)).toBe(false);
   });
 
-  it('is disabled once the backdrop band has dissolved, even inside the foreground gate', () => {
-    // Just past the backdrop band's goneAt but still WELL inside the shared
-    // foreground gate: the additive sprite field has faded to black, so the
-    // layer must disable outright (the "opacity 0 ⇒ no render" house rule)
-    // rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
-    // Derived from the band + gate so a roster growth carries both edges.
+  it('is disabled once the backdrop band has dissolved', () => {
+    // Just past the backdrop band's goneAt: the additive sprite field has faded to
+    // black, so the layer must disable outright (the "opacity 0 ⇒ no render" house
+    // rule) rather than draw invisible sprites and hold the (hdr, NEAR0) step open.
     const beyondBand = STAR_BACKDROP_DISSOLVE.goneAt * 1.01;
-    expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     const state = makeState();
     expect(pass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB, ALL_ON)).toBe(false);

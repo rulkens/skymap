@@ -12,7 +12,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { planetsPass } from '../../../../src/layers/body/passes/planetsPass';
 import { texturedBodiesPass } from '../../../../src/layers/body/passes/texturedBodiesPass';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../src/layers/body/render/planetRenderer';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../src/services/engine/helpers/minPickRadiusMpc';
@@ -89,14 +88,10 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 /** A ctx comfortably inside the shared foreground gate, with a fixed pose for every body. */
-function makeCtx(
-  planets: readonly SeededPlanet[],
-  distance = FOREGROUND_MAX_DISTANCE_MPC / 2,
-): FrameView {
+function makeCtx(planets: readonly SeededPlanet[]): FrameView {
   vi.mocked(sceneBodyStates).mockReturnValue(seededBodyStates(0, planets));
   return {
     snapshot: { meshBodies: [], sceneBodies: positionedBodiesOf(planets) },
-    cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     canvasSize: { width: 1280, height: 720 },

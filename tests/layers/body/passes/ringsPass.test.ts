@@ -10,7 +10,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { ringsPass } from '../../../../src/layers/body/passes/ringsPass';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
@@ -92,9 +91,8 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
+function makeCtx(): FrameView {
   return {
-    cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     canvasSize: { width: 1280, height: 720 },

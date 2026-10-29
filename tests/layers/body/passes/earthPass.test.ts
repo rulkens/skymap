@@ -13,7 +13,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { earthPass } from '../../../../src/layers/body/passes/earthPass';
 import { surfaceTilesPass } from '../../../../src/layers/body/passes/surfaceTilesPass';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -121,11 +120,10 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 /**
- * A ctx whose camera sits `distance` Mpc from Earth's centre along +x, looking AT Earth (the unmocked
- * `bodyRelativePose` needs a real position/target). `cam.distance` is set independently of the
- * camera's actual position: the gates keyed on it and on the sub-pixel cull must vary independently.
+ * A ctx whose camera sits 1e-13 Mpc from Earth's centre along +x, looking AT Earth (the unmocked
+ * `bodyRelativePose` needs a real position/target).
  */
-function makeCtx(distance: number): FrameView {
+function makeCtx(): FrameView {
   const drawCamPos: Vec3 = [
     SEEDED_EARTH.positionMpc[0] + 1e-13,
     SEEDED_EARTH.positionMpc[1],
@@ -133,7 +131,7 @@ function makeCtx(distance: number): FrameView {
   ];
   return {
     snapshot: { meshBodies: [], sceneBodies: [] },
-    cam: { distance, position: drawCamPos, target: SEEDED_EARTH.positionMpc },
+    cam: { position: drawCamPos, target: SEEDED_EARTH.positionMpc },
     drawCamPos,
     bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
     canvasSize: { width: 1280, height: 720 },
@@ -143,7 +141,7 @@ function makeCtx(distance: number): FrameView {
 
 // Tests asserting `toHaveBeenCalledTimes(1)` call `makeCtx` fresh instead of sharing this:
 // `prepareBodySurfaceFrame`'s ctx-keyed memo would otherwise hit an entry another test primed.
-const NEAR_CTX = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+const NEAR_CTX = makeCtx();
 
 /**
  * A body-m SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT arrays (the f32 one
@@ -242,7 +240,7 @@ describe('prepareBodySurfaceFrame', () => {
     const state: EngineState = {
       ...makeState(),
     } as unknown as EngineState;
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const ctx = makeCtx();
     const earthView = makeEarthBodyView('earth');
     const marsView = makeEarthBodyView('mars');
 
@@ -271,7 +269,7 @@ describe('earthPass.draw', () => {
 
     // Fresh ctx, not the shared NEAR_CTX: `toHaveBeenCalledTimes(1)` needs its own memo entry.
     // Well above the cloud-shadow descent-fade band.
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const ctx = makeCtx();
     globe.draw(PASS_STUB, view, ctx, state);
 
     expect(mvpMock).toHaveBeenCalledTimes(1);
@@ -305,7 +303,7 @@ describe('earthPass.draw', () => {
     const state = makeState();
     const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const ctx = makeCtx();
     globe.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
@@ -329,7 +327,7 @@ describe('earthPass.draw', () => {
     const state = makeState();
     const globe = earthPass(makeRuntime({ earthRenderer: { draw: drawSpy } }));
 
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const ctx = makeCtx();
     globe.draw(PASS_STUB, view, ctx, state);
 
     const [, uniforms] = drawSpy.mock.calls[0]! as [GPURenderPassEncoder, Float32Array];
@@ -372,7 +370,6 @@ describe('earthPass.draw', () => {
     const closeCtx = {
       snapshot: { meshBodies: [], sceneBodies: [] },
       cam: {
-        distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,
         target: SEEDED_EARTH.positionMpc,
       },
@@ -488,7 +485,7 @@ describe('surfaceTilesPass', () => {
     // capture context carries a fresh, empty plans store.
     const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
-    const faceCtx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const faceCtx = makeCtx();
     faceCtx.snapshot.plans = createFramePlannerResultStore();
     const runtime = makeRuntime({
       surfaceTileRenderer: { draw: tileDraw },
@@ -530,7 +527,6 @@ describe('earthPass.draw — the base globe is always drawn', () => {
     return {
       snapshot: { meshBodies: [], sceneBodies: [] },
       cam: {
-        distance: FOREGROUND_MAX_DISTANCE_MPC / 2,
         position: drawCamPos,
         target: SEEDED_EARTH.positionMpc,
       },
@@ -570,7 +566,7 @@ describe('earthPass.drawPick', () => {
     // Far enough out that the BODY_PICK_MIN_RADIUS_PX floor exceeds Earth's
     // true radius — the far-edge-of-the-foreground-band case the floor exists
     // for (see minPickRadiusMpc's header).
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
+    const ctx = makeCtx();
     const state = {
       ...makeState(),
       gpu: { bodyPickRenderer: { drawSphere } },

@@ -47,7 +47,7 @@ const KM = SCALE_UNITS.KM_TO_MPC;
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'];
 
 // Camera 1e6 km down +x from the Sun (at the origin) — deep inside the
-// foreground gate, so `enabled`'s distance check passes.
+// solar-system label cutoff, so the glint backdrop fade is fully on.
 const CAM_KM = 1_000_000;
 const CAM_POS: Vec3 = [CAM_KM * KM, 0, 0];
 

@@ -6,7 +6,7 @@ import { walkFiles } from '../../helpers/conventions/walkFiles';
 // Bug caught: a pass or present helper comparing the eye to the cutoff by hand again, so it
 // measures from somewhere other than its own region and outlives the band it should yield to.
 describe('FOREGROUND_MAX_DISTANCE_MPC importers', () => {
-  it('only bands and slab rows import FOREGROUND_MAX_DISTANCE_MPC', () => {
+  it('only band definitions import FOREGROUND_MAX_DISTANCE_MPC', () => {
     const importers = walkFiles('src', ['.ts', '.tsx'])
       .filter((file) => /from\s+['"][^'"]*\/foregroundMaxDistance['"]/.test(readFileSync(file, 'utf8')))
       .sort();
