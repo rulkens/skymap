@@ -1,6 +1,6 @@
 /**
  * SatellitePointFrame — what `satellitePointRenderer.draw` needs per view. `vp` is the
- * eye-rebased view-projection in clip metres; `earthKm` is Earth's centre minus the eye in world
+ * eye-rebased view-projection in near-plane clip units (`near0OverlayClipScale`); `earthKm` is Earth's centre minus the eye in world
  * km, and `temeToWorld` the rotation of the current instant, both composed in f64 by the pass.
  */
 import type { Mat3 } from '../../../@types/math/Mat3';
