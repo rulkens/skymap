@@ -13,6 +13,7 @@ import { labelsCosmoPass } from './labelsCosmoPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { labelsNearPass } from './labelsNearPass';
+import { labelsWorldPass } from './labelsWorldPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 
@@ -24,6 +25,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   markerLinesPass,
   labelsCosmoPass,
   labelsNearPass,
+  labelsWorldPass,
   clipPathDebugPass,
   skyCubemapBlitPass,
   domeResamplePass,

@@ -104,7 +104,9 @@ where ≥2 layers share a gate.
    `zoneOfAvoidanceUpsampleLayer.ts` uses it for its MSDF caption draw — and
    the downscaled-viewport formula lives once in `reducedTargetSize.ts`,
    called from `renderTargets.ts:334` (verified zero remaining inline
-   copies). Original finding, for record: **Reduced-res accumulate →
+   copies). The `postBlit` hook was later deleted: the band's lettering is
+   core's `labels-world` pass, drawn after the upsample. Original finding,
+   for record: **Reduced-res accumulate →
    upsample, ×4 — copy-paste confirmed, and
    still growing.** `zoneOfAvoidanceUpsampleLayer` (#555,
    `passes/zoneOfAvoidanceUpsampleLayer.ts`) is a 4th instance of the exact
