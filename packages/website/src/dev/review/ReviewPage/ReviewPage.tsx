@@ -26,6 +26,8 @@ import { describeApply } from '../describeApply';
 import { flashMark } from '../flashMark';
 import { itemKey } from '../itemKey';
 import { ownerMark } from '../ownerMark';
+import { normalizeHeading } from '../../../../../../tools/site/utils/normalizeHeading';
+import { readStructureJobs } from '../readStructureJobs';
 import { sectionText } from '../sectionText';
 import { saveJob } from '../saveJob';
 import { setNote } from '../setNote';
@@ -111,6 +113,7 @@ function ReviewPage({ article, url, first, job }: ReviewPageProps) {
   usePageChrome(article, active, hiding, marksShown);
   useApplyPoll(url, !!review.apply, adopt);
 
+  const structureJobs = useMemo(readStructureJobs, []);
   const section =
     open && open.target !== 'applied' ? sections.find((s) => s.heading === open.target) : undefined;
   const sectionWords = useMemo(() => {
@@ -342,6 +345,7 @@ function ReviewPage({ article, url, first, job }: ReviewPageProps) {
           key={open.serial}
           {...panelProps}
           title={section.title}
+          job={structureJobs.get(normalizeHeading(section.title))}
           items={section.items}
           words={sectionWords}
           apply={{

@@ -20,6 +20,11 @@
   color: var(--color-accent);
 }
 
+.job {
+  composes: dim from '../ReviewControl/ReviewControl.module.css';
+  margin-bottom: var(--space-4);
+}
+
 .words {
   composes: dim from '../ReviewControl/ReviewControl.module.css';
   margin-bottom: var(--space-4);
