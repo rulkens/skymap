@@ -21,6 +21,13 @@ Each landing page of the website gets its own folder holding its text, its struc
 
 The MDX editor flags `class` ("Attribute class is not allowed here") because it types tags as React JSX. Astro renders `className` as `class` (`astro/dist/runtime/server/render/util.js:117`). So no MDX file uses `class=`. The 56 uses are all in landing MDX: wrappers become the Task 2 component, and the rest become `className`.
 
+### Deletion audit (owner, 2026-10-29, ask 2JWg)
+
+10. `PageSection` stays recursive, and the heading reader keeps its entity decoding and nav/footer strip.
+11. One job writer: `setFrontMatterJob` strips the `---` fences and calls `setStructureJob`.
+12. `checkPageStructure` reads the page folders instead of keeping its own list.
+13. The shipped `2026-10-20-page-front-matter` plan (#928) moves to `plans/completed/` in this PR.
+
 Section jobs are drafted by the implementer in the job-line form (the reader's question, or what the section shows in one plain line). The owner corrects them, so list them in the PR body.
 
 ## Ground preparation
@@ -88,12 +95,12 @@ Each component keeps its own folder (`Shot/Shot.tsx` + `Shot.module.css`) and it
 
 ## Definition of Done
 
-- [ ] `npm run typecheck`, `npm run site:check`, `npm run site:build`, `npm run site:links` and the new structure check pass. Website and site-tool tests pass.
-- [ ] No `export const` is left in any landing MDX file, and no `class=` in any MDX file.
-- [ ] `components/` has only `site/`, `shared/`, `docs/` and `pages/` at its top.
-- [ ] The built HTML of all 8 pages is unchanged apart from dev-only output. Diff `dist/` before and after.
+- [x] `npm run typecheck`, `npm run site:check`, `npm run site:build`, `npm run site:links` and the new structure check pass. Website and site-tool tests pass.
+- [x] No `export const` is left in any landing MDX file, and no `class=` in any MDX file.
+- [x] `components/` has only `site/`, `shared/`, `docs/` and `pages/` at its top.
+- [x] The built HTML of all 8 pages is unchanged apart from dev-only output. Diff `dist/` before and after.
 - [ ] The review tool on :5800 shows a page job and the section jobs, and editing the job in the bar rewrites the YAML.
-- [ ] The PR body lists the drafted section jobs.
+- [x] The PR body points to the drafted section jobs in the 8 structure files.
 
 ## Out of scope
 
