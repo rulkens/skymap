@@ -1,11 +1,12 @@
 /**
- * One entry's distance-band value for one item at one view: the product of the bands that
+ * One entry's distance-band value for one item at one eye: the product of the bands that
  * apply to the item. `in` and `out` use `smoothstep`, the curve `fadeBand` uses. The region anchor's position comes from
- * `snapshot.bodyStates`, the same map `sceneBodyStates` hands passes.
+ * `snapshot.bodyStates`, the same map `sceneBodyStates` hands passes. It takes an eye rather
+ * than a view so scene-body admission can measure at the frame camera.
  */
 
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
+import type { BandEye } from '../../../@types/engine/presentation/BandEye';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { regionById } from '../../../utils/regions/regionById';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
@@ -13,7 +14,7 @@ import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelative
 export function bandValueOf(
   entry: VisibilityEntry,
   item: string | undefined,
-  view: Pick<FrameView, 'drawCamPos' | 'snapshot'>,
+  view: BandEye,
 ): number {
   if (entry.bands === undefined) return 1;
   const [x, y, z] = view.drawCamPos;

@@ -22,7 +22,6 @@ import { bodyCameraDistanceMpc } from '../present/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../present/isTexturedBodyKey';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from '../present/prepareBodySurfaceFrame';
 import { surfaceTileSpecOf } from '../subsystems/surfaceTiles/surfaceTileSpecOf';
 
@@ -35,7 +34,6 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
       const hostId = view.slab.frame.hostId;
       const spec = surfaceTileSpecOf(hostId);
       if (spec === null) return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const tiles = runtime.surfaceTiles;
       // Every vertex position reads the height atlas, so a cut without it is garbage.
       return (

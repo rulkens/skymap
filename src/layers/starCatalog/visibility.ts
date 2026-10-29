@@ -18,10 +18,16 @@ export const starCatalogVisibility = [
     key: 'starCatalog',
     cluster: 'starCatalogs',
     items: STAR_CATALOG_IDS,
-    // No `foreground` band here: this entry carries `bodies`, and scene-body admission
-    // runs once per frame with no view to measure a band at, so the star passes keep
-    // the gate by hand (`appVisibility.test.ts` pins the rule).
     bodies: SEEDED_STAR_CATALOGS,
+    // Each seeded set recedes from its own region; the survey stars keep drawing from far out.
+    bands: {
+      foreground: {
+        ...FOREGROUND_RECEDE,
+        from: 'solar-neighbourhood',
+        items: ['famousStar', 'sun'],
+      },
+      sStarForeground: { ...FOREGROUND_RECEDE, from: 'galactic-centre', items: ['sStar'] },
+    },
   },
   {
     label: 'starCatalog',

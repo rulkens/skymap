@@ -1,7 +1,7 @@
 /**
  * tileBodiesInView — names exactly the tiling body the view gives a `body-m`
- * slab, over the 1 px edge, the foreground-distance edge, a body behind the eye
- * and a host only a mesh body re-admits.
+ * slab, over the 1 px edge, a body behind the eye and a host only a mesh body
+ * re-admits.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 import { tileBodiesInView } from '../../../../../src/layers/body/subsystems/surfaceTiles/tileBodiesInView';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { isSurfaceTileBodyId } from '../../../../../src/layers/body/subsystems/surfaceTiles/isSurfaceTileBodyId';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
@@ -22,7 +21,7 @@ const STATES = deriveBodyStates(CONST_J2000);
 const NEAR_DISTANCE_MPC = 1e-12;
 const firstTileBody = (view: FrameView) => tileBodiesInView(view)[0] ?? null;
 
-/** What `deriveSlabs` built: the first tiling host's slab, gated as today on distance. */
+/** What `deriveSlabs` built: the first tiling host's slab. */
 function slabAnswer(view: FrameView): string | null {
   const hosts = view.slabs.flatMap((slab) =>
     slab.frame.kind === 'body-m' && isSurfaceTileBodyId(slab.frame.hostId)
@@ -30,7 +29,7 @@ function slabAnswer(view: FrameView): string | null {
       : [],
   );
   expect(hosts.length).toBeLessThanOrEqual(1);
-  return view.cam.distance < FOREGROUND_MAX_DISTANCE_MPC ? (hosts[0] ?? null) : null;
+  return hosts[0] ?? null;
 }
 
 /** Eye `distanceM` from `bodyId` along `dir`, looking at it (or away). */
@@ -64,24 +63,6 @@ describe('tileBodiesInView', () => {
       }
       expect(outcomes).toEqual(new Set([bodyId, null]));
     }
-  });
-
-  it('agrees on both sides of the foreground distance', () => {
-    const at = (distanceMpc: number): FrameView => {
-      const earth = STATES.get(asSceneBodyId('earth'))!.positionMpc;
-      const d = 3 * 6.371e6 * SCALE_UNITS.M_TO_MPC;
-      return frameViewsAt({
-        eyeMpc: [earth[0] + d, earth[1], earth[2]],
-        forward: [-1, 0, 0],
-        distanceMpc,
-      })[0]!;
-    };
-    const inside = at(FOREGROUND_MAX_DISTANCE_MPC * (1 - 1e-9));
-    const outside = at(FOREGROUND_MAX_DISTANCE_MPC);
-    expect(firstTileBody(inside)).toBe('earth');
-    expect(firstTileBody(inside)).toBe(slabAnswer(inside));
-    expect(firstTileBody(outside)).toBeNull();
-    expect(firstTileBody(outside)).toBe(slabAnswer(outside));
   });
 
   it('names a host only a mesh body re-admits', () => {

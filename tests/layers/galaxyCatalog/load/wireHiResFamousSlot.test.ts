@@ -9,7 +9,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../../src/data/sources';
+import { HI_RES_LAYER_COUNT } from '../../../../src/layers/galaxyCatalog/data/hiResLayerCount';
+import { HI_RES_LAYER_SIDE_BY_TIER } from '../../../../src/layers/galaxyCatalog/data/hiResLayerSideByTier';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import type { TexturedDiskRenderer } from '../../../../src/@types/rendering/TexturedDiskRenderer';
 

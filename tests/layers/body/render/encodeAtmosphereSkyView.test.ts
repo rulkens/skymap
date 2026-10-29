@@ -20,7 +20,8 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { bodySlabCamLocal } from '../../../../src/utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
+import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
 import type { AtmosphereShellRenderer } from '../../../../src/layers/body/@types/AtmosphereShellRenderer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -71,19 +72,19 @@ const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(Math.PI / 4 / 2));
 
 /**
  * The minimal FrameView the encode reads: `bodyPose` (source of the camera altitude), `drawCamPos` +
- * `cam.distance` + `drawPxPerRad` (for `atmosphereDrawList`'s own culls, decoupled from the sky-view
- * math). `camDistance` defaults to 0, inside the near-field edge; `drawCamPos` is sized so Earth's
- * disc resolves well above sub-pixel.
+ * the active slab rows + `drawPxPerRad` (for `atmosphereDrawList`'s own culls, decoupled from the
+ * sky-view math). Every body row is active by default; `drawCamPos` is sized so Earth's disc
+ * resolves well above sub-pixel.
  */
 function makeCtx(input: {
   bodyPose: BodyPoseProvider;
   drawCamPos?: Vec3;
-  camDistance?: number;
+  slabBodyCandidates?: readonly SlabRow[];
 }): FrameView {
   return {
     bodyPose: input.bodyPose,
     drawCamPos: input.drawCamPos ?? DRAW_CAM_POS,
-    cam: { distance: input.camDistance ?? 0 },
+    snapshot: { slabBodyCandidates: input.slabBodyCandidates ?? BODY_SLAB_ROWS },
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
@@ -136,7 +137,7 @@ describe('encodeAtmosphereSkyView', () => {
       encoder,
       makeCtx({
         bodyPose: makeBodyPose(EYE_REL_BODY_M),
-        camDistance: FOREGROUND_MAX_DISTANCE_MPC,
+        slabBodyCandidates: [],
       }),
       makeState(),
       claim,
@@ -145,14 +146,14 @@ describe('encodeAtmosphereSkyView', () => {
     expect(claim).not.toHaveBeenCalled();
   });
 
-  it('is a no-op when the camera is beyond the near-field distance gate', () => {
+  it('is a no-op when no body row is active', () => {
     const renderer = spyRenderer();
     encodeAtmosphereSkyView(
       renderer,
       encoder,
       makeCtx({
         bodyPose: makeBodyPose(EYE_REL_BODY_M),
-        camDistance: FOREGROUND_MAX_DISTANCE_MPC,
+        slabBodyCandidates: [],
       }),
       makeState(),
     );
