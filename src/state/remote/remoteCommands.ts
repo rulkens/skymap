@@ -2,30 +2,29 @@
  * REMOTE_COMMANDS — every command a remote may send, as one registry: a key's
  * presence is the allow-list, `parse` rebuilds the payload from untrusted JSON
  * (bounds and registry ids checked here), and `toActions` maps it onto existing
- * actions. Lives in `compositions/` because `goTo` checks ids against
- * `APP_EXHIBITS`, a composition value.
+ * actions.
  */
 
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { APP_EXHIBITS } from './appExhibits';
-import { clipRegistry } from '../data/animation/clips/clipRegistry';
-import { tourRegistry } from '../data/animation/tours/tourRegistry';
-import { RATE_LADDER } from '../data/time/rateLadder';
-import { setControlScheme } from '../state/settings/core/cameraControlsSlice';
-import { remotePairingToggled } from '../state/remote/remoteSlice';
-import { goHome } from '../state/selection/goHome';
-import { advanceTour, prevBeat, togglePause } from '../state/tour/tourActions';
-import { startClip } from '../state/camera/clipActions';
-import { exitTakeover } from '../state/takeover/takeoverActions';
-import { pause, resume, setDirection, setRate, setSimDays } from '../state/time/timeSlice';
-import { goLiveNowAction } from '../state/time/goLiveNowAction';
-import { actionsForPaletteAction } from '../utils/palette/actionsForPaletteAction';
-import { isFiniteIn } from '../utils/math/isFiniteIn';
-import { isKeyOf } from '../utils/object/isKeyOf';
-import { isRecord } from '../utils/object/isRecord';
-import type { PaletteAction } from '../@types/palette/PaletteAction';
-import type { RemoteCommandPayloads } from '../@types/remote/RemoteCommandPayloads';
-import type { RemoteCommandSpec } from '../@types/remote/RemoteCommandSpec';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { RATE_LADDER } from '../../data/time/rateLadder';
+import { setControlScheme } from '../settings/core/cameraControlsSlice';
+import { remotePairingToggled } from './remoteSlice';
+import { goHome } from '../selection/goHome';
+import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
+import { startClip } from '../camera/clipActions';
+import { exitTakeover } from '../takeover/takeoverActions';
+import { pause, resume, setDirection, setRate, setSimDays } from '../time/timeSlice';
+import { goLiveNowAction } from '../time/goLiveNowAction';
+import { actionsForPaletteAction } from '../../utils/palette/actionsForPaletteAction';
+import { isFiniteIn } from '../../utils/math/isFiniteIn';
+import { isKeyOf } from '../../utils/object/isKeyOf';
+import { isRecord } from '../../utils/object/isRecord';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
+import type { RemoteCommandPayloads } from '../../@types/remote/RemoteCommandPayloads';
+import type { RemoteCommandSpec } from '../../@types/remote/RemoteCommandSpec';
 
 const MAX_FOCUS_ID_CHARS = 256;
 const MAX_ALT_KM = 1e6;

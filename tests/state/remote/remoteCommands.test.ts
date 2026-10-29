@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseRemoteCommand } from '../../src/compositions/parseRemoteCommand';
-import { runRemoteCommand } from '../../src/compositions/runRemoteCommand';
-import { RATE_LADDER } from '../../src/data/time/rateLadder';
-import { setControlScheme } from '../../src/state/settings/core/cameraControlsSlice';
-import { goHome } from '../../src/state/selection/goHome';
-import { advanceTour } from '../../src/state/tour/tourActions';
-import { startClip } from '../../src/state/camera/clipActions';
+import { parseRemoteCommand } from '../../../src/utils/remote/parseRemoteCommand';
+import { runRemoteCommand } from '../../../src/utils/remote/runRemoteCommand';
+import { RATE_LADDER } from '../../../src/data/time/rateLadder';
+import { setControlScheme } from '../../../src/state/settings/core/cameraControlsSlice';
+import { goHome } from '../../../src/state/selection/goHome';
+import { advanceTour } from '../../../src/state/tour/tourActions';
+import { startClip } from '../../../src/state/camera/clipActions';
 import {
   goLive,
   pause,
@@ -14,10 +14,10 @@ import {
   setDirection,
   setRate,
   setSimDays,
-} from '../../src/state/time/timeSlice';
-import { actionsForPaletteAction } from '../../src/utils/palette/actionsForPaletteAction';
-import type { PaletteAction } from '../../src/@types/palette/PaletteAction';
-import type { RemoteCommandEnv } from '../../src/@types/remote/RemoteCommandEnv';
+} from '../../../src/state/time/timeSlice';
+import { actionsForPaletteAction } from '../../../src/utils/palette/actionsForPaletteAction';
+import type { PaletteAction } from '../../../src/@types/palette/PaletteAction';
+import type { RemoteCommandEnv } from '../../../src/@types/remote/RemoteCommandEnv';
 
 const ENV: RemoteCommandEnv = {
   nowMs: 1234.5,
