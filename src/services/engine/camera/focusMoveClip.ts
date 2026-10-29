@@ -15,7 +15,7 @@ const cache = new WeakMap<CameraTweenDescriptor, ClipData>();
 export function focusMoveClip(d: CameraTweenDescriptor): ClipData {
   const cached = cache.get(d);
   if (cached !== undefined) return cached;
-  const data = focusMotionRowOf(d).clipOf(d);
+  const data = focusMotionRowOf(d.motion).clipOf(d);
   cache.set(d, data);
   return data;
 }

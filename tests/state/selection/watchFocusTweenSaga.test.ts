@@ -281,20 +281,20 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
-  // A scene body is FOLLOWED by the camera's follow rows, not tweened —
-  // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-  // moves. The saga must return before planting a tween for a body row, while a
-  // non-body focus (here the Milky Way) still tweens as before.
-  it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
+  // Eased leaves a moving body to the follow approach; Geodesic flies the
+  // geodesic to the framing at the click and the follow rows take over on arrival.
+  it('a geodesic focus on a moving body dispatches a tween; an eased one does not', async () => {
     // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
     store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
 
-    // A non-body focus (Milky Way) still plants a tween through the same saga.
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('mars') }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween!.motion.style).toBe('geodesic');
+    expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 
   // Regression: a famous star carries a driver id (its position comes from the

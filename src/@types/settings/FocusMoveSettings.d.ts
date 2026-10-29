@@ -9,7 +9,7 @@ import type { GeodesicTuning } from '../camera/GeodesicTuning';
 
 export type FocusMoveSettings = {
   readonly style: FocusMoveStyle;
-  /** Also drives the planet follow-approach and Home, which stay Eased under either style. */
+  /** Also times the follow approach, which owns a move to a moving body under Eased. */
   readonly eased: { readonly durationMs: number };
   readonly geodesic: GeodesicTuning;
 };

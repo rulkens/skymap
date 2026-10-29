@@ -14,17 +14,14 @@
  *
  * ### Why this tween is the only camera authority during the flight
  *
- * `watchFocusTweenSaga` deliberately NO-OPS for bodies the follow driver handles
- * (see watchFocusTweenSaga.ts:85-97 — 'followed, not tweened'), so writing the
- * Earth focus row here plants no competing tween. This saga's `startCameraTween`
- * is the sole mover. On tween end the follow driver activates, captures the
- * tween's end pose as its `from`, and re-seeds its distance target to the exact
- * framing distance the pose already carries (the memory drops when the follow
- * EPOCH's ref changes, which advances only on a frame a follow row wins; the
- * driver then re-seeds its distance target to `bodyLikeFraming`'s distance —
- * the same one `bodyHomePose` used). Because
- * the pose already sits at that distance, the tween→follow handoff is seamless:
- * the driver takes over a camera already at rest.
+ * The Earth focus is written as a `'cut'`, so `watchFocusTweenSaga` plants no
+ * competing tween (under Geodesic it would fly Earth's heading-keeping framing);
+ * this saga's `startCameraTween` is the sole mover, in the user's focus-move
+ * style. The tween delivers the framing, so the follow memory it hands over is
+ * settled: on tween end the follow row holds Earth at the landed distance with
+ * no second ease. A Geodesic flight runs up to the tuning's max duration while
+ * Earth moves under a pose frozen at dispatch: invisible at real time, a
+ * visible catch-up on the hand-off frame at fast rates.
  *
  * ### Why BOTH select and focus are written
  *
@@ -52,7 +49,7 @@ import { bodyHomePose } from '../../services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { EASED_FOCUS_EASE } from '../../data/camera/focusMoveDefaults';
+import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchGoHomeSaga() {
@@ -75,17 +72,15 @@ export function* watchGoHomeSaga() {
     // driver can re-express the pose if the setting changes mid-flight.
     const frame = yield* select(selectOrientation);
     const frameBasis = ORIENTATION_FRAMES[frame];
-    // Eased under either style: Earth moves under a geodesic window frozen at
-    // dispatch, and the hand-off to the follow driver expects the framed pose.
-    const { eased } = yield* select(selectFocusMoves);
+    const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
 
     yield* put(updateSelectionSelect(EARTH_REF));
-    yield* put(updateSelectionFocus(EARTH_REF));
+    yield* put(updateSelectionFocus(EARTH_REF, 'cut'));
     yield* put(
       startCameraTween({
         from: runtime.from,
         to: bodyHomePose(EARTH_REF.id, simDays, runtime.fovYRad, frameBasis),
-        motion: { style: 'eased', durationMs: eased.durationMs, ease: EASED_FOCUS_EASE },
+        motion,
         frame,
       }),
     );

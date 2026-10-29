@@ -30,6 +30,7 @@ import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
+import { focusMotionRowOf } from '../../services/engine/camera/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -84,20 +85,20 @@ export function* watchFocusTweenSaga() {
       // inside the saga worker.
       if (!ROW_FOCUSABLE[row.type]) return;
 
-      // A body the follow rows WILL handle is followed, not tweened — the
-      // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-      // moves. Gate on `bodyMovesThisFrame` rather than a bare `row.type ===
-      // 'body'`: a focused S-star is a `starCatalog` row, not a body row, but
-      // the sim clock still moves it, so a type-only gate would miss it and
-      // tween a moving target instead of following it.
-      if (bodyMovesThisFrame(row)) return;
-
       // Known ready since the wait above; re-read rather than reuse, since a
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
-      const frame = yield* select(selectOrientation);
       // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
       const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
+
+      // A body the sim clock moves is the motion row's call: a style that does
+      // not tween one leaves it to the follow approach; one that does flies to
+      // the framing at the click, and the follow rows take over on arrival.
+      // Gate on `bodyMovesThisFrame`, not `row.type === 'body'`: a focused
+      // S-star is a `starCatalog` row the sim clock still moves.
+      if (bodyMovesThisFrame(row) && !focusMotionRowOf(motion).tweensMovingBodies) return;
+
+      const frame = yield* select(selectOrientation);
       yield* put(
         startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
       );
