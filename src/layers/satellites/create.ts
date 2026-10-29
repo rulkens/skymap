@@ -1,7 +1,8 @@
 /**
  * create — the satellites Layer in dependency order: the renderer, the propagator (no worker yet),
- * then the slot whose commit starts the worker and whose release ends it. A landed sweep wakes the
- * frame loop so it is drawn even with the camera at rest.
+ * then the slot that drives it, then the selected
+ * satellites the camera may follow. A landed sweep wakes the frame loop so it is drawn even with
+ * the camera at rest.
  */
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { SatellitesRuntime } from './@types/SatellitesRuntime';
@@ -10,6 +11,7 @@ import { SATELLITE_SWEEP_TIMING } from '../../data/satellites/satelliteSweepTimi
 import { createSatellitePointRenderer } from './render/satellitePointRenderer';
 import { createSatellitePropagator } from './subsystems/createSatellitePropagator';
 import { createSatellitesSlot } from './load/satellitesSlot';
+import { createSelectedSatellites } from './subsystems/createSelectedSatellites';
 import SatellitePropagationWorker from './load/satellitePropagation.worker?worker';
 
 export function create(deps: LayerCoreDeps): SatellitesRuntime {
@@ -23,10 +25,15 @@ export function create(deps: LayerCoreDeps): SatellitesRuntime {
     if (wake !== null) clearTimeout(wake);
     wake = null;
   };
+  const slot = createSatellitesSlot(propagator, renderer);
   return {
     renderer,
     propagator,
-    slot: createSatellitesSlot(propagator, renderer),
+    slot,
+    selected: createSelectedSatellites(
+      { read: () => deps.store.getState().selection, subscribe: deps.store.subscribe },
+      { slot, propagator },
+    ),
     scheduleWake: () => {
       cancelWake();
       wake = setTimeout(() => {

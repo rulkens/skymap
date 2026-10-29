@@ -14,4 +14,5 @@ export const SELECTION_KINDS = [
   'earthScene',
   'starCatalog',
   'blackHole',
+  'satellite',
 ] as const;

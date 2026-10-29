@@ -16,5 +16,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     discard;
   }
   let glow = exp(-4.0 * r2);
-  return vec4<f32>(u.color * glow * clear * u.opacity, 1.0);
+  return vec4<f32>(u.color * glow * clear * in.opacity, 1.0);
 }

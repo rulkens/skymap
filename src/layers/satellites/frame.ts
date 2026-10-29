@@ -14,6 +14,7 @@ import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { satelliteOpacity } from './subsystems/satelliteOpacity';
 import { sweepDue } from './subsystems/sweepDue';
+import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
 
 const IDLE = { value: undefined, awake: false, settling: false } as const;
 
@@ -29,7 +30,8 @@ export function satellitesPlanner(
       const { propagator, renderer } = runtime;
       const catalog = propagator.catalog();
       const earth = deriveBodyStates(snapshot.simDays).get(SCENE_EARTH.id);
-      if (catalog === null || earth === undefined || fade <= 0 || views.length === 0) return IDLE;
+      if (catalog === null || earth === undefined || views.length === 0) return IDLE;
+      if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
       const simMs = julianDaysToUnixMs(snapshot.simDays);
       const cameraEarthKm =
         distanceMpc(views[0]!.drawCamPos, earth.positionMpc) / SCALE_UNITS.KM_TO_MPC;
@@ -37,7 +39,7 @@ export function satellitesPlanner(
 
       const latest = propagator.latest();
       if (latest !== null && latest !== drawn?.sweep) {
-        renderer.upload(latest);
+        renderer.upload(latest, catalog.classCode);
         drawn = { sweep: latest, simMs: latest.simMs, atMs: snapshot.nowMs };
         runtime.scheduleWake();
       }

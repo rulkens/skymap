@@ -11,4 +11,5 @@ export const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
   earthScene: true,
   starCatalog: true,
   blackHole: true,
+  satellite: true,
 };
