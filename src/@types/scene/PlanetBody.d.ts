@@ -14,9 +14,10 @@
 
 import type { BodySurface } from './BodySurface';
 import type { Vec3 } from '../math/Vec3';
+import type { SceneBodyId } from './SceneBodyId';
 
 export type PlanetBody = {
-  readonly id: string;
+  readonly id: SceneBodyId;
   readonly label: string;
   readonly surface: BodySurface;
   readonly albedo: Vec3; // flat lit colour (no texture yet), linear RGB

@@ -47,11 +47,13 @@ import {
   STAR_COLORIDX_STEP,
   STAR_COLORIDX_LEVELS,
 } from '../../src/data/starCatalog/starCatalogFormat';
-import { STAR_COLUMN_SCHEMA, STAR_OCTREE_DATA_PREFIX } from '../../src/data/octree/octreeFormat';
+import { OCTREE_CATALOGS } from '../deploy/r2/octreeCatalogs';
+import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 import { initialState } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { buildOctreeCatalog } from '../octree/buildOctreeCatalog';
 import { writeOctreeCatalog } from '../octree/writeOctreeCatalog';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { STAR_COLUMN_SCHEMA } from '../../src/data/octree/starOctreeFamily';
 
 /** Hipparcos-2 bright-star cut: Gaia saturates on stars brighter than this. */
 const HP_BRIGHT_CUT = 4.0;
@@ -522,10 +524,9 @@ async function runCli(): Promise<void> {
   const hipToSourceId = parseHipXmatch(readFileSync(rawDataPath('gaia.hip-xmatch'), 'utf8'));
   process.stderr.write(`  ${hipToSourceId.size.toLocaleString()} HIP→source_id pairs\n`);
 
-  // The curated seed is the single source of the Gaia-dedup fact now: subtract
-  // each entry's Gaia DR3 source_id from the bin so a nearby named star isn't
-  // drawn twice (once as a scene body, once as a Gaia point). A null gaiaDr3
-  // (the Sun; saturated bright stars with no DR3 row) drops out.
+  // The curated seed is the single source of the Gaia-dedup fact: subtract each
+  // entry's DR3 source_id so a named star isn't drawn twice (scene body and Gaia
+  // point). A null gaiaDr3 (the Sun; saturated stars with no DR3 row) drops out.
   const famousSeed = parseFamousStarsSeed(readFileSync(rawDataPath('famous-stars.seed'), 'utf8'));
   const famousGaiaIds = seedToFamousGaiaIds(famousSeed);
 
@@ -552,17 +553,18 @@ async function runCli(): Promise<void> {
       `clamps absMag ${clamps.absMag.toLocaleString()}, colorIdx ${clamps.colorIdx.toLocaleString()}\n`,
   );
 
-  const starOutDir = join(outDir, STAR_OCTREE_DATA_PREFIX);
-  const header = writeOctreeCatalog(objects, meta, starOutDir, 'stars');
+  const starOutDir = join(outDir, OCTREE_FAMILIES.star.dataPrefix);
+  const starCatalogName = OCTREE_CATALOGS.find((c) => c.family === 'star')!.name;
+  const header = writeOctreeCatalog(objects, meta, starOutDir, starCatalogName);
   const t2 = performance.now();
   process.stderr.write(
     `stars octree: ${header.stats.chunkCount?.toLocaleString()} chunks ` +
       `(${header.chunks.length.toLocaleString()} rooted in the index), ` +
       `chunkNodeCap ${header.chunkNodeCap.toLocaleString()}, ` +
       `index ${header.nodes.toLocaleString()} nodes / ${header.records.toLocaleString()} records / ` +
-      `${statSync(join(starOutDir, 'stars.bin')).size.toLocaleString()} B; ` +
+      `${statSync(join(starOutDir, `${starCatalogName}.bin`)).size.toLocaleString()} B; ` +
       `build ${((t1 - t0) / 1000).toFixed(1)} s, write ${((t2 - t1) / 1000).toFixed(1)} s\n` +
-      `  wrote ${join(starOutDir, 'stars.bin')} + ${join(starOutDir, 'stars')}/\n`,
+      `  wrote ${join(starOutDir, `${starCatalogName}.bin`)} + ${join(starOutDir, starCatalogName)}/\n`,
   );
 }
 

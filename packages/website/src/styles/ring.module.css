@@ -1,0 +1,179 @@
+/*
+ * ring.module.css — the ring, the site's only control: the marker the app draws around objects,
+ * plus a label; it dresses links (ObjLink), the menu's `summary` and the few real buttons alike.
+ * A vocabulary, not a component: no `.root`; take a class with
+ * `composes: ring from '../../styles/ring.module.css'`. The variants (`ring-big`, `ring-small`,
+ * `ring-hang`) are composed together with `ring`. They are prefixed because every module in this
+ * folder compiles to `styles-{class}`, and type.module.css already owns `small`.
+ * `glyph` goes on the drawing (Icon) inside a ring, `glyph-ring` on a link that is not a ring.
+ */
+
+.ring {
+  --mark: 0.9375rem;
+  --gap: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap);
+  max-width: 100%;
+  min-height: var(--tap);
+  padding: 0.375rem 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  color: var(--color-fg);
+  font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  /* `anywhere`, so the label may also shrink below its longest word inside the flex line. */
+  overflow-wrap: anywhere;
+}
+
+.ring::before {
+  content: '';
+  flex: none;
+  width: var(--mark);
+  height: var(--mark);
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  transition:
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+/*
+ * Pointing at a control selects it the way the app selects an object: the
+ * marker becomes the object and a thin ring stands off around it. A shadow,
+ * so nothing is measured again and the label does not move.
+ */
+.ring:hover::before,
+.ring:focus-visible::before {
+  background: var(--color-accent);
+  box-shadow:
+    0 0 0 0.3125rem var(--color-bg),
+    0 0 0 0.375rem var(--color-accent);
+}
+
+.ring[aria-pressed='true']::before,
+.ring[aria-current='page']::before,
+[open] > .ring::before {
+  background: var(--color-accent);
+}
+
+.ring.ring-big {
+  --mark: 1.625rem;
+  --gap: 1.25rem;
+  font-size: var(--text-ring-big);
+}
+
+/* Under 20px the display face loses its hairlines, so the small ring's label is Jost. */
+.ring.ring-small {
+  --mark: 0.6875rem;
+  --gap: 0.625rem;
+  font: var(--weight-small) var(--text-small) / 1.2 var(--font-body);
+  letter-spacing: 0.01em;
+}
+
+/*
+ * A navigation link carries a drawing of its destination where the marker
+ * would be (components/Icon/Icon.tsx). The ring is still the selection: it is
+ * drawn around the drawing when the link is pointed at, focused or the page
+ * you are on. Padding and border are taken back by the margin, so the ring
+ * costs no room and the label does not move.
+ */
+.ring:has(> .glyph) {
+  --mark: 1.5rem;
+  --gap: 1.125rem;
+}
+
+.ring.ring-small:has(> .glyph) {
+  --mark: 1.25rem;
+  --gap: 0.875rem;
+}
+
+.ring.ring-big:has(> .glyph) {
+  --mark: 2rem;
+  --gap: 1.375rem;
+}
+
+/* The view and enlarge marks recur under every picture, so they are set small and dim; pointing at a link lights it. */
+.ring.ring-small:has(> :is([data-icon='view'], [data-icon='enlarge'])) {
+  --mark: 1rem;
+  --gap: 0.75rem;
+}
+
+.ring:has(> .glyph)::before {
+  content: none;
+}
+
+.glyph {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ring > .glyph {
+  width: var(--mark);
+  height: var(--mark);
+}
+
+/* `.glyph-ring` is a link that is not a ring control but selects its drawing the same way (SectionNav). */
+:is(.ring, .glyph-ring) > .glyph {
+  box-sizing: content-box;
+  margin: -0.4375rem;
+  padding: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  stroke: var(--color-accent);
+  transition: border-color 0.25s ease;
+}
+
+.ring > .glyph:is([data-icon='view'], [data-icon='enlarge']) {
+  stroke: var(--site-text-dim);
+  transition:
+    border-color 0.25s ease,
+    stroke 0.25s ease;
+}
+
+:is(.ring, .glyph-ring):hover > .glyph,
+:is(.ring, .glyph-ring):focus-visible > .glyph,
+.ring[aria-current='page'] > .glyph,
+[open] > .ring > .glyph {
+  border-color: var(--color-accent);
+  stroke: var(--color-accent);
+}
+
+/*
+ * Hung in the margin: the marker or drawing stands left of the text edge, so
+ * the label starts where the paragraph above it does and a stack of links of
+ * different sizes shares one label edge. The right margin gives back what the
+ * left one took, so links hung side by side keep their spacing, and each row
+ * they wrap to starts at the text edge. Only where the page has margin enough
+ * to hold the big marker; narrower, a link under a big one is set in by the
+ * difference (2.875rem is the big marker and its gap), so the labels still meet.
+ */
+@media (min-width: 1200px) {
+  .ring.ring-hang {
+    --hang: calc(var(--mark) + var(--gap));
+    margin-inline: calc(-1 * var(--hang)) var(--hang);
+  }
+}
+
+@media (max-width: 1199px) {
+  .ring.ring-big.ring-hang + .ring.ring-hang {
+    padding-left: calc(2.875rem - var(--mark) - var(--gap));
+  }
+}
+
+/* As specific as the rules that set the transitions, or it would lose to them. */
+@media (prefers-reduced-motion: reduce) {
+  .ring::before,
+  :is(.ring, .glyph-ring) > .glyph,
+  .ring > .glyph:is([data-icon='view'], [data-icon='enlarge']) {
+    transition: none;
+  }
+}

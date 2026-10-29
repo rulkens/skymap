@@ -34,8 +34,6 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { earthArm } from '../../../fixtures/earthArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
@@ -44,9 +42,10 @@ import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { ridesWheelTarget } from '../../../../src/services/engine/camera/ridesWheelTarget';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
-const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
+const BODIES = deriveBodyStates(CONST_J2000);
 const B = ORIENTATION_FRAMES.ecliptic;
 
 function makeStore() {
@@ -55,7 +54,7 @@ function makeStore() {
 
 const EARTH_ROW: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),
@@ -73,7 +72,7 @@ function ctxOf(
       poseBasis: B,
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
-      focusBodyId: focus?.type === 'body' ? (focus.id as BodyId) : null,
+      focusBodyId: focus?.type === 'body' ? focus.id : null,
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
       fovYRad: Math.PI / 3,
@@ -84,6 +83,7 @@ function ctxOf(
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     lastWinnerRidesWheel: ridesWheelTarget(CAMERA_DRIVERS, overrides.winnerLastFrame ?? 'resting'),
     autoRotateEpoch: { ref: null, startMs: null },
+    navOwns: false,
   };
 }
 
@@ -124,7 +124,13 @@ describe('replayInput', () => {
       register: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
       gesture: { ...EMPTY_SURFACE_GESTURE_MEMORY },
       tilt: { ...EMPTY_TILT_MEMORY },
-      follow: { from: null, distanceTarget: 42, panOffset: [1, 2, 3] as Vec3, saturated: false },
+      follow: {
+        from: null,
+        distanceTarget: 42,
+        durationMs: null,
+        panOffset: [1, 2, 3] as Vec3,
+        saturated: false,
+      },
     });
     const steps = deepFreeze<readonly InputStep[]>([
       atRestZoom(1.5),
@@ -212,7 +218,7 @@ describe('replayInput', () => {
     // The follow roll ride: the notch is resolved to a distance for the driver
     // to adopt and its commit carries only the ridden roll.
     const followStore = makeStore();
-    const earth = BODIES.get('earth')!;
+    const earth = BODIES.get(asSceneBodyId('earth'))!;
     const nearEarth = absoluteArm({
       target: [...earth.positionMpc] as Vec3,
       yaw: 0.7,
@@ -225,6 +231,7 @@ describe('replayInput', () => {
     const follow = {
       from: null,
       distanceTarget: 2.5 * EARTH_RADIUS_MPC,
+      durationMs: null,
       panOffset: [0, 0, 0] as Vec3,
       saturated: false,
     };
@@ -491,7 +498,7 @@ describe('replayInput', () => {
     // scene-up end (weight ≈ 0.097), so the step is strictly UNDER the 0.1
     // cap — pinning either weight extreme would saturate it instead.
     const store = makeStore();
-    const earth = BODIES.get('earth')!;
+    const earth = BODIES.get(asSceneBodyId('earth'))!;
     const nearEarth = absoluteArm({
       target: [...earth.positionMpc] as Vec3,
       yaw: 0.7,
@@ -548,7 +555,7 @@ describe('replayInput', () => {
     // pivot has to reach that resolution or the wheel walks the driver's
     // target inside the planet (the absolute floor is 0.048 Earth radii).
     const store = makeStore();
-    const earth = BODIES.get('earth')!;
+    const earth = BODIES.get(asSceneBodyId('earth'))!;
     const nearEarth = absoluteArm({
       target: [...earth.positionMpc] as Vec3,
       yaw: 0.7,
@@ -560,6 +567,7 @@ describe('replayInput', () => {
     const follow = {
       from: null,
       distanceTarget: 4 * EARTH_RADIUS_MPC,
+      durationMs: null,
       panOffset: [0, 0, 0] as Vec3,
       saturated: false,
     };
@@ -590,7 +598,7 @@ describe('replayInput', () => {
     // the resolved distance into its memory, the register renders at the
     // target distance carrying `base.roll` (the saturated follow ease).
     const store = makeStore();
-    const earth = BODIES.get('earth')!;
+    const earth = BODIES.get(asSceneBodyId('earth'))!;
     const poseAt = (distMpc: number, roll: number) =>
       absoluteArm({
         target: [...earth.positionMpc] as Vec3,
@@ -615,7 +623,13 @@ describe('replayInput', () => {
           register,
           gesture: EMPTY_SURFACE_GESTURE_MEMORY,
           tilt: EMPTY_TILT_MEMORY,
-          follow: { from: null, distanceTarget: target, panOffset: [0, 0, 0], saturated: false },
+          follow: {
+            from: null,
+            distanceTarget: target,
+            durationMs: null,
+            panOffset: [0, 0, 0],
+            saturated: false,
+          },
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
@@ -653,7 +667,7 @@ describe('replayInput', () => {
 
   it('a gesture-held zoom rides the roll too — every driven zoom path', () => {
     const store = makeStore();
-    const earth = BODIES.get('earth')!;
+    const earth = BODIES.get(asSceneBodyId('earth'))!;
     const inBand = absoluteArm({
       target: [...earth.positionMpc] as Vec3,
       yaw: 0.7,

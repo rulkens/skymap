@@ -6,7 +6,10 @@
 
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
+import type { GalaxyRecordBridge } from './GalaxyRecordBridge';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
@@ -25,8 +28,12 @@ import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDis
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 
 export type GalaxyCatalogRuntime = {
-  /** The CPU-side catalog mirror; the point slots' commits are its only writers. */
+  /** The CPU-side catalog mirror, kept for the flat-only readers (hi-res famous, famous labels). */
   readonly catalogs: Map<SourceType, GalaxyCatalog>;
+  /** One record source per loaded catalog, set and deleted with `catalogs`; every other reader's view. */
+  readonly records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>;
+  /** The records' lookups made synchronous for the selection row. */
+  readonly recordBridge: GalaxyRecordBridge;
   /** The lazy PGC → human-name alias fetch slot; the pgcAlias asset row's factory hands this back. */
   readonly pgcAlias: AssetSlot<PgcAliasMap, void>;
   /** A getter over the meta slot's private cell, so the runtime literal is complete in one expression. */
@@ -36,7 +43,7 @@ export type GalaxyCatalogRuntime = {
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */
   readonly publish: (patch: Partial<GalaxyCatalogFacts>) => void;
 
-  readonly points: ReadonlyMap<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  readonly points: ReadonlyMap<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   readonly famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, GalaxyCatalogReq>;
   readonly hiResFamous: AssetSlot<HiResFamousPair, HiResFamousReq>;
 

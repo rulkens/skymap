@@ -24,10 +24,11 @@ import {
   elapsedForWinner,
   pickWinner,
 } from '../../../../src/services/engine/camera/cameraDrivers';
+import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
-import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
+import { focusMoveClip } from '../../../../src/services/engine/camera/focusMoveClip';
 import {
   UNSTARTED_EPOCHS,
   advanceEpoch,
@@ -35,7 +36,7 @@ import {
 } from '../../../../src/services/engine/camera/cameraEpochs';
 import { bodyLikeFraming } from '../../../../src/services/engine/camera/bodyLikeFraming';
 import { framingPose } from '../../../../src/services/engine/camera/framingPose';
-import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
+import { DEFAULT_FOCUS_MOVES } from '../../../../src/data/camera/focusMoveDefaults';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
@@ -48,8 +49,8 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
+import { setEasedDuration } from '../../../../src/state/settings/core/focusMovesSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
-import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
 import type { ExhibitId } from '../../../../src/@types/exhibits/ExhibitId';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -63,21 +64,25 @@ import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCamer
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { OrientationFrameId } from '../../../../src/@types/camera/OrientationFrameId';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-const APPROACHING: DriverActivity = { approachDone: false, dragClaimed: false };
-const APPROACH_DONE: DriverActivity = { approachDone: true, dragClaimed: false };
+const APPROACHING: DriverActivity = {
+  approachDone: false,
+  dragClaimed: false,
+  navMoving: false,
+};
+const APPROACH_DONE: DriverActivity = { ...APPROACHING, approachDone: true };
 const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1.5, pitch: 0.1, distance: 100 };
 
 const TWEEN_DESC: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
   to: { target: [1, 2, 3], yaw: 2, pitch: 0.2, distance: 10 },
-  durationMs: 1000,
-  easing: 'easeOutCubic',
+  motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
   // Matches the store's default settings.orientation, so the tween row's
   // re-encode is the identity branch (from === to) and the raw evaluateClip
   // output is unchanged — the fixture other tests compare against verbatim.
@@ -116,7 +121,7 @@ function runAtWinner(
   nowMs: number,
   approachDone = false,
 ) {
-  const winner = pickWinner(drivers, s, { approachDone, dragClaimed: false });
+  const winner = pickWinner(drivers, s, { ...APPROACHING, approachDone });
   const ctx = makeDriverCtx({
     state: s,
     elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -132,7 +137,7 @@ describe('CAMERA_DRIVERS — pose functions', () => {
   }
 
   it('tween row converts ms→sec correctly', () => {
-    // Oracle independent of evaluateClip / tweenToClip — a 1000× unit slip
+    // Oracle independent of evaluateClip / easedFocusClip — a 1000× unit slip
     // (passing elapsedMs instead of elapsedMs/1000) would saturate the clip to
     // its `to` pose (500 s >> 1 s duration), making distance == 1000.
     // The midpoint + bounds assertions below catch that slip.
@@ -149,8 +154,7 @@ describe('CAMERA_DRIVERS — pose functions', () => {
     const UNIT_SLIP_DESC: CameraTweenDescriptor = {
       from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
       to: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1000 },
-      durationMs: 1000,
-      easing: 'easeOutCubic',
+      motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
       frame: DEFAULT_ORIENTATION,
     };
 
@@ -249,8 +253,7 @@ describe('CAMERA_DRIVERS — tween pins the frame it started under', () => {
   const TWEEN_WITH_AIM: CameraTweenDescriptor = {
     from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
     to: { target: [0, 0, 0], yaw: 0.7, pitch: 0.2, distance: 50 },
-    durationMs: 1000,
-    easing: 'easeOutCubic',
+    motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
     frame: 'ecliptic',
   };
 
@@ -365,7 +368,7 @@ describe('the mission row, lifted from the timeline kind', () => {
     const store = inExhibit('voyager-missions');
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     const s = store.getState() as unknown as RootState;
-    const claimed = { approachDone: false, dragClaimed: true };
+    const claimed = { ...APPROACHING, dragClaimed: true };
     expect(pickWinner(drivers, s, claimed).id).toBe('mission');
   });
 });
@@ -382,7 +385,7 @@ describe('pickWinner — precedence', () => {
 
 describe("the winner's elapsed", () => {
   it('passes tween elapsed to the tween driver pose', () => {
-    // The tween driver evaluates via evaluateClip(tweenToClip(desc), elapsedSec).
+    // The tween driver evaluates via evaluateClip(focusMoveClip(desc), elapsedSec).
     const store = makeStore();
     store.dispatch(startCameraTween(TWEEN_DESC));
     const s = store.getState() as unknown as RootState;
@@ -393,12 +396,12 @@ describe("the winner's elapsed", () => {
     // The tween's arrival frame: elapsed 0.
     const pose0 = runAtWinner(drivers, s, epochs, nowMs).pose;
     // Roll rides beside the clip channels; neither endpoint carries one.
-    expect(pose0).toEqual(absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 0), roll: 0 }));
+    expect(pose0).toEqual(absoluteArm({ ...evaluateClip(focusMoveClip(TWEEN_DESC), 0), roll: 0 }));
 
     // 200 ms later on the same epoch: elapsedMs = 200.
     const pose200 = runAtWinner(drivers, s, epochs, nowMs + 200).pose;
     expect(pose200).toEqual(
-      absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000), roll: 0 }),
+      absoluteArm({ ...evaluateClip(focusMoveClip(TWEEN_DESC), 200 / 1000), roll: 0 }),
     );
   });
 
@@ -492,7 +495,7 @@ const BASE_DISTANCE = 500;
  * nominal Earth radius the framing oracle below reads. */
 const EARTH_ROW = {
   type: 'body' as const,
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0] as [number, number, number],
   radiusM: 6371000,
@@ -515,6 +518,8 @@ function makeFollowProduce(opts: {
   const mem: FollowMemory = {
     from: opts.from ?? null,
     distanceTarget: opts.distanceTarget ?? null,
+    // Captured together: a fixture handing in `from` hands in its duration too.
+    durationMs: opts.from ? DEFAULT_FOCUS_MOVES.eased.durationMs : null,
     panOffset: [0, 0, 0],
     saturated: false,
   };
@@ -539,7 +544,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // The snapshot at the frame instant — the driver's target term must be THIS
     // (the live body), not the row's static positionMpc.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
 
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
@@ -548,7 +553,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     const produceFollow = makeFollowProduce({ state: s, from: BASE_POSE });
 
     // After approach saturation the target is the live body position.
-    const result = worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose);
+    const result = worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs).pose);
     expect(result.target).toEqual(livePos);
     // And it is NOT the row's static positionMpc ([0,0,0]) — proving it reads the
     // live snapshot, whose Earth sits far from the origin at this instant.
@@ -566,7 +571,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
 
     const produceFollow = makeFollowProduce({ state: s, from: BASE_POSE });
 
-    const result = worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose);
+    const result = worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs).pose);
     expect(result.roll).toBeCloseTo(0.6, 12);
   });
 
@@ -581,11 +586,13 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     });
 
     // The elapsed at which easeOutCubic reaches 0.5.
-    const halfMs = FOCUS_TWEEN_MS * (1 - Math.cbrt(0.5));
+    const halfMs = DEFAULT_FOCUS_MOVES.eased.durationMs * (1 - Math.cbrt(0.5));
     const half = worldArmOf(produceFollow(halfMs).pose).lookOffset!;
     expect(half[0]).toBeCloseTo(0.2, 12);
     expect(half[1]).toBeCloseTo(-0.1, 12);
-    expect(worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose).lookOffset).toEqual([0, 0]);
+    expect(worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs).pose).lookOffset).toEqual(
+      [0, 0],
+    );
   });
 
   it('deactivates when focus leaves the body; pickWinner hands off to the next driver', () => {
@@ -639,9 +646,9 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
   it('the follow approach ease converges from the captured pose to the framing offset', () => {
     // Framing distance oracle — the shared body framing math, NOT the ease
     // formula. At elapsed 0 the pose sits at the captured `from` distance; by
-    // FOCUS_TWEEN_MS it has converged to the framing distance, monotonically.
+    // the Eased duration it has converged to the framing distance, monotonically.
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     const FROM: CameraPose = { target: [9, 9, 9], yaw: 0.2, pitch: 0.1, distance: 500 };
@@ -656,14 +663,12 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(worldArmOf(produceFollow(0).pose).distance).toBeCloseTo(FROM.distance, 9);
 
     // At (and past) saturation the distance is the framing distance.
-    expect(worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose).distance).toBeCloseTo(
-      framingDistance,
-      12,
-    );
-    expect(worldArmOf(produceFollow(FOCUS_TWEEN_MS * 2).pose).distance).toBeCloseTo(
-      framingDistance,
-      12,
-    );
+    expect(
+      worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs).pose).distance,
+    ).toBeCloseTo(framingDistance, 12);
+    expect(
+      worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs * 2).pose).distance,
+    ).toBeCloseTo(framingDistance, 12);
 
     // Monotone convergence: sampling forward in time moves strictly toward the
     // framing distance (Earth's framing distance is tiny, so distance decreases).
@@ -676,12 +681,41 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(samples[0]!).toBeGreaterThan(framingDistance);
   });
 
+  it('a duration captured at activation survives a mid-approach settings change', () => {
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;
+    const produceAt = (elapsedMs: number, mem: FollowMemory | null) =>
+      follow.pose(
+        makeDriverCtx({
+          state: store.getState() as unknown as RootState,
+          elapsedMs,
+          simDays: FOLLOW_SIM_DAYS,
+          projection: { fovYRad: FOLLOW_FOV, aspect: 1, near: 0.01, far: 50000 },
+          register: absoluteArm(BASE_POSE),
+          winnerLastFrame: 'followApproach',
+        }),
+        mem,
+        null,
+      );
+
+    const activated = produceAt(0, null).memory!;
+    expect(activated.durationMs).toBe(DEFAULT_FOCUS_MOVES.eased.durationMs);
+    const before = produceAt(300, activated).pose;
+
+    store.dispatch(setEasedDuration(3000));
+
+    expect(produceAt(300, activated).pose).toEqual(before);
+    // A fresh activation does take the new duration.
+    expect(produceAt(0, null).memory!.durationMs).toBe(3000);
+  });
+
   it('a followed body holds the distance framingPose gives it', () => {
     // A radius-multiple override must reach the follow seed too, or a followed
     // body glides away from the pose its arrival framed it to.
     const marsRow = {
       type: 'body' as const,
-      id: 'mars',
+      id: asSceneBodyId('mars'),
       label: 'Mars',
       positionMpc: [0, 0, 0] as [number, number, number],
       driver: { ...bodyDriverGeometry('mars'), focusDistanceRadii: 7 },
@@ -693,7 +727,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     const produceFollow = makeFollowProduce({ state: s, from: BASE_POSE });
 
     // A ratio: at ~1e-15 Mpc an absolute tolerance cannot tell the two distances apart.
-    const held = worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose).distance;
+    const held = worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs).pose).distance;
     expect(held / framingPose(marsRow, FOLLOW_FOV, BASE_POSE).distance).toBeCloseTo(1, 9);
   });
 
@@ -708,7 +742,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     // target so the zoom is honoured, instead of re-asserting the framing
     // distance every frame (snap-back).
     const snapshot = deriveBodyStates(FOLLOW_SIM_DAYS);
-    const livePos = snapshot.get('earth')!.positionMpc;
+    const livePos = snapshot.get(asSceneBodyId('earth'))!.positionMpc;
     const framingDistance = bodyLikeFraming(livePos, EARTH_ROW.radiusM, FOLLOW_FOV).distance;
 
     // The user's committed drag-zoom — vastly larger than Earth's ~1e-15 Mpc
@@ -737,7 +771,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     });
 
     // Saturated (t=1): distance is the committed base distance, NOT framing.
-    const result = worldArmOf(produceFollow(FOCUS_TWEEN_MS * 4).pose);
+    const result = worldArmOf(produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs * 4).pose);
     expect(result.distance).toBeCloseTo(COMMITTED_DIST, 9);
     // Guard the snap-back explicitly: the framing distance is tiny, so
     // 'equals framing' would be a hard failure if the driver re-asserted it.
@@ -765,7 +799,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
       distanceTarget: 100,
       followDistanceTarget: NOTCH_TARGET,
     });
-    const { pose, memory } = produceFollow(FOCUS_TWEEN_MS * 4);
+    const { pose, memory } = produceFollow(DEFAULT_FOCUS_MOVES.eased.durationMs * 4);
 
     // Carried into the memory, so the next frame eases to it rather than
     // re-asserting the pre-notch target.
@@ -834,6 +868,7 @@ describe('the follow produce — the capture is returned, not written', () => {
     const mem: FollowMemory = Object.freeze<FollowMemory>({
       from: null,
       distanceTarget: null,
+      durationMs: null,
       panOffset: [0, 0, 0],
       saturated: false,
     });
@@ -857,5 +892,25 @@ describe('orbitDrag — the register comes from the ctx', () => {
     });
     const drag = CAMERA_DRIVERS.find((d) => d.id === 'orbitDrag')!;
     expect(drag.pose(ctx, null, null).pose).toBe(REGISTER_POSE);
+  });
+});
+
+describe('the openspace table', () => {
+  const rest = composeControlSchemes([]);
+
+  it('the held row takes any open gesture over the coast, and both yield to a claimed drag', () => {
+    const store = makeStore();
+    const idle = store.getState() as unknown as RootState;
+    store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
+    const pressed = store.getState() as unknown as RootState;
+    const pick = (s: RootState, a: Partial<DriverActivity>) =>
+      pickWinner(rest.openspace.drivers, s, { ...APPROACHING, ...a }).id;
+
+    expect(pick(pressed, {})).toBe('openSpaceHeld');
+    expect(pick(pressed, { navMoving: true })).toBe('openSpaceHeld');
+    expect(pick(idle, { navMoving: true })).toBe('openSpaceCoast');
+    expect(pick(idle, {})).toBe('resting');
+    expect(pick(pressed, { dragClaimed: true })).toBe('resting');
+    expect(pick(idle, { navMoving: true, dragClaimed: true })).toBe('resting');
   });
 });

@@ -10,7 +10,7 @@ folder still say "body".
 - `src/data/bodies/sceneAnchors.ts` exports `SCENE_ANCHORS: readonly
   AnchorBody[]` — "roots of the focus graph: positions stated outright, not
   derived from `OrbitalElements`". It holds the seeded star map, the Sun's own
-  row, and now `GALACTIC_CENTRE_ANCHOR` (a `PlaceId`, not a `BodyId`).
+  row, and now `GALACTIC_CENTRE_ANCHOR` (a `PlaceId`, not a `SceneBodyId`).
   The `SGR_A_STAR_ALIAS` body row that aliased it was deleted by the
   `blackHoles` Layer PR (#825).
 - `src/@types/scene/AnchorBody.d.ts`'s `id` is a bare `string` — it was never

@@ -25,6 +25,7 @@ import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer
 import LazyCommandPaletteContainer from '../containers/LazyCommandPaletteContainer';
 import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
+import PairingOverlayContainer from '../containers/PairingOverlayContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
@@ -126,6 +127,7 @@ export function App(): React.ReactElement {
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
       <ArrivalVeilContainer />
+      <PairingOverlayContainer />
     </>
   );
 }

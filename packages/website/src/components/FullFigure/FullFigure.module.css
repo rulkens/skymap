@@ -1,0 +1,32 @@
+.root {
+  margin: var(--section-space) 0 0;
+}
+
+.frame {
+  position: relative;
+  background: #000;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* An interlude between sections, not a screen of its own: the next heading shows under it. */
+    max-height: 68svh;
+    object-fit: cover;
+    /* What is cut comes mostly off the foot, where the fade to black already hides the picture. */
+    object-position: 50% 35%;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 14%, rgb(0 0 0 / 0) 86%, #000 100%);
+  }
+}
+
+.caption {
+  composes: wrap from '../../styles/layout.module.css';
+  margin-top: 0.5rem;
+}

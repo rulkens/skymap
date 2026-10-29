@@ -13,6 +13,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
 const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;
@@ -172,14 +173,14 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     // Advance well past epoch so the derived Earth position is clearly not the
     // stale row snapshot — the exact reported bug.
     const simDays = CONST_J2000 + 300;
-    const livePos = deriveBodyStates(simDays).get('earth')!.positionMpc;
+    const livePos = deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc;
 
     // A deliberately-wrong snapshot: a magnitude/direction the live Earth never
     // has (Earth's heliocentric offset is ~1 AU ≈ 5e-12 Mpc). Both stay well
     // inside the far plane below, so neither is length-clamped.
     const staleRow: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
       driver: bodyDriverGeometry('earth'),

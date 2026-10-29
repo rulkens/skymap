@@ -1,251 +1,75 @@
-// ─── The enum itself ────────────────────────────────────────────────────────
-
 /**
- * Stable numeric tag for every data source. Used as a `.bin` byte for
- * galaxy catalog rows, packed into the pick texture for galaxy catalog + structure hits, and
- * as a registry key for filament + volume assets.
+ * Stable numeric tag for every data source: a `.bin` byte for galaxy catalog rows,
+ * the upper 6 bits of the pick word (63 is the all-ones sentinel, `selectionEncoding.ts`),
+ * and a registry key. Wire-format contract, so it runs over the comment budget.
  *
- * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
- * file format AND packed into the pick texture's upper 6 bits. Treat
- * them like API version numbers — append, never renumber. Recycling a
- * code silently breaks every `.bin` ever written and every saved
- * selection URL. Code 0 is retired (the deleted synthetic cloud) and
- * stays unassigned for that reason.
- *
- * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
- * same "append, never renumber" discipline applies for consistency.
- * Codes 10 and 12-14 are likewise retired (the deleted CF-4 density volume
- * and the deleted DEV-only synthetic volume fixtures) and stay unassigned.
+ * Append, never renumber: values are baked into every `.bin` and saved selection URL.
+ * Retired and unassigned: 0, 10, 12-14. Insertion order here is cosmetic; the VALUE is the contract.
  */
 export const Source = {
-  /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */
+  /** Sloan Digital Sky Survey galaxy catalog. */
   SDSS: 1,
-  /** 2MASS Redshift Galaxy catalog — near-IR all-sky redshift catalog. */
+  /** 2MASS Redshift Survey galaxy catalog. */
   TwoMRS: 2,
-  /**
-   * Galaxy List for the Advanced Detector Era (GLADE v2.3) — an all-sky
-   * compilation that pre-merges HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS,
-   * and SDSS-DR12Q with cross-match dedup. Acts as the "deep all-sky"
-   * baseline so the merger doesn't have to re-dedup those parent catalogs.
-   */
+  /** GLADE v2.3: pre-merged HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS, SDSS-DR12Q with cross-match dedup. */
   Glade: 3,
-  /**
-   * Curated atlas of well-known galaxies (Messier + NGC greatest-hits).
-   * Distinct from galaxy-catalog-derived sources because entries are hand-picked,
-   * carry curated descriptions, and ship with high-quality processed
-   * thumbnails. Many entries (M31, M33, M81, NGC 253) sit too close to
-   * survive 2MRS/GLADE's small-z filtering, so they need their own
-   * positions rather than just tagging existing rows.
-   */
+  /** Hand-picked well-known galaxies; M31, M33, M81, NGC 253 are too near for 2MRS/GLADE's small-z filter, so they carry their own positions. */
   FamousGalaxy: 4,
-  /**
-   * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
-   * cluster's marker ring return source code 5 in the upper 6 bits of
-   * the packed identity; the 26-bit `localIdx` carries the structure's index
-   * into the structure table. See `selectionEncoding.ts` for the layout.
-   */
+  /** Cluster anchors; a pick's 26-bit `localIdx` indexes the structure table (`selectionEncoding.ts`). */
   GalaxyCluster: 5,
-  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as GalaxyCluster. */
+  /** Supercluster anchors; same encoding as GalaxyCluster. */
   Supercluster: 6,
-  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as GalaxyCluster. */
+  /** Void anchors; same encoding as GalaxyCluster. */
   Void: 7,
-  /**
-   * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
-   * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
-   * candidate quasars) rendered alongside the galaxy catalogs for the
-   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the structure
-   * codes above, so the next galaxy catalog integer is 8.
-   */
+  /** Milliquas v8 (Flesch 2023) AGN point sources. */
   Milliquas: 8,
-  /**
-   * Cosmic-web filament skeleton (DisPerSE on a 2MRS + GLADE density
-   * field). Single global asset, not per-record; the registry entry
-   * carries the default-enabled flag + intensity multiplier.
-   */
+  /** Cosmic-web filament skeleton (DisPerSE): one global asset, registry key only. */
   Filaments: 9,
-  /**
-   * MCPM ("Cosmic Slime" / rhizome) cosmic-web density volume — SDSS DR17
-   * VAC, tier-aware. Default-on scalar field; the registry entry carries
-   * its presentation defaults.
-   */
+  /** MCPM cosmic-web density volume (SDSS DR17 VAC), tier-aware. */
   Mcpm: 11,
-  /**
-   * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
-   * against a group's marker ring return source code 15 in the upper 6
-   * bits of the packed identity; the 26-bit `localIdx` carries the structure's
-   * index into the structure store. Same encoding as GalaxyCluster/Supercluster/
-   * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
-   * renumber the galaxy catalog codes 0–8 below it.
-   */
+  /** Nearby galaxy-group anchors; same encoding as GalaxyCluster, seed-only. */
   GalaxyGroup: 15,
-  /**
-   * Procedural Milky-Way galactic-disk overlay. Not persisted, but PICKABLE:
-   * `milkyWayPickRenderer` stamps this code and `milkyWaySelectionRow` resolves
-   * it to the singleton ref, so it spends a pick code. The entry carries the
-   * default-visible master toggle. Appended at 16.
-   */
+  /** Procedural Milky-Way disk overlay; pickable via `milkyWayPickRenderer`. */
   MilkyWay: 16,
-  /**
-   * CF4++ peculiar-velocity flow-field overlay (single `flowfield.scfd` cube,
-   * demand-loaded). Registry-key-only code; the entry carries the default-off
-   * gate plus the look/motion defaults. Appended at 17.
-   */
+  /** CF4++ peculiar-velocity flow field (`flowfield.scfd`); registry key only. */
   Flow: 17,
-  /**
-   * DESI DR1 deep-cone galaxy catalog — a narrow, ultra-deep pencil-beam
-   * (BGS_BRIGHT + LRG + ELG_LOPnotqso + QSO tracers, NGC-only, Corona
-   * Borealis cone) reaching z ≈ 3.5, far past every other galaxy catalog
-   * source. Persisted to its own `.bin` like the other galaxy catalogs;
-   * appended at 18 — never renumber the codes below it.
-   */
+  /** DESI DR1 deep cone (Corona Borealis, NGC-only) to z ≈ 3.5; own `.bin`. */
   DesiDeep: 18,
-  /**
-   * DESI DR1 dec-band wedge galaxy catalog — a 2.5°-thick, 65°-long
-   * declination-band fan (same four BGS/LRG/ELG/QSO tracers, NGC-only)
-   * across the Corona Borealis arm of the DR1 footprint. A second drill
-   * geometry through the same survey as the deep cone (see `DESI_PATCHES`);
-   * persisted to its own `.bin`, appended at 19 — never renumber the codes
-   * below it.
-   */
+  /** DESI DR1 declination-band wedge (see `DESI_PATCHES`); own `.bin`. */
   DesiWedge: 19,
-  /**
-   * DESI DR1 Sloan Great Wall galaxy catalog — the first DEPTH-bounded patch:
-   * a bounded volume floating in space rather than the cone/wedge's infinite
-   * drills, sculpted as a smooth union of ellipsoids on the wall's density
-   * peaks (see `makeEllipsoidUnionFilter`) so the selection follows the wall's
-   * true 3D extent with feathered, dissolved edges. Pure BGS by geometry
-   * (LRG/ELG/QSO have nothing at z<0.1), so it carries real photometry. A third
-   * drill geometry through the same survey (see `DESI_PATCHES`); persisted to
-   * its own `.bin`, appended at 20 — never renumber the codes below it.
-   */
+  /** DESI DR1 Sloan Great Wall: depth-bounded ellipsoid union (`makeEllipsoidUnionFilter`), pure BGS; own `.bin`. */
   DesiSgw: 20,
   /**
-   * Curated, true-scale stellar neighbourhood — the hand-picked nearby-star map
-   * of the near-field descent, named for the dedup story (famous stars are the
-   * curated overlay, the Gaia bin is the survey), mirroring FamousGalaxy. The
-   * curated star-catalog twin of the survey-wide Gaia bin (code 24). The Sun
-   * shares the map's seed table but not this row: it has its own (code 26), so
-   * muting the neighbourhood leaves the descent's aim point alone.
-   * Not persisted to any `.bin` — a body's identity is its stable seed id, not a
-   * record index — but pickable: the star layers draw into the NEAR0 pick
-   * texture via `drawPick`, tagged with this code (the Sun's dot included, since
-   * those layers address the one seed table). The entry renders through its own
-   * content-layer, not the galaxy catalog points pipeline. Value 21 — never
-   * renumber the codes below it.
+   * Curated nearby-star map. Not persisted (identity is the seed id) but pickable:
+   * star layers stamp it via `drawPick`, including the Sun's dot, since they share one seed table.
    */
   FamousStar: 21,
-  /**
-   * True-scale Solar-System bodies (Moon, Jupiter, …) in the near-field
-   * descent. Not persisted (identity is the stable seed id) but pickable on the
-   * NEAR0 pick pass via `drawPick`; a body row that renders through its own
-   * content-layer. Value 22. Never renumber the codes below it.
-   */
+  /** True-scale Solar-System bodies; pickable via `drawPick`, not persisted. */
   Planet: 22,
-  /**
-   * Textured true-scale Earth in the near-field descent. Not persisted (identity
-   * is the stable seed id) but pickable on the NEAR0 pick pass via `drawPick`;
-   * the entry is a body row that renders through its own content-layer, not the
-   * galaxy catalog points pipeline.
-   * Value 23. Codes are append-only by VALUE; the insertion order in this
-   * const is cosmetic, so Earth keeps 23 even though its siblings are declared
-   * above it. Never renumber the codes below it.
-   */
+  /** Textured true-scale Earth; pickable via `drawPick`, not persisted. */
   Earth: 23,
-  /**
-   * Survey-wide Gaia stellar catalog — millions of stars streamed as tiered
-   * `stars-<tier>.bin` point clouds and drawn by the star renderer. The
-   * wide-field twin of the curated `famousStar` neighbourhood (code 21): that
-   * one seeds a hand-picked map from the body store; this one loads the bulk
-   * survey from disk. The code tags the source in the NEAR0 pick texture — leaf
-   * stars ARE pickable — but is not persisted to the `.bin` (a star's identity
-   * is its record index). The stars render through their own renderer gated by a
-   * camera-distance crossfade band, never the galaxy-catalog points pipeline.
-   * Appended at 24 — never renumber the codes below it.
-   */
+  /** Survey-wide Gaia stars (tiered `stars-<tier>.bin`); leaf stars are pickable, identity is the record index. */
   GaiaStars: 24,
-  /**
-   * True-3D constellation stick-figure overlay — the classical asterism lines
-   * projected onto the real heliocentric positions of their member stars
-   * (single `constellations.json` artifact, demand-loaded). Registry-key-only
-   * code (not persisted, not pickable); the entry carries the default-visible
-   * master toggle plus the line-intensity multiplier. Appended at 25 — never
-   * renumber the codes below it.
-   */
+  /** True-3D constellation figures (`constellations.json`); registry key only. */
   Constellations: 25,
-  /**
-   * The Sun — the descent's aim point and the render origin, a body row in its
-   * own right rather than a member of the curated star map. Modelling it as a
-   * row is what lets the star map's gate be a plain membership test instead of
-   * an id exemption threaded through the star layers and the caption pipeline.
-   * Registry-key-only: the Sun's dot is drawn (and picked) by the star layers
-   * over the shared seed table, so its pick carries the FamousStar code (21) —
-   * nothing stamps this one into the pick texture, and nothing persists it.
-   * Appended at 26 — never renumber the codes below it.
-   */
+  /** The Sun, its own row so the star map's gate stays a membership test; its pick carries FamousStar (21), nothing stamps 26. */
   Sun: 26,
-  /**
-   * Sagittarius A\* — the Galactic Centre anchor the S-star orbits focus on. A
-   * body row that draws NOTHING: it is positioned, captioned, focusable and
-   * selectable, so nothing ever stamps this code into the pick texture and
-   * nothing persists it. Registry-key-only. Appended at 27 — never renumber the
-   * codes below it.
-   */
+  /** Sagittarius A\*: draws nothing, never stamped into the pick texture. */
   SgrAStar: 27,
   /**
-   * The 39 bound S-stars orbiting Sgr A\*. Their own body row rather than
-   * members of the curated star map, so the Galactic Centre toggles apart from
-   * the solar neighbourhood — and their own CODE because the packed pick id is
-   * an index INTO a seed table: sharing FamousStar's code would renumber every
-   * famous star. The star layers draw both sets and stamp whichever code the
-   * star's table dictates. Not persisted. Appended at 28.
-   *
-   * BUDGET: the pick texture's source field is 6 bits with 63 reserved as the
-   * all-ones sentinel (`selectionEncoding.ts`), so after this row codes
-   * 29..62 remain. `zoneOfAvoidance` (29, below) spends one, leaving
-   * 30..62 for future pickable sources.
+   * The 39 bound S-stars. Own code because the pick id indexes a seed table:
+   * sharing FamousStar's would renumber every famous star.
    */
   SStar: 28,
-  /**
-   * Zone-of-avoidance guide band — the additively-blended wedge along the
-   * galactic plane annotating the dust-obscured hole every optical/near-IR
-   * catalog shares. Pickable (clicking the band opens its InfoCard), so it
-   * spends one of the codes the SStar docblock's budget note reserved.
-   * Appended at 29 — after this row, codes 30..62 remain before the pick
-   * field needs a wider layout.
-   */
+  /** Zone-of-avoidance band; pickable. */
   ZoneOfAvoidance: 29,
-  /**
-   * Polyphorm ("2MRS Polyphorm") cosmic-web density volume — a test field
-   * for a Polyphorm-derived run over the 2MRS footprint. Registry-key-only
-   * code (not persisted, not pickable); the entry carries its presentation
-   * defaults like MCPM. Default-off — it's a test field the user
-   * toggles on. Appended at 30 — never renumber the codes below it.
-   */
+  /** 2MRS Polyphorm density volume; registry key only, default-off test field. */
   Polyphorm2MRS: 30,
-  /**
-   * MCPM workbench promoted-export cosmic-web density volume — a durable
-   * home for cubes promoted from the workbench dev tool via
-   * `tools/volumes/promoteWorkbenchExport.ts`. Registry-key-only code (not
-   * persisted, not pickable); the entry carries its presentation defaults
-   * like MCPM/Polyphorm2MRS. Hidden until a promotion decision clears
-   * — see `src/layers/cosmicWebDensity/sources/mcpm-workbench.ts`. Appended
-   * at 31, the first code the 6-bit pick-source widening opened up — never
-   * renumber the codes below it.
-   */
+  /** MCPM workbench promoted-export volume (`tools/volumes/promoteWorkbenchExport.ts`); registry key only. */
   McpmWorkbench: 31,
-  /**
-   * Mesh-drawn scene bodies (the whale and the basket of petunias) — one code
-   * for the pair, since one registry row governs both. Pickable: the mesh pass
-   * stamps this code into the pick texture itself rather than borrowing a star
-   * layer's, so it spends a pick code. Appended at 32.
-   */
-  MeshBody: 32,
-  /**
-   * Milky Way structure markers — parsec-scale places inside our own galaxy,
-   * drawn by the NEAR0 marker pass. Same encoding as GalaxyCluster; seed-only. Appended
-   * at 33..36 — after these rows, codes 37..62 remain before the 6-bit
-   * pick-source field needs a wider layout.
-   */
+  /** All missions-Layer craft under one code; the pick index runs over `MISSION_CRAFT_IDS`. */
+  Craft: 32,
+  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. Codes 37..62 remain. */
   OpenCluster: 33,
   GlobularCluster: 34,
   Nebula: 35,

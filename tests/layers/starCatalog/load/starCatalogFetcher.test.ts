@@ -34,11 +34,12 @@ import { fetchWithProgress } from '../../../../src/services/loading/fetchWithPro
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { Source } from '../../../../src/data/sources';
 import { encodeOctreeObject } from '../../../../tools/octree/encodeOctreeObject';
-import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/octreeFormat';
+import { NO_CHUNK_REF } from '../../../../src/data/octree/octreeFormat';
 import type { SkstCatalog } from '../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { OctreeChunkRef } from '../../../../src/@types/octree/OctreeChunkRef';
 import type { ColumnId } from '../../../../src/@types/octree/ColumnId';
 import type { OctreeRawColumn } from '../../../../tools/@types/octree/OctreeRawColumn';
+import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
 
 /**
  * A tiny hand-authored catalog — one aggregate over two leaves — kept

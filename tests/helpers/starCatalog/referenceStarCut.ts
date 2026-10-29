@@ -40,7 +40,7 @@ import {
   REFINE_THRESHOLD_SQ_FLOAT_INDEX,
   VIEW_COUNT_U32_INDEX,
   WORLD_SPREAD_FLOAT_INDEX,
-} from '../../../src/layers/starCatalog/render/starCutLayout';
+} from '../../../src/services/gpu/octree/octreeCutLayout';
 
 export function referenceStarCut(
   nodes: Uint32Array,

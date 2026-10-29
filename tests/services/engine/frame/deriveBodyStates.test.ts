@@ -18,8 +18,9 @@ import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadius
 import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { SAMPLED_BODIES } from '../../../../src/data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../../src/data/bodies/sampledBodies';
 import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const states = deriveBodyStates(CONST_J2000);
 const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
@@ -60,7 +61,7 @@ describe('deriveBodyStates', () => {
     // A second id at the centre is how a second position creeps back in: the
     // impostor hub 178 pc off the hole it hubs.
     expect(states.get('galactic-centre')).toBeDefined();
-    expect(states.has('sgr-a-star')).toBe(false);
+    expect(states.has(asSceneBodyId('sgr-a-star'))).toBe(false);
   });
 
   it('every element row derives a body state', () => {
@@ -88,7 +89,7 @@ describe('deriveBodyStates', () => {
     // keeps the fixture total against the element table, so a body cannot escape
     // the pin by being added without a fixture row.
     for (const [id, expected] of Object.entries(BODY_STATES_J2000)) {
-      const actual = states.get(id);
+      const actual = states.get(asSceneBodyId(id));
       expect(actual, `state for '${id}'`).toBeDefined();
       expect(actual!.positionMpc, id).toEqual(expected.positionMpc);
       expect(actual!.orientation, id).toEqual(expected.orientation);
@@ -104,8 +105,8 @@ describe('deriveBodyStates', () => {
     // geocentric distance of any point on the Moon's ellipse is bounded by its
     // periapsis a(1−e) and apoapsis a(1+e). If the parent hop were dropped (moon
     // placed heliocentric, or added to the wrong focus) this band would fail.
-    const moon = states.get('moon')!;
-    const earth = states.get('earth')!;
+    const moon = states.get(asSceneBodyId('moon'))!;
+    const earth = states.get(asSceneBodyId('earth'))!;
     const { semiMajorMpc: a, eccentricity: e } = elementsById('moon');
     const periapsis = a * (1 - e);
     const apoapsis = a * (1 + e);
@@ -141,8 +142,8 @@ describe('deriveBodyStates', () => {
     // no Horizons correction row, so raw Kepler is its whole offset.
     const t = CONST_J2000 + 3652.5;
     const snap = deriveBodyStates(t);
-    const phobos = snap.get('phobos')!;
-    const mars = snap.get('mars')!;
+    const phobos = snap.get(asSceneBodyId('phobos'))!;
+    const mars = snap.get(asSceneBodyId('mars'))!;
     const relative = keplerianPositionMpc(propagateElements(elementsById('phobos'), t));
 
     expect(phobos.positionMpc[0] - mars.positionMpc[0]).toBeCloseTo(relative[0], 18);
@@ -156,9 +157,9 @@ describe('deriveBodyStates', () => {
     const k = BARYCENTRIC_REFLEX_BY_PRIMARY.get('earth')!.k;
     for (const t of SPAN_DATES) {
       const snap = deriveBodyStates(t);
-      const earth = snap.get('earth')!.positionMpc;
-      const moon = snap.get('moon')!.positionMpc;
-      const sun = snap.get('sun')!.positionMpc;
+      const earth = snap.get(asSceneBodyId('earth'))!.positionMpc;
+      const moon = snap.get(asSceneBodyId('moon'))!.positionMpc;
+      const sun = snap.get(asSceneBodyId('sun'))!.positionMpc;
       const rowKepler = keplerianPositionMpc(propagateElements(elementsById('earth'), t));
       const { positionKm, outside } = EPHEMERIS_CORRECTIONS['earth']!;
       const correctionKm = correctionSeriesAt(positionKm!, t, outside)!;
@@ -180,7 +181,7 @@ describe('deriveBodyStates', () => {
     const site = findByIdOrThrow(SURFACE_FIXED_SITES, 'soendermarken', 'test');
     for (const t of SPAN_DATES) {
       const snap = deriveBodyStates(t);
-      const earth = snap.get('earth')!;
+      const earth = snap.get(asSceneBodyId('earth'))!;
       const offsetM = rotateVec3ByTightMat3(
         sitePointBodyFixed(site, siteGroundRadiusM(site, SCENE_EARTH.surface.datumRadiusM)),
         earth.orientation,
@@ -195,7 +196,7 @@ describe('deriveBodyStates', () => {
     // Matches orientationForBody's row-gate contract: a body with a row (Earth)
     // carries a baked IAU rotation; a row-less one (the Galactic Centre) carries identity.
     expect(states.get('galactic-centre')!.orientation).toEqual([...IDENTITY_MAT3]);
-    expect(states.get('earth')!.orientation).not.toEqual([...IDENTITY_MAT3]);
+    expect(states.get(asSceneBodyId('earth'))!.orientation).not.toEqual([...IDENTITY_MAT3]);
   });
 
   // The host direction leaves a moon's equator only by the gap between its IAU pole and its
@@ -231,7 +232,7 @@ describe('deriveBodyStates', () => {
     (id) => {
       for (const simDays of [CONST_J2000, CONST_J2000 + 3650]) {
         const snap = deriveBodyStates(simDays);
-        const moon = snap.get(id)!;
+        const moon = snap.get(asSceneBodyId(id))!;
         const host = snap.get(bodyHostId(id)!)!;
         const d = [0, 1, 2].map((k) => host.positionMpc[k]! - moon.positionMpc[k]!);
         const len = Math.hypot(d[0]!, d[1]!, d[2]!);

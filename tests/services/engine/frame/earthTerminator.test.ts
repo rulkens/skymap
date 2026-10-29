@@ -3,6 +3,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { cubeSphereMesh } from '../../../../src/utils/math/cubeSphereMesh';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /**
  * Reproduces the reported bug: with the sim clock live at 2026-07-21T14:00Z, the
@@ -73,7 +74,7 @@ function denmarkLocalDir(): [number, number, number] {
 
 describe('earth terminator', () => {
   it('places the sub-solar point at the astronomically correct direction (W(t) guard)', () => {
-    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get('earth')!;
+    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get(asSceneBodyId('earth'))!;
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
     // Sub-solar point in Earth's IAU body frame: longitude ≈ -28.7°, latitude
     // ≈ +20.5° (ground truth above). This has always been correct — it guards the
@@ -86,7 +87,7 @@ describe('earth terminator', () => {
   });
 
   it('lights the Denmark texel (day/night not inverted against the live clock)', () => {
-    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get('earth')!;
+    const earth = deriveBodyStates(JD_2026_07_21_1400Z).get(asSceneBodyId('earth'))!;
     const sun = sunDirLocal(earth.positionMpc, RENDER_ORIGIN_MPC, earth.orientation);
     const dk = denmarkLocalDir();
     const lambert = dk[0] * sun[0] + dk[1] * sun[1] + dk[2] * sun[2];

@@ -38,6 +38,27 @@ describe('applyMoves', () => {
     expect(moved.getText()).toContain("from '../../utils/bar'");
   });
 
+  it('keeps a file extension where the import wrote one', () => {
+    const project = projectWith({
+      '/site/utils/foo.ts': 'export const foo = 1;',
+      '/site/Card/Card.tsx': 'export default function Card() { return null; }',
+      '/site/a.ts': "import { foo } from './utils/foo.ts';\nexport const x = foo;",
+      '/site/b.ts': "import { foo } from './utils/foo';\nexport const y = foo;",
+      '/site/Card/useCard.ts': "import Card from './Card.tsx';\nexport const c = Card;",
+    });
+
+    applyMoves(project, [
+      { from: '/site/utils/foo.ts', to: '/site/lib/foo.ts' },
+      { from: '/site/Card/useCard.ts', to: '/site/hooks/useCard.ts' },
+    ]);
+
+    expect(project.getSourceFileOrThrow('/site/a.ts').getText()).toContain("from './lib/foo.ts'");
+    expect(project.getSourceFileOrThrow('/site/b.ts').getText()).toContain("from './lib/foo'");
+    expect(project.getSourceFileOrThrow('/site/hooks/useCard.ts').getText()).toContain(
+      "from '../Card/Card.tsx'",
+    );
+  });
+
   it('resolves a batch where two moved files import each other', () => {
     const project = projectWith({
       '/src/a.ts': "import { b } from './b';\nexport const a = b;",

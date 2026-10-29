@@ -61,6 +61,41 @@ describe('orientationForBody', () => {
     expect(meridianAfter[2]).toBeCloseTo(meridianBefore[2], 4);
   });
 
+  // The references are the IERS definitions themselves, not this table: the Earth
+  // Rotation Angle (IERS Conventions 2010, eq. 5.15) and the precession-only part
+  // of the CIP pole (eq. 5.16). The sim clock is UTC, which stands in for UT1
+  // (|UT1 − UTC| < 0.9 s, ≤ 0.4 km at the equator), so both read the same JD.
+  const ERA_DEG = (jd: number): number => {
+    const turns = 0.779057273264 + 1.00273781191135448 * (jd - CONST_J2000);
+    return (((turns % 1) + 1) % 1) * 360;
+  };
+  const ARCSEC = Math.PI / (180 * 3600);
+  const wrapDeg = (deg: number): number => ((deg + 540) % 360) - 180;
+
+  it.each([
+    ['2000-01-01T12:00:00Z', CONST_J2000],
+    ['2026-10-28T12:00:00Z', 2461342.0],
+    ['2050-06-01T00:00:00Z', 2469958.5],
+  ])("puts Greenwich at the Earth Rotation Angle on %s", (_label, jd) => {
+    const greenwich = apply(orientationForBody('earth', jd, NO_POSITIONS), [1, 0, 0]);
+    const raDeg = (Math.atan2(greenwich[1], greenwich[0]) * 180) / Math.PI;
+    // 0.001° is 110 m at the equator; the error this guards was 0.2–0.3° (23–35 km).
+    expect(Math.abs(wrapDeg(raDeg - ERA_DEG(jd)))).toBeLessThan(0.001);
+  });
+
+  it.each([
+    ['2026-10-28T12:00:00Z', 2461342.0],
+    ['2050-06-01T00:00:00Z', 2469958.5],
+  ])("precesses Earth's pole to the mean CIP on %s", (_label, jd) => {
+    const t = (jd - CONST_J2000) / 36_525;
+    const cipX = (-0.016617 + 2004.191898 * t - 0.4297829 * t * t) * ARCSEC;
+    const cipY = (-0.006951 - 0.025896 * t - 22.4072747 * t * t) * ARCSEC;
+    const pole = apply(orientationForBody('earth', jd, NO_POSITIONS), [0, 0, 1]);
+    // 1″ is ~30 m at the surface; the dropped drift was 0.15° (17 km) by 2026.
+    expect(Math.abs(pole[0] - cipX)).toBeLessThan(1 * ARCSEC);
+    expect(Math.abs(pole[1] - cipY)).toBeLessThan(1 * ARCSEC);
+  });
+
   it('returns identity for the Galactic Centre anchor', () => {
     // The place has no rotation row, so the gate above already returns identity
     // for it. This pins that fact so a future accidental rotation-table entry

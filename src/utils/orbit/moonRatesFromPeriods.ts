@@ -45,8 +45,9 @@
  * well-defined (> 0), so only the two precession terms need the guard.
  */
 
+import { DAYS_PER_JULIAN_CENTURY } from '../../data/time/daysPerJulianCentury';
+
 const TWO_PI = 2 * Math.PI;
-const DAYS_PER_JULIAN_CENTURY = 36_525;
 const YEARS_PER_JULIAN_CENTURY = 100;
 
 // Below this a JPL precession period signals "no measurable precession" (a

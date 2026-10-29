@@ -83,6 +83,8 @@ export const voyagerMissions: Exhibit = {
     picking: {
       kinds: {
         body: true,
+        craft: true,
+        earthScene: true,
         starCatalog: true,
         galaxyCatalog: false,
         structure: false,

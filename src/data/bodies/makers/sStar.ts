@@ -20,6 +20,7 @@ import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { OrbitPlaneFrame } from '../../../@types/scene/OrbitPlaneFrame';
 import type { SStarSeed } from '../../../@types/scene/SStarSeed';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 /**
  * The plane of the sky at Sgr A*: pole = line of sight, so `xAxis` is East,
@@ -54,7 +55,7 @@ function sStarTrailTint(row: SStarSeed): Vec3 {
 
 export function sStar(row: SStarSeed): OrbitalElements {
   return {
-    id: row.id,
+    id: asSceneBodyId(row.id),
     focusId: GALACTIC_CENTRE_ANCHOR.id,
     semiMajorMpc: row.semiMajorArcsec * GC_ARCSEC_TO_MPC,
     eccentricity: row.eccentricity,

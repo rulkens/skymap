@@ -1,17 +1,14 @@
 /**
- * drawableMeshBodies — the mesh bodies a host row draws: attached to it, past
- * the partition's glint threshold, AND resident. ONE derivation behind
- * `meshBodiesPass`'s `enabled`, `draw` and `drawPick`, so the gate and the two
- * draws cannot disagree. An empty `SCENE_MESH_BODIES` short-circuits before
+ * drawableMeshBodies — the mesh-drawn bodies of `roster` a host row draws: attached to it
+ * and in that roster's partition `meshes` (resolved AND resident). ONE derivation behind a
+ * mesh pass's `enabled`, `draw` and `drawPick`, so the gate and the two draws cannot
+ * disagree. A host with none of the roster attached short-circuits before
  * `sceneBodyPartition` is touched.
- *
- * Residency is the demand-driven gate: a body inside the load radius but not
- * yet decoded draws nothing — invisible rather than a wrong shape (spec).
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { MeshBody } from '../../../@types/scene/MeshBody';
+import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
 import { sceneBodyPartition } from './sceneBodyPartition';
 
@@ -19,13 +16,12 @@ export function drawableMeshBodies(
   state: PassState,
   ctx: FrameView,
   hostId: string,
-): readonly MeshBody[] {
-  const renderer = state.gpu.meshBodyRenderer;
-  if (renderer === null) return [];
-  const attached = meshBodiesAttachedTo(hostId);
+  roster: ReadonlySet<string>,
+): readonly MeshPresentation[] {
+  if (state.gpu.meshBodyRenderer === null) return [];
+  const attached = meshBodiesAttachedTo(hostId).filter((body) => roster.has(body.id));
   if (attached.length === 0) return [];
-  const resolved = sceneBodyPartition(state, ctx).meshes;
-  return attached.filter(
-    (body) => resolved.some((m) => m.id === body.id) && renderer.hasMesh(body.id),
-  );
+  // Surface maps only split `flat` from `textured`; `meshes` never reads them.
+  const resolved = sceneBodyPartition(state, ctx, roster, () => false).meshes;
+  return attached.filter((body) => resolved.some((m) => m.id === body.id));
 }

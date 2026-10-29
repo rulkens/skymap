@@ -26,9 +26,11 @@ import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, factsReported } from '../engine/engineSlice';
 import { selectStructureBulk } from '../engine/selectors';
-import { selectOrientation } from '../settings/selectors';
+import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
+import { focusMotionRowOf } from '../../services/engine/camera/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
@@ -38,7 +40,7 @@ export function* watchFocusTweenSaga() {
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-      // A cut lands with no move; `navigateSaga` commits its framing.
+      // A cut's caller places the camera itself.
       if (action.meta.transition === 'cut') return;
 
       // A focus that resolves before `wireInput` runs has no camera to fly yet.
@@ -83,19 +85,21 @@ export function* watchFocusTweenSaga() {
       // inside the saga worker.
       if (!ROW_FOCUSABLE[row.type]) return;
 
-      // A body the follow rows WILL handle is followed, not tweened — the
-      // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-      // moves. Gate on `bodyMovesThisFrame` rather than a bare `row.type ===
-      // 'body'`: a focused S-star is a `starCatalog` row, not a body row, but
-      // the sim clock still moves it, so a type-only gate would miss it and
-      // tween a moving target instead of following it.
-      if (bodyMovesThisFrame(row)) return;
-
       // Known ready since the wait above; re-read rather than reuse, since a
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
+      // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
+      const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
+
+      // The motion row decides whether a moving body is tweened.
+      // Gate on `bodyMovesThisFrame`, not `row.type === 'body'`: a focused
+      // S-star is a `starCatalog` row the sim clock still moves.
+      if (bodyMovesThisFrame(row) && !focusMotionRowOf(motion).tweensMovingBodies) return;
+
       const frame = yield* select(selectOrientation);
-      yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, frame)));
+      yield* put(
+        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
+      );
     }),
   );
 }

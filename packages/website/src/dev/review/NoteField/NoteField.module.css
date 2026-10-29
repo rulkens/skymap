@@ -1,0 +1,20 @@
+.root {
+  margin-top: var(--space-3);
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+}
+
+.area {
+  composes: field from '../ReviewControl/ReviewControl.module.css';
+  display: block;
+  width: 100%;
+  margin-top: var(--space-1);
+  resize: vertical;
+  /* The field is as tall as its text, so a long note is read whole. */
+  field-sizing: content;
+}
+
+.save {
+  composes: button from '../ReviewControl/ReviewControl.module.css';
+  margin-top: var(--space-2);
+}

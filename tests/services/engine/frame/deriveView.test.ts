@@ -32,7 +32,6 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
-import type { SlabHostId } from '../../../../src/@types/engine/frame/SlabHostId';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
@@ -40,11 +39,13 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
 // Roll and a rotated orientation basis keep every lookAt element off ±0, so the
 // pin below compares real values rather than the sign of a zero.
@@ -68,11 +69,11 @@ function makeState(): EngineState {
   return {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
+    terrainHeightAt: datumOnlyTerrainHeight,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
     visibilityEntries: [],
-    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       bodies: { items: {} },
     },
@@ -107,7 +108,6 @@ function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
   };
 }
 
-/** A turned view beside the canvas view of the SAME frame, to compare against. */
 function view(overrides: Partial<ViewSpec> = {}): { canvas: FrameView; v: FrameView } {
   const snapshot = frame();
   return {
@@ -142,7 +142,6 @@ describe('deriveView', () => {
     const want = basisOf(v.vp);
     expectVec(orbitForwardOf(v.cam), want.forward);
     expectVec(basisOf(canvas.vp).right, want.forward);
-    // The shells' target − eye.
     const aim = [0, 1, 2].map((i) => v.cam.target[i]! - v.cam.position[i]!) as Vec3;
     expectVec(normalize3(aim), want.forward);
     const camVp = computeViewProj(v.cam, spec().frustum);
@@ -179,7 +178,6 @@ describe('deriveView', () => {
   it('an asymmetric frustum survives into view.vp and drawPxPerRad', () => {
     const frustum: ViewFrustum = { tanLeft: -0.3, tanRight: 0.9, tanDown: -0.5, tanUp: 0.4 };
     const { canvas, v } = view({ frustum, sizePx: { width: 800, height: 600 } });
-    // Each frustum edge, one unit deep along the camera's own axes, lands on NDC ±1.
     const { right, up, forward } = basisOf(canvas.vp);
     const ndc = (tx: number, ty: number): [number, number] => {
       const p = [0, 1, 2].map(
@@ -197,14 +195,12 @@ describe('deriveView', () => {
   });
 
   it("an eye offset moves drawCamPos by the rotated offset and leaves the frame's pose untouched", () => {
-    // Half a unit along the turned view's right, which is the camera's back.
     const { canvas, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
     expect(v.cam.position).toEqual(v.drawCamPos);
     expect(v.cam.distance).toBe(CAM.distance);
     expect(CAM.position).toEqual(canvas.drawCamPos);
     const back = basisOf(canvas.vp).forward.map((x) => -0.5 * x) as Vec3;
     expectVec([0, 1, 2].map((i) => v.drawCamPos[i]! - canvas.drawCamPos[i]!) as Vec3, back);
-    // Both matrices put the moved eye at the eye-space origin: clip (0, 0, ·, 0).
     const eye = v.drawCamPos;
     const cosmo = vec4.transformMat4([eye[0], eye[1], eye[2], 1], Float64Array.from(v.vp));
     const rel = [0, 1, 2].map((i) => eye[i]! - RENDER_ORIGIN_MPC[i]!);
@@ -221,14 +217,19 @@ describe('deriveView', () => {
     // from a camera 100 Mpc out (frameContext.test.ts's routing fixture).
     const basisLocal: Mat3 = [1, 0, 0, 0, 0, 1, 0, -1, 0];
     const arm: FramedCameraPose = {
-      frame: { body: 'earth' },
-      pose: { bodyId: 'earth', anchorLocalM: [10, 20, 30], eyeRelAnchorM: [1, 2, 3], basisLocal },
+      frame: { body: asSceneBodyId('earth') },
+      pose: {
+        bodyId: asSceneBodyId('earth'),
+        anchorLocalM: [10, 20, 30],
+        eyeRelAnchorM: [1, 2, 3],
+        basisLocal,
+      },
     };
     // 2 m along the TURNED view's right: basisLocal·YAW_RIGHT's first column is
     // local +y (the unturned basis would put it on +x).
     const eyeOffsetMpc: Vec3 = [2 * SCALE_UNITS.M_TO_MPC, 0, 0];
     const v = deriveView(frame(arm), CAM, spec({ rotation: YAW_RIGHT, eyeOffsetMpc }));
-    const pose = v.bodyPose('earth');
+    const pose = v.bodyPose(asSceneBodyId('earth'));
     expect(pose).not.toBeNull();
     expectVec(pose!.eyeRelBodyM, [11, 24, 33], 9);
     expect(pose!.basisM).toEqual(multiply3x3(basisLocal, YAW_RIGHT));
@@ -280,11 +281,9 @@ describe('deriveView', () => {
 });
 
 describe('deriveView — the canvas view is the pre-split one', () => {
-  // Captured from this branch's HEAD before the split, through the SAME fixture
-  // and today's `deriveFrameContext` with no view spec. Element-wise `toBe`:
-  // the ruling was that the canvas view goes through `turnedOrbitCamera` like
-  // every other view BECAUSE an identity turn and a zero offset are exact, and
-  // this is the only guard that the ruling held.
+  // Golden values captured through the SAME fixture. Element-wise `toBe`: the canvas view goes
+  // through `turnedOrbitCamera` like every other view because an identity turn and a zero offset
+  // are exact, and this is the only guard that holds.
   const VP = [
     0.7586652040481567, -0.39352402091026306, -0.6410056948661804, -0.6409992575645447,
     0.20353782176971436, 1.7850372791290283, -0.09983441233634949, -0.0998334139585495,
@@ -310,8 +309,6 @@ describe('deriveView — the canvas view is the pre-split one', () => {
   });
 });
 
-// A capture face is `deriveView(capture.snapshot, capture.cam,
-// faceViewSpec(key, face, size, slotBase))` and nothing else.
 describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpec)', () => {
   const CAPTURE_LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
   const CAPTURE_PROJECTION: CameraProjection = {
@@ -336,12 +333,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     [0, 0, -1],
   ];
 
-  /**
-   * Build an `EngineState`-shaped fixture with every bootstrap-gate handle
-   * populated (so `isEngineReady` passes by default) and a `cameraRuntime`
-   * carrying the live projection + last-frame epoch that `cubemapCaptureFrame`
-   * reads for far and `simDays`.
-   */
   function makeCaptureState(
     overrides: {
       booted?: boolean;
@@ -373,7 +364,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
       visibilityEntries: [],
-      data: { bodies: { earth: null, planets: [], meshBodies: [] } },
+      terrainHeightAt: datumOnlyTerrainHeight,
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
@@ -382,7 +373,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     } as unknown as EngineState;
   }
 
-  /** The row's one frame, ready-narrowed — `null` bubbles a not-ready fixture up loudly. */
   function captureFrame(
     state: EngineState,
     overrides: { nearMpc?: number; axes?: Parameters<typeof cubemapCaptureFrame>[0]['axes'] } = {},
@@ -436,8 +426,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         nowMs: 0,
       }).isReady,
     ).toBe(false);
-    // D13: the galaxy/pick renderers are no longer part of isEngineReady's
-    // gate — only the two core handles (renderTargets, compositor) block.
     expect(
       cubemapCaptureFrame({
         state: makeCaptureState({ renderTargets: null }),
@@ -484,7 +472,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       if (capture === null) continue;
 
       for (const d of directions) {
-        // Cube-face selection + (s,t) per the GL table 8.19 / WGSL rules.
         const [x, y, z] = d;
         const ax = Math.abs(x);
         const ay = Math.abs(y);
@@ -530,7 +517,6 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         const cx = vp[0]! * p[0] + vp[4]! * p[1] + vp[8]! * p[2] + vp[12]!;
         const cy = vp[1]! * p[0] + vp[5]! * p[1] + vp[9]! * p[2] + vp[13]!;
         const cw = vp[3]! * p[0] + vp[7]! * p[1] + vp[11]! * p[2] + vp[15]!;
-        // WebGPU viewport transform: top-left origin, y down.
         const u = (cx / cw + 1) / 2;
         const v = (1 - cy / cw) / 2;
 
@@ -613,7 +599,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     // rounding (to zero, NaN vp, further out). In the host's own frame the
     // face's forward is the bare cube axis.
     const bodyStates = deriveBodyStates(CAPTURE_LAST_SIM_DAYS);
-    const voyager = bodyStates.get('voyager1')!;
+    const voyager = bodyStates.get(asSceneBodyId('voyager1'))!;
     const capture = cubemapCaptureFrame({
       state: makeCaptureState(),
       eyeMpc: voyager.positionMpc,
@@ -630,7 +616,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     );
     expect(Array.from(view.vp).every(Number.isFinite)).toBe(true);
     expect(Array.from(view.slabs[0]!.vp).every(Number.isFinite)).toBe(true);
-    const { basisM } = view.bodyPose('voyager1' as BodyId)!;
+    const { basisM } = view.bodyPose(asSceneBodyId('voyager1'))!;
     expect(basisM[6]).toBeCloseTo(0, 9);
     expect(basisM[7]).toBeCloseTo(0, 9);
     expect(basisM[8]).toBeCloseTo(1, 9);
@@ -645,19 +631,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   });
 
   it("each face's vp and cam.poseBasis match the pre-split values", () => {
-    // Captured from this branch's HEAD before the split, through the SAME
-    // fixture and today's `computeViewProj`/`assembleOrbitCamera` (unchanged
-    // by the split) fed the old per-face `FACE_BASES` basis directly, then
-    // `flipClipY`. Element-wise `toBe` on every nonzero element — the guard
-    // that `FACE_VIEW_ROTATIONS` reproduces the old per-face basis exactly,
-    // AND (post-K6) that `clipYFlip` applied at the projection builder lands
-    // on the SAME numbers the old post-derive `flipClipY` mutation did.
-    // Ruling: a handful of elements land at `0` vs `-0`
-    // (a harmless term-order artefact, not a value drift, per the Task 3
-    // review's identical finding on the canvas view) — `toBe` cannot tell a
-    // captured `-0` from `0` at the literal, so every ZERO-valued element
-    // uses `toBeCloseTo(0, 12)` instead, which is sign-blind; any real
-    // regression still fails it the moment the value is no longer ~0.
+    // Golden values captured through the SAME fixture from the per-face basis fed directly to
+    // `computeViewProj`/`assembleOrbitCamera` then `flipClipY`: guards that `FACE_VIEW_ROTATIONS`
+    // reproduces that basis and that `clipYFlip` at the projection builder lands on the same numbers.
+    // A few elements are `0` vs `-0` (term-order artefact) and `toBe` cannot tell them apart at the
+    // literal, so ZERO-valued elements use the sign-blind `toBeCloseTo(0, 12)`.
     const VP: readonly (readonly number[])[] = [
       [0, 0, 1, 1, 0, 1, 0, 0, -1, 0, 0, 0, 56, 34, -12, -12],
       [0, 0, -1, -1, 0, 1, 0, 0, 1, 0, 0, 0, -56, 34, 12, 12],
@@ -696,17 +674,15 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
 
 describe('deriveView — NEAR0 range from the spheres it draws', () => {
   const STATES = deriveBodyStates(CONST_J2000);
-  const SUN_MPC = STATES.get('sun')!.positionMpc;
+  const SUN_MPC = STATES.get(asSceneBodyId('sun'))!.positionMpc;
   const SUN_OUTER_M = outerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
   const MERCURY = findByIdOrThrow(SCENE_PLANETS, 'mercury', 'test');
 
-  /** A ready frame at `pose` with Mercury in core's roster and `sceneBodies` as given. */
   function frameAt(pose: CameraPose, bodies: readonly SceneBody[]) {
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
     const base = makeState();
     const state = {
       ...base,
-      data: { bodies: { earth: null, planets: [MERCURY], meshBodies: [] } },
     } as unknown as EngineState;
     const snapshot = deriveFrameContext(state, {
       cam,
@@ -754,7 +730,6 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
   });
 
   it('a star faded to 0 neither sizes NEAR0 nor occludes', () => {
-    // Core leaves a star whose handed value is 0 out of `sceneBodies`.
     const { cam, snapshot } = frameAt(NEAR_SUN, []);
     expect(deriveView(snapshot, cam, spec()).slabs[NEAR0]!.distanceRangeM).toBeNull();
   });
@@ -762,7 +737,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
   it('NEAR0 never spans a planet', () => {
     // 1e5 km off Mercury both it (~30 px) and the Sun (~15 px) resolve; Mercury
     // draws in its own body slab, so NEAR0's range is the Sun's alone.
-    const mercuryMpc = STATES.get('mercury')!.positionMpc;
+    const mercuryMpc = STATES.get(asSceneBodyId('mercury'))!.positionMpc;
     const pose: CameraPose = {
       target: [...mercuryMpc],
       yaw: 0,
@@ -784,10 +759,9 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
     // cast is the one every body anchor takes (`bodySlabRowOf`).
     const { cam, snapshot } = frameAt(NEAR_SUN, SCENE_SUN);
     const layerRow: SlabRow = {
-      anchorId: 'sun' as SlabHostId,
+      anchorId: 'sun' as PositionedId,
       drawRadiusM: () => SUN_OUTER_M,
       footprintRadiusM: SUN_OUTER_M,
-      source: 'foreground',
     };
     const withRow = { ...snapshot, slabBodyCandidates: [...snapshot.slabBodyCandidates, layerRow] };
     expect(deriveView(withRow, cam, spec()).slabs[NEAR0]!.distanceRangeM).toEqual(

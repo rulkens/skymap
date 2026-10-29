@@ -52,10 +52,10 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
   {
     id: 'solar-system',
     name: 'Solar System ephemerides and facts',
-    about: 'The orbits of the planets and moons, the positions they are corrected to, and the figures on each body’s card.',
+    about: 'The orbits of the planets, moons and Earth’s satellites, the positions they are corrected to, and the figures on each body’s card.',
     pages: 'each',
     sections: [],
-    ids: ['jpl-elements', 'horizons', 'seed-planet-facts'],
+    ids: ['jpl-elements', 'horizons', 'celestrak', 'seed-planet-facts'],
     step: 'planets-moons-and-their-positions',
   },
   {

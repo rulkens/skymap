@@ -1,0 +1,174 @@
+.ground,
+.root {
+  position: sticky;
+  top: 0;
+  height: var(--nav-height);
+}
+
+.ground {
+  z-index: 1;
+  margin-bottom: calc(-1 * var(--nav-height));
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--border-divider);
+}
+
+.root {
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 1.875rem;
+  /* Full width, on the gutter: the bar lines up with the hero's words, which are not in the page column. */
+  padding-inline: var(--gutter);
+  /* The launch control is as far from the right edge as from the top one. */
+  padding-right: calc((var(--nav-height) - var(--tap)) / 2);
+  /* Over a picture the labels sit on stars; the shadow is their local scrim. */
+  text-shadow:
+    0 0 0.75rem #000,
+    0 0 0.25rem #000;
+}
+
+/* A hero starts under the bar instead of below it. */
+.root.hero {
+  margin-bottom: calc(-1 * var(--nav-height));
+}
+
+.ground.hero {
+  z-index: 3;
+  opacity: var(--nav-ground, 1);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  margin-right: auto;
+  font: var(--weight-display) 1.75rem / 1 var(--font-family-display);
+  color: var(--color-fg);
+  text-decoration: none;
+}
+
+.mark:hover {
+  color: var(--color-accent);
+}
+
+.links,
+.list {
+  display: flex;
+  gap: 1.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu {
+  display: none;
+}
+
+.toggle {
+  composes: ring ring-small from '../../styles/ring.module.css';
+}
+
+/* A button, so it sheds the browser's button face; `button.` outranks the composed ring. */
+button.toggle {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Same breakpoint as site.css. */
+@media (max-width: 900px) {
+  .root {
+    gap: 1rem;
+  }
+
+  .links {
+    display: none;
+  }
+
+  .menu {
+    display: block;
+  }
+
+  /* The launch control keeps its place beside the mark; the menu sits at the thumb's edge. */
+  .root nav {
+    order: 3;
+  }
+
+  /*
+   * With the reader's text size doubled the three controls are wider than a phone. Each grows only as far as
+   * the window's width allows (at the usual size these caps are above the rem values), and its spacing follows
+   * its own text, so the bar never pushes the page sideways.
+   */
+  .root {
+    gap: min(1rem, 3vw);
+    padding-inline: min(var(--gutter), 5vw);
+  }
+
+  .mark {
+    font-size: min(1.75rem, 9vw);
+  }
+
+  .root .menu > button.toggle,
+  .root .open {
+    --mark: 0.6875em;
+    --gap: 0.625em;
+    font-size: min(var(--text-small), 4.6vw);
+  }
+
+  .root .open {
+    gap: 0.5em;
+    padding-inline: 0.75em 1em;
+  }
+
+  .root .menu > button.toggle svg,
+  .root .open svg {
+    width: 1.25em;
+    height: 1.25em;
+  }
+
+  /* A popover sits in the top layer, placed on the window: right under the bar, which is stuck to the top. */
+  .menu .list {
+    position: fixed;
+    inset: var(--nav-height) 0 auto;
+    width: auto;
+    margin: 0;
+    flex-direction: column;
+    gap: 0;
+    padding: 0.5rem var(--gutter) 1.5rem;
+    color: inherit;
+    background: var(--color-bg);
+    border: 0;
+    border-bottom: 1px solid var(--border-divider);
+    text-shadow: none;
+  }
+
+  .menu .list:not(:popover-open) {
+    display: none;
+  }
+
+  /* The same face as the bar's links on a wide screen, a size up for the thumb. */
+  .root .menu .item {
+    width: 100%;
+    min-height: 3.5rem;
+    font: var(--weight-body) var(--text-body) / 1.2 var(--font-body);
+    letter-spacing: 0.01em;
+  }
+
+  /* The open list needs the bar's ground even over a hero. */
+  .root:has(.list:popover-open) {
+    background: var(--color-bg);
+    text-shadow: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .root {
+    gap: min(0.75rem, 3vw);
+  }
+
+  .mark {
+    font-size: min(1.5rem, 9vw);
+  }
+}

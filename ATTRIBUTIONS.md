@@ -622,6 +622,31 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
 - **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
 
+### CelesTrak GP orbit data
+
+<!-- attribution: id=celestrak; keys=celestrak,celestrak.readme -->
+
+- **What:** SGP4 mean orbital elements (OMM) of about 20,000 Earth-orbiting
+  objects: the active satellites, three debris clouds, analyst objects and the
+  last 30 days of launches.
+- **By:** CelesTrak (T.S. Kelso), from the US Space Force's public catalog.
+- **Licence:** Not stated on the pages read. The usage policy sets download
+  limits ("Only download the data you need, when you are going to use it, and
+  only download data once per update") and says nothing on republishing,
+  credit or commercial use. Whether a daily copy may be republished from our
+  own storage is to be asked of CelesTrak before the satellites Layer ships.
+- **Use:** No licence stated
+- **Attribution:** None asked on the pages read; skymap credits CelesTrak.
+- **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
+- **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
+  `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
+  `npm run build-satellites` → `satellite-catalog/v1/satellites.satg` on R2.
+- **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
+  dropped, and re-encoded; the element values are copied unchanged.
+- **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
+  <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
+  <https://celestrak.org/NORAD/elements/>
+
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
 <!-- attribution: id=mcxc; keys=mcxc.* -->
@@ -1984,6 +2009,49 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
 - **Modified:** Yes. Posed deployed, flattened.
 - **Checked:** 2026-10-07: <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>
 
+### Phobos shape model (Gaskell M003) and Viking mosaic
+
+<!-- attribution: id=mesh-phobos; keys=meshes.phobos*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Phobos up close: Gaskell's 3.1-million-facet shape model and the
+  Viking Orbiter global mosaic on the DLR control network.
+- **By:** Shape: R. Gaskell (Planetary Science Institute), archived by NASA's
+  Planetary Data System and served by NAIF. Mosaic: USGS Astrogeology, DLR
+  control.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it; the USGS mosaic is a US government
+  work (public domain). The PDS citation names Gaskell as author.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: R. Gaskell (PSI), Phobos shape model M003,
+  NASA PDS / NAIF. Colour: Viking Orbiter mosaic, DLR control, USGS
+  Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/PHOBOS_M003_GAS_V01.OBJ>,
+  <https://planetarymaps.usgs.gov/mosaic/Phobos_Viking_Mosaic_40ppd_DLRcontrol.tif>
+- **Enters skymap:** downloaded by hand → Blender import and relief pre-bake →
+  `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic resampled, rescaled to the seed albedo and
+  shifted 4.5° east to register with the shape.
+- **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
+
+### Deimos shape model (Thomas K005)
+
+<!-- attribution: id=mesh-deimos; keys=meshes.deimos*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** The shape model drawn for Deimos up close (5,184 facets).
+- **By:** P. Thomas (Cornell), archived by NASA's Planetary Data System and
+  served by NAIF.
+- **Licence:** Openly archived in NASA's Planetary Data System, which states no
+  licence for it; the PDS citation names Thomas as author.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: P. Thomas (Cornell), Deimos shape model K005,
+  NASA PDS / NAIF".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/DEIMOS_K005_THO_V01.OBJ>
+- **Enters skymap:** downloaded by hand → Blender import and pre-bake →
+  `build-meshes`.
+- **Modified:** Yes. Painted the seed albedo; no colour map is used.
+- **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
+
 ## Fonts
 
 All three are under the SIL Open Font License 1.1, whose second condition
@@ -2648,13 +2716,13 @@ and where they come from".
 - **What:** The libraries the app and the website bundle. Named in
   `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
   `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
-  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`; for the website `astro`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`; for the website `astro`,
   `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
   (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
   families under `react-markdown`, and others); the build lists every one in
   `third-party-licenses.md`. Build-time tools are listed in `package.json`.
 - **By:** Their authors.
-- **Licence:** MIT, each of the fourteen named, as its own `package.json`
+- **Licence:** MIT, each of the fifteen named, as its own `package.json`
   states. Of the 74 packages the app's bundle holds, the build reports MIT
   for 71, ISC for one, and no licence field for two entry points of
   `redux-saga` (itself MIT).
@@ -2671,7 +2739,10 @@ and where they come from".
 - **Enters skymap:** `package.json`, `packages/website/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
-  installed packages; the built bundle, searched for licence notices; the
+  installed packages then named; 2026-10-28: `satellite.js` 7.1.0's
+  `LICENSE.md` (MIT, © 2013 Shashwat Kandadai), whose plain-JS SGP4 the
+  satellites worker bundles; the built bundle, searched for licence notices; the
   generated `third-party-licenses.md`; the sentence quoted, in
   <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`.
-- **Not verified:** what the website's scripts and the dev-tool pages bundle.
+- **Not verified:** what the website's scripts and the dev-tool pages bundle;
+  the package count of the app's bundle since `satellite.js` joined it.

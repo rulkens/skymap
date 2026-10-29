@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
 import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
-import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
+import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
@@ -30,8 +30,8 @@ describe('the S-star source row', () => {
     // Both moved clusters at once: a half-migration would leave one of them
     // gated by a `bodies.items` row nothing writes.
     expect(STAR_CATALOG_IDS).toContain(SUN_ENTRY.id);
-    expect(BODY_IDS).not.toContain(S_STAR_ENTRY.id);
-    expect(BODY_IDS).not.toContain(SUN_ENTRY.id);
+    expect(BODY_SOURCE_IDS).not.toContain(S_STAR_ENTRY.id);
+    expect(BODY_SOURCE_IDS).not.toContain(SUN_ENTRY.id);
   });
 
   it('every registry code fits the pick texture’s source field, uniquely', () => {

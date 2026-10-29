@@ -15,11 +15,14 @@ import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoida
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
-import { bodySelectionRow } from '../../../../src/services/engine/selection/bodySelectionRow';
+import { bodySelectionRow } from '../../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../../src/layers/structure/present/structureSelectionRow';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
+import { galaxyRowRuntime } from '../../../support/selectionResolverOver';
+import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 function roundTrip<Ref extends SelectionRef>(row: SelectionKindRow<Ref>, ref: Ref): Ref | null {
   const word = row.encodePick(ref);
@@ -58,15 +61,18 @@ describe('SelectionKindRow.encodePick', () => {
         star,
       ),
     ).toEqual(star);
-    const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12345 } as const;
-    const row = galaxyCatalogSelectionRow({ catalogs: new Map(), famousMeta: [] });
+    const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12 } as const;
+    const catalogs = new Map([[Source.SDSS, makeGalaxyCatalog(16)]]);
+    const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs, famousMeta: [] }));
     expect(roundTrip(row, galaxy)).toEqual(galaxy);
   });
 
   it('body', () => {
     const ref = { type: 'body', id: SCENE_PLANETS[1]!.id } as const;
     expect(roundTrip(bodySelectionRow(), ref)).toEqual(ref);
-    expect(bodySelectionRow().encodePick({ type: 'body', id: 'no-such-body' })).toBeNull();
+    expect(
+      bodySelectionRow().encodePick({ type: 'body', id: asSceneBodyId('no-such-body') }),
+    ).toBeNull();
   });
 
   it('structure: the index is per category, and matches the ring pick word', () => {

@@ -6,7 +6,7 @@
  * a moon's correction also shifts M before Kepler, so it stays on its conic.
  * `orbit` is the PROPAGATED element set at `t` the body was placed with, so
  * the orbit trail draws the same conic instead of re-deriving its own.
- * Memoized on `simDays` and the trajectory registry version: every pass (draw, pick, labels) reads the same
+ * Memoized on `simDays` and the trajectory and transient registry versions: every pass (draw, pick, labels) reads the same
  * snapshot each frame, so recomputing per reader would tear a mid-frame
  * clock tick between passes.
  */
@@ -26,10 +26,12 @@ import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { SAMPLED_BODIES } from '../../../data/bodies/sampledBodies';
 import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
 import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
+import { transientPositions } from '../../bodies/transientPositions';
+import type { PositionedId } from '../../../@types/scene/PositionedId';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -37,22 +39,35 @@ import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 // mistake belongs — instead of on whichever frame first reaches the bad row.
 const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 
-// The last computed snapshot, keyed by the instant and the trajectory registry
-// version it was computed at. A frame re-reads the same instant from several
+// The last computed snapshot, keyed by the instant and the two registry versions
+// it was computed at. A frame re-reads the same instant from several
 // passes and a paused clock re-reads it every frame, so a one-deep cache makes
 // both free; a new instant, or a track arriving on a paused clock, recomputes.
-let cache: { simDays: number; version: number; states: ReadonlyMap<string, BodyState> } | undefined;
+let cache:
+  | {
+      simDays: number;
+      version: number;
+      transientVersion: number;
+      states: ReadonlyMap<PositionedId, BodyState>;
+    }
+  | undefined;
 
-export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
+export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, BodyState> {
   const version = trajectoryRegistry.version();
-  if (cache !== undefined && simDays === cache.simDays && version === cache.version) {
+  const transientVersion = transientPositions.version();
+  if (
+    cache !== undefined &&
+    simDays === cache.simDays &&
+    version === cache.version &&
+    transientVersion === cache.transientVersion
+  ) {
     return cache.states;
   }
 
   // Phase 1 — positions only, so phase 2 can orient a body against where the
   // *other* bodies ended up rather than against iteration order.
-  const positions = new Map<string, Vec3>();
-  const orbits = new Map<string, OrbitalElements>();
+  const positions = new Map<PositionedId, Vec3>();
+  const orbits = new Map<PositionedId, OrbitalElements>();
 
   // 1a — the roots: position authored, not orbited, so no orbit. The authored
   // position is shared by reference rather than copied: it is never mutated,
@@ -104,9 +119,16 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   // presence gate, not this phase, decides whether the craft is drawn.
   for (const { id } of SAMPLED_BODIES) positions.set(id, bodyPositionMpcAt(id, simDays));
 
+  // 1e — transient objects, last, so each can hang off any body above. One without a position
+  // this instant is left out rather than parked somewhere.
+  for (const [id, positionAt] of transientPositions.entries()) {
+    const position = positionAt(simDays, positions);
+    if (position !== null) positions.set(id, position);
+  }
+
   // Phase 2 — orientations over the finished position map. Anchors go through
   // `orientationForBody` too, so the rotation-row gate stays one gate.
-  const states = new Map<string, BodyState>();
+  const states = new Map<PositionedId, BodyState>();
   for (const [id, positionMpc] of positions) {
     states.set(id, {
       positionMpc,
@@ -115,6 +137,6 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     });
   }
 
-  cache = { simDays, version, states };
+  cache = { simDays, version, transientVersion, states };
   return states;
 }

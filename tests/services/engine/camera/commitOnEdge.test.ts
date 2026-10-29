@@ -29,6 +29,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 /**
  * The commit-on-edge contract drives the driver table + Redux store directly
@@ -62,8 +63,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -93,8 +93,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -127,8 +126,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [0, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -158,8 +156,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: TO,
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -194,8 +191,7 @@ describe('commitOnEdge — tween settles', () => {
       startCameraTween({
         from: PRE,
         to: TO,
-        durationMs: 200,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 200, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -261,8 +257,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
       startCameraTween({
         from: BASE_POSE,
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -295,8 +290,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
       startCameraTween({
         from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 },
         to: { target: [10, 0, 0], yaw: 1, pitch: 0, distance: 50 },
-        durationMs: 1000,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );
@@ -396,9 +390,9 @@ describe('commitOnEdge — clip deactivation', () => {
     // The rows read `base.frame` only, so the pose value is irrelevant here.
     store.dispatch(
       commitCameraPose({
-        frame: { body: 'earth' },
+        frame: { body: asSceneBodyId('earth') },
         pose: {
-          bodyId: 'earth',
+          bodyId: asSceneBodyId('earth'),
           anchorLocalM: [0, 0, 0],
           eyeRelAnchorM: [0, 0, 1e7],
           basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, -1],
@@ -407,7 +401,11 @@ describe('commitOnEdge — clip deactivation', () => {
     );
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     expect(
-      pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
+      pickWinner(drivers, store.getState(), {
+        approachDone: false,
+        dragClaimed: false,
+        navMoving: false,
+      }).id,
     ).toBe('orbitDrag');
 
     store.dispatch(
@@ -417,7 +415,11 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     expect(
-      pickWinner(drivers, store.getState(), { approachDone: false, dragClaimed: false }).id,
+      pickWinner(drivers, store.getState(), {
+        approachDone: false,
+        dragClaimed: false,
+        navMoving: false,
+      }).id,
     ).toBe('clip');
   });
 });

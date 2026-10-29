@@ -10,6 +10,7 @@ import { earthFlyout } from '../../../../src/data/animation/clips/earthFlyout';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 describe('earthFlyout', () => {
   it('targets the frozen-clock Earth (the instant it is built at)', () => {
@@ -18,11 +19,11 @@ describe('earthFlyout', () => {
     // not at the epoch.
     const LATER = CONST_J2000 + 200;
     const start = earthFlyout(LATER).data.start as CameraPose;
-    const earthLater = deriveBodyStates(LATER).get('earth')!.positionMpc;
+    const earthLater = deriveBodyStates(LATER).get(asSceneBodyId('earth'))!.positionMpc;
     expect(start.target).toEqual([...earthLater]);
 
     // And distinctly NOT the J2000 position — the clock actually moved the aim.
-    const earthJ2000 = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
+    const earthJ2000 = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     expect(start.target).not.toEqual([...earthJ2000]);
   });
 });

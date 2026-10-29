@@ -1,0 +1,92 @@
+/*
+ * ReviewControl — the review's button, field, panel box, key cap and dim text, as a vocabulary: no component, no `.root`.
+ * Take a class with `composes: button from '../ReviewControl/ReviewControl.module.css'`; to change a
+ * composed property, raise the specificity of the rule (`.root .save`), since the copy lands later.
+ * `--review-line` comes from the page (ReviewPage.module.css `.on`).
+ */
+.button {
+  min-height: 24px;
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+}
+
+/* A phone's target is a finger's. */
+@media (max-width: 900px) {
+  .button {
+    min-height: var(--tap);
+  }
+}
+
+.field {
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.button:focus-visible,
+.field:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* The box of a panel hung from the bar: the caller sets its position, top and width; on a phone it becomes a sheet. */
+.panel {
+  right: var(--space-8);
+  box-sizing: border-box;
+  /* Leaves the feedback dock's corner free under it. */
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar, 2.75rem) - 9rem);
+  overflow-y: auto;
+  background: var(--color-bg);
+  border: 1px solid var(--review-line);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.4 var(--font-body);
+}
+
+.panel:focus {
+  outline: none;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    top: auto;
+    left: var(--space-8);
+    width: auto;
+    max-height: 55svh;
+  }
+}
+
+.key {
+  padding: 0 var(--space-3);
+  border: 1px solid var(--review-line-dim);
+  border-radius: var(--space-2);
+  color: var(--color-fg);
+  font: 400 0.75rem / 1.4 var(--font-family-mono);
+}
+
+.dim {
+  color: var(--site-text-dim);
+}

@@ -11,17 +11,18 @@ import {
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+import type { OctreeResidency } from '../../../../src/@types/octree/OctreeResidency';
 import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
 import { multiRootStarOctree } from '../../../fixtures/multiRootStarOctree';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 /** No chunk resident: a v1 catalog has none. */
-const NONE: StarResidency = residencyOf();
+const NONE: OctreeResidency<StarColumns> = residencyOf();
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs (a leaf cell's world box is `[mortonCoord, mortonCoord + 1) pc`),
 // so the two-leaf geometry below is hand-reasoned in the same frame that
-// `starNodeOriginRelCamMpc` reconstructs.
+// `octreeNodeOriginRelCamMpc` reconstructs.
 const GRID: StarOctreeGrid = { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] };
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 

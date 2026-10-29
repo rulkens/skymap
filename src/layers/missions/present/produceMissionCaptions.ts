@@ -1,25 +1,25 @@
 /**
- * produceMissionCaptions — the missions Layer's NEAR0 `screenLabels` producer:
- * one mesh-body caption per sampled craft once its track is loaded, dimmed
- * when the visitor emphasises the other craft. The label entry's `items` claim
- * these ids from core's scene-body captions, so each craft has exactly one captioner.
+ * produceMissionCaptions — the missions Layer's NEAR0 `screenLabels` producer: one caption per
+ * present craft (a sampled craft once its track is loaded), all switched by the one `craft`
+ * item. Core captions no craft, so each has exactly one captioner. Only the sampled craft dim
+ * when the visitor emphasises the other one: emphasis is a Voyager-exhibit idea.
  */
 
 import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenLabel';
-import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
-import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
-import { SAMPLED_BODY_IDS } from '../../../data/missions/sampledBodyIds';
+import { MISSIONS_BODY_ROWS } from '../bodies/missionsBodyRows';
+import { CRAFT_ENTRY } from '../sources/craft';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { emphasisDim } from '../../../utils/scene/emphasisDim';
 import { meshBodyCaption } from '../../../utils/labels/meshBodyCaption';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
+import { craftPickId } from './craftPickId';
 
-const CRAFT = SAMPLED_BODY_IDS.map((id) =>
-  findByIdOrThrow(SCENE_MESH_BODIES, id, 'produceMissionCaptions'),
-).filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id));
+const CRAFT = MISSIONS_BODY_ROWS.flatMap((row) =>
+  isMeshBody(row.body) ? [{ body: row.body, sampled: row.position.kind === 'sampled' }] : [],
+);
 
 export const produceMissionCaptions: LayerScreenLabel<'missions'>['produceLabels'] = (
   state,
@@ -27,19 +27,17 @@ export const produceMissionCaptions: LayerScreenLabel<'missions'>['produceLabels
   fade,
 ) => {
   const { simDays } = ctx.snapshot;
-  const present = CRAFT.filter((body) => spacecraftPresent(body.id, simDays));
-  if (present.length === 0) return { labels: [], awake: false };
-
   const composeCtx = captionComposeContextOf(state, ctx);
   const states = sceneBodyStates(state, ctx);
-  const craft = state.settings.missions.craft;
+  const emphasis = state.settings.missions.craft;
 
-  const labels = present.map((body) =>
-    composeForegroundCaption(
-      composeCtx,
-      meshBodyCaption(body, states.get(body.id)!.positionMpc),
-      fade[body.id]! * emphasisDim(craft, body.id),
-    ),
+  const labels = CRAFT.filter(({ body }) => spacecraftPresent(body.id, simDays)).map(
+    ({ body, sampled }) =>
+      composeForegroundCaption(
+        composeCtx,
+        meshBodyCaption(body, states.get(body.id)!.positionMpc, craftPickId(body.id)!),
+        fade[CRAFT_ENTRY.id]! * (sampled ? emphasisDim(emphasis, body.id) : 1),
+      ),
   );
   return { labels, awake: false };
 };

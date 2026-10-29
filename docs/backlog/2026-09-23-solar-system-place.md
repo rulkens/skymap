@@ -8,7 +8,7 @@ coupling still in place.
 
 ## What is true today
 
-- `src/data/bodies/orbitalElements.ts` — eleven element rows carry
+- `src/layers/body/bodies/` — eleven element rows carry
   `focusId: 'sun'`. The elements are heliocentric J2000 Keplerian sets, so the
   Sun is their true focus, not a stand-in.
 - `src/data/bodies/bodyRegions.ts:23,66,116-117` — `SUN_ID = 'sun'` anchors

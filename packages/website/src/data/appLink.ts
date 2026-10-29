@@ -1,7 +1,7 @@
 /** The only place the app's base path is written; the `/app` move changes this line. */
 export const APP_BASE = '/';
 
-/** The launch control's words (components/OpenApp.astro), for copy that quotes them. */
+/** The launch control's words (components/OpenApp/OpenApp.tsx), for copy that quotes them. */
 export const OPEN_APP_LABEL = 'Open app';
 
 /**

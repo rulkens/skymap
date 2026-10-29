@@ -8,10 +8,11 @@
 import { SURFACE_STANDOFF_RADII } from '../../src/utils/camera/clampDistance';
 
 import type { DriverGeometry } from '../../src/@types/engine/camera/DriverGeometry';
+import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 
 export function starRowDriver(poseId: string | null, radiusM: number): DriverGeometry {
   return {
-    poseId,
+    poseId: poseId === null ? null : asSceneBodyId(poseId),
     boundingRadiusM: radiusM,
     footprintRadiusM: radiusM,
     groundRadiusM: radiusM,

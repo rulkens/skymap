@@ -29,10 +29,11 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
-const SATURN = BODIES.get('saturn')! as BodyState;
+const SATURN = BODIES.get(asSceneBodyId('saturn'))! as BodyState;
 const R_SATURN_M = 58232000;
 const R_SATURN_MPC = R_SATURN_M * SCALE_UNITS.M_TO_MPC;
 // The harness settings put fovDeg 60 on the store; runFrame stamps it onto
@@ -57,8 +58,8 @@ describe('body switch reset (ruling 18)', () => {
     seedRememberedTilt(h);
     expect(h.state.cameraRuntime.tilt.rememberedTiltRad).toBeGreaterThan(0.3);
 
-    // The user's action. The real saga path dispatches NO tween for a moving
-    // body (watchFocusTweenSaga gates on bodyMovesThisFrame) — the follow row IS
+    // The user's action. Under Eased (the default) the real saga path
+    // dispatches NO tween for a moving body — the follow row IS
     // the flight, so the store focus write alone reproduces the app flow.
     h.focus('saturn');
 

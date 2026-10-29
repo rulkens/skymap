@@ -13,6 +13,7 @@ import type { SurfaceStepCtx } from '../../../src/@types/camera/SurfaceStepCtx';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -33,7 +34,7 @@ const CTX: SurfaceStepCtx = {
 
 /** Mid-latitude, oblique and headed off north, so the level settle has work to do. */
 const seed: BodyFixedPose = {
-  bodyId: 'earth',
+  bodyId: asSceneBodyId('earth'),
   anchorLocalM: [0, 0, 0],
   eyeRelAnchorM: [0.6, -1.2, 1.4],
   basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -90,6 +91,30 @@ describe('nudgedSurfacePose', () => {
     const rolled = nudgedSurfacePose(low, EMPTY_TILT_MEMORY, { look: [0, 0.1], roll: 0.2 }, CTX);
     expect(looked.tilt.rememberedTiltRad).not.toBe(EMPTY_TILT_MEMORY.rememberedTiltRad);
     expect(rolled.tilt.rememberedTiltRad).toBe(looked.tilt.rememberedTiltRad);
+  });
+
+  it('a body orbit nudge slows with altitude, so the ground tracks the drag', () => {
+    const angleBetween = (a: Vec3, b: Vec3) =>
+      Math.acos(Math.min(1, dot(a, b) / Math.hypot(...a) / Math.hypot(...b)));
+    const eyeOf = (p: BodyFixedPose): Vec3 => [
+      p.anchorLocalM[0] + p.eyeRelAnchorM[0],
+      p.anchorLocalM[1] + p.eyeRelAnchorM[1],
+      p.anchorLocalM[2] + p.eyeRelAnchorM[2],
+    ];
+    const swept = (h: number) => {
+      const low: BodyFixedPose = { ...seed, eyeRelAnchorM: [R + h, 0, 0] };
+      const pose: BodyFixedPose = {
+        ...low,
+        basisLocal: canonicalBasisAt(eyeFrameOf(low, 1, POLE)!, 0.3, 0.2),
+      };
+      const nudged = nudgedSurfacePose(pose, EMPTY_TILT_MEMORY, { orbit: [0.1, 0] }, CTX);
+      return angleBetween(eyeOf(pose), eyeOf(nudged.pose));
+    };
+    // Ground under the eye moves ~θ·h for a screen angle θ (2·tan(fov/2)/fov = 4/π here),
+    // so the sweep about the centre is ~θ·h/R — not θ, which would cross the planet.
+    expect(swept(0.001)).toBeLessThan(0.1 * 0.001 * 2);
+    expect(swept(0.001)).toBeGreaterThan(0);
+    expect(swept(0.01) / swept(0.001)).toBeCloseTo(10, 0);
   });
 
   it('an empty delta returns the pose by reference', () => {

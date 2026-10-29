@@ -17,4 +17,63 @@ export const SITE_LOOPS: readonly SiteLoop[] = [
   { id: 'place-sgr-a', shot: 'place-sgr-a', motion: 'orbit', seconds: 5 },
   { id: 'place-andromeda', shot: 'place-andromeda', motion: 'orbit', seconds: 5 },
   { id: 'place-virgo', shot: 'place-virgo', motion: { swayDeg: 12 }, seconds: 5 },
+  // The Features page's Domes film: the dome swings as a horizontal drag on the phone remote would turn it.
+  { id: 'features-dome-remote', shot: 'dome-earth', motion: { swayDeg: 25 }, seconds: 6, width: 480 },
+  // The Features page's clock films. No short span brings all four moons back, so Jupiter's jumps where it repeats.
+  {
+    id: 'features-time-jupiter',
+    shot: 'features-time-jupiter',
+    motion: { clockDays: 4 },
+    seconds: 5,
+    width: 960,
+  },
+  {
+    id: 'features-time-earth',
+    shot: 'features-time-earth',
+    motion: { clockDays: SIDEREAL_DAY },
+    seconds: 5,
+    width: 960,
+  },
+  // 120 frames of three turns of Earth each: the globe keeps still while the Sun's light goes round, and the year ends 6 days short.
+  {
+    id: 'features-time-seasons',
+    shot: 'features-time-seasons',
+    motion: { clockDays: 360 * SIDEREAL_DAY },
+    seconds: 5,
+    width: 960,
+  },
+  // One turn of the Moon about Earth, so the camera comes back; the Sun's light is two days short of full at the end.
+  {
+    id: 'features-time-moon',
+    shot: 'features-time-moon',
+    motion: { clockDays: 27.321661, orbitTurns: 1 },
+    seconds: 5,
+    width: 960,
+  },
+  // Twenty years: Voyager 1 jumps back to where it began where the film repeats.
+  {
+    id: 'features-time-voyager',
+    shot: 'features-time-voyager',
+    motion: { clockDays: 20 * 365.25, swayDeg: 4 },
+    seconds: 5,
+    width: 960,
+  },
+  // Eight years bring Venus round thirteen times and Earth eight; the outer planets and Mercury jump where it repeats.
+  {
+    id: 'features-time-planets',
+    shot: 'features-time-planets',
+    motion: { clockDays: 8 * 365.25, swayDeg: 4 },
+    seconds: 5,
+    width: 960,
+  },
+  // The Features page's Milky Way and cosmic web films, each on the picture it replaces. Sixteen years is S2's orbit, so S2 closes; the other S-stars jump where it repeats.
+  {
+    id: 'features-s-stars',
+    shot: 'features-s-stars',
+    motion: { clockDays: 16 * 365.25 },
+    seconds: 5,
+    width: 960,
+  },
+  // The ribbons run on the wall clock and never come back, so the film's end is blended into its start.
+  { id: 'features-flow', shot: 'features-flow', motion: 'live', seconds: 4, width: 960 },
 ];

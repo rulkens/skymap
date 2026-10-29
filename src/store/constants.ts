@@ -44,6 +44,8 @@ export const engineRoute = 'engine' as const;
 export const timeRoute = 'time' as const;
 // `arrivalRoute` is the boot link's arrival status — what the veil and `ready` wait on.
 export const arrivalRoute = 'arrival' as const;
+// `remoteRoute` is the dome's pairing with its remotes (`?remote` only): phase, room code, pairing address.
+export const remoteRoute = 'remote' as const;
 // `inputRoute` holds every source's folded intents: the steps the next frame
 // drains and the pick requests the pick driver answers.
 export const inputRoute = 'input' as const;

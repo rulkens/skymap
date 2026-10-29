@@ -22,13 +22,13 @@ import { residencyOf } from '../../../fixtures/residencyOf';
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
-import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+import type { OctreeResidency } from '../../../../src/@types/octree/OctreeResidency';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
   encodeSkstCatalog,
   decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
-import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -42,6 +42,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -62,7 +63,7 @@ function sorted(stars: OctreeLeafStar[]): OctreeLeafStar[] {
  * AU-scale resolve radius, so only record 1 is ever in range. Built through the
  * real octree + encode/decode path so the reconstruction matches the runtime.
  */
-async function threeStarCatalog(): Promise<StarOctree> {
+async function threeStarCatalog(): Promise<Octree<StarColumns>> {
   const stars: OctreeLeafStar[] = [
     { mortonIndex: 0, offset: [100, 100, 100], absMag: 5, bpRp: 0.3 },
     { mortonIndex: 0, offset: [500, 500, 500], absMag: 4, bpRp: 0.65 },
@@ -87,7 +88,7 @@ function camAt(starPos: Readonly<Vec3>, distMpc: number): Vec3 {
   return [starPos[0] + distMpc, starPos[1], starPos[2]];
 }
 
-const NO_CHUNKS: StarResidency = residencyOf();
+const NO_CHUNKS: OctreeResidency<StarColumns> = residencyOf();
 
 function makeCtx(camPos: Vec3): FrameView {
   return {
@@ -103,7 +104,7 @@ function makeCtx(camPos: Vec3): FrameView {
  * renderer (`draw`).
  */
 function makeRuntime(
-  catalog: StarOctree | null,
+  catalog: Octree<StarColumns> | null,
   overrides: Record<string, unknown> = {},
 ): StarCatalogRuntime {
   const renderer =

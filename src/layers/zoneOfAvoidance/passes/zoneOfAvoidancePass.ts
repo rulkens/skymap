@@ -1,14 +1,13 @@
 /**
  * zoneOfAvoidancePass — the producer half of the ZoA guide band: ray-marches
  * the shell into the reduced-res `zoa` offscreen, which
- * `zoneOfAvoidanceUpsamplePass` composites into HDR. Both gate on
- * `deriveZoneOfAvoidanceLiveness`, so producer and consumer can't disagree.
+ * `zoneOfAvoidanceUpsamplePass` composites into HDR. Both read the handed value, so
+ * producer and consumer can't disagree.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ZoneOfAvoidanceRuntime } from '../@types/ZoneOfAvoidanceRuntime';
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../data/zoneOfAvoidance/zoneOfAvoidanceShell';
-import { deriveZoneOfAvoidanceLiveness } from '../present/deriveZoneOfAvoidanceLiveness';
 
 export function zoneOfAvoidancePass(
   runtime: ZoneOfAvoidanceRuntime,
@@ -16,16 +15,11 @@ export function zoneOfAvoidancePass(
   return {
     name: 'zone-of-avoidance',
     fade: 'zoneOfAvoidance',
-
-    enabled: (_state, ctx, _view, fade) => deriveZoneOfAvoidanceLiveness(ctx, fade) !== null,
+    enabled: () => true,
 
     // `view` unused: draw takes the raw OrbitCamera (`ctx.cam`) and the
     // downscaled viewport below, not the SlabView's full-canvas vp/viewportPx.
     draw(pass, _view, ctx, state, fade) {
-      // Re-derive: enabled() already proved liveness, but this keeps draw pure.
-      const opacity = deriveZoneOfAvoidanceLiveness(ctx, fade);
-      if (opacity === null) return;
-
       // Viewport is the 'zoa' target's allocated size (see `sizeOf`).
       const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('zoa');
 
@@ -35,7 +29,7 @@ export function zoneOfAvoidancePass(
         [vw, vh],
         state.settings.zoneOfAvoidance,
         ZONE_OF_AVOIDANCE_SHELL,
-        opacity,
+        fade,
       );
     },
 
@@ -44,9 +38,6 @@ export function zoneOfAvoidancePass(
     // canvas's (`canvasSize`, not the 'zoa' downsample `draw` uses), and the
     // pick target covers `view.window` of that canvas.
     drawPick(pass, view, ctx, state, fade) {
-      const opacity = deriveZoneOfAvoidanceLiveness(ctx, fade);
-      if (opacity === null) return;
-
       runtime.renderer.drawPick(
         pass,
         ctx.cam,
@@ -54,7 +45,7 @@ export function zoneOfAvoidancePass(
         view.window,
         state.settings.zoneOfAvoidance,
         ZONE_OF_AVOIDANCE_SHELL,
-        opacity,
+        fade,
       );
     },
   };
