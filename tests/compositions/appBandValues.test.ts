@@ -5,6 +5,7 @@ import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf'
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
+import { cosmicFlows } from '../../src/data/exhibits/cosmicFlows';
 import type { FrameView } from '../../src/@types/engine/frame/FrameView';
 
 function valueAt(key: string, distanceMpc: number, item?: string): number {
@@ -52,5 +53,14 @@ describe('extragalactic overlays at the home view', () => {
   it.each(['flow', 'cosmicWebFilaments'])('%s is gone at home and full in the survey', (key) => {
     expect(valueAt(key, HOME_DISTANCE_MPC)).toBe(0);
     expect(valueAt(key, 1)).toBe(1);
+  });
+});
+
+// Pins that the Cosmic Flows exhibit opens on full ribbons: its pose is the only view that
+// shows them this close, so a flow band edge pushed past it dims the exhibit with no other test failing.
+describe('flow at the Cosmic Flows exhibit pose', () => {
+  it('is full at the nearest the exhibit eye can sit to home', () => {
+    const { target, distance } = cosmicFlows.pose!;
+    expect(valueAt('flow', distance - Math.hypot(...target))).toBe(1);
   });
 });
