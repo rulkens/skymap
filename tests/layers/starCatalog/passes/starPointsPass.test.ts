@@ -13,6 +13,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
+import { gateOrbitTrailGroup } from '../../../../src/services/engine/layer/gateOrbitTrailGroup';
+import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes/index';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
@@ -213,6 +215,15 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
   it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
     // The group filter executeFrame applies over the early (hdr, NEAR0) step; above the gate
     // it must be empty (not just the (foreground:0, NEAR0) body group) for the skip to be wholesale.
+    // orbit-trails yields through its entry's band, resolved here over the real entries with every
+    // fade at 1; star-points keeps its gate by hand (its entry carries `bodies`).
+    const gateState = {
+      visibilityEntries: APP_VISIBILITY,
+      subsystems: {
+        fades: { opacityOf: () => 1 },
+        clipPlayer: { clipOpacityOf: () => 1 },
+      },
+    } as unknown as EngineState;
     const pointsPass = starPointsPass(makeRuntime(makeRenderer()));
     const state = {
       gpu: {
@@ -230,7 +241,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         orbitTrails: { enabled: true },
         missionTrails: { enabled: false },
       },
-      orbitTrailGroups: [{ show: 'orbitTrails', rows: [], fade: () => 1 }],
+      orbitTrailGroups: [gateOrbitTrailGroup({ show: 'orbitTrails', rows: [] }, gateState)],
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     const hdrNear0 = FRAME_ORDER.flatMap((step) =>
