@@ -77,15 +77,9 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
   } as unknown as FrameView;
 }
 
-// The focus group is bound off `state.gpu.focusUniform` — an opaque bind
-// group is all the pass reads.
 const FULL = makeGalaxyCatalogFade();
 
-const STATE_STUB = {
-  gpu: {
-    focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
-  },
-} as unknown as EngineState;
+const STATE_STUB = { gpu: {} } as unknown as EngineState;
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -129,6 +123,7 @@ function makeStateWithRenderer(
     gpu: { ...STATE_STUB.gpu, ...overrides.gpu },
   } as unknown as EngineState;
   const runtime = {
+    focusBindGroup: {} as GPUBindGroup,
     pointRenderer: { draw: drawSpy, loadedSources: () => loadedSources },
     pickRenderer: { drawPoints: drawPointsSpy },
   } as unknown as GalaxyCatalogRuntime;

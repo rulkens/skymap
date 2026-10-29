@@ -117,6 +117,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
       return catalogsVersion;
     },
     publish: deps.publish,
+    focusBindGroup: deps.focusUniform.bindGroup,
     points,
     famousGalaxiesMeta,
     pgcAlias,
