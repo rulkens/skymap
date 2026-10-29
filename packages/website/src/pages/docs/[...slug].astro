@@ -7,22 +7,22 @@
  */
 import { getCollection, render } from 'astro:content';
 
-import Caveat from '../../components/Caveat/Caveat.tsx';
-import CodeBlock from '../../components/CodeBlock/CodeBlock.tsx';
-import DocFigure from '../../components/DocFigure/DocFigure.tsx';
-import DocLink from '../../components/DocLink/DocLink.tsx';
-import DocTable from '../../components/DocTable/DocTable.tsx';
-import Example from '../../components/Example/Example.tsx';
-import FactText from '../../components/FactText/FactText.tsx';
-import Flow from '../../components/Flow/Flow.tsx';
-import Formula from '../../components/Formula/Formula.tsx';
-import Keys from '../../components/Keys/Keys.tsx';
-import Links from '../../components/Links/Links.tsx';
-import Note from '../../components/Note/Note.tsx';
-import RepoLink from '../../components/RepoLink/RepoLink.tsx';
-import SourceLink from '../../components/SourceLink/SourceLink.tsx';
-import Spans from '../../components/Spans/Spans.tsx';
-import View from '../../components/View/View.tsx';
+import Caveat from '../../components/shared/text/Caveat/Caveat.tsx';
+import CodeBlock from '../../components/shared/text/CodeBlock/CodeBlock.tsx';
+import DocFigure from '../../components/docs/DocFigure/DocFigure.tsx';
+import DocLink from '../../components/docs/DocLink/DocLink.tsx';
+import DocTable from '../../components/docs/DocTable/DocTable.tsx';
+import Example from '../../components/docs/Example/Example.tsx';
+import FactText from '../../components/docs/FactText/FactText.tsx';
+import Flow from '../../components/docs/Flow/Flow.tsx';
+import Formula from '../../components/docs/Formula/Formula.tsx';
+import Keys from '../../components/docs/Keys/Keys.tsx';
+import Links from '../../components/docs/Links/Links.tsx';
+import Note from '../../components/shared/text/Note/Note.tsx';
+import RepoLink from '../../components/docs/RepoLink/RepoLink.tsx';
+import SourceLink from '../../components/docs/SourceLink/SourceLink.tsx';
+import Spans from '../../components/docs/Spans/Spans.tsx';
+import View from '../../components/docs/View/View.tsx';
 import Docs from '../../layouts/Docs.astro';
 
 export async function getStaticPaths() {

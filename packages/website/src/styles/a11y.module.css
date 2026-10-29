@@ -1,7 +1,7 @@
 /*
  * a11y.module.css — the two classes that exist for assistive technology and the keyboard.
  * A vocabulary, not a component: no `.root`; take a class with
- * `composes: unseen from '../../styles/a11y.module.css'`.
+ * `composes: unseen from '../../../../styles/a11y.module.css'`.
  */
 
 /* Words for a screen reader only: what a sighted reader takes from where a thing stands or how it is set. */

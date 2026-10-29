@@ -1,0 +1,132 @@
+---
+title: 'The science behind Skymap: data, methods, limits'
+description: Where Skymap’s numbers come from, how we turn catalogues into pixels, and where we simplify. Each claim links to its source.
+---
+
+import AskList from '../../../components/pages/science/AskList/AskList.tsx';
+import Citation from '../../../components/shared/text/Citation/Citation.tsx';
+import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import FramePair from '../../../components/pages/science/FramePair/FramePair.tsx';
+import FullFigure from '../../../components/pages/science/FullFigure/FullFigure.tsx';
+import Group from '../../../components/shared/layout/Group/Group.tsx';
+import Note from '../../../components/shared/text/Note/Note.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
+import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
+import Remark from '../../../components/shared/text/Remark/Remark.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import SectionNav from '../../../components/pages/science/SectionNav/SectionNav.tsx';
+import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
+import StatementsFigure from '../../../components/pages/science/StatementsFigure/StatementsFigure.tsx';
+import Sources from '../../../components/shared/text/Sources/Sources.tsx';
+import SourceTable from '../../../components/pages/science/SourceTable/SourceTable.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { fact } from '../../../data/fact';
+import { REPO_URL } from '../../../data/siteIdentity';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { formatDate } from '../../../utils/formatDate';
+import { sitePath } from '../../../utils/sitePath';
+import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.data';
+
+<PictureBand id="science-wedges" gap="none" eager>
+  <h1>The science behind Skymap</h1>
+  <p className={text.say}>Skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says what is measured, what is derived and what is drawn, and lists where we simplify.</p>
+  <ShotCaption id="science-wedges" />
+</PictureBand>
+
+<SectionNav
+  items={[
+    { href: '#sources', label: 'The sources', icon: 'sources' },
+    { href: '#bins', label: 'Measured, derived, drawn', icon: 'method' },
+    { href: '#simplifications', label: 'Known simplifications', icon: 'simplified' },
+    { href: '#cite', label: 'How to cite', icon: 'cite' },
+  ]}
+/>
+
+<Section id="sources">
+  <SectionHead title="The sources">
+    <p>This is every dataset Skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and the imagery. We list them so that anything you see in the app can be traced to who measured it. Each name opens a page with its licence and the files we use.</p>
+  </SectionHead>
+  <SourceTable>
+    <p>{fact('sci-built-counts').text}{' '}<a href={fact('sci-built-counts').source}>{fact('sci-built-counts').sourceLabel}</a></p>
+    <p>The count is what the app draws. It is smaller than the source’s own total because rows without a usable <a href={sitePath('/docs/reference/glossary/#redshift')}>redshift</a> are dropped, <a href={sitePath('/docs/data/pipeline/#cross-match-and-de-duplicate')}>overlapping catalogues are merged</a>, and <a href={sitePath('/docs/data/sdss/')}>SDSS</a> is cut to about 500,000 of its most luminous galaxies. Where a count is missing, neither our build nor the source’s own record gives one.</p>
+    <p>Terrain heights, the Mars rover sites, 3D models, the constellation lines, the photographs of named galaxies and the survey pictures fetched for other galaxies are not in the table. They are recorded in the repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a> and its{' '}<a href={`${REPO_URL}/blob/main/ATTRIBUTIONS.md`}>attributions file</a>.</p>
+  </SourceTable>
+</Section>
+
+<Section id="bins">
+  <SectionHead title="Measured, derived, drawn">
+    <p>Each word has one meaning on this site. A point in the scene is usually all three at once: a measured direction, a <a href={sitePath('/docs/science/#distance-from-redshift')}>derived distance</a> and a drawn dot.</p>
+  </SectionHead>
+
+  <Group title="Measured" big first>
+    <p slot="lede">An instrument recorded it, and we use the published value.</p>
+    <Claims items={MEASURED} />
+  </Group>
+
+  <Group title="Derived" big>
+    <p slot="lede">Computed from measurements by a method we can name.</p>
+    <FramePair start="science-web-points" end="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
+    <Claims items={DERIVED} />
+  </Group>
+
+  <Group title="Drawn" big>
+    <p slot="lede">A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside the <a href={sitePath('/docs/science/#the-milky-way')}>Milky Way</a>, so its portrait from outside has to be drawn.</p>
+    <StatementsFigure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" />
+    <Claims items={DRAWN} />
+  </Group>
+  <Remark text={fact('astronomical-unit').short} />
+</Section>
+
+<FullFigure id="science-zoa" />
+
+<Section id="simplifications">
+  <SectionHead title="Known simplifications">
+    <p>{count} places where the scene <a href={sitePath('/docs/simplifications/')}>departs from the sky</a>, or from what a careful analysis would do, as of{' '}{formatDate(fact('sim-frames').checked)}.</p>
+  </SectionHead>
+  {SIMPLIFIED.map((group, i) => (
+    <Group title={group.title} big first={i === 0}>
+      <Claims items={group.items} />
+    </Group>
+  ))}
+  <Note>If you find one we missed, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.</Note>
+</Section>
+
+<Section id="cite">
+  <SectionHead title="How to cite">
+    <p><a href={sitePath('/docs/cite/')}>Cite Skymap</a> for the pictures, and the catalogues for the data in them.</p>
+  </SectionHead>
+  <Columns count={2}>
+    <div>
+      <h3>skymap</h3>
+      <Citation />
+    </div>
+    <div>
+      <h3>The catalogues</h3>
+      <AskList />
+    </div>
+  </Columns>
+</Section>
+
+<Section id="onward">
+  <h2>Further reading</h2>
+  <div className={links['link-row']}>
+    <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
+    <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
+    <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
+    <ObjLink hang href={sitePath('/docs/cite/')}>Cite Skymap</ObjLink>
+    <ObjLink hang href={sitePath('/classroom/')}>Use Skymap in the classroom</ObjLink>
+    <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
+  </div>
+  <div className={links['onward-row']}>
+    <OpenApp />
+  </div>
+</Section>
+
+<Section as="div">
+  <Sources ids={factIds} />
+  <Credits />
+</Section>

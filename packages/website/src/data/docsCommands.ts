@@ -292,6 +292,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:structure'],
+        does: 'Compares the headings of each landing page in the built site with its structure file and fails on one that only one of the two has.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:external'],
         does: 'Asks for every address outside the site that a built page links to, and lists each one that is gone with its pages and its data row.',
         manual: SITE_TOOLS,
