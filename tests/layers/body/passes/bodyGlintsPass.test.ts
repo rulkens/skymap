@@ -149,19 +149,10 @@ function glintsWith(renderer: unknown) {
 const GLINTS = glintsWith(makeRenderer());
 
 describe('bodyGlintsPass.enabled', () => {
-  it('is true below the gate with a sub-pixel body, false beyond the foreground gate', () => {
+  it('is true with a sub-pixel body inside the backdrop band', () => {
     expect(GLINTS.enabled(STATE, makeCtx(CAM_POS, [LIT, UNLIT]), makeNear0View(CAM_POS))).toBe(
       true,
     );
-    // At galaxy scale the whole neighbourhood is far below a pixel: the shared
-    // gate turns the glints off before the partition even matters.
-    expect(
-      GLINTS.enabled(
-        STATE,
-        makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC], [LIT, UNLIT]),
-        makeNear0View(CAM_POS),
-      ),
-    ).toBe(false);
   });
 });
 
@@ -252,6 +243,17 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     expect(GLINTS.pickEnabled!(STATE, makeCtx(camWithin, [], [], earthWithinGate), view)).toBe(
       true,
     );
+  });
+
+  it('is false past the backdrop dissolve outside the caption range, even with glints', () => {
+    // Every glint `drawPick` would stamp there has dissolved, so the row has nothing to pick.
+    expect(
+      GLINTS.pickEnabled!(
+        STATE,
+        makeCtx(camBeyond, [LIT], [], earthWithinGate),
+        makeNear0View(camBeyond),
+      ),
+    ).toBe(false);
   });
 
   it('is false beyond the caption gate with no glints', () => {
