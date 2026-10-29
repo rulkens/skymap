@@ -6,7 +6,7 @@ import type { Label3D } from '../../../../../src/@types/rendering/Label3D';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // '?static' pulls the LINKED WGSL text (package:: imports resolved), the same
 // specifier label3DRenderer.ts itself imports — see wesl-shaders skill gotcha
-// #6 for why vitest.config.ts must separately register wesl-plugin for this
+// #4 for why vitest.config.ts must separately register weslStaticPlugin for this
 // to link rather than fail as a JS parse error.
 import vsLinked from '../../../../../src/services/gpu/shaders/labels3d/vertex.wesl?static';
 import fsLinked from '../../../../../src/services/gpu/shaders/labels3d/fragment.wesl?static';

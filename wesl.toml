@@ -1,9 +1,10 @@
 # WESL linker configuration.
 #
-# `wesl-plugin` reads this file at build time to find shader sources and
-# resolve `import` statements inside `.wesl` modules.
+# `weslStaticPlugin` (tools/utils/vite/) reads `include` and `root` from this
+# file at build time to find shader sources and resolve `import` statements
+# inside `.wesl` modules.
 #
-# Schema (verified against `node_modules/wesl-plugin/dist/PluginExtension-DTjKL6rt.d.mts`):
+# Schema:
 #   - `edition`: WESL language version. `unstable_2025` is the current
 #     pre-1.0 edition; bump it (and audit syntax) when WESL stabilises.
 #   - `include`: glob patterns (relative to this file's directory) for

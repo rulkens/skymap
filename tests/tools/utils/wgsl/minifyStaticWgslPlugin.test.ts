@@ -13,9 +13,9 @@ fn csMain(@builtin(global_invocation_id) id: vec3u) {
     for (var i = 4; i > 0; i--) { buf[i]--; }
 }`;
 
-// The module shape wesl-plugin's staticBuildExtension emits.
+// The module shape weslStaticPlugin emits.
 const emitted = (wgsl: string) =>
-  `\n    export const wgsl = \`${wgsl}\`;\n    export default wgsl;\n  `;
+  `export const wgsl = ${JSON.stringify(wgsl)};\nexport default wgsl;\n`;
 
 async function transform(code: string, id: string) {
   const plugin = minifyStaticWgslPlugin();
