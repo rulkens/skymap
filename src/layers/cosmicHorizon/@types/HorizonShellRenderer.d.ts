@@ -11,8 +11,8 @@
  * so the silhouette is pixel-perfect and tracks the camera's orbit.
  */
 
-import type { OrbitCamera } from '../camera/OrbitCamera';
-import type { Vec2 } from '../math/Vec2';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 export type HorizonShellRenderer = {
   /** Human-readable identifier (`'horizonShellRenderer'`). */

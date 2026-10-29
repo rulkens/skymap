@@ -17,7 +17,7 @@ import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
-import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
+import type { HorizonShellRenderer } from '../../../layers/cosmicHorizon/@types/HorizonShellRenderer';
 import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';

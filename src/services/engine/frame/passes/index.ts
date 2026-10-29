@@ -6,7 +6,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { horizonShellPass } from './horizonShellPass';
+import { horizonShellPass } from '../../../../layers/cosmicHorizon/passes/horizonShellPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
 import { markerLinesPass } from './markerLinesPass';

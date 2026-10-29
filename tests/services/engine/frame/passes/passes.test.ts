@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
+import { horizonShellPass } from '../../../../../src/layers/cosmicHorizon/passes/horizonShellPass';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';

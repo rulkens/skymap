@@ -42,9 +42,9 @@
  * `ctx.canvasSize`.
  */
 
-import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { horizonShellFadeAlpha } from '../../../../utils/math/horizonShellFadeAlpha';
-import { HORIZON_RADIUS_MPC } from '../../../../data/rendering/horizonRadiusMpc';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import { horizonShellFadeAlpha } from '../render/horizonShellFadeAlpha';
+import { HORIZON_RADIUS_MPC } from '../data/horizonRadiusMpc';
 
 export const horizonShellPass: ContentPass = {
   name: 'horizon-shell',

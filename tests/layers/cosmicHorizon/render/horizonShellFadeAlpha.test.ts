@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { horizonShellFadeAlpha } from '../../../src/utils/math/horizonShellFadeAlpha';
+import { horizonShellFadeAlpha } from '../../../../src/layers/cosmicHorizon/render/horizonShellFadeAlpha';
 
 const RADIUS_MPC = 14_300; // 14.3 Gpc
 

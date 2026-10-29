@@ -5,7 +5,7 @@
 
 import { cosmicFlows } from './cosmicFlows';
 import { cosmicWeb } from './cosmicWeb';
-import { observableUniverse } from './observableUniverse';
+import { observableUniverse } from '../../layers/cosmicHorizon/exhibits/observableUniverse';
 import { zoneOfAvoidance } from './zoneOfAvoidance';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 

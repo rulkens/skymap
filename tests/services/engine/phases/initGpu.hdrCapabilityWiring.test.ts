@@ -106,7 +106,7 @@ vi.mock('../../../../src/layers/galaxyCatalog/render/proceduralDiskRenderer', ()
   createProceduralDiskRenderer: vi.fn(() => makeStub('proceduralDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRenderer', () => ({
+vi.mock('../../../../src/layers/cosmicHorizon/render/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
   // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
   // loads the content-layer registry incl. horizonShellPass — that module

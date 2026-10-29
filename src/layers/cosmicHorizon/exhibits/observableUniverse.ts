@@ -7,12 +7,12 @@
  * landscape answer at the default 60° FOV (`R / sin(fovY/2)`).
  */
 
-import { section } from '../../utils/exhibits/section';
-import { factsKind } from '../../components/ExhibitOverlay/kinds/factsKind';
-import { proseKind } from '../../components/ExhibitOverlay/kinds/proseKind';
-import { sourcesKind } from '../../components/ExhibitOverlay/kinds/sourcesKind';
-import type { Exhibit } from '../../@types/exhibits/Exhibit';
-import { HORIZON_RADIUS_MPC } from '../rendering/horizonRadiusMpc';
+import { section } from '../../../utils/exhibits/section';
+import { factsKind } from '../../../components/ExhibitOverlay/kinds/factsKind';
+import { proseKind } from '../../../components/ExhibitOverlay/kinds/proseKind';
+import { sourcesKind } from '../../../components/ExhibitOverlay/kinds/sourcesKind';
+import type { Exhibit } from '../../../@types/exhibits/Exhibit';
+import { HORIZON_RADIUS_MPC } from '../data/horizonRadiusMpc';
 
 export const observableUniverse: Exhibit = {
   id: 'observableUniverse',
