@@ -11,6 +11,7 @@ import Figure from '../../components/Figure/Figure.tsx';
 import ObjLink from '../../components/ObjLink/ObjLink.tsx';
 import Offer from '../../components/Offer/Offer.tsx';
 import Remark from '../../components/Remark/Remark.tsx';
+import RemoteDemo from '../../components/RemoteDemo/RemoteDemo.tsx';
 import SectionHead from '../../components/SectionHead/SectionHead.tsx';
 import Step from '../../components/Step/Step.tsx';
 import Steps from '../../components/Steps/Steps.tsx';
@@ -45,9 +46,9 @@ export const STEPS = [
 
 {/* The disc leads: the page's subject is round, so its header is not a rectangle with words on it. */}
 
-<DiscBand id="dome-earth">
+<DiscBand id="dome-earth" showDrawn={false}>
   <h1>Domes and museums</h1>
-  <p>We can do three things for a dome or a gallery: a <a href={sitePath('/docs/guide/screens-and-domes/#dome-mode')}>live fisheye picture</a> from the app, a <a href={sitePath('/docs/guide/screens-and-domes/#live-or-as-a-film')}>rendered film</a>, or a screen built around <a href={sitePath('/docs/guide/tours/#what-an-exhibit-is')}>one exhibit</a>.</p>
+  <p>Skymap is made to be projected on a dome. We support 4K output (depending on the specs of your projection system) and can pre-render videos of any size.</p>
   <ObjLink hang href="#contact">How to reach us</ObjLink>
   <p slot="note" class={text.small}>This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames are 4,096.</p>
 </DiscBand>
@@ -58,28 +59,50 @@ export const STEPS = [
   </SectionHead>
 
   <Offer title="Live fisheye from the app">
-    <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc open={false} />
+    <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc open={false} showDrawn={false} />
     <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
-    <Fragment slot="today">{`${fact('dome-rig').text} ${fact('dome-tilt').text}`}</Fragment>
-    <Fragment slot="work">Another tilt, labels or captions on the dome, and control without a mouse. Skymap gives one disc: dividing it between projectors is the job of your dome system.</Fragment>
+    <Fragment slot="today">Skymap has an OpenSpace-compatible <a href={sitePath('/docs/reference/settings/#camera-controls')}>navigation scheme</a>: a drag sets the camera moving and it slows to a stop after you let go. Shift+C switches to it.</Fragment>
+    <Fragment slot="work">Another tilt, and labels or captions on the dome. Skymap gives one disc: dividing it between projectors is the job of your dome system.</Fragment>
     <ViewLink slot="link" hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>Open this view in dome mode</ViewLink>
   </Offer>
 
   <Offer title="A rendered film, for a dome or a flat screen" wide>
-    <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} />
+    <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} showDrawn={false} />
     <p>A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in the projection room.</p>
     <Fragment slot="today">{`${fact('film-recorder').text} ${fact('film-silent').text}`}</Fragment>
     <Fragment slot="work">The flight itself: where it goes, how long it rests, what the captions say. Narration and music come from you or from someone you choose.</Fragment>
     <ViewLink slot="link" hang href={appLink(siteShot('tour-cosmic-web').link)}>Start the tour</ViewLink>
   </Offer>
 
-  <Offer title="A build for one exhibit or kiosk">
-    <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
+  <Offer title="A build for an exhibit or kiosk">
+    <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" showDrawn={false} />
     <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
     <Fragment slot="today">{`${fact('exhibits').text} ${fact('kiosk-planned').text}`}</Fragment>
     <Fragment slot="work">A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor walks away is the planned kiosk mode, and we would build it for the first venue that needs it.</Fragment>
-    <ObjLink slot="link" hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes, in the docs</ObjLink>
+    <ObjLink slot="link" hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes</ObjLink>
   </Offer>
+</section>
+
+<section class={section} id="remote">
+  <SectionHead title="Steer the dome from a phone">
+    <p>A phone or a laptop in the room drives the live fisheye, so the person presenting can stand with the audience.</p>
+  </SectionHead>
+  <Columns count={2}>
+    <div>
+      <h3>Pair it</h3>
+      <p class={text.small}>The dome shows a QR code and a room code. Scan the QR code with a phone on the same network, or open the address shown under it.</p>
+      <h3>Fly with your finger</h3>
+      <p class={text.small}>Drag to orbit, pinch to zoom. From the phone you can also search for an object, start a tour or an exhibit, set the time and switch labels on and off.</p>
+      <h3>More than one phone</h3>
+      <p class={text.small}>Add a phone shows the code on the dome again, so a second person can join.</p>
+      <h3>Where it runs</h3>
+      <p class={text.small}>The phone and the dome talk through the computer that runs Skymap for your dome, so it works wherever the dome runs Skymap itself.</p>
+    </div>
+    {/* The island's wrapper takes no box, so the column is this div's. */}
+    <div>
+      <RemoteDemo sizes="(max-width: 900px) 100vw, 36rem" client:visible />
+    </div>
+  </Columns>
 </section>
 
 <section class={section} id="honest">
@@ -97,7 +120,7 @@ export const STEPS = [
     </div>
     <div>
       <h3>Open source</h3>
-      <p class={text.small}><a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye is made</a> before anyone signs anything.</p>
+      <p class={text.small}><a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye view is constructed</a> before anyone signs anything.</p>
       <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
     </div>
   </Columns>

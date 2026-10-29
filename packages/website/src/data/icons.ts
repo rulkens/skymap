@@ -54,4 +54,7 @@ export const ICONS: Record<IconName, string> = {
   enlarge: 'M14 4.5h5.5V10M19.5 4.5L13 11M10 19.5H4.5V14M4.5 19.5L11 13',
   // What shuts a sheet laid over the page.
   close: 'M6 6l12 12M18 6L6 18',
+  // Stop and start a film.
+  pause: 'M9 6v12M15 6v12',
+  play: 'M8.5 5.5v13l10-6.5z',
 };

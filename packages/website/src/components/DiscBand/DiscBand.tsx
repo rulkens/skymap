@@ -11,9 +11,9 @@ import Disc from '../Disc/Disc.tsx';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './DiscBand.module.css';
 
-type DiscBandProps = { id: string; note?: ReactNode; children: ReactNode };
+type DiscBandProps = { id: string; note?: ReactNode; showDrawn?: boolean; children: ReactNode };
 
-function DiscBand({ id, note, children }: DiscBandProps) {
+function DiscBand({ id, note, showDrawn = true, children }: DiscBandProps) {
   return (
     <section className={styles.root} data-opening>
       <div className={styles.words}>{children}</div>
@@ -24,7 +24,7 @@ function DiscBand({ id, note, children }: DiscBandProps) {
           </div>
         </div>
         <figcaption className={styles.caption}>
-          <ShotCaption id={id} />
+          <ShotCaption id={id} showDrawn={showDrawn} />
           {note}
         </figcaption>
       </figure>
