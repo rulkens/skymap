@@ -14,6 +14,10 @@ import {
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
+  setFocusMoveStyle,
+  setGeodesicTuning,
+} from '../../../src/state/settings/core/focusMovesSlice';
+import {
   engineStatusChanged,
   factsReported,
   layerFactsSeeded,
@@ -21,7 +25,7 @@ import {
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
@@ -96,7 +100,7 @@ describe('watchFocusTweenSaga', () => {
     mw.setContext({
       selection: composeSelectionRows(
         () => [
-          ...coreSelectionRows(),
+          bodySelectionRow(),
           structureSelectionRow(structures),
           milkyWaySelectionRow(),
           starCatalogSelectionRow(NO_SURVEY_STARS),
@@ -277,18 +281,14 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
-  // A scene body is FOLLOWED by the camera's follow rows, not tweened —
-  // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-  // moves. The saga must return before planting a tween for a body row, while a
-  // non-body focus (here the Milky Way) still tweens as before.
-  it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
+  it('a geodesic focus on a moving body dispatches a tween; an eased one does not', async () => {
     // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
     store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
 
-    // A non-body focus (Milky Way) still plants a tween through the same saga.
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('mars') }));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
@@ -356,5 +356,15 @@ describe('watchFocusTweenSaga', () => {
 
     const tween = store.getState()[cameraRoute].tween;
     expect(tween!.frame).toBe('galactic');
+  });
+
+  it('dispatches the motion resolved from the store at dispatch', async () => {
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(setGeodesicTuning({ rho: 0.4 }));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween!.motion).toMatchObject({ style: 'geodesic', fovYRad: 0.8, tuning: { rho: 0.4 } });
   });
 });

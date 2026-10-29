@@ -7,13 +7,13 @@ import Shot from '../Shot/Shot.tsx';
 import ShotCaption from '../ShotCaption/ShotCaption.tsx';
 import styles from './FullFigure.module.css';
 
-type FullFigureProps = { id: string; tall?: string };
+type FullFigureProps = { id: string };
 
-function FullFigure({ id, tall }: FullFigureProps) {
+function FullFigure({ id }: FullFigureProps) {
   return (
     <figure className={styles.root}>
       <div className={styles.frame}>
-        <Shot id={id} tall={tall} sizes="100vw" />
+        <Shot id={id} sizes="100vw" />
       </div>
       <figcaption className={styles.caption}>
         <ShotCaption id={id} />

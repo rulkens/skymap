@@ -1,17 +1,12 @@
 /**
- * `Source` enum + `SOURCE_REGISTRY`.
- *
- * The registry of every data source skymap loads, keyed by `Source` code;
- * see `SourceEntry.d.ts` for the twelve `type` kinds it discriminates over.
- * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`,
- * or under `layers/<name>/sources/` once that family is a formed Layer.
+ * `SOURCE_REGISTRY`, keyed by `Source` code (`./source`); `SourceEntry.d.ts` lists the `type`
+ * kinds. Each row lives under its Layer's `sources/` and folds in through that Layer's rows array.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SourceType } from '../@types/data/SourceType';
 import type { Tier } from '../@types/data/Tier';
 
-import { Source } from './source';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { STRUCTURE_SOURCE_ROWS } from '../layers/structure/sources/structureSourceRows';
 import { sourceRecordOf } from '../utils/data/sourceRecordOf';
@@ -20,9 +15,9 @@ import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/con
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import { MILKY_WAY_SOURCE_ROWS } from '../layers/milkyWay/sources/milkyWaySourceRows';
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
-import { PLANET_ENTRY } from './sources/planet';
-import { EARTH_ENTRY } from './sources/earth';
+import { BODY_SOURCE_ROWS } from '../layers/body/sources/bodySourceRows';
 import { MISSIONS_SOURCE_ROWS } from '../layers/missions/sources/missionsSourceRows';
+import { SATELLITES_SOURCE_ROWS } from '../layers/satellites/sources/satellitesSourceRows';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
 import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
 import { BLACK_HOLE_SOURCE_ROWS } from '../layers/blackHoles/sources/blackHoleSourceRows';
@@ -32,42 +27,12 @@ export { Source } from './source';
 // ─── Registry ───────────────────────────────────────────────────────────────
 
 /**
- * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
- * see the `GalaxyCatalogSourceEntry` / `StructureSourceEntry` definitions for the field shapes.
- *
- * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
- * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to
- * `GalaxyCatalogEntry` at use sites without manual casts.
- *
- * Convention notes that aren't expressed by the types:
- *
- * - **`label`** follows galaxy-catalog-team capitalisation (`'2MRS'` no space,
- *   `'GLADE'` uppercase). Match these in any new UI strings.
- * - **`binBaseName`** is the on-disk filename stem; tier-aware filenames
- *   are assembled in `tierFilenameForSource`.
- * - **`maxDistMpc`** is a *display* limit (camera framing), not a strict
- *   cut. Conversion uses `H₀ ≈ 70 km/s/Mpc`; outliers may sit beyond.
- * - **`bandLabels`** records the actual band each `magU/G/R/I/Z` slot
- *   carries. Catalog parsers shoehorn non-SDSS bands into the 5-slot
- *   layout, so labelling rows "(g)" for a 2MRS galaxy would be misleading.
- *   `'—'` (em-dash) marks an empty slot.
- *
- * Key insertion order here is cosmetic: every key is a `Source` code, a
- * non-negative integer, and JS iterates integer-like own keys in ascending
- * numeric order regardless of where they were written — `sourceEntries.ts` /
- * `sourceIds.ts` derive `SOURCE_ENTRIES` / `SOURCE_IDS` via `Object.values`,
- * so those arrays (and anything downstream, e.g. the Labels panel's row
- * order) are ordered by ascending code value. Changing that order needs
- * either renumbering codes (forbidden — codes are append-only by value) or a
- * separate display-order mechanism; neither is a decision this file makes.
+ * `as const satisfies` keeps each entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]`
+ * narrows without casts. `maxDistMpc` is a display limit (H₀ ≈ 70 km/s/Mpc), not a cut;
+ * `bandLabels` names what each `magU/G/R/I/Z` slot really carries (`'—'` = empty). Integer keys
+ * iterate ascending, so `SOURCE_ENTRIES` / `SOURCE_IDS` and the Labels panel follow code value.
  */
-const UNFORMED_SOURCE_REGISTRY = {
-  [Source.Planet]: PLANET_ENTRY,
-  [Source.Earth]: EARTH_ENTRY,
-} as const;
-
 export const SOURCE_REGISTRY = {
-  ...UNFORMED_SOURCE_REGISTRY,
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(STAR_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
@@ -77,36 +42,18 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
   ...sourceRecordOf(COSMIC_WEB_DENSITY_SOURCE_ROWS),
   ...sourceRecordOf(BLACK_HOLE_SOURCE_ROWS),
+  ...sourceRecordOf(BODY_SOURCE_ROWS),
   ...sourceRecordOf(MISSIONS_SOURCE_ROWS),
+  ...sourceRecordOf(SATELLITES_SOURCE_ROWS),
   ...sourceRecordOf(STRUCTURE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
-// `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
-// code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every
-// iterating site — `.category` and `.priority` read off it without a cast.
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
 
 /**
- * Sizing for the `texture_2d_array` that holds the curated Famous-galaxy
- * thumbnails at full curator resolution (the close-approach LOD that
- * supersedes the shared 128 px atlas tile when a galaxy fills enough
- * pixels on screen).
- *
- * Why a fixed N and per-tier `layerSide`:
- *
- *   - Eight layers is the LRU working set we sized to "the handful of
- *     famous galaxies the camera is likely to be near at once" — enough
- *     for cluster fly-throughs (Virgo, Coma) without thrashing, small
- *     enough that the GPU footprint stays inside the per-tier budget.
- *   - `layerSide` is tier-aware because the dominant cost is
- *     `N * layerSide² * 4 bytes`. With N=8: 1024² → 32 MB (desktop /
- *     "medium"+"large"), 512² → 8 MB (mobile / "small"). The curator
- *     emits 1024 px sources; the mobile path downsamples at decode time
- *     via `createImageBitmap`'s `resizeWidth`/`resizeHeight`.
- *
- * Treat both as load-bearing: the memory bound documented in
- * `docs/adrs/0002-tiered-thumbnail-textures.md` and the fade-band math
- * in the design spec assume these exact values.
+ * `texture_2d_array` holding Famous-galaxy thumbnails at curator resolution. Cost is
+ * `N * layerSide² * 4 bytes`: 32 MB at 1024² (medium/large), 8 MB at 512² (small, downsampled at
+ * decode). `docs/adrs/0002-tiered-thumbnail-textures.md` and the fade-band math assume these.
  */
 export const HI_RES_LAYER_COUNT = 8 as const;
 

@@ -1,27 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { isValidElement } from 'react';
+import { createElement, isValidElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
 import { ROW_VIEW } from '../../../src/components/CommandPalette/paletteRows';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
-import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
 
-describe('ROW_VIEW body leading visual', () => {
+const bodyEntry = (id: string): LayerSearchEntry => ({
+  id: `body-${id}`,
+  class: 'primary',
+  names: [id],
+});
+
+describe('ROW_VIEW layer-row leading visual', () => {
   it('a body whose focus id has a captured card shot renders as an img', () => {
-    const row: ScoredRow = { kind: 'body', body: SCENE_EARTH, score: 0 };
-    const leading = ROW_VIEW.body(row).leading;
+    const row: ScoredRow = { kind: 'layer', entry: bodyEntry(SCENE_EARTH.id), score: 0 };
+    const leading = ROW_VIEW.layer(row).leading;
     expect(isValidElement(leading) && leading.type).toBe('img');
   });
 
   it('a body with no captured card shot falls back to the letter glyph', () => {
     // Phobos has no card in featuredTabs.ts (Mars' moons are not featured),
     // so it must never resolve to an img with a 404'ing src.
-    const phobos = findByIdOrThrow(SCENE_BODIES, 'phobos', 'paletteRows.test');
-    const row: ScoredRow = { kind: 'body', body: phobos, score: 0 };
-    const leading = ROW_VIEW.body(row).leading;
+    const row: ScoredRow = { kind: 'layer', entry: bodyEntry('phobos'), score: 0 };
+    const leading = ROW_VIEW.layer(row).leading;
     expect(isValidElement(leading) && leading.type).toBe('span');
   });
 });
@@ -69,5 +74,18 @@ describe('ROW_VIEW structure rows', () => {
     const bulk = { ...entry, id: 'galaxy-cluster-bulk-x1', featured: false };
     const leading = ROW_VIEW.structure({ kind: 'structure', entry: bulk, score: 0 }).leading;
     expect(isValidElement(leading) && leading.type).toBe('span');
+  });
+});
+
+describe('ROW_VIEW layer rows', () => {
+  const entry: LayerSearchEntry = { id: 'body-curiosity', names: ['Curiosity'], class: 'primary' };
+  const secondaryOf = (e: LayerSearchEntry) =>
+    renderToStaticMarkup(
+      createElement('div', null, ROW_VIEW.layer({ kind: 'layer', entry: e, score: 0 }).secondary),
+    );
+
+  it('a layer row shows its entry chip, and none when omitted', () => {
+    expect(secondaryOf({ ...entry, chip: 'Rover' })).toContain('Rover');
+    expect(secondaryOf(entry)).toBe('<div></div>');
   });
 });

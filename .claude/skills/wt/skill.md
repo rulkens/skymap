@@ -40,10 +40,16 @@ without it the galaxy catalogs fail to load and the sky stays empty.
    into it. The harness prefixes the branch with `worktree-` automatically —
    pass only the clean kebab name, not a `worktree-` prefix.
 
-4. **Report** the new worktree path and branch that `EnterWorktree` returns,
+4. **Install dependencies** with `npm ci --prefer-offline --no-audit --no-fund`
+   in the new worktree (about 5 s with a warm cache). A fresh worktree has no
+   `node_modules` of its own: most packages resolve up to the main checkout's,
+   which silently serves stale versions after a dependency bump, and anything
+   imported by path breaks outright.
+
+5. **Report** the new worktree path and branch that `EnterWorktree` returns,
    in one line, so the user knows where they are.
 
-5. **Decide whether to link real data, and act.** Judge it from the
+6. **Decide whether to link real data, and act.** Judge it from the
    description; don't ask. Run `/link-data` (it symlinks this worktree's
    `public/data/` → main's) whenever the task could plausibly involve looking
    at the render — renderer/shader work, a visual bug, anything with a UI

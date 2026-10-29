@@ -99,36 +99,18 @@ where ≥2 layers share a gate.
 
 ## 4. Recurring mechanisms (the patterns)
 
-1. 🟢 **RESOLVED — rung 2** (`createUpsampleLayer.ts`, PR #575). The four
-   producer layers now share one primitive with a `postBlit` hook —
-   `zoneOfAvoidanceUpsampleLayer.ts` uses it for its MSDF caption draw — and
-   the downscaled-viewport formula lives once in `reducedTargetSize.ts`,
-   called from `renderTargets.ts:334` (verified zero remaining inline
-   copies). Original finding, for record: **Reduced-res accumulate →
-   upsample, ×4 — copy-paste confirmed, and
-   still growing.** `zoneOfAvoidanceUpsampleLayer` (#555,
-   `passes/zoneOfAvoidanceUpsampleLayer.ts`) is a 4th instance of the exact
-   scaffold: `enabled` is `deriveXLiveness(...) !== null`, `draw` is a
-   defensive null-check + one blit call. The downscaled-viewport derivation
-   (`Math.max(1, Math.floor(ctx.canvasSize.width / scale))` etc.) is now a
-   verbatim QUADRUPLICATE across the 4 producer layers —
-   `scalarVolumeLayer.ts:62-63`, `starAggregatesLayer.ts:60-61`,
-   `milkyWayAggregateLayer.ts:69-70`, `zoneOfAvoidanceLayer.ts:43-44` — each
-   with its own copy of the rationale comment. `zoneOfAvoidanceUpsampleLayer`
-   also reuses the shared `createAdditiveUpsample` factory directly (no new
-   pipeline), so it is genuine evidence FOR the shared primitive, not a
-   divergent one — except its `draw` bolts on a second concern the scaffold
-   doesn't have: after the blit, `postBlit` draws the band's full-res MSDF
-   lettering through the shared `label3DRenderer` (rung 8, decisions.md #19;
-   `drawLabels` and its private pipeline are deleted). Liveness now lives in
-   the producer's `fadeAlpha` (`produceZoneOfAvoidanceLettering` reads
-   `deriveZoneOfAvoidanceLiveness` and emits no label at all when it is
-   `null`), not a second gate re-tested in the layer — `postBlit` guards
-   itself independently with a null-renderer + zero-glyphCount check. A shared
-   `{name, slab, sourceTargetId, handleKey, enabled}` primitive would need an
-   optional post-blit hook to fit this 4th row without a bolted branch (rule
-   #10) — worth deciding at rung 2 rather than after, since it would collapse
-   the ~10 hand-edit sites per instance.
+1. 🟢 **RESOLVED — rung 2** (PR #575). The four reduced-res accumulate →
+   upsample rows (volume, star-aggregate, milky-way, zone-of-avoidance) share
+   `createUpsamplePass`, and the downscaled-viewport formula lives once in
+   `reducedTargetSize.ts`, called from `renderTargets.ts:334`. The Zone of
+   Avoidance lettering is not part of the upsample: core's `labels-world` pass
+   (`src/services/engine/frame/passes/labelsWorldPass.ts`) draws it after
+   `zone-of-avoidance-upsample` in `src/data/rendering/frameSections.ts`, the
+   way the 2D `labels-cosmo` / `labels-near` twins draw theirs. Liveness lives
+   in the producer's `fadeAlpha` (`produceZoneOfAvoidanceLettering` reads
+   `deriveZoneOfAvoidanceLiveness` and emits no label when it is `null`), so
+   the upsample row stays a plain `{name, slab, sourceTargetId, handleKey,
+   enabled}` scaffold with no second concern bolted on (rule #10).
 2. 🔴 **Fullscreen triangle, ×5 + a second implementation.** Byte-identical
    vertex bodies in additiveUpsample/starAggregateUpsample/compositor/bloom,
    plus `lib/fullscreenTri.wesl` implementing the same primitive differently;

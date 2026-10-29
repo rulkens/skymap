@@ -29,7 +29,7 @@ export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
         view.viewportPx,
         ctx.drawPxPerRad,
         view.camPos,
-        state.gpu.focusUniform!.bindGroup,
+        runtime.focusBindGroup,
         disks,
         // Each call's `@group(0)` camera uniform needs its own physical buffer
         // (`instancedQuadRenderer`'s ring) — the instance buffer needs no ring,

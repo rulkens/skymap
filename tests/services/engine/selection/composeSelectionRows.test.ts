@@ -1,5 +1,5 @@
 /**
- * composeSelectionRows, driven through the six core rows via
+ * composeSelectionRows, driven through the real selection rows via
  * `selectionResolverOver` — the composed resolver's dispatch and its
  * claim-then-decode focus-id contract. One describe per resolver
  * subject (pick, pick table, row extraction, focus id); the last describes pin
@@ -589,8 +589,10 @@ describe('composeSelectionRows — picking gate', () => {
         zoneOfAvoidance: true,
         body: true,
         craft: true,
+        earthScene: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
@@ -604,8 +606,10 @@ describe('composeSelectionRows — picking gate', () => {
         zoneOfAvoidance: true,
         body: true,
         craft: true,
+        earthScene: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(structureDisabled.resolvePick(pick)).toBeNull();
@@ -621,8 +625,10 @@ describe('composeSelectionRows — picking gate', () => {
         zoneOfAvoidance: true,
         body: true,
         craft: true,
+        earthScene: true,
         starCatalog: true,
         blackHole: true,
+        satellite: true,
       }),
     );
     expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);

@@ -5,15 +5,7 @@
 
 import { cosmicFlows } from './cosmicFlows';
 import { cosmicWeb } from './cosmicWeb';
-import { observableUniverse } from './observableUniverse';
-import { solarSystem } from './solarSystem';
 import { zoneOfAvoidance } from './zoneOfAvoidance';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
-export const CORE_EXHIBITS: readonly Exhibit[] = [
-  cosmicFlows,
-  cosmicWeb,
-  solarSystem,
-  zoneOfAvoidance,
-  observableUniverse,
-];
+export const CORE_EXHIBITS: readonly Exhibit[] = [cosmicFlows, cosmicWeb, zoneOfAvoidance];

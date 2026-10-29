@@ -44,7 +44,7 @@ export const APP = [
   { term: 'In your browser', id: 'privacy-app-storage' },
   { term: 'Galaxy pictures', id: 'privacy-thumbnails' },
 ];
-export const factIds = [...SITE, ...COUNTER, ...APP].map((item) => item.id).concat('privacy-form-closed');
+export const factIds = [...SITE, ...COUNTER, ...APP].map((item) => item.id);
 export const checked = formatDate(fact('privacy-site-requests').checked);
 
 {/* Every fact row the page prints is in factIds, so the Sources list cannot drift from the copy. */}
@@ -79,19 +79,6 @@ export const checked = formatDate(fact('privacy-site-requests').checked);
     <Claims items={APP} />
   </Group>
   <Note>The app’s data files come from the same host as this website, described above. Links in the app to outside catalogues, such as NED and Aladin, open those sites only when you choose them.</Note>
-</section>
-
-<section class={section} id="form">
-  <SectionHead title="The contact form" narrow>
-    <p>{fact('privacy-form-closed').text}</p>
-  </SectionHead>
-  <div class={prose}>
-    <p>Until it opens, the way to reach us is the <a href={ISSUES_URL}>issue list on GitHub</a>. An issue is public, it carries your GitHub name, and GitHub’s own privacy statement applies to it.</p>
-  </div>
-  <Caveat landing title="The plan, not yet in effect">
-    <p>When the form opens, your message will go to a small program of ours on Cloudflare, which forwards the four fields (name, organisation, email address and message) to us as an email. A spam check, Cloudflare Turnstile, will run before a message is accepted. Your browser will load its script from challenges.cloudflare.com, on the domes page only, and only when the form comes into view. The program keeps nothing of its own. We will keep the email for as long as the conversation needs it.</p>
-    <Note flow>We will rewrite this section when the form opens, and the date at the top of the page will change with it.</Note>
-  </Caveat>
 </section>
 
 <section class={section} id="responsible">

@@ -1,12 +1,10 @@
 /**
- * frameOrderBoot — `checkFrameOrder` over the REAL artifacts the app boots
- * with, which is the check `startLoop` runs once before the first frame. The
- * per-rule cases live in `checkFrameOrder.test.ts`; this one binds them to
- * production data, so a core pass that forgets its `FRAME_ORDER` line fails
- * here instead of silently never drawing (a Layer's passes are pinned by that
- * Layer's own test, e.g. `tests/layers/structure/layer.test.ts`). Target ids
- * include every Layer's `targets` too, via `composeRenderTargetRows` — the
- * same composed table the `renderTargets` GPU-handle row allocates.
+ * frameOrderBoot — `checkFrameOrder` over the REAL artifacts the app boots with (the check
+ * `startLoop` runs before the first frame). Per-rule cases live in `checkFrameOrder.test.ts`;
+ * this binds them to production data, so a core pass missing its `FRAME_ORDER` line fails here
+ * instead of never drawing (a Layer's passes are pinned by that Layer's own test). Target ids
+ * include every Layer's `targets` via `composeRenderTargetRows`, the table the `renderTargets`
+ * GPU-handle row allocates.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,8 +12,9 @@ import { describe, it, expect } from 'vitest';
 import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { bodyLayer } from '../../../../src/layers/body/layer';
+import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
@@ -23,19 +22,14 @@ import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
 
-// Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional (Global Constraints), so PRELUDE's and SCENE's Layer-owned rows need
-// a stand-in here — this file checks core's artifacts alone, never the full
-// `createLayers` composition.
+// A `plan` line's planner is never optional, so PRELUDE's and SCENE's Layer-owned rows need a
+// stand-in: this file checks core's artifacts and the body computes, never `createLayers`.
 const LAYER_PLANNER_STUBS = [...stubPlannersFor(PRELUDE), ...stubPlannersFor(SCENE)];
 
 describe('checkFrameOrder — boot', () => {
   it('every ViewRig’s program passes the boot check', () => {
-    // The swap format only decides the swap ROW's format, never an id, so any
-    // valid format yields the same rows `startLoop` reads off the assembled
-    // table. Every rig, the same set `startLoop` itself checks — not just
-    // `FRAME_ORDER` (mono's own concatenation), so a dome-only pass or a
-    // section shared by both rigs is exercised here too.
+    // The swap format only decides the swap ROW's format, never an id. Checks every rig, as
+    // `startLoop` does, so a dome-only pass or a section shared by both rigs is exercised.
     const targets = composeRenderTargetRows(
       'bgra8unorm',
       APP_COMPOSITION.layers.map((layer) => layer.targets ?? []),
@@ -44,7 +38,7 @@ describe('checkFrameOrder — boot', () => {
       checkFrameOrder(
         Object.values(VIEW_RIGS).map((rig) => rig.program),
         CONTENT_PASSES,
-        CORE_COMPUTES,
+        bodyLayer.computes!({} as BodyRuntime),
         LAYER_PLANNER_STUBS,
         targets,
       ),
