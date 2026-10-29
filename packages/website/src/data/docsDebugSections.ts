@@ -97,6 +97,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/body/ui/TerrainPickMarkerTuningSection.tsx',
   },
   {
+    heading: 'Earth tuning',
+    shows:
+      'Three sliders for Earth: how bright its atmosphere is drawn, how much light the night side keeps, and how wide the Sun’s glint on the oceans is.',
+    file: 'src/layers/body/ui/EarthTuningSectionContainer.tsx',
+  },
+  {
     heading: 'Debug Overlays',
     shows:
       'Three pictures laid over the scene: the buffer a click is looked up in, the stand-in shapes of the orbit trails, and the level of detail of each ground tile.',
