@@ -69,15 +69,11 @@ export const Source = {
   McpmWorkbench: 31,
   /** All missions-Layer craft under one code; the pick index runs over `MISSION_CRAFT_IDS`. */
   Craft: 32,
-  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. Codes 37..62 remain. */
+  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. Codes 38..62 remain. */
   OpenCluster: 33,
   GlobularCluster: 34,
   Nebula: 35,
   GcCluster: 36,
-  /**
-   * The satellites Layer's points: one code for all of them, its pick index running over the
-   * day's catalog (`satellitesSelectionRow` resolves it). Value 37 stays stable: it is baked into
-   * pick words.
-   */
+  /** The satellites Layer's points; the pick index runs over the day's catalog. */
   Satellite: 37,
 } as const;

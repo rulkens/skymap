@@ -3,6 +3,7 @@ import { json2satrec, propagate } from 'satellite.js';
 import { composeTemeToWorld } from '../../../../src/layers/satellites/subsystems/composeTemeToWorld';
 import { orientationForBody } from '../../../../src/data/bodies/orientationForBody';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
+import { GOES_18 } from '../fixtures/celestrakRecords';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 const apply = (m: Mat3, v: readonly number[]): number[] =>
@@ -13,24 +14,12 @@ const applyT = (m: Mat3, v: readonly number[]): number[] =>
 // GOES 18 as CelesTrak published it on 2026-10-28: GOES-West, parked over 137.0° W. Carried through
 // the composed rotation into the world and back out through Earth's own orientation, a
 // geostationary satellite must land over that longitude of the globe Skymap draws, at any hour.
-const GOES_18 = json2satrec({
-  OBJECT_NAME: 'GOES 18',
-  OBJECT_ID: '2022-021A',
-  EPOCH: '2026-10-27T05:53:31.873056',
-  MEAN_MOTION: 1.00270727,
-  ECCENTRICITY: 5.975e-5,
-  INCLINATION: 0.0036,
-  RA_OF_ASC_NODE: 29.4619,
-  ARG_OF_PERICENTER: 239.0961,
-  MEAN_ANOMALY: 78.4634,
+const GOES_18_SATREC = json2satrec({
+  ...GOES_18,
   EPHEMERIS_TYPE: 0,
   CLASSIFICATION_TYPE: 'U',
-  NORAD_CAT_ID: 51850,
   ELEMENT_SET_NO: 999,
   REV_AT_EPOCH: 0,
-  BSTAR: 0,
-  MEAN_MOTION_DOT: 1.09e-6,
-  MEAN_MOTION_DDOT: 0,
 });
 
 describe('composeTemeToWorld', () => {
@@ -39,7 +28,7 @@ describe('composeTemeToWorld', () => {
     (iso) => {
       const ms = Date.parse(iso);
       const simDays = unixMsToJulianDays(ms);
-      const { position: p } = propagate(GOES_18, new Date(ms))!;
+      const { position: p } = propagate(GOES_18_SATREC, new Date(ms))!;
       const earth = orientationForBody('earth', simDays, new Map());
       const world = apply(composeTemeToWorld(earth, simDays), [p.x, p.y, p.z]);
       const body = applyT(earth, world);

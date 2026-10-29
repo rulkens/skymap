@@ -1,6 +1,6 @@
 /**
- * The satellites Layer's whole runtime. The propagator holds no worker until the slot commits and
- * none after it releases (spec §5.5); the renderer and the slot live as long as the Layer.
+ * The satellites Layer's whole runtime: the propagator, the renderer, the catalog slot and the
+ * selected satellites.
  */
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { SatellitePointRenderer } from './SatellitePointRenderer';

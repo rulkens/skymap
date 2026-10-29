@@ -60,7 +60,7 @@ describe('createSatellitePropagator', () => {
     const started = propagator.start(FILE);
     const worker = FakeWorker.last;
     propagator.request(1); // before ready: dropped
-    worker.reply({ kind: 'ready', count: 0 });
+    worker.reply({ kind: 'ready' });
     await started;
     propagator.request(2);
     propagator.request(3); // one already in flight: dropped
@@ -76,7 +76,7 @@ describe('createSatellitePropagator', () => {
     const propagator = make();
     const started = propagator.start(FILE);
     const worker = FakeWorker.last;
-    worker.reply({ kind: 'ready', count: 0 });
+    worker.reply({ kind: 'ready' });
     await started;
     propagator.stop();
     expect(worker.terminated).toBe(true);
@@ -106,7 +106,7 @@ describe('createSatellitePropagator', () => {
     void propagator.start(FILE).catch(() => undefined);
     const stale = FakeWorker.last;
     const started = propagator.start(FILE);
-    FakeWorker.last.reply({ kind: 'ready', count: 0 });
+    FakeWorker.last.reply({ kind: 'ready' });
     await started;
     stale.reply(swept(9));
     expect(propagator.latest()).toBeNull();

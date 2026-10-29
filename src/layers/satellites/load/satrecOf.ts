@@ -4,14 +4,13 @@
  * thread builds only the satellite the camera follows.
  */
 import { json2satrec } from './satelliteJsCore';
-import { formatOmmEpoch } from '../../../utils/time/formatOmmEpoch';
 import type { SatelliteCatalog } from '../../../@types/satellites/SatelliteCatalog';
 
 export function satrecOf(cat: SatelliteCatalog, k: number): ReturnType<typeof json2satrec> {
   return json2satrec({
     OBJECT_NAME: cat.names[k]!,
     OBJECT_ID: cat.cosparIds[k]!,
-    EPOCH: formatOmmEpoch(cat.epochMs[k]!),
+    EPOCH: new Date(cat.epochMs[k]!).toISOString(),
     MEAN_MOTION: cat.meanMotion[k]!,
     ECCENTRICITY: cat.eccentricity[k]!,
     INCLINATION: cat.inclinationDeg[k]!,

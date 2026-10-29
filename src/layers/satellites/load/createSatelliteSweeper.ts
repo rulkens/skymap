@@ -12,7 +12,6 @@ import type { SatelliteCatalog } from '../../../@types/satellites/SatelliteCatal
 const MS_PER_MINUTE = 60_000;
 
 export function createSatelliteSweeper(cat: SatelliteCatalog): {
-  readonly count: number;
   sweep(simMs: number): { posKm: Float32Array; velKmS: Float32Array; valid: Uint8Array };
 } {
   const count = cat.noradId.length;
@@ -20,7 +19,6 @@ export function createSatelliteSweeper(cat: SatelliteCatalog): {
   const drawn = Uint8Array.from(cat.noradId, (id) => (id === HUBBLE_NORAD_ID ? 0 : 1));
 
   return {
-    count,
     sweep(simMs) {
       const posKm = new Float32Array(3 * count);
       const velKmS = new Float32Array(3 * count);

@@ -19,25 +19,8 @@ import {
 } from '../../../../src/state/selection/selectionSlice';
 import { createTestStore } from '../../../support/createTestStore';
 import type { SatelliteCatalog } from '../../../../src/@types/satellites/SatelliteCatalog';
-import type { CelestrakOmm } from '../../../../tools/@types/satellites/CelestrakOmm';
+import { ISS } from '../fixtures/celestrakRecords';
 
-// CelesTrak's ISS record as downloaded on 2026-10-28.
-const ISS: CelestrakOmm = {
-  OBJECT_NAME: 'ISS (ZARYA)',
-  OBJECT_ID: '1998-067A',
-  EPOCH: '2026-10-27T04:14:31.558560',
-  MEAN_MOTION: 15.49073103,
-  ECCENTRICITY: 0.00069486,
-  INCLINATION: 51.6336,
-  RA_OF_ASC_NODE: 6.9404,
-  ARG_OF_PERICENTER: 314.9066,
-  MEAN_ANOMALY: 45.1358,
-  EPHEMERIS_TYPE: 0,
-  NORAD_CAT_ID: 25544,
-  BSTAR: 0.00011132043,
-  MEAN_MOTION_DOT: 5.704e-5,
-  MEAN_MOTION_DDOT: 0,
-};
 const { catalog: ISS_CATALOG } = buildSatelliteCatalog(
   [{ group: { group: 'active', class: 'active' }, records: [ISS] }],
   0,

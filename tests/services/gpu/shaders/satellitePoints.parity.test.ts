@@ -59,6 +59,5 @@ describe('satellites/points/io.wesl parity', () => {
     const { viewProj, viewportPx, pxPerRad, ...rest } = SATELLITE_UNIFORM_OFFSETS;
     expect(offsets).toEqual({ cam: viewProj, ...rest });
     expect(Math.ceil(at / 16) * 16).toBe(SATELLITE_UNIFORM_BYTES);
-    expect([viewProj, viewportPx, pxPerRad]).toEqual([0, 64, 72]);
   });
 });

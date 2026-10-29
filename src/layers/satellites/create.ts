@@ -1,6 +1,6 @@
 /**
  * create — the satellites Layer in dependency order: the renderer, the propagator (no worker yet),
- * then the slot whose commit starts the worker and whose release ends it, then the selected
+ * then the slot that drives it, then the selected
  * satellites the camera may follow. A landed sweep wakes the frame loop so it is drawn even with
  * the camera at rest.
  */
