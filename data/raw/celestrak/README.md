@@ -1,6 +1,6 @@
 # CelesTrak GP orbit data
 
-Input to `npm run build-satellites`, which writes `public/data/satellite-catalog/v1/satellites.bin`
+Input to `npm run build-satellites`, which writes `public/data/satellite-catalog/v1/satellites.satg`
 (layout in `tools/utils/io/writeSatelliteCatalog.ts`). The JSON files are gitignored; regenerate with
 `npm run fetch-celestrak`. In production nobody runs either by hand: the daily
 `.github/workflows/satellites.yml` fetches, builds and uploads to R2 (docs/DEPLOY.md).

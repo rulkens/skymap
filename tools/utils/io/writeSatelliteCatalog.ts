@@ -1,5 +1,5 @@
 /**
- * writeSatelliteCatalog — serialise a `SatelliteCatalog` to the `satellites.bin` layout (little-endian):
+ * writeSatelliteCatalog — serialise a `SatelliteCatalog` to the `satellites.satg` layout (little-endian):
  * `SATG`, u32 version 1, u32 count n, u32 0, f64 fetchedAtMs; from byte 24 the ten f64 columns in
  * `SatelliteCatalog` order (epochMs … meanMotionDdot, n each), u32 noradId (n), u8 classCode (n),
  * padding to 4, u32 string offsets (2n + 1) into a UTF-8 blob holding names[0..n) then cosparIds.

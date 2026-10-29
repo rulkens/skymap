@@ -4,4 +4,4 @@
  * fetch it. Outside the manifest on purpose: it is rewritten daily at this fixed key, and the `v1/`
  * folder is the version gate a content hash would otherwise be (docs/DATA.md).
  */
-export const SATELLITE_CATALOG_PATH = 'satellite-catalog/v1/satellites.bin';
+export const SATELLITE_CATALOG_PATH = 'satellite-catalog/v1/satellites.satg';
