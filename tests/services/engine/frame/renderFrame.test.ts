@@ -240,15 +240,6 @@ function makeMockMilkyWayCloud() {
   } as any;
 }
 
-function makeMockHorizonShellRenderer(callLog: CallLog) {
-  return {
-    draw: vi.fn(() => {
-      callLog.push('horizonShellRenderer.draw');
-    }),
-    destroy: vi.fn(),
-  } as any;
-}
-
 function makeMockThumbnails(callLog: CallLog) {
   return {
     runFrame: vi.fn(() => {
@@ -351,7 +342,6 @@ function makeInput(
     cloudRenderer: milkyWayCloudRenderer,
     aggregateUpsample: null,
   } as unknown as MilkyWayRuntime;
-  const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const compositor = makeMockCompositor(callLog);
   // The render-target table backing views. The density row's default view is inert; the
   // density-ordering test swaps in its own half-res view via this record. The mw-aggregate row
@@ -467,7 +457,6 @@ function makeInput(
     densityRuntime,
     milkyWayCloudRenderer,
     milkyWayCloud,
-    horizonShellRenderer,
     thumbnails,
     texturedQuadRenderer,
     texturedDiskRenderer,
@@ -498,7 +487,6 @@ function makeInput(
           // Every `ContentPass.draw` reads its renderer off `state.gpu.*`; the milkyWay Layer's passes
           // close over `milkyWayRuntime` instead.
           galaxyPointRenderer,
-          horizonShellRenderer,
           texturedDiskRenderer,
           proceduralDiskRenderer,
           compositor,

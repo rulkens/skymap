@@ -1,23 +1,21 @@
 /**
- * passes — the per-pass `enabled` gates against stub state + ctx with no GPU
- * device. The spot-checked `draw` calls pin that a pass threads the resolved
- * `SlabView`'s `vp`/`viewportPx` rather than reading `ctx.vp`/`ctx.canvasSize`
- * directly.
- *
- * Encoder sequencing and the post-process chain live in `renderFrame.test.ts`.
+ * horizonShellPass — the distance-fade gate in `enabled` and the `draw` call's
+ * arguments, against stub state + ctx with no GPU device. `draw` must thread the
+ * resolved `SlabView`'s `viewportPx` rather than reading `ctx.canvasSize` directly.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { horizonShellPass } from '../../../../../src/layers/cosmicHorizon/passes/horizonShellPass';
-import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
-import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
-import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
-import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import { horizonShellPass } from '../../../../src/layers/cosmicHorizon/passes/horizonShellPass';
+import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
+import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { CosmicHorizonRuntime } from '../../../../src/layers/cosmicHorizon/@types/CosmicHorizonRuntime';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -86,16 +84,8 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
   } as unknown as FrameView;
 }
 
-const STATE_STUB = {
-  // Passes bind the shared focus group off state.gpu.focusUniform; an opaque
-  // bind group is all they read. The nullable GPU renderer fields default to
-  // null (pre-bootstrap shape); individual draw tests override the one they
-  // exercise.
-  gpu: {
-    focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
-    horizonShellRenderer: null,
-  },
-} as unknown as EngineState;
+// The pass reads nothing off state; an empty stub satisfies the signature.
+const STATE_STUB = {} as unknown as EngineState;
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -104,16 +94,11 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
+function makePass(draw = vi.fn()) {
+  return horizonShellPass({ renderer: { draw } } as unknown as CosmicHorizonRuntime);
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
-
-// The starAggregatesPass/starAggregateUpsamplePass producer/consumer gate
-// pin moved to `tests/layers/starCatalog/passes/starAggregateUpsamplePass.test.ts`
-// with the rest of the starCatalog Layer's own pass tests.
-
-// Coverage for the `textured-disks` layer lives in
-// `texturedDisksPass.test.ts` (one test file per ContentPass module,
-// matching the convention used by every other entry in `passes/`). The
-// hdr-target layers check above pins the name in canonical order.
 
 describe('horizonShellPass.enabled', () => {
   it('returns false near the origin — the inverse of the Milky-Way band', () => {
@@ -121,7 +106,7 @@ describe('horizonShellPass.enabled', () => {
     // 14.3 Gpc ≈ 0.7 Gpc), so the layer is skipped — no empty
     // full-screen ray-march pass at galaxy-scale zoom.
     const ctx0 = makeCtx();
-    expect(horizonShellPass.enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
+    expect(makePass().enabled(STATE_STUB, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
   });
 
   it('returns true once the camera pulls back to cosmological scale', () => {
@@ -129,7 +114,7 @@ describe('horizonShellPass.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    expect(horizonShellPass.enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
+    expect(makePass().enabled(STATE_STUB, ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 });
 
@@ -140,11 +125,7 @@ describe('horizonShellPass.draw', () => {
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
     const view = slabViewOf(ctx, COSMO);
-    const state = {
-      ...STATE_STUB,
-      gpu: { ...STATE_STUB.gpu, horizonShellRenderer: { draw: drawSpy } },
-    } as unknown as EngineState;
-    horizonShellPass.draw(PASS_STUB, view, ctx, state);
+    makePass(drawSpy).draw(PASS_STUB, view, ctx, STATE_STUB);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);

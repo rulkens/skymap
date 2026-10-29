@@ -38,7 +38,7 @@ import { buildSwapRenderers } from '../../../../src/services/engine/phases/build
 /**
  * The eight handle keys `buildSwapRenderers` owns on `state.gpu.*`, plus the
  * `uiCtx` / `fontAtlases` inputs it reads, plus one NOT-flagged row
- * (`horizonShellRenderer`) — the untouched-identity proof's subject.
+ * (`label3DRenderer`) — the untouched-identity proof's subject.
  */
 function makeState(): EngineState {
   return {
@@ -58,7 +58,7 @@ function makeState(): EngineState {
       pickDebugOverlay: null,
       labelRendererNear: null,
       markerLineRendererNear: null,
-      horizonShellRenderer: makeStub(),
+      label3DRenderer: makeStub(),
     },
     subsystems: {
       cosmoLabelDirector: {
@@ -123,7 +123,7 @@ describe('buildSwapRenderers', () => {
 
   it("a non-swap-format row's handle identity is unchanged across a rebuild", () => {
     const state = makeState();
-    const horizonShellRenderer = state.gpu.horizonShellRenderer;
+    const label3DRenderer = state.gpu.label3DRenderer;
 
     buildSwapRenderers(state, 'bgra8unorm');
     buildSwapRenderers(state, 'rgba16float');
@@ -131,8 +131,8 @@ describe('buildSwapRenderers', () => {
     // Proves the rebuildOnSwapFormat filter is exact, not a superset: a row
     // absent from GPU_HANDLE_ROWS's flagged 8 must survive two rebuilds
     // untouched — same reference, destroy() never called.
-    const stub = horizonShellRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
-    expect(state.gpu.horizonShellRenderer).toBe(horizonShellRenderer);
+    const stub = label3DRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
+    expect(state.gpu.label3DRenderer).toBe(label3DRenderer);
     expect(stub.destroy).not.toHaveBeenCalled();
   });
 });

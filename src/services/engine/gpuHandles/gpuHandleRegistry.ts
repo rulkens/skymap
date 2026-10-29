@@ -8,7 +8,6 @@
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
-import { createHorizonShellRenderer } from '../../../layers/cosmicHorizon/render/horizonShellRenderer';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
@@ -130,11 +129,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'labelPickRendererNear',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabelPickRenderer(deps.ctx.device, pickDepthFormat(NEAR0), SLAB_REVERSED_Z[NEAR0]!),
-  },
-  {
-    key: 'horizonShellRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     // Draws into HDR (rgba16float), not the swap chain: no rebuildOnSwapFormat.

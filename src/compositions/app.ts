@@ -11,6 +11,7 @@ import { EARTH_HOME } from '../data/selection/earthHome';
 import { blackHolesLayer } from '../layers/blackHoles/layer';
 import { bodyLayer } from '../layers/body/layer';
 import { constellationsLayer } from '../layers/constellations/layer';
+import { cosmicHorizonLayer } from '../layers/cosmicHorizon/layer';
 import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
 import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
 import { earthScenesLayer } from '../layers/earthScenes/layer';
@@ -37,6 +38,7 @@ export const APP_COMPOSITION = {
     zoneOfAvoidanceLayer,
     localBubbleLayer,
     lightTimeLayer,
+    cosmicHorizonLayer,
     constellationsLayer,
     blackHolesLayer,
     milkyWayLayer,
@@ -57,6 +59,7 @@ export const APP_COMPOSITION = {
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
     typeof lightTimeLayer,
+    typeof cosmicHorizonLayer,
     typeof constellationsLayer,
     typeof blackHolesLayer,
     typeof milkyWayLayer,

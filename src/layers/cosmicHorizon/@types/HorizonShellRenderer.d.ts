@@ -25,7 +25,7 @@ export type HorizonShellRenderer = {
    * the camera basis + FOV from `cam` to build the view rays.
    *
    * `fadeAlpha` is the distance-fade in `[0, 1]` (see
-   * `utils/math/horizonShellFadeAlpha`); the fragment shader multiplies it
+   * `render/horizonShellFadeAlpha`); the fragment shader multiplies it
    * into the additive contribution so the shell ramps in with pull-back.
    */
   draw(pass: GPURenderPassEncoder, cam: OrbitCamera, viewport: Vec2, fadeAlpha: number): void;

@@ -12,8 +12,8 @@
  * `horizonShellRenderer`, `filamentRenderer`, `texturedDiskRenderer`, and
  * `proceduralDiskRenderer` — but `runFrame` only ever forwarded them,
  * unread, into `RenderFrameInput`.  Now that every `ContentPass` reads its
- * renderer straight off `state.gpu.*` (see `passes/index.ts`), those fields
- * were dead weight here; they're gone along with the matching
+ * own renderer (core's off `state.gpu.*`, a Layer's off its runtime), those
+ * fields were dead weight here; they're gone along with the matching
  * `RenderFrameInput` fields.
  */
 

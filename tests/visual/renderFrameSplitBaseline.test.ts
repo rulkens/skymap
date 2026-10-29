@@ -3,8 +3,9 @@
  * blocks host the draws, so a pass-split refactor must still hash byte-identically. Boundaries are
  * excluded on purpose: a split changes their count.
  *
- * Recorded at the renderer-mock entry point (the mocks short-circuit before `pass.draw`). The horizon
- * shell is excluded: its fade band mirrors the Milky Way's, so the two never co-exist in one frame.
+ * Recorded at the renderer-mock entry point (the mocks short-circuit before `pass.draw`). The
+ * cosmicHorizon Layer's shell is not composed in: its fade band mirrors the Milky Way's, so the two
+ * never co-exist in one frame.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -278,7 +279,6 @@ describe('renderFrame visual baseline', () => {
       cloudRenderer: milkyWayCloudRenderer,
       aggregateUpsample,
     } as unknown as MilkyWayRuntime;
-    const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
@@ -407,10 +407,6 @@ describe('renderFrame visual baseline', () => {
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
           labelRendererNear: null,
-          // Every `ContentPass.draw` reads its renderer off `state.gpu.*`; the local names below are the logging
-          // renderers declared above, so their `argShape` entries land in `records`. The milkyWay Layer's
-          // renderers ride `milkyWayRuntime` instead.
-          horizonShellRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.

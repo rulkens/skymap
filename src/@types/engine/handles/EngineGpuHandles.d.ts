@@ -17,7 +17,6 @@ import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
-import type { HorizonShellRenderer } from '../../../layers/cosmicHorizon/@types/HorizonShellRenderer';
 import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
@@ -148,10 +147,6 @@ export type EngineGpuHandles = {
    * UI overlay.
    */
   selectionRingRenderer: SelectionRingRenderer | null;
-  /**
-   * Cosmic-horizon shell: a translucent sphere at the comoving particle-horizon radius.
-   */
-  horizonShellRenderer: HorizonShellRenderer | null;
   /**
    * Shared world-geometry text renderer for arc-placed labels. Draws into HDR, not the
    * swap chain, so it is NOT a `rebuildOnSwapFormat` row.
