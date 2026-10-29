@@ -43,7 +43,7 @@ import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
@@ -69,7 +69,7 @@ function makeState(): EngineState {
   return {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
@@ -364,7 +364,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
       visibilityEntries: [],
-      terrain: FLAT_TERRAIN,
+      terrainHeightAt: datumOnlyTerrainHeight,
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },

@@ -13,7 +13,7 @@ import { cloudShellPass } from '../../../../src/layers/body/passes/cloudShellPas
 import { CLOUD_SHELL_PARAMS } from '../../../../src/layers/body/present/cloudShellParams';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/load/bodyTextureSlotKey';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
 import type { SeededBody } from '../../../helpers/frame/SeededBody';

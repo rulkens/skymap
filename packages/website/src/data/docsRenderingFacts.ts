@@ -143,7 +143,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
     id: 'render-terrain',
     about: 'app',
     text: 'Close to Earth or Mars the app walks a tree of ground tiles every frame, on the processor, culls those outside the view or beyond the horizon, and stops at the level fine enough for the screen. Each kept tile is a patch of 64 by 64 cells, displaced by a height tile of 129 by 129 posts, and all patches are one draw call. Every patch hangs a skirt from its four edges to hide the step where it meets a coarser neighbour.',
-    source: `${REPO_BLOB}/src/utils/surfaceTiles/cutSurfaceTiles.ts`,
+    source: `${REPO_BLOB}/src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts`,
     sourceLabel: `the choice of ground tiles, ${IN_REPO}`,
     checked: CHECKED,
   },

@@ -18,9 +18,9 @@ import type { SurfaceEffect } from '../../../@types/data/SurfaceEffect';
 import type { SurfaceTileRenderer } from '../@types/SurfaceTileRenderer';
 import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
-import { patchOriginRelEyeM } from '../../../utils/surfaceTiles/patchOriginRelEyeM';
-import { surfacePatchIndices } from '../../../utils/surfaceTiles/surfacePatchIndices';
-import { surfaceEffectsKey } from '../../../utils/surfaceTiles/surfaceEffectsKey';
+import { patchOriginRelEyeM } from '../subsystems/surfaceTiles/patchOriginRelEyeM';
+import { surfacePatchIndices } from '../subsystems/surfaceTiles/surfacePatchIndices';
+import { surfaceEffectsKey } from '../subsystems/surfaceTiles/surfaceEffectsKey';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import vsCode from '../../../services/gpu/shaders/bodies/surfaceTile/vertex.wesl?static';
 import {
@@ -34,7 +34,7 @@ import {
   HEIGHT_ATLAS_SLOTS_PER_ROW,
 } from '../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
-import { SURFACE_TILE_SHADER_VARIANTS } from '../../../data/bodies/surfaceTileShaderVariants';
+import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
 
 /**

@@ -19,6 +19,7 @@ import { readCanvas } from '../utils/shot/readCanvas';
 import { SHOT_ENCODING } from './shotEncoding';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
 import { openSiteShot } from './utils/openSiteShot';
+import { shootPairedRemote } from './utils/shootPairedRemote';
 
 const MASTERS_DIR = 'data/shots/site';
 const OUT_DIR = 'packages/website/src/assets/shots';
@@ -28,6 +29,16 @@ const KEY_DELAY_MS = 60;
 const RESULTS_SETTLE_MS = 1200;
 // A panel section unfolds over a short transition.
 const PANEL_SETTLE_MS = 600;
+// `minimalUi`: the app's own accessible names, which its CSS-module class names are not stable enough to be.
+const MINIMAL_UI_CSS = [
+  'Navigation cheatsheet',
+  'Renderer settings',
+  'Scale reference',
+  'Time controls',
+]
+  .map((name) => `[aria-label="${name}"]`)
+  .join(', ')
+  .concat(' { visibility: hidden !important; }');
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -54,14 +65,15 @@ let failed = false;
 try {
   for (const shot of rows) {
     const master = join(MASTERS_DIR, `${shot.id}.png`);
+    const dpr = shot.dpr ?? DPR;
     if (!fromMasters) {
-      const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
+      const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: dpr });
       try {
         const page = await context.newPage();
         await openSiteShot(page, base!, shot);
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
-        if (shot.settings?.searchFor !== undefined) {
+        if (shot.settings?.searchFor !== undefined && !shot.settings.remote) {
           await page.keyboard.press('/');
           await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
           await page.waitForTimeout(RESULTS_SETTLE_MS);
@@ -71,13 +83,18 @@ try {
           await page.locator('button', { has: page.locator(`span:text-is("${heading}")`) }).click();
           await page.waitForTimeout(PANEL_SETTLE_MS);
         }
+        if (shot.settings?.minimalUi) await page.addStyleTag({ content: MINIMAL_UI_CSS });
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
-        writeFileSync(
-          master,
-          shot.settings?.ui
-            ? await page.screenshot({ type: 'png' })
-            : await readCanvas(page, 'png'),
-        );
+        if (shot.settings?.remote) {
+          writeFileSync(master, await shootPairedRemote(page, base!, shot));
+        } else {
+          writeFileSync(
+            master,
+            shot.settings?.ui
+              ? await page.screenshot({ type: 'png' })
+              : await readCanvas(page, 'png'),
+          );
+        }
       } catch (err) {
         failed = true;
         console.error(`${shot.id}: ${err instanceof Error ? err.message : String(err)}`);
@@ -99,10 +116,10 @@ try {
     const crop = shot.settings?.crop;
     const frame = crop
       ? sharp(master).extract({
-          left: crop.left * DPR,
-          top: crop.top * DPR,
-          width: crop.width * DPR,
-          height: crop.height * DPR,
+          left: crop.left * dpr,
+          top: crop.top * dpr,
+          width: crop.width * dpr,
+          height: crop.height * dpr,
         })
       : sharp(master);
     const narrowest = Math.min(...shot.widths);

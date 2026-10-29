@@ -77,7 +77,7 @@ function Footer({ path, light }: FooterProps) {
           </nav>
         </div>
 
-        <ShotCaption id={GROUND} />
+        <ShotCaption id={GROUND} showDrawn={false} />
 
         <div className={styles.end}>
           {light}
