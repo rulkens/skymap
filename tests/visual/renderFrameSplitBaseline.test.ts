@@ -338,6 +338,7 @@ describe('renderFrame visual baseline', () => {
     };
 
     const galaxyRuntime = {
+      focusBindGroup: {} as GPUBindGroup,
       pointRenderer: galaxyPointRenderer,
       proceduralDiskRenderer,
       texturedDiskRenderer,

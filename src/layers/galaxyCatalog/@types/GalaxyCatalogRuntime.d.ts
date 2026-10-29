@@ -40,6 +40,8 @@ export type GalaxyCatalogRuntime = {
   readonly famousMeta: readonly FamousGalaxyMetaEntry[];
   /** Bumped by every point-slot commit; the two `frame` reconciles key on it. */
   readonly catalogsVersion: number;
+  /** Captured from `create`'s deps like `publish`: passes read the engine's `@group(3)` focus group here, not off `state.gpu`. */
+  readonly focusBindGroup: GPUBindGroup;
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */
   readonly publish: (patch: Partial<GalaxyCatalogFacts>) => void;
 

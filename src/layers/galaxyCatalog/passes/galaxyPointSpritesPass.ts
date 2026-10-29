@@ -56,7 +56,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         pxFadeEnd: PROCEDURAL_DISK_FADE_END_PX,
         // @group(3): the engine owns one focus buffer, written once per frame in
         // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
-        focusBindGroup: state.gpu.focusUniform!.bindGroup,
+        focusBindGroup: runtime.focusBindGroup,
         fadeOpacityOf: (source) => fade[galaxyCatalogIdOf(source)],
       });
     },
