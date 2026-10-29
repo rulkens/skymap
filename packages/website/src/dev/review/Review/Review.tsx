@@ -31,7 +31,7 @@ function Review() {
       const first: DocsReview = found.ok
         ? ((await found.json()) as DocsReview)
         : { page, words: { before: wordsIn(article.textContent ?? '') }, marks: [] };
-      // The job is not in the review file: the page carries it from its text's front matter (layouts/Base.astro).
+      // The job is not in the review file: the page carries it from its job file (layouts/Base.astro).
       const meta = document.querySelector<HTMLMetaElement>('meta[name="skymap:job"]');
       const job = meta ? { text: meta.content, setIn: meta.dataset.setIn } : undefined;
       if (!stale) setLoaded({ article, url, first, job });

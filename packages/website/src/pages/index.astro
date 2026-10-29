@@ -15,11 +15,12 @@ import { heroVideoUrl } from '../utils/heroVideoUrl';
 
 const entry = (await getEntry('pages', 'home'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', 'home'))!.data;
 const stills = await flightStills(FLIGHT_STOPS.map((stop) => stop.id));
 const first = stills[0]!;
 ---
 
-<Base {...entry.data} jsonLd={homeJsonLd(Astro.site!, entry.data.description)} heroNav>
+<Base {...entry.data} job={structure.job} sections={structure.sections} jsonLd={homeJsonLd(Astro.site!, entry.data.description)} heroNav>
   <!-- The first still is the largest paint on a phone; the same srcsets feed the <picture>, so it is fetched once. -->
   <Fragment slot="head">
     <link rel="preload" as="image" type="image/avif" media="(orientation: portrait)" imagesrcset={first.portrait.avif} imagesizes={first.portrait.sizes} fetchpriority="high" />

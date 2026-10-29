@@ -10,11 +10,14 @@ import { sitePath } from '../utils/sitePath';
 
 const entry = (await getEntry('pages', 'about'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', 'about'))!.data;
 const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
 ---
 
 <Base
   {...entry.data}
+  job={structure.job}
+  sections={structure.sections}
   jsonLd={[
     breadcrumbJsonLd(Astro.site!, [{ name: 'About', path: '/about/' }]),
     ...aboutJsonLd(Astro.site!, pageUrl, fact('about-what-is').text),

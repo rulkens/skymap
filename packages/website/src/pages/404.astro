@@ -6,8 +6,9 @@ import Base from '../layouts/Base.astro';
 
 const entry = (await getEntry('pages', '404'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', '404'))!.data;
 ---
 
-<Base {...entry.data}>
+<Base {...entry.data} job={structure.job} sections={structure.sections}>
   <Content />
 </Base>

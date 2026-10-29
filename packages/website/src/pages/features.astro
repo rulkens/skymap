@@ -7,8 +7,9 @@ import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 
 const entry = (await getEntry('pages', 'features'))!;
 const { Content } = await render(entry);
+const structure = (await getEntry('pageStructures', 'features'))!.data;
 ---
 
-<Base {...entry.data} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Features', path: '/features/' }])]}>
+<Base {...entry.data} job={structure.job} sections={structure.sections} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Features', path: '/features/' }])]}>
   <Content />
 </Base>
