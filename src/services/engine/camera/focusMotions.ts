@@ -18,10 +18,14 @@ export const FOCUS_MOTIONS: {
     clipOf: easedFocusClip,
     durationMsOf: (d) => d.motion.durationMs,
     easeOf: (d) => d.motion.ease,
+    tweensMovingBodies: false,
   },
+  // Flies to the framing at the click; a body the clock moves drifts off it in
+  // flight, so the follow row's first frame catches up (visible at fast rates).
   geodesic: {
     clipOf: geodesicFocusClip,
     durationMsOf: geodesicDurationMs,
     easeOf: (d) => d.motion.tuning.ease,
+    tweensMovingBodies: true,
   },
 };

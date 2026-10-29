@@ -338,7 +338,10 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       // Clips author no offset channel, so the start pose's eases out here, on
       // the same ease the clip gives every other term.
       const keep =
-        1 - EASE[focusMotionRowOf(tween).easeOf(tween)](ctx.elapsedMs / focusMoveDurationMs(tween));
+        1 -
+        EASE[focusMotionRowOf(tween.motion).easeOf(tween)](
+          ctx.elapsedMs / focusMoveDurationMs(tween),
+        );
       const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
         pose: absoluteArm({ ...framed.pose, lookOffset }),

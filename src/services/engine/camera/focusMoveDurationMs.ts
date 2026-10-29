@@ -13,7 +13,7 @@ const cache = new WeakMap<CameraTweenDescriptor, number>();
 export function focusMoveDurationMs(d: CameraTweenDescriptor): number {
   const cached = cache.get(d);
   if (cached !== undefined) return cached;
-  const durationMs = focusMotionRowOf(d).durationMsOf(d);
+  const durationMs = focusMotionRowOf(d.motion).durationMsOf(d);
   cache.set(d, durationMs);
   return durationMs;
 }
