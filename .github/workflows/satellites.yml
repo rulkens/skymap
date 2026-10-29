@@ -21,9 +21,12 @@ concurrency:
 permissions:
   contents: read
 
+# Two jobs so the R2 key never shares a runner with npm: an install script in `build` could tamper
+# with the runner (PATH, binaries) and catch the key in a later step. `upload` has no checkout and
+# no npm; it only receives the built file.
 jobs:
-  refresh:
-    name: fetch · build · upload
+  build:
+    name: fetch · build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -47,6 +50,27 @@ jobs:
       - name: Build satellites.satg
         run: npm run build-satellites
 
+      - name: Hand the catalog to the upload job
+        uses: actions/upload-artifact@v4
+        with:
+          name: satellite-catalog
+          path: public/data/satellite-catalog/v1/satellites.satg
+          if-no-files-found: error
+          retention-days: 1
+
+  upload:
+    name: upload
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Receive the catalog
+        uses: actions/download-artifact@v4
+        with:
+          name: satellite-catalog
+          path: catalog
+
       # Gzipped on the wire like the R2 sync's gzipOnWire families; browsers inflate it transparently.
       # max-age=3600: a refresh reaches every visitor within an hour, with no CDN purge.
       - name: Upload to R2
@@ -56,7 +80,7 @@ jobs:
           AWS_DEFAULT_REGION: auto
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          gzip -9 -n -c public/data/satellite-catalog/v1/satellites.satg > "$RUNNER_TEMP/satellites.satg"
+          gzip -9 -n -c catalog/satellites.satg > "$RUNNER_TEMP/satellites.satg"
           aws s3 cp "$RUNNER_TEMP/satellites.satg" s3://skymap-data/data/satellite-catalog/v1/satellites.satg \
             --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" \
             --content-type application/octet-stream \
