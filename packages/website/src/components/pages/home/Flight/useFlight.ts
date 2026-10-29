@@ -123,7 +123,7 @@ export function useFlight({
       const nudge = opening ? 'Scroll to pull back' : 'Keep scrolling';
       if (hint.textContent !== nudge) hint.textContent = nudge;
 
-      const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
+      const readout = `${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
       if (scale.textContent !== readout) scale.textContent = readout;
 
       // The rings are evenly spaced, so the line fills by stops passed and is full at the last ring.
