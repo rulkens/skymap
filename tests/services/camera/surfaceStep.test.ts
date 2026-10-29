@@ -33,6 +33,7 @@ import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { angleBetween } from '../../helpers/math/angleBetween';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -114,17 +115,6 @@ function zoom(factor: number, duringGesture: boolean, cursorPx: Vec2 | null = nu
 function eyeOf(pose: BodyFixedPose): Vec3 {
   const { anchorLocalM: a, eyeRelAnchorM: e } = pose;
   return [a[0] + e[0], a[1] + e[1], a[2] + e[2]];
-}
-
-// atan2 of the cross over the dot: acos of the dot reads a one-ulp difference
-// between parallel vectors as 1.5e-8, which is louder than the laws under test.
-function angleBetween(a: Vec3, b: Vec3): number {
-  const cross: Vec3 = [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
-  ];
-  return Math.atan2(Math.hypot(...cross), a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 }
 
 /**
