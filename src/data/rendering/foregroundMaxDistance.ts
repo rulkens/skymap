@@ -3,10 +3,10 @@
  * pass yields at, so all four NEAR0 encoder steps fall away wholesale at galaxy
  * zoom: `executeFrame` already skips an empty layer group and a composite whose
  * source target went untouched. A Layer pass declares it as its entry's
- * `FOREGROUND_RECEDE` band, applied by core; core's body passes AND it into
- * `enabled` by hand until the body Layers take them over, and the star passes
- * do too, because their entry carries `bodies` and scene-body admission cannot
- * measure a band.
+ * `FOREGROUND_RECEDE` band, applied by core; body slab rows yield through the
+ * same band as their `activeBand`, so past it the body passes are never asked.
+ * The star passes still AND it into `enabled` by hand, because their entry
+ * carries `bodies` and scene-body admission cannot measure a band.
  *
  * It maxes over region EXTENTS — a scale, no anchor POSITION, so seeding a region
  * 8 kpc out cannot widen it. Two measures read it until the hand gates go: the

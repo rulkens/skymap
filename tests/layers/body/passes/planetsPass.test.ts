@@ -148,12 +148,6 @@ function makePartitionFixture() {
 }
 
 describe('planetsPass.enabled', () => {
-  it('is false beyond the foreground gate even for a flat body', () => {
-    const { state, bodies, planets } = makePartitionFixture();
-    const farCtx = makeCtx(bodies, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planets.enabled(state, farCtx, makeBodyView(asSceneBodyId('mercury')))).toBe(false);
-  });
-
   it('is true for the flat-branch row, false for the textured and glint rows', () => {
     const { state, bodies, planets } = makePartitionFixture();
     const ctx = makeCtx(bodies);
@@ -275,12 +269,6 @@ describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)',
     const { state, bodies, planets } = makePartitionFixture();
     const ctx = makeCtx(bodies);
     expect(planets.pickEnabled!(state, ctx, makeBodyView(asSceneBodyId('moon')))).toBe(false);
-  });
-
-  it('is false beyond the foreground gate even for a textured row', () => {
-    const { state, bodies, planets } = makePartitionFixture();
-    const farCtx = makeCtx(bodies, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planets.pickEnabled!(state, farCtx, makeBodyView(asSceneBodyId('mars')))).toBe(false);
   });
 });
 

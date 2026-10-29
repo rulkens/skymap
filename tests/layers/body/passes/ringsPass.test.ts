@@ -137,17 +137,6 @@ function makeRendererSpy() {
 }
 
 describe('ringsPass.enabled', () => {
-  it('is false beyond the foreground gate even with a resident resolved ring', () => {
-    const { state, rings } = makeFixture(makeRendererSpy(), [saturnBody()], ['saturn-ring']);
-    expect(
-      rings.enabled(
-        state,
-        makeCtx(FOREGROUND_MAX_DISTANCE_MPC),
-        makeBodyView(asSceneBodyId('saturn')),
-      ),
-    ).toBe(false);
-  });
-
   it('is false when the ring strip is NOT resident', () => {
     const { state, rings } = makeFixture(makeRendererSpy(), [saturnBody()], []);
     expect(rings.enabled(state, makeCtx(), makeBodyView(asSceneBodyId('saturn')))).toBe(false);

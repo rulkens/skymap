@@ -67,9 +67,9 @@ export function deriveFrameContext(
   // A banded row exists only while its band is open. Keyed on the FRAME camera, not a
   // view's offset eye: eye separation is metres against a band in AU.
   const slabBodyCandidates: readonly SlabRow[] = [
-    ...state.slabRows.filter((row) => slabRowActive(row, cam.position, bodyStates)),
+    ...state.slabRows,
     ...hostlessMeshBodies.map(bodySlabRowOf),
-  ];
+  ].filter((row) => slabRowActive(row, cam.position, bodyStates));
 
   // Provider B serves ONLY the engaged body, from its own stored pose (no Mpc round
   // trip); everything else, and the whole absolute arm, stays on provider A. Gated on

@@ -14,7 +14,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
@@ -69,21 +68,16 @@ function makeBodyPose(): BodyPoseProvider {
   return (bodyId) => (bodyId === 'earth' ? STUB_POSE : null);
 }
 
-/** A ctx inside the foreground gate carrying the one body-m slab `bodyRowSlabs` resolves
- *  `insideAtmosphere` against; array position matches the slab's `index` (the `FrameView.slabs`
- *  invariant). */
-function makeCtx(
-  withEarthSlab: boolean,
-  camDistanceMpc = FOREGROUND_MAX_DISTANCE_MPC / 2,
-): FrameView {
+/** A ctx carrying the one body-m slab `bodyRowSlabs` resolves `insideAtmosphere` against;
+ *  array position matches the slab's `index` (the `FrameView.slabs` invariant). */
+function makeCtx(withEarthSlab: boolean, drawPxPerRad = FIXTURE_PX_PER_RAD): FrameView {
   const slabs = withEarthSlab
     ? [makeSlab({ index: 0, frame: { kind: 'body-m', hostId: asSceneBodyId('earth') } })]
     : [];
   return {
     bodyPose: makeBodyPose(),
     drawCamPos: [0, 0, 0],
-    cam: { distance: camDistanceMpc },
-    drawPxPerRad: FIXTURE_PX_PER_RAD,
+    drawPxPerRad,
     slabs,
     snapshot: { slabBodyCandidates: BODY_SLAB_ROWS },
   } as unknown as FrameView;
@@ -127,11 +121,11 @@ describe('encodeAtmosphereAerialPerspective', () => {
   });
 
   it('the aerial bake skips a hosting row whose body has no inside entry', () => {
-    // The band carries no foreground gate, so past it the line is open while the
-    // draw list is empty: the bake must find no entry rather than throw mid-frame.
+    // The draw list culls on the surface disc, the line on the eye's distance, so the
+    // line can be open with no entry: the bake must find none rather than throw mid-frame.
     beginComputePass.mockClear();
     const renderer = spyRenderer();
-    const ctx = makeCtx(true, FOREGROUND_MAX_DISTANCE_MPC);
+    const ctx = makeCtx(true, 1e-30);
 
     expect(() =>
       encodeAtmosphereAerialPerspective(renderer, encoder, ctx, makeState(), vi.fn()),

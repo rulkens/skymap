@@ -135,19 +135,6 @@ function makeFixture(renderer: unknown, bodies: readonly SeededPlanet[]) {
 }
 
 describe('texturedBodiesPass.enabled', () => {
-  it('is false beyond the foreground gate even for a resident resolved body', () => {
-    const { state, bodies, textured } = makeFixture(makeRendererSpy(['mars']), [
-      bodyAt('mars', 3390000),
-    ]);
-    expect(
-      textured.enabled(
-        state,
-        makeCtx(bodies, FOREGROUND_MAX_DISTANCE_MPC),
-        makeBodyView(asSceneBodyId('mars')),
-      ),
-    ).toBe(false);
-  });
-
   it('is false for a registry body that is NOT resident (it is flat, drawn by planetsPass)', () => {
     const { state, bodies, textured } = makeFixture(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
     expect(textured.enabled(state, makeCtx(bodies), makeBodyView(asSceneBodyId('mars')))).toBe(

@@ -5,16 +5,13 @@
  * Load-bearing: the f64 seam. The layer MUST feed `composeBodySlabMvp` the slab's `Float64Array`
  * `view.slab.vp`, NOT the f32-narrowed `view.vp`. `composeBodySlabMvp` and `bodySlabCamLocal` are
  * mocked to recognisable values (their math has its own tests); `bodyRelativePose` stays UNMOCKED,
- * so `ctx.cam` fixtures need non-degenerate `position`/`target`. Above `FOREGROUND_MAX_DISTANCE_MPC`
- * the whole `(foreground:0, 'body')` group must come back empty from the SAME filter
- * `executeFrame` uses, which lets the frame skip the foreground pass at galaxy zoom.
+ * so `ctx.cam` fixtures need non-degenerate `position`/`target`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { earthPass } from '../../../../src/layers/body/passes/earthPass';
 import { surfaceTilesPass } from '../../../../src/layers/body/passes/surfaceTilesPass';
-import { bodyLayer } from '../../../../src/layers/body/layer';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -236,45 +233,6 @@ describe('earthPass.enabled', () => {
     expect(earthPass(makeRuntime()).enabled(state, NEAR_CTX, makeEarthBodyView('earth'))).toBe(
       true,
     );
-  });
-
-  it('is disabled beyond the foreground gate and enabled below it', () => {
-    const state = makeState();
-    expect(
-      earthPass(makeRuntime()).enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2), VIEW_STUB),
-    ).toBe(true);
-    // At and above the gate Earth is a deep-sub-pixel speck at the galactic centre; the edge and a
-    // decade beyond are derived from the gate, so growing it cannot strand a literal.
-    expect(
-      earthPass(makeRuntime()).enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC), VIEW_STUB),
-    ).toBe(false);
-    expect(
-      earthPass(makeRuntime()).enabled(state, makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10), VIEW_STUB),
-    ).toBe(false);
-  });
-});
-
-describe("the (foreground:0, 'body') render group above the foreground gate", () => {
-  it('empties above the gate and is non-empty below it (the wholesale-skip property)', () => {
-    // The SAME group filter executeFrame applies: (target, slab) match + the layer's enabled gate.
-    // An empty group means the executor never opens the foreground pass or its composite.
-    const state = makeState();
-    const passes = bodyLayer.passes({
-      ...makeRuntime(),
-      texturedBodyRenderer: { hasMap: () => false },
-      textureSlots: new Map(),
-    } as unknown as BodyRuntime);
-    const bodyRoster = FRAME_ORDER.flatMap((step) =>
-      step.kind === 'foreground' ? step.bodyPasses : [],
-    );
-    const groupAt = (ctx: FrameView) =>
-      passes.filter(
-        (pass) => bodyRoster.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
-      );
-
-    expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2)).map((l) => l.name)).toContain('earth');
-    expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC))).toEqual([]);
-    expect(groupAt(makeCtx(FOREGROUND_MAX_DISTANCE_MPC * 10))).toEqual([]);
   });
 });
 

@@ -44,9 +44,10 @@ describe('surfaceTilePlanner', () => {
       debugPanelOpen: () => false,
       publish: vi.fn(),
     } as unknown as BodyRuntime;
-    // Over Earth, 1 km up; past the foreground gate, so no view shows it and no cut is walked.
+    // Over Earth, 1 km up, but no body row is active, so no view shows it and no cut is walked.
     const view = {
       cam: { distance: Infinity },
+      snapshot: { bodyStates: new Map(), slabBodyCandidates: [], meshBodies: [] },
       drawPxPerRad: 1000,
       frustum: { tanLeft: -1, tanRight: 1, tanDown: -1, tanUp: 1 },
       bodyPose: (id: string) =>
