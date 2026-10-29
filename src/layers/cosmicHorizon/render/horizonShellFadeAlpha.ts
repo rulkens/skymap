@@ -27,7 +27,7 @@
  * Smoothstepped between, so a slow fly-out reveals it without a pop.
  */
 
-import { smoothstep } from './smoothstep';
+import { smoothstep } from '../../../utils/math/smoothstep';
 
 const FADE_IN_START_FRAC = 0.05;
 const FADE_IN_FULL_FRAC = 0.4;

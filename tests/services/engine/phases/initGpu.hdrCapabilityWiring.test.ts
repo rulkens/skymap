@@ -106,14 +106,6 @@ vi.mock('../../../../src/layers/galaxyCatalog/render/proceduralDiskRenderer', ()
   createProceduralDiskRenderer: vi.fn(() => makeStub('proceduralDiskRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRenderer', () => ({
-  createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
-  // initGpu imports the FRAME program (for TIMED_SLOTS), which transitively
-  // loads the content-layer registry incl. horizonShellPass — that module
-  // reads this const, so the mock must provide it.
-  HORIZON_RADIUS_GPC: 14.3,
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () => ({
   createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
 }));
@@ -209,7 +201,6 @@ function makeState(): EngineState {
       selectionRingRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      horizonShellRenderer: null,
       pickDebugOverlay: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,

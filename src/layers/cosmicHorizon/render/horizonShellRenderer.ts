@@ -35,21 +35,21 @@
  *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
  */
 
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
-import vsCode from '../../shaders/horizonShell/vertex.wesl?static';
-import fsCode from '../../shaders/horizonShell/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { HORIZON_RADIUS_GPC } from '../../../../data/rendering/horizonRadiusGpc';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { HorizonShellRenderer } from '../../../../@types/rendering/HorizonShellRenderer';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import vsCode from '../../../services/gpu/shaders/horizonShell/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/horizonShell/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+import { HORIZON_RADIUS_GPC } from '../data/horizonRadiusGpc';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { HorizonShellRenderer } from '../@types/HorizonShellRenderer';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 type Init = {
   device: GPUDevice;
