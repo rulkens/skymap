@@ -26,17 +26,19 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { tweenToClip } from './tweenToClip';
+import { focusMoveClip } from './focusMoveClip';
+import { focusMoveDurationMs } from './focusMoveDurationMs';
+import { focusMotionRowOf } from './focusMotionRowOf';
+import { EASE } from '../animation/ease';
 import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
 import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { easeOutCubic } from '../../../utils/math/easeOutCubic';
+import { EASED_FOCUS_EASE } from '../../../data/camera/focusMoveDefaults';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
@@ -72,6 +74,7 @@ export function elapsedForWinner(
 export const NO_FOLLOW_MEMORY: FollowMemory = {
   from: null,
   distanceTarget: null,
+  durationMs: null,
   panOffset: [0, 0, 0],
   saturated: false,
 };
@@ -128,7 +131,9 @@ function followPose(
   // absolute-arm gate strands the camera.
   const memory = mem ?? NO_FOLLOW_MEMORY;
   let from = memory.from;
-  if (from === null) {
+  let durationMs = memory.durationMs;
+  // The duration is captured with `from`, so a slider drag never re-times a flight.
+  if (from === null || durationMs === null) {
     const cur = ctx.authoredWorld;
     const pb = ctx.poseBasis;
     const eye = eyeMpcOf(cur, pb);
@@ -142,6 +147,7 @@ function followPose(
       roll: cur.roll,
       lookOffset: cur.lookOffset,
     };
+    durationMs = s.settings.focusMoves.eased.durationMs;
   }
 
   // Distance target, two sources (see FollowMemory): a fresh focus seeds
@@ -169,7 +175,7 @@ function followPose(
 
   // The debt, not the clock, decides the ease is over: settled means the framing
   // was delivered, whatever the epoch reads.
-  const t = memory.saturated ? 1 : easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
+  const t = memory.saturated ? 1 : EASE[EASED_FOCUS_EASE](ctx.elapsedMs / durationMs);
   return {
     pose: absoluteArm({
       target: livePos,
@@ -183,7 +189,7 @@ function followPose(
       roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
       lookOffset: easedLookOffset(from, committed, t),
     }),
-    memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
+    memory: { from, distanceTarget, durationMs, panOffset: memory.panOffset, saturated: t >= 1 },
   };
 }
 
@@ -314,13 +320,13 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     commitsOnEdge: 'register',
     isActive: (s) => s.camera.tween !== null,
     // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
-    // captured through; `tweenToClip` memoises by reference so
+    // captured through; `focusMoveClip` memoises by reference so
     // `evaluateClip`'s compile cache reuses tracks across frames.
     pose: (ctx, mem) => {
       const s = ctx.state;
       const tween = s.camera.tween!;
       const pinned = ORIENTATION_FRAMES[tween.frame];
-      const evaluated = evaluateFramedClip(tweenToClip(tween), ctx.elapsedMs / 1000, {
+      const evaluated = evaluateFramedClip(focusMoveClip(tween), ctx.elapsedMs / 1000, {
         frameBasis: pinned,
         bodies: ctx.bodies,
         playback: tween,
@@ -330,8 +336,12 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       if (offset === undefined || !isWorldArm(framed))
         return { pose: framed, memory: settledMemory(mem) };
       // Clips author no offset channel, so the start pose's eases out here, on
-      // the same easeOutCubic `tweenToClip` gives every other term.
-      const keep = 1 - easeOutCubic(ctx.elapsedMs / tween.durationMs);
+      // the same ease the clip gives every other term.
+      const keep =
+        1 -
+        EASE[focusMotionRowOf(tween.motion).easeOf(tween)](
+          ctx.elapsedMs / focusMoveDurationMs(tween),
+        );
       const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
         pose: absoluteArm({ ...framed.pose, lookOffset }),

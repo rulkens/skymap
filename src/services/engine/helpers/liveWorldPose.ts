@@ -16,6 +16,6 @@ export function liveWorldPose(state: EngineState): CameraPose {
     // up-basis — the same split `runFrame` feeds the draw path.
     poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
     upBasis: state.cameraRuntime.outputs.upBasis,
-    terrainHeightAt: state.terrain.heightAt,
+    terrainHeightAt: state.terrainHeightAt,
   });
 }

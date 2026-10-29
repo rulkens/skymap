@@ -20,7 +20,7 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Seven formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Eight formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -30,6 +30,7 @@ Seven formats, each a magic + version header followed by fixed- or variable-size
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
+| SATG   | `0x47544153` | 1       | Earth-satellite SGP4 mean elements, columnar: ten f64 element columns, NORAD ids, class bytes, then names and COSPAR ids as a UTF-8 string table. 24-byte header. | [`writeSatelliteCatalog.ts`](../tools/utils/io/writeSatelliteCatalog.ts) |
 | SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/data/shellMesh/shellMeshFormat.ts)               |
 
 ## `public/data/` layout
@@ -43,6 +44,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
+- `satellite-catalog/v1/`: `satellites.satg`. Untracked by design: neither hashed nor in the manifest, because the daily Action overwrites it at this fixed R2 key (docs/DEPLOY.md, "Satellite catalog"). `dataUrl()` passes the unmanifested path through.
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
@@ -58,7 +60,7 @@ The manifest is written last, after every file it names, so a page load can neve
 
 Boot fetches `<dataBaseUrl>/data/manifest.json` once with `cache: 'no-cache'` ([`dataManifest.ts`](../src/services/loading/dataManifest.ts)); every subsequent [`dataUrl(filename)`](../src/services/loading/fetchWithProgress.ts) call resolves the logical name through it, falling back to the identity path when the manifest doesn't name it (an unbuilt worktree, or the unhashed `images/` tree). [`dataBaseUrl()`](../src/utils/network/dataBaseUrl.ts) is empty in dev (Vite serves `public/data/*` at `/data/*`) and points at the R2 custom domain in production. See [docs/DEPLOY.md](DEPLOY.md) for how that env var is set.
 
-Galaxy catalogs ship in three [`Tier`](../src/@types/data/Tier.d.ts) presets the user can hot-swap at runtime: `small` (~300k galaxies, mobile), `medium` (~600k, desktop default), `large` (~2.5M, opt-in full catalog). Per-source caps live on each entry's `tierTargets` in [`src/data/sources.ts`](../src/data/sources.ts) / `src/data/sources/*.ts` (galaxy catalogs: `src/layers/galaxyCatalog/sources/*.ts`); [`tierTargets.ts`](../src/data/tierTargets.ts) is the single place both the fetcher and the builder read for the (source, tier) → filename mapping, so the URL and the on-disk layout can't drift apart.
+Galaxy catalogs ship in three [`Tier`](../src/@types/data/Tier.d.ts) presets the user can hot-swap at runtime: `small` (~300k galaxies, mobile), `medium` (~600k, desktop default), `large` (~2.5M, opt-in full catalog). Per-source caps live on each entry's `tierTargets` in each Layer's `sources/` rows (galaxy catalogs: `src/layers/galaxyCatalog/sources/*.ts`), folded by [`src/data/sources.ts`](../src/data/sources.ts); [`tierTargets.ts`](../src/data/tierTargets.ts) is the single place both the fetcher and the builder read for the (source, tier) → filename mapping, so the URL and the on-disk layout can't drift apart.
 
 For a fresh checkout, `npm run fetch-data` pulls the deployed `manifest.json` and everything it currently names (`--dry-run` lists the selection without downloading). It is the fastest path to real data. Everything from here on is for building the binaries yourself from raw catalog downloads, needed if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
 
@@ -184,7 +186,7 @@ The Rust port, `npm run build-stars-rs` (requires a Rust toolchain), still emits
 
 ## Cosmic-web volumes
 
-All three share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/data/sources/*.ts`).
+All three share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/layers/cosmicWebDensity/sources/*.ts`).
 
 - **MCPM Cosmic Web** (`mcpm`): three tiered `.scfd` from the SDSS DR17 Cosmic Slime VAC. The Python extraction happens once per VAC release; contributors curl the pre-extracted `.npy` tiers and run `npm run build-mcpm`. Full flow in [`data/raw/mcpm/README.md`](../data/raw/mcpm/README.md).
 - **Polyphorm (2MRS)** (`polyphorm-2mrs`, hidden by default): a locally-run Polyphorm export converted by `tools/volumes/extractPolyphormExport.py` into d8/d4/d2 tiers, then imported per tier with `buildRhizomeVolume.ts --clamp 0.2`. The clamp zeroes packed voxels below that log-normalised threshold; 0.2 sits below the renderer's default visibility deadband and shrinks the large tier's gzipped size by two orders of magnitude at no visible cost.
@@ -214,7 +216,7 @@ The tiling is equirectangular: level `z` spans `512 << z` texels of width, i.e. 
 
 The same three bands carry a second product, **height**: `earth-tiles/v10/height/<z>/<x>/<y>.webp`, a lossless 129² Terrain-RGB WebP with a custom `SHGT` RIFF chunk carrying the header ([`heightTileFormat.ts`](../src/data/scene/heightTileFormat.ts)), baked over the albedo bands' own boxes and levels from ETOPO 2022 30″ globally, `skadi` 1″ under the EOX boxes, and DHM/Terræn 0.4 m under the GeoDanmark patch (`npm run fetch-height`; one README per source under `data/raw/`). Each pixel encodes `code = R·65536 + G·256 + B` against a single global 0.1 m grid (`heightM = HEIGHT_CODE_OFFSET_M + code · HEIGHT_CODE_STEP_M`); a per-tile scale would break bit-exact shared edges. Three rules make displacement crack-free and are easy to break silently: every post is addressed by its GLOBAL lattice index, so two adjacent tiles write the same computed float on their shared column; a coarser level takes its posts from the children already on disk by plain every-other-post decimation, never an average, so a parent is bit-identical to its children at shared points ([`bakeHeightLevel.ts`](../tools/textures/bakeHeightLevel.ts)); and every post is quantised onto the grid BEFORE the `SHGT` header's bounds are derived from it, so the header always describes exactly the posts the file stores. Bands therefore bake deepest-first in one invocation, which is also what nests z7 global under the z8 skadi tiles. ETOPO's bathymetry is not clamped at the source: the bake flattens each connected water component to its lowest shore and the largest one — the world ocean — to exactly 0, so an enclosed basin keeps its own level (the Dead Sea at −430 m, no Great-Lakes pit) — though where the land mask disagrees with ETOPO's own water (the Caspian and Black Sea shores baked to −131 m and −541 m against a true ≈−28 m and 0 m), a land post under deep ETOPO water donates its depth as the shore level; the rule is under review (spec §4.4).
 
-At runtime [`surfaceTileSubsystem.ts`](../src/services/engine/subsystems/surfaceTileSubsystem.ts) fetches the manifest (any failure degrades to the base globe, never an error), then streams tiles through a 256-slot LRU atlas (8192 px, 512 px slots) at 4 concurrent fetches. On R2 the tiles are immutable and bulk-uploaded via rclone; any re-bake that changes pixels bumps the `TILE_PREFIX` version, and the day-cached manifest uploads last ([`syncR2.ts`](../tools/deploy/syncR2.ts), [DEPLOY.md](DEPLOY.md)). Earth tiles never appear in the data `manifest.json`, so `npm run fetch-data` skips them by construction; dev serves whatever `public/data/images/earth-tiles/` holds locally.
+At runtime [`surfaceTileStream.ts`](../src/layers/body/subsystems/surfaceTiles/surfaceTileStream.ts) fetches the manifest (any failure degrades to the base globe, never an error), then streams tiles through a 256-slot LRU atlas (8192 px, 512 px slots) at 4 concurrent fetches. On R2 the tiles are immutable and bulk-uploaded via rclone; any re-bake that changes pixels bumps the `TILE_PREFIX` version, and the day-cached manifest uploads last ([`syncR2.ts`](../tools/deploy/syncR2.ts), [DEPLOY.md](DEPLOY.md)). Earth tiles never appear in the data `manifest.json`, so `npm run fetch-data` skips them by construction; dev serves whatever `public/data/images/earth-tiles/` holds locally.
 
 ### Mars surface sources
 
@@ -257,6 +259,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Voyager 1/2 tracks     | `fetch-horizons -- voyager1 voyager2` + `fetch-voyager-windows` | `build-spacecraft-tracks` (`spacecraftTracks.bin` + generated `missionEvents.generated.ts`) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
+| Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`satellite-catalog/v1/satellites.satg`; the Action uploads it, no `sync-r2`) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 

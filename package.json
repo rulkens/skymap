@@ -47,6 +47,7 @@
     "import-mesh": "\"${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}\" --background --factory-startup --python tools/meshes/prebake/importMesh.py --",
     "prebake-mesh": "tsx tools/meshes/prebakeMesh.ts",
     "build-spacecraft-tracks": "tsx tools/bodies/buildSpacecraftTracks.ts && npm run build-data-manifest",
+    "build-satellites": "tsx tools/satellites/buildSatellites.ts",
     "build-meshes": "tsx tools/meshes/buildMeshes.ts && npm run build-data-manifest",
     "promote-mcpm-workbench": "tsx tools/volumes/promoteWorkbenchExport.ts",
     "build-dust": "tsx tools/volumes/buildDustVolume.ts --all && npm run build-data-manifest",
@@ -105,6 +106,7 @@
     "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
     "fetch-height": "tsx tools/fetch/fetchHeightSources.ts",
     "fetch-horizons": "tsx tools/fetch/fetchHorizons.ts",
+    "fetch-celestrak": "tsx tools/fetch/fetchCelestrak.ts",
     "fetch-voyager-windows": "tsx tools/fetch/fetchVoyagerWindows.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
@@ -197,6 +199,7 @@
     "react-markdown": "10.1.0",
     "react-redux": "9.3.0",
     "redux-saga": "1.5.0",
+    "satellite.js": "7.1.0",
     "typed-redux-saga": "1.5.0",
     "wgpu-matrix": "3.4.2"
   }

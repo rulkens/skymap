@@ -541,6 +541,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       {
+        name: 'Satellites',
+        control: 'switch',
+        does: 'Shows the satellites and debris that CelesTrak tracks round Earth, as points, when the camera is near Earth. Their file is fetched, and their orbits worked out, only while the camera is there.',
+        values: SWITCH,
+        first: ON,
+        state: 'satellites.enabled',
+        firstValue: true,
+      },
+      {
         name: 'Zone of Avoidance',
         control: 'switch',
         does: 'Shows the blue band along the plane of the Milky Way, behind which the catalogues are short of galaxies.',
@@ -749,6 +758,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: 'Skymap',
         state: 'cameraControls.scheme',
         firstValue: 'skymap',
+      },
+      {
+        name: 'Focus moves',
+        control: 'list',
+        does: 'Chooses how the camera flies to something you focus on. Eased keeps every part of the move on one curve over a fixed time. Geodesic flies the zoom and the pan together at an even pace, and takes longer for longer journeys.',
+        values: 'Eased, Geodesic',
+        first: 'Eased',
+        state: 'focusMoves.style',
+        firstValue: 'eased',
       },
       {
         name: 'Orbit friction',

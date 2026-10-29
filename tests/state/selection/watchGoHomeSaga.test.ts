@@ -10,11 +10,16 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Middleware } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
+import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { goHome } from '../../../src/state/selection/goHome';
+import { startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
+import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { bodyHomePose } from '../../../src/services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
@@ -22,9 +27,14 @@ import { selectOrientation } from '../../../src/state/settings/selectors';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import {
+  setEasedDuration,
+  setFocusMoveStyle,
+} from '../../../src/state/settings/core/focusMovesSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { cameraRoute, selectionRoute, timeRoute } from '../../../src/store/constants';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
@@ -40,15 +50,34 @@ describe('watchGoHomeSaga', () => {
   let store: ReturnType<typeof build>;
   let cameraRuntime: () => LiveCameraRuntime | null;
 
+  // Every planted tween, in order: the reducer keeps only the last.
+  let tweens: CameraTweenDescriptor[];
+
   function build() {
     const mw = createSagaMiddleware();
-    const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
+    const recordTweens: Middleware = () => (next) => (action) => {
+      if (startCameraTween.match(action)) tweens.push(action.payload);
+      return next(action);
+    };
+    const s = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(recordTweens, mw),
+    });
+    // The focus tween saga runs too: Home's own Earth focus write funnels through it.
     mw.run(watchGoHomeSaga);
+    mw.run(watchFocusTweenSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: FOV, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
-    mw.setContext({ cameraRuntime: () => cameraRuntime() });
+    mw.setContext({
+      cameraRuntime: () => cameraRuntime(),
+      selection: composeSelectionRows(
+        () => [bodySelectionRow()],
+        () => ALL_KINDS_ENABLED,
+      ),
+    });
     return s;
   }
   beforeEach(() => {
+    tweens = [];
     store = build();
   });
 
@@ -98,5 +127,35 @@ describe('watchGoHomeSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
     expect(store.getState()[selectionRoute].select).toBeNull();
     expect(store.getState()[selectionRoute].focus).toBeNull();
+  });
+
+  it('under Eased, Home follows the eased duration', async () => {
+    store.dispatch(setEasedDuration(1234));
+
+    store.dispatch(goHome());
+    await flush();
+
+    expect(store.getState()[cameraRoute].tween!.motion).toEqual({
+      style: 'eased',
+      durationMs: 1234,
+      ease: 'easeOutCubic',
+    });
+  });
+
+  // Under Geodesic the focus saga tweens a moving body, so Home's Earth focus
+  // write must not plant a second, heading-keeping tween beside Home's own.
+  it('under Geodesic, Home tweens along the geodesic to bodyHomePose', async () => {
+    const now = performance.now();
+    store.dispatch(pause({ nowMs: now }));
+    store.dispatch(setFocusMoveStyle('geodesic'));
+
+    store.dispatch(goHome());
+    await flush();
+
+    const simDays = deriveSimDays(store.getState()[timeRoute], performance.now());
+    const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
+    expect(tweens).toHaveLength(1);
+    expect(tweens[0]!.motion.style).toBe('geodesic');
+    expect(tweens[0]!.to).toEqual(bodyHomePose(asSceneBodyId('earth'), simDays, FOV, frameBasis));
   });
 });
