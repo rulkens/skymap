@@ -16,23 +16,21 @@ import Remark from '../../components/shared/text/Remark/Remark.tsx';
 import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.tsx';
 import Step from '../../components/shared/layout/Step/Step.tsx';
 import Steps from '../../components/shared/layout/Steps/Steps.tsx';
+import Section from '../../components/shared/layout/Section/Section.tsx';
 import { appLink } from '../../data/appLink';
 import { CLASS_FEATURES } from '../../data/classFeatures';
 import { fact } from '../../data/fact';
 import { HOME_LINKS } from '../../data/homeLinks';
 import { HONESTY_BINS } from '../../data/honestyBins';
-import layout from '../../styles/layout.module.css';
 import links from '../../styles/links.module.css';
 import text from '../../styles/type.module.css';
 import { sitePath } from '../../utils/sitePath';
 
-export const section = `${layout.wrap} ${layout.section}`;
-export const linkRow = `${links['link-row']} ${links.onward}`;
 export const says = (id) => fact(id).short ?? fact(id).text;
 
 <ClassroomHero client:visible />
 
-<section class={section} id="lesson">
+<Section id="lesson">
   <SectionHead title="What you can do in a lesson">
     <p>The first needs no preparation.</p>
   </SectionHead>
@@ -51,16 +49,16 @@ export const says = (id) => fact(id).short ?? fact(id).text;
     </Feature>
   ))}
   <Remark text={says('earth-orbit-speed')} />
-</section>
+</Section>
 
-<section class={section} id="links">
+<Section id="links">
   <SectionHead title="Ready-made links">
     <p>Each link has one question. It opens where its picture was taken. The pictures have the <a href={sitePath('/docs/guide/settings/#turn-names-on-or-off')}>name labels</a> switched off; the links open with them on.</p>
   </SectionHead>
   <LessonLinks />
-</section>
+</Section>
 
-<section class={section} id="make">
+<Section id="make">
   <SectionHead title="Make your own link">
     <p>There is no share button: the address bar is the link.</p>
   </SectionHead>
@@ -82,15 +80,15 @@ export const says = (id) => fact(id).short ?? fact(id).text;
       <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view</ObjLink>
     </div>
   </Columns>
-</section>
+</Section>
 
-<section class={section} id="runs">
+<Section id="runs">
   <SectionHead title="Before you rely on it" />
   <Columns count={3}>
     <div>
       <h3>What it runs on</h3>
       <p><a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a> is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}{says('webgpu-required')}</p>
-      <p class={text.small}>{says('webgpu-browsers')}</p>
+      <p className={text.small}>{says('webgpu-browsers')}</p>
       <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
     </div>
     <div>
@@ -105,9 +103,9 @@ export const says = (id) => fact(id).short ?? fact(id).text;
       <p>A link fixes the camera among the stars, so it cannot show the Moon’s phases as they look from the ground. There is no link for phases or eclipses.</p>
     </div>
   </Columns>
-</section>
+</Section>
 
-<section class={section} id="honest">
+<Section id="honest">
   <SectionHead title="Measured, derived and drawn">
     <p>Some of the scene is data, some is <a href={sitePath('/docs/science/')}>derived from data</a>, and some is a choice of ours. It makes a lesson in how we know things: of anything on screen, ask which of the three it is.</p>
   </SectionHead>
@@ -119,18 +117,18 @@ export const says = (id) => fact(id).short ?? fact(id).text;
       </div>
     ))}
   </Columns>
-  <div class={links['link-row']}>
+  <div className={links['link-row']}>
     <ObjLink hang href={sitePath('/science/#bins')}>The science behind Skymap</ObjLink>
   </div>
-</section>
+</Section>
 
-<div class={section}>
-  <div class={linkRow}>
+<Section as="div">
+  <div className={links['onward-row']}>
     <OpenApp />
     <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
   </div>
-</div>
+</Section>
 
-<div class={section}>
+<Section as="div">
   <Credits />
-</div>
+</Section>

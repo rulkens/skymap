@@ -14,7 +14,7 @@ import ShotCaption from '../../shared/media/ShotCaption/ShotCaption.tsx';
 
 type WorkbenchFigureProps = { id: string };
 
-const FILES = import.meta.glob<string>('../../assets/workbenches/*.{avif,webp}', {
+const FILES = import.meta.glob<string>('../../../assets/workbenches/*.{avif,webp}', {
   eager: true,
   query: '?url&no-inline',
   import: 'default',
@@ -29,7 +29,7 @@ function WorkbenchFigure({ id }: WorkbenchFigureProps) {
   if (!row) throw new Error(`Unknown workbench "${id}" (see src/data/workbenches.ts)`);
 
   const url = (width: number, ext: string) => {
-    const file = FILES[`../../assets/workbenches/${id}-${width}.${ext}`];
+    const file = FILES[`../../../assets/workbenches/${id}-${width}.${ext}`];
     if (!file)
       throw new Error(
         `No ${ext} at ${width}px for workbench "${id}": run tools/site/shootWorkbench.ts`,

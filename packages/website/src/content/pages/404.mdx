@@ -9,23 +9,21 @@ import ViewLink from '../../components/shared/links/ViewLink/ViewLink.tsx';
 import PictureBand from '../../components/shared/media/PictureBand/PictureBand.tsx';
 import ShotCaption from '../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../components/shared/text/Sources/Sources.tsx';
+import Section from '../../components/shared/layout/Section/Section.tsx';
 import { appLink } from '../../data/appLink';
 import { siteShot } from '../../data/siteShot';
-import layout from '../../styles/layout.module.css';
 import text from '../../styles/type.module.css';
 import { sitePath } from '../../utils/sitePath';
-
-export const section = `${layout.wrap} ${layout.section}`;
 
 {/* The void's ring is in the middle of the frame: zoomed, it stands beside the words, not under them. */}
 
 <PictureBand id="void-bootes" gap="none" zoom={1.45} eager>
   <h1>There is nothing here</h1>
-  <p class={text.say}>This address is not on the map. The picture is the Boötes Void, reported in 1981 as “a million cubic megaparsec void”: the volume of a ball about 400 million light-years across, with very little in it. You are in suitable company.</p>
+  <p className={text.say}>This address is not on the map. The picture is the Boötes Void, reported in 1981 as “a million cubic megaparsec void”: the volume of a ball about 400 million light-years across, with very little in it. You are in suitable company.</p>
   <ObjLink hang size="big" href={sitePath('/')}>Skymap home page</ObjLink>
   <ViewLink hang href={appLink(siteShot('void-bootes').link)}>The Boötes Void</ViewLink>
   <ShotCaption id="void-bootes" open={false} />
 </PictureBand>
-<div class={section}>
+<Section as="div">
   <Sources ids={['bootes-void']} />
-</div>
+</Section>

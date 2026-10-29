@@ -16,15 +16,14 @@ import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.
 import Step from '../../components/shared/layout/Step/Step.tsx';
 import Steps from '../../components/shared/layout/Steps/Steps.tsx';
 import ViewLink from '../../components/shared/links/ViewLink/ViewLink.tsx';
+import Section from '../../components/shared/layout/Section/Section.tsx';
 import { appLink } from '../../data/appLink';
 import { fact } from '../../data/fact';
 import { REPO_URL } from '../../data/siteIdentity';
 import { siteShot } from '../../data/siteShot';
-import layout from '../../styles/layout.module.css';
 import text from '../../styles/type.module.css';
 import { sitePath } from '../../utils/sitePath';
 
-export const section = `${layout.wrap} ${layout.section}`;
 export const STEPS = [
   {
     title: 'You write to us',
@@ -50,10 +49,10 @@ export const STEPS = [
   <h1>Domes and museums</h1>
   <p>Skymap is made to be projected on a dome. We support 4K output (depending on the specs of your projection system) and can pre-render videos of any size.</p>
   <ObjLink hang href="#contact">How to reach us</ObjLink>
-  <p slot="note" class={text.small}>This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames are 4,096.</p>
+  <p slot="note" className={text.small}>This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames are 4,096.</p>
 </DiscBand>
 
-<section class={section} id="deliver">
+<Section id="deliver">
   <SectionHead title="What we can deliver">
     <p>For each: what the code does today, and what would be work for you.</p>
   </SectionHead>
@@ -81,59 +80,59 @@ export const STEPS = [
     <Fragment slot="work">A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor walks away is the planned kiosk mode, and we would build it for the first venue that needs it.</Fragment>
     <ObjLink slot="link" hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes</ObjLink>
   </Offer>
-</section>
+</Section>
 
-<section class={section} id="remote">
+<Section id="remote">
   <SectionHead title="Steer the dome from a phone">
     <p>A phone or a laptop in the room drives the live fisheye, so the person presenting can stand with the audience.</p>
   </SectionHead>
   <Columns count={2}>
     <div>
       <h3>Pair it</h3>
-      <p class={text.small}>The dome shows a QR code and a room code. Scan the QR code with a phone on the same network, or open the address shown under it.</p>
+      <p className={text.small}>The dome shows a QR code and a room code. Scan the QR code with a phone on the same network, or open the address shown under it.</p>
       <h3>Fly with your finger</h3>
-      <p class={text.small}>Drag to orbit, pinch to zoom. From the phone you can also search for an object, start a tour or an exhibit, set the time and switch labels on and off.</p>
+      <p className={text.small}>Drag to orbit, pinch to zoom. From the phone you can also search for an object, start a tour or an exhibit, set the time and switch labels on and off.</p>
       <h3>More than one phone</h3>
-      <p class={text.small}>Add a phone shows the code on the dome again, so a second person can join.</p>
+      <p className={text.small}>Add a phone shows the code on the dome again, so a second person can join.</p>
       <h3>Where it runs</h3>
-      <p class={text.small}>The phone and the dome talk through the computer that runs Skymap for your dome, so it works wherever the dome runs Skymap itself.</p>
+      <p className={text.small}>The phone and the dome talk through the computer that runs Skymap for your dome, so it works wherever the dome runs Skymap itself.</p>
     </div>
     {/* The island's wrapper takes no box, so the column is this div's. */}
     <div>
       <RemoteDemo sizes="(max-width: 900px) 100vw, 36rem" client:visible />
     </div>
   </Columns>
-</section>
+</Section>
 
-<section class={section} id="honest">
+<Section id="honest">
   <SectionHead title="What your audience is looking at" />
   <Columns count={3}>
     <div>
       <h3>Data and drawing, labelled</h3>
-      <p class={text.small}>Star and galaxy positions come from published <a href={sitePath('/docs/data/')}>catalogues</a>. Some of the scene is a model: nobody has photographed <a href={sitePath('/docs/science/#the-milky-way')}>the Milky Way</a> from outside, so on your dome it is drawn.</p>
+      <p className={text.small}>Star and galaxy positions come from published <a href={sitePath('/docs/data/')}>catalogues</a>. Some of the scene is a model: nobody has photographed <a href={sitePath('/docs/science/#the-milky-way')}>the Milky Way</a> from outside, so on your dome it is drawn.</p>
       <ObjLink hang size="small" href={sitePath('/science/')}>The science behind Skymap</ObjLink>
     </div>
     <div>
       <h3>Credits and licences</h3>
-      <p class={text.small}>Some data and imagery in Skymap carry non-commercial licences. The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data.{' '}{fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source by source, ask the rights holders where the terms require it, and replace what may not be shown.</p>
+      <p className={text.small}>Some data and imagery in Skymap carry non-commercial licences. The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data.{' '}{fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source by source, ask the rights holders where the terms require it, and replace what may not be shown.</p>
       <ObjLink hang size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
     </div>
     <div>
       <h3>Open source</h3>
-      <p class={text.small}><a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye view is constructed</a> before anyone signs anything.</p>
+      <p className={text.small}><a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye view is constructed</a> before anyone signs anything.</p>
       <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
     </div>
   </Columns>
   <Remark text={fact('earth-rotation').short} live="dome-turn" />
-</section>
+</Section>
 
-<section class={section} id="commission">
+<Section id="commission">
   <SectionHead title="How a commission runs" />
   <Steps count={4}>
     {STEPS.map((step) => (
       <Step title={step.title}>
-        <p class={text.small}>{step.text}</p>
+        <p className={text.small}>{step.text}</p>
       </Step>
     ))}
   </Steps>
-</section>
+</Section>

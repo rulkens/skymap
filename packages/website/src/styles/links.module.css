@@ -2,7 +2,7 @@
  * links.module.css — how links sit in running text and in the rows that close a section.
  * A vocabulary, not a component: no `.root`; take a class with
  * `composes: link-row from '../../../../styles/links.module.css'`. `.onward` is composed together
- * with `.link-row` (it only changes that row's alignment and top margin).
+ * with `.link-row` (it only changes that row's alignment and top margin); `.onward-row` is both.
  */
 
 /*
@@ -27,4 +27,9 @@
   align-items: center;
   row-gap: 0.75rem;
   margin-top: 2.5rem;
+}
+
+/* The row that closes a section: `.link-row` and `.onward` together, as one class a page takes by name. */
+.onward-row {
+  composes: link-row onward;
 }

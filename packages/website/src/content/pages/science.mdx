@@ -23,16 +23,14 @@ import ShotCaption from '../../components/shared/media/ShotCaption/ShotCaption.t
 import StatementsFigure from '../../components/pages/science/StatementsFigure/StatementsFigure.tsx';
 import Sources from '../../components/shared/text/Sources/Sources.tsx';
 import SourceTable from '../../components/pages/science/SourceTable/SourceTable.tsx';
+import Section from '../../components/shared/layout/Section/Section.tsx';
 import { fact } from '../../data/fact';
 import { REPO_URL } from '../../data/siteIdentity';
-import layout from '../../styles/layout.module.css';
 import links from '../../styles/links.module.css';
 import text from '../../styles/type.module.css';
 import { formatDate } from '../../utils/formatDate';
 import { sitePath } from '../../utils/sitePath';
 
-export const section = `${layout.wrap} ${layout.section}`;
-export const linkRow = `${links['link-row']} ${links.onward}`;
 export const MEASURED = [
   { term: 'Directions', id: 'sci-directions' },
   { term: 'Redshifts', id: 'sci-redshifts' },
@@ -126,7 +124,7 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 
 <PictureBand id="science-wedges" gap="none" eager>
   <h1>The science behind Skymap</h1>
-  <p class={text.say}>Skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says what is measured, what is derived and what is drawn, and lists where we simplify.</p>
+  <p className={text.say}>Skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says what is measured, what is derived and what is drawn, and lists where we simplify.</p>
   <ShotCaption id="science-wedges" />
 </PictureBand>
 
@@ -139,7 +137,7 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   ]}
 />
 
-<section class={section} id="sources">
+<Section id="sources">
   <SectionHead title="The sources">
     <p>This is every dataset Skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and the imagery. We list them so that anything you see in the app can be traced to who measured it. Each name opens a page with its licence and the files we use.</p>
   </SectionHead>
@@ -148,9 +146,9 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     <p>The count is what the app draws. It is smaller than the source’s own total because rows without a usable <a href={sitePath('/docs/reference/glossary/#redshift')}>redshift</a> are dropped, <a href={sitePath('/docs/data/pipeline/#cross-match-and-de-duplicate')}>overlapping catalogues are merged</a>, and <a href={sitePath('/docs/data/sdss/')}>SDSS</a> is cut to about 500,000 of its most luminous galaxies. Where a count is missing, neither our build nor the source’s own record gives one.</p>
     <p>Terrain heights, the Mars rover sites, 3D models, the constellation lines, the photographs of named galaxies and the survey pictures fetched for other galaxies are not in the table. They are recorded in the repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a> and its{' '}<a href={`${REPO_URL}/blob/main/ATTRIBUTIONS.md`}>attributions file</a>.</p>
   </SourceTable>
-</section>
+</Section>
 
-<section class={section} id="bins">
+<Section id="bins">
   <SectionHead title="Measured, derived, drawn">
     <p>Each word has one meaning on this site. A point in the scene is usually all three at once: a measured direction, a <a href={sitePath('/docs/science/#distance-from-redshift')}>derived distance</a> and a drawn dot.</p>
   </SectionHead>
@@ -172,11 +170,11 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     <Claims items={DRAWN} />
   </Group>
   <Remark text={fact('astronomical-unit').short} />
-</section>
+</Section>
 
 <FullFigure id="science-zoa" />
 
-<section class={section} id="simplifications">
+<Section id="simplifications">
   <SectionHead title="Known simplifications">
     <p>{count} places where the scene <a href={sitePath('/docs/simplifications/')}>departs from the sky</a>, or from what a careful analysis would do, as of{' '}{formatDate(fact('sim-frames').checked)}.</p>
   </SectionHead>
@@ -186,9 +184,9 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     </Group>
   ))}
   <Note>If you find one we missed, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.</Note>
-</section>
+</Section>
 
-<section class={section} id="cite">
+<Section id="cite">
   <SectionHead title="How to cite">
     <p><a href={sitePath('/docs/cite/')}>Cite Skymap</a> for the pictures, and the catalogues for the data in them.</p>
   </SectionHead>
@@ -202,11 +200,11 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       <AskList />
     </div>
   </Columns>
-</section>
+</Section>
 
-<section class={section} id="onward">
+<Section id="onward">
   <h2>Further reading</h2>
-  <div class={links['link-row']}>
+  <div className={links['link-row']}>
     <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
     <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
     <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
@@ -214,12 +212,12 @@ export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     <ObjLink hang href={sitePath('/classroom/')}>Use Skymap in the classroom</ObjLink>
     <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
   </div>
-  <div class={linkRow}>
+  <div className={links['onward-row']}>
     <OpenApp />
   </div>
-</section>
+</Section>
 
-<div class={section}>
+<Section as="div">
   <Sources ids={factIds} />
   <Credits />
-</div>
+</Section>

@@ -15,18 +15,16 @@ import Remark from '../../components/shared/text/Remark/Remark.tsx';
 import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.tsx';
 import ShotCaption from '../../components/shared/media/ShotCaption/ShotCaption.tsx';
 import Sources from '../../components/shared/text/Sources/Sources.tsx';
+import Section from '../../components/shared/layout/Section/Section.tsx';
 import { OPEN_APP_LABEL } from '../../data/appLink';
 import { ISSUES_URL } from '../../data/contact';
 import { fact } from '../../data/fact';
 import { MAKER_NAME } from '../../data/siteIdentity';
-import layout from '../../styles/layout.module.css';
 import links from '../../styles/links.module.css';
 import text from '../../styles/type.module.css';
 import { formatDate } from '../../utils/formatDate';
 import { sitePath } from '../../utils/sitePath';
 
-export const section = `${layout.wrap} ${layout.section}`;
-export const prose = `${text.prose} ${links['tap-links']}`;
 export const SITE = [
   { term: 'What it loads', id: 'privacy-site-requests' },
   { term: 'Who serves it', id: 'privacy-host' },
@@ -51,20 +49,20 @@ export const checked = formatDate(fact('privacy-site-requests').checked);
 
 <PictureBand id="privacy-far-side" gap="none" eager>
   <h1>Privacy</h1>
-  <p class={text.say}>This website collects nothing about you. The app counts visits without cookies and keeps one note in your browser.</p>
-  <Note flow>Each statement below was read from the code on <span class={text.date}>{checked}</span>.</Note>
+  <p className={text.say}>This website collects nothing about you. The app counts visits without cookies and keeps one note in your browser.</p>
+  <Note flow>Each statement below was read from the code on <span className={text.date}>{checked}</span>.</Note>
   <ShotCaption id="privacy-far-side" />
 </PictureBand>
 
-<section class={section} id="website">
+<Section id="website">
   <SectionHead title="This website" narrow>
     <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, the about page and this one.</p>
   </SectionHead>
   <Claims items={SITE} />
   <Remark text="Your browser fetched every file on this page from Skymap’s own addresses." live="files-fetched" />
-</section>
+</Section>
 
-<section class={section} id="app">
+<Section id="app">
   <SectionHead title="The app" narrow>
     <p>The map itself, which opens when you choose “{OPEN_APP_LABEL}”.</p>
   </SectionHead>
@@ -79,21 +77,21 @@ export const checked = formatDate(fact('privacy-site-requests').checked);
     <Claims items={APP} />
   </Group>
   <Note>The app’s data files come from the same host as this website, described above. Links in the app to outside catalogues, such as NED and Aladin, open those sites only when you choose them.</Note>
-</section>
+</Section>
 
-<section class={section} id="responsible">
+<Section id="responsible">
   <SectionHead title="Who is responsible" narrow>
     <p>{MAKER_NAME}, who makes Skymap, decides what the site and the app load and keep.</p>
   </SectionHead>
-  <div class={prose}>
+  <div className={`${text.prose} ${links['tap-links']}`}>
     <p>To ask what we hold about you, or to have it removed, open an issue on GitHub that says only that you have a privacy request, and we will reply with an address. Today the answer is short: the counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.</p>
   </div>
-  <div class={links['link-row']}>
+  <div className={links['link-row']}>
     <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
     <ObjLink hang size="small" href={sitePath('/about/')}>About Skymap</ObjLink>
   </div>
-</section>
+</Section>
 
-<div class={section}>
+<Section as="div">
   <Sources ids={factIds} all />
-</div>
+</Section>
