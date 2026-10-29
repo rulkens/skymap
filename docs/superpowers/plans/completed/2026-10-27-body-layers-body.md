@@ -752,7 +752,7 @@ in `src/data/bodies/{orbitalElements,scenePlanets,sceneEarth,rotationElements}.t
 (`grep -nE "'(earth|mercury|moon|titan|nereid|charon)'" <those files>` empty); `SCENE_PLANETS` ids print
 in today's order (checked once by the implementer, not a test).
 
-- [ ] Task 10
+- [x] Task 10
 
 ### Task 11: `LayerSearchEntry.chip`; the palette's `layer` arm shows it; craft rows chip their kind (O5 C)
 
@@ -783,7 +783,7 @@ const CHIP: Readonly<Record<string, string>> = {
 **Test:** `a layer row shows its entry's chip, and none when omitted`. **Bug caught:** the chip is
 dropped between the entry and the row view.
 
-- [ ] Task 11
+- [x] Task 11
 
 ### Task 12: earthScenes' own selection kind and palette row (O6a, O6b)
 
@@ -858,7 +858,7 @@ ui: [{ slot: 'detailCard', content: { type: 'earthScene', Detail: BodyDetailCard
 **Done:** `npx tsc --noEmit` clean; `grep -n EARTH_SCENE_BODY_IDS src/utils/scene/isCoreBodyId.ts` empty;
 boot passes `assertSelectionRowsDisjoint`.
 
-- [ ] Task 12
+- [x] Task 12
 
 ### Task 13: the `body` selection kind, its card and its source rows move into the Layer
 
@@ -903,7 +903,7 @@ does not check duplicates), so core's entry goes in this commit.
 **Done:** `grep -rn "coreSelectionRows\|isCoreBodyId" src tests` is empty; `assertSelectionRowsDisjoint`
 passes at boot.
 
-- [ ] Task 13
+- [x] Task 13
 
 ### Task 14: palette rows, captions, planet trails and the Solar System exhibit
 
@@ -960,7 +960,7 @@ guides: () => ({
 
 **Done:** `grep -rnE "kind: 'body'|CORE_TRAIL_ELEMENTS|SCENE_BODY_CAPTION_LABEL|sceneBodyCaptions" src | grep -v "^src/layers/body/"` is empty.
 
-- [ ] Task 14
+- [x] Task 14
 
 ### Task 15: docs for PRs 2–3
 
@@ -974,7 +974,7 @@ the stars (its row, drawing, caption, selection and search are all starCatalog's
 position), so it moves with the seeded stars (§7 step 5); stale comments the survey found:
 `source.ts:180-182` (the Sun's pick code), `BodySourceEntry.d.ts:5` (Sun listed as body-typed).
 
-- [ ] Task 15
+- [x] Task 15
 
 ---
 
