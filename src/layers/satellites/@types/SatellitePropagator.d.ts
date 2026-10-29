@@ -7,7 +7,7 @@ import type { SatelliteSweep } from './SatelliteSweep';
  * sweep is ever in flight.
  */
 export type SatellitePropagator = {
-  /** Parses `satellites.bin`, spawns the worker and resolves once it has built every satrec. */
+  /** Parses `satellites.satg`, spawns the worker and resolves once it has built every satrec. */
   start(file: ArrayBuffer): Promise<void>;
   /** Terminates the worker and drops the catalog and the last sweep. */
   stop(): void;
