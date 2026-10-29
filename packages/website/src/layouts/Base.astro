@@ -5,8 +5,8 @@ import '../styles/site.css';
 import jostUrl from '@fontsource-variable/jost/files/jost-latin-wght-normal.woff2?url';
 import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
 import BaseLayout from './BaseLayout/BaseLayout.tsx';
-import NavMenu from '../components/Nav/NavMenu.tsx';
-import LightLine from '../components/Footer/LightLine.tsx';
+import NavMenu from '../components/site/Nav/NavMenu.tsx';
+import LightLine from '../components/site/Footer/LightLine.tsx';
 import { fact } from '../data/fact';
 import DevOverlay from '../dev/overlay/DevOverlay/DevOverlay.tsx';
 import { INDEXABLE } from '../data/site';
@@ -76,10 +76,10 @@ const imageUrl = new URL(card.src, Astro.site).href;
       <slot />
     </BaseLayout>
     <script>
-      import '../components/Footer/lightLine.client.ts';
-      import '../components/CopyButton/copyButtons.client.ts';
-      import '../components/Remark/remarkLines.client.ts';
-      import '../components/Phone3D/phoneTurn.client.ts';
+      import '../components/site/Footer/lightLine.client.ts';
+      import '../components/shared/links/CopyButton/copyButtons.client.ts';
+      import '../components/shared/text/Remark/remarkLines.client.ts';
+      import '../components/shared/media/Phone3D/phoneTurn.client.ts';
     </script>
     {
       import.meta.env.DEV && (

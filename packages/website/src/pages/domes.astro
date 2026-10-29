@@ -6,10 +6,10 @@
  */
 import { getEntry, render } from 'astro:content';
 
-import Beside from '../components/Beside/Beside.tsx';
-import ContactClosed from '../components/ContactForm/ContactClosed.tsx';
-import ContactForm from '../components/ContactForm/ContactForm.tsx';
-import Credits from '../components/Credits/Credits.tsx';
+import Beside from '../components/shared/layout/Beside/Beside.tsx';
+import ContactClosed from '../components/pages/domes/ContactForm/ContactClosed.tsx';
+import ContactForm from '../components/pages/domes/ContactForm/ContactForm.tsx';
+import Credits from '../components/shared/text/Credits/Credits.tsx';
 import { CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../data/contact';
 import Base from '../layouts/Base.astro';
 import layout from '../styles/layout.module.css';
