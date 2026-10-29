@@ -7,13 +7,15 @@ import type { ShotFormat } from '../../shot/@types/ShotFormat';
  * The frame and `toBlob` share one task: a WebGPU canvas is cleared once
  * presented, so any await between them reads back transparent black. The page
  * script is a string because tsx wraps a nested named function in `__name`,
- * which does not exist in the page.
+ * which does not exist in the page. Under software WebGPU the frame lives in the
+ * overlay `installSoftwareCanvas` grabs into, so that canvas is read instead.
  */
 export async function readCanvas(page: Page, format: ShotFormat): Promise<Buffer> {
   const mime = format === 'png' ? 'image/png' : 'image/jpeg';
   const b64 = await page.evaluate<string | null>(`(async () => {
     await window.__skymap.nextFrame();
-    const canvas = document.querySelector('canvas');
+    await window.__softwareCanvasGrab?.();
+    const canvas = document.querySelector('canvas[data-software-canvas]') ?? document.querySelector('canvas');
     if (!canvas) return null;
     const blob = await new Promise((r) => canvas.toBlob(r, '${mime}', ${SHOT_JPEG_QUALITY / 100}));
     if (!blob) return null;

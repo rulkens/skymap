@@ -33,6 +33,7 @@ import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { angleBetween } from '../../helpers/math/angleBetween';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -114,13 +115,6 @@ function zoom(factor: number, duringGesture: boolean, cursorPx: Vec2 | null = nu
 function eyeOf(pose: BodyFixedPose): Vec3 {
   const { anchorLocalM: a, eyeRelAnchorM: e } = pose;
   return [a[0] + e[0], a[1] + e[1], a[2] + e[2]];
-}
-
-function angleBetween(a: Vec3, b: Vec3): number {
-  const la = Math.hypot(...a);
-  const lb = Math.hypot(...b);
-  const c = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb);
-  return Math.acos(Math.max(-1, Math.min(1, c)));
 }
 
 /**
@@ -429,7 +423,9 @@ describe('surfaceStep', () => {
       0.5 * Math.hypot(0 - 0.6, 0, 2 - 0.8),
       11, // measured residual 1.2e-12
     );
-    expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-12);
+    // 1e-11: the honest ruler reads 2.9e-12 here; the acos one read anything
+    // under 1.5e-8 as exactly 0, so the old 1e-12 bound never measured this.
+    expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-11);
 
     // …and keeping the wheel turning walks the eye onto that point, which is
     // the user-visible property: what the cursor is over stays put and grows.

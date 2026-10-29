@@ -1,35 +1,17 @@
 ---
 name: wesl-shaders
-description: Working with WESL (WebGPU Shading Extended Language) and the wesl-plugin Vite/build-time linker — covers .wesl import syntax, parser quirks, shader-module debugging, and WGSL struct layout for shared CameraUniforms-style prefixes. **Use this skill whenever you're editing a .wesl file, debugging a "Invalid ShaderModule" or "unexpected token" error from Chrome's WGSL compiler, extending a shaders/lib/ directory, or wiring wesl-plugin into a Vite or Vitest config — even if the user doesn't explicitly mention WESL.** The gotchas in this skill are linker-level constraints that aren't documented upstream and silently produce broken or unlinked WGSL output.
+description: Working with WESL (WebGPU Shading Extended Language) and Skymap's build-time linker (`weslStaticPlugin`, on the `wesl` library) — covers .wesl import syntax, parser quirks, shader-module debugging, and WGSL struct layout for shared CameraUniforms-style prefixes. **Use this skill whenever you're editing a .wesl file, debugging a "Invalid ShaderModule" or "unexpected token" error from Chrome's WGSL compiler, extending a shaders/lib/ directory, or wiring `weslStaticPlugin` into a Vite or Vitest config — even if the user doesn't explicitly mention WESL.** The gotchas in this skill are linker-level constraints that aren't documented upstream and silently produce broken or unlinked WGSL output.
 ---
 
 # WESL shader gotchas
 
-These are the things wesl-plugin@0.6.74's linker gets wrong (or stricter than the WESL spec suggests). Each one cost real debugging time during this repo's WGSL→WESL conversion. Re-test all of them on every wesl-plugin version bump — they're upstream bugs that may eventually be fixed.
+These are the places the `wesl` linker (0.7.26) is stricter than the WESL spec suggests, plus the wiring Skymap needs. `?static` imports are linked at build time by `tools/utils/vite/weslStaticPlugin.ts`, which emits the WGSL as a JSON string (so backticks in shader comments are harmless). Re-test the linker gotchas on every `wesl` version bump.
 
 Shaders live in `src/services/gpu/shaders/`, with the shared modules under `shaders/lib/`; the cross-references below all point into that tree.
 
-## The seven gotchas
+## The four gotchas
 
-### 1. No backticks in shader comments
-
-The WESL parser tokenises `` ` `` regardless of comment context — `//` AND `/* */` both fail with "expected a semicolon" at the first backtick.
-
-Use single quotes for inline-code callouts in `.wesl` source:
-
-```wgsl
-// 'saturate(x)' is a wrapper for clamp(x, 0, 1) — single quotes, NOT backticks.
-```
-
-`.ts`, `.md`, and other source files are unaffected. This repo did a one-time sweep across the shader tree during the WGSL→WESL rename:
-
-```sh
-perl -i -pe "s/\`/'/g" src/services/gpu/shaders/**/*.wesl
-```
-
-If you copy-paste from `.md` docs into `.wesl` files, watch for backticks the editor preserved silently.
-
-### 2. The package prefix is the literal token `package`
+### 1. The package prefix is the literal token `package`
 
 Inside `.wesl` files, the import-path root is the literal string `package`, not your `package.json` name.
 
@@ -41,33 +23,15 @@ import package::lib::math::saturate;
 import skymap::lib::math::saturate;
 ```
 
-The npm package name is reserved for cross-package imports if your project ever publishes a shader library. Single-project builds always use `package::`. Verified in `node_modules/wesl/dist/index.js` (the plugin calls `fileToModulePath(rootModuleName, "package", false)`, hard-coding the literal).
+The npm package name is reserved for cross-package imports if your project ever publishes a shader library. Single-project builds always use `package::`. Verified in `node_modules/wesl/dist/index.js` (the linker calls `fileToModulePath(rootModuleName, "package", false)`, hard-coding the literal).
 
-### 3. Imports must live at the top of the file
+### 2. Imports must live at the top of the file
 
-wesl-plugin@0.6.74's linker only resolves `import` statements that appear before code emission begins. Imports placed near their call sites (e.g., next to `fn shadeGalaxy(...)`) get passed through verbatim — Chrome's WGSL parser then chokes on the `import` keyword and the whole shader module fails to compile, silently invalidating any pipeline that depends on it.
-
-Symptom: a renderer that draws lazily (e.g., the milkyWay impostor whose draw is gated on `fadeAlpha > 0`) will work at startup, then turn the screen black the moment its draw fires for the first time. The shader compile error is in the browser console; it's the "previous error" referenced by the cascade of `Invalid ShaderModule` and `Invalid RenderPipeline` lines.
+The linker only resolves `import` statements that appear before the first declaration. An import placed near its call site (e.g., next to `fn shadeGalaxy(...)`) leaves the name unbound, and the link fails with `unresolved identifier '<name>'` — at build time, in the shader that imports it.
 
 Fix: move all `import` lines to the top of the file, alongside any existing imports.
 
-### 4. No brace-list imports
-
-WESL's spec allows `import path::{ a, b, c };`. wesl-plugin@0.6.74 doesn't — it passes brace-list imports through verbatim and Chrome rejects them. Use one `import` per identifier:
-
-```wgsl
-// Wrong (per the spec, but doesn't link in this plugin version):
-import package::lib::math::{ rot2, sabs, toPolar };
-
-// Right:
-import package::lib::math::rot2;
-import package::lib::math::sabs;
-import package::lib::math::toPolar;
-```
-
-The exception worth knowing: `import path::{ Type, fn };` for pulling out a struct AND a function from one module sometimes works in some plugin versions. Don't rely on it — split into two lines and re-test if you ever go back to the brace form.
-
-### 5. Imports name a function FROM a module, not a function-as-module
+### 3. Imports name a function FROM a module, not a function-as-module
 
 WESL's import resolution treats the LAST segment of the path as the function (or struct) name and everything before it as the module path. So:
 
@@ -81,35 +45,22 @@ Implication: don't do "one function per file" under `lib/`. The import path beco
 
 `src/services/gpu/shaders/lib/math.wesl` is the canonical example.
 
-### 6. Vitest doesn't auto-inherit Vite plugins
+### 4. Vitest doesn't auto-inherit Vite plugins
 
-Adding `wesl-plugin` to `vite.config.ts` is necessary but not sufficient. Vitest's SSR transform pipeline runs through its own plugin chain, and wesl-plugin must be registered explicitly in `vitest.config.ts`:
+Adding the plugin to `vite.config.ts` is necessary but not sufficient. Vitest's SSR transform pipeline runs through its own plugin chain, so `weslStaticPlugin` is registered again in `vitest.config.ts`:
 
 ```ts
 // vitest.config.ts
 import { defineConfig } from 'vitest/config';
-import { staticBuildExtension } from 'wesl-plugin';
-import viteWesl from 'wesl-plugin/vite';
+import { weslStaticPlugin } from './tools/utils/vite/weslStaticPlugin.ts';
 
 export default defineConfig({
-  plugins: [viteWesl({ extensions: [staticBuildExtension] })],
+  plugins: [weslStaticPlugin()],
   test: { environment: 'node', include: ['tests/**/*.test.ts'] },
 });
 ```
 
-Without this, Vitest fetches `.wesl` files and rolldown tries to parse them as JavaScript. The error message ("expected a semicolon" or "unexpected token") looks identical to gotcha #3 but the cause is completely different — check the test command first when you see this error.
-
-### 7. TypeScript types need a triple-slash reference, not just the tsconfig types array
-
-wesl-plugin ships ambient module declarations at the subpath `wesl-plugin/suffixes` (declares `*.wesl?static` as resolving to `string`). Adding `"wesl-plugin/suffixes"` to `compilerOptions.types` in `tsconfig.json` does not reliably resolve under `moduleResolution: "bundler"`. The fix is a triple-slash reference in a project ambient `.d.ts`:
-
-```ts
-// src/@types/wesl.d.ts
-/// <reference types="wesl-plugin/suffixes" />
-export {};
-```
-
-Belt-and-braces: keep the `compilerOptions.types` entry too, so the IDE picks it up. The triple-slash ensures the build itself resolves correctly.
+Without this, Vitest fetches `.wesl` files and rolldown tries to parse them as JavaScript, failing with "expected a semicolon" or "unexpected token" — a JS parse error, not a shader error. A tool with its own `wesl.toml` passes `weslStaticPlugin({ weslToml })`, since the default is `<cwd>/wesl.toml`.
 
 ## Runtime-only failure: duplicate @builtin(position)
 
@@ -117,7 +68,7 @@ Declaring `@builtin(position)` twice in one entry point (once on a member of the
 
 ## Mitigations baked into skymap
 
-- **shaderCompileLogger.ts** — every renderer routes `device.createShaderModule` through `createShaderModuleWithDevLog(device, code, label)`, which logs the linked WGSL alongside any compile-time error in dev mode. wesl-plugin doesn't yet emit sourcemaps that survive into Chrome's WGSL diagnostics, so error line numbers refer to the LINKED output, not your source `.wesl` files. Reading the linked output in the dev console is the only way to map "error at line 142" back to a source file. The helper is at `src/services/gpu/shaderCompileLogger.ts`; copy the pattern into other projects.
+- **shaderCompileLogger.ts** — every renderer routes `device.createShaderModule` through `createShaderModuleWithDevLog(device, code, label)`, which logs the linked WGSL alongside any compile-time error in dev mode. The linked output carries no sourcemap, so Chrome's error line numbers refer to the LINKED output, not your source `.wesl` files. Reading the linked output in the dev console is the only way to map "error at line 142" back to a source file. The helper is at `src/services/gpu/shaderCompileLogger.ts`; copy the pattern into other projects.
 
 - **`label:` everywhere** — every WebGPU resource (shader module, render pipeline, bind group, bind group layout, pipeline layout, buffer, texture) has a `label` field. Browser-console errors that previously said "(unlabeled)" now name the offending resource. Worth its weight in debugging time.
 
@@ -156,20 +107,16 @@ Exemplar: skymap's `tests/services/gpu/shaders/constants.parity.test.ts`. It ass
 
 ## Versions pinned
 
-- `wesl@^0.7.26`
-- `wesl-plugin@^0.6.74`
+- `wesl@0.7.26`
 
-Re-test gotchas 1-4 on every plugin version bump — they're all linker bugs that may be fixed upstream. If they're fixed, the workarounds become unnecessary noise; if they're not, document the version that confirmed them.
+Re-test gotchas 1-3 on every `wesl` version bump — they're linker behaviour that may change upstream. If they're fixed, the workarounds become unnecessary noise; if they're not, document the version that confirmed them.
 
-## When wesl-plugin gives you a parse error
+## When the linker gives you an error
 
 Before debugging the shader itself, run through this checklist:
 
-1. Any `` ` `` in comments? (gotcha #1) Strip them.
-2. Any `import` not at the top of the file? (gotcha #3) Hoist them.
-3. Any `import path::{ a, b }` brace lists? (gotcha #4) Split into one-per-line.
-4. Is the prefix `package::` or your npm name? (gotcha #2) It must be `package::`.
-5. Does `npm test` fail but `npm run build` pass? (gotcha #6) Vitest config is missing wesl-plugin.
-6. Does TypeScript complain about `?static` resolving to `any`? (gotcha #7) Add the triple-slash reference.
+1. `unresolved identifier`? An `import` below the first declaration (gotcha #2): hoist it.
+2. `module not found`? The prefix must be `package::` (gotcha #1), and the last path segment names a function in a module, not a file (gotcha #3).
+3. Does `npm test` fail but `npm run build` pass? (gotcha #4) `vitest.config.ts` is missing `weslStaticPlugin`.
 
 If none of these apply, you're looking at a real WGSL bug — read the linked output via the dev-mode logger (above) to see what reached Chrome's compiler.

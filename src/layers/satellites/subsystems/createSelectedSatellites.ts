@@ -6,11 +6,13 @@
  */
 import { transientPositions } from '../../../services/bodies/transientPositions';
 import { satelliteTransientId } from '../present/satelliteTransientId';
+import { satrecOf } from '../load/satrecOf';
 import { catalogIndexOf } from './catalogIndexOf';
 import { satellitePositioner } from './satellitePositioner';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
 import type { SatelliteCatalog } from '../../../@types/satellites/SatelliteCatalog';
 import type { SelectedSatellites } from '../@types/SelectedSatellites';
+import type { TrackedSatellite } from '../@types/TrackedSatellite';
 import type { SelectionState } from '../../../@types/store/SelectionState';
 
 const selectedNoradIds = ({ select, focus }: SelectionState): Set<number> => {
@@ -27,24 +29,34 @@ export function createSelectedSatellites(
   },
 ): SelectedSatellites {
   // The catalog each entry was built from, so a reloaded catalog rebuilds it.
-  const set = new Map<number, SatelliteCatalog>();
+  const set = new Map<number, { catalog: SatelliteCatalog; tracked: TrackedSatellite }>();
+  let tracked: readonly TrackedSatellite[] = [];
   let wanted = new Set<number>();
   let lastSelection: unknown = null;
 
   const sync = (): void => {
     const catalog = runtime.propagator.catalog();
     for (const [noradId, built] of set) {
-      if (wanted.has(noradId) && built === catalog) continue;
+      if (wanted.has(noradId) && built.catalog === catalog) continue;
       transientPositions.delete(satelliteTransientId(noradId));
       set.delete(noradId);
     }
-    if (catalog === null) return;
-    for (const noradId of wanted) {
-      const k = set.has(noradId) ? -1 : catalogIndexOf(catalog, noradId);
-      if (k < 0) continue;
-      transientPositions.set(satelliteTransientId(noradId), satellitePositioner(catalog, k));
-      set.set(noradId, catalog);
+    if (catalog !== null) {
+      for (const noradId of wanted) {
+        const k = set.has(noradId) ? -1 : catalogIndexOf(catalog, noradId);
+        if (k < 0) continue;
+        transientPositions.set(satelliteTransientId(noradId), satellitePositioner(catalog, k));
+        set.set(noradId, {
+          catalog,
+          tracked: {
+            satrec: satrecOf(catalog, k),
+            epochMs: catalog.epochMs[k]!,
+            classCode: catalog.classCode[k]!,
+          },
+        });
+      }
     }
+    tracked = Array.from(set.values(), (entry) => entry.tracked);
   };
 
   const onSelection = (): void => {
@@ -59,6 +71,7 @@ export function createSelectedSatellites(
   onSelection();
   return {
     any: () => wanted.size > 0,
+    tracked: () => tracked,
     stop: () => {
       for (const unsubscribe of unsubscribes) unsubscribe();
       wanted = new Set();

@@ -100,6 +100,20 @@ describe('createSelectedSatellites', () => {
     expect(deriveBodyStates(AT).has(ISS_ID)).toBe(true);
   });
 
+  it('exposes the satrec of what it positions, never a hovered one, and empties on clear', () => {
+    const { store, tracker } = setup(ISS_CATALOG);
+    stop = tracker.stop;
+    store.dispatch(updateSelectionHover(ISS_REF));
+    expect(tracker.tracked()).toEqual([]);
+    store.dispatch(updateSelectionSelect(ISS_REF));
+    const [iss] = tracker.tracked();
+    expect(iss?.satrec.satnum).toBe('25544');
+    expect(iss?.epochMs).toBe(ISS_CATALOG.epochMs[0]);
+    expect(tracker.tracked()).toBe(tracker.tracked());
+    store.dispatch(clearSelection());
+    expect(tracker.tracked()).toEqual([]);
+  });
+
   it('drops every position when it stops', () => {
     const { store, tracker } = setup(ISS_CATALOG);
     store.dispatch(updateSelectionFocus(ISS_REF, 'cut'));

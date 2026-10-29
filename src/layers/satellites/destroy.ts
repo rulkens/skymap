@@ -6,4 +6,5 @@ export function destroy(runtime: SatellitesRuntime): void {
   runtime.selected.stop();
   runtime.propagator.stop();
   runtime.renderer.destroy();
+  runtime.orbitRenderer.destroy();
 }

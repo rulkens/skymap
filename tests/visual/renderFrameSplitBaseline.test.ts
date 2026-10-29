@@ -338,6 +338,7 @@ describe('renderFrame visual baseline', () => {
     };
 
     const galaxyRuntime = {
+      focusBindGroup: {} as GPUBindGroup,
       pointRenderer: galaxyPointRenderer,
       proceduralDiskRenderer,
       texturedDiskRenderer,
@@ -394,6 +395,7 @@ describe('renderFrame visual baseline', () => {
         viewRig: 'mono',
         gpu: {
           labelRendererCosmo: labelRenderer,
+          label3DRenderer: null,
           markerLineRendererCosmo: markerLineRenderer,
           // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.

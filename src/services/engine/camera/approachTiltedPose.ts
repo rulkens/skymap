@@ -18,6 +18,7 @@ import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
+import { tiltFromNadirRad } from '../../../utils/camera/tiltFromNadirRad';
 import { isWorldArm } from './rungs/isWorldArm';
 import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../@types/scene/BodyState';
@@ -56,17 +57,12 @@ export function approachTiltedPose(
   const tau = mappedTiltRad(rememberedTiltRad, hr, tuning);
   if (tau < 1e-12) return framed; // at/above the band top — inert, by reference
 
-  const n = normalize3(rel);
   const forward = normalize3([
     pose.target[0] - eye[0],
     pose.target[1] - eye[1],
     pose.target[2] - eye[2],
   ]);
-  // Inlined rather than `tiltFromNadirRad`: the two round differently by an
-  // ulp, and at heliocentric magnitudes the yaw/pitch decode amplifies that
-  // to ~1e-9 — the golden trace holds this world-arm readout bit-for-bit.
-  const vert = forward[0] * n[0] + forward[1] * n[1] + forward[2] * n[2];
-  const currentTilt = Math.acos(Math.max(-1, Math.min(1, -vert)));
+  const currentTilt = tiltFromNadirRad(forward, rel);
   const delta = tau - currentTilt;
   if (Math.abs(delta) < 1e-12) return framed;
 

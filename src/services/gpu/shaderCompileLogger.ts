@@ -2,7 +2,7 @@
  * Helper for creating a `GPUShaderModule` that logs the linked WGSL
  * source alongside any compile-time error in dev mode.
  *
- * Why this exists: under wesl-plugin's `?static` import, what reaches
+ * Why this exists: under a `?static` import (`weslStaticPlugin`), what reaches
  * `device.createShaderModule` is a *linked* WGSL string with all WESL
  * imports resolved into top-level functions. Chrome's WGSL compiler
  * reports error line numbers against THAT linked string, not the
@@ -16,7 +16,7 @@
  * is a Promise; we don't await it so module creation stays
  * synchronous and the caller can keep building its pipeline.
  *
- * Until wesl-plugin gains sourcemap support, every renderer should
+ * Until the linked output carries a sourcemap, every renderer should
  * route shader-module creation through this helper. Removing it later
  * is a one-line edit (drop the wrapper, call createShaderModule
  * directly) — keeping it in a single file means there's exactly one

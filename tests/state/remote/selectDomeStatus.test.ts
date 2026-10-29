@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { selectDomeStatus } from '../../src/compositions/selectDomeStatus';
-import { stateAfter } from '../fixtures/stateAfter';
-import { setControlScheme } from '../../src/state/settings/core/cameraControlsSlice';
-import { setSelectionRow } from '../../src/state/selectionRows/selectionRowsSlice';
-import { takeoverStarted } from '../../src/state/takeover/takeoverActions';
-import { beatChanged, setPaused } from '../../src/state/tour/tourSlice';
-import { setSimDays } from '../../src/state/time/timeSlice';
-import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
-import { bodyDriverGeometry } from '../../src/utils/scene/bodyDriverGeometry';
-import type { ToggleRow } from '../../src/@types/settings/ToggleRow';
-import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
+import { selectDomeStatus } from '../../../src/state/remote/selectDomeStatus';
+import { stateAfter } from '../../fixtures/stateAfter';
+import { setControlScheme } from '../../../src/state/settings/core/cameraControlsSlice';
+import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
+import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { beatChanged, setPaused } from '../../../src/state/tour/tourSlice';
+import { setSimDays } from '../../../src/state/time/timeSlice';
+import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
+import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const NO_ROWS: readonly ToggleRow[] = [];
 

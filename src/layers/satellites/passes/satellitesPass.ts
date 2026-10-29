@@ -19,7 +19,6 @@ import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
 import type { SatelliteClass } from '../../../@types/satellites/SatelliteClass';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepthBinding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
@@ -27,19 +26,19 @@ import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOcclud
 import { near0OverlayClipScale } from '../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
-import { satelliteOpacity } from '../subsystems/satelliteOpacity';
+import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
+import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
-import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
+import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
   const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number => {
-    const catalog = runtime.propagator.catalog();
-    if (catalog === null) return 0;
-    return satelliteOpacity(
-      julianDaysToUnixMs(simDays),
-      catalog.fetchedAtMs,
-      distanceMpc(eye, earthMpc) / SCALE_UNITS.KM_TO_MPC,
+    const sweep = runtime.renderer.uploaded();
+    const age = sweep === null ? Infinity : Math.abs(julianDaysToUnixMs(simDays) - sweep.simMs);
+    return (
+      sweepAgeOpacity(
+        Math.max(age, runtime.simRate.rate() * SATELLITE_SWEEP_TIMING.expectedSweepLagMs),
+      ) * satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc)
     );
   };
 
@@ -80,11 +79,7 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
 
     enabled(state, ctx, view, fade) {
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
-      const sweep = runtime.renderer.uploaded();
-      if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return false;
-      if (earth === undefined || sweep === null) return false;
-      const simAge = Math.abs(julianDaysToUnixMs(ctx.snapshot.simDays) - sweep.simMs);
-      if (simAge > SATELLITE_SWEEP_TIMING.maxDrawSimAgeMs) return false;
+      if (earth === undefined) return false;
       return opacityOf(ctx.snapshot.simDays, view.camPos, earth.positionMpc) > 0;
     },
 
