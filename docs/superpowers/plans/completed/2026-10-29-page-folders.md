@@ -99,7 +99,7 @@ Each component keeps its own folder (`Shot/Shot.tsx` + `Shot.module.css`) and it
 - [x] No `export const` is left in any landing MDX file, and no `class=` in any MDX file.
 - [x] `components/` has only `site/`, `shared/`, `docs/` and `pages/` at its top.
 - [x] The built HTML of all 8 pages is unchanged apart from dev-only output. Diff `dist/` before and after.
-- [ ] The review tool on :5800 shows a page job and the section jobs, and editing the job in the bar rewrites the YAML.
+- [x] The review tool on :5800 shows a page job and the section jobs, and editing the job in the bar rewrites the YAML. (Checked by curl and a PUT to __job; the owner merged without a visual look.)
 - [x] The PR body points to the drafted section jobs in the 8 structure files.
 
 ## Out of scope
