@@ -19,6 +19,7 @@ import type { InputStep } from '../../../src/@types/camera/InputStep';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -28,7 +29,12 @@ const POLE: Vec3 = [0, 0, 1];
 const NADIR: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, -1];
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
-  return { bodyId: 'earth', anchorLocalM: [0, 0, 0], eyeRelAnchorM: eyeM, basisLocal };
+  return {
+    bodyId: asSceneBodyId('earth'),
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: eyeM,
+    basisLocal,
+  };
 }
 
 function zoom(factor: number): InputStep {

@@ -3,13 +3,14 @@ import { selectionDriver } from '../../../src/utils/selection/selectionDriver';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 describe('selectionDriver', () => {
   it('returns the driver on a driving arm', () => {
     const driver = bodyDriverGeometry('earth');
     const row: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [0, 0, 0],
       driver,

@@ -32,6 +32,7 @@ import type { TiltMemory } from '../../../src/@types/camera/TiltMemory';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { TILT_GAIN } from '../../../src/data/camera/tiltGain';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const R = 1;
 const VIEWPORT: Vec2 = [100, 100];
@@ -69,7 +70,7 @@ const BAND_MID_HR = Math.sqrt(TUNING.tiltFullHR * TUNING.tiltZeroHR);
 /** Parked at the midpoint, so `bodyUpWeight` is strictly in (0, 1) and the
  * un-map shows up in the numbers rather than as an identity. */
 const IN_BAND: BodyFixedPose = {
-  bodyId: 'earth',
+  bodyId: asSceneBodyId('earth'),
   anchorLocalM: [0, 0, 0],
   eyeRelAnchorM: [0, 0, R * (1 + BAND_MID_HR)],
   basisLocal: NADIR,
@@ -93,7 +94,12 @@ function hrOf(p: BodyFixedPose): number {
 }
 
 function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
-  return { bodyId: 'earth', anchorLocalM: [0, 0, 0], eyeRelAnchorM: eyeM, basisLocal };
+  return {
+    bodyId: asSceneBodyId('earth'),
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: eyeM,
+    basisLocal,
+  };
 }
 
 function drag(mode: 'orbit' | 'pan', startPx: Vec2, endPx: Vec2): InputStep {
@@ -1118,7 +1124,7 @@ describe('surfaceStep', () => {
 
   it('a tilt drag writes the un-mapped memory and returns a new object', () => {
     const prev = Object.freeze({ gesture: 'down' as const });
-    const prevTilt: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0 };
+    const prevTilt: TiltMemory = { hostId: asSceneBodyId('earth'), rememberedTiltRad: 0 };
     const { pose, gesture, tilt } = surfaceStep(prev, prevTilt, IN_BAND, tiltDrag(15), CTX);
 
     expect(gesture).not.toBe(prev);
@@ -1133,7 +1139,7 @@ describe('surfaceStep', () => {
   });
 
   it('a zoom step never authors tilt', () => {
-    const prevTilt: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0.4 };
+    const prevTilt: TiltMemory = { hostId: asSceneBodyId('earth'), rememberedTiltRad: 0.4 };
     const step: InputStep = { kind: 'zoom', factor: 0.5, duringGesture: false, cursorPx: null };
     const { pose, gesture, tilt } = surfaceStep(
       EMPTY_SURFACE_GESTURE_MEMORY,
@@ -1180,7 +1186,7 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
     ];
     const m = R * (1 + BAND_MID_HR);
     return {
-      bodyId: 'earth',
+      bodyId: asSceneBodyId('earth'),
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [LU[0] * m, LU[1] * m, LU[2] * m],
       basisLocal: [...right, ...up, ...forward] as Mat3,

@@ -1,49 +1,43 @@
 /**
  * buildDemandCtx — unit tests for the demand-context builder.
  *
- * The builder maps `EngineState` into the read surfaces a demand predicate
- * consults. These tests target the two non-trivial surfaces: `slotState`
- * (slot accessor + idle fallback) and `request` (the transient request-flag
- * set). `settings` is a direct passthrough and needs no behaviour test.
- *
- * Mocking strategy: inject a minimal `state` carrying only the slices the
- * builder reads — `settings`, `ui`, and `assetSlots`. No GPU
- * resources are involved.
+ * Targets the two non-trivial surfaces: `slotState` (slot accessor + idle fallback) and `request` (the
+ * transient request-flag set). `settings` is a direct passthrough. A minimal `state` carries only
+ * `settings`, `ui` and `slotsByKey`.
  */
 
 import { describe, it, expect } from 'vitest';
 import { buildDemandCtx } from '../../../../src/services/engine/wiring/buildDemandCtx';
-import { Source } from '../../../../src/data/sources';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
-/**
- * Build a minimal EngineState with only the fields buildDemandCtx reads.
- * `ui.paletteOpen` defaults to false, and the slot maps/fields to empty so
- * `slotState` falls back to 'idle' unless a test supplies a slot.  `tier`
- * lives top-level on `settings` (the builder itself never reads it).
- */
 function makeState(
   opts: {
     paletteOpen?: boolean;
-    points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousGalaxiesMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
     simDays?: number;
   } = {},
 ): EngineState {
-  const famousGalaxiesMeta =
+  const slotsByKey = new Map<AssetKey, AssetSlot<unknown, unknown>>(
     opts.famousGalaxiesMetaState === undefined
-      ? null
-      : ({ state: () => ({ kind: opts.famousGalaxiesMetaState }) } as unknown as AssetSlot<
-          unknown,
-          unknown
-        >);
+      ? []
+      : [
+          [
+            'famousGalaxiesMeta',
+            { state: () => ({ kind: opts.famousGalaxiesMetaState }) } as unknown as AssetSlot<
+              unknown,
+              unknown
+            >,
+          ],
+        ],
+  );
   const pose = opts.pose ?? {
     target: [0, 0, 0],
     yaw: 0,
@@ -57,10 +51,7 @@ function makeState(
       cosmicWebDensity: { items: {} },
     },
     ui: { paletteOpen: opts.paletteOpen ?? false } as UiState,
-    assetSlots: {
-      points: opts.points ?? new Map(),
-      famousGalaxiesMeta,
-    },
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm(pose) },
       outputs: {
@@ -70,9 +61,7 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    // `slotFor` consults the Layer-owned slots first; none here.
-    layerSlots: new Map(),
-    subsystems: { surfaceTiles: null },
+    slotsByKey,
   } as unknown as EngineState;
 }
 

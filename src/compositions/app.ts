@@ -11,14 +11,17 @@ import { EARTH_HOME } from '../data/selection/earthHome';
 import { blackHolesLayer } from '../layers/blackHoles/layer';
 import { bodyLayer } from '../layers/body/layer';
 import { constellationsLayer } from '../layers/constellations/layer';
+import { cosmicHorizonLayer } from '../layers/cosmicHorizon/layer';
 import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
 import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
+import { earthScenesLayer } from '../layers/earthScenes/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { lightTimeLayer } from '../layers/lightTime/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
 import { milkyWayLayer } from '../layers/milkyWay/layer';
 import { missionsLayer } from '../layers/missions/layer';
+import { satellitesLayer } from '../layers/satellites/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
 import { stellarStreamsLayer } from '../layers/stellarStreams/layer';
 import { structureLayer } from '../layers/structure/layer';
@@ -32,15 +35,18 @@ export const APP_COMPOSITION = {
     cosmicWebFilamentsLayer,
     flowLayer,
     missionsLayer,
+    satellitesLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
     stellarStreamsLayer,
     lightTimeLayer,
+    cosmicHorizonLayer,
     constellationsLayer,
     blackHolesLayer,
     milkyWayLayer,
     structureLayer,
     bodyLayer,
+    earthScenesLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -51,14 +57,17 @@ export const APP_COMPOSITION = {
     typeof cosmicWebFilamentsLayer,
     typeof flowLayer,
     typeof missionsLayer,
+    typeof satellitesLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
     typeof stellarStreamsLayer,
     typeof lightTimeLayer,
+    typeof cosmicHorizonLayer,
     typeof constellationsLayer,
     typeof blackHolesLayer,
     typeof milkyWayLayer,
     typeof structureLayer,
     typeof bodyLayer,
+    typeof earthScenesLayer,
   ]
 >;

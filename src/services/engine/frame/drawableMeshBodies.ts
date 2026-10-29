@@ -1,8 +1,8 @@
 /**
- * drawableMeshBodies — the mesh-drawn bodies a host row draws: attached to it
- * and in the partition's `meshes` (resolved AND resident). ONE derivation behind
- * `meshBodiesPass`'s `enabled`, `draw` and `drawPick`, so the gate and the two
- * draws cannot disagree. A host with nothing attached short-circuits before
+ * drawableMeshBodies — the mesh-drawn bodies of `roster` a host row draws: attached to it
+ * and in that roster's partition `meshes` (resolved AND resident). ONE derivation behind a
+ * mesh pass's `enabled`, `draw` and `drawPick`, so the gate and the two draws cannot
+ * disagree. A host with none of the roster attached short-circuits before
  * `sceneBodyPartition` is touched.
  */
 
@@ -16,10 +16,12 @@ export function drawableMeshBodies(
   state: PassState,
   ctx: FrameView,
   hostId: string,
+  roster: ReadonlySet<string>,
 ): readonly MeshPresentation[] {
   if (state.gpu.meshBodyRenderer === null) return [];
-  const attached = meshBodiesAttachedTo(hostId);
+  const attached = meshBodiesAttachedTo(hostId).filter((body) => roster.has(body.id));
   if (attached.length === 0) return [];
-  const resolved = sceneBodyPartition(state, ctx).meshes;
+  // Surface maps only split `flat` from `textured`; `meshes` never reads them.
+  const resolved = sceneBodyPartition(state, ctx, roster, () => false).meshes;
   return attached.filter((body) => resolved.some((m) => m.id === body.id));
 }

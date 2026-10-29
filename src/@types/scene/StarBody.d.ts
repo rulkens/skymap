@@ -16,9 +16,10 @@
 
 import type { BodySurface } from './BodySurface';
 import type { Vec3 } from '../math/Vec3';
+import type { SceneBodyId } from './SceneBodyId';
 
 export type StarBody = {
-  readonly id: string;
+  readonly id: SceneBodyId;
   readonly label: string;
   readonly absMag: number; // drives point brightness/size + LOD
   readonly color: Vec3; // blackbody colour from temperatureK, linear RGB

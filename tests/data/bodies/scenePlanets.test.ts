@@ -4,12 +4,13 @@ import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const hypot3 = (v: readonly [number, number, number]) => Math.hypot(v[0], v[1], v[2]);
 
 // Position + orientation live in each body's derived BodyState, not the record.
 const states = deriveBodyStates(CONST_J2000);
-const stateOf = (id: string) => states.get(id)!;
+const stateOf = (id: string) => states.get(asSceneBodyId(id))!;
 
 describe('SCENE_PLANETS', () => {
   it("Jupiter's heliocentric distance is Jovian-scale (~5.2 AU)", () => {

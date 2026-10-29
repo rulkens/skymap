@@ -16,10 +16,11 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { SceneBodyId } from '../scene/SceneBodyId';
 
 export type BodyInfo = {
   readonly type: 'body';
-  readonly id: string;
+  readonly id: SceneBodyId;
   readonly label: string;
   readonly positionMpc: Vec3;
 };

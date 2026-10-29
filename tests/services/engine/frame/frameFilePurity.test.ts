@@ -1,6 +1,6 @@
 /**
- * A file under `src/services/engine/frame/` — and its `timing/` and `passes/`
- * subfolders, and every Layer's own `passes/` — declares ONE thing: the symbol
+ * A file under `src/services/engine/frame/` — and its subfolders, and every
+ * Layer's own `passes/` — declares ONE thing: the symbol
  * it is named for (for a pass file, its `ContentPass`). Helpers and constants
  * inlined beside it are invisible to the rest of the codebase and untestable
  * alone, and agents keep re-adding them — hence a ratchet rather than a review
@@ -50,14 +50,12 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
-  'frame/passes/bodyGlintsPass': 3,
-  'frame/passes/cloudShellPass': 1,
-  'frame/passes/earthPass': 4,
-  'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
-  'frame/passes/planetsPass': 1,
-  'frame/passes/ringsPass': 1,
-  'frame/passes/texturedBodiesPass': 2,
+  'layers/body/passes/bodyGlintsPass': 2,
+  'layers/body/passes/cloudShellPass': 1,
+  'layers/body/passes/planetsPass': 1,
+  'layers/body/passes/ringsPass': 1,
+  'layers/body/passes/texturedBodiesPass': 2,
   'layers/milkyWay/passes/milkyWayPass': 1,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
   'layers/starCatalog/passes/starPointsPass': 2,
@@ -73,7 +71,6 @@ type Declared = { readonly name: string; readonly exported: boolean };
 const isExportedStatement = (stmt: Statement): boolean =>
   Node.isModifierable(stmt) && stmt.hasModifier(SyntaxKind.ExportKeyword);
 
-/** Top-level VALUE declarations; types are `src/@types/`'s business, not this sweep's. */
 function declarationsOf(stmt: Statement): readonly Declared[] {
   if (Node.isImportDeclaration(stmt) || Node.isExportDeclaration(stmt)) return [];
   if (Node.isTypeAliasDeclaration(stmt) || Node.isInterfaceDeclaration(stmt)) return [];
@@ -99,7 +96,6 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
 // underscores.
 const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase();
 
-/** Everything declared beside the file's own symbol (the export it is named for). */
 function strayDeclarations(path: string, base: string): readonly string[] {
   const declared = parseOnlyProject
     .addSourceFileAtPath(path)
@@ -117,16 +113,12 @@ describe.each([
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
-  ['frame/computes', FRAME_DIR + 'computes/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
-  // `passes/index.ts` and `computes/index.ts` are
-  // registry barrels, not rows; the other dirs have no barrel and CLAUDE.md
-  // forbids adding one.
+  // `passes/index.ts` is a registry barrel, not a row; the other dirs have no
+  // barrel and CLAUDE.md forbids adding one.
   const files = readdirSync(dir).filter(
-    (f) =>
-      f.endsWith('.ts') &&
-      !((label === 'frame/passes' || label === 'frame/computes') && f === 'index.ts'),
+    (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
   );
   expect(files.length).toBeGreaterThan(0);
 

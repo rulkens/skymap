@@ -20,6 +20,7 @@ import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Two instants far enough apart that Earth has visibly moved along its orbit.
 const SIM_A = CONST_J2000 + 3652.5; // ~10 years past epoch
@@ -29,7 +30,7 @@ const BODIES_B = deriveBodyStates(SIM_B);
 
 const EARTH_ROW: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),
@@ -45,8 +46,8 @@ const NO_PAN: Vec3 = [0, 0, 0];
 
 describe('applyFocusedBodyPivot', () => {
   it('pins the target to the live body while keeping the orbit terms (no drift)', () => {
-    const posA = deriveBodyStates(SIM_A).get('earth')!.positionMpc;
-    const posB = deriveBodyStates(SIM_B).get('earth')!.positionMpc;
+    const posA = deriveBodyStates(SIM_A).get(asSceneBodyId('earth'))!.positionMpc;
+    const posB = deriveBodyStates(SIM_B).get(asSceneBodyId('earth'))!.positionMpc;
     // Precondition for the test to mean anything: the body actually moved.
     expect(posA).not.toEqual(posB);
 
@@ -73,8 +74,8 @@ describe('applyFocusedBodyPivot', () => {
     // A right-drag strafe shifts the pivot to bodyPosition + offset; the offset is
     // a fixed world-frame vector, so as the body moves the shifted pivot tracks it.
     const offset: Vec3 = [10, -20, 30];
-    const posA = deriveBodyStates(SIM_A).get('earth')!.positionMpc;
-    const posB = deriveBodyStates(SIM_B).get('earth')!.positionMpc;
+    const posA = deriveBodyStates(SIM_A).get(asSceneBodyId('earth'))!.positionMpc;
+    const posB = deriveBodyStates(SIM_B).get(asSceneBodyId('earth'))!.positionMpc;
 
     const pinnedA = worldArmOf(
       applyFocusedBodyPivot(DRAG_FRAMED, true, EARTH_ROW, BODIES_A, offset),

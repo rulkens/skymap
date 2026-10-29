@@ -1,46 +1,14 @@
 /**
  * watchGoHomeSaga — flies the camera to the canonical sunlit Earth pose on each
- * `goHome` command, and pins Earth in the select + focus slots. The one home
- * intent behind the `h`/`e` keys and the Home pill lands here.
+ * `goHome` command (the `h`/`e` keys and the Home pill).
  *
- * ### Why home breaks the orientation-preserving rule
- *
- * Every OTHER focus (a palette body pick, the `f` key) preserves the user's
- * live yaw/pitch — the camera glides to the target from wherever it already
- * looks. Home is the ONE deliberate exception: it tweens to `bodyHomePose`,
- * whose yaw/pitch aim at Earth's sunlit side with the terminator raking across
- * the globe. Landing on the night side (a black disc) would waste the "you are
- * here" arrival shot, so home overrides orientation on purpose.
- *
- * ### Why this tween is the only camera authority during the flight
- *
- * `watchFocusTweenSaga` deliberately NO-OPS for bodies the follow driver handles
- * (see watchFocusTweenSaga.ts:85-97 — 'followed, not tweened'), so writing the
- * Earth focus row here plants no competing tween. This saga's `startCameraTween`
- * is the sole mover. On tween end the follow driver activates, captures the
- * tween's end pose as its `from`, and re-seeds its distance target to the exact
- * framing distance the pose already carries (the memory drops when the follow
- * EPOCH's ref changes, which advances only on a frame a follow row wins; the
- * driver then re-seeds its distance target to `bodyLikeFraming`'s distance —
- * the same one `bodyHomePose` used). Because
- * the pose already sits at that distance, the tween→follow handoff is seamless:
- * the driver takes over a camera already at rest.
- *
- * ### Why BOTH select and focus are written
- *
- * `updateSelectionSelect(EARTH_REF)` pins the InfoCard (the "you are here"
- * onboarding card); `updateSelectionFocus(EARTH_REF)` drives the follow-pivot
- * (`applyFocusedBodyPivot`) and the URL hash. The `h`-key path before this fold
- * wrote only focus, so the card never pinned — writing both closes that gap and
- * matches the palette path.
- *
- * ### Why it bails, and why getContext is read INSIDE the loop
- *
- * `cameraRuntime()` is null pre-bootstrap / post-destroy (mirroring
- * watchFocusTweenSaga's null-runtime bail): a home press in that window simply
- * does nothing rather than tweening from a stale pose. getContext is read per
- * action, not once at saga start, because the engine registers its saga context
- * AFTER the root saga forks — the same reason the sibling sagas read it lazily.
+ * Home deliberately overrides the live orientation: it lands on `bodyHomePose`'s
+ * sunlit side, not a night-side disc. The focus is written as `'cut'` so
+ * `watchFocusTweenSaga` plants no competing tween; this tween is the sole mover
+ * and the follow memory settles on arrival. Both select (InfoCard pin) and focus
+ * (follow pivot, URL) are written. On a null `cameraRuntime` the press is
+ * skipped; getContext is read per action because the engine registers its
+ * context after the root saga forks.
  */
 import { take, getContext, put, select } from 'typed-redux-saga';
 
@@ -50,9 +18,9 @@ import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { bodyHomePose } from '../../services/engine/camera/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { selectOrientation } from '../settings/selectors';
+import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
+import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchGoHomeSaga() {
@@ -75,15 +43,15 @@ export function* watchGoHomeSaga() {
     // driver can re-express the pose if the setting changes mid-flight.
     const frame = yield* select(selectOrientation);
     const frameBasis = ORIENTATION_FRAMES[frame];
+    const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
 
     yield* put(updateSelectionSelect(EARTH_REF));
-    yield* put(updateSelectionFocus(EARTH_REF));
+    yield* put(updateSelectionFocus(EARTH_REF, 'cut'));
     yield* put(
       startCameraTween({
         from: runtime.from,
-        to: bodyHomePose('earth', simDays, runtime.fovYRad, frameBasis),
-        durationMs: FOCUS_TWEEN_MS,
-        easing: 'easeOutCubic',
+        to: bodyHomePose(EARTH_REF.id, simDays, runtime.fovYRad, frameBasis),
+        motion,
         frame,
       }),
     );

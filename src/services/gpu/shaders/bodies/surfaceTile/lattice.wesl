@@ -38,7 +38,7 @@ fn latticeCellM(tex: texture_2d<f32>, origin: vec2<u32>, cell: vec2<u32>, stride
 // than reading a neighbouring leaf's ground. Two tiles sharing an edge
 // therefore take one-sided slopes from opposite sides of the same post -- a
 // second-order disagreement a post wide, the price of no apron in the tile.
-// TWIN: src/utils/surfaceTiles/latticePostGradient.ts.
+// TWIN: src/layers/body/subsystems/surfaceTiles/latticePostGradient.ts.
 fn latticePostGradient(tex: texture_2d<f32>, origin: vec2<u32>, post: vec2<u32>, cells: u32) -> vec2<f32> {
   let west = max(post.x, 1u) - 1u;
   let east = min(post.x + 1u, cells);

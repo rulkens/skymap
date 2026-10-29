@@ -26,7 +26,7 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=22.12"
+    "node": ">=24"
   },
   "type": "module",
   "workspaces": [
@@ -47,6 +47,7 @@
     "import-mesh": "\"${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}\" --background --factory-startup --python tools/meshes/prebake/importMesh.py --",
     "prebake-mesh": "tsx tools/meshes/prebakeMesh.ts",
     "build-spacecraft-tracks": "tsx tools/bodies/buildSpacecraftTracks.ts && npm run build-data-manifest",
+    "build-satellites": "tsx tools/satellites/buildSatellites.ts",
     "build-meshes": "tsx tools/meshes/buildMeshes.ts && npm run build-data-manifest",
     "promote-mcpm-workbench": "tsx tools/volumes/promoteWorkbenchExport.ts",
     "build-dust": "tsx tools/volumes/buildDustVolume.ts --all && npm run build-data-manifest",
@@ -105,6 +106,7 @@
     "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
     "fetch-height": "tsx tools/fetch/fetchHeightSources.ts",
     "fetch-horizons": "tsx tools/fetch/fetchHorizons.ts",
+    "fetch-celestrak": "tsx tools/fetch/fetchCelestrak.ts",
     "fetch-voyager-windows": "tsx tools/fetch/fetchVoyagerWindows.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
@@ -158,9 +160,10 @@
     "@types/node": "25.6.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/ws": "8.18.2",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "@vitejs/plugin-react": "6.0.1",
-    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/coverage-v8": "4.1.12",
     "@webgpu/types": "0.1.69",
     "earcut": "3.2.3",
     "eslint": "9.39.5",
@@ -173,15 +176,16 @@
     "prettier": "3.8.3",
     "sharp": "0.35.5",
     "ts-morph": "28.0.0",
-    "tsx": "4.21.0",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.65.0",
     "vite": "8.2.1",
-    "vitest": "4.1.5",
+    "vitest": "4.1.12",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
     "wgslender": "1.4.1",
-    "wrangler": "4.148.0",
+    "wrangler": "4.151.1",
+    "ws": "8.22.0",
     "xatlas-wasm": "0.1.3"
   },
   "dependencies": {
@@ -189,11 +193,13 @@
     "classnames": "2.5.1",
     "hotkeys-js": "4.0.4",
     "meshoptimizer": "1.2.0",
+    "qrcode-generator": "2.0.4",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-markdown": "10.1.0",
     "react-redux": "9.3.0",
     "redux-saga": "1.5.0",
+    "satellite.js": "7.1.0",
     "typed-redux-saga": "1.5.0",
     "wgpu-matrix": "3.4.2"
   }

@@ -1,0 +1,88 @@
+name: Satellite catalog
+
+# Daily refresh of the satellite orbit data (spec: docs/superpowers/specs/completed/2026-10-28-earth-satellites-design.md
+# §5.2). SGP4 elements go stale by kilometres a day, so nobody uploads this by hand: the run fetches
+# CelesTrak, builds satellites.satg and overwrites its fixed R2 key. A failed run uploads nothing and
+# the app keeps the previous file; after 14 days without a good run the app fades the satellites out.
+#
+# Secrets: R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY (an R2 token, Object Read & Write on skymap-data
+# only) and CLOUDFLARE_ACCOUNT_ID. Uploads go over R2's S3 API because wrangler's REST API has no
+# bucket-scoped permission: its token would reach every bucket in the account.
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: satellite-catalog
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+# Two jobs so the R2 key never shares a runner with npm: an install script in `build` could tamper
+# with the runner (PATH, binaries) and catch the key in a later step. `upload` has no checkout and
+# no npm; it only receives the built file.
+jobs:
+  build:
+    name: fetch · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch CelesTrak groups
+        run: npm run fetch-celestrak
+
+      # Throws below its object floor, so an upstream outage never reaches R2.
+      - name: Build satellites.satg
+        run: npm run build-satellites
+
+      - name: Hand the catalog to the upload job
+        uses: actions/upload-artifact@v4
+        with:
+          name: satellite-catalog
+          path: public/data/satellite-catalog/v1/satellites.satg
+          if-no-files-found: error
+          retention-days: 1
+
+  upload:
+    name: upload
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Receive the catalog
+        uses: actions/download-artifact@v4
+        with:
+          name: satellite-catalog
+          path: catalog
+
+      # Gzipped on the wire like the R2 sync's gzipOnWire families; browsers inflate it transparently.
+      # max-age=3600: a refresh reaches every visitor within an hour, with no CDN purge.
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          gzip -9 -n -c catalog/satellites.satg > "$RUNNER_TEMP/satellites.satg"
+          aws s3 cp "$RUNNER_TEMP/satellites.satg" s3://skymap-data/data/satellite-catalog/v1/satellites.satg \
+            --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" \
+            --content-type application/octet-stream \
+            --content-encoding gzip \
+            --cache-control 'public, max-age=3600'

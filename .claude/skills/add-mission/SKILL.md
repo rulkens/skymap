@@ -163,21 +163,25 @@ raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` 
    symlink, so every rebake is invisible until you run it against main's tree:
    `npx tsx -e "import { buildDataManifest } from './tools/deploy/buildDataManifest.ts'; buildDataManifest('<main>/public/data');"`
    then hard-refresh.
-7. **Seed** — `src/data/bodies/sceneMeshBodies.ts`: `{ id, label, meshKey }`.
-   `standoffRadii` only when a boom or array sets the bounding sphere; no
-   `captionRevealM` for a real object.
-8. **Driver** — `src/data/bodies/orbitalElements.ts` (`probe()` / `orbiter()`
-   row + a `palette.ts` tint, comment naming the Horizons epoch) **or**
-   `src/data/bodies/surfaceFixedSites.ts` (`altitudeM: groundOffsetM('<key>')`,
-   `seat: 'resting'` for a lander or rover set down on the terrain — `'anchored'`
-   is for a georeferenced scan that carries its own height; host must be an
-   IAU-pole body in `SCENE_CELESTIAL_BODIES`).
-9. **Rotation** — `src/data/bodies/rotationElements.ts`: one row per the arm
-   chosen. On the `iau-pole` arm the row's pole IS body +Z, so aiming the
-   boresight (+X) somewhere means putting the pole PERPENDICULAR to it and
-   phasing with W₀ — `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`.
-10. **Names + facts** — `bodySearchNames.ts` `AUTHORED` (designations and
-    nicknames a reader types), `data/seeds/planet_facts.seed.json` (id,
+7. **Craft row** — ONE file in `src/layers/missions/bodies/<id>.ts` exporting a
+   `LayerBody`, plus one entry in `MISSIONS_BODY_ROWS`
+   (`missionsBodyRows.ts`). `body` is the seed via `meshBody({ id, label,
+   meshKey })`; `standoffRadii` only when a boom or array sets the bounding
+   sphere; no `captionRevealM` for a real object. Rows never import a body
+   table (module-init cycle); import only types, makers and constants.
+8. **Position** — the row's `position`, one of: `kind: 'orbit'` (`orbiter()` /
+   `probe()` elements, a `palette.ts` tint, comment naming the Horizons epoch),
+   `kind: 'sampled'` (a tabulated trajectory), or `kind: 'site'` (`altitudeM:
+   meshGroundOffsetM('<key>')`, `seat: 'resting'` for a lander or rover set down
+   on the terrain — `'anchored'` is for a georeferenced scan that carries its own
+   height; `hostId` must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
+9. **Rotation** — the row's optional `rotation`, one per the arm chosen. On the
+   `iau-pole` arm the row's pole IS body +Z, so aiming the boresight (+X)
+   somewhere means putting the pole PERPENDICULAR to it and phasing with W₀ —
+   `rotationFromIau` composes `Rz(90 + α₀)·Rx(90 − δ₀)·Rz(W₀)`. A surface site
+   uses `{ kind: 'surfaceLocked', id, headingDeg }`.
+10. **Names + facts** — `layers/missions/present/craftSearch.ts` `ALIASES`
+    (designations and nicknames a reader types; the label is added for you), `data/seeds/planet_facts.seed.json` (id,
     `wikiTitle`, `description`; `yearLength`/`distance`/`dayLength` as the
     neighbours do), then `npm run build-planet-facts`. A figure on the card must
     agree with the ROW rather than the fact sheet — the card sits beside the body
@@ -214,7 +218,7 @@ worktree dev server that symlinks `public/data`.
 | `bodyFromSource` must have det +1        | A mirror turns the model inside out; cycle axes, never flip one                                                                |
 | A hostless body costs a slab row         | A `focusId: 'sun'` mesh body grows `BODY_SLAB_CAPACITY`; an Earth/Mars orbiter rides its host                                  |
 | Mesh bodies draw no orbit trail          | By design (`trailElements.ts`); an orbiter shows only the moving mesh                                                          |
-| All mesh captions share one label toggle | `src/data/sources/mesh-body.ts` is one row; per-body muting is a separate change                                               |
+| All craft captions share one label toggle | The missions `craft` registry row is the one "Spacecraft" item; per-craft muting is a separate change                         |
 | `meshBody()` throws on a missing asset   | Seed rows land only after step 6; a seed without a bake breaks every import                                                    |
 | Prebake is not CI                        | Blender output is gitignored; deploy re-bakes on main, so the download and the `.blend` must exist there too                   |
 | `import-mesh` overwrites the `.blend`    | Every hand edit goes; the README's edit list is what lets them be redone                                                       |

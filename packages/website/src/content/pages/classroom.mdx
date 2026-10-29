@@ -36,7 +36,7 @@ export const says = (id) => fact(id).short ?? fact(id).text;
   <SectionHead title="What you can do in a lesson">
     <p>The first needs no preparation.</p>
   </SectionHead>
-  {CLASS_FEATURES.map((feature, i) => (
+  {CLASS_FEATURES.map((feature) => (
     <Feature
       shot={feature.shot}
       tall={feature.tall}
@@ -45,7 +45,6 @@ export const says = (id) => fact(id).short ?? fact(id).text;
       ask={feature.ask}
       href={appLink(feature.hash)}
       action={feature.action}
-      wide={i === 0}
     >
       <p>{feature.factIds.map(says).join(' ')}</p>
       <p>{feature.lesson}</p>
@@ -80,7 +79,7 @@ export const says = (id) => fact(id).short ?? fact(id).text;
     <AddressStrip hash={HOME_LINKS.classroom} />
     <div>
       <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
-      <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
+      <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view</ObjLink>
     </div>
   </Columns>
 </section>
