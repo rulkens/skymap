@@ -25,14 +25,20 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOccluderSpheres';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
+import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
-  const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number =>
-    satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc);
+  const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number => {
+    const sweep = runtime.renderer.uploaded();
+    const age = sweep === null ? Infinity : Math.abs(julianDaysToUnixMs(simDays) - sweep.simMs);
+    return (
+      sweepAgeOpacity(age) *
+      satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc)
+    );
+  };
 
   const frameOf = (
     view: SlabView,
@@ -68,11 +74,8 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
 
     enabled(state, ctx, view, fade) {
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
-      const sweep = runtime.renderer.uploaded();
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return false;
-      if (earth === undefined || sweep === null) return false;
-      const simAge = Math.abs(julianDaysToUnixMs(ctx.snapshot.simDays) - sweep.simMs);
-      if (simAge > SATELLITE_SWEEP_TIMING.maxDrawSimAgeMs) return false;
+      if (earth === undefined) return false;
       return opacityOf(ctx.snapshot.simDays, view.camPos, earth.positionMpc) > 0;
     },
 
