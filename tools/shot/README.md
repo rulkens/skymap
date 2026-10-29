@@ -56,6 +56,23 @@ With `--hide-ui` the image is read straight from the WebGPU canvas (`toBlob`, in
 fresh frame, since a presented WebGPU canvas is cleared), so no page chrome can leak in; otherwise,
 and whenever that read fails, it is a Playwright page screenshot.
 
+## Cloud containers (no GPU, no local data)
+
+A Claude Code cloud container has no `public/data/` and no GPU. Serve the catalogs from R2 instead;
+R2's CORS rule admits `http://localhost:5173` only, so keep the default port:
+
+```bash
+VITE_DATA_BASE_URL=https://skymap-data.rulkens.com npm run dev   # leave running
+npm run shot -- 'focus=body-saturn' --url http://localhost:5173
+```
+
+The rest is automatic, in `launchChromium` (`tools/utils/browser/`). If Playwright's pinned browser
+is missing, it uses the container's own Chromium at `/opt/pw-browsers/chromium`. With no WebGPU
+adapter it relaunches on SwiftShader and installs `installSoftwareCanvas`, because presenting a
+WebGPU canvas there destroys the device. Each screenshot then grabs the last frame from the GPU into
+an overlay canvas, which takes about 15 s at 1280×720, so a shot takes a minute or two.
+`npm run perf` timings are meaningless on SwiftShader, and `record`'s raw CDP captures get no frame.
+
 ## Timeouts and exit code
 
 A link that does not settle within `--timeout` still gets an image of whatever is on screen, with a

@@ -15,8 +15,8 @@ export type InstancedQuadConfig = {
    *  so each consumer's labels stay distinguishable in devtools. */
   label: string;
   /** Vertex shader source (WESL or WGSL) — typically imported via
-   *  `?static` at the consumer module to satisfy the `wesl-plugin`
-   *  build step. */
+   *  `?static` at the consumer module, which `weslStaticPlugin` links
+   *  at build time. */
   vertexSource: string;
   /** Fragment shader source — same import convention as `vertexSource`. */
   fragmentSource: string;

@@ -5,7 +5,7 @@
 # skymap also renders — so `root` stays local, no `resolve.alias`, no
 # symlinks.
 #
-# wesl-plugin locates this file from the *explicit* `weslToml` option in
+# weslStaticPlugin locates this file from the *explicit* `weslToml` option in
 # vite.config.ts, not from the Vite `root` or `process.cwd()` — see that
 # file's header for why the explicit path is mandatory.
 

@@ -41,7 +41,7 @@ function mockDevice(): GPUDevice {
   return {
     createSampler: vi.fn(() => ({})),
     // The compositor routes shader creation through a dev-mode
-    // getCompilationInfo logger (wesl-plugin `?static` linker maps error
+    // getCompilationInfo logger (the `?static` linker maps error
     // line numbers to the linked WGSL, not the source). Vitest sets
     // `import.meta.env.DEV = true`, so the mock must expose it.
     createShaderModule: vi.fn(() => ({
