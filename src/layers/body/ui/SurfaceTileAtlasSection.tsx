@@ -94,26 +94,12 @@ function SurfaceTileAtlasSection({
     </form>
   );
 
-  if (!snap.engaged) {
-    return (
-      <DebugSection title="Surface Tiles">
-        {flyToForm}
-        {flyToPresets}
-        {terrainToggles}
-        <div className={styles.notice}>Not engaged — no manifest, or no body engaged.</div>
-      </DebugSection>
-    );
-  }
-
   const totalResident = snap.levels.reduce((sum, row) => sum + row.resident, 0);
   const totalPending = snap.levels.reduce((sum, row) => sum + row.pending, 0);
   const deepestZ = snap.levels.at(-1)?.z;
 
-  return (
-    <DebugSection title={`Surface Tiles — ${snap.bodyId} (${snap.used}/${snap.capacity} slots)`}>
-      {flyToForm}
-      {flyToPresets}
-      {terrainToggles}
+  const residency = (
+    <>
       <div className={styles.levels}>
         <span className={styles.head}>z</span>
         <span className={styles.head}>resident</span>
@@ -158,26 +144,27 @@ function SurfaceTileAtlasSection({
           z{deepestZ} resident: {snap.deepestLevelKeys.join(', ') || '—'}
         </div>
       )}
+    </>
+  );
 
-      {snap.subCamera && (
-        <div
-          className={styles.readout}
-          title="Where the last plan's camera sat, and the deepest band baked there"
-        >
-          sub-camera: {formatLonLat(snap.subCamera.lonDeg, snap.subCamera.latDeg)} · deepest band
-          here: {snap.subCamera.coveredMaxLevel ?? 'none'}
-        </div>
+  return (
+    <DebugSection
+      title={
+        snap.engaged
+          ? `Surface Tiles — ${snap.bodyId} (${snap.used}/${snap.capacity} slots)`
+          : 'Surface Tiles'
+      }
+    >
+      {flyToForm}
+      {flyToPresets}
+      {terrainToggles}
+      {snap.engaged ? (
+        residency
+      ) : (
+        <div className={styles.notice}>Not engaged — no manifest, or no body engaged.</div>
       )}
     </DebugSection>
   );
-}
-
-/** East/west, north/south degree pair at 5 decimals — ~1 m resolution, the
- *  scale this readout exists to catch (a demo band a few hundred metres wide). */
-function formatLonLat(lonDeg: number, latDeg: number): string {
-  const ew = lonDeg >= 0 ? 'E' : 'W';
-  const ns = latDeg >= 0 ? 'N' : 'S';
-  return `${Math.abs(lonDeg).toFixed(5)}°${ew}, ${Math.abs(latDeg).toFixed(5)}°${ns}`;
 }
 
 export default SurfaceTileAtlasSection;

@@ -9,7 +9,6 @@ export const IDLE_SURFACE_TILE_PLAN: SurfaceTilePlan = {
   wantManifest: null,
   verdict: 'keep',
   lastPlan: null,
-  subCamera: null,
   params: null,
   awake: false,
 };

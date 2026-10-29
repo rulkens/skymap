@@ -19,7 +19,7 @@ describe('throttleWithTrailingCall', () => {
     expect(gate.pass(0)).toBe(true);
     expect(gate.pass(16)).toBe(false);
     expect(gate.pass(32)).toBe(false);
-    vi.advanceTimersByTime(233);
+    vi.advanceTimersByTime(249);
     expect(onTrailing).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onTrailing).toHaveBeenCalledTimes(1);

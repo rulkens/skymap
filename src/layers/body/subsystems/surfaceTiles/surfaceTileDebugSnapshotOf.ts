@@ -5,7 +5,7 @@ import type { SurfaceTileDebugSnapshot } from '../../@types/SurfaceTileDebugSnap
 export function surfaceTileDebugSnapshotOf(
   tiles: BodyRuntime['surfaceTiles'],
 ): SurfaceTileDebugSnapshot {
-  const { lastPlan, cut, subCamera } = tiles.plan;
+  const { lastPlan, cut } = tiles.plan;
   const plan = lastPlan === null ? null : { ...lastPlan, cutCount: cut.length };
-  return { ...tiles.stream.debugStats(), plan, subCamera };
+  return { ...tiles.stream.debugStats(), plan };
 }

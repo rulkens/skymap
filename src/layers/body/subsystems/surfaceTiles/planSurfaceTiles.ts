@@ -22,8 +22,6 @@ import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { baseLevelForTier } from '../../../../utils/surfaceTiles/baseLevelForTier';
 import { cutSurfaceTiles } from './cutSurfaceTiles';
 import { derivePlannerParams } from './derivePlannerParams';
-import { deepestBandLevelAt } from './deepestBandLevelAt';
-import { directionToLonLatDeg } from '../../../../utils/geo/directionToLonLatDeg';
 import { tileBodiesInView } from './tileBodiesInView';
 import { tileCamerasOf } from './tileCamerasOf';
 
@@ -50,15 +48,10 @@ export function planSurfaceTiles(
     manifest.value === null
       ? null
       : derivePlannerParams(manifest.value, baseLevelForTier(bodyId, committedTier(bodyId)));
-  const lonLat = directionToLonLatDeg(camPosLocalM);
-  const subCamera =
-    params === null
-      ? null
-      : { ...lonLat, coveredMaxLevel: deepestBandLevelAt(params.bands, lonLat) };
   const shown = views.filter((view) => tileBodiesInView(view).includes(bodyId));
   const wantManifest = shown.length > 0 && manifest.status === 'absent' ? bodyId : null;
   const awake = wantManifest !== null || manifest.status === 'pending' || inFlight;
-  const unplanned = { ...IDLE_SURFACE_TILE_PLAN, wantManifest, subCamera, params, awake };
+  const unplanned = { ...IDLE_SURFACE_TILE_PLAN, wantManifest, params, awake };
   if (params === null || shown.length === 0) {
     return { ...unplanned, verdict: stale ? 'release' : 'keep' };
   }
@@ -104,7 +97,6 @@ export function planSurfaceTiles(
     wantManifest,
     verdict: own ? 'keep' : { engage: bodyId, tilePx: params.tilePx },
     lastPlan: { requestCount: demand.requests.length, zWin: demand.zWin, misses },
-    subCamera,
     params,
     // This plan's own requests count: `inFlight` was read before they existed,
     // so the engaging frame would otherwise vote asleep.

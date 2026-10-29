@@ -124,8 +124,8 @@ beforeEach(() => {
 });
 
 describe('planSurfaceTiles', () => {
-  it('looking up at street level keeps the position readout and plans nothing', () => {
-    // Bug caught: the readout or the atlases follow the view instead of the position.
+  it('looking up at street level plans nothing', () => {
+    // Bug caught: the atlases follow the view instead of the position.
     const latRad = (55.68 * Math.PI) / 180;
     const lonRad = (12.57 * Math.PI) / 180;
     const up: Vec3 = [
@@ -145,9 +145,6 @@ describe('planSurfaceTiles', () => {
       LARGE,
     );
 
-    expect(plan.subCamera?.lonDeg).toBeCloseTo(12.57, 9);
-    expect(plan.subCamera?.latDeg).toBeCloseTo(55.68, 9);
-    expect(plan.subCamera?.coveredMaxLevel).toBe(DEEPEST);
     expect(plan.cut).toEqual([]);
     expect(plan.requests).toEqual([]);
     expect(plan.touched).toEqual([]);

@@ -65,7 +65,6 @@ const EMPTY_STATS: ReturnType<SurfaceTileStream['debugStats']> = {
 export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
   ...EMPTY_STATS,
   plan: null,
-  subCamera: null,
 };
 
 const ABSENT: ReturnType<SurfaceTileResidency['manifest']> = { status: 'absent', value: null };

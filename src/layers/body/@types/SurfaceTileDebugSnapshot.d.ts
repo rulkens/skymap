@@ -1,4 +1,3 @@
-import type { TerrainSubCamera } from './TerrainSubCamera';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 
 /**
@@ -41,9 +40,4 @@ export type SurfaceTileDebugSnapshot = {
   readonly droppedAllocations: number;
   /** `"x,y"` keys resident at the deepest active level, capped at 16. */
   readonly deepestLevelKeys: readonly string[];
-  /** Where over the body the last planned frame's camera sat, and the
-   *  deepest band level available AT that point — the readout that answers
-   *  "am I over a spot with deep imagery?" without cross-referencing bounds
-   *  by hand. `null` while disengaged, matching `plan`. */
-  readonly subCamera: TerrainSubCamera | null;
 };
