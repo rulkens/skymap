@@ -12,7 +12,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { SatelliteOrbitEllipse } from '../@types/SatelliteOrbitEllipse';
+import type { OrbitConic } from '../../../@types/scene/OrbitConic';
 import type { TrackedSatellite } from '../@types/TrackedSatellite';
 
 const MS_PER_MINUTE = 60_000;
@@ -28,7 +28,7 @@ export function satelliteOrbitEllipse(
   simDays: number,
   temeToWorld: Readonly<Mat3>,
   earthMpc: Readonly<Vec3>,
-): SatelliteOrbitEllipse | null {
+): OrbitConic | null {
   const state = sgp4(
     satellite.satrec,
     (julianDaysToUnixMs(simDays) - satellite.epochMs) / MS_PER_MINUTE,

@@ -9,10 +9,8 @@ import type { SatellitesRuntime } from './@types/SatellitesRuntime';
 import type { SatelliteSweep } from './@types/SatelliteSweep';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
-import { distanceMpc } from '../../utils/math/distanceMpc';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
-import { SCALE_UNITS } from '../../data/scaleUnits';
-import { satelliteOpacity } from './subsystems/satelliteOpacity';
+import { satelliteLayerOpacity } from './subsystems/satelliteLayerOpacity';
 import { sweepDue } from './subsystems/sweepDue';
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
 
@@ -34,9 +32,11 @@ export function satellitesPlanner(
       const earth = deriveBodyStates(snapshot.simDays).get(SCENE_EARTH.id);
       if (catalog === null || earth === undefined || views.length === 0) return IDLE;
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
-      const cameraEarthKm =
-        distanceMpc(views[0]!.drawCamPos, earth.positionMpc) / SCALE_UNITS.KM_TO_MPC;
-      if (satelliteOpacity(simMs, catalog.fetchedAtMs, cameraEarthKm) <= 0) return IDLE;
+      if (
+        satelliteLayerOpacity(catalog, snapshot.simDays, views[0]!.drawCamPos, earth.positionMpc) <=
+        0
+      )
+        return IDLE;
 
       const latest = propagator.latest();
       if (latest !== null && latest !== drawn?.sweep) {

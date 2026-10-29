@@ -41,22 +41,20 @@ export function createSelectedSatellites(
       transientPositions.delete(satelliteTransientId(noradId));
       set.delete(noradId);
     }
-    if (catalog === null) {
-      tracked = [];
-      return;
-    }
-    for (const noradId of wanted) {
-      const k = set.has(noradId) ? -1 : catalogIndexOf(catalog, noradId);
-      if (k < 0) continue;
-      transientPositions.set(satelliteTransientId(noradId), satellitePositioner(catalog, k));
-      set.set(noradId, {
-        catalog,
-        tracked: {
-          satrec: satrecOf(catalog, k),
-          epochMs: catalog.epochMs[k]!,
-          classCode: catalog.classCode[k]!,
-        },
-      });
+    if (catalog !== null) {
+      for (const noradId of wanted) {
+        const k = set.has(noradId) ? -1 : catalogIndexOf(catalog, noradId);
+        if (k < 0) continue;
+        transientPositions.set(satelliteTransientId(noradId), satellitePositioner(catalog, k));
+        set.set(noradId, {
+          catalog,
+          tracked: {
+            satrec: satrecOf(catalog, k),
+            epochMs: catalog.epochMs[k]!,
+            classCode: catalog.classCode[k]!,
+          },
+        });
+      }
     }
     tracked = Array.from(set.values(), (entry) => entry.tracked);
   };

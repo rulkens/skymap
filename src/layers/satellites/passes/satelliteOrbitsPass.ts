@@ -2,10 +2,8 @@
  * satelliteOrbitsPass — the selected and focused satellites' orbits as the same fading trail the
  * planets get, drawn by the Layer's OWN `OrbitTrailRenderer`: core's rewrites its instance buffer on
  * every `draw`, so a second draw in a frame would overwrite the planets' records before submit.
- * Alpha is the class fade times the stale-data and camera-distance fade, not the dots' sweep-lag
- * fade: at fast time a ring is computed every frame and stays exact. NEAR0, under the same
- * occlusion as the trails; no pick.
- * HARD INVARIANT: `view.slab.vp`, never `view.vp` (see `writeOrbitTrailRecord`).
+ * Alpha is the class fade times `satelliteLayerOpacity`. NEAR0, under the same occlusion as the
+ * trails; no pick.
  */
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
@@ -30,7 +28,6 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
 
     enabled(state, ctx, _view, fade) {
       if (runtime.selected.tracked().length === 0) return false;
-      if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return false;
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
       if (earth === undefined) return false;
       return (

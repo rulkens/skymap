@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { satelliteOrbitEllipse } from '../../../../src/layers/satellites/subsystems/satelliteOrbitEllipse';
 import { satellitePositioner } from '../../../../src/layers/satellites/subsystems/satellitePositioner';
 import { composeTemeToWorld } from '../../../../src/layers/satellites/subsystems/composeTemeToWorld';
+import { eccentricAnomalyFromMean } from '../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { satrecOf } from '../../../../src/layers/satellites/load/satrecOf';
 import { orientationForBody } from '../../../../src/data/bodies/orientationForBody';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -21,12 +22,6 @@ const { catalog } = buildSatelliteCatalog(
 );
 const EARTH_MPC: Vec3 = [4.1e-6, -2.3e-6, 1.7e-6];
 
-const eccentricFromMean = (m: number, e: number): number => {
-  let big = m;
-  for (let i = 0; i < 50; i++) big -= (big - e * Math.sin(big) - m) / (1 - e * Math.cos(big));
-  return big;
-};
-
 describe('satelliteOrbitEllipse', () => {
   it.each([
     ['ISS', 25544],
@@ -40,7 +35,7 @@ describe('satelliteOrbitEllipse', () => {
       const positions = new Map([[SCENE_EARTH.id, EARTH_MPC]]);
       const m = composeTemeToWorld(orientationForBody(SCENE_EARTH.id, simDays, positions), simDays);
       const ring = satelliteOrbitEllipse(satellite, simDays, m, EARTH_MPC)!;
-      const big = eccentricFromMean(ring.meanAnomalyRad, ring.eccentricity);
+      const big = eccentricAnomalyFromMean(ring.meanAnomalyRad, ring.eccentricity);
       const dot = satellitePositioner(catalog, k)(simDays, positions)!;
       for (let i = 0; i < 3; i++) {
         const onRing =

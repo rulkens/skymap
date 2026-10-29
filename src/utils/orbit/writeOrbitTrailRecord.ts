@@ -13,6 +13,7 @@
 
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { OrbitConic } from '../../@types/scene/OrbitConic';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { CULL_PX, FULL_PX } from '../../data/bodies/orbitTrailConstants';
 import { composeOrbitConic } from '../camera/composeOrbitConic';
@@ -20,16 +21,11 @@ import { apparentSizePx } from '../math/apparentSizePx';
 import { eyeRelativeOrbitBasisKm } from './eyeRelativeOrbitBasisKm';
 
 export function writeOrbitTrailRecord(
-  input: {
+  input: OrbitConic & {
     readonly slabVp: Float64Array;
     readonly viewportPx: Readonly<Vec2>;
     readonly eyeMpc: Readonly<Vec3>;
     readonly pxPerRad: number;
-    readonly centerMpc: Readonly<Vec3>;
-    readonly semiMajorMpc: Readonly<Vec3>;
-    readonly semiMinorMpc: Readonly<Vec3>;
-    readonly eccentricity: number;
-    readonly meanAnomalyRad: number;
     readonly color: Readonly<Vec3>;
     readonly fade: number;
   },

@@ -29,7 +29,6 @@ import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
 import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
-import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
   const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number => {
@@ -76,7 +75,6 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
 
     enabled(state, ctx, view, fade) {
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
-      if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return false;
       if (earth === undefined) return false;
       return opacityOf(ctx.snapshot.simDays, view.camPos, earth.positionMpc) > 0;
     },

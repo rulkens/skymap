@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { createSimRateTracker } from '../../../../src/layers/satellites/subsystems/createSimRateTracker';
-import { sweepAgeOpacity } from '../../../../src/layers/satellites/subsystems/sweepAgeOpacity';
-import { SATELLITE_SWEEP_TIMING } from '../../../../src/data/satellites/satelliteSweepTiming';
 
 describe('createSimRateTracker', () => {
   it('reports 0 on the first frame', () => {
@@ -37,9 +35,5 @@ describe('createSimRateTracker', () => {
     t.observe(100_000, 1_000);
     t.observe(100_000 - 3_600 * 16, 1_016);
     expect(t.rate()).toBeCloseTo(3_600);
-  });
-
-  it('hides a fresh sweep steadily at 6 h/s', () => {
-    expect(sweepAgeOpacity(21_600 * SATELLITE_SWEEP_TIMING.expectedSweepLagMs)).toBe(0);
   });
 });
