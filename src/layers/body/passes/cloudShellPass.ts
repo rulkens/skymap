@@ -20,7 +20,7 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { CLOUD_SHELL_PARAMS } from '../present/cloudShellParams';
 import { EARTH_SURFACE_PARAMS } from '../../../data/bodies/earthSurfaceParams';
-import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../load/bodyTextureSlotKey';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';

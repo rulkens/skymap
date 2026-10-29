@@ -15,7 +15,7 @@ import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
-import type { LayerTerrain } from './LayerTerrain';
+import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
@@ -107,6 +107,6 @@ export type Layer<
   /** Composed into `state.planners` by `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
-  /** The ground core's camera reads. One provider per composition, counting core's; boot throws on two. */
-  terrain?(runtime: Runtime): LayerTerrain;
+  /** The ground height core's camera reads; the datum with none. One provider per composition; boot throws on two. */
+  heightAt?(runtime: Runtime): TerrainHeightAtLookup;
 };

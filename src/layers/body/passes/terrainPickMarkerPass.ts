@@ -6,13 +6,12 @@
  * toggle off. A MISS draws nothing: `latchSurfaceGesture`'s datum fallback is camera feel.
  */
 
-import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { frustumFovYRad } from '../../../utils/camera/frustumFovYRad';
-import { terrainPickAt } from '../../../utils/camera/terrainPickAt';
-import { isSurfaceTileBodyId } from '../../../utils/surfaceTiles/isSurfaceTileBodyId';
+import { isSurfaceTileBodyId } from '../subsystems/surfaceTiles/isSurfaceTileBodyId';
+import { terrainPickUnderCursor } from '../present/terrainPickUnderCursor';
 
 export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
   return {
@@ -24,8 +23,7 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
       if (view.slab.frame.kind !== 'body-m') return false;
       if (!isSurfaceTileBodyId(view.slab.frame.hostId)) return false;
       // A non-empty cut signals THIS body is the one the tile stream serves; `heightAt` answers 0 for any other.
-      const tiles = state.subsystems.surfaceTiles;
-      return tiles !== null && tiles !== undefined && tiles.plan.cut.length > 0;
+      return runtime.surfaceTiles.plan.cut.length > 0;
     },
 
     draw(pass, view, ctx, state) {
@@ -37,27 +35,17 @@ export function terrainPickMarkerPass(runtime: BodyRuntime): ContentPass {
       const pose = ctx.bodyPose(bodyId);
       if (pose === null) return;
 
-      // The body arm as `cursorRayBodyLocal` reads it, rebuilt from the SAME provider the
-      // slab's `vp` came from. Anchored at the body centre, so `eyeRelAnchorM` IS `eyeRelBodyM`.
-      const eyeM = pose.eyeRelBodyM;
-      const arm: BodyFixedPose = {
+      const pick = terrainPickUnderCursor({
+        tiles: runtime.surfaceTiles,
         bodyId,
-        anchorLocalM: [0, 0, 0],
-        eyeRelAnchorM: [eyeM[0], eyeM[1], eyeM[2]],
-        basisLocal: [...pose.basisM],
-      };
-      const pick = terrainPickAt({
-        arm,
+        pose,
         cursorPx: cursorTexPx,
         viewportPx: view.viewportPx,
         fovYRad: frustumFovYRad(ctx.frustum),
-        terrainHeightAt: (b, d) => {
-          const tiles = state.subsystems.surfaceTiles;
-          return tiles === null ? 0 : tiles.stream.heightAt(b, d, tiles.plan.params);
-        },
       });
       if (pick === null) return;
 
+      const eyeM = pose.eyeRelBodyM;
       const centreRelEyeM: Vec3 = [
         pick.pointM[0] - eyeM[0],
         pick.pointM[1] - eyeM[1],

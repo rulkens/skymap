@@ -10,7 +10,7 @@ import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry'
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../present/hostBodyId';
-import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { loadRadiusMpc } from './bodyTextureLoadRadius';

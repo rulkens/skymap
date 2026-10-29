@@ -18,12 +18,21 @@ type FigureProps = {
   id: string;
   sizes: string;
   open?: boolean;
+  showDrawn?: boolean;
   disc?: boolean;
   seam?: 'start' | 'end';
   children?: ReactNode;
 };
 
-function Figure({ id, sizes, open = true, disc = false, seam, children }: FigureProps) {
+function Figure({
+  id,
+  sizes,
+  open = true,
+  showDrawn = true,
+  disc = false,
+  seam,
+  children,
+}: FigureProps) {
   return (
     <figure className={styles.root}>
       {disc ? (
@@ -34,7 +43,7 @@ function Figure({ id, sizes, open = true, disc = false, seam, children }: Figure
         <Shot id={id} sizes={sizes} />
       )}
       <figcaption className={cx(styles.caption, seam && styles[seam])}>
-        <ShotCaption id={id} open={open} />
+        <ShotCaption id={id} open={open} showDrawn={showDrawn} />
         {children}
       </figcaption>
     </figure>

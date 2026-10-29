@@ -4,8 +4,9 @@
  * body rows with their source rows, the `body` selection kind and card, palette rows,
  * name captions, orbit trails, the Solar System exhibit and the Earth and planet slab
  * rows. It draws Earth, the planets, moons and rings: its own renderers, texture slots,
- * passes and the two atmosphere computes. The shape-model moons draw through core's
- * one mesh handle (the mesh slots stay core's); the surface-tile plan and subsystem stay core's.
+ * passes and the two atmosphere computes. It streams and plans the surface tiles, is
+ * the ground core's camera reads, and publishes the DebugPanel's tile readouts. The
+ * shape-model moons draw through core's one mesh handle (the mesh slots stay core's).
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -38,6 +39,14 @@ import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
+import { surfaceTilePlanner } from './frame';
+import { watchDebugPanelWakeSaga } from './sagas/watchDebugPanelWakeSaga';
+import { heightAt } from './heightAt';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTiles/surfaceTileStream';
+import { NO_TERRAIN_PICK_MARKER_READOUT } from './present/terrainPickMarkerReadoutOf';
+import SurfaceTileAtlasSectionContainer from './ui/SurfaceTileAtlasSectionContainer';
+import TerrainPickMarkerTuningSectionContainer from './ui/TerrainPickMarkerTuningSectionContainer';
+import type { BodyFacts } from './@types/BodyFacts';
 
 export const bodyLayer = defineLayer({
   name: 'body',
@@ -47,6 +56,10 @@ export const bodyLayer = defineLayer({
   visibility: bodyVisibility,
   exhibits: bodyLayerExhibits,
   slabs: BODY_SLAB_ROWS,
+  facts: {
+    surfaceTileDebug: EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+    terrainPickMarker: NO_TERRAIN_PICK_MARKER_READOUT,
+  } as BodyFacts,
   create,
   destroy,
   passes: (runtime) => [
@@ -64,6 +77,9 @@ export const bodyLayer = defineLayer({
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
   assets: bodyAssetRows,
+  planners: (runtime) => [surfaceTilePlanner(runtime)],
+  sagas: [watchDebugPanelWakeSaga],
+  heightAt,
   guides: () => ({
     screenLabels: [
       {
@@ -79,6 +95,8 @@ export const bodyLayer = defineLayer({
   search: () => bodySearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },
+    { slot: 'debug', content: SurfaceTileAtlasSectionContainer },
+    { slot: 'debug', content: TerrainPickMarkerTuningSectionContainer },
     {
       slot: 'detailCard',
       content: { type: 'body', Detail: BodyDetailCardContainer, Compact: CompactBodyCard },

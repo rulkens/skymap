@@ -41,7 +41,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
@@ -75,7 +75,7 @@ function makeState(
   return {
     booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     subsystems: { texturedDisks },
     // No focused pivot: the input's `altitudeMpc` is the raw cam.distance.
     selectionRows: { hover: null, select: null, focus: null },
