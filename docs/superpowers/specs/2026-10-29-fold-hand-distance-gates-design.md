@@ -2,7 +2,7 @@
 
 ## Why
 
-#958 moved the near-field trails onto declared distance bands. Eighteen sites still write
+#958 moved the near-field trails onto declared distance bands. Nineteen sites still write
 `ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC` by hand. Two problems with that:
 
 - **Two measures read one threshold.** The hand gates measure camera-to-focus-target, the
@@ -53,7 +53,7 @@ anchor differ by at most 40 AU against a 230 kpc edge.
 `SCENE_PLANETS`). It should walk the frame's admitted body rows
 (`ctx.snapshot.slabBodyCandidates`), so it agrees with A by construction.
 
-**C. Body glints: 2 sites, deletion.** `bodyGlintsPass.enabled` already gates on
+**C. Body glints: 3 sites, deletion.** `bodyGlintsPass.enabled` (and `glintsPassOver`, the missions and earthScenes glints) already gates on
 `bodyGlintBackdropFade`, measured from the solar system and gone far inside the cutoff.
 The hand gate is redundant there. `pickEnabled` reads the same fade instead.
 
