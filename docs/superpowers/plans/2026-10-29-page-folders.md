@@ -10,6 +10,17 @@ Each landing page of the website gets its own folder holding its text, its struc
 4. Routes stay as one thin `.astro` per page in `src/pages/`.
 5. The repeated class-string constants (`section`, `part`, `linkRow`, `prose`) become components or CSS classes, not constants.
 
+### Components (owner, 2026-10-29, ask u1Ct)
+
+6. A component used by exactly one landing page lives in `components/pages/<page>/`. When a second page needs it, it moves to `shared/`.
+7. Shared components are grouped by kind (`layout`, `media`, `links`, `text`).
+8. The docs-only components go in one `components/docs/` folder for now. They get sub-grouped with the docs pages PR.
+9. The component move rides this PR as its own commit, first.
+
+### `class` in MDX (owner report, 2026-10-29)
+
+The MDX editor flags `class` ("Attribute class is not allowed here") because it types tags as React JSX. Astro renders `className` as `class` (`astro/dist/runtime/server/render/util.js:117`). So no MDX file uses `class=`. The 56 uses are all in landing MDX: wrappers become the Task 2 component, and the rest become `className`.
+
 Section jobs are drafted by the implementer in the job-line form (the reader's question, or what the section shows in one plain line). The owner corrects them, so list them in the PR body.
 
 ## Ground preparation
@@ -42,17 +53,44 @@ export type PageStructure = { job: string; sections: PageSection[] };
 - **Domes contact.** The contact section moves from `pages/domes.astro` into an `.astro` component the MDX places. It is `.astro` because a `client:` island must stand as a tag (see the route's comment).
 - **Page-only data.** Files in `data/` that exactly one page uses move into that page's folder as `<page>.data.ts`, or stay as their own file inside the folder when they are big (`homeJsonLd`, `aboutJsonLd` and so on). Fact registries stay in `data/`, because docs import them.
 
+### Component folders
+
+Usage was counted by imports on 2026-10-29 (layouts, routes, MDX, other components). Re-check any component you are unsure of before moving it.
+
+```
+components/
+  site/                 on every page, from the layouts: Nav, Footer, FigureSheet
+  shared/
+    layout/             Beside, Columns, Group, SectionHead, FeatureSection, Step, Steps (+ the Task 2 wrapper)
+    media/              Shot, ShotCaption, Figure, PictureBand, CaptionGallery, Disc, DiscFilm, FeatureFilm, Phone3D, RemoteDemo
+    links/              ObjLink, ViewLink, OpenApp, AddressStrip, CopyButton, Icon
+    text/               Note, Remark, Caveat, Claims, Citation, CodeBlock, Credits, Sources
+  docs/                 every component only docs pages and the Docs layout use (DocsNav, DocBody, PageSections, DocTable, DocLink, …)
+  pages/
+    home/               Lead, Flight, Tour, Places, Dome, Honesty, Classroom, Closing
+    features/           FeaturesHero, FeatureGallery
+    classroom/          ClassroomHero, Feature, LessonLinks
+    domes/              ContactForm, DiscBand, Offer (+ the Task 3 contact section)
+    science/            AskList, FramePair, FullFigure, SectionNav, SourceTable, StatementsFigure
+    about/              PressPictures, Quotable
+    privacy/            InlineAddress
+```
+
+Each component keeps its own folder (`Shot/Shot.tsx` + `Shot.module.css`) and its own helper files. `tests/` mirrors the move.
+
 ## Tasks
 
-- [ ] **Task 1: Class strings.** Replace every `export const section/part = \`${layout.wrap} ${layout.section}\`` and the `linkRow`/`prose` strings with a component (for example `Part`) or a single CSS-module class. One commit.
-- [ ] **Task 2: Folders.** Move the 8 MDX files into their folders with `npm run move-files` (then grep for old paths: `.astro`/`.mdx` imports are not rewritten). Move `export const` lists into `<page>.data.ts`. Move the Domes contact into its component. Move single-page data files. Update the collection glob, routes, route comments and `pageSourceFile`. One commit.
-- [ ] **Task 3: Structure files.** Add the type, the collection, the 8 YAML files (headings from the built pages, drafted jobs), the job moved from front matter, `__job` writing YAML, the dev JSON plus the `SectionPanel` line, `checkPageStructure.ts` plus its CI step, and tests for the YAML writer and the drift comparison (pure function in `tools/site/utils/`). One commit.
-- [ ] **Task 4: Backlog.** Add the docs-pages follow-up line to `docs/BACKLOG.md`. Add it to the same commit as Task 3 or its own.
+- [ ] **Task 1: Component folders.** Move per the tree above with one `npm run move-files -- --manifest` (run `--dry` first). Then grep for the old paths in what it misses: `.astro` and `.mdx` imports, CSS `@import`/`composes`, string paths (the dev overlay's source stamps, `tools/site`), and docs. One commit.
+- [ ] **Task 2: Class strings and `class=`.** Replace every `export const section/part = \`${layout.wrap} ${layout.section}\`` wrapper with a component in `shared/layout/`, and the `linkRow`/`prose` strings with a component or a single CSS-module class. Every remaining `class=` in MDX becomes `className=`. One commit.
+- [ ] **Task 3: Folders.** Move the 8 MDX files into their folders with `npm run move-files` (then grep for old paths: `.astro`/`.mdx` imports are not rewritten). Move `export const` lists into `<page>.data.ts`. Move the Domes contact into its component. Move single-page data files. Update the collection glob, routes, route comments and `pageSourceFile`. One commit.
+- [ ] **Task 4: Structure files.** Add the type, the collection, the 8 YAML files (headings from the built pages, drafted jobs), the job moved from front matter, `__job` writing YAML, the dev JSON plus the `SectionPanel` line, `checkPageStructure.ts` plus its CI step, and tests for the YAML writer and the drift comparison (pure function in `tools/site/utils/`). One commit.
+- [ ] **Task 5: Backlog.** Add the docs-pages follow-up line to `docs/BACKLOG.md` (docs pages into folders with structure files, and the docs components sub-grouped). Add it to the same commit as Task 4 or its own.
 
 ## Definition of Done
 
 - [ ] `npm run typecheck`, `npm run site:check`, `npm run site:build`, `npm run site:links` and the new structure check pass. Website and site-tool tests pass.
-- [ ] No `export const` is left in any landing MDX file.
+- [ ] No `export const` is left in any landing MDX file, and no `class=` in any MDX file.
+- [ ] `components/` has only `site/`, `shared/`, `docs/` and `pages/` at its top.
 - [ ] The built HTML of all 8 pages is unchanged apart from dev-only output. Diff `dist/` before and after.
 - [ ] The review tool on :5800 shows a page job and the section jobs, and editing the job in the bar rewrites the YAML.
 - [ ] The PR body lists the drafted section jobs.
