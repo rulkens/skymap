@@ -1,6 +1,7 @@
 /**
- * The review bar writes a page's job into its structure file. A write that touched another line, or
- * a section's own `job:`, would be an edit nobody asked for in a file the owner is also editing.
+ * The review bar writes a page's job into its structure file or front matter. A write that touched
+ * another line, or a section's own `job:`, would be an edit nobody asked for in a file the owner is
+ * also editing.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -27,10 +28,9 @@ describe('setStructureJob', () => {
     expect(after[0]).toBe('job: "New question?"');
   });
 
-  it('adds a job line first when the file has none, and never reads a section job as the page job', () => {
+  it('never reads a section job as the page job', () => {
     const bare = file.split('\n').slice(1).join('\n');
-    const out = setStructureJob(bare, 'What?');
-    expect(out).toBe(`job: "What?"\n${bare}`);
+    expect(() => setStructureJob(bare, 'What?')).toThrow(/No job line/);
   });
 
   it('writes the job JSON-quoted, so a colon or a quote stays one string', () => {

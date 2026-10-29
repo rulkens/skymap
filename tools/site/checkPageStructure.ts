@@ -3,7 +3,7 @@
  * inside `<main>` must be named in the file and every heading the file names must be on the page
  * (see structureDrift). Run after `npm run site:build`. Exits 1 on any drift or a missing build.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { parse } from 'yaml';
@@ -14,9 +14,11 @@ import type { PageStructure } from '../../packages/website/src/@types/PageStruct
 import { mainHeadings } from './utils/mainHeadings';
 import { structureDrift } from './utils/structureDrift';
 
-const PAGES = ['home', 'features', 'classroom', 'domes', 'science', 'about', 'privacy', '404'];
 const siteDir = resolve(distDir, toolPages.website);
 const pagesDir = resolve(import.meta.dirname, '../../packages/website/src/content/pages');
+const PAGES = readdirSync(pagesDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
 
 // Home is the site root, 404 is a lone file; every other page is a folder with an index.
 const builtFile = (page: string): string =>
