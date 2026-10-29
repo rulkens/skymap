@@ -16,7 +16,8 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
+import { SOURCE_REGISTRY } from '../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 

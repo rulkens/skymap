@@ -1,7 +1,8 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
+import { SOURCE_REGISTRY } from '../../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { maskWith } from '../../../../utils/maskWith';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
