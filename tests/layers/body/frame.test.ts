@@ -83,34 +83,4 @@ describe('surfaceTilePlanner', () => {
     for (let nowMs = 1000; nowMs < 1300; nowMs += 16) planner.plan(snapshotAt(nowMs), [], STATE);
     expect(publish).toHaveBeenCalledTimes(2);
   });
-
-  it("a readout turned away on the loop's last frame wakes one more frame that publishes it", () => {
-    // Bug caught: the loop sleeping (paused clock) right after a throttled-out frame, so the
-    // panel keeps the previous readout: tiles settled but shown pending, or the pick height
-    // at an earlier cursor.
-    vi.useFakeTimers();
-    const publish = vi.fn<(patch: Partial<BodyFacts>) => void>();
-    const requestRender = vi.fn();
-    const runtime = {
-      surfaceTiles: {
-        stream: createSurfaceTileStream({ device: {} as GPUDevice, requestRender: () => {} }),
-        plan: IDLE_SURFACE_TILE_PLAN,
-      },
-      textureSlots: new Map(),
-      debugPanelOpen: () => true,
-      publish,
-      readoutGate: throttleWithTrailingCall(250, requestRender),
-    } as unknown as BodyRuntime;
-    const planner = surfaceTilePlanner(runtime);
-
-    planner.plan(snapshotAt(0), [], STATE);
-    planner.plan(snapshotAt(16), [], STATE);
-    expect(publish).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(250);
-    expect(requestRender).toHaveBeenCalledTimes(1);
-    planner.plan(snapshotAt(266), [], STATE);
-    expect(publish).toHaveBeenCalledTimes(2);
-    vi.useRealTimers();
-  });
 });

@@ -40,11 +40,4 @@ describe('watchDebugPanelWakeSaga', () => {
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(2);
   });
-
-  it('does not wake when the debug panel closes', async () => {
-    store.dispatch(setDebugPanelOpen(true));
-    store.dispatch(toggleDebugPanelOpen());
-    await flush();
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
 });

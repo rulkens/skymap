@@ -35,8 +35,6 @@ export type BodyRuntime = {
    * `surfaceTilePlanner` and read by the passes, capture faces and the terrain seam. */
   readonly surfaceTiles: { readonly stream: SurfaceTileStream; plan: SurfaceTilePlan };
   readonly publish: (patch: Partial<BodyFacts>) => void;
-  /** Gates the tile readout: nothing is published while no one can read it. */
   readonly debugPanelOpen: () => boolean;
-  /** Paces the tile readout; a turned-away publish wakes one more frame once it reopens. */
   readonly readoutGate: TrailingThrottle;
 };

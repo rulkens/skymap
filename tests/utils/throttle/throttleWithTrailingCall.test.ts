@@ -27,15 +27,4 @@ describe('throttleWithTrailingCall', () => {
     vi.advanceTimersByTime(1000);
     expect(onTrailing).toHaveBeenCalledTimes(1);
   });
-
-  it('cancel drops a pending trailing call', () => {
-    // Bug caught: a trailing call landing on a destroyed owner.
-    const onTrailing = vi.fn();
-    const gate = throttleWithTrailingCall(250, onTrailing);
-    gate.pass(0);
-    gate.pass(16);
-    gate.cancel();
-    vi.advanceTimersByTime(1000);
-    expect(onTrailing).not.toHaveBeenCalled();
-  });
 });

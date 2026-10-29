@@ -3,8 +3,7 @@ import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 
 /**
  * SurfaceTileDebugSnapshot — `surfaceTileStream`'s residency for the DebugPanel,
- * published by `surfaceTilePlanner` as a body Layer fact at a human-readable rate
- * while the panel is open, never every frame.
+ * published by `surfaceTilePlanner` (see its header for the pacing).
  * `engaged: false` (atlas never allocated, or destroyed) means every other
  * field is a quiet zero/empty — see `EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT`.
  */

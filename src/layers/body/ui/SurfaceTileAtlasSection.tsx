@@ -5,10 +5,7 @@
  *
  * No visualization — this is for reading numbers against
  * `surfaceTileStream.ts`'s `resident` map and the frame's tile plan while
- * chasing a tile-residency bug, not for a first look at the feature. The
- * snapshot is the body Layer's published fact: at most 4 Hz while the panel is
- * open, and its last state still lands when the render loop sleeps
- * (`surfaceTilePlanner`).
+ * chasing a tile-residency bug, not for a first look at the feature.
  */
 
 import { Fragment, useState, type FormEvent, type ReactElement } from 'react';

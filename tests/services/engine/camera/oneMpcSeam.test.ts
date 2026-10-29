@@ -33,7 +33,6 @@ const TS_FILES: readonly string[] = [
   ...walkFiles('src/services/camera', ['.ts']),
   ...walkFiles('src/utils/camera', ['.ts']),
   ...walkFiles('src/layers', ['.ts']),
-  'src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts',
   'src/utils/star/starSphereRangeM.ts',
 ].filter((f) => !SEAM_FILES.includes(f));
 
