@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { balanceSurfaceCut } from '../../../../../src/layers/body/subsystems/surfaceTiles/balanceSurfaceCut';
 import { surfaceTileColumns } from '../../../../../src/utils/surfaceTiles/surfaceTileColumns';
 import { SURFACE_TILE_PX } from '../../../../../src/data/bodies/surfaceTileParams';
-import type { SurfaceCutTile } from '../../../../../src/@types/scene/SurfaceCutTile';
+import type { SurfaceCutTile } from '../../../../../src/layers/body/@types/SurfaceCutTile';
 import type { SurfaceTileBand } from '../../../../../src/@types/scene/SurfaceTileBand';
 
 /** `heightLevel` defaults to the leaf's own level (`levelDelta` 0). */

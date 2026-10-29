@@ -12,7 +12,7 @@ import type { SurfacePick } from '../../../@types/camera/SurfacePick';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { BodyRuntime } from '../@types/BodyRuntime';
-import { terrainPickAt } from '../../../utils/camera/terrainPickAt';
+import { terrainPickAt } from './terrainPickAt';
 
 export function terrainPickUnderCursor(input: {
   readonly tiles: BodyRuntime['surfaceTiles'];

@@ -17,7 +17,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
-import type { TileCamera } from '../../../../../src/@types/scene/TileCamera';
+import type { TileCamera } from '../../../../../src/layers/body/@types/TileCamera';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const EARTH_ID = asSceneBodyId('earth');

@@ -7,18 +7,18 @@
  * Stateless — recomputed from arguments on every call (user ruling 2026-09-17).
  */
 
-import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { SurfacePick } from '../../@types/camera/SurfacePick';
-import type { TerrainHeightAtLookup } from '../../@types/camera/TerrainHeightAtLookup';
-import type { Vec2 } from '../../@types/math/Vec2';
-import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
-import { innerBoundRadiusM } from '../occlusion/innerBoundRadiusM';
-import { outerBoundRadiusM } from '../occlusion/outerBoundRadiusM';
-import { bodyFixedEyeM } from './bodyFixedEyeM';
-import { cursorRayBodyLocal } from './cursorRayBodyLocal';
-import { raycastTerrain } from './raycastTerrain';
-import { surfacePickToleranceM } from './surfacePickToleranceM';
-import { bodyGroundRadiusAtM } from '../scene/bodyGroundRadiusAtM';
+import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
+import type { SurfacePick } from '../../../@types/camera/SurfacePick';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
+import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
+import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
+import { cursorRayBodyLocal } from '../../../utils/camera/cursorRayBodyLocal';
+import { raycastTerrain } from '../../../utils/camera/raycastTerrain';
+import { surfacePickToleranceM } from '../../../utils/camera/surfacePickToleranceM';
+import { bodyGroundRadiusAtM } from '../../../utils/scene/bodyGroundRadiusAtM';
 
 export function terrainPickAt(input: {
   readonly arm: BodyFixedPose;

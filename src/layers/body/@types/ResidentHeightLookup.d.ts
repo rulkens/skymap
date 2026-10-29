@@ -1,5 +1,5 @@
-import type { SurfaceTileId } from '../data/SurfaceTileId';
-import type { HeightTileHeader } from './HeightTileHeader';
+import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
+import type { HeightTileHeader } from '../../../@types/scene/HeightTileHeader';
 
 /** ResidentHeightLookup — probes one tile's atlas residency for `terrainHeightM`'s
  *  ancestor climb; `null` means "not resident", not "not yet fetched". Narrowed to

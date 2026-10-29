@@ -36,7 +36,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `exhibits?`      | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import                                                                                                                                                                               |
 | `bodies?`        | `bodies/`                                      | One body row per file, + the rows array. Leaf data: imports types, `src/data` constants and makers, and pure utils; never a body table, `layer.ts` or a pass. `data/bodies/layerBodyRows.ts` folds them by import, a host's Layer (body's Earth) before the Layers whose rows orbit it |
 | `bodies/makers/` | `bodies/makers/`                               | The Layer's own row builders (`heliocentricPlanet`, `satelliteBody`), imported by its `bodies/` rows only                                                                                                                                                                              |
-| `heightAt?`      | `layer.ts`                                     | Runtime-bound: the ground height core's camera reads; the datum with none. One provider per composition; boot throws on two                                                                                                                                                            |
+| `heightAt?`      | `heightAt.ts`                                  | Runtime-bound: the ground height core's camera reads; the datum with none. One provider per composition; boot throws on two                                                                                                                                                            |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -95,8 +95,8 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 `milkyWay`, `lightTime`, `structure`, `missions` and `body` are formed. `body` draws
 Earth, the planets, moons and rings: its own renderers, texture slots, passes and
 atmosphere computes, with its Earth and planet slab rows declared in `layer.ts`; its
-shape-model moons go through core's one mesh handle, and the surface-tile subsystem
-is still core's. It also declares its identity: the body rows in `body/bodies/`, the
+shape-model moons go through core's one mesh handle. It also streams and plans the
+surface tiles, and its `heightAt` is the ground core's camera reads. It declares its identity: the body rows in `body/bodies/`, the
 `body` selection kind and card, palette rows, name captions, orbit trails and the
 Solar System exhibit. `missions` draws its craft: the rows live in
 `missions/bodies/`, and its own mesh, contact-shadow and glint passes draw

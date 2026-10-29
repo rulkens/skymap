@@ -1,4 +1,4 @@
-import type { SurfaceCutTile } from '../../../../@types/scene/SurfaceCutTile';
+import type { SurfaceCutTile } from '../../@types/SurfaceCutTile';
 import type { SurfaceTileBand } from '../../../../@types/scene/SurfaceTileBand';
 import { packSurfaceTileKey as packTile } from './packSurfaceTileKey';
 import { surfaceTileColumns } from '../../../../utils/surfaceTiles/surfaceTileColumns';

@@ -54,7 +54,7 @@ export type SurfaceTileStream = Destroyable & {
    *  decoded in the shader), or `null` while nothing is engaged. */
   getHeightAtlasView(): GPUTextureView | null;
 
-  /** Residency counts for the DebugPanel's low-rate poll; the plan's half
+  /** Residency counts for the DebugPanel's throttled readout; the plan's half
    *  (`plan`, `subCamera`) comes from the frame's `SurfaceTilePlan`. */
   debugStats(): Omit<SurfaceTileDebugSnapshot, 'plan' | 'subCamera'>;
 };

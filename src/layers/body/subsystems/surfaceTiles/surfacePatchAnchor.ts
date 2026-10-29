@@ -1,4 +1,4 @@
-import type { SurfacePatchAnchor } from '../../../../@types/scene/SurfacePatchAnchor';
+import type { SurfacePatchAnchor } from '../../@types/SurfacePatchAnchor';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../../../data/bodies/texturePrimeMeridianU';
 
 /**

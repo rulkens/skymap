@@ -20,7 +20,7 @@ vi.mock('../../../../../src/layers/body/load/fetchHeightTile', () => ({
 import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
 import type { SurfaceTilePlan } from '../../../../../src/layers/body/@types/SurfaceTilePlan';
 import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
-import type { HeightTileImage } from '../../../../../src/@types/scene/HeightTileImage';
+import type { HeightTileImage } from '../../../../../src/layers/body/@types/HeightTileImage';
 import { createSurfaceTileStream } from '../../../../../src/layers/body/subsystems/surfaceTiles/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
 import { fetchSurfaceTileManifest } from '../../../../../src/layers/body/load/fetchSurfaceTileManifest';

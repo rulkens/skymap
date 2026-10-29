@@ -1,3 +1,3 @@
-import type { LonLatDeg } from '../scene/LonLatDeg';
+import type { LonLatDeg } from '../../../@types/scene/LonLatDeg';
 
 export type TerrainSubCamera = LonLatDeg & { readonly coveredMaxLevel: number | null };

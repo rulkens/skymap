@@ -1,4 +1,4 @@
-import type { HeightTileHeader } from './HeightTileHeader';
+import type { HeightTileHeader } from '../../../@types/scene/HeightTileHeader';
 
 /** HeightTileImage — a fetched height tile as the runtime keeps it: the header
  *  plus the still-encoded Terrain-RGB bitmap, which the shader decodes. */

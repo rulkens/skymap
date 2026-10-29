@@ -15,7 +15,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
-import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/load/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';

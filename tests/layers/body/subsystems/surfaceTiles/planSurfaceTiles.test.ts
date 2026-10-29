@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SurfaceTileDemand } from '../../../../../src/layers/body/@types/SurfaceTileDemand';
-import type { SurfaceCutTile } from '../../../../../src/@types/scene/SurfaceCutTile';
+import type { SurfaceCutTile } from '../../../../../src/layers/body/@types/SurfaceCutTile';
 import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId';
 import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
 import type { SurfaceTileResidency } from '../../../../../src/layers/body/@types/SurfaceTileResidency';

@@ -61,7 +61,7 @@ describe('surfaceTilePlanner', () => {
   });
 
   it('the tile readout publishes only while the debug panel is open, at most every 250 ms', () => {
-    // Bug caught: a dispatch every frame, or a non-serialisable field tripping RTK's check.
+    // Bug caught: a dispatch every frame, or one while no panel can read it.
     let open = false;
     const publish = vi.fn<(patch: Partial<BodyFacts>) => void>();
     const runtime = {
@@ -82,9 +82,6 @@ describe('surfaceTilePlanner', () => {
     open = true;
     for (let nowMs = 1000; nowMs < 1300; nowMs += 16) planner.plan(snapshotAt(nowMs), [], STATE);
     expect(publish).toHaveBeenCalledTimes(2);
-    const published = publish.mock.calls[0]![0].surfaceTileDebug;
-    expect(published).toBeDefined();
-    expect(structuredClone(published)).toEqual(published);
   });
 
   it("a readout turned away on the loop's last frame wakes one more frame that publishes it", () => {

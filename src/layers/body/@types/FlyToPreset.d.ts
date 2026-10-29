@@ -2,7 +2,7 @@
  * One named landmark for the Surface Tiles fly-to shortcuts.
  */
 
-import type { SurfaceTileBodyId } from '../SurfaceTileBodyId';
+import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 
 export type FlyToPreset = {
   readonly label: string;

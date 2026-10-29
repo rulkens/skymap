@@ -18,13 +18,13 @@ import type { SurfaceTileResidency } from '../../@types/SurfaceTileResidency';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import type { SurfaceTilePlannerParams } from '../../@types/SurfaceTilePlannerParams';
 import type { SurfaceTileDebugSnapshot } from '../../@types/SurfaceTileDebugSnapshot';
-import type { HeightTileImage } from '../../../../@types/scene/HeightTileImage';
+import type { HeightTileImage } from '../../@types/HeightTileImage';
 import type { SurfaceTileStream } from '../../@types/SurfaceTileStream';
 import type { SurfaceTileStreamDeps } from '../../@types/SurfaceTileStreamDeps';
 import type { TileStreamSubsystem } from '../../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { Destroyable } from '../../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ResidentHeightLookup } from '../../../../@types/scene/ResidentHeightLookup';
+import type { ResidentHeightLookup } from '../../@types/ResidentHeightLookup';
 import { createTileStreamSubsystem } from '../../../../services/engine/subsystems/tileStreamSubsystem';
 import { TextureAtlas } from '../../../../services/gpu/resources/textureAtlas';
 import { uploadBitmapToAtlas } from '../../../../utils/gpu/uploadBitmapToAtlas';
@@ -61,7 +61,7 @@ const EMPTY_STATS: ReturnType<SurfaceTileStream['debugStats']> = {
   deepestLevelKeys: [],
 };
 
-/** The "nothing here yet" snapshot, shared with `engine.ts`'s debug handle. */
+/** The "nothing here yet" snapshot: the Layer's seeded fact and `selectSurfaceTileDebug`'s fallback. */
 export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
   ...EMPTY_STATS,
   plan: null,
@@ -340,8 +340,8 @@ export function createSurfaceTileStream(deps: SurfaceTileStreamDeps): SurfaceTil
     return level;
   }
 
-  /** Built on demand for a low-rate DebugPanel poll, never from a render
-   *  path, so an O(resident) scan is fine. */
+  /** Built only for the DebugPanel's throttled readout (at most 4 Hz, and only
+   *  while the panel is open), so an O(resident) scan is fine. */
   function debugStats(): ReturnType<SurfaceTileStream['debugStats']> {
     if (atlas === null) return EMPTY_STATS;
     const byLevel = new Map<number, { resident: number; pending: number }>();

@@ -1,4 +1,4 @@
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 /**
  * One view as the surface-tile walk sees it: the body-local f64 view-projection

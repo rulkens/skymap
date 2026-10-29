@@ -1,4 +1,4 @@
-import type { SurfacePatchAnchor } from '../../../../@types/scene/SurfacePatchAnchor';
+import type { SurfacePatchAnchor } from '../../@types/SurfacePatchAnchor';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**

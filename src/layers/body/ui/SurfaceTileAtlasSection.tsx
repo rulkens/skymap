@@ -15,7 +15,7 @@ import { Fragment, useState, type FormEvent, type ReactElement } from 'react';
 import type { SurfaceTileDebugSnapshot } from '../@types/SurfaceTileDebugSnapshot';
 import type { DebugOverlayKey } from '../../../@types/data/debug/DebugOverlayKey';
 import { DEBUG_OVERLAY_ROWS } from '../../../data/debug/debugOverlayRows';
-import { FLY_TO_PRESETS } from '../../../data/debug/flyToPresets';
+import { FLY_TO_PRESETS } from './flyToPresets';
 import { parseLonLatInput } from '../../../utils/geo/parseLonLatInput';
 import DebugOverlayToggles from '../../../components/DebugPanel/DebugOverlayToggles';
 import DebugSection from '../../../components/DebugPanel/DebugSection';

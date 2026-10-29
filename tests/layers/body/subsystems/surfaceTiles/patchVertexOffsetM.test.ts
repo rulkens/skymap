@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SurfacePatchAnchor } from '../../../../../src/@types/scene/SurfacePatchAnchor';
+import type { SurfacePatchAnchor } from '../../../../../src/layers/body/@types/SurfacePatchAnchor';
 import { patchVertexOffsetM } from '../../../../../src/layers/body/subsystems/surfaceTiles/patchVertexOffsetM';
 
 /**

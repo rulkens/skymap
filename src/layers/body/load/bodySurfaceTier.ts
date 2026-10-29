@@ -6,7 +6,7 @@
  * exact lie this function exists to prevent. No commit yet → the arriving tier.
  */
 
-import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from './bodyTextureSlotKey';
 
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';

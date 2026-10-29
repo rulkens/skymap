@@ -1,10 +1,10 @@
-import type { TerrainSubCamera } from '../../../@types/camera/TerrainSubCamera';
+import type { TerrainSubCamera } from './TerrainSubCamera';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 
 /**
- * SurfaceTileDebugSnapshot — a cheap, on-demand read of `surfaceTileStream`'s
- * residency for the DebugPanel. Built fresh per call (not pushed per-frame),
- * so the panel polls it at a human-readable rate instead of every render.
+ * SurfaceTileDebugSnapshot — `surfaceTileStream`'s residency for the DebugPanel,
+ * published by `surfaceTilePlanner` as a body Layer fact at a human-readable rate
+ * while the panel is open, never every frame.
  * `engaged: false` (atlas never allocated, or destroyed) means every other
  * field is a quiet zero/empty — see `EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT`.
  */

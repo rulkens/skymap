@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { bodySurfaceTier } from '../../../../src/layers/body/load/bodySurfaceTier';
-import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/load/bodyTextureSlotKey';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

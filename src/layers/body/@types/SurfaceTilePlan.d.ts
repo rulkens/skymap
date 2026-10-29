@@ -6,13 +6,13 @@
  * `lastPlan`) only from views that show the body.
  */
 
-import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
+import type { SurfaceCutTile } from './SurfaceCutTile';
 import type { SurfaceTileRequest } from './SurfaceTileRequest';
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
 import type { SurfaceTilePlannerParams } from './SurfaceTilePlannerParams';
 import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
-import type { TerrainSubCamera } from '../../../@types/camera/TerrainSubCamera';
+import type { TerrainSubCamera } from './TerrainSubCamera';
 import type { SurfaceTileVerdict } from './SurfaceTileVerdict';
 
 export type SurfaceTilePlan = {

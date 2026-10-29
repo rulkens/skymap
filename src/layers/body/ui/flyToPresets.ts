@@ -4,9 +4,9 @@
 // datum, and an island where the surrounding ocean floor is the miss case.
 // Each `altKm` is roughly "the relief fills the view".
 
-import type { FlyToPreset } from '../../@types/data/debug/FlyToPreset';
-import { SURFACE_FIXED_SITES } from '../bodies/surfaceFixedSites';
-import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
+import type { FlyToPreset } from '../@types/FlyToPreset';
+import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
+import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 
 const EARTH_PRESETS = [
   {

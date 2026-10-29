@@ -1,7 +1,7 @@
-import type { BodyTextureId } from '../../@types/data/BodyTextureId';
-import type { RingTextureId } from '../../@types/data/RingTextureId';
-import type { TextureKind } from '../../@types/data/TextureKind';
-import type { BodyTextureSlotKey } from '../../@types/data/BodyTextureSlotKey';
+import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
+import type { RingTextureId } from '../../../@types/data/RingTextureId';
+import type { TextureKind } from '../../../@types/data/TextureKind';
+import type { BodyTextureSlotKey } from '../../../@types/data/BodyTextureSlotKey';
 
 /**
  * bodyTextureSlotKey — join a `(bodyId, kind)` pair into the composite

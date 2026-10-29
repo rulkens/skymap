@@ -8,7 +8,7 @@
 
 import { mat4d } from 'wgpu-matrix';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { TileCamera } from '../../../../@types/scene/TileCamera';
+import type { TileCamera } from '../../@types/TileCamera';
 import type { SceneBodyId } from '../../../../@types/scene/SceneBodyId';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { frustumPerspectiveF64 } from '../../../../utils/camera/frustumPerspectiveF64';

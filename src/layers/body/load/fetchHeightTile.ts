@@ -1,4 +1,4 @@
-import type { HeightTileImage } from '../../../@types/scene/HeightTileImage';
+import type { HeightTileImage } from '../@types/HeightTileImage';
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
 import {
   HEIGHT_POSTS_PER_TILE,
