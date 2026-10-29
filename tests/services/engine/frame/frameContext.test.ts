@@ -43,6 +43,9 @@ import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -329,7 +332,11 @@ describe('deriveFrameContext — pose-provider seam, provider B (Task 14, spec �
 });
 
 describe('deriveFrameContext — scene-body admission', () => {
-  function admittedIds(sunFade: number, starClip = 1): readonly string[] {
+  function admittedIds(
+    sunFade: number,
+    starClip = 1,
+    eyeFromHomeMpc = SCALE_UNITS.AU_TO_MPC,
+  ): readonly string[] {
     const state = {
       ...makeState(),
       visibilityEntries: APP_VISIBILITY,
@@ -344,10 +351,19 @@ describe('deriveFrameContext — scene-body admission', () => {
         },
       },
     } as unknown as EngineState;
-    const snapshot = deriveFrameContext(state, frameInput(RESTING_POSE));
+    const pose: CameraPose = { ...RESTING_POSE, distance: eyeFromHomeMpc };
+    const snapshot = deriveFrameContext(state, frameInput(pose));
     if (!snapshot.isReady) throw new Error('fixture not ready');
     return snapshot.sceneBodies.map(({ body }) => body.id);
   }
+
+  it("a star body is not admitted past its region's band", () => {
+    const famousIds: string[] = SEEDED_STAR_CATALOGS.famousStar.map((body) => body.id);
+    expect(admittedIds(1)).toEqual(expect.arrayContaining(famousIds));
+    const atCutoff = admittedIds(1, 1, FOREGROUND_MAX_DISTANCE_MPC);
+    expect(atCutoff.filter((id) => famousIds.includes(id))).toEqual([]);
+    expect(atCutoff).toContain('mars');
+  });
 
   it("a covered body is admitted only while every covering item's handed value is above 0", () => {
     expect(admittedIds(1)).toContain('sun');

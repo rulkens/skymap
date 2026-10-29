@@ -13,7 +13,7 @@ import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
 import { atmosphereShellPass } from '../../../../src/layers/body/passes/atmosphereShellPass';
 import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../fixtures/makeSlab';
@@ -89,18 +89,20 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-/** A ctx inside the foreground gate; `bodyPose` returns one fixed pose, so only the eye's
+/** A ctx with every body row active; `bodyPose` returns one fixed pose, so only the eye's
  *  distance (inside or outside the band) matters. */
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2, pose = STUB_POSE): FrameView {
+function makeCtx(pose = STUB_POSE): FrameView {
   return {
-    cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => pose) as FrameView['bodyPose'],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
-    snapshot: { renderTargets: { farDepthView: () => FAR_DEPTH_VIEW } },
+    snapshot: {
+      renderTargets: { farDepthView: () => FAR_DEPTH_VIEW },
+      slabBodyCandidates: BODY_SLAB_ROWS,
+    },
   } as unknown as FrameView;
 }
 
@@ -144,7 +146,7 @@ describe('atmosphereShellPass.enabled', () => {
     // Both draws on one body would double its in-scatter, and the proxy mesh
     // loses its near wall from inside; the two passes split on this one flag.
     const { state, pass } = makeFixture({ draw: vi.fn() });
-    const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2, INSIDE_POSE);
+    const ctx = makeCtx(INSIDE_POSE);
     expect(pass.enabled(state, ctx, makeBodyView(asSceneBodyId('earth')))).toBe(false);
   });
 });

@@ -49,7 +49,7 @@ export type ReadyFrameContext = {
   /**
    * The rows eligible for a slab before any view's frustum gate: one per store
    * body (Earth, the planets, the mesh bodies that host their own row) plus the
-   * composed `state.slabRows` whose band is open. Frame-wide because the roster
+   * every composed or hostless row whose band is open. Frame-wide because the roster
    * is a store read and the band keys on the frame camera — a view culls it
    * (`visibleSlabBodies`), it never re-assembles it.
    */

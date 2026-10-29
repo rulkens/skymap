@@ -76,11 +76,6 @@ describe('APP_VISIBILITY', () => {
     }
   });
 
-  // Scene-body admission runs once per frame with no view, so it cannot measure a band.
-  it('no entry declares both bodies and bands', () => {
-    expect(SHOWS.filter((e) => e.bodies !== undefined && e.bands !== undefined)).toEqual([]);
-  });
-
   it('APP_VISIBILITY lists exactly the entries the composed Layers declare', () => {
     // `U` pinned: `layers` is a tuple of unlike Layer types.
     const declared = APP_COMPOSITION.layers.flatMap<VisibilityEntry>(
