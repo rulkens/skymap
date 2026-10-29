@@ -40,7 +40,7 @@ export function* watchFocusTweenSaga() {
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-      // A cut lands with no move; `navigateSaga` commits its framing.
+      // A cut's caller places the camera itself.
       if (action.meta.transition === 'cut') return;
 
       // A focus that resolves before `wireInput` runs has no camera to fly yet.
@@ -91,9 +91,7 @@ export function* watchFocusTweenSaga() {
       // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
       const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
 
-      // A body the sim clock moves is the motion row's call: a style that does
-      // not tween one leaves it to the follow approach; one that does flies to
-      // the framing at the click, and the follow rows take over on arrival.
+      // The motion row decides whether a moving body is tweened.
       // Gate on `bodyMovesThisFrame`, not `row.type === 'body'`: a focused
       // S-star is a `starCatalog` row the sim clock still moves.
       if (bodyMovesThisFrame(row) && !focusMotionRowOf(motion).tweensMovingBodies) return;

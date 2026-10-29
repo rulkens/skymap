@@ -1,43 +1,14 @@
 /**
  * watchGoHomeSaga — flies the camera to the canonical sunlit Earth pose on each
- * `goHome` command, and pins Earth in the select + focus slots. The one home
- * intent behind the `h`/`e` keys and the Home pill lands here.
+ * `goHome` command (the `h`/`e` keys and the Home pill).
  *
- * ### Why home breaks the orientation-preserving rule
- *
- * Every OTHER focus (a palette body pick, the `f` key) preserves the user's
- * live yaw/pitch — the camera glides to the target from wherever it already
- * looks. Home is the ONE deliberate exception: it tweens to `bodyHomePose`,
- * whose yaw/pitch aim at Earth's sunlit side with the terminator raking across
- * the globe. Landing on the night side (a black disc) would waste the "you are
- * here" arrival shot, so home overrides orientation on purpose.
- *
- * ### Why this tween is the only camera authority during the flight
- *
- * The Earth focus is written as a `'cut'`, so `watchFocusTweenSaga` plants no
- * competing tween (under Geodesic it would fly Earth's heading-keeping framing);
- * this saga's `startCameraTween` is the sole mover, in the user's focus-move
- * style. The tween delivers the framing, so the follow memory it hands over is
- * settled: on tween end the follow row holds Earth at the landed distance with
- * no second ease. A Geodesic flight runs up to the tuning's max duration while
- * Earth moves under a pose frozen at dispatch: invisible at real time, a
- * visible catch-up on the hand-off frame at fast rates.
- *
- * ### Why BOTH select and focus are written
- *
- * `updateSelectionSelect(EARTH_REF)` pins the InfoCard (the "you are here"
- * onboarding card); `updateSelectionFocus(EARTH_REF)` drives the follow-pivot
- * (`applyFocusedBodyPivot`) and the URL hash. The `h`-key path before this fold
- * wrote only focus, so the card never pinned — writing both closes that gap and
- * matches the palette path.
- *
- * ### Why it bails, and why getContext is read INSIDE the loop
- *
- * `cameraRuntime()` is null pre-bootstrap / post-destroy (mirroring
- * watchFocusTweenSaga's null-runtime bail): a home press in that window simply
- * does nothing rather than tweening from a stale pose. getContext is read per
- * action, not once at saga start, because the engine registers its saga context
- * AFTER the root saga forks — the same reason the sibling sagas read it lazily.
+ * Home deliberately overrides the live orientation: it lands on `bodyHomePose`'s
+ * sunlit side, not a night-side disc. The focus is written as `'cut'` so
+ * `watchFocusTweenSaga` plants no competing tween; this tween is the sole mover
+ * and the follow memory settles on arrival. Both select (InfoCard pin) and focus
+ * (follow pivot, URL) are written. On a null `cameraRuntime` the press is
+ * skipped; getContext is read per action because the engine registers its
+ * context after the root saga forks.
  */
 import { take, getContext, put, select } from 'typed-redux-saga';
 

@@ -1,7 +1,7 @@
 /**
  * FocusMoveSettings — the `settings.focusMoves` cluster: which style a focus
  * move flies, and both styles' tuning. This is the Intent; `resolveFocusMotion`
- * freezes it into a `FocusMotion` at dispatch. Only `style` persists.
+ * freezes it into a `FocusMotion` at dispatch.
  */
 
 import type { FocusMoveStyle } from '../camera/FocusMoveStyle';

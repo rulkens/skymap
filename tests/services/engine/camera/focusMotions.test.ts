@@ -112,7 +112,7 @@ describe('focusMotions', () => {
   });
 
   it('a geodesic tween to a moving body hands off to followHold on the live body, with no second ease', () => {
-    const h = makeCameraSimHarness({ focusBody: null, bootHR: 10 });
+    const h = makeCameraSimHarness({ focusBody: null });
     h.focus('mars');
     const row = h.store.getState().selectionRows.focus!;
     const from = h.store.getState().camera.base.pose as CameraPose;
