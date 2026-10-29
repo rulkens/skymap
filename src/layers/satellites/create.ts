@@ -12,6 +12,7 @@ import { createSatellitePointRenderer } from './render/satellitePointRenderer';
 import { createOrbitTrailRenderer } from '../../services/gpu/renderers/bodies/orbitTrailRenderer';
 import { createSatellitePropagator } from './subsystems/createSatellitePropagator';
 import { createSatellitesSlot } from './load/satellitesSlot';
+import { createSimRateTracker } from './subsystems/createSimRateTracker';
 import { createSelectedSatellites } from './subsystems/createSelectedSatellites';
 import SatellitePropagationWorker from './load/satellitePropagation.worker?worker';
 
@@ -33,6 +34,7 @@ export function create(deps: LayerCoreDeps): SatellitesRuntime {
     orbitRenderer,
     propagator,
     slot,
+    simRate: createSimRateTracker(),
     selected: createSelectedSatellites(
       { read: () => deps.store.getState().selection, subscribe: deps.store.subscribe },
       { slot, propagator },

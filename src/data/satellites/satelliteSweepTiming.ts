@@ -5,6 +5,8 @@
  * drawn (if the clock moved at all), or at once when the clock is `maxSimAgeMs` from it. The
  * dots stay fully drawn to `fullDrawSimAgeMs`, then fade over `drawFadeSimAgeMs`: a ~13 ms sweep
  * keeps 1 h/s at ~2-3 min old, and past ~2 h/s the dots fade out steadily instead of blinking.
+ * `expectedSweepLagMs` is the ~13 ms sweep plus transfer plus one frame of request alignment
+ * (measured 2026-10-29); with the 300/420 s age fade it keeps dots full to ~1.7 h/s, hidden by ~2.3.
  * The planner also wakes an idle frame loop after `realIntervalMs`.
  */
 export const SATELLITE_SWEEP_TIMING = {
@@ -12,4 +14,5 @@ export const SATELLITE_SWEEP_TIMING = {
   maxSimAgeMs: 30_000,
   fullDrawSimAgeMs: 300_000,
   drawFadeSimAgeMs: 120_000,
+  expectedSweepLagMs: 50,
 } as const;

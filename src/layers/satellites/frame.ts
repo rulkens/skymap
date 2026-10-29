@@ -28,11 +28,12 @@ export function satellitesPlanner(
     fade: 'satellites',
     plan(snapshot, views, _state, fade) {
       const { propagator, renderer } = runtime;
+      const simMs = julianDaysToUnixMs(snapshot.simDays);
+      runtime.simRate.observe(simMs, snapshot.nowMs);
       const catalog = propagator.catalog();
       const earth = deriveBodyStates(snapshot.simDays).get(SCENE_EARTH.id);
       if (catalog === null || earth === undefined || views.length === 0) return IDLE;
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
-      const simMs = julianDaysToUnixMs(snapshot.simDays);
       const cameraEarthKm =
         distanceMpc(views[0]!.drawCamPos, earth.positionMpc) / SCALE_UNITS.KM_TO_MPC;
       if (satelliteOpacity(simMs, catalog.fetchedAtMs, cameraEarthKm) <= 0) return IDLE;

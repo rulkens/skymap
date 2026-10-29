@@ -2,8 +2,9 @@
  * satelliteOrbitsPass — the selected and focused satellites' orbits as the same fading trail the
  * planets get, drawn by the Layer's OWN `OrbitTrailRenderer`: core's rewrites its instance buffer on
  * every `draw`, so a second draw in a frame would overwrite the planets' records before submit.
- * Alpha is the class fade times the dots' opacity, so a ring never outlives its dot. NEAR0, under
- * the same occlusion as the trails; no pick.
+ * Alpha is the class fade times the stale-data and camera-distance fade, not the dots' sweep-lag
+ * fade: at fast time a ring is computed every frame and stays exact. NEAR0, under the same
+ * occlusion as the trails; no pick.
  * HARD INVARIANT: `view.slab.vp`, never `view.vp` (see `writeOrbitTrailRecord`).
  */
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

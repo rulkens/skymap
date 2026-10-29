@@ -28,6 +28,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
+import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
@@ -35,8 +36,9 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
     const sweep = runtime.renderer.uploaded();
     const age = sweep === null ? Infinity : Math.abs(julianDaysToUnixMs(simDays) - sweep.simMs);
     return (
-      sweepAgeOpacity(age) *
-      satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc)
+      sweepAgeOpacity(
+        Math.max(age, runtime.simRate.rate() * SATELLITE_SWEEP_TIMING.expectedSweepLagMs),
+      ) * satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc)
     );
   };
 

@@ -1,6 +1,7 @@
 /**
  * satelliteLayerOpacity — the stale-data and camera-distance fade shared by the dots and the orbit
- * rings, so a ring never outlives its dot. 0 while no catalog is loaded.
+ * rings. Not the sweep-lag fade: at fast time the dots fade because sweeps cannot keep up, while a
+ * selected ring is SGP4'd every frame and stays exact. 0 while no catalog is loaded.
  */
 import { satelliteOpacity } from './satelliteOpacity';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
