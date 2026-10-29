@@ -14,7 +14,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { surfaceTileCentreUv } from '../../../src/utils/surfaceTiles/surfaceTileCentreUv';
+import { surfaceTileCentreUv } from '../../../src/layers/body/subsystems/surfaceTiles/surfaceTileCentreUv';
 import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
 import { surfaceTileXyForUv } from '../../../src/utils/surfaceTiles/surfaceTileXyForUv';
 import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';

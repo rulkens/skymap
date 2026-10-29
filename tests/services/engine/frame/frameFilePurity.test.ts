@@ -114,7 +114,6 @@ describe.each([
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
-  ['frame/surfaceTilePlanner', FRAME_DIR + 'surfaceTilePlanner/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
   // `passes/index.ts` is a registry barrel, not a row; the other dirs have no

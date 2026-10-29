@@ -116,7 +116,7 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/utils/palette/scoreFamousMatch.ts',
   'src/utils/occlusion/subjectOccludedByBodies.ts',
   'src/utils/render/disk/byDistanceToCamera.ts',
-  'src/utils/surfaceTiles/cutSurfaceTiles.ts',
+  'src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts',
   'src/utils/volume/packLogTraceVoxels.ts',
   'tools/capture/parseFeaturedArgs.ts',
   'tools/catalog/buildAllBins.ts',

@@ -24,7 +24,7 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../src/@types/data/Tier';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 type StubSlot = AssetSlot<unknown, unknown> & {
   load: ReturnType<typeof vi.fn>;
@@ -75,7 +75,7 @@ function makeState(
     settings: {},
     requests: new Set(),
     subsystems: { assetQueue },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
       outputs: {
@@ -424,7 +424,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
       settings: {},
       requests: new Set(),
       subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-      terrain: FLAT_TERRAIN,
+      terrainHeightAt: datumOnlyTerrainHeight,
       cameraRuntime: {
         register: { pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e6 }) },
         outputs: {
