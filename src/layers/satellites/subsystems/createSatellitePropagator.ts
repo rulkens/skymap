@@ -1,8 +1,7 @@
 /**
- * createSatellitePropagator — owns the SGP4 worker's lifetime and its one-in-flight message loop.
- * The asset slot calls `start` on commit and `stop` on release, which is what keeps the worker
- * alive only while the Layer is active. The worker gets a copy of `satellites.satg`: the main thread
- * keeps its own parsed views for the names and the epoch window.
+ * createSatellitePropagator — owns the SGP4 worker and its one-in-flight message loop. The worker
+ * gets a copy of `satellites.satg`: the main thread keeps its own parsed views for the names and the
+ * epoch window.
  */
 import { parseSatelliteCatalog } from '../load/parseSatelliteCatalog';
 import type { SatelliteCatalog } from '../../../@types/satellites/SatelliteCatalog';
@@ -50,8 +49,9 @@ export function createSatellitePropagator(
         w.onerror = (event) => {
           const err =
             event.error ?? new Error(event.message || 'satellite propagation worker error');
-          if (worker === w) stop();
+          // Reject first: stop() would settle the start with its own "stopped" error.
           reject(err);
+          if (worker === w) stop();
         };
         w.onmessage = (event: MessageEvent<SatelliteWorkerReply>) => {
           if (worker !== w) return;

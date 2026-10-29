@@ -38,6 +38,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
+- [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
+- [ ] **A link or search pick switches its subject's Layer on** `needs-design` — with satellites off a satellite link lands home; ruled generic for every kind, own PR, no new `SelectionKindRow` member. → [details](backlog/2026-10-29-link-switches-its-subject-on.md)
 - [ ] **Layer terrain contract review** `needs-design` — whether the camera's ground query should stay a Layer member (`heightAt`, narrowed 2026-10-28) or move behind another seam.
 - [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
 - [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:783`, and neither `runFrame` nor the scheduler's `tick` catches, so trace where the throw is lost.
@@ -117,6 +119,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **Lazy-allocate GPU resources for off features** `ready` — flow particles (26.6 MB, off by default), bloom with bloom disabled, hidden layers' render targets. → [details](backlog/2026-10-13-lazy-gpu-allocation.md)
@@ -298,6 +301,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## External / blocked
 
+- [ ] **Space-Track's full satellite catalog** `blocked` — ~30k objects with rocket bodies and all debris; needs an account and written approval to redistribute (satellites spec §9).
+- [ ] **Craft around other planets and at Lagrange points** `needs-design` — `/add-mission` rows, plus `buildSpacecraftTracks` generalised beyond Voyager for halo orbits (satellites spec §9).
 - [ ] **HyperLEDA cache backfill** `blocked` — R2 cache is intentionally partial (52k / ~1.5M PGCs); don't auto-refetch, promote only on concrete need (memory `project_hyperleda_partial_cache`).
 - [ ] **DESI DR1 as a data source** `blocked` — viable + ~90% new data, but ~10× points (~9.75M) exceeds the interactive-render ceiling; revisit after the point ceiling lifts to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`). A scoped 2.5° patch shipped separately via the [deep-cone spec](superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md).
 - [ ] **DESI BGS real galaxy shapes** `needs-verification` — DR1 LSS clustering catalogs carry no shape columns; every DESI row renders at the default size + hashed fallback orientation. → [details](backlog/2026-07-09-desi-bgs-real-shapes.md)

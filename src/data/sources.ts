@@ -17,6 +17,7 @@ import { MILKY_WAY_SOURCE_ROWS } from '../layers/milkyWay/sources/milkyWaySource
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { BODY_SOURCE_ROWS } from '../layers/body/sources/bodySourceRows';
 import { MISSIONS_SOURCE_ROWS } from '../layers/missions/sources/missionsSourceRows';
+import { SATELLITES_SOURCE_ROWS } from '../layers/satellites/sources/satellitesSourceRows';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
 import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
 import { BLACK_HOLE_SOURCE_ROWS } from '../layers/blackHoles/sources/blackHoleSourceRows';
@@ -43,6 +44,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(BLACK_HOLE_SOURCE_ROWS),
   ...sourceRecordOf(BODY_SOURCE_ROWS),
   ...sourceRecordOf(MISSIONS_SOURCE_ROWS),
+  ...sourceRecordOf(SATELLITES_SOURCE_ROWS),
   ...sourceRecordOf(STRUCTURE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 

@@ -1,6 +1,6 @@
 name: Satellite catalog
 
-# Daily refresh of the satellite orbit data (spec: docs/superpowers/specs/2026-10-28-earth-satellites-design.md
+# Daily refresh of the satellite orbit data (spec: docs/superpowers/specs/completed/2026-10-28-earth-satellites-design.md
 # §5.2). SGP4 elements go stale by kilometres a day, so nobody uploads this by hand: the run fetches
 # CelesTrak, builds satellites.satg and overwrites its fixed R2 key. A failed run uploads nothing and
 # the app keeps the previous file; after 14 days without a good run the app fades the satellites out.

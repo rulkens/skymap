@@ -1,6 +1,6 @@
 /**
- * satellites — the Earth-satellite points' settings cluster: the show toggle, which the
- * "Labels & guides" row writes through the show entry (no reducer of its own yet).
+ * satellites — the Earth-satellite points' settings cluster: the master switch and one per class.
+ * The Settings section writes both through the generic `setVisibility`, so no reducer of its own.
  */
 import { createSlice } from '@reduxjs/toolkit';
 

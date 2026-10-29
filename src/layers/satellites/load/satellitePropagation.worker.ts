@@ -1,7 +1,7 @@
 /**
  * Web-worker entry for SGP4: `init` builds the satrecs once (≈0.1–0.4 s for 20k objects), each
  * `sweep` propagates them all and transfers the result back. It never sweeps on its own; the
- * main thread pulls (spec §5.5) and terminates the worker when the Layer goes inactive.
+ * main thread pulls.
  */
 import { parseSatelliteCatalog } from './parseSatelliteCatalog';
 import { createSatelliteSweeper } from './createSatelliteSweeper';
@@ -16,7 +16,7 @@ self.onmessage = (event: MessageEvent<SatelliteWorkerRequest>) => {
   const msg = event.data;
   if (msg.kind === 'init') {
     sweeper = createSatelliteSweeper(parseSatelliteCatalog(msg.buffer));
-    post({ kind: 'ready', count: sweeper.count });
+    post({ kind: 'ready' });
     return;
   }
   if (sweeper === null) throw new Error('satellitePropagation: sweep before init');
