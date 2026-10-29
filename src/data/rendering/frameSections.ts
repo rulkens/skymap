@@ -17,6 +17,7 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
+    { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
     // `sky-view` re-bakes its LUT every frame (camera altitude + sun direction), unlike
@@ -227,7 +228,7 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails'],
+      passes: ['orbit-trails', 'mission-trails', 'satellites'],
       slot: 'POST_FOREGROUND',
     },
   ],

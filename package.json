@@ -199,6 +199,7 @@
     "react-markdown": "10.1.0",
     "react-redux": "9.3.0",
     "redux-saga": "1.5.0",
+    "satellite.js": "7.1.0",
     "typed-redux-saga": "1.5.0",
     "wgpu-matrix": "3.4.2"
   }

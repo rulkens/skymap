@@ -1,0 +1,39 @@
+/**
+ * create — the satellites Layer in dependency order: the renderer, the propagator (no worker yet),
+ * then the slot whose commit starts the worker and whose release ends it. A landed sweep wakes the
+ * frame loop so it is drawn even with the camera at rest.
+ */
+import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
+import type { SatellitesRuntime } from './@types/SatellitesRuntime';
+import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
+import { SATELLITE_SWEEP_TIMING } from '../../data/satellites/satelliteSweepTiming';
+import { createSatellitePointRenderer } from './render/satellitePointRenderer';
+import { createSatellitePropagator } from './subsystems/createSatellitePropagator';
+import { createSatellitesSlot } from './load/satellitesSlot';
+import SatellitePropagationWorker from './load/satellitePropagation.worker?worker';
+
+export function create(deps: LayerCoreDeps): SatellitesRuntime {
+  const renderer = createSatellitePointRenderer({
+    device: deps.ctx.device,
+    targetFormat: HDR_TARGET_FORMAT,
+  });
+  const propagator = createSatellitePropagator(SatellitePropagationWorker, deps.requestRender);
+  let wake: ReturnType<typeof setTimeout> | null = null;
+  const cancelWake = (): void => {
+    if (wake !== null) clearTimeout(wake);
+    wake = null;
+  };
+  return {
+    renderer,
+    propagator,
+    slot: createSatellitesSlot(propagator, renderer),
+    scheduleWake: () => {
+      cancelWake();
+      wake = setTimeout(() => {
+        wake = null;
+        deps.requestRender();
+      }, SATELLITE_SWEEP_TIMING.realIntervalMs);
+    },
+    cancelWake,
+  };
+}

@@ -541,6 +541,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       {
+        name: 'Satellites',
+        control: 'switch',
+        does: 'Shows the satellites and debris that CelesTrak tracks round Earth, as points, when the camera is near Earth. Their file is fetched, and their orbits worked out, only while the camera is there.',
+        values: SWITCH,
+        first: ON,
+        state: 'satellites.enabled',
+        firstValue: true,
+      },
+      {
         name: 'Zone of Avoidance',
         control: 'switch',
         does: 'Shows the blue band along the plane of the Milky Way, behind which the catalogues are short of galaxies.',
