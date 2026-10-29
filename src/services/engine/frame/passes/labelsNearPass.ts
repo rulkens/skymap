@@ -9,7 +9,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { near0LabelProjection } from '../near0LabelProjection';
-import { NEAR0_OVERLAY_CLIP_SCALE } from '../near0OverlayClipScale';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
@@ -40,7 +39,7 @@ export const labelsNearPass: ContentPass = {
     if (renderer === null) return;
     const lineRenderer = state.gpu.markerLineRendererNear;
 
-    const { vpF32, viewportPx } = near0LabelProjection(ctx);
+    const { vpF32, viewportPx, clipScale } = near0LabelProjection(ctx);
 
     // The joint both renderers bind: the coverage alpha AND the sampled depth
     // these captions clip their glyphs against, since their `occludeNearKm`
@@ -55,7 +54,7 @@ export const labelsNearPass: ContentPass = {
     // The captions' em rides the rescaled NEAR0 matrix, so it scales with it.
     renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, {
       scene,
-      clipScale: NEAR0_OVERLAY_CLIP_SCALE,
+      clipScale,
     });
   },
 

@@ -1,11 +1,14 @@
 /**
- * NEAR0_OVERLAY_CLIP_SCALE — the factor that rescales the NEAR0 overlay's
- * matrices to emit clip METRES. NDC and depth are invariant under a uniform
- * clip scale; any world length a consumer divides by that `w` must carry the
- * same factor.
- * Derivation: docs/RENDERER.md, "NEAR0 overlay clip `w` must stay ≫ 1e-20".
+ * near0OverlayClipScale — the uniform clip scale the NEAR0 overlays (captions,
+ * leader lines, selection ring, mission trails) multiply their eye-relative-Mpc
+ * vp by. NDC is invariant under it; what it sets is the MAGNITUDE of clip `w`,
+ * which rasterizers only interpolate faithfully inside a band (SwiftShader:
+ * ~1e-12 … 1e11; hardware is wider but not unbounded). 1/near pins the nearest
+ * drawn content at w = 1 and the farthest at far/near (≤ ~1e6 under
+ * `foregroundFrustum`), whatever the camera's scale. The old fixed metre scale
+ * put a caption 100 pc out at w ≈ 1e18, past the band: sheared glyph garbage.
  */
 
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-
-export const NEAR0_OVERLAY_CLIP_SCALE = SCALE_UNITS.MPC_TO_M;
+export function near0OverlayClipScale(nearMpc: number): number {
+  return 1 / nearMpc;
+}
