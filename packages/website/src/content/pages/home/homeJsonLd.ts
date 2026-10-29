@@ -1,7 +1,7 @@
-import pkg from '../../../../package.json';
-import { APP_BASE } from './appLink';
-import { BASE } from './site';
-import { MAKER_NAME } from './siteIdentity';
+import pkg from '../../../../../../package.json';
+import { APP_BASE } from '../../../data/appLink';
+import { BASE } from '../../../data/site';
+import { MAKER_NAME } from '../../../data/siteIdentity';
 
 /**
  * Home's structured data. Only what the page itself says or what is plainly

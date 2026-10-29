@@ -4,123 +4,33 @@ description: Where Skymap’s numbers come from, how we turn catalogues into pix
 job: "Where do Skymap's numbers come from, and how far can I trust them?"
 ---
 
-import AskList from '../../components/pages/science/AskList/AskList.tsx';
-import Citation from '../../components/shared/text/Citation/Citation.tsx';
-import Claims from '../../components/shared/text/Claims/Claims.tsx';
-import Columns from '../../components/shared/layout/Columns/Columns.tsx';
-import Credits from '../../components/shared/text/Credits/Credits.tsx';
-import FramePair from '../../components/pages/science/FramePair/FramePair.tsx';
-import FullFigure from '../../components/pages/science/FullFigure/FullFigure.tsx';
-import Group from '../../components/shared/layout/Group/Group.tsx';
-import Note from '../../components/shared/text/Note/Note.tsx';
-import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
-import OpenApp from '../../components/shared/links/OpenApp/OpenApp.tsx';
-import PictureBand from '../../components/shared/media/PictureBand/PictureBand.tsx';
-import Remark from '../../components/shared/text/Remark/Remark.tsx';
-import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.tsx';
-import SectionNav from '../../components/pages/science/SectionNav/SectionNav.tsx';
-import ShotCaption from '../../components/shared/media/ShotCaption/ShotCaption.tsx';
-import StatementsFigure from '../../components/pages/science/StatementsFigure/StatementsFigure.tsx';
-import Sources from '../../components/shared/text/Sources/Sources.tsx';
-import SourceTable from '../../components/pages/science/SourceTable/SourceTable.tsx';
-import Section from '../../components/shared/layout/Section/Section.tsx';
-import { fact } from '../../data/fact';
-import { REPO_URL } from '../../data/siteIdentity';
-import links from '../../styles/links.module.css';
-import text from '../../styles/type.module.css';
-import { formatDate } from '../../utils/formatDate';
-import { sitePath } from '../../utils/sitePath';
-
-export const MEASURED = [
-  { term: 'Directions', id: 'sci-directions' },
-  { term: 'Redshifts', id: 'sci-redshifts' },
-  { term: 'Stars', id: 'sci-star-observables' },
-  { term: 'Galaxy brightness', id: 'sci-magnitudes' },
-  { term: 'Surfaces', id: 'sci-surfaces' },
-];
-export const DERIVED = [
-  { term: 'Galaxy distances', id: 'sci-galaxy-distance' },
-  { term: 'The Hubble constant', id: 'sci-h0-range' },
-  { term: 'Nearby galaxies', id: 'sci-local-volume' },
-  { term: 'Two kinds of redshift', id: 'sci-two-redshifts' },
-  { term: 'Star distances', id: 'sci-star-distance' },
-  { term: 'Planets and moons', id: 'sci-ephemeris' },
-  { term: 'Density field', id: 'sci-density-field' },
-  { term: 'Filaments', id: 'sci-filaments' },
-  { term: 'Flows', id: 'sci-flows' },
-  { term: 'Galaxy colour', id: 'sci-colour' },
-  { term: 'Clusters', id: 'sci-structures' },
-];
-export const DRAWN = [
-  { term: 'The Milky Way', id: 'sci-milky-way' },
-  { term: 'Its stars', id: 'sci-milky-way-points' },
-  { term: 'The edge sphere', id: 'sci-horizon-shell' },
-  { term: 'How far the data go', id: 'sci-deepest' },
-  { term: 'Planet maps', id: 'sci-planet-maps' },
-  { term: 'Atmospheres', id: 'sci-atmospheres' },
-  { term: 'Earth’s clouds', id: 'sci-earth-clouds' },
-  { term: 'Galaxy discs', id: 'sci-galaxy-discs' },
-  { term: 'Galaxy tilt', id: 'sci-galaxy-tilt' },
-  { term: 'DESI brightness', id: 'sci-desi-brightness' },
-  { term: 'The black hole', id: 'sci-black-hole' },
-  { term: 'Zone of Avoidance band', id: 'sci-zoa-band' },
-  { term: 'Structure markers', id: 'sci-markers' },
-  { term: 'Glow and tone', id: 'sci-tone' },
-];
-export const SIMPLIFIED = [
-  {
-    title: 'Distance',
-    items: [
-      { term: 'Redshift space', id: 'sim-redshift-space' },
-      { term: 'Reference frame', id: 'sim-frames' },
-      { term: 'Two expansion rates', id: 'sim-horizon-h0' },
-      { term: 'A step at 30 megaparsecs', id: 'sim-scale-step' },
-      { term: 'Estimated redshifts', id: 'sci-photometric-share' },
-    ],
-  },
-  {
-    title: 'Coverage',
-    items: [
-      { term: 'SDSS footprint', id: 'survey-gaps' },
-      { term: '2MRS footprint', id: '2mrs-coverage' },
-      { term: 'Zone of Avoidance', id: 'sim-zone' },
-      { term: 'DESI', id: 'sim-desi-patches' },
-      { term: 'Flux limits', id: 'sim-flux-limits' },
-      { term: 'Our own dimming', id: 'sim-reweight' },
-      { term: 'Data sizes', id: 'sim-data-sizes' },
-      { term: 'Duplicates', id: 'sim-duplicates' },
-    ],
-  },
-  {
-    title: 'Stars, planets and time',
-    items: [
-      { term: 'Stars stand still', id: 'sim-star-epoch' },
-      { term: 'Which stars', id: 'sim-star-coverage' },
-      { term: 'Outside 1900 to 2100', id: 'sim-ephemeris-span' },
-    ],
-  },
-  {
-    title: 'Size and brightness',
-    items: [
-      { term: 'Exposure', id: 'sim-exposure' },
-      { term: 'Quasars', id: 'sim-quasar-boost' },
-      { term: 'Galaxy points', id: 'sim-point-floor' },
-      { term: 'Planets and stars', id: 'sim-true-size' },
-    ],
-  },
-];
-export const factIds = [
-  ...[...MEASURED, ...DERIVED, ...DRAWN, ...SIMPLIFIED.flatMap((group) => group.items)].map(
-    (item) => item.id,
-  ),
-  'sci-built-counts',
-  'sci-cite-skymap',
-  'astronomical-unit',
-  'megaparsec-length',
-];
-export const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
-
-{/* Every fact row the page prints is in factIds, so the Sources list cannot drift from the copy. */}
+import AskList from '../../../components/pages/science/AskList/AskList.tsx';
+import Citation from '../../../components/shared/text/Citation/Citation.tsx';
+import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import FramePair from '../../../components/pages/science/FramePair/FramePair.tsx';
+import FullFigure from '../../../components/pages/science/FullFigure/FullFigure.tsx';
+import Group from '../../../components/shared/layout/Group/Group.tsx';
+import Note from '../../../components/shared/text/Note/Note.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
+import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
+import Remark from '../../../components/shared/text/Remark/Remark.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import SectionNav from '../../../components/pages/science/SectionNav/SectionNav.tsx';
+import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
+import StatementsFigure from '../../../components/pages/science/StatementsFigure/StatementsFigure.tsx';
+import Sources from '../../../components/shared/text/Sources/Sources.tsx';
+import SourceTable from '../../../components/pages/science/SourceTable/SourceTable.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { fact } from '../../../data/fact';
+import { REPO_URL } from '../../../data/siteIdentity';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { formatDate } from '../../../utils/formatDate';
+import { sitePath } from '../../../utils/sitePath';
+import { count, DERIVED, DRAWN, factIds, MEASURED, SIMPLIFIED } from './science.data';
 
 <PictureBand id="science-wedges" gap="none" eager>
   <h1>The science behind Skymap</h1>

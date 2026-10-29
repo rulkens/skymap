@@ -1,5 +1,5 @@
-import type { ClassFeature } from '../@types/ClassFeature';
-import { siteShot } from './siteShot';
+import type { ClassFeature } from '../../../@types/ClassFeature';
+import { siteShot } from '../../../data/siteShot';
 
 // A feature's control opens where its picture was taken, so the link is read from the picture's manifest row.
 const at = (shot: string, tall: string) => ({ shot, tall, hash: siteShot(shot).link });

@@ -4,55 +4,29 @@ description: Skymap is made by one person, Alexander Rulkens, and is open source
 job: "Who makes Skymap, how do I reach them, and which pictures may I reuse?"
 ---
 
-import Beside from '../../components/shared/layout/Beside/Beside.tsx';
-import Claims from '../../components/shared/text/Claims/Claims.tsx';
-import Columns from '../../components/shared/layout/Columns/Columns.tsx';
-import Credits from '../../components/shared/text/Credits/Credits.tsx';
-import Figure from '../../components/shared/media/Figure/Figure.tsx';
-import Note from '../../components/shared/text/Note/Note.tsx';
-import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
-import OpenApp from '../../components/shared/links/OpenApp/OpenApp.tsx';
-import PictureBand from '../../components/shared/media/PictureBand/PictureBand.tsx';
-import PressPictures from '../../components/pages/about/PressPictures/PressPictures.tsx';
-import Quotable from '../../components/pages/about/Quotable/Quotable.tsx';
-import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.tsx';
-import ShotCaption from '../../components/shared/media/ShotCaption/ShotCaption.tsx';
-import Sources from '../../components/shared/text/Sources/Sources.tsx';
-import Section from '../../components/shared/layout/Section/Section.tsx';
-import { CONTACT_ENDPOINT, ISSUES_URL } from '../../data/contact';
-import { fact } from '../../data/fact';
-import { MAKER_NAME, REPO_URL } from '../../data/siteIdentity';
-import links from '../../styles/links.module.css';
-import text from '../../styles/type.module.css';
-import { formatDate } from '../../utils/formatDate';
-import { sitePath } from '../../utils/sitePath';
-
-export const ALIVE = [
-  { term: 'Licence', id: 'about-licence' },
-  { term: 'Version', id: 'about-version' },
-  { term: 'History', id: 'about-history' },
-];
-export const COLOPHON = [
-  { term: 'Pictures', id: 'about-pictures' },
-  { term: 'Headings', id: 'about-display-face' },
-  { term: 'Text', id: 'about-text-face' },
-  { term: 'Font files', id: 'about-fonts-hosted' },
-  { term: 'Pages', id: 'about-built-with' },
-];
-export const factIds = [
-  'about-what-is',
-  'about-maker',
-  'about-ai',
-  ...ALIVE.map((item) => item.id),
-  'about-picture-licence',
-  'about-picture-reuse',
-  'gaia-licence',
-  ...COLOPHON.map((item) => item.id),
-];
-export const whatIs = fact('about-what-is').text;
-export const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
-
-{/* Every fact row the page prints is in factIds, so the Sources list cannot drift from the copy. */}
+import Beside from '../../../components/shared/layout/Beside/Beside.tsx';
+import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import Figure from '../../../components/shared/media/Figure/Figure.tsx';
+import Note from '../../../components/shared/text/Note/Note.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import OpenApp from '../../../components/shared/links/OpenApp/OpenApp.tsx';
+import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
+import PressPictures from '../../../components/pages/about/PressPictures/PressPictures.tsx';
+import Quotable from '../../../components/pages/about/Quotable/Quotable.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
+import Sources from '../../../components/shared/text/Sources/Sources.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { CONTACT_ENDPOINT, ISSUES_URL } from '../../../data/contact';
+import { fact } from '../../../data/fact';
+import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { formatDate } from '../../../utils/formatDate';
+import { sitePath } from '../../../utils/sitePath';
+import { ALIVE, COLOPHON, factIds, makerProfile, whatIs } from './about.data';
 
 <PictureBand id="about-milky-way" gap="none" eager>
   <h1>About Skymap</h1>

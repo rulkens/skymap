@@ -4,48 +4,25 @@ description: This website sets no cookies and counts nothing. The app counts vis
 job: "What does the Skymap website or app collect or keep about me?"
 ---
 
-import Caveat from '../../components/shared/text/Caveat/Caveat.tsx';
-import Claims from '../../components/shared/text/Claims/Claims.tsx';
-import Group from '../../components/shared/layout/Group/Group.tsx';
-import Note from '../../components/shared/text/Note/Note.tsx';
-import InlineAddress from '../../components/pages/privacy/InlineAddress/InlineAddress.tsx';
-import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
-import PictureBand from '../../components/shared/media/PictureBand/PictureBand.tsx';
-import Remark from '../../components/shared/text/Remark/Remark.tsx';
-import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.tsx';
-import ShotCaption from '../../components/shared/media/ShotCaption/ShotCaption.tsx';
-import Sources from '../../components/shared/text/Sources/Sources.tsx';
-import Section from '../../components/shared/layout/Section/Section.tsx';
-import { OPEN_APP_LABEL } from '../../data/appLink';
-import { ISSUES_URL } from '../../data/contact';
-import { fact } from '../../data/fact';
-import { MAKER_NAME } from '../../data/siteIdentity';
-import links from '../../styles/links.module.css';
-import text from '../../styles/type.module.css';
-import { formatDate } from '../../utils/formatDate';
-import { sitePath } from '../../utils/sitePath';
-
-export const SITE = [
-  { term: 'What it loads', id: 'privacy-site-requests' },
-  { term: 'Who serves it', id: 'privacy-host' },
-  { term: 'What the host sees', id: 'privacy-host-sees' },
-];
-export const COUNTER = [
-  { term: 'The counter', id: 'privacy-counter' },
-  { term: 'What it sends', id: 'privacy-counter-sends' },
-  { term: 'What is stored', id: 'privacy-counter-stores' },
-  { term: 'No cookie', id: 'privacy-counter-cache' },
-  { term: 'How long', id: 'privacy-counter-retention' },
-  { term: 'No notice', id: 'privacy-no-notice' },
-];
-export const APP = [
-  { term: 'In your browser', id: 'privacy-app-storage' },
-  { term: 'Galaxy pictures', id: 'privacy-thumbnails' },
-];
-export const factIds = [...SITE, ...COUNTER, ...APP].map((item) => item.id);
-export const checked = formatDate(fact('privacy-site-requests').checked);
-
-{/* Every fact row the page prints is in factIds, so the Sources list cannot drift from the copy. */}
+import Caveat from '../../../components/shared/text/Caveat/Caveat.tsx';
+import Claims from '../../../components/shared/text/Claims/Claims.tsx';
+import Group from '../../../components/shared/layout/Group/Group.tsx';
+import Note from '../../../components/shared/text/Note/Note.tsx';
+import InlineAddress from '../../../components/pages/privacy/InlineAddress/InlineAddress.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import PictureBand from '../../../components/shared/media/PictureBand/PictureBand.tsx';
+import Remark from '../../../components/shared/text/Remark/Remark.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import ShotCaption from '../../../components/shared/media/ShotCaption/ShotCaption.tsx';
+import Sources from '../../../components/shared/text/Sources/Sources.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { OPEN_APP_LABEL } from '../../../data/appLink';
+import { ISSUES_URL } from '../../../data/contact';
+import { MAKER_NAME } from '../../../data/siteIdentity';
+import links from '../../../styles/links.module.css';
+import text from '../../../styles/type.module.css';
+import { sitePath } from '../../../utils/sitePath';
+import { APP, checked, COUNTER, factIds, SITE } from './privacy.data';
 
 <PictureBand id="privacy-far-side" gap="none" eager>
   <h1>Privacy</h1>

@@ -1,8 +1,8 @@
 ---
-/* The about page: its text and front matter are content/pages/about.mdx. The route holds the structured data, which needs the site's origin. */
+/* The about page: its text and front matter are content/pages/about/about.mdx. The route holds the structured data, which needs the site's origin. */
 import { getEntry, render } from 'astro:content';
 
-import { aboutJsonLd } from '../data/aboutJsonLd';
+import { aboutJsonLd } from '../content/pages/about/aboutJsonLd';
 import { fact } from '../data/fact';
 import Base from '../layouts/Base.astro';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';

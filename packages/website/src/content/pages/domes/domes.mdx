@@ -5,43 +5,27 @@ job: "Can Skymap run in our dome or exhibit, and how do I ask for it?"
 ---
 
 import { Fragment } from 'astro/jsx-runtime';
-import Columns from '../../components/shared/layout/Columns/Columns.tsx';
-import DiscBand from '../../components/pages/domes/DiscBand/DiscBand.tsx';
-import Figure from '../../components/shared/media/Figure/Figure.tsx';
-import ObjLink from '../../components/shared/links/ObjLink/ObjLink.tsx';
-import Offer from '../../components/pages/domes/Offer/Offer.tsx';
-import Remark from '../../components/shared/text/Remark/Remark.tsx';
-import RemoteDemo from '../../components/shared/media/RemoteDemo/RemoteDemo.tsx';
-import SectionHead from '../../components/shared/layout/SectionHead/SectionHead.tsx';
-import Step from '../../components/shared/layout/Step/Step.tsx';
-import Steps from '../../components/shared/layout/Steps/Steps.tsx';
-import ViewLink from '../../components/shared/links/ViewLink/ViewLink.tsx';
-import Section from '../../components/shared/layout/Section/Section.tsx';
-import { appLink } from '../../data/appLink';
-import { fact } from '../../data/fact';
-import { REPO_URL } from '../../data/siteIdentity';
-import { siteShot } from '../../data/siteShot';
-import text from '../../styles/type.module.css';
-import { sitePath } from '../../utils/sitePath';
-
-export const STEPS = [
-  {
-    title: 'You write to us',
-    text: 'Tell us about the dome or the room, the screen, the audience, and a date if there is one.',
-  },
-  {
-    title: 'We answer with a plan',
-    text: 'We say what exists today, what would be new work, and what the new work costs. Nothing is built before you agree.',
-  },
-  {
-    title: 'We send a test',
-    text: 'A short piece in your format, for you to run on your own system. A dome shows faults that a desk monitor hides.',
-  },
-  {
-    title: 'We build and deliver',
-    text: 'Files or a web address, with the list of credits your screen has to show. You review it on the dome before it opens.',
-  },
-];
+import Columns from '../../../components/shared/layout/Columns/Columns.tsx';
+import ContactSection from '../../../components/pages/domes/ContactSection/ContactSection.astro';
+import Credits from '../../../components/shared/text/Credits/Credits.tsx';
+import DiscBand from '../../../components/pages/domes/DiscBand/DiscBand.tsx';
+import Figure from '../../../components/shared/media/Figure/Figure.tsx';
+import ObjLink from '../../../components/shared/links/ObjLink/ObjLink.tsx';
+import Offer from '../../../components/pages/domes/Offer/Offer.tsx';
+import Remark from '../../../components/shared/text/Remark/Remark.tsx';
+import RemoteDemo from '../../../components/shared/media/RemoteDemo/RemoteDemo.tsx';
+import SectionHead from '../../../components/shared/layout/SectionHead/SectionHead.tsx';
+import Step from '../../../components/shared/layout/Step/Step.tsx';
+import Steps from '../../../components/shared/layout/Steps/Steps.tsx';
+import ViewLink from '../../../components/shared/links/ViewLink/ViewLink.tsx';
+import Section from '../../../components/shared/layout/Section/Section.tsx';
+import { appLink } from '../../../data/appLink';
+import { fact } from '../../../data/fact';
+import { REPO_URL } from '../../../data/siteIdentity';
+import { siteShot } from '../../../data/siteShot';
+import text from '../../../styles/type.module.css';
+import { sitePath } from '../../../utils/sitePath';
+import { STEPS } from './domes.data';
 
 {/* The disc leads: the page's subject is round, so its header is not a rectangle with words on it. */}
 
@@ -135,4 +119,10 @@ export const STEPS = [
       </Step>
     ))}
   </Steps>
+</Section>
+
+<ContactSection />
+
+<Section as="div">
+  <Credits />
 </Section>

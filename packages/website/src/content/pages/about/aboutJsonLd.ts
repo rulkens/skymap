@@ -1,5 +1,5 @@
-import { BASE } from './site';
-import { MAKER_NAME, REPO_URL } from './siteIdentity';
+import { BASE } from '../../../data/site';
+import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
 
 /**
  * The About page's structured data: the maker as the same `Person` node Home

@@ -1,6 +1,6 @@
 ---
 /*
- * The home page: its text and front matter are content/pages/index.mdx. The route holds what only a
+ * The home page: its text and front matter are content/pages/home/home.mdx. The route holds what only a
  * route can: the head's preloads and pre-paint script, and the flight's stills, which it hands to the text as props.
  */
 import { getEntry, render } from 'astro:content';
@@ -8,12 +8,12 @@ import { getEntry, render } from 'astro:content';
 import { flightStopViews } from '../components/pages/home/Flight/flightStopViews.ts';
 import { prePaintScript } from '../components/pages/home/Flight/prePaintScript.ts';
 import { FLIGHT_STOPS } from '../data/flightStops';
-import { homeJsonLd } from '../data/homeJsonLd';
+import { homeJsonLd } from '../content/pages/home/homeJsonLd';
 import Base from '../layouts/Base.astro';
 import { flightStills } from '../utils/flightStills';
 import { heroVideoUrl } from '../utils/heroVideoUrl';
 
-const entry = (await getEntry('pages', 'index'))!;
+const entry = (await getEntry('pages', 'home'))!;
 const { Content } = await render(entry);
 const stills = await flightStills(FLIGHT_STOPS.map((stop) => stop.id));
 const first = stills[0]!;

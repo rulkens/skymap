@@ -11,9 +11,9 @@ describe('pageSourceFile', () => {
     expect(pageSourceFile('/docs/start/scene/')).toBe('docs/start/scene.mdx');
   });
 
-  it('maps a landing page and home to the pages collection', () => {
-    expect(pageSourceFile('/features/')).toBe('pages/features.mdx');
-    expect(pageSourceFile('/')).toBe('pages/index.mdx');
+  it('maps a landing page and home to its folder in the pages collection', () => {
+    expect(pageSourceFile('/features/')).toBe('pages/features/features.mdx');
+    expect(pageSourceFile('/')).toBe('pages/home/home.mdx');
   });
 
   it('refuses a path that climbs out', () => {
