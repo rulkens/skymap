@@ -92,6 +92,15 @@ describe('createSatellitePropagator', () => {
     await expect(started).rejects.toThrow(/stopped before it was ready/);
   });
 
+  it('rejects a start with the worker error itself, and stops the worker', async () => {
+    const propagator = make();
+    const started = propagator.start(FILE);
+    const worker = FakeWorker.last;
+    worker.onerror?.({ error: new Error('satrec init failed'), message: '' } as ErrorEvent);
+    await expect(started).rejects.toThrow('satrec init failed');
+    expect(worker.terminated).toBe(true);
+  });
+
   it('ignores a reply from a worker it has already replaced', async () => {
     const propagator = make();
     void propagator.start(FILE).catch(() => undefined);

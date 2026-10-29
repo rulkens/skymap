@@ -50,8 +50,9 @@ export function createSatellitePropagator(
         w.onerror = (event) => {
           const err =
             event.error ?? new Error(event.message || 'satellite propagation worker error');
-          if (worker === w) stop();
+          // Reject first: stop() would settle the start with its own "stopped" error.
           reject(err);
+          if (worker === w) stop();
         };
         w.onmessage = (event: MessageEvent<SatelliteWorkerReply>) => {
           if (worker !== w) return;
