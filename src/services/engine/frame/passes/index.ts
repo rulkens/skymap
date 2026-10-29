@@ -6,52 +6,25 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { horizonShellPass } from './horizonShellPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsCosmoPass } from './labelsCosmoPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
-import { earthPass } from './earthPass';
-import { surfaceTilesPass } from './surfaceTilesPass';
-import { terrainPickMarkerPass } from './terrainPickMarkerPass';
-import { cloudShellPass } from './cloudShellPass';
-import { planetsPass } from './planetsPass';
-import { texturedBodiesPass } from './texturedBodiesPass';
-import { coreMeshBodiesPass } from './coreMeshBodiesPass';
-import { ringsPass } from './ringsPass';
-import { bodyGlintsPass } from './bodyGlintsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { labelsNearPass } from './labelsNearPass';
-import { atmosphereShellPass } from './atmosphereShellPass';
-import { aerialPerspectivePass } from './aerialPerspectivePass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 
-/**
- * Core's contributed passes, as a flat set. It states no order and no grouping:
- * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
- */
+/** Core's contributed passes, as a flat set; `FRAME_ORDER` orders them. */
 export const CONTENT_PASSES: readonly ContentPass[] = [
-  horizonShellPass,
   orbitTrailsPass,
-  bodyGlintsPass,
   selectionRingPass,
   near0SelectionRingPass,
   markerLinesPass,
   labelsCosmoPass,
-  earthPass,
-  surfaceTilesPass,
-  terrainPickMarkerPass,
-  cloudShellPass,
-  planetsPass,
-  texturedBodiesPass,
-  coreMeshBodiesPass,
-  ringsPass,
   labelsNearPass,
   clipPathDebugPass,
-  atmosphereShellPass,
-  aerialPerspectivePass,
   skyCubemapBlitPass,
   domeResamplePass,
 ];

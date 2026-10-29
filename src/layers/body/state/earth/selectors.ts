@@ -11,18 +11,3 @@ export const selectRoute = createSelector(
 
 /** The whole cluster, under the slice's own name. */
 export const selectEarth = selectRoute;
-
-export const selectAtmosphereExposure = createSelector(
-  [selectRoute],
-  (route: EarthSettings): number => route.atmosphereExposure,
-);
-
-export const selectAmbientLight = createSelector(
-  [selectRoute],
-  (route: EarthSettings): number => route.ambientLight,
-);
-
-export const selectOceanRoughness = createSelector(
-  [selectRoute],
-  (route: EarthSettings): number => route.oceanRoughness,
-);

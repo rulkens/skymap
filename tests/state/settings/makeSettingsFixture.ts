@@ -69,10 +69,12 @@ import { initialState as thumbnailsInitialState } from '../../../src/layers/gala
 import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
+import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
+import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
@@ -91,6 +93,7 @@ export function makeSettingsFixture(
   return {
     orientation: DEFAULT_ORIENTATION,
     cameraControls: DEFAULT_CAMERA_CONTROLS,
+    focusMoves: DEFAULT_FOCUS_MOVES,
     camera: {
       fovDeg: DEFAULT_FOV_DEG,
     },
@@ -123,6 +126,7 @@ export function makeSettingsFixture(
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
+    satellites: { ...satellitesInitialState },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
     missions: { ...missionsInitialState },

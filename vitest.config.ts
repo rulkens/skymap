@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 import { weslStaticPlugin } from './tools/utils/vite/weslStaticPlugin.ts';
 import react from '@vitejs/plugin-react';
 
+import { satelliteJsDistAlias } from './tools/utils/vite/satelliteJsDistAlias.ts';
+
 // Vitest doesn't auto-inherit plugins from vite.config.ts in our setup,
 // so we re-register weslStaticPlugin here. Without this, Vitest's SSR transform
 // pipeline tries to parse .wesl files as JavaScript and rolldown rejects
@@ -12,6 +14,7 @@ import react from '@vitejs/plugin-react';
 // Vitest can transform .tsx component files — without it, JSX syntax in
 // test files triggers a parse error in the SSR pipeline.
 export default defineConfig({
+  resolve: { alias: satelliteJsDistAlias },
   plugins: [react(), weslStaticPlugin()],
   test: {
     environment: 'node',

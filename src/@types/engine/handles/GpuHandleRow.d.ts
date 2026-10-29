@@ -5,8 +5,8 @@ import type { EngineState } from '../state/EngineState';
 
 // Distributive over GpuHandleKey so `construct`'s return type is pinned to
 // the EXACT field type for that key (not a union of all of them) — a row for
-// 'horizonShellRenderer' must return HorizonShellRenderer, not
-// HorizonShellRenderer | RenderTargets | ...
+// 'label3DRenderer' must return Label3DRenderer, not
+// Label3DRenderer | RenderTargets | ...
 export type GpuHandleRow = {
   [K in GpuHandleKey]: {
     readonly key: K;

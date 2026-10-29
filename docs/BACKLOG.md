@@ -37,12 +37,17 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
+- [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
+- [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
+- [ ] **A link or search pick switches its subject's Layer on** `needs-design` — with satellites off a satellite link lands home; ruled generic for every kind, own PR, no new `SelectionKindRow` member. → [details](backlog/2026-10-29-link-switches-its-subject-on.md)
+- [ ] **Layer terrain contract review** `needs-design` — whether the camera's ground query should stay a Layer member (`heightAt`, narrowed 2026-10-28) or move behind another seam.
+- [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
+- [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:783`, and neither `runFrame` nor the scheduler's `tick` catches, so trace where the throw is lost.
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
 - [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **`DragMode` consumers test `=== 'pan'`, a new variant falls silently into orbit** `ready` — five sites hand-pick one string literal instead of an exhaustive switch, and the workbenches' `attachOrbitControls.ts` keeps its own local `DragMode` type distinct from the shared one. → [details](backlog/2026-09-29-dragmode-binary-pan-tests.md)
 - [ ] **Port the mcpm and scene workbenches onto the store input path** `ready` — both still drive `tools/utils/input/attachOrbitControls.ts` + `createInputAggregator.ts`; port them to `recognize` and delete the pair.
 - [ ] **Takeover's camera-cluster merge wipes any field it doesn't set** `ready` — `withSceneSnapshotSaga` merges a partial `camera` cluster, and `mergeSettingsSnapshot` replaces whole clusters rather than fields, so any `CameraSettings` field added later is dropped for the duration of every takeover. → [details](backlog/2026-09-29-takeover-replaces-camera-cluster.md)
-- [ ] **`DEFAULT_VOLUME_PALETTE_ID`'s comment claims persistence that doesn't exist** `ready` — the comment says the palette choice is persisted to localStorage by the App shell via `setVolumePalette`; neither the storage call nor that symbol exists anywhere in `src`. → [details](backlog/2026-09-29-stale-palette-persisted-comment.md)
 - [ ] **Voyager exhibit: cross-link and thumbnail** `ready` — a body-card row opening the exhibit, and the palette card's thumbnail. → [details](backlog/2026-10-06-voyager-exhibit-next.md)
 - [ ] **Voyager exhibit: Later tier** `deferred` — guided tour, Pale Blue Dot view, future stretch, Golden Record overlay. → [details](backlog/2026-10-06-voyager-exhibit-later.md)
 - [ ] **Tab is swallowed app-wide** `awaiting-decision` — hide-UI binds Tab, so no overlay control is keyboard-reachable. → [details](backlog/2026-10-06-tab-swallowed-accessibility.md)
@@ -61,7 +66,10 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Faster `npm run shot`** `ready` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
-- [ ] **Existing exhibits move into their Layers** `needs-design` — four exhibits are still core rows; with the `exhibits` Layer member (#854) each moves to the Layer it shows. → [details](backlog/2026-10-11-exhibits-into-layers.md)
+- [ ] **Layer leftovers sweep** `ready` — M1–M9: ~10.7k LOC of single-Layer code still in core moves with no contract change. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Seeded stars become starCatalog body rows** `needs-design` — J1 / body-layers spec §7 step 5; needs an `anchor` kind on `BodyPosition`. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Per-kind selection presentation moves into SelectionKindRow** `needs-design` — J2: the galaxy, star, structure and Milky Way arms of the per-kind core tables. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Remaining Layer seams** `needs-design` — J3–J14 (ephemeris corrections, clips, body facts, …). → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
 - [ ] **`SCENE_ANCHORS`/`AnchorBody` is the place table, filed under a body name** `needs-design` — the black-hole prep's first non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`) exposed that this table was never body-only, just never used for anything else. → [details](backlog/2026-09-22-scene-anchors-are-places.md)
 - [ ] **The solar system hangs off the Sun; it could hang off a place** `deferred` — a `'solar-system'` `PlaceId` at the heliocentre would re-key the eleven `focusId: 'sun'` element rows and both Sun-anchored regions the way R15 did for the Galactic Centre; no reader needs it until a barycentric ephemeris, a moving render origin, or the seeded stars leaving the body tables. → [details](backlog/2026-09-23-solar-system-place.md)
@@ -111,6 +119,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **Lazy-allocate GPU resources for off features** `ready` — flow particles (26.6 MB, off by default), bloom with bloom disabled, hidden layers' render targets. → [details](backlog/2026-10-13-lazy-gpu-allocation.md)
@@ -292,6 +301,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## External / blocked
 
+- [ ] **Space-Track's full satellite catalog** `blocked` — ~30k objects with rocket bodies and all debris; needs an account and written approval to redistribute (satellites spec §9).
+- [ ] **Craft around other planets and at Lagrange points** `needs-design` — `/add-mission` rows, plus `buildSpacecraftTracks` generalised beyond Voyager for halo orbits (satellites spec §9).
 - [ ] **HyperLEDA cache backfill** `blocked` — R2 cache is intentionally partial (52k / ~1.5M PGCs); don't auto-refetch, promote only on concrete need (memory `project_hyperleda_partial_cache`).
 - [ ] **DESI DR1 as a data source** `blocked` — viable + ~90% new data, but ~10× points (~9.75M) exceeds the interactive-render ceiling; revisit after the point ceiling lifts to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`). A scoped 2.5° patch shipped separately via the [deep-cone spec](superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md).
 - [ ] **DESI BGS real galaxy shapes** `needs-verification` — DR1 LSS clustering catalogs carry no shape columns; every DESI row renders at the default size + hashed fallback orientation. → [details](backlog/2026-07-09-desi-bgs-real-shapes.md)

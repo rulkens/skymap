@@ -9,6 +9,7 @@ import { distDir } from './tools/utils/io/distDir.ts';
 import { readCertPair } from './tools/utils/serve/readCertPair.ts';
 import { inlineEntryCssPlugin } from './tools/utils/vite/inlineEntryCssPlugin.ts';
 import { remoteRelayPlugin } from './tools/utils/vite/remoteRelayPlugin.ts';
+import { satelliteJsDistAlias } from './tools/utils/vite/satelliteJsDistAlias.ts';
 import { minifyStaticWgslPlugin } from './tools/utils/wgsl/minifyStaticWgslPlugin.ts';
 
 // ── Opt-in LAN HTTPS for on-device (iPad/iPhone) testing ────────────────────
@@ -66,6 +67,7 @@ export default defineConfig(({ command }) => ({
     inlineEntryCssPlugin(),
     remoteRelayPlugin(),
   ],
+  resolve: { alias: satelliteJsDistAlias },
   server: { port: DEV_PORTS.main, ...lanHttpsServer() },
   // Dev only: a built bundle must not carry this machine's absolute path.
   define: {
