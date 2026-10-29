@@ -1,20 +1,7 @@
 /**
- * RunFrameDeps — closure captures the per-frame body relies on.
- *
- * Every entry was a free reference in the original
- * `engine.ts:1407–1708` body; the galaxy catalog done in Phase 3 Task 3.1
- * enumerated each one by source (createEngine arg, IIFE-local renderer,
- * createEngine helper, etc.) and confirmed read-only vs. mutated.
- *
- * ### Why no renderer fields
- *
- * Pre-unification this bag also carried `milkyWayCloudRenderer`,
- * `horizonShellRenderer`, `filamentRenderer`, `texturedDiskRenderer`, and
- * `proceduralDiskRenderer` — but `runFrame` only ever forwarded them,
- * unread, into `RenderFrameInput`.  Now that every `ContentPass` reads its
- * renderer straight off `state.gpu.*` (see `passes/index.ts`), those fields
- * were dead weight here; they're gone along with the matching
- * `RenderFrameInput` fields.
+ * RunFrameDeps — the closure captures the per-frame body relies on. It carries no
+ * renderers: every `ContentPass` reads its own (core's off `state.gpu`, a Layer's
+ * off its runtime).
  */
 
 import type { EngineCallbacks } from '../EngineCallbacks';

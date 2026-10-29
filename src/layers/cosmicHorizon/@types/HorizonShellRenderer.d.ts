@@ -11,8 +11,8 @@
  * so the silhouette is pixel-perfect and tracks the camera's orbit.
  */
 
-import type { OrbitCamera } from '../camera/OrbitCamera';
-import type { Vec2 } from '../math/Vec2';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 export type HorizonShellRenderer = {
   /** Human-readable identifier (`'horizonShellRenderer'`). */
@@ -25,7 +25,7 @@ export type HorizonShellRenderer = {
    * the camera basis + FOV from `cam` to build the view rays.
    *
    * `fadeAlpha` is the distance-fade in `[0, 1]` (see
-   * `utils/math/horizonShellFadeAlpha`); the fragment shader multiplies it
+   * `render/horizonShellFadeAlpha`); the fragment shader multiplies it
    * into the additive contribution so the shell ramps in with pull-back.
    */
   draw(pass: GPURenderPassEncoder, cam: OrbitCamera, viewport: Vec2, fadeAlpha: number): void;

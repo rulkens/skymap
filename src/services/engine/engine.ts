@@ -162,7 +162,6 @@ export function createEngine(
       labelPickRendererNear: null,
       debugLineRenderer: null,
       selectionRingRenderer: null,
-      horizonShellRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.

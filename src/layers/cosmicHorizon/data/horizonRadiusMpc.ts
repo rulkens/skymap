@@ -5,7 +5,7 @@
  * re-deriving `14.3 * 1000`.
  */
 
-import { SCALE_UNITS } from '../scaleUnits';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { HORIZON_RADIUS_GPC } from './horizonRadiusGpc';
 
 export const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * SCALE_UNITS.GPC_TO_MPC;
