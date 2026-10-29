@@ -1,52 +1,23 @@
 /**
- * createTestStore — `createAppStore` plus the inert saga-context the running app
- * always has by the time any saga worker can reach for a capability.
+ * createTestStore — `createAppStore` plus the inert saga context the running app always has.
+ * `watchWakeSaga` reads `getContext('reconcile')` on every wake write; a bare test store lacks it
+ * and the undefined dereference is stderr noise. Guarding in the saga would mask a real
+ * production misconfiguration, so tests fix it here.
  *
- * `createAppStore` runs `mainSaga`, which forks `watchWakeSaga`. That watcher
- * reaches the engine's render scheduler via `getContext('reconcile')` on every
- * settings/camera/time write. In the real app the engine registers that context
- * (`setSagaContext({ reconcile })`, see `registerReconcile`) immediately after
- * construction, BEFORE any user interaction dispatches a wake write — so the
- * context is always present when the worker runs.
- *
- * A test that boots the store directly and then dispatches a wake write (a
- * container toggling `autoRotate`, a scene effect flipping `filaments`) skips
- * that engine step, so the worker dereferences an undefined context and prints
- * `Cannot read properties of undefined (reading 'requestRender')` to stderr. The
- * test still passes (the reducer ran before the async worker), but the stack
- * trace is noise. Registering a no-op `reconcile` here mirrors what the engine
- * does and drops the write on the floor — exactly the right behaviour for a test
- * with no renderer to wake.
- *
- * Guarding inside `watchWakeSaga` is the wrong layer: in production the context
- * is always present, so a source guard would mask a genuine future
- * misconfiguration. This is a test-setup completion, not a runtime change.
- *
- * `reconcile` was for a long time the only member registered here, which was a
- * habit rather than a decision: `setSagaContext` used to take a `Partial`, so the
- * bag grew a capability at a time as sagas needed one. The setter now takes the
- * whole `SagaContext`, and the reason is visible from this file — registering is
- * what fires `sagaContextRegistered`, which is what releases the hash bridge, so
- * a test store with a hash left on `window.location` by an earlier test in the
- * same file performs a real arrival read and reaches `selection`. With one
- * member registered that read threw and cancelled every watcher in the root
- * saga, leaving the test's actual subject dead for reasons nothing on screen
- * explained.
+ * Registering is what fires `sagaContextRegistered`, which releases the hash bridge: a hash
+ * left on `window.location` by an earlier test then does a real arrival read that reaches
+ * `selection`. With a partial bag that read threw and cancelled every root-saga watcher.
  */
 
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../src/layers/structure/present/structureSelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
 import type { StructureRowFixture } from './selectionResolverOver';
 
-// The narrow engine surface `watchWakeSaga` (and its sibling reconcile watchers)
-// reach for. Every method is a no-op: a test store has no scheduler, fade
-// registry to drive, and no assertion here inspects these — they
-// exist only so `getContext('reconcile')` resolves.
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
   syncFades: () => {},
@@ -54,38 +25,23 @@ export const NOOP_RECONCILE: ReconcileEffects = {
   applySwapFormat: () => {},
 };
 
-// An engine that has booted and loaded nothing. Empty, not absent: a `#focus=`
-// arrival resolves against this and gets null, so the command saga parks waiting
-// for a catalog pulse that never comes — which is the correct behaviour for a
-// store with no data behind it, and the difference between a deferred deep link
-// and a TypeError that cancels the root saga.
+// Empty, not absent: a `#focus=` arrival gets null and the command saga parks, where an
+// absent resolver would be a TypeError that cancels the root saga.
 const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 
 /**
- * The whole context bag, every capability inert. A test store has no engine, so
- * the honest registration is one where each capability answers "nothing here"
- * rather than one where some are missing: an absent capability is a throw at the
- * `getContext` call site, an inert one is a saga that no-ops or defers.
- *
- * Exported so a test needing ONE real capability spreads this and overrides it,
- * instead of hand-assembling the rest of the no-ops around it.
+ * The whole context bag, every capability inert: an absent capability throws at the
+ * `getContext` call site, an inert one makes the saga no-op or defer. Spread it to override one.
  */
 export const NOOP_SAGA_CONTEXT: SagaContext = {
   nextFrame: () => Promise.resolve(),
   reconcile: NOOP_RECONCILE,
-  // The real core and structure rows, over the empty store above: a static id
-  // (body/star/cluster/…) resolves off its table exactly as the running app
-  // does, while a catalog-backed id (galaxy) still resolves to null with no
-  // engine resource in the path.
   selection: composeSelectionRows(
-    () => [...coreSelectionRows(), structureSelectionRow(EMPTY_STRUCTURES)],
+    () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES)],
     () => ALL_KINDS_ENABLED,
   ),
-  // Null is the same answer the engine gives pre-bootstrap and post-destroy, and
-  // both camera sagas already handle it by no-opping.
   cameraRuntime: () => null,
-  // Resolves immediately: a clip with no player has already finished, so the
-  // tour saga advances rather than awaiting a promise nothing will settle.
+  // Resolves immediately so the tour saga advances rather than awaiting a promise nothing settles.
   playClip: () => Promise.resolve(),
   clipPathInspect: {
     compute: () => {},
@@ -94,7 +50,6 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
     pinnedClip: () => null,
     pinnedFrame: () => null,
   },
-  // A home-less composition: a bare arrival frames the neutral pose and seeds nothing.
   home: { focus: null, seedSelection: false },
 };
 

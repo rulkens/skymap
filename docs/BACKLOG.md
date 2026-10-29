@@ -37,11 +37,13 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
+- [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
+- [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
+- [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:783`, and neither `runFrame` nor the scheduler's `tick` catches, so trace where the throw is lost.
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
 - [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **`DragMode` consumers test `=== 'pan'`, a new variant falls silently into orbit** `ready` — five sites hand-pick one string literal instead of an exhaustive switch, and the workbenches' `attachOrbitControls.ts` keeps its own local `DragMode` type distinct from the shared one. → [details](backlog/2026-09-29-dragmode-binary-pan-tests.md)
 - [ ] **Port the mcpm and scene workbenches onto the store input path** `ready` — both still drive `tools/utils/input/attachOrbitControls.ts` + `createInputAggregator.ts`; port them to `recognize` and delete the pair.
-- [ ] **`DEFAULT_VOLUME_PALETTE_ID`'s comment claims persistence that doesn't exist** `ready` — the comment says the palette choice is persisted to localStorage by the App shell via `setVolumePalette`; neither the storage call nor that symbol exists anywhere in `src`. → [details](backlog/2026-09-29-stale-palette-persisted-comment.md)
 - [ ] **Voyager exhibit: cross-link and thumbnail** `ready` — a body-card row opening the exhibit, and the palette card's thumbnail. → [details](backlog/2026-10-06-voyager-exhibit-next.md)
 - [ ] **Voyager exhibit: Later tier** `deferred` — guided tour, Pale Blue Dot view, future stretch, Golden Record overlay. → [details](backlog/2026-10-06-voyager-exhibit-later.md)
 - [ ] **Tab is swallowed app-wide** `awaiting-decision` — hide-UI binds Tab, so no overlay control is keyboard-reachable. → [details](backlog/2026-10-06-tab-swallowed-accessibility.md)
@@ -105,6 +107,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **f32 half-ulp sightline nudge at the body-arm flip** `needs-verification` — ~4 mas, in two narrow `h/R` windows. → [details](backlog/2026-09-11-camera-f32-half-ulp-sightline-nudge-at-arm-flip.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
+- [ ] **Follow-approach and Home on the geodesic** `needs-design` — PR 2 of geodesic focus moves; the endpoint moves every frame. → [details](backlog/2026-10-27-geodesic-follow-and-home.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel mesh bodies can't be picked** `ready` — an unresolved mesh body sits in `glints`, but the glint pick stamps only `SCENE_PLANETS` rows (`bodyGlintsPass.ts:345-346`).
 

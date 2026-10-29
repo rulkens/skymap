@@ -91,6 +91,7 @@ describe('Settings page', () => {
     /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
     /^picking\./,
+    /^focusMoves\.(eased|geodesic)\./,
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,
     /^blackHoleLensingTuning\./,

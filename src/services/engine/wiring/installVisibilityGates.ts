@@ -6,14 +6,12 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { gateIdentityOf } from '../../../utils/visibility/gateIdentityOf';
-import { slotFor } from './slotFor';
 import { syncVisibilityTarget } from './syncVisibilityTarget';
 
 export function installVisibilityGates(state: EngineState): void {
   for (const row of state.assetRows) {
     if (row.gates === undefined) continue;
     const id = gateIdentityOf(row.gates);
-    // `collectVisibilityGates` already threw on a gating row with no slot.
-    slotFor(state, row.key)!.subscribe(() => syncVisibilityTarget(state, id));
+    row.slot.subscribe(() => syncVisibilityTarget(state, id));
   }
 }

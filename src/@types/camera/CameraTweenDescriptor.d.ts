@@ -1,11 +1,11 @@
 /**
  * CameraTweenDescriptor — a timeless "from → to" camera animation plan.
  *
- * The descriptor holds only absolute poses and a duration; the animation clock
- * is an engine Resource, not a field of this type — so the descriptor carries
- * no wall-clock and stays valid across frames, storable and replayable.
- * Interrupting an in-flight tween simply creates a new descriptor from the
- * current pose.
+ * The descriptor holds only absolute poses and how to fly between them
+ * (`motion`); the animation clock is an engine Resource, not a field of this
+ * type — so the descriptor carries no wall-clock and stays valid across frames,
+ * storable and replayable. Interrupting an in-flight tween simply creates a
+ * new descriptor from the current pose.
  *
  * `frame` pins the orientation frame `from`/`to` were captured under (the
  * setting live at build time), so a mid-tween orientation switch re-expresses
@@ -14,13 +14,12 @@
  */
 
 import type { CameraPose } from './CameraPose';
-import type { Ease } from '../animation/Ease';
+import type { FocusMotion } from './FocusMotion';
 import type { OrientationFrameId } from './OrientationFrameId';
 
 export type CameraTweenDescriptor = {
   from: CameraPose;
   to: CameraPose;
-  durationMs: number;
-  easing: Ease;
+  motion: FocusMotion;
   frame: OrientationFrameId;
 };

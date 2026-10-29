@@ -1,84 +1,36 @@
 /**
- * startLoop — focused test for the highest-leverage invariants of the
- * fourth (and last) bootstrap phase.
+ * startLoop — the invariants of the last bootstrap phase.
  *
- * ### Why this file exists
- *
- * Pre-2026-05-11 audit #5 the only coverage `startLoop.ts` had was
- * `bootstrap.test.ts`, which mocks the phase at module scope — so the
- * ~150 lines that build `RunFrameDeps`, replace the forward-declared
- * `frameRef.current`, and fire the first `requestRender()` had zero
- * direct asserts.  Every boot runs this phase; a silent regression
- * here (e.g. forgetting `requestRender()`, swapping `frameRef.current`
- * order with the dep-bag build, skipping the cloud-count early return)
- * yields "black canvas on first paint, engine stuck in 'loading'" —
- * the same symptom class as the 2026-05-08 black-screen incident.
- *
- * ### What this file asserts
- *
- * Four invariants — see each test's docblock for the rationale:
- *   1. The happy path: `frameRef.current` is replaced AND
- *      `scheduler.requestRender()` is called.
- *   2. The new `frameRef.current` calls `runFrame(state, frameDeps,
- *      performance.now())` — pinning the call contract guards against
- *      a refactor that drops one of the three args.
- *   3. The cloud-count early return: zero clouds → no rAF kick.
- *   4. The readiness guard: `initGpu` never ran → typed error.
- *
- * ### Why mock `runFrame`
- *
- * The real `runFrame` is the engine's per-frame body — it reads every
- * GPU renderer, runs the camera matrices, dispatches passes, and is
- * tested in its own `runFrame.test.ts`.  Here we only care that
- * `startLoop` *wires it up correctly*; mocking lets the new
- * `frameRef.current` be invoked at test time without dragging in
- * WebGPU.
+ * `bootstrap.test.ts` mocks the phase at module scope, so the code that builds `RunFrameDeps`,
+ * replaces the forward-declared `frameRef.current` and fires the first `requestRender()` needs
+ * direct asserts: a regression there (forgotten `requestRender()`, swapped `frameRef.current` order,
+ * skipped cloud-count early return) is a black canvas on first paint with the engine stuck in
+ * 'loading'. `runFrame` is mocked (tested in `runFrame.test.ts`); only the wiring matters here.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
-// ── Module mocks ──────────────────────────────────────────────────────
-
-// `runFrame` is the engine's per-frame body — independently tested
-// elsewhere.  Mock it so we can verify `startLoop` calls it with the
-// right shape without invoking the real GPU pass dispatch.
 const runFrameSpy = vi.fn();
 vi.mock('../../../../src/services/engine/frame/runFrame', () => ({
   runFrame: (...args: unknown[]) => runFrameSpy(...args),
 }));
 
-// Imported AFTER the mocks so startLoop picks them up.
 import { startLoop } from '../../../../src/services/engine/phases/startLoop';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
-// Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional — PRELUDE's and SCENE's Layer-owned rows need a stand-in here, since this
-// fixture's `passes`/`computes` are core's own registry alone too.
+// A `plan` line's planner is never optional, so PRELUDE's and SCENE's Layer-owned rows need a stand-in here.
 const LAYER_PLANNER_STUBS = [...stubPlannersFor(PRELUDE), ...stubPlannersFor(SCENE)];
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-
-/**
- * Minimal `EngineState` shaped for startLoop's body.  Populates only
- * what the phase reads:
- *   - `state.sources.catalogs` for the early-return guard;
- *   - `state.subsystems.scheduler.requestRender` for the rAF kick;
- *   - `state.gpu.renderTargets.specs` for the `checkFrameOrder` boot call —
- *     the REAL rows, so the check runs for real here rather than being
- *     defanged by a stub (its own coverage is `frameOrderBoot.test.ts`);
- *   - `state.gpu.timingService` omitted.
- *
- * `cloudCount` controls how many entries `catalogs` carries; the values
- * don't matter (only `.size` is read in this phase).
- */
+/** Minimal `EngineState` with what the phase reads: `sources.catalogs` (early-return guard; only
+ *  `.size` matters, set by `cloudCount`), `subsystems.scheduler.requestRender`, and the REAL
+ *  `gpu.renderTargets.specs` so `checkFrameOrder` runs for real (covered by `frameOrderBoot.test.ts`). */
 function makeState({ cloudCount = 1 } = {}): EngineState {
   const catalogs = new Map<unknown, unknown>();
   for (let i = 0; i < cloudCount; i++) {
@@ -102,16 +54,11 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
     // `checkFrameOrder` runs against the COMPOSED rows; over an empty layer
     // tuple that is core's own registry.
     passes: CONTENT_PASSES,
-    computes: CORE_COMPUTES,
+    computes: [],
     planners: LAYER_PLANNER_STUBS,
   } as unknown as EngineState;
 }
 
-/**
- * Minimal `BootstrapDeps` shaped for startLoop's body.  Populates only
- * the fields the phase reads.  `frameRef.current` starts as a no-op
- * stub so we can assert it gets replaced.
- */
 function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
@@ -120,8 +67,6 @@ function makeDeps(): BootstrapDeps {
     frameRef: { current: () => {} },
     handleRef: { current: null },
     allSlots: new Map(),
-    // startLoop never reads a resolver — a resolver that always returns null
-    // is enough to satisfy the type.
     selection: {
       resolvePick: () => null,
       extractRow: () => null,
@@ -136,8 +81,6 @@ function makeDeps(): BootstrapDeps {
     },
   };
 }
-
-// ── Tests ────────────────────────────────────────────────────────────
 
 describe('startLoop', () => {
   it('replaces frameRef.current and fires scheduler.requestRender exactly once on the happy path', async () => {
@@ -157,9 +100,6 @@ describe('startLoop', () => {
   });
 
   it('the new frameRef.current invokes runFrame with (state, frameDeps, time)', async () => {
-    // Pinning the call contract guards against a refactor that drops
-    // or reorders the three args.  runFrame's own suite verifies the
-    // body; here we only verify the wire.
     const state = makeState({ cloudCount: 1 });
     const deps = makeDeps();
 
@@ -171,11 +111,8 @@ describe('startLoop', () => {
     expect(runFrameSpy).toHaveBeenCalledTimes(1);
     const callArgs = runFrameSpy.mock.calls[0]!;
     expect(callArgs[0]).toBe(state);
-    // frameDeps is built inside startLoop — verify it carries the
-    // canvas reference threaded from deps.  Renderer handles are NOT part
-    // of `RunFrameDeps` any more — every `ContentPass.draw` reads its
-    // renderer straight off `state.gpu.*` (see `passes/index.ts`), so
-    // there's nothing renderer-shaped to assert on this bag.
+    // frameDeps is built inside startLoop and must carry the canvas threaded from deps. Renderer handles
+    // are not part of `RunFrameDeps`: every `ContentPass.draw` reads its renderer off `state.gpu.*`.
     const calledFrameDeps = callArgs[1] as Record<string, unknown>;
     expect(calledFrameDeps.canvas).toBe(deps.canvas);
     expect(typeof callArgs[2]).toBe('number'); // performance.now() snapshot

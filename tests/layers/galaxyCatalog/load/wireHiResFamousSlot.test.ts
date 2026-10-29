@@ -1,18 +1,11 @@
 /**
  * wireHiResFamousSlot — the hi-res famous pair as a demand-loop slot.
  *
- * The load is a GPU allocation rather than a fetch, so the whole contract is in
- * `commit`'s ORDER: bind the new view, hand the new planner to the textured-disk
- * subsystem, and only then destroy the pair that was live. Reversing any of that
- * drops every visible famous galaxy to its atlas tile for the frames between —
- * precisely what a tier flip must not do.
- *
- * Factory stubs stand in for the two GPU-bearing constructors; the ordering
- * assertions read a shared call log the stubs append to.
- *
- * The pair to retire is the one the renderer has BOUND, tracked by the wiring
- * itself: a pair superseded mid-commit was bound but never became the slot's
- * committed value, so `slot.committed()` would name the wrong one.
+ * The load is a GPU allocation, so the contract is `commit`'s ORDER: bind the new view,
+ * hand the new planner to the textured-disk subsystem, only then destroy the pair that
+ * was live; otherwise every visible famous galaxy drops to its atlas tile in between.
+ * The pair to retire is the one the renderer has BOUND (tracked by the wiring): a pair
+ * superseded mid-commit was bound but never became `slot.committed()`.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -20,7 +13,6 @@ import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../../src/d
 import type { Tier } from '../../../../src/@types/data/Tier';
 import type { TexturedDiskRenderer } from '../../../../src/@types/rendering/TexturedDiskRenderer';
 
-/** The hi-res row's request, mirroring `ASSET_WIRING`'s `req` for that row. */
 const reqFor = (tier: Tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] });
 
 /** Hoisted so the `vi.mock` factories (evaluated before this module's body) can reach it. */
@@ -129,8 +121,6 @@ describe('wireHiResFamousSlot', () => {
     ]);
   });
 
-  // A pair superseded mid-commit was bound but never became the slot's committed
-  // value, so the next commit must retire what is bound, not what the slot holds.
   it('retires a pair superseded mid-commit when the next one binds', async () => {
     const slot = makeSlot();
     let superseded = false;

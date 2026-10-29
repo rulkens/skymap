@@ -1,18 +1,9 @@
 /**
- * bodySurfaceTier — which whole-globe surface texture a body is actually
- * rendering, expressed as its tier.
- *
- * The tile planner's base level is derived from this, so the difference between
- * "the tier the session asked for" and "the tier that committed" is the
- * difference between planning against pixels that exist and pixels that are
- * still downloading. A tier swap holds those two apart for as long as an 8 MB
- * JPEG takes, and getting it wrong is invisible: the ground is simply a level
- * softer than it should be for a few seconds, or a tile lands two levels above
- * its base.
- *
- * Both cases are the same shape — a slot whose `lastRequest()` disagrees with
- * `state.tier` — and only the slot's load state tells them apart, which is the
- * one thing a test can pin down here.
+ * bodySurfaceTier — which whole-globe surface texture a body is actually rendering, as a tier. The
+ * tile planner's base level derives from it, and "the tier the session asked for" vs "the tier that
+ * committed" differ for as long as an 8 MB JPEG downloads during a tier swap; the error is invisible
+ * (ground a level softer, or a tile two levels above its base). Both cases are a slot whose
+ * `lastRequest()` disagrees with `state.tier`, and only the slot's load state tells them apart.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -47,7 +38,10 @@ function stateWith(input: {
             },
     });
   }
-  return { tier: input.tier, assetSlots: { bodyTextures } } as unknown as EngineState;
+  return {
+    tier: input.tier,
+    slotsByKey: bodyTextures,
+  } as unknown as EngineState;
 }
 
 describe('bodySurfaceTier', () => {

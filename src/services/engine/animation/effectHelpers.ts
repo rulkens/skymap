@@ -48,6 +48,7 @@ import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
 import type { PoseFrame } from '../../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
 import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
@@ -133,6 +134,21 @@ export function moveTarget(
     space: 'lin',
     ...(frame !== undefined ? { frame } : {}),
   };
+}
+
+/**
+ * geodesic — fly target and distance together along van Wijk & Nuij's zoom/pan
+ * path to `to`. `over` (seconds) omitted ⇒ the arc-length duration `tuning`
+ * derives. It owns target and distance for its window, so don't also drive them
+ * with `moveTarget` / `dollyTo` there; yaw and pitch tweens may run beside it.
+ */
+export function geodesic(
+  to: { readonly target: Vec3; readonly distance: number },
+  tuning: GeodesicTuning,
+  fovYRad: number,
+  over?: number,
+): Effect & { kind: 'geodesic' } {
+  return { kind: 'geodesic', to, tuning, fovYRad, ...(over !== undefined ? { over } : {}) };
 }
 
 /**

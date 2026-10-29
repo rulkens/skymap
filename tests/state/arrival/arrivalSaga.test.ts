@@ -33,7 +33,7 @@ import {
   engineLoadProgressChanged,
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
@@ -97,7 +97,7 @@ function build({
     nextFrame,
     selection: composeSelectionRows(
       () => [
-        ...coreSelectionRows(),
+        bodySelectionRow(),
         structureSelectionRow(EMPTY_STRUCTURES),
         ...(layerRows.landed ? [milkyWaySelectionRow()] : []),
       ],
