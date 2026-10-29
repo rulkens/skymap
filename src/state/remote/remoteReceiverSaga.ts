@@ -29,11 +29,11 @@ import {
   selectLayerSearchRows,
   selectStructureSearchList,
 } from '../engine/selectors';
-import { parseRemoteCommand } from '../../compositions/parseRemoteCommand';
-import { runRemoteCommand } from '../../compositions/runRemoteCommand';
-import { REMOTE_MENU } from '../../compositions/remoteMenu';
-import { selectDomeStatus } from '../../compositions/selectDomeStatus';
-import { selectToggleRows } from '../../compositions/selectToggleRows';
+import { parseRemoteCommand } from '../../utils/remote/parseRemoteCommand';
+import { runRemoteCommand } from '../../utils/remote/runRemoteCommand';
+import { REMOTE_MENU } from './remoteMenu';
+import { selectDomeStatus } from './selectDomeStatus';
+import { selectToggleRows } from '../settings/selectToggleRows';
 import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
 import { rankPaletteMatches } from '../../utils/palette/rankPaletteMatches';
 import { remoteSearchMatches } from '../../utils/remote/remoteSearchMatches';

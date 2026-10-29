@@ -3,11 +3,11 @@
  * `dev` tours and clips stay off it; the registries are the only place a label is written.
  */
 
-import { APP_EXHIBITS } from './appExhibits';
-import { clipRegistry } from '../data/animation/clips/clipRegistry';
-import { tourRegistry } from '../data/animation/tours/tourRegistry';
-import type { RemoteMenuItem } from '../@types/remote/RemoteMenuItem';
-import type { RemoteMenu } from '../@types/remote/RemoteMenu';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
+import { clipRegistry } from '../../data/animation/clips/clipRegistry';
+import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import type { RemoteMenuItem } from '../../@types/remote/RemoteMenuItem';
+import type { RemoteMenu } from '../../@types/remote/RemoteMenu';
 
 const listed = <Id extends string>(
   rows: readonly { id: Id; label: string; dev?: boolean }[],

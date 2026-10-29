@@ -1,21 +1,20 @@
 /**
- * selectDomeStatus — the snapshot a dome sends its remotes. Lives in
- * `compositions/` because its toggle rows come from `selectToggleRows`, which
- * reads Layers; the caller passes them in, with the dome's own `nowMs`.
+ * selectDomeStatus — the snapshot a dome sends its remotes. The
+ * caller passes the toggle rows in, with the dome's own `nowMs`.
  * `focus` is the URL's focus id with Earth included: the URL drops Earth as
  * home, but a remote must still see what is focused.
  */
 
-import { selectCameraControls } from '../state/settings/selectors';
-import { selectFocusedFocusable } from '../state/selection/selectors';
-import { selectTakeoverSource } from '../state/takeover/selectors';
-import { selectTimeState } from '../state/time/selectors';
-import { selectTourBeatIndex, selectTourPaused, selectTourTotal } from '../state/tour/selectors';
-import { deriveSimDays } from '../utils/time/deriveSimDays';
-import { focusIdOf } from '../utils/selection/focusIdOf';
-import type { DomeStatus } from '../@types/remote/DomeStatus';
-import type { ToggleRow } from '../@types/settings/ToggleRow';
-import type { RootState } from '../store/types';
+import { selectCameraControls } from '../settings/selectors';
+import { selectFocusedFocusable } from '../selection/selectors';
+import { selectTakeoverSource } from '../takeover/selectors';
+import { selectTimeState } from '../time/selectors';
+import { selectTourBeatIndex, selectTourPaused, selectTourTotal } from '../tour/selectors';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { focusIdOf } from '../../utils/selection/focusIdOf';
+import type { DomeStatus } from '../../@types/remote/DomeStatus';
+import type { ToggleRow } from '../../@types/settings/ToggleRow';
+import type { RootState } from '../../store/types';
 
 export function selectDomeStatus(
   state: RootState,

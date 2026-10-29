@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { selectToggleRows } from '../../src/compositions/selectToggleRows';
-import { APP_COMPOSITION } from '../../src/compositions/app';
-import { layerUiContents } from '../../src/utils/layer/layerUiContents';
-import { rootReducer } from '../../src/store/rootReducer';
-import { setPaletteOpen } from '../../src/state/ui/uiSlice';
-import type { RootState } from '../../src/store/types';
+import { selectToggleRows } from '../../../src/state/settings/selectToggleRows';
+import { APP_COMPOSITION } from '../../../src/compositions/app';
+import { layerUiContents } from '../../../src/utils/layer/layerUiContents';
+import { rootReducer } from '../../../src/store/rootReducer';
+import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
+import type { RootState } from '../../../src/store/types';
 
 const INIT: RootState = rootReducer(undefined, { type: '@@test/init' });
 // One stable array, as the panel passes it: the memo keys on its identity.
