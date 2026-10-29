@@ -92,6 +92,6 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
     // The trailing wake runs the frame that publishes a turned-away readout, so the
     // last state before the loop sleeps still reaches the panel.
     readoutGate: throttleWithTrailingCall(READOUT_INTERVAL_MS, deps.requestRender),
-    debugPanelOpen: deps.debugPanelOpen,
+    debugPanelOpen: () => deps.store.getState().ui.debugPanelOpen,
   };
 }
