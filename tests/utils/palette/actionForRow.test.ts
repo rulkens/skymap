@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
@@ -59,13 +58,6 @@ describe('actionForRow', () => {
     expect(actionForRow({ kind: 'milkyWay', score: 0 })).toEqual({
       kind: 'focus',
       focusId: MILKY_WAY_FOCUS_ID,
-    });
-  });
-
-  it('a body row → the seed id under the body focus prefix', () => {
-    expect(actionForRow({ kind: 'body', body: SCENE_EARTH, score: 0 })).toEqual({
-      kind: 'focus',
-      focusId: `body-${SCENE_EARTH.id}`,
     });
   });
 

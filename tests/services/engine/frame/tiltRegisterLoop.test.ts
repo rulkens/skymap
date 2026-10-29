@@ -234,8 +234,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
       startCameraTween({
         from,
         to: { ...from, target: [...from.target] as Vec3, distance: from.distance * 1.5 },
-        durationMs: 400,
-        easing: 'easeOutCubic',
+        motion: { style: 'eased', durationMs: 400, ease: 'easeOutCubic' },
         frame: DEFAULT_ORIENTATION,
       }),
     );

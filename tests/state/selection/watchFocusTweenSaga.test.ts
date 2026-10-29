@@ -14,6 +14,10 @@ import {
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
+  setFocusMoveStyle,
+  setGeodesicTuning,
+} from '../../../src/state/settings/core/focusMovesSlice';
+import {
   engineStatusChanged,
   factsReported,
   layerFactsSeeded,
@@ -21,7 +25,7 @@ import {
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
@@ -96,7 +100,7 @@ describe('watchFocusTweenSaga', () => {
     mw.setContext({
       selection: composeSelectionRows(
         () => [
-          ...coreSelectionRows(),
+          bodySelectionRow(),
           structureSelectionRow(structures),
           milkyWaySelectionRow(),
           starCatalogSelectionRow(NO_SURVEY_STARS),
@@ -356,5 +360,15 @@ describe('watchFocusTweenSaga', () => {
 
     const tween = store.getState()[cameraRoute].tween;
     expect(tween!.frame).toBe('galactic');
+  });
+
+  it('dispatches the motion resolved from the store at dispatch', async () => {
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(setGeodesicTuning({ rho: 0.4 }));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+
+    const tween = store.getState()[cameraRoute].tween;
+    expect(tween!.motion).toMatchObject({ style: 'geodesic', fovYRad: 0.8, tuning: { rho: 0.4 } });
   });
 });

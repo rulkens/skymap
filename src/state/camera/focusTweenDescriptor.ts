@@ -21,17 +21,17 @@
  * ### What is shared across arms
  *
  * Every arm preserves the user's orientation — `yaw`/`pitch` carry over from the
- * live `from` pose, only `target` and `distance` change — and every arm uses the
- * project-wide `FOCUS_TWEEN_MS` duration and the `easeOutCubic` curve. The `to`
- * target is always copied into a fresh array so the descriptor never aliases the
- * row's `worldPos` (or the shared `MILKY_WAY_CENTER_WORLD` constant).
+ * live `from` pose, only `target` and `distance` change — and every arm flies
+ * the caller's `motion`. The `to` target is always copied into a fresh array so
+ * the descriptor never aliases the row's `worldPos` (or the shared
+ * `MILKY_WAY_CENTER_WORLD` constant).
  */
 
-import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import { framingPose } from '../../services/engine/camera/framingPose';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+import type { FocusMotion } from '../../@types/camera/FocusMotion';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
 /**
@@ -41,21 +41,17 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
  * `fovYRad` is the projection FOV the structure and body arms need to frame
  * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
- * `frame` is the orientation live at the caller's dispatch time — stamped
- * onto the descriptor so the tween driver can re-express the pose if the
- * setting changes mid-flight (same contract as `clipStarted`'s `frame`).
+ * `motion` is frozen onto the descriptor as given. `frame` is the orientation
+ * live at the caller's dispatch time — stamped onto the descriptor so the tween
+ * driver can re-express the pose if the setting changes mid-flight (same
+ * contract as `clipStarted`'s `frame`).
  */
 export function focusTweenDescriptor(
   row: SelectionRow,
   from: CameraPose,
   fovYRad: number,
+  motion: FocusMotion,
   frame: OrientationFrameId,
 ): CameraTweenDescriptor {
-  return {
-    from,
-    to: framingPose(row, fovYRad, from),
-    durationMs: FOCUS_TWEEN_MS,
-    easing: 'easeOutCubic',
-    frame,
-  };
+  return { from, to: framingPose(row, fovYRad, from), motion, frame };
 }

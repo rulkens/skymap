@@ -1,14 +1,10 @@
 /**
- * A mesh body is DRAWN through its host's metre-unit body row while the things
- * that point at it — the NEAR0 selection ring, the caption — project through
- * the NEAR0 slab in heliocentric Mpc. The three must land on one pixel wherever
- * the ring draws at all, its centre must stay inside the NEAR0 frustum, and it
- * must stand down once the body overflows the screen — as it does at its own
- * two-radii standoff.
- *
- * Built from the real seams (`deriveBodyStates` → `createOrbitCamera` →
- * `deriveSlabs` → each pass's own `draw`), so a change to any of them that
- * moves one path and not the other fails here.
+ * A mesh body is DRAWN through its host's metre-unit body row while the things that point at
+ * it (the NEAR0 selection ring, the caption) project through the NEAR0 slab in heliocentric
+ * Mpc. The three must land on one pixel wherever the ring draws, the ring's centre must stay
+ * inside the NEAR0 frustum, and it must stand down once the body overflows the screen, as it
+ * does at its own two-radii standoff. Built from the real seams, so a change that moves one
+ * path and not the other fails here.
  */
 
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
@@ -25,7 +21,7 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
-import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
+import { bodyLayerSlabRow } from '../../../../../src/layers/body/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import { meshBodyCaption } from '../../../../../src/utils/labels/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
@@ -45,7 +41,6 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
 
-/** Clip-space position of `p` under the column-major `m`, as [x, y, z, w]. */
 function clipOf(m: Float32Array, p: Readonly<Vec3>): [number, number, number, number] {
   return [0, 1, 2, 3].map(
     (r) => m[r]! * p[0] + m[4 + r]! * p[1] + m[8 + r]! * p[2] + m[12 + r]!,
@@ -94,11 +89,9 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     cam,
     frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     cosmoVp: computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect)),
-    // Altitude over the hull — what NEAR0's near-plane floor is being tested
-    // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
-    visibleRows: [earth].map(bodySlabRowOf),
+    visibleRows: [earth].map(bodyLayerSlabRow),
     viewportPx: VIEWPORT,
     starSphereRangeM: null,
     attachedBodiesByHostId: new Map([
@@ -140,9 +133,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     gpu: {
       meshBodyRenderer: { hasMesh: () => true, draw: meshDraw },
       selectionRingRenderer: { draw: ringDraw },
-      texturedBodyRenderer: null,
     },
-    data: { bodies: { earth, planets: [], meshBodies: SCENE_MESH_BODIES } },
     selectionRows: { select: row, focus: row, hover: null },
     settings: { galaxyCatalogs: { sizePx: 2 } },
   } as unknown as EngineState;
@@ -167,8 +158,6 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   ];
 
   return {
-    // The mesh's origin under its own MVP (the first 16 floats of the packed
-    // uniforms) — where the body is actually drawn.
     meshClip: clipOf((meshCall[2] as Float32Array).subarray(0, 16), [0, 0, 0]),
     ringCall: ringCall as [
       unknown,
@@ -181,7 +170,6 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   };
 }
 
-/** Offset, in pixels, between two clip-space positions on this viewport. */
 function offsetPx(a: readonly number[], b: readonly number[]): number {
   return Math.hypot(
     ((a[0]! / a[3]! - b[0]! / b[3]!) * VIEWPORT[0]) / 2,
