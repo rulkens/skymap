@@ -15,10 +15,12 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { bodyLayerWithoutGpu } from '../../../helpers/engine/bodyLayerWithoutGpu';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
-import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/load/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/layers/body/subsystems/surfaceTiles/idleSurfaceTilePlan';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 import type { ShowKey } from '../../../../src/@types/animation/ShowKey';
 
@@ -248,21 +250,44 @@ describe('createLayers composition', () => {
     await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-asset/);
   });
 
-  it('throws at boot when terrain is provided more than once', async () => {
+  it('throws at boot when heightAt is provided more than once', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    const terrainLayer = (tag: string) =>
+    const heightAtLayer = (tag: string) =>
       ({
         name: tag,
         create: () => ({}),
         destroy: () => {},
         passes: () => [],
-        terrain: () => FLAT_TERRAIN,
+        heightAt: () => datumOnlyTerrainHeight,
       }) as unknown as Layer<string, unknown>;
 
     await expect(
-      createLayers(state, makeDeps([terrainLayer('a'), terrainLayer('b')], store)),
-    ).rejects.toThrow(/terrain/);
+      createLayers(state, makeDeps([heightAtLayer('a'), heightAtLayer('b')], store)),
+    ).rejects.toThrow(/heightAt provided twice — a and b/);
+  });
+
+  it("createLayers composes the body Layer's heightAt and no core provider", async () => {
+    // Bug caught: a core tile provider left beside the body Layer's throws at boot as a
+    // second ground; a dropped body row would leave the camera on the flat datum.
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const heightAt = vi.fn(() => 42);
+    const body = {
+      ...bodyLayerWithoutGpu,
+      create: () => ({
+        textureSlots: new Map(),
+        atlasSlot: {},
+        surfaceTiles: { stream: { heightAt }, plan: IDLE_SURFACE_TILE_PLAN },
+      }),
+    } as unknown as Layer<string, unknown>;
+    const deps = makeDeps([body], store);
+    (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
+
+    await createLayers(state, deps);
+
+    expect(state.terrainHeightAt(asSceneBodyId('earth'), [1, 0, 0])).toBe(42);
+    expect(heightAt).toHaveBeenCalledTimes(1);
   });
 
   it('throws at boot when a Layer mints a slot key core already owns', async () => {

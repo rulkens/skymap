@@ -78,7 +78,7 @@ export function deriveFrameContext(
     bodies: bodyStates,
     poseBasis: cam.poseBasis,
     upBasis: cam.upBasis,
-    terrainHeightAt: state.terrain.heightAt,
+    terrainHeightAt: state.terrainHeightAt,
   };
   const armHost = hostOf(arm.frame, armBasisCtx);
   // UN-turned: `deriveView` turns the output through `viewBodyPose`.

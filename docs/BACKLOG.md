@@ -38,6 +38,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
+- [ ] **Layer terrain contract review** `needs-design` — whether the camera's ground query should stay a Layer member (`heightAt`, narrowed 2026-10-28) or move behind another seam.
 - [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
 - [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:783`, and neither `runFrame` nor the scheduler's `tick` catches, so trace where the throw is lost.
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
@@ -63,7 +64,10 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Faster `npm run shot`** `ready` — one shot is ~5 s, 1 s of it a fixed idle wait; measured breakdown and four options. → [details](backlog/2026-10-05-shot-speed.md)
 - [ ] **`capture-featured cosmicWeb` no longer reproduces its committed thumbnail** `ready` — on main (seen 2026-10-05, same before and after #842) the exhibit card comes out as a different view (wider, off-centre); `body-earth`, `body-hubble` and `body-voyager1` still match.
-- [ ] **Existing exhibits move into their Layers** `needs-design` — four exhibits are still core rows; with the `exhibits` Layer member (#854) each moves to the Layer it shows. → [details](backlog/2026-10-11-exhibits-into-layers.md)
+- [ ] **Layer leftovers sweep** `ready` — M1–M9: ~10.7k LOC of single-Layer code still in core moves with no contract change. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Seeded stars become starCatalog body rows** `needs-design` — J1 / body-layers spec §7 step 5; needs an `anchor` kind on `BodyPosition`. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Per-kind selection presentation moves into SelectionKindRow** `needs-design` — J2: the galaxy, star, structure and Milky Way arms of the per-kind core tables. → [details](backlog/2026-10-29-layer-migration-leftovers.md)
+- [ ] **Remaining Layer seams** `needs-design` — J3–J14 (ephemeris corrections, clips, body facts, …). → [details](backlog/2026-10-29-layer-migration-leftovers.md)
 - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
 - [ ] **`SCENE_ANCHORS`/`AnchorBody` is the place table, filed under a body name** `needs-design` — the black-hole prep's first non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`) exposed that this table was never body-only, just never used for anything else. → [details](backlog/2026-09-22-scene-anchors-are-places.md)
 - [ ] **The solar system hangs off the Sun; it could hang off a place** `deferred` — a `'solar-system'` `PlaceId` at the heliocentre would re-key the eleven `focusId: 'sun'` element rows and both Sun-anchored regions the way R15 did for the Galactic Centre; no reader needs it until a barycentric ephemeris, a moving render origin, or the seeded stars leaving the body tables. → [details](backlog/2026-09-23-solar-system-place.md)
@@ -108,7 +112,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **f32 half-ulp sightline nudge at the body-arm flip** `needs-verification` — ~4 mas, in two narrow `h/R` windows. → [details](backlog/2026-09-11-camera-f32-half-ulp-sightline-nudge-at-arm-flip.md)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
-- [ ] **Follow-approach and Home on the geodesic** `needs-design` — PR 2 of geodesic focus moves; the endpoint moves every frame. → [details](backlog/2026-10-27-geodesic-follow-and-home.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel mesh bodies can't be picked** `ready` — an unresolved mesh body sits in `glints`, but the glint pick stamps only `SCENE_PLANETS` rows (`bodyGlintsPass.ts:345-346`).
 

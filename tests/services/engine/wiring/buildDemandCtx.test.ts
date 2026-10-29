@@ -15,7 +15,7 @@ import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 function makeState(
   opts: {
@@ -51,7 +51,7 @@ function makeState(
       cosmicWebDensity: { items: {} },
     },
     ui: { paletteOpen: opts.paletteOpen ?? false } as UiState,
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm(pose) },
       outputs: {
@@ -62,7 +62,6 @@ function makeState(
       },
     },
     slotsByKey,
-    subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }
 
