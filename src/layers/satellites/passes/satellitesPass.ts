@@ -19,7 +19,6 @@ import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
 import type { SatelliteClass } from '../../../@types/satellites/SatelliteClass';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepthBinding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
@@ -27,20 +26,13 @@ import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOcclud
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SATELLITE_SWEEP_TIMING } from '../../../data/satellites/satelliteSweepTiming';
-import { satelliteOpacity } from '../subsystems/satelliteOpacity';
+import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../subsystems/composeTemeToWorld';
 import { SATELLITE_CLASSES } from '../../../data/satellites/satelliteClasses';
 
 export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
-  const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number => {
-    const catalog = runtime.propagator.catalog();
-    if (catalog === null) return 0;
-    return satelliteOpacity(
-      julianDaysToUnixMs(simDays),
-      catalog.fetchedAtMs,
-      distanceMpc(eye, earthMpc) / SCALE_UNITS.KM_TO_MPC,
-    );
-  };
+  const opacityOf = (simDays: number, eye: Readonly<Vec3>, earthMpc: Readonly<Vec3>): number =>
+    satelliteLayerOpacity(runtime.propagator.catalog(), simDays, eye, earthMpc);
 
   const frameOf = (
     view: SlabView,

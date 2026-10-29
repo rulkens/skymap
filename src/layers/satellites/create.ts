@@ -1,5 +1,5 @@
 /**
- * create — the satellites Layer in dependency order: the renderer, the propagator (no worker yet),
+ * create — the satellites Layer in dependency order: the renderers, the propagator (no worker yet),
  * then the slot that drives it, then the selected
  * satellites the camera may follow. A landed sweep wakes the frame loop so it is drawn even with
  * the camera at rest.
@@ -9,6 +9,7 @@ import type { SatellitesRuntime } from './@types/SatellitesRuntime';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { SATELLITE_SWEEP_TIMING } from '../../data/satellites/satelliteSweepTiming';
 import { createSatellitePointRenderer } from './render/satellitePointRenderer';
+import { createOrbitTrailRenderer } from '../../services/gpu/renderers/bodies/orbitTrailRenderer';
 import { createSatellitePropagator } from './subsystems/createSatellitePropagator';
 import { createSatellitesSlot } from './load/satellitesSlot';
 import { createSelectedSatellites } from './subsystems/createSelectedSatellites';
@@ -19,6 +20,7 @@ export function create(deps: LayerCoreDeps): SatellitesRuntime {
     device: deps.ctx.device,
     targetFormat: HDR_TARGET_FORMAT,
   });
+  const orbitRenderer = createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
   const propagator = createSatellitePropagator(SatellitePropagationWorker, deps.requestRender);
   let wake: ReturnType<typeof setTimeout> | null = null;
   const cancelWake = (): void => {
@@ -28,6 +30,7 @@ export function create(deps: LayerCoreDeps): SatellitesRuntime {
   const slot = createSatellitesSlot(propagator, renderer);
   return {
     renderer,
+    orbitRenderer,
     propagator,
     slot,
     selected: createSelectedSatellites(
