@@ -1,6 +1,6 @@
 /**
  * The satellites Layer: the ~20k objects CelesTrak publishes, as points around Earth
- * (docs/superpowers/specs/2026-10-28-earth-satellites-design.md). One asset slot whose commit
+ * (docs/superpowers/specs/completed/2026-10-28-earth-satellites-design.md). One asset slot whose commit
  * runs the SGP4 worker, one planner that pulls sweeps, one renderer,
  * one pass, one show entry with a switch per class, and its Settings section.
  */
