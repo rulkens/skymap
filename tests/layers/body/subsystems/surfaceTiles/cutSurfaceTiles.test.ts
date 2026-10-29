@@ -36,6 +36,7 @@ import type { SurfaceTileId } from '../../../../../src/@types/data/SurfaceTileId
 import type { SurfaceTileBand } from '../../../../../src/@types/scene/SurfaceTileBand';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { angleBetween } from '../../../../helpers/math/angleBetween';
 
 const BASE_LEVEL = baseLevelForTier('earth', 'large');
 const MIN_TILE_LEVEL = BASE_LEVEL + 1;
@@ -179,10 +180,6 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
     residentSlot: heightFrom(bands),
     maxLevel,
   };
-}
-
-function angleBetween(a: Vec3, b: Vec3): number {
-  return Math.acos(Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
 }
 
 /** Same u0/u1/vNorth/vSouth/centre construction the walk itself uses for

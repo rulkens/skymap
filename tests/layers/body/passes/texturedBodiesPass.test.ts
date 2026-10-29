@@ -11,7 +11,6 @@ import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { describe, it, expect, vi } from 'vitest';
 
 import { texturedBodiesPass } from '../../../../src/layers/body/passes/texturedBodiesPass';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SCENE_RINGS } from '../../../../src/data/bodies/sceneRings';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
@@ -91,14 +90,10 @@ const PASS_STUB = {
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-function makeCtx(
-  planets: readonly SeededPlanet[],
-  distance = FOREGROUND_MAX_DISTANCE_MPC / 2,
-): FrameView {
+function makeCtx(planets: readonly SeededPlanet[]): FrameView {
   vi.mocked(sceneBodyStates).mockReturnValue(seededBodyStates(0, planets));
   return {
     snapshot: { meshBodies: [], sceneBodies: positionedBodiesOf(planets) },
-    cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -135,19 +130,6 @@ function makeFixture(renderer: unknown, bodies: readonly SeededPlanet[]) {
 }
 
 describe('texturedBodiesPass.enabled', () => {
-  it('is false beyond the foreground gate even for a resident resolved body', () => {
-    const { state, bodies, textured } = makeFixture(makeRendererSpy(['mars']), [
-      bodyAt('mars', 3390000),
-    ]);
-    expect(
-      textured.enabled(
-        state,
-        makeCtx(bodies, FOREGROUND_MAX_DISTANCE_MPC),
-        makeBodyView(asSceneBodyId('mars')),
-      ),
-    ).toBe(false);
-  });
-
   it('is false for a registry body that is NOT resident (it is flat, drawn by planetsPass)', () => {
     const { state, bodies, textured } = makeFixture(makeRendererSpy([]), [bodyAt('mars', 3390000)]);
     expect(textured.enabled(state, makeCtx(bodies), makeBodyView(asSceneBodyId('mars')))).toBe(

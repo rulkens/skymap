@@ -35,12 +35,7 @@ vi.mock('../../../src/components/containers/LabelsAndGuidesSectionContainer', ()
   default: () => <div data-testid="labels-section" />,
 }));
 vi.mock('../../../src/components/containers/DisplaySectionContainer', () => ({
-  default: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="display-section">{children}</div>
-  ),
-}));
-vi.mock('../../../src/components/containers/EarthSectionContainer', () => ({
-  default: () => <div data-testid="earth-section" />,
+  default: () => <div data-testid="display-section" />,
 }));
 vi.mock('../../../src/components/containers/CameraControlsSectionContainer', () => ({
   default: () => <div data-testid="camera-controls-section" />,

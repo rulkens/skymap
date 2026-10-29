@@ -1,6 +1,7 @@
 // Data only: `appVisibility.ts` derives core's address types from this.
 
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
+import { FOREGROUND_RECEDE } from '../../data/bands/foregroundRecede';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
@@ -12,12 +13,21 @@ const LABEL_BEARING_STAR_CATALOG_IDS = STAR_CATALOG_SOURCE_ROWS.map(([, entry]) 
   .map((entry) => entry.id);
 
 export const starCatalogVisibility = [
-  { key: 'sStarTrails' },
+  { key: 'sStarTrails', bands: { foreground: FOREGROUND_RECEDE } },
   {
     key: 'starCatalog',
     cluster: 'starCatalogs',
     items: STAR_CATALOG_IDS,
     bodies: SEEDED_STAR_CATALOGS,
+    // Each seeded set recedes from its own region; the survey stars keep drawing from far out.
+    bands: {
+      foreground: {
+        ...FOREGROUND_RECEDE,
+        from: 'solar-neighbourhood',
+        items: ['famousStar', 'sun'],
+      },
+      sStarForeground: { ...FOREGROUND_RECEDE, from: 'galactic-centre', items: ['sStar'] },
+    },
   },
   {
     label: 'starCatalog',

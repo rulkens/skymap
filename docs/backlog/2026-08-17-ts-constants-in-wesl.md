@@ -14,26 +14,16 @@ own `src/test/VirtualModules.test.ts` (constants in expressions, in
 `constants::MISSING` is a hard link error with a caret-marked source excerpt —
 failures here are loud, not silent.
 
-None of this reaches the app today: `node_modules/wesl-plugin/src/extensions/StaticExtension.ts:44-50`
-calls `link({ weslSrc, rootModuleName, debugWeslRoot, libs, conditions })` —
-no `constants`, no `virtualLibs`. The repo's ~12 comments asserting "`?static`
-WESL linking has no value injection" are describing this shipped extension,
-which is real, but stating it as a property of WESL/`wesl-plugin` in general,
-which is false. Correct phrasing: "the built-in `staticBuildExtension` passes
-no `constants` to the linker; `wesl`'s `link()` does support them."
-
-`PluginExtension` is a plain `{ extensionName, emitFn }` object
-(`wesl-plugin/src/PluginExtension.ts:19-27`) registered via
-`WeslPlugin.ts:59`'s `[...builtinExtensions, ...(o.extensions ?? [])]` and
-looked up by name (`:84-89`). A user extension named `static` shadows the
-built-in one, so injection could be turned on with zero changes to the ~132
-existing `.wesl?static` import sites — only the plugin registration changes.
-`emitFn` can call `link()` with any `LinkParams`, including `constants` /
-`virtualLibs`.
-
-Query-string per-import values do not work: any `?static&k=v` segment
-degrades to a boolean (`WeslPlugin.ts:119-132`), so an injected constant is
-global to the extension instance, not per import site.
+None of this reaches the app today: Skymap's own `?static` plugin
+(`tools/utils/vite/weslStaticPlugin.ts`) calls
+`link({ weslSrc, rootModuleName, debugWeslRoot })` — no `constants`, no
+`virtualLibs`. The repo's ~12 comments asserting "`?static` WESL linking has
+no value injection" describe that plugin, which is real, but state it as a
+property of WESL in general, which is false. Correct phrasing: "our `?static`
+plugin passes no `constants` to the linker; `wesl`'s `link()` does support
+them." Turning it on is a `constants` option on that plugin: the ~132
+existing `.wesl?static` import sites stay as they are, and an injected value
+is global to the plugin instance, not per import site.
 
 ## The AbstractInt landmine
 
@@ -44,26 +34,17 @@ silently evaluates as integer division (`7`, not `7.5`). Passing the string
 must format every float as a string (or wrap the use site in `f32(...)`) —
 there is no compiler check for this on either side of the boundary.
 
-A second landmine in the same file: `emitStaticJs` returns a JS template
-literal wrapping the WGSL text. An injected string containing a backtick or
-`${` corrupts the emitted JS module (same family as the project's existing
-"no backticks in WESL" rule).
-
 ## Cost of turning it on
 
-`.wesl` files are linked from four separate build configs, each with its own
-`wesl-plugin` registration: the app (`vite.config.ts`), the Vitest suite
-(`vitest.config.ts`, same root), and two dev tools with their own
-`weslToml` (`tools/galaxy-renderer/vite.config.ts`,
-`tools/flow-workbench/vite.config.ts`). The moment one shared `.wesl` file
-says `import constants::X`, every build that links it needs the
-constants-aware extension registered or it fails at link time — loud, but a
-real four-site coupling that a shared, un-copy-pasted helper module would
-need to own.
+`.wesl` files are linked from six build configs, each registering
+`weslStaticPlugin`: the app (`vite.config.ts`), the Vitest suite
+(`vitest.config.ts`, same root), and four dev tools with their own
+`weslToml`. The moment one shared `.wesl` file says `import constants::X`,
+every build that links it needs the constants passed in or it fails at link
+time — loud, but a six-site coupling the plugin's default would have to own.
 
-Watch/HMR only covers `wesl.toml` and the discovered `.wesl` files
-(`PluginApi.ts:88,113,204`); a TS module used as a `constants` source is
-invisible to the plugin's own watcher. Editing it does not re-link the
+The plugin's cache and HMR react only to `wesl.toml` and `.wesl` files; a TS
+module used as a `constants` source is invisible to them. Editing it does not re-link the
 shader in a running dev server — Vite's own config-dependency tracking may
 restart the whole server instead (unverified), which is strictly slower than
 the `.wesl`-literal HMR loop shader tuning currently relies on.
@@ -97,13 +78,12 @@ precedented by `extensions/ReflectExtension.ts`) can be fully typed.
    consider codegen-to-checked-in-`.wesl`** (a script writes
    `shaders/generated/*.wesl`, committed, CI-checked for no diff on
    regeneration). This is the option that scales best across the four
-   builds if injection is ever truly needed — no `wesl-plugin` internals
-   copied, the file is watched/HMR-ed/greppable like any other `.wesl`. Prefer
-   it over copying `StaticExtension.ts` and adding `constants`/`virtualLibs`
-   by hand: that copy would need re-syncing on every `wesl-plugin` upgrade,
-   for a benefit (typed, per-import values) it still cannot deliver.
+   builds if injection is ever truly needed — the file is
+   watched/HMR-ed/greppable like any other `.wesl`. Prefer it over a
+   `constants` option on `weslStaticPlugin`: small to add, but it still
+   cannot deliver typed or per-import values.
 
-Injection via a custom `constants`/`virtualLibs` extension is the tool of
+Injection via a `constants`/`virtualLibs` plugin option is the tool of
 last resort — reach for it only when a value is genuinely compile-time,
 genuinely shader-owned in the generated sense (a computed LUT, a generated
 dispatch table), not a hand-written literal a `.wesl` module could hold

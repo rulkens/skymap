@@ -97,6 +97,7 @@ describe('Settings page', () => {
     /^blackHoleLensingTuning\./,
     /^bodies\.items\.[\w-]+\.enabled$/,
     /^(constellations|localBubble)\.intensity$/,
+    /^earth\.(atmosphereExposure|ambientLight|oceanRoughness)$/,
     /^flow\.(mode|count|trail|flowSpeed|densityBias|wander|boundaryFadeWidth)$/,
     /^galaxyCatalogs\.(brightness|provenance\..+)$/,
     /^galaxyCatalogs\.items\.(sdss|2mrs|glade|milliquas|desiDeep|desiWedge|desiSgw)\.labelEnabled$/,

@@ -240,7 +240,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     cloudRenderer: milkyWayCloudRenderer,
     aggregateUpsample: null,
   } as unknown as MilkyWayRuntime;
-  const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const renderTargetViews: Record<string, GPUTextureView> = {
@@ -318,6 +317,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       viewRig: 'mono',
       gpu: {
         labelRendererCosmo: null,
+        label3DRenderer: null,
         markerLineRendererCosmo: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
@@ -329,7 +329,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         labelRendererNear: null,
         // Every `ContentPass.draw` reads its renderer off `state.gpu.*`; the milkyWay Layer's passes close
         // over `milkyWayRuntime` instead.
-        horizonShellRenderer,
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },

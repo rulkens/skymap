@@ -1,6 +1,7 @@
 // Data only: `appVisibility.ts` derives core's address types from this.
 
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
+import { FOREGROUND_RECEDE } from '../../data/bands/foregroundRecede';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 
 // The caption categories, not body ids: Earth, planets and mesh bodies. Rows that draw
@@ -10,6 +11,6 @@ const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' &&
 );
 
 export const bodyVisibility = [
-  { key: 'orbitTrails' },
+  { key: 'orbitTrails', bands: { foreground: FOREGROUND_RECEDE } },
   { label: 'body', cluster: 'bodies', items: LABEL_BEARING_BODY_IDS, recession: 'mild' },
 ] as const satisfies readonly VisibilityEntry[];

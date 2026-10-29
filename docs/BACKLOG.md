@@ -38,6 +38,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
+- [ ] **The selection row carries its positioner** `needs-design` — satellites mirrors the positioner its own `extractRow` computes into `transientPositions` via `store.subscribe`; carry it on the row and `LayerCoreDeps.store` goes with it. → [details](backlog/2026-10-29-selection-row-carries-its-positioner.md)
+- [ ] **A selection kind's facts live in its Layer** `needs-design` — a new kind edits 14 core tables (focusable, halo, framing, label, URL hash, exhibit picking); ruled: they move onto the Layer's `SelectionKindRow`. → [details](backlog/2026-10-28-selection-kind-facts-in-the-layer.md)
+- [ ] **A link or search pick switches its subject's Layer on** `needs-design` — with satellites off a satellite link lands home; ruled generic for every kind, own PR, no new `SelectionKindRow` member. → [details](backlog/2026-10-29-link-switches-its-subject-on.md)
 - [ ] **Layer terrain contract review** `needs-design` — whether the camera's ground query should stay a Layer member (`heightAt`, narrowed 2026-10-28) or move behind another seam.
 - [ ] **Narrow `PickingSettings.kinds` to pickable kinds** `needs-design` — the record is total over every selection kind, so the DebugPanel lists an `earthScene` toggle that does nothing (no pick source).
 - [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:783`, and neither `runFrame` nor the scheduler's `tick` catches, so trace where the throw is lost.
@@ -117,6 +120,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Switching a layer off never frees its VRAM** `needs-design` — no `release` predicate reads a setting; a deselected volume strands up to 217 MB, catalogs/flow/filaments the same. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **Lazy-allocate GPU resources for off features** `ready` — flow particles (26.6 MB, off by default), bloom with bloom disabled, hidden layers' render targets. → [details](backlog/2026-10-13-lazy-gpu-allocation.md)
@@ -146,7 +150,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Body seed albedos are authored, not measured** `needs-design` — one field serves surface reflectance and the atmosphere's ground bounce, which want different quantities; Pluto's is 0.49 vs a measured 0.72. → [details](backlog/2026-08-18-body-seed-albedos-vs-measured.md)
 - [ ] **Titan's north/south albedo asymmetry** `needs-design` — its only large-scale visible structure reverses with the 29.5-year season, so no static texture can carry it. → [details](backlog/2026-08-18-titan-seasonal-albedo-asymmetry.md)
 - [ ] **Packed instance-record layout is four hand-maintained conventions** `needs-design` — one field order encoded three ways per renderer, checked by nothing; one site already shipped stale. → [details](backlog/2026-08-01-instance-record-layout-conventions.md)
-- [ ] **TS constants can reach WESL via a custom link extension** `needs-design` — the built-in `?static` extension passes none of `wesl`'s `constants`/`virtualLibs`; ~12 comments claim injection is impossible outright. → [details](backlog/2026-08-17-ts-constants-in-wesl.md)
+- [ ] **TS constants can reach WESL via a plugin option** `needs-design` — our `?static` plugin passes none of `wesl`'s `constants`/`virtualLibs`; ~12 comments claim injection is impossible outright. → [details](backlog/2026-08-17-ts-constants-in-wesl.md)
 - [ ] **Stale shader-tree doc comments misclaim fullscreen-tri/upsample ownership** `ready` — `bloom/io.wesl`'s header and `additiveUpsample.ts`'s "two subsystems" count both predate zone-of-avoidance's third instance. → [details](backlog/2026-08-20-stale-shader-tree-doc-comments.md)
 - [ ] **`composeOrbitConic` braids three jobs; the ribbon measures pixels two ways** `deferred` — culled orbits pay an f64 inverse first, and two pixel conventions agree only by isometry. → [details](backlog/2026-08-01-orbit-trail-compose-and-pixel-conventions.md)
 - [ ] **Body-texture colour calibration** `needs-design` — Mars reads over-saturated; the `sss` sources are enhanced, not colorimetric, and no target appearance is recorded. → [details](backlog/2026-07-24-mars-texture-colour-calibration.md)
@@ -223,7 +227,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`CatalogDrawEntry` bind-group coverage** `deferred` — a wrong-source `fadeBindGroup`/`sourceBindGroup` on a `catalogStore.entries()` entry would pass every test (the draw test only smoke-checks the command list). → [details](backlog/2026-07-14-catalog-draw-entry-coverage.md)
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `manual` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 - [ ] **Fluid ISM-map event CDF has no texel-area term** `deferred` — log-radial grid means uniform-per-texel sampling seeds the centre and starves the outer disc; fixing it recalibrates the whole tuned map. → [details](backlog/2026-08-10-ism-fluid-event-cdf-texel-area.md)
-- [ ] **Filaments + flow field lack scale fade bands** `ready` — both layers gate on user intent alone, with no zoom-based fade like the survey point clouds. → [details](backlog/2026-07-24-filaments-flow-scale-bands.md)
 - [ ] **Flow field does not reseed on a particle-count change** `needs-verification` — confirmed on the deployed build; the latch arms and the seed pass encodes, so the suspect is a stale trail ring or index-hashed seed positions. → [details](backlog/2026-09-15-flow-field-no-reseed-on-count-change.md)
 - [ ] **Barycentric orbit pairs** `needs-design` — Pluto's wobble is one `BARYCENTRIC_PAIRS` row (Earth–Moon already uses it); the minor moons still need an invisible focus-graph node. → [details](backlog/2026-08-16-barycentric-orbit-pairs.md)
 - [ ] **Pluto's minor moons (Styx/Nix/Kerberos/Hydra)** `blocked` — they orbit the barycentre, so honest placement waits on barycentric pairs. → [details](backlog/2026-08-16-barycentric-orbit-pairs.md)
@@ -279,6 +282,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
 
+- [ ] **Website docs pages into folders with structure files** `ready` — the 27 docs pages get a folder and a `.structure.yaml` each like the landing pages (job moves out of front matter), and `components/docs/` is sub-grouped by kind.
 - [ ] **Cosmic-zoom plan review** `process` — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review (memory `project_cosmic_zoom_plan`).
 - [ ] **Famous-curator suite runtime cost** `deferred` — real sharp encodes + tmpdir I/O dominate suite wall-clock; cache fixtures, shrink images, or tag a slow-suite split. → [details](backlog/2026-07-10-famous-curator-suite-runtime-cost.md)
 - [ ] **Deproject invariant consolidation** `deferred` — square-in/square-out tested 4× across the curator export surface; fold into one parameterized test if that surface is reworked. → [details](backlog/2026-07-10-deproject-invariant-consolidation.md)
@@ -298,6 +302,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## External / blocked
 
+- [ ] **Space-Track's full satellite catalog** `blocked` — ~30k objects with rocket bodies and all debris; needs an account and written approval to redistribute (satellites spec §9).
+- [ ] **Craft around other planets and at Lagrange points** `needs-design` — `/add-mission` rows, plus `buildSpacecraftTracks` generalised beyond Voyager for halo orbits (satellites spec §9).
 - [ ] **HyperLEDA cache backfill** `blocked` — R2 cache is intentionally partial (52k / ~1.5M PGCs); don't auto-refetch, promote only on concrete need (memory `project_hyperleda_partial_cache`).
 - [ ] **DESI DR1 as a data source** `blocked` — viable + ~90% new data, but ~10× points (~9.75M) exceeds the interactive-render ceiling; revisit after the point ceiling lifts to ~25M+ ([research](research/2026-06-05-desi-dr1-as-a-data-source.md), memory `project_desi_deferred`). A scoped 2.5° patch shipped separately via the [deep-cone spec](superpowers/specs/completed/2026-07-07-desi-deep-cone-design.md).
 - [ ] **DESI BGS real galaxy shapes** `needs-verification` — DR1 LSS clustering catalogs carry no shape columns; every DESI row renders at the default size + hashed fallback orientation. → [details](backlog/2026-07-09-desi-bgs-real-shapes.md)

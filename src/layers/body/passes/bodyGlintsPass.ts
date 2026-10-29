@@ -33,7 +33,6 @@ import { bodyGlintBackdropFade } from '../../../utils/scene/bodyGlintBackdropFad
 import { packBodyGlints } from '../../../utils/scene/packBodyGlints';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../data/labels/solarSystemLabelMaxDistance';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
 import { MAX_GLINTS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
@@ -53,7 +52,6 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
     name: 'body-glints',
 
     enabled(state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       // Opacity 0 means no render: disable rather than pack invisible points.
       if (bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx)) <= 0) return false;
       return bodySceneBodyPartition(state, ctx, runtime).glints.length > 0;
@@ -61,11 +59,14 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
 
     // Wider than `enabled`: this pass also carries Earth's pick stamp (see
     // `drawPick`), so the row is admitted whenever the Earth caption invites a click
-    // even with an empty `glints` branch.
+    // even with an empty `glints` branch. Past the backdrop dissolve with no caption,
+    // every glint `drawPick` would stamp is skipped, so the row has nothing to pick.
     pickEnabled(state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      if (bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) return true;
-      return earthCaptionPickable(ctx);
+      const backdropFade = bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx));
+      return (
+        (backdropFade > 0 && bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) ||
+        earthCaptionPickable(ctx)
+      );
     },
 
     draw(pass, view, ctx, state) {

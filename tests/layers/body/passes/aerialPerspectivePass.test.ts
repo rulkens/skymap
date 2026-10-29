@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { aerialPerspectivePass } from '../../../../src/layers/body/passes/aerialPerspectivePass';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { SceneBodyId } from '../../../../src/@types/scene/SceneBodyId';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
@@ -49,7 +49,7 @@ function makeCtx(eyeRelBodyM: Vec3): FrameView {
     basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyRelativePose['basisM'],
   };
   return {
-    cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
+    snapshot: { slabBodyCandidates: BODY_SLAB_ROWS },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => pose) as FrameView['bodyPose'],
     drawPxPerRad: FIXTURE_PX_PER_RAD,

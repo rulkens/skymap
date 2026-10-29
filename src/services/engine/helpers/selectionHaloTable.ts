@@ -32,6 +32,7 @@ type CraftRow = Extract<SelectionRow, { type: 'craft' }>;
 type EarthSceneRow = Extract<SelectionRow, { type: 'earthScene' }>;
 type StarCatalogRow = Extract<SelectionRow, { type: 'starCatalog' }>;
 type BlackHoleRow = Extract<SelectionRow, { type: 'blackHole' }>;
+type SatelliteRow = Extract<SelectionRow, { type: 'satellite' }>;
 
 const SELECTION_HALO_TABLE: {
   galaxyCatalog: (row: GalaxyRow) => SelectionHalo;
@@ -43,6 +44,7 @@ const SELECTION_HALO_TABLE: {
   earthScene: (row: EarthSceneRow) => SelectionHalo;
   starCatalog: (row: StarCatalogRow) => SelectionHalo;
   blackHole: (row: BlackHoleRow) => SelectionHalo;
+  satellite: (row: SatelliteRow) => SelectionHalo;
 } = {
   // 30 kpc fallback for a galaxy without a measured size; the ring spans 2x the diameter.
   galaxyCatalog: (row) => ({
@@ -65,10 +67,11 @@ const SELECTION_HALO_TABLE: {
   starCatalog: nearFieldHalo,
   // Footprint is r_s: the ring hugs the horizon.
   blackHole: nearFieldHalo,
+  satellite: nearFieldHalo,
 };
 
 function nearFieldHalo(
-  row: BodyRow | CraftRow | EarthSceneRow | StarCatalogRow | BlackHoleRow,
+  row: BodyRow | CraftRow | EarthSceneRow | StarCatalogRow | BlackHoleRow | SatelliteRow,
 ): SelectionHalo {
   return {
     radiusMpc: row.driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,

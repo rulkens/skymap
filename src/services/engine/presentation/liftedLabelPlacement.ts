@@ -62,11 +62,8 @@ import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import { labelLeaderLine } from '../../../utils/camera/labelLeaderLine';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
-import {
-  LEADER_LIFT_FACTOR,
-  LEADER_LINE_PADDING_PX,
-  MIN_LABEL_CLEARANCE_PX,
-} from './leaderLineStyle';
+import { LEADER_LINE_PADDING_PX, MIN_LABEL_CLEARANCE_PX } from './leaderLineStyle';
+import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 
 export function liftedLabelPlacement(input: {
   /** The dot (galaxy / body) position in the layer's world frame. */
@@ -100,12 +97,12 @@ export function liftedLabelPlacement(input: {
    */
   lineBottomLiftPx?: number;
 }): { labelWorldPos: Vec3; line: { fromWorld: Vec3; toWorld: Vec3 } | null } | null {
-  const proposedLiftPx = Math.max(MIN_LABEL_CLEARANCE_PX, LEADER_LIFT_FACTOR * input.subjectSizePx);
+  const liftPx0 = proposedLiftPx(input.subjectSizePx);
   const proposed = labelLeaderLine({
     anchorWorldPos: input.anchorWorldPos,
     vp: input.vp,
     viewportPx: input.viewportPx,
-    liftPx: proposedLiftPx,
+    liftPx: liftPx0,
   });
   if (proposed === null) return null;
 
@@ -131,8 +128,8 @@ export function liftedLabelPlacement(input: {
   // MIN_LABEL_CLEARANCE_PX of the dot. Re-running `labelLeaderLine` replays
   // the same forward projection of the same dot — it cannot flip to null —
   // and only moves the lifted world point; the guard keeps the type honest.
-  const deficitPx = MIN_LABEL_CLEARANCE_PX + inkDropPx - proposedLiftPx;
-  const liftPx = deficitPx > 0 ? proposedLiftPx + deficitPx : proposedLiftPx;
+  const deficitPx = MIN_LABEL_CLEARANCE_PX + inkDropPx - liftPx0;
+  const liftPx = deficitPx > 0 ? liftPx0 + deficitPx : liftPx0;
   const leader =
     deficitPx > 0
       ? labelLeaderLine({

@@ -11,7 +11,6 @@ import { APP_LABELS_AND_GUIDES_ROWS } from '../../compositions/appLabelsAndGuide
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
-import EarthSectionContainer from '../containers/EarthSectionContainer';
 import CameraControlsSectionContainer from '../containers/CameraControlsSectionContainer';
 
 export const SettingsSections = memo(function SettingsSections(): ReactNode {
@@ -22,9 +21,7 @@ export const SettingsSections = memo(function SettingsSections(): ReactNode {
         <Section key={index} />
       ))}
       <LabelsAndGuidesSectionContainer layerRows={APP_LABELS_AND_GUIDES_ROWS} />
-      <DisplaySectionContainer>
-        <EarthSectionContainer />
-      </DisplaySectionContainer>
+      <DisplaySectionContainer />
       <CameraControlsSectionContainer />
     </>
   );
