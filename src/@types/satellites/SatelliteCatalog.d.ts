@@ -1,6 +1,6 @@
 /**
  * SatelliteCatalog — every satellite's SGP4 mean elements, column by column (index k is one object
- * in every column), as `satellites.bin` stores them and the worker reads them. The element columns
+ * in every column), as `satellites.satg` stores them and the worker reads them. The element columns
  * keep CelesTrak's OMM units verbatim: SGP4 was fitted to them, so nothing is converted here.
  */
 export type SatelliteCatalog = {

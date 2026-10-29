@@ -1,7 +1,7 @@
 /**
  * createSatellitePropagator — owns the SGP4 worker's lifetime and its one-in-flight message loop.
  * The asset slot calls `start` on commit and `stop` on release, which is what keeps the worker
- * alive only while the Layer is active. The worker gets a copy of `satellites.bin`: the main thread
+ * alive only while the Layer is active. The worker gets a copy of `satellites.satg`: the main thread
  * keeps its own parsed views for the names and the epoch window.
  */
 import { parseSatelliteCatalog } from '../load/parseSatelliteCatalog';
