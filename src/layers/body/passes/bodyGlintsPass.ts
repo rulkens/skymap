@@ -63,9 +63,10 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
     // every glint `drawPick` would stamp is skipped, so the row has nothing to pick.
     pickEnabled(state, ctx, _view) {
       const backdropFade = bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx));
-      if (backdropFade <= 0 && !earthCaptionPickable(ctx)) return false;
-      if (bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) return true;
-      return earthCaptionPickable(ctx);
+      return (
+        (backdropFade > 0 && bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) ||
+        earthCaptionPickable(ctx)
+      );
     },
 
     draw(pass, view, ctx, state) {

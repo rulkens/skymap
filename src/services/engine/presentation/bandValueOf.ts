@@ -5,9 +5,8 @@
  * than a view so scene-body admission can measure at the frame camera.
  */
 
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { BandEye } from '../../../@types/engine/presentation/BandEye';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { regionById } from '../../../utils/regions/regionById';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
@@ -15,7 +14,7 @@ import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelative
 export function bandValueOf(
   entry: VisibilityEntry,
   item: string | undefined,
-  view: { drawCamPos: Readonly<Vec3>; snapshot: Pick<ReadyFrameContext, 'bodyStates'> },
+  view: BandEye,
 ): number {
   if (entry.bands === undefined) return 1;
   const [x, y, z] = view.drawCamPos;

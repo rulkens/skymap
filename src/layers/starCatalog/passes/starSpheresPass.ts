@@ -45,9 +45,10 @@
  * through its entry's region band, past which every seeded star is a
  * deep-sub-pixel speck), AND a resolved seeded star — the same sort `draw`
  * consumes, so the enable gate and the draw set cannot disagree. The fade
- * runs first so the sort is not run at all when the camera is far. The sort is bound at `ctx.drawCamPos` (absolute frame) while the
- * MVPs compose at `view.camPos` (NEAR0's origin-relative frame); the two coincide
- * because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
+ * runs first so the sort is not run at all when the camera is far. The sort is
+ * bound at `ctx.drawCamPos` (absolute frame) while the MVPs compose at
+ * `view.camPos` (NEAR0's origin-relative frame); the two coincide because
+ * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  *
  * `RENDER_ORIGIN_MPC` is imported directly as a constant (not threaded
  * through ctx state) — the render origin is fixed at the Sun for the

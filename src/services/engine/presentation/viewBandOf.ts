@@ -1,7 +1,6 @@
 import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { VisibilityEntry } from '../../../@types/engine/layer/VisibilityEntry';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { BandEye } from '../../../@types/engine/presentation/BandEye';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { bandValueOf } from './bandValueOf';
 
@@ -11,7 +10,7 @@ export function viewBandOf(
   entries: readonly VisibilityEntry[],
   address: VisibilityAddress,
   item: string | undefined,
-  view: { drawCamPos: Readonly<Vec3>; snapshot: Pick<ReadyFrameContext, 'bodyStates'> },
+  view: BandEye,
 ): number {
   const entry = visibilityEntryOf(entries, address);
   const own = bandValueOf(entry, item, view);
