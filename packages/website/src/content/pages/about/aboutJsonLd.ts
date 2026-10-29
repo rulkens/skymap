@@ -1,5 +1,6 @@
 import { BASE } from '../../../data/site';
-import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
+import { MAKER_NAME } from '../../../data/siteIdentity';
+import { makerProfile, whatIs } from './about.data';
 
 /**
  * The About page's structured data: the maker as the same `Person` node Home
@@ -7,7 +8,7 @@ import { MAKER_NAME, REPO_URL } from '../../../data/siteIdentity';
  * itself as an `AboutPage` carrying the citable paragraph. Every value is
  * printed on the page. `site` is Astro's configured origin.
  */
-export function aboutJsonLd(site: URL, pageUrl: string, whatIs: string): Record<string, unknown>[] {
+export function aboutJsonLd(site: URL, pageUrl: string): Record<string, unknown>[] {
   const home = new URL(BASE, site).href;
   const maker = { '@id': `${home}#maker` };
   return [
@@ -17,7 +18,7 @@ export function aboutJsonLd(site: URL, pageUrl: string, whatIs: string): Record<
       ...maker,
       name: MAKER_NAME,
       url: pageUrl,
-      sameAs: [REPO_URL.slice(0, REPO_URL.lastIndexOf('/'))],
+      sameAs: [makerProfile],
     },
     {
       '@context': 'https://schema.org',

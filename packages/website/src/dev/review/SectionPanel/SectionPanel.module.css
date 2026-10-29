@@ -26,8 +26,7 @@
 }
 
 .words {
-  composes: dim from '../ReviewControl/ReviewControl.module.css';
-  margin-bottom: var(--space-4);
+  composes: job;
   font-variant-numeric: tabular-nums;
 }
 

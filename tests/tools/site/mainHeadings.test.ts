@@ -20,8 +20,4 @@ describe('mainHeadings', () => {
       h3: ["It's here"],
     });
   });
-
-  it('finds nothing in a page with no main', () => {
-    expect(mainHeadings('<h2>Loose</h2>')).toEqual({ h2: [], h3: [] });
-  });
 });

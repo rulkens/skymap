@@ -1,7 +1,6 @@
 /*
  * Section — one block of a page: the page's column and the gap above it. `as="div"`
  * is the block that carries no landmark of its own, such as the closing sources.
- * `className` comes before `id` so the markup keeps the attribute order it always had.
  */
 import type { ReactNode } from 'react';
 

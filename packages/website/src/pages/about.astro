@@ -3,7 +3,6 @@
 import { getEntry, render } from 'astro:content';
 
 import { aboutJsonLd } from '../content/pages/about/aboutJsonLd';
-import { fact } from '../data/fact';
 import Base from '../layouts/Base.astro';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
@@ -16,11 +15,10 @@ const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
 
 <Base
   {...entry.data}
-  job={structure.job}
-  sections={structure.sections}
+  {...structure}
   jsonLd={[
     breadcrumbJsonLd(Astro.site!, [{ name: 'About', path: '/about/' }]),
-    ...aboutJsonLd(Astro.site!, pageUrl, fact('about-what-is').text),
+    ...aboutJsonLd(Astro.site!, pageUrl),
   ]}
 >
   <Content />

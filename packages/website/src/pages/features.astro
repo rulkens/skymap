@@ -10,6 +10,6 @@ const { Content } = await render(entry);
 const structure = (await getEntry('pageStructures', 'features'))!.data;
 ---
 
-<Base {...entry.data} job={structure.job} sections={structure.sections} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Features', path: '/features/' }])]}>
+<Base {...entry.data} {...structure} jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Features', path: '/features/' }])]}>
   <Content />
 </Base>

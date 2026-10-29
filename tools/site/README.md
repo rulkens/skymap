@@ -71,7 +71,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Structure check
 
-`npm run site:structure` (after `npm run site:build`) compares each landing page's `<page>.structure.yaml` (`packages/website/src/content/pages/<page>/`) with its built HTML: the YAML's sections are the page's h2s and their `parts` its h3s, inside `<main>`. A heading only one side has fails the check, as does a missing or malformed YAML file.
+`npm run site:structure` (after `npm run site:build`) compares each landing page's `<page>.structure.yaml` (`packages/website/src/content/pages/<page>/`) with its built HTML: the YAML's sections are the page's h2s and their `parts` its h3s, inside `<main>`. A heading only one side has fails the check.
 
 ## External link check
 
