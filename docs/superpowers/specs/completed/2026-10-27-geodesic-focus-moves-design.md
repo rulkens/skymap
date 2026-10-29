@@ -48,6 +48,16 @@ a toggle between them:
     hand-off. Owner ruling, 2026-10-27.
 
   Both still honour the Eased duration slider.
+
+  > **Superseded 2026-10-28 (PR 2).** Under Geodesic, a focus on a moving body and Home now
+  > fly a geodesic tween to the framing pose computed at the click, and the follow rows take
+  > over on arrival through the tween's settled hand-off. The gate is the
+  > `tweensMovingBodies` member of each `FOCUS_MOTIONS` row; Eased is unchanged. The accepted
+  > cost is that the body drifts during the flight: invisible at real time, a visible
+  > catch-up on the hand-off frame at fast time rates. **Rejected:** #531's approach, which
+  > re-solves the path against the body every frame, opts the follow rows out of the pivot pin
+  > and freezes the geodesic tuning in `FollowMemory`. It was dropped for tween-then-follow,
+  > which adds no driver code, at the cost of the drift above.
 - **`flyToLonLat` on the geodesic.** It lands with a heading and roll, which the geodesic does
   not model. It stays an eased motion with its own `FLY_TO_LON_LAT_TWEEN_MS` (or the payload's
   override), and the Eased slider does not drive it (my call: that is a different move).

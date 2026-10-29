@@ -19,7 +19,7 @@ import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../src/utils/math/mat3FromColumns';
 import { BODY_SLAB_ROWS } from '../../../src/layers/body/present/bodySlabRows';
-import { FLAT_TERRAIN } from '../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
 const FOV_Y_RAD = 1;
@@ -61,7 +61,7 @@ export function frameViewsAt(input: {
   const state = {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: BODY_SLAB_ROWS,

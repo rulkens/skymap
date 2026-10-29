@@ -25,7 +25,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -77,7 +77,7 @@ function makeState(
     selectionKindRows: overrides.selectionKindRows ?? [],
     slabRows: [],
     visibilityEntries: [],
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: { pose: absoluteArm(LAST_POSE) },
       outputs: {

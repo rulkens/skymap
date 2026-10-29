@@ -1,4 +1,4 @@
-import { SITE_LOOPS } from '../data/siteLoops';
+import { siteLoop } from '../data/siteLoop';
 
 const FILES = import.meta.glob<string>('../assets/loops/*.mp4', {
   eager: true,
@@ -12,9 +12,7 @@ const FILES = import.meta.glob<string>('../assets/loops/*.mp4', {
  * has not been run since the row was added.
  */
 export function loopUrl(id: string): string {
-  if (!SITE_LOOPS.some((loop) => loop.id === id)) {
-    throw new Error(`Unknown loop id "${id}" (see src/data/siteLoops.ts)`);
-  }
+  siteLoop(id);
   const file = FILES[`../assets/loops/${id}.mp4`];
   if (!file) throw new Error(`No file for loop "${id}": run npm run site:loops`);
   return file;

@@ -12,7 +12,7 @@ import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/layers/body/present/hostBodyId';
-import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../src/layers/body/load/bodyTextureSlotKey';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';

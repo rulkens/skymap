@@ -29,3 +29,5 @@ blackHoles' row is anchored on a place, not a body (`blackHoleAnchorId`, a `Plac
 Centre, `src/layers/blackHoles/present/blackHoleSlabRow.ts`), and its `hosts` line is `lens`, not a body
 draw. A roster derived from `slabRows` anchors would catch it; the declaration must stay per body, and
 the lens row must remain a Layer `slabs` row with no body behind it.
+
+J13 in the [layer-migration survey](2026-10-29-layer-migration-leftovers.md) refines this: the roster to replace is `bodySlabRosterIds` (`SCENE_PLANETS` + mesh bodies), ~35 LOC.

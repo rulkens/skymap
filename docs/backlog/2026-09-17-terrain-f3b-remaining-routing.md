@@ -45,8 +45,8 @@ Two of the table's rows are already **done**, not pending:
 - **Occlusion (19 sites).** `src/services/engine/frame/sceneOccluderBodies.ts`
   pass `innerBoundRadiusM(...)` for every occluder. The horizon cap's occludee — the
   row the spec singles out as needing `boundsM(patch).max` — is
-  `src/utils/surfaceTiles/cutSurfaceTiles.ts:168,181`, where `reliefHeadroom(z,x,y)`
-  (`:253-259`) reads the deepest resident height ancestor's `subtreeRangeM` and widens
+  `src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts`, whose relief headroom
+  reads the deepest resident height ancestor's `subtreeRangeM` and widens
   the cap by `acos(1/(1+relief))`. That is a per-node local maximum from real header
   data, which is what the row asked for. It landed with F1/F2 (R14/R15).
 - **Atmosphere ground radius (part of the 41).** `src/layers/body/present/atmosphereParams.ts`
@@ -99,9 +99,8 @@ teleport, it tracks at the wrong speed and the terrain slides under the cursor.
 Spec §8.1 sketches `raycast(origin, dir)` — intersect the outer-bound sphere, march
 against `terrainHeightM`, bisect the first crossing — as the answer. It does not
 exist; F3a shipped only `terrainHeightM`
-(`src/utils/surfaceTiles/terrainHeightM.ts:24`) and
-`surfaceTileSubsystem.terrainHeightAt`
-(`src/@types/engine/subsystems/SurfaceTileSubsystem.d.ts:68`).
+(`src/layers/body/subsystems/surfaceTiles/terrainHeightM.ts`) and the body Layer's
+`heightAt` (`src/layers/body/heightAt.ts`).
 
 Note the overlap: the **zoom** anchor is already filed separately
 (`2026-09-17-terrain-aware-zoom-anchor.md`) and its option 2 is a cheap fixed-point
