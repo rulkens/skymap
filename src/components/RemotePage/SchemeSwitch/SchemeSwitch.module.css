@@ -1,14 +1,13 @@
 .root {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.label {
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-input);
+  gap: var(--space-4);
 }
 
 .segment {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
 }

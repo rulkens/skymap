@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import cx from 'classnames';
 import { focusNameFrom } from '../../utils/remote/focusNameFrom';
 import { useRemoteLink } from './useRemoteLink';
 import JoinField from './JoinField/JoinField';
@@ -18,6 +19,8 @@ import ExhibitSection from './ExhibitSection/ExhibitSection';
 import TimeSection from './TimeSection/TimeSection';
 import ToggleSection from './ToggleSection/ToggleSection';
 import SetupSection from './SetupSection/SetupSection';
+import HomeIcon from './HomeIcon';
+import SchemeSwitch from './SchemeSwitch/SchemeSwitch';
 import type { RemoteNavAxis } from '../../@types/remote/RemoteNavAxis';
 import controls from './remoteControls.module.css';
 import styles from './RemotePage.module.css';
@@ -60,13 +63,24 @@ function RemotePage() {
         <Trackpad onEvent={sendDevice} axis={openspace ? axis : null}>
           {openspace && <AxisHoldButtons axis={axis} onChange={setAxis} />}
         </Trackpad>
-        <button
-          type="button"
-          className={controls.button}
-          onClick={() => sendCommand({ name: 'home', payload: null })}
-        >
-          Home
-        </button>
+        <div className={styles.homeRow}>
+          <button
+            type="button"
+            className={cx(controls.button, styles.home)}
+            onClick={() => sendCommand({ name: 'home', payload: null })}
+          >
+            <HomeIcon />
+            Home
+          </button>
+          {scheme && (
+            <SchemeSwitch
+              scheme={scheme}
+              onChange={(next) =>
+                sendCommand({ name: 'controlSchemeSet', payload: { scheme: next } })
+              }
+            />
+          )}
+        </div>
       </div>
       {status && (
         <div className={styles.sections} inert={!domeThere}>
@@ -75,13 +89,7 @@ function RemotePage() {
           <ExhibitSection menu={menu} onCommand={sendCommand} />
           <TimeSection time={status.time} onCommand={sendCommand} />
           <ToggleSection toggles={status.toggles} onCommand={sendCommand} />
-          <SetupSection
-            scheme={scheme}
-            onSchemeChange={(next) =>
-              sendCommand({ name: 'controlSchemeSet', payload: { scheme: next } })
-            }
-            onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })}
-          />
+          <SetupSection onAddPhone={() => sendCommand({ name: 'togglePairing', payload: null })} />
         </div>
       )}
     </main>

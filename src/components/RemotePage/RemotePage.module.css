@@ -37,6 +37,20 @@
   padding: 0 var(--space-8) var(--space-8);
 }
 
+/* Home takes the width the two square scheme buttons leave. */
+.homeRow {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.home {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
 .sections[inert] {
   opacity: 0.4;
 }
