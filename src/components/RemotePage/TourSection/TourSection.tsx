@@ -1,5 +1,6 @@
 /** TourSection — start a tour; while one runs, step back, pause and step on. */
 
+import cx from 'classnames';
 import type { DomeStatus } from '../../../@types/remote/DomeStatus';
 import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import type { RemoteMenu } from '../../../@types/remote/RemoteMenu';
@@ -12,12 +13,13 @@ export type TourSectionProps = {
 };
 
 function TourSection({ tours, tour, onCommand }: TourSectionProps) {
+  if (tours.length === 0 && !tour) return null;
   return (
     <section className={controls.section}>
       <h2 className={controls.heading}>Tours</h2>
       {tour && (
         <>
-          <p role="status">
+          <p role="status" className={controls.status}>
             {tours.find((t) => t.id === tour.id)?.label ?? tour.id}, beat {tour.beatIndex + 1} of{' '}
             {tour.beatCount}
             {tour.paused ? ', paused' : ''}
@@ -47,12 +49,13 @@ function TourSection({ tours, tour, onCommand }: TourSectionProps) {
           </div>
         </>
       )}
-      <div className={controls.row}>
+      <div className={controls.menu}>
         {tours.map((t) => (
           <button
             key={t.id}
             type="button"
-            className={`${controls.button} ${tour?.id === t.id ? controls.on : ''}`}
+            aria-current={tour?.id === t.id || undefined}
+            className={cx(controls.button, tour?.id === t.id && controls.on)}
             onClick={() => onCommand({ name: 'goTo', payload: { kind: 'tour', tourId: t.id } })}
           >
             {t.label}
