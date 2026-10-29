@@ -68,7 +68,15 @@ export function composeForegroundCaption(
     })
       ? 1
       : 0,
-    occludeNearKm: (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
+    // The sampled-depth channel asks whether the scene at the subject's pixel
+    // stands nearer than the subject. Under a pixel, that pixel is one terrain
+    // texel spanning kilometres and the baked site height sits inside its LOD
+    // error, so the answer is noise (rover captions flickered over Mars); a
+    // negative cutoff is the shader's "never", leaving the sphere test to decide.
+    occludeNearKm:
+      subjectSizePx < 1
+        ? -1
+        : (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
     prominencePx,
     lift: {
       subjectSizePx,

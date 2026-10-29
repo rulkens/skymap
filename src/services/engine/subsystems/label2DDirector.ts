@@ -126,6 +126,7 @@ import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
 import { declutterByScreenSeparation } from '../../../utils/labels/declutterByScreenSeparation';
+import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
@@ -267,7 +268,11 @@ function declutterByBboxOverlap(
  * `screenPx` (behind the camera) bypasses the cull unconditionally, exactly
  * as `declutterByBboxOverlap` never blocks on an off-screen anchor; the pure
  * `declutterByScreenSeparation` util does the priority-sorted greedy accept
- * over everything else. Returns a fresh array in original input order.
+ * over everything else. A label carrying `lift` is judged at its text's
+ * proposed lifted position, not its anchor: the lift stage runs later, over
+ * survivors, so this is the one place that can keep a planet's floated name
+ * from culling a rover standing at the planet's own anchor. Returns a fresh
+ * array in original input order.
  */
 function declutterByScreenSeparationArm(
   labels: readonly Label2D[],
@@ -289,7 +294,11 @@ function declutterByScreenSeparationArm(
       continue;
     }
     candidateIdx.push(i);
-    candidates.push({ screenPx: p.screenPx, priorityPx: label.prominencePx ?? 0 });
+    const screenPx: Vec2 =
+      label.lift === undefined
+        ? p.screenPx
+        : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
+    candidates.push({ screenPx, priorityPx: label.prominencePx ?? 0 });
   }
   for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
     accepted.add(candidateIdx[k]!);
