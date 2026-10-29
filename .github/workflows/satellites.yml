@@ -32,10 +32,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -51,7 +51,7 @@ jobs:
         run: npm run build-satellites
 
       - name: Hand the catalog to the upload job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: satellite-catalog
           path: public/data/satellite-catalog/v1/satellites.satg
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - name: Receive the catalog
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: satellite-catalog
           path: catalog
