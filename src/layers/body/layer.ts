@@ -46,6 +46,7 @@ import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTiles/sur
 import { NO_TERRAIN_PICK_MARKER_READOUT } from './present/terrainPickMarkerReadoutOf';
 import SurfaceTileAtlasSectionContainer from './ui/SurfaceTileAtlasSectionContainer';
 import TerrainPickMarkerTuningSectionContainer from './ui/TerrainPickMarkerTuningSectionContainer';
+import EarthTuningSectionContainer from './ui/EarthTuningSectionContainer';
 import type { BodyFacts } from './@types/BodyFacts';
 
 export const bodyLayer = defineLayer({
@@ -97,6 +98,7 @@ export const bodyLayer = defineLayer({
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },
     { slot: 'debug', content: SurfaceTileAtlasSectionContainer },
     { slot: 'debug', content: TerrainPickMarkerTuningSectionContainer },
+    { slot: 'debug', content: EarthTuningSectionContainer },
     {
       slot: 'detailCard',
       content: { type: 'body', Detail: BodyDetailCardContainer, Compact: CompactBodyCard },
