@@ -13,7 +13,7 @@
 import { memo, useMemo } from 'react';
 import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectToggleRows } from '../../compositions/selectToggleRows';
+import { selectToggleRows } from '../../state/settings/selectToggleRows';
 import type { SectionRow } from '../../@types/components/SectionRow';
 import type { LayerToggleRow } from '../../@types/engine/layer/LayerToggleRow';
 

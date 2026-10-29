@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { REMOTE_MENU } from '../../src/compositions/remoteMenu';
-import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
+import { REMOTE_MENU } from '../../../src/state/remote/remoteMenu';
+import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
+import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 
 describe('REMOTE_MENU', () => {
   it('leaves dev tours and dev clips off', () => {

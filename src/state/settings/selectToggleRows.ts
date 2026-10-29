@@ -2,26 +2,25 @@
  * selectToggleRows — every Labels & Guides checkbox, in panel order: one row per label category
  * (`LABEL_CATEGORIES`, registry-code order), then each Layer row in composition order. Every row reads and writes
  * through its entry: a category through the label entry that lists it, a Layer row through the show entry it names.
- * Lives in `compositions/` because the Layer rows' entries come from `APP_VISIBILITY`.
  *
  * Referentially stable: an unrelated store write returns the same array, so the `memo` section behind it does not
  * re-render. Every row's value is a boolean key, never `state.settings` itself, which Immer re-identifies on every
  * write. The memo has one slot: every caller must pass the same `layerRows` array, or alternating calls rebuild the
  * rows each time.
  */
-import { LABEL_CATEGORIES } from '../data/structure/labelCategories';
-import { CATEGORY_DISPLAY_INFO } from '../data/structure/categoryDisplayInfo';
-import { memoizeLastByKeys } from '../utils/cache/memoizeLastByKeys';
-import { labelEntryFor } from '../utils/visibility/labelEntryFor';
-import { visibilityEntryOf } from '../utils/visibility/visibilityEntryOf';
-import { visibilityClusterOf } from '../utils/visibility/visibilityClusterOf';
-import { visibilitySwitchOf } from '../utils/visibility/visibilitySwitchOf';
-import { setVisibility } from '../state/settings/setVisibilityAction';
-import { APP_VISIBILITY } from './appVisibility';
-import type { ToggleRow } from '../@types/settings/ToggleRow';
-import type { LayerToggleRow } from '../@types/engine/layer/LayerToggleRow';
-import type { ShowEntry } from '../@types/engine/layer/ShowEntry';
-import type { RootState } from '../store/types';
+import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
+import { memoizeLastByKeys } from '../../utils/cache/memoizeLastByKeys';
+import { labelEntryFor } from '../../utils/visibility/labelEntryFor';
+import { visibilityEntryOf } from '../../utils/visibility/visibilityEntryOf';
+import { visibilityClusterOf } from '../../utils/visibility/visibilityClusterOf';
+import { visibilitySwitchOf } from '../../utils/visibility/visibilitySwitchOf';
+import { setVisibility } from './setVisibilityAction';
+import { APP_VISIBILITY } from '../../compositions/appVisibility';
+import type { ToggleRow } from '../../@types/settings/ToggleRow';
+import type { LayerToggleRow } from '../../@types/engine/layer/LayerToggleRow';
+import type { ShowEntry } from '../../@types/engine/layer/ShowEntry';
+import type { RootState } from '../../store/types';
 
 // A category's label entry, and the item it reads: none for an item-less entry (the Milky Way's).
 const LABEL_ROWS = LABEL_CATEGORIES.map((cat) => {

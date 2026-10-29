@@ -1,9 +1,9 @@
 /** parseRemoteCommand — `{ name, payload }` with a registry name and an accepted payload; null otherwise. */
 
-import { REMOTE_COMMANDS } from './remoteCommands';
-import { isKeyOf } from '../utils/object/isKeyOf';
-import { isRecord } from '../utils/object/isRecord';
-import type { RemoteCommand } from '../@types/remote/RemoteCommand';
+import { REMOTE_COMMANDS } from '../../state/remote/remoteCommands';
+import { isKeyOf } from '../object/isKeyOf';
+import { isRecord } from '../object/isRecord';
+import type { RemoteCommand } from '../../@types/remote/RemoteCommand';
 
 export function parseRemoteCommand(raw: unknown): RemoteCommand | null {
   if (!isRecord(raw) || typeof raw.name !== 'string') return null;

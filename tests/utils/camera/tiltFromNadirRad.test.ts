@@ -24,4 +24,15 @@ describe('tiltFromNadirRad', () => {
     // No nadir exists at the centre: 0, not NaN.
     expect(tiltFromNadirRad(toward, [0, 0, 0])).toBe(0);
   });
+
+  it('stays well-conditioned at nadir: a 1e-9 rad tilt reads as 1e-9, not 0', () => {
+    // acos(f·n) near 1 maps the dot's last bit to ~1e-8 rad, which is what let
+    // the settle golden trace drift between CPUs; atan2 of the perpendicular
+    // magnitude over the dot keeps the error at the angle's own last bit.
+    const eye: Vec3 = [0, 0, 2];
+    const tilt = 1e-9;
+    expect(tiltFromNadirRad([Math.sin(tilt), 0, -Math.cos(tilt)], eye)).toBeCloseTo(tilt, 20);
+    // Scale of `forward` is immaterial: both terms carry it.
+    expect(tiltFromNadirRad([0, 3 * Math.sin(0.4), -3 * Math.cos(0.4)], eye)).toBeCloseTo(0.4, 12);
+  });
 });

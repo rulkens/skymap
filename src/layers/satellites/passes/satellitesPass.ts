@@ -23,6 +23,7 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { sampledDepthBinding } from '../../../services/engine/frame/sampledDepthBinding';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderSpheres } from '../../../services/engine/frame/sceneOccluderSpheres';
+import { near0OverlayClipScale } from '../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../services/engine/frame/near0OverlayVpF32';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
@@ -52,7 +53,10 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
     const { simDays } = ctx.snapshot;
     const eye = view.camPos;
     return {
-      vp: near0OverlayVpF32(rebaseViewProj(view.slab.vp, eye)),
+      vp: near0OverlayVpF32(
+        rebaseViewProj(view.slab.vp, eye),
+        near0OverlayClipScale(view.slab.near),
+      ),
       viewportPx: view.viewportPx,
       pxPerRad: ctx.drawPxPerRad,
       simMs: julianDaysToUnixMs(simDays),

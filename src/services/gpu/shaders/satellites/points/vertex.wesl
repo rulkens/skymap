@@ -9,7 +9,8 @@ import package::lib::billboard::expandBillboardScreen;
 
 @group(0) @binding(2) var<uniform> u: SatelliteUniforms;
 
-// Clip metres: a dot this close to, or behind, the eye is dropped rather than folded.
+// Clip w is in near-plane units (near0OverlayClipScale: the near plane sits at w = 1), so
+// this only catches a dot at or behind the eye, which is dropped rather than folded.
 const W_EPS: f32 = 0.01;
 
 @vertex

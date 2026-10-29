@@ -22,6 +22,8 @@ export function cosmoLabelProjection(ctx: FrameView): Label2DProjection {
     vpF32: ctx.vp,
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
     pxPerRad: ctx.drawPxPerRad,
+    // COSMO uploads its vp unscaled: clip w is already O(1) in Mpc at galaxy range.
+    clipScale: 1,
   };
   cache.set(ctx, projection);
   return projection;
