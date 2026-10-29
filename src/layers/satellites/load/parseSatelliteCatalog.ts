@@ -1,5 +1,5 @@
 /**
- * parseSatelliteCatalog — read `satellites.bin` (layout in `writeSatelliteCatalog`). The f64 and u32
+ * parseSatelliteCatalog — read `satellites.satg` (layout in `writeSatelliteCatalog`). The f64 and u32
  * columns are views into `buf`, not copies, so the buffer can be transferred to the worker whole.
  */
 import type { SatelliteCatalog } from '../../../@types/satellites/SatelliteCatalog';

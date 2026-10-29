@@ -640,7 +640,7 @@ unclear, and no entry here reads them as a licence.
 - **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
 - **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
   `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
-  `npm run build-satellites` → `satellite-catalog/v1/satellites.bin` on R2.
+  `npm run build-satellites` → `satellite-catalog/v1/satellites.satg` on R2.
 - **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
   dropped, and re-encoded; the element values are copied unchanged.
 - **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,

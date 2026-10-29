@@ -44,7 +44,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
-- `satellite-catalog/v1/`: `satellites.bin`. Untracked by design: neither hashed nor in the manifest, because the daily Action overwrites it at this fixed R2 key (docs/DEPLOY.md, "Satellite catalog"). `dataUrl()` passes the unmanifested path through.
+- `satellite-catalog/v1/`: `satellites.satg`. Untracked by design: neither hashed nor in the manifest, because the daily Action overwrites it at this fixed R2 key (docs/DEPLOY.md, "Satellite catalog"). `dataUrl()` passes the unmanifested path through.
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
@@ -259,7 +259,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Voyager 1/2 tracks     | `fetch-horizons -- voyager1 voyager2` + `fetch-voyager-windows` | `build-spacecraft-tracks` (`spacecraftTracks.bin` + generated `missionEvents.generated.ts`) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
-| Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`satellite-catalog/v1/satellites.bin`; the Action uploads it, no `sync-r2`) |
+| Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`satellite-catalog/v1/satellites.satg`; the Action uploads it, no `sync-r2`) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 
