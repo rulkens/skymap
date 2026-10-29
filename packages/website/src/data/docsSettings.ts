@@ -402,9 +402,9 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         control: 'switch',
         does: 'Shows the satellites and debris that CelesTrak tracks round Earth, as points, when the camera is near Earth. Their file is fetched, and their orbits worked out, only while the camera is there.',
         values: SWITCH,
-        first: ON,
+        first: OFF,
         state: 'satellites.enabled',
-        firstValue: true,
+        firstValue: false,
       },
       {
         name: 'Active satellites',
