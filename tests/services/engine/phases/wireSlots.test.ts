@@ -10,7 +10,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';

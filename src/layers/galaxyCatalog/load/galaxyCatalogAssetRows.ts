@@ -5,12 +5,9 @@ import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRo
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
-import {
-  GALAXY_CATALOG_SOURCES,
-  HI_RES_LAYER_SIDE_BY_TIER,
-  Source,
-  SOURCE_REGISTRY,
-} from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
+import { HI_RES_LAYER_SIDE_BY_TIER } from '../data/hiResLayerSideByTier';
 import { tierTarget } from '../../../data/tierTargets';
 import type { Tier } from '../../../@types/data/Tier';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
