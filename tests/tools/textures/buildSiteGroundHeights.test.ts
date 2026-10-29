@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { anchoredSeat } from '../../../tools/textures/buildSiteGroundHeights';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
 const R = 6_371_000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -12,8 +14,8 @@ describe('anchoredSeat', () => {
     const metresPerDegLat = DEG_TO_RAD * R;
     const metresPerDegLon = metresPerDegLat * Math.cos(anchor.latDeg * DEG_TO_RAD);
     const site = {
-      id: 'soendermarken',
-      hostId: 'earth',
+      id: asSurfaceSiteId('soendermarken'),
+      hostId: asSceneBodyId('earth'),
       latDeg: anchor.latDeg,
       lonDeg: anchor.lonDeg + 320 / metresPerDegLon,
       altitudeM: 0,

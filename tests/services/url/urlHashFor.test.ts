@@ -12,9 +12,11 @@ import { selectionToFocusId } from '../../../src/services/url/focusUrl';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
 import { craftSelectionRow } from '../../../src/layers/missions/present/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../src/layers/earthScenes/present/earthSceneSelectionRow';
 import type { CraftInfo } from '../../../src/@types/engine/CraftInfo';
+import type { EarthSceneInfo } from '../../../src/@types/engine/EarthSceneInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
@@ -22,6 +24,7 @@ import type { StarInfo } from '../../../src/@types/engine/StarInfo';
 import type { BlackHoleInfo } from '../../../src/@types/engine/BlackHoleInfo';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 function makeGalaxy(source: number): GalaxyInfo {
   return {
@@ -69,7 +72,7 @@ describe('URL_HASH_FOR', () => {
     // against the body seed tables (no loaded catalog needed).
     const moon: BodyInfo = {
       type: 'body',
-      id: 'moon',
+      id: asSceneBodyId('moon'),
       label: 'Moon',
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
@@ -83,17 +86,36 @@ describe('URL_HASH_FOR', () => {
     // Craft deep links keep the body prefix; only the craft row may claim them back.
     const hubble: CraftInfo = {
       type: 'craft',
-      id: 'hubble',
+      id: asSceneBodyId('hubble'),
       label: 'Hubble',
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
     const resolver = composeSelectionRows(
-      () => [...coreSelectionRows(), craftSelectionRow()],
+      () => [bodySelectionRow(), craftSelectionRow()],
       () => ALL_KINDS_ENABLED,
     );
     const id = URL_HASH_FOR.craft(hubble);
     expect(id).toBe('body-hubble');
     expect(resolver.resolveFocusId(id as string)).toEqual({ type: 'craft', id: 'hubble' });
+  });
+
+  it('#focus=body-<id> round-trips for an Earth scene, to the earthScene kind', () => {
+    const park: EarthSceneInfo = {
+      type: 'earthScene',
+      id: asSceneBodyId('soendermarken'),
+      label: 'Søndermarken',
+      positionMpc: [1e-6, 2e-6, 3e-6],
+    };
+    const resolver = composeSelectionRows(
+      () => [bodySelectionRow(), earthSceneSelectionRow()],
+      () => ALL_KINDS_ENABLED,
+    );
+    const id = URL_HASH_FOR.earthScene(park);
+    expect(id).toBe('body-soendermarken');
+    expect(resolver.resolveFocusId(id as string)).toEqual({
+      type: 'earthScene',
+      id: 'soendermarken',
+    });
   });
 
   it('#focus=star-<seedId> round-trips for a seeded star', () => {

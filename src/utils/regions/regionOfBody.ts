@@ -11,5 +11,5 @@ import { BODY_REGIONS } from '../../data/bodies/bodyRegions';
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
 
 export function regionOfBody(bodyId: string): BodyRegion | null {
-  return BODY_REGIONS.find((region) => region.memberIds.includes(bodyId)) ?? null;
+  return BODY_REGIONS.find((region) => region.memberIds.some((id) => id === bodyId)) ?? null;
 }

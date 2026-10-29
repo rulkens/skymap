@@ -16,6 +16,7 @@ import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // A minimal GalaxyRow with x/y/z and a measured diameter.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
@@ -54,7 +55,7 @@ describe('selectionHalo', () => {
   it('returns a NEAR0 descriptor for a body row carrying its physical radius', () => {
     const bodyRow: SelectionRow = {
       type: 'body',
-      id: 'earth',
+      id: asSceneBodyId('earth'),
       label: 'Earth',
       positionMpc: [4.8481e-12, 0, 0],
       driver: bodyDriverGeometry('earth'),

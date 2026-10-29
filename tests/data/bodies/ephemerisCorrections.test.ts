@@ -22,6 +22,7 @@ import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPosition
 import { propagateElements } from '../../../src/utils/orbit/propagateElements';
 import HORIZONS from '../../fixtures/horizonsPlanets.json';
 import HORIZONS_MOONS from '../../fixtures/horizonsMoons.json';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 // Earth is compared with 399 (Earth centre), so its error also carries the app Moon's
 // error through the reflex: measured max 621 km, inside the planets' own bound.
@@ -29,8 +30,8 @@ const TOLERANCE_KM = 1000;
 
 function relativeKm(id: string, centreId: string, jd: number): [number, number, number] {
   const states = deriveBodyStates(jd);
-  const body = states.get(id)!.positionMpc;
-  const centre = states.get(centreId)!.positionMpc;
+  const body = states.get(asSceneBodyId(id))!.positionMpc;
+  const centre = states.get(asSceneBodyId(centreId))!.positionMpc;
   const k = 1 / SCALE_UNITS.KM_TO_MPC;
   return [(body[0] - centre[0]) * k, (body[1] - centre[1]) * k, (body[2] - centre[2]) * k];
 }

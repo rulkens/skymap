@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/present/missionCraftIds';
-import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
+import { produceSceneBodyCaptions } from '../../../../src/layers/body/present/produceSceneBodyCaptions';
 import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
 import { SAMPLED_BODY_IDS } from '../../../../src/data/bodies/sampledBodyIds';
 import { MISSION_EMPHASIS_DIM } from '../../../../src/data/missions/missionTrailStyle';
@@ -22,11 +22,11 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
-// The frame's scene bodies as core hands them, at the fixture's J2000 instant.
 const SCENE_BODIES = positionedBodiesOf(
   [...SCENE_PLANETS, ...SCENE_MESH_BODIES],
   deriveBodyStates(CONST_J2000),
@@ -51,20 +51,15 @@ function makeCtx(camPos: Vec3, distance: number): FrameView {
 
 function makeState(): EngineState {
   return {
-    gpu: { texturedBodyRenderer: null },
-    data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: SCENE_MESH_BODIES },
-    },
+    gpu: {},
     settings: {
       missions: { craft: null },
       bodies: { items: makeBodyItems() },
     },
-    // The composed entries core derives the claimed bodies from.
     visibilityEntries: APP_VISIBILITY,
   } as unknown as EngineState;
 }
 
-// The values core hands each label entry: the one Spacecraft item, and every body category.
 const CRAFT_ON = { craft: 1 };
 const CRAFT_OFF = { craft: 0 };
 const BODY_FADE = { earth: 1, planet: 1 };
@@ -111,7 +106,8 @@ describe('produceMissionCaptions', () => {
   it("emphasising Voyager 1 dims Voyager 2's caption and leaves Hubble's at full alpha", () => {
     loadTracks();
     // RENDER_ORIGIN_MPC is the Sun, so the craft's position is its caption anchor.
-    const camPos = deriveBodyStates(CONST_J2000).get('voyager2')!.positionMpc as Vec3;
+    const camPos = deriveBodyStates(CONST_J2000).get(asSceneBodyId('voyager2'))!
+      .positionMpc as Vec3;
     const ctx = makeCtx(camPos, 1e-9);
     const state = makeState();
     const before = produceMissionCaptions(state, ctx, CRAFT_ON).labels;

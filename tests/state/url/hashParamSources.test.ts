@@ -31,6 +31,7 @@ import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry'
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
@@ -53,7 +54,7 @@ const virgoRow: StructureInfo = {
 
 const earthRow: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),

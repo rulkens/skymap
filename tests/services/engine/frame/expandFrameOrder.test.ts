@@ -23,22 +23,18 @@ import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum'
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
-/** The roster a step resolved. */
 function namesOf(step: FrameStep | undefined): readonly string[] {
   return step !== undefined && step.kind === 'render' ? step.passes.map((p) => p.name) : [];
 }
 
-/** The authored timing-slot suffix a step carries, if any. */
 function slotOf(step: FrameStep | undefined): string | undefined {
   return step !== undefined && step.kind === 'render' ? step.slot : 'no step';
 }
 
-/** A sky row's face: no body row to draw. */
 function skyFace(face: CubeFace): CaptureFaceInput {
   return { face, bodySlabs: [] };
 }
 
-/** A fake row is enough: expansion reads only `name`. */
 function fakePass(name: string): ContentPass {
   return {
     name,
@@ -47,11 +43,7 @@ function fakePass(name: string): ContentPass {
   };
 }
 
-/**
- * The COMPOSED pass list `createLayers` writes: core's registry plus a name-only
- * stub for every authored name a Layer contributes (Ruling 2). Expansion reads
- * only `name`, so the stubs are enough to exercise the roster.
- */
+/** The COMPOSED pass list `createLayers` writes: core's registry plus a name-only stub per Layer-contributed authored name. */
 const COMPOSED_PASSES: readonly ContentPass[] = [
   ...CONTENT_PASSES,
   ...FRAME_ORDER_PASS_NAMES.filter((name) => !CONTENT_PASSES.some((p) => p.name === name)).map(
@@ -59,7 +51,6 @@ const COMPOSED_PASSES: readonly ContentPass[] = [
   ),
 ];
 
-/** The real order + composed registry, with only the per-frame lists varied. */
 function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
   return expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
     tone: TONE,
@@ -116,6 +107,7 @@ describe('expandFrameOrder', () => {
       'constellations',
       'body-glints',
       'mission-glints',
+      'earth-scene-glints',
       'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
@@ -194,12 +186,8 @@ describe('expandFrameOrder', () => {
 
 describe('expandFrameOrder — the per-frame fan-outs', () => {
   it('emits a COSMO capture step alongside NEAR0 per requested face, row by row', () => {
-    // The fixed opt-in roster spans both slabs — `point-sprites`/
-    // `textured-disks` (COSMO), `star-aggregates`/`star-catalog` (NEAR0) — and a
-    // render step is the unit of pass encoding, so each requested face must get
-    // ONE step per slab. A NEAR0-only step would leave the COSMO half of the
-    // roster permanently undrawn. The line names several rows, which bake one
-    // after the other in the order named.
+    // The fixed opt-in roster spans both slabs, and a render step is the unit of pass encoding,
+    // so each requested face gets ONE step per slab; a NEAR0-only step would leave the COSMO half undrawn.
     const steps = program({
       captureFaces: new Map([
         ['sgrAStar', [skyFace(0), skyFace(2)]],
@@ -221,8 +209,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ]);
     // The captures ride the PRELUDE computes, ahead of every other render
     // step, so a same-frame lensing draw can sample a cubemap this frame
-    // actually wrote. `aerial-perspective` is SCENE's own compute now (a
-    // perView row) and so lands after every PRELUDE step, including these.
+    // actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
     expect(steps[2]).toEqual({ kind: 'compute', name: 'star-cut' });
@@ -330,7 +317,6 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     });
   });
 
-  /** One foreground line over `chain`, every name a fake pass. */
   function foreground(
     chain: readonly number[],
     bodyPasses: Extract<FrameStepSpec, { kind: 'foreground' }>['bodyPasses'],
@@ -370,7 +356,11 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       (step) => step.kind === 'render' && step.target === 'foreground:0',
     );
     expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
-    expect(namesOf(steps[first + 2])).toEqual(['mission-meshes', 'core-mesh-bodies']);
+    expect(namesOf(steps[first + 2])).toEqual([
+      'mission-meshes',
+      'body-meshes',
+      'earth-scene-meshes',
+    ]);
   });
 
   it('refuses a body roster with a second marker', () => {
@@ -400,9 +390,6 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('emits an (hdr, slab) lens step per entry, after (hdr, NEAR0) and before the foreground chain', () => {
-    // Positioned so the lens's OVER blend occludes the (hdr, NEAR0) roster
-    // already accumulated above it, and so the unwarped POST_LENSING line lands
-    // on top of it.
     const steps = program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } });
     const rosterIdx = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
@@ -420,8 +407,6 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('a render line with a BodyRowSource slab expands once per resolved row', () => {
-    // Painter order is the frame's, not the index's: the rows come out in the
-    // order the list holds them, so a nearer row drawn second stays second.
     const steps = program({ bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [] } });
     expect(
       steps

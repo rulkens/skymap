@@ -12,6 +12,7 @@ import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { FamousStarMetaEntry } from '../../../../src/@types/loading/FamousStarMetaEntry';
 import type { StarInfo } from '../../../../src/@types/engine/StarInfo';
 import { Source } from '../../../../src/data/sources';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const structure = {
   type: 'structure',
@@ -27,7 +28,7 @@ const NO_META: readonly FamousStarMetaEntry[] = [];
 
 const earthRow: SelectionRow = {
   type: 'body',
-  id: 'earth',
+  id: asSceneBodyId('earth'),
   label: 'Earth',
   positionMpc: [0, 0, 0],
   driver: bodyDriverGeometry('earth'),
@@ -35,7 +36,7 @@ const earthRow: SelectionRow = {
 
 const jupiterRow: SelectionRow = {
   type: 'body',
-  id: 'jupiter',
+  id: asSceneBodyId('jupiter'),
   label: 'Jupiter',
   positionMpc: [4e-14, 0, 0],
   driver: bodyDriverGeometry('jupiter'),

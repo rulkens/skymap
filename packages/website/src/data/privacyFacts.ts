@@ -102,12 +102,4 @@ export const PRIVACY_FACTS: readonly Fact[] = [
     sourceLabel: `when the app fetches a galaxy’s picture, ${IN_REPO}`,
     checked: '2026-10-07',
   },
-  {
-    id: 'privacy-form-closed',
-    about: 'app',
-    text: 'There is no contact form on this website today, so nothing you type here can reach us or anyone else.',
-    source: `${REPO_BLOB}/packages/website/src/data/contact.ts`,
-    sourceLabel: `the contact setting, ${IN_REPO}`,
-    checked: CHECKED,
-  },
 ];

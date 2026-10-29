@@ -20,6 +20,8 @@ const OTHER_USES: Record<string, number> = {
   'components/AddressStrip/AddressStrip.tsx': 1,
   // The whole card is the link, its picture included; the launch drawing follows the name.
   'components/Places/PlaceLink.tsx': 1,
+  // Each slide is a link to its own view, the current one reachable; the caption under it carries the ViewLink.
+  'components/FeatureGallery/FeatureGallery.tsx': 1,
   // The card's picture repeats the card's ViewLink, hidden from the keyboard and from assistive technology.
   'components/LessonLinks/LessonLinks.tsx': 1,
 };

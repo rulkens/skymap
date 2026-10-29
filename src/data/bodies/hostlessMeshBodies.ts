@@ -8,6 +8,7 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { meshBodySlabHostId } from '../../utils/meshBodies/meshBodySlabHostId';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
+import type { PositionedId } from '../../@types/scene/PositionedId';
 
 export const HOSTLESS_MESH_BODIES: readonly MeshBody[] = SCENE_MESH_BODIES.filter(
   (body) => meshBodySlabHostId(body.id) === body.id,
