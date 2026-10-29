@@ -5,14 +5,11 @@
  * source target went untouched. A Layer pass declares it as its entry's
  * `FOREGROUND_RECEDE` band, applied by core; body slab rows yield through the
  * same band as their `activeBand`, so past it the body passes are never asked.
- * The star passes still AND it into `enabled` by hand, because their entry
- * carries `bodies` and scene-body admission cannot measure a band.
  *
  * It maxes over region EXTENTS — a scale, no anchor POSITION, so seeding a region
- * 8 kpc out cannot widen it. Two measures read it until the hand gates go: the
- * hand gates compare `ctx.cam.distance` (camera-to-TARGET), the band compares
- * the eye's distance from the origin, so a region anchored past the band would
- * have its Layer rows cut while still framed.
+ * 8 kpc out cannot widen it. One measure reads it: the eye's distance from an
+ * anchor (a band's `from`, else the origin; a slab row's own body), so content
+ * whose band names its region keeps drawing while the eye is near that region.
  *
  * The ×100 margin resolves two opposed pulls: enclose the widest regime with
  * enough headroom that the star-points backdrop is not cut while that

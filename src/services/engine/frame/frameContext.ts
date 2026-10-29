@@ -33,6 +33,7 @@ import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
 import { resolveVisibilityOpacity } from '../presentation/resolveVisibilityOpacity';
+import { viewBandOf } from '../presentation/viewBandOf';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
@@ -96,14 +97,19 @@ export function deriveFrameContext(
   // Every admitted scene body, positioned once; which is resolved is a per-view
   // question, so each view sorts these. A body some show entry covers is admitted
   // while every covering item hands a value above 0 — the value its passes read, so a
-  // star faded or clipped to 0 neither occludes nor sizes NEAR0.
+  // star faded, clipped or banded to 0 neither occludes nor sizes NEAR0. The band is
+  // measured at the frame camera, the eye slab rows use, for the same reason.
   const coverage = sceneBodyCoverageOf(state.visibilityEntries);
+  const frameEye = { drawCamPos: cam.position, snapshot: { bodyStates } };
   const handedAboveZero = new Map<string, boolean>();
   const isAboveZero = (id: FadeIdentity): boolean => {
     const key = fadeIdentityKey(id);
     let above = handedAboveZero.get(key);
     if (above === undefined) {
-      above = resolveVisibilityOpacity(state, { nowMs }, id.address, id.item) > 0;
+      above =
+        resolveVisibilityOpacity(state, { nowMs }, id.address, id.item) *
+          viewBandOf(state.visibilityEntries, id.address, id.item, frameEye) >
+        0;
       handedAboveZero.set(key, above);
     }
     return above;

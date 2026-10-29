@@ -41,13 +41,11 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC` — beyond it every seeded star is a
- * deep-sub-pixel speck, and gating with the NEAR0 siblings lets the executor
- * skip the whole foreground pass group as empty), AND a resolved seeded star —
- * the same sort `draw` consumes, so the enable gate and the draw set cannot
- * disagree. The distance gate runs first so the sort is not run at all when the
- * camera is far. The sort is bound at `ctx.drawCamPos` (absolute frame) while the
+ * `enabled` gates on a seeded star set handing a value above 0 (each recedes
+ * through its entry's region band, past which every seeded star is a
+ * deep-sub-pixel speck), AND a resolved seeded star — the same sort `draw`
+ * consumes, so the enable gate and the draw set cannot disagree. The fade
+ * runs first so the sort is not run at all when the camera is far. The sort is bound at `ctx.drawCamPos` (absolute frame) while the
  * MVPs compose at `view.camPos` (NEAR0's origin-relative frame); the two coincide
  * because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  *
@@ -66,7 +64,7 @@ import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { sceneBodyPresentation } from '../../../services/engine/frame/sceneBodyPresentation';
 import { positionedSeededStars } from '../present/positionedSeededStars';
 import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
+import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
@@ -75,9 +73,9 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass<'starC
     name: 'star-spheres',
     fade: 'starCatalog',
 
-    enabled(_state, ctx, _view) {
-      // Distance first, sort last — see the module header's gate note.
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
+    enabled(_state, ctx, _view, fade) {
+      // Fade first, sort last — see the module header's gate note.
+      if (seededStarsHandedZero(fade)) return false;
       return sceneBodyPresentation(ctx).resolved.some(({ body }) => SEEDED_STAR_REFS.has(body.id));
     },
 
