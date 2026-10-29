@@ -1,7 +1,8 @@
 /**
- * satellitesSlot — the catalog's asset slot. Its committed value is the file, and committing it is
- * what starts the SGP4 worker; releasing it terminates the worker and frees the GPU instances, so
- * the demand loop's load/release edges are the worker's whole lifetime.
+ * satellitesSlot — the catalog's asset slot. Its committed value is the file. Committing it starts
+ * the SGP4 worker and releasing it terminates the worker and frees the GPU instances, so the demand
+ * loop's load/release edges are the worker's whole lifetime: no worker exists while the Layer is
+ * inactive.
  */
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';

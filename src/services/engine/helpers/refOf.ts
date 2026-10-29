@@ -19,6 +19,7 @@ import type { CraftInfo } from '../../../@types/engine/CraftInfo';
 import type { EarthSceneInfo } from '../../../@types/engine/EarthSceneInfo';
 import type { StarInfo } from '../../../@types/engine/StarInfo';
 import type { BlackHoleInfo } from '../../../@types/engine/BlackHoleInfo';
+import type { SatelliteInfo } from '../../../@types/engine/SatelliteInfo';
 
 const REF_OF: {
   galaxyCatalog: (t: GalaxyInfo) => SelectionRef;
@@ -30,6 +31,7 @@ const REF_OF: {
   earthScene: (t: EarthSceneInfo) => SelectionRef;
   starCatalog: (t: StarInfo) => SelectionRef;
   blackHole: (t: BlackHoleInfo) => SelectionRef;
+  satellite: (t: SatelliteInfo) => SelectionRef;
 } = {
   galaxyCatalog: (t) => ({
     type: 'galaxyCatalog',
@@ -45,6 +47,7 @@ const REF_OF: {
   // The durable seed id rides the row, not the ref.
   starCatalog: (t) => ({ type: 'starCatalog', source: t.source, index: t.index }),
   blackHole: (t) => ({ type: 'blackHole', id: t.id }),
+  satellite: (t) => ({ type: 'satellite', noradId: t.noradId }),
 };
 
 export function refOf(target: FocusableTarget): SelectionRef {

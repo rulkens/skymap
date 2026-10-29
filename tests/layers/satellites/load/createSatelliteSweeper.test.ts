@@ -3,44 +3,15 @@ import { json2satrec, propagate } from 'satellite.js';
 import { createSatelliteSweeper } from '../../../../src/layers/satellites/load/createSatelliteSweeper';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { HUBBLE_NORAD_ID } from '../../../../src/data/satellites/hubbleNoradId';
+import { ISS, GOES_18 } from '../fixtures/celestrakRecords';
 import type { CelestrakOmm } from '../../../../tools/@types/satellites/CelestrakOmm';
 
 // CelesTrak records as downloaded on 2026-10-28: a low orbit, a GEO orbit (SGP4's deep-space branch) and
 // Hubble, which the points skip. The reference is satellite.js run on the raw OMM, so any loss
 // between the download and the worker (epoch digits, a dropped field, a unit) shows here.
 const RECORDS = [
-  {
-    OBJECT_NAME: 'ISS (ZARYA)',
-    OBJECT_ID: '1998-067A',
-    EPOCH: '2026-10-27T04:14:31.558560',
-    MEAN_MOTION: 15.49073103,
-    ECCENTRICITY: 0.00069486,
-    INCLINATION: 51.6336,
-    RA_OF_ASC_NODE: 6.9404,
-    ARG_OF_PERICENTER: 314.9066,
-    MEAN_ANOMALY: 45.1358,
-    EPHEMERIS_TYPE: 0,
-    NORAD_CAT_ID: 25544,
-    BSTAR: 0.00011132043,
-    MEAN_MOTION_DOT: 5.704e-5,
-    MEAN_MOTION_DDOT: 0,
-  },
-  {
-    OBJECT_NAME: 'GOES 18',
-    OBJECT_ID: '2022-021A',
-    EPOCH: '2026-10-27T05:53:31.873056',
-    MEAN_MOTION: 1.00270727,
-    ECCENTRICITY: 5.975e-5,
-    INCLINATION: 0.0036,
-    RA_OF_ASC_NODE: 29.4619,
-    ARG_OF_PERICENTER: 239.0961,
-    MEAN_ANOMALY: 78.4634,
-    EPHEMERIS_TYPE: 0,
-    NORAD_CAT_ID: 51850,
-    BSTAR: 0,
-    MEAN_MOTION_DOT: 1.09e-6,
-    MEAN_MOTION_DDOT: 0,
-  },
+  ISS,
+  GOES_18,
   {
     OBJECT_NAME: 'HST',
     OBJECT_ID: '1990-037B',

@@ -6,6 +6,7 @@ import type { BodyInfo } from './BodyInfo';
 import type { CraftInfo } from './CraftInfo';
 import type { EarthSceneInfo } from './EarthSceneInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
+import type { SatelliteInfo } from './SatelliteInfo';
 import type { Vec3 } from '../math/Vec3';
 
 /**
@@ -43,4 +44,6 @@ export type SelectionRow =
       readonly driver: DriverGeometry;
     }
   // A black hole poses from its PLACE (`driver.poseId`), not a body table.
-  | (BlackHoleInfo & { readonly driver: DriverGeometry });
+  | (BlackHoleInfo & { readonly driver: DriverGeometry })
+  // A satellite poses from its transient position (`transientPositions`), which the clock moves.
+  | (SatelliteInfo & { readonly driver: DriverGeometry });

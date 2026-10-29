@@ -39,6 +39,7 @@ export const solarSystem: Exhibit = {
         milkyWay: false,
         zoneOfAvoidance: false,
         blackHole: true,
+        satellite: false,
       },
     },
   },
