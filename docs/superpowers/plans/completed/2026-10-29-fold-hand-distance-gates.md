@@ -48,12 +48,12 @@
 - `bodyLayerSlabRow(body)` and `bodySlabRowOf(body)` both return rows with `activeBand: FOREGROUND_RECEDE_FADE_BAND`.
 - `atmosphereDrawList(state, ctx)` takes its candidates from `ctx.snapshot.slabBodyCandidates`, keeping only anchors among `[SCENE_EARTH, ...SCENE_PLANETS]` (the bodies with `ATMOSPHERE_PARAMS`). The `cam.distance` short-circuit goes.
 
-- [ ] Add test `every body slab row is active at 1 AU and inactive at the foreground cutoff` in `bodySlabRows.test.ts`. It runs `slabRowActive(row, camPos, states)` over `BODY_SLAB_ROWS` and `bodySlabRowOf(<a hostless mesh body>)`, with the eye at 1 AU from the row's anchor (true) and at `FOREGROUND_MAX_DISTANCE_MPC` from it (false).
-- [ ] Add test `atmosphereDrawList lists no body whose slab row is inactive` in `atmosphereDrawList.test.ts`: a snapshot whose `slabBodyCandidates` omits Earth yields no Earth entry, even with the eye close to Earth. Rewrite or delete the existing case that asserts emptiness from `cam.distance`, whichever the file has.
-- [ ] Run both: they fail.
-- [ ] Implement the constant, the two `activeBand`s and the `atmosphereDrawList` roster change; delete the 8 hand gates. Rewrite the `foregroundMaxDistance.ts` doc paragraph that names "core's body passes AND it into `enabled` by hand" to say body rows yield via `activeBand`.
-- [ ] Run `npx vitest run tests/layers/body tests/services/engine/frame` and `npm run typecheck:fast`: green.
-- [ ] Commit.
+- [x] Add test `every body slab row is active at 1 AU and inactive at the foreground cutoff` in `bodySlabRows.test.ts`. It runs `slabRowActive(row, camPos, states)` over `BODY_SLAB_ROWS` and `bodySlabRowOf(<a hostless mesh body>)`, with the eye at 1 AU from the row's anchor (true) and at `FOREGROUND_MAX_DISTANCE_MPC` from it (false).
+- [x] Add test `atmosphereDrawList lists no body whose slab row is inactive` in `atmosphereDrawList.test.ts`: a snapshot whose `slabBodyCandidates` omits Earth yields no Earth entry, even with the eye close to Earth. Rewrite or delete the existing case that asserts emptiness from `cam.distance`, whichever the file has.
+- [x] Run both: they fail.
+- [x] Implement the constant, the two `activeBand`s and the `atmosphereDrawList` roster change; delete the 8 hand gates. Rewrite the `foregroundMaxDistance.ts` doc paragraph that names "core's body passes AND it into `enabled` by hand" to say body rows yield via `activeBand`.
+- [x] Run `npx vitest run tests/layers/body tests/services/engine/frame` and `npm run typecheck:fast`: green.
+- [x] Commit.
 
 ### Task 2: Admission reads bands; the star catalog declares region bands
 
@@ -79,17 +79,17 @@
   Check the item ids against `SEEDED_STAR_CATALOGS` keys and `STAR_CATALOG_IDS`; the survey item stays unbanded.
 - `starPointsPass` / `starSpheresPass`: their hand gate goes. Their inner `enabled` returns false when every seeded item they draw hands 0 in the record `gatePassByFade` passes in.
 
-- [ ] Add tests in `appBandValues.test.ts`, using `valueAt` with `from` resolved against real `bodyStates` (extend the helper to pass them):
+- [x] Add tests in `appBandValues.test.ts`, using `valueAt` with `from` resolved against real `bodyStates` (extend the helper to pass them):
   - `seeded neighbourhood stars are full at 1 kpc from home and gone at the cutoff` (items `famousStar`, `sun`).
   - `S-stars are full at the galactic centre and gone at the cutoff from it`: eye 1 pc from the galactic centre anchor gives 1 (this is the Review Focus 4 trap); eye `FOREGROUND_MAX_DISTANCE_MPC` from it gives 0.
   - `the survey star item has no foreground band`: 1 at `10 * FOREGROUND_MAX_DISTANCE_MPC`.
-- [ ] Add an admission test `a star body is not admitted past its region's band`: with every fade at 1, a frame camera at the cutoff from the solar neighbourhood admits no `famousStar` body, and one at 1 AU admits them.
-- [ ] Delete the `no entry declares both bodies and bands` test.
-- [ ] Run: new tests fail.
-- [ ] Implement admission, the param narrowing, the bands, and the two pass changes; remove the stale "No `foreground` band here" comment in `starCatalog/visibility.ts` and the hand-gate sentence in `foregroundMaxDistance.ts`.
-- [ ] Update `starPointsPass.test.ts`'s wholesale-skip test so its state resolves the real entries (as #958 did for orbit-trails); its assertion stays: the group is empty above the cutoff and non-empty below.
-- [ ] Run `npx vitest run tests/compositions tests/services/engine tests/layers/starCatalog` and `npm run typecheck:fast`: green.
-- [ ] Commit.
+- [x] Add an admission test `a star body is not admitted past its region's band`: with every fade at 1, a frame camera at the cutoff from the solar neighbourhood admits no `famousStar` body, and one at 1 AU admits them.
+- [x] Delete the `no entry declares both bodies and bands` test.
+- [x] Run: new tests fail.
+- [x] Implement admission, the param narrowing, the bands, and the two pass changes; remove the stale "No `foreground` band here" comment in `starCatalog/visibility.ts` and the hand-gate sentence in `foregroundMaxDistance.ts`.
+- [x] Update `starPointsPass.test.ts`'s wholesale-skip test so its state resolves the real entries (as #958 did for orbit-trails); its assertion stays: the group is empty above the cutoff and non-empty below.
+- [x] Run `npx vitest run tests/compositions tests/services/engine tests/layers/starCatalog` and `npm run typecheck:fast`: green.
+- [x] Commit.
 
 ### Task 3: Glints and the Sgr A* marker yield through their own fades
 
@@ -103,20 +103,20 @@
 - `bodyGlintsPass.pickEnabled`: replace the hand gate with `bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx)) <= 0 && !earthCaptionPickable(ctx) → false`. The Earth caption pick keeps its own `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC` rule (out of scope).
 - `blackHoleMarkerBrightness(row, camPos, states)` multiplies by `fadeBand(FOREGROUND_RECEDE_FADE_BAND, |camPos − anchor|)`. `blackHoleMarkerPass.enabled` and `blackHolePickable` drop their hand gates; they already test brightness > `GLINT_MIN_BRIGHTNESS`.
 
-- [ ] Add test `marker brightness is 0 at the foreground cutoff from its anchor and unchanged at 1 kpc`.
-- [ ] Run: it fails.
-- [ ] Implement; delete the five hand gates.
-- [ ] Run `npx vitest run tests/layers/blackHoles tests/layers/body` and `npm run typecheck:fast`: green.
-- [ ] Commit.
+- [x] Add test `marker brightness is 0 at the foreground cutoff from its anchor and unchanged at 1 kpc`.
+- [x] Run: it fails.
+- [x] Implement; delete the five hand gates.
+- [x] Run `npx vitest run tests/layers/blackHoles tests/layers/body` and `npm run typecheck:fast`: green.
+- [x] Commit.
 
 ### Task 4: Ratchet: no hand-written foreground gate returns
 
 **Files:**
 - Test: `tests/data/rendering/foregroundMaxDistance.test.ts` (extend)
 
-- [ ] Add test `only bands and slab rows import FOREGROUND_MAX_DISTANCE_MPC`. It globs `src/**/*.ts` and asserts the importers are exactly `src/data/bands/foregroundRecede.ts`, `src/data/bands/surveyDeepZoom.ts` and `src/layers/structure/visibility.ts` (today's 17 importers minus the 14 sites Tasks 1–3 remove). A pass or present helper importing it fails.
-- [ ] Run it: green after Tasks 1–3. Mutation-check it by re-adding one import to `planetsPass.ts`; it fails.
-- [ ] Commit.
+- [x] Add test `only bands and slab rows import FOREGROUND_MAX_DISTANCE_MPC`. It globs `src/**/*.ts` and asserts the importers are exactly `src/data/bands/foregroundRecede.ts`, `src/data/bands/surveyDeepZoom.ts` and `src/layers/structure/visibility.ts` (today's 17 importers minus the 14 sites Tasks 1–3 remove). A pass or present helper importing it fails.
+- [x] Run it: green after Tasks 1–3. Mutation-check it by re-adding one import to `planetsPass.ts`; it fails.
+- [x] Commit.
 
 ## Definition of Done
 
