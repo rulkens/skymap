@@ -63,12 +63,14 @@ import { pickingInitialState } from '../../../src/state/settings/core/pickingSli
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as lightTimeInitialState } from '../../../src/layers/lightTime/state/lightTime/initialState';
+import { initialState as cosmicHorizonInitialState } from '../../../src/layers/cosmicHorizon/state/cosmicHorizon/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as biasInitialState } from '../../../src/layers/galaxyCatalog/state/bias/initialState';
 import { initialState as thumbnailsInitialState } from '../../../src/layers/galaxyCatalog/state/thumbnails/initialState';
 import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
+import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
@@ -121,10 +123,12 @@ export function makeSettingsFixture(
     milkyWay: { ...milkyWayInitialState },
     zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
     lightTime: { ...lightTimeInitialState },
+    cosmicHorizon: { ...cosmicHorizonInitialState },
     blackHoles: { items: { ...blackHolesInitialState.items } },
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
+    satellites: { ...satellitesInitialState },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
     missions: { ...missionsInitialState },

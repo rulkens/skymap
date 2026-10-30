@@ -622,6 +622,31 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
 - **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
 
+### CelesTrak GP orbit data
+
+<!-- attribution: id=celestrak; keys=celestrak,celestrak.readme -->
+
+- **What:** SGP4 mean orbital elements (OMM) of about 20,000 Earth-orbiting
+  objects: the active satellites, three debris clouds, analyst objects and the
+  last 30 days of launches.
+- **By:** CelesTrak (T.S. Kelso), from the US Space Force's public catalog.
+- **Licence:** Not stated on the pages read. The usage policy sets download
+  limits ("Only download the data you need, when you are going to use it, and
+  only download data once per update") and says nothing on republishing,
+  credit or commercial use. Whether a daily copy may be republished from our
+  own storage is to be asked of CelesTrak before the satellites Layer ships.
+- **Use:** No licence stated
+- **Attribution:** None asked on the pages read; skymap credits CelesTrak.
+- **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
+- **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
+  `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
+  `npm run build-satellites` → `satellite-catalog/v1/satellites.satg` on R2.
+- **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
+  dropped, and re-encoded; the element values are copied unchanged.
+- **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
+  <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
+  <https://celestrak.org/NORAD/elements/>
+
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
 <!-- attribution: id=mcxc; keys=mcxc.* -->
@@ -2691,13 +2716,13 @@ and where they come from".
 - **What:** The libraries the app and the website bundle. Named in
   `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
   `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
-  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`; for the website `astro`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`, `satellite.js`; for the website `astro`,
   `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
   (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
   families under `react-markdown`, and others); the build lists every one in
   `third-party-licenses.md`. Build-time tools are listed in `package.json`.
 - **By:** Their authors.
-- **Licence:** MIT, each of the fourteen named, as its own `package.json`
+- **Licence:** MIT, each of the fifteen named, as its own `package.json`
   states. Of the 74 packages the app's bundle holds, the build reports MIT
   for 71, ISC for one, and no licence field for two entry points of
   `redux-saga` (itself MIT).
@@ -2714,7 +2739,10 @@ and where they come from".
 - **Enters skymap:** `package.json`, `packages/website/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
-  installed packages; the built bundle, searched for licence notices; the
+  installed packages then named; 2026-10-28: `satellite.js` 7.1.0's
+  `LICENSE.md` (MIT, © 2013 Shashwat Kandadai), whose plain-JS SGP4 the
+  satellites worker bundles; the built bundle, searched for licence notices; the
   generated `third-party-licenses.md`; the sentence quoted, in
   <https://opensource.org/license/mit> and in `node_modules/react/LICENSE`.
-- **Not verified:** what the website's scripts and the dev-tool pages bundle.
+- **Not verified:** what the website's scripts and the dev-tool pages bundle;
+  the package count of the app's bundle since `satellite.js` joined it.

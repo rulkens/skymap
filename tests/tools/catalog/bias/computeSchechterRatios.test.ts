@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { computeSchechterRatios } from '../../../../tools/catalog/bias/computeSchechterRatios';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 

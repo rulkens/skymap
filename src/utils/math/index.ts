@@ -31,7 +31,6 @@ export * from './galaxyTypeFromBminusJ';
 export * from './galaxyTypeFromColor';
 export * from './galaxyTypeFromJminusK';
 export * from './smoothstep';
-export * from './horizonShellFadeAlpha';
 export * from './easeOutCubic';
 export * from './lerp';
 export * from './lerpAngleShortest';

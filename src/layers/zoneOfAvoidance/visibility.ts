@@ -9,6 +9,10 @@ const R = MILKY_WAY_RADIUS_MPC;
 // frames up (2R to 10R) and out once the Local Group is the subject. The out edges are
 // literal Mpc: no `local-group` region exists to derive them from.
 export const zoneOfAvoidanceVisibility = [
-  { key: 'zoneOfAvoidance', bands: { veil: { in: [2 * R, 10 * R], out: [2, 6] } } },
+  {
+    key: 'zoneOfAvoidance',
+    selects: ['zoneOfAvoidance'],
+    bands: { veil: { in: [2 * R, 10 * R], out: [2, 6] } },
+  },
   { label: 'zoneOfAvoidance', cluster: 'zoneOfAvoidance', of: 'zoneOfAvoidance' },
 ] as const satisfies readonly VisibilityEntry[];

@@ -15,7 +15,7 @@
  * `tests/support/allKindsEnabled`.
  */
 
-import { SOURCE_REGISTRY } from '../../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import type { SelectionKind } from '../../../@types/engine/SelectionKind';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
@@ -33,7 +33,7 @@ export function composeSelectionRows(
         return null;
       }
       if (!kindsEnabled()[row.type]) return null;
-      return row.resolvePick(SOURCE_REGISTRY[pick.sourceCode], pick);
+      return row.resolvePick(APP_SOURCE_REGISTRY[pick.sourceCode], pick);
     },
 
     extractRow(ref, simDays) {

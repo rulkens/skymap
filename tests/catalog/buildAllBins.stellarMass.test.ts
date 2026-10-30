@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { recordsToCloud } from '../../tools/catalog/buildAllBins';
 import type { ParsedRecord } from '../../tools/parsers/common';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 
 function record(source: ParsedRecord['source'], objID: bigint): ParsedRecord {

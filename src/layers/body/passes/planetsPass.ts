@@ -12,7 +12,7 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
@@ -23,7 +23,6 @@ import { bodySceneBodyPartition } from '../present/bodySceneBodyPartition';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { INSTANCE_FLOATS } from '../render/planetRenderer';
 import { seedIndexOfBody } from '../../../utils/picking/seedIndexOfBody';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../../services/engine/helpers/bodySlabFlooredPick';
 
 // A `'body'` row draws at most one planet, so one record is reused.
@@ -35,8 +34,6 @@ export function planetsPass(runtime: BodyRuntime): ContentPass {
 
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
-      // Distance first: the partition is the costly read.
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const bodyId = view.slab.frame.hostId;
       return bodySceneBodyPartition(state, ctx, runtime).flat.some((p) => p.id === bodyId);
     },
@@ -45,7 +42,6 @@ export function planetsPass(runtime: BodyRuntime): ContentPass {
     // textured-only row must stay pickable while its visual row leaves the pass plan.
     pickEnabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       const bodyId = view.slab.frame.hostId;
       const { flat, textured } = bodySceneBodyPartition(state, ctx, runtime);
       return flat.some((p) => p.id === bodyId) || textured.some((p) => p.id === bodyId);

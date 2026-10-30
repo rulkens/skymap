@@ -15,7 +15,7 @@ import { galaxyFocusDistance } from '../../../../src/services/engine/camera/gala
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';

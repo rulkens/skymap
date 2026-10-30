@@ -46,8 +46,6 @@ import { logCameraState } from '../../../../src/services/engine/helpers/logCamer
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
 import { liveFocusRow } from '../../../../src/services/engine/helpers/liveFocusRow';
 
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
-
 const CANVAS = {} as HTMLCanvasElement;
 
 // ── Fake EngineState builder ──────────────────────────────────────────────────
@@ -69,7 +67,6 @@ function makeState(): {
     booted: false,
     selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
-    terrain: FLAT_TERRAIN,
   } as unknown as EngineState;
 
   return { state, requestRender };
@@ -114,26 +111,6 @@ describe('makeReconcileEffects', () => {
       CANVAS,
       'LIVE_FOCUS_ROW',
       state.cameraRuntime.outputs.simDays,
-      null,
-      'DISPLAYED_ARM',
-    );
-  });
-
-  it("logCameraState forwards the terrain seam's sub-camera readout", () => {
-    const { state } = makeState();
-    state.terrain = {
-      ...FLAT_TERRAIN,
-      subCamera: () => ({ lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 }),
-    };
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.logCameraState();
-
-    expect(logCameraState).toHaveBeenCalledWith(
-      'LIVE_CAM',
-      CANVAS,
-      'LIVE_FOCUS_ROW',
-      state.cameraRuntime.outputs.simDays,
-      { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
       'DISPLAYED_ARM',
     );
   });

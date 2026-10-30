@@ -13,12 +13,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { bodyGlintsPass } from '../../../../src/layers/body/passes/bodyGlintsPass';
 import { BODY_GLINT_INSTANCE_FLOATS as INSTANCE_FLOATS } from '../../../../src/data/rendering/bodyGlintInstanceFloats';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
+import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../../../src/data/bands/solarSystemCaptionRecede';
 import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
@@ -34,6 +34,11 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { viewBandOf } from '../../../../src/services/engine/presentation/viewBandOf';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
+
+// Where the solar-system captions have faded out.
+const CAPTION_GONE_MPC = SOLAR_SYSTEM_CAPTION_RECEDE.out[1];
 
 // `makeCtx` pins the body-state snapshot to the fixture bodies, reusing each record's own
 // refs so the `toBe(...)` assertions hold.
@@ -47,7 +52,7 @@ const KM = SCALE_UNITS.KM_TO_MPC;
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as SeededPlanet['orientation'];
 
 // Camera 1e6 km down +x from the Sun (at the origin) — deep inside the
-// foreground gate, so `enabled`'s distance check passes.
+// solar-system label cutoff, so the glint backdrop fade is fully on.
 const CAM_KM = 1_000_000;
 const CAM_POS: Vec3 = [CAM_KM * KM, 0, 0];
 
@@ -95,11 +100,14 @@ function makeCtx(
   meshBodies: readonly SceneBody[] = [],
   earth?: SeededPlanet,
 ): FrameView {
-  vi.mocked(sceneBodyStates).mockReturnValue(
-    seededBodyStates(0, earth ? [...planets, earth] : planets),
-  );
+  const bodyStates = seededBodyStates(0, earth ? [...planets, earth] : planets);
+  vi.mocked(sceneBodyStates).mockReturnValue(bodyStates);
   return {
-    snapshot: { meshBodies, sceneBodies: positionedBodiesOf([...planets, ...meshBodies]) },
+    snapshot: {
+      meshBodies,
+      sceneBodies: positionedBodiesOf([...planets, ...meshBodies]),
+      bodyStates,
+    },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -149,19 +157,10 @@ function glintsWith(renderer: unknown) {
 const GLINTS = glintsWith(makeRenderer());
 
 describe('bodyGlintsPass.enabled', () => {
-  it('is true below the gate with a sub-pixel body, false beyond the foreground gate', () => {
+  it('is true with a sub-pixel body inside the backdrop band', () => {
     expect(GLINTS.enabled(STATE, makeCtx(CAM_POS, [LIT, UNLIT]), makeNear0View(CAM_POS))).toBe(
       true,
     );
-    // At galaxy scale the whole neighbourhood is far below a pixel: the shared
-    // gate turns the glints off before the partition even matters.
-    expect(
-      GLINTS.enabled(
-        STATE,
-        makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC], [LIT, UNLIT]),
-        makeNear0View(CAM_POS),
-      ),
-    ).toBe(false);
   });
 });
 
@@ -244,7 +243,7 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     orientation: IDENTITY,
   };
   const camWithin: Vec3 = [1e-6, 0, 0]; // inside the caption gate
-  const camBeyond: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+  const camBeyond: Vec3 = [CAPTION_GONE_MPC * 2, 0, 0];
 
   it('is true when Earth is seeded within the caption gate even with an empty glints branch — while enabled is false', () => {
     const view = makeNear0View(camWithin);
@@ -252,6 +251,17 @@ describe('bodyGlintsPass.pickEnabled (Bug B — Earth-stamp-only frame stays in 
     expect(GLINTS.pickEnabled!(STATE, makeCtx(camWithin, [], [], earthWithinGate), view)).toBe(
       true,
     );
+  });
+
+  it('is false past the backdrop dissolve outside the caption range, even with glints', () => {
+    // Every glint `drawPick` would stamp there has dissolved, so the row has nothing to pick.
+    expect(
+      GLINTS.pickEnabled!(
+        STATE,
+        makeCtx(camBeyond, [LIT], [], earthWithinGate),
+        makeNear0View(camBeyond),
+      ),
+    ).toBe(false);
   });
 
   it('is false beyond the caption gate with no glints', () => {
@@ -344,7 +354,7 @@ function makePickState(bodyPickRenderer: unknown): EngineState {
 
 describe('bodyGlintsPass.drawPick', () => {
   it('WITHIN the caption gate picks BOTH the lit and the invisible (unlit) glint, dropping unknowns', () => {
-    // The camera sits inside SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, so every body's LABEL is on and
+    // The camera sits inside CAPTION_GONE_MPC, so every body's LABEL is on and
     // pick follows the LABEL, not the glint's brightness: unlit MARS is still picked, as is lit JUPITER.
     // UNKNOWN is not in the seed table (it rides the frame's mesh bodies) → dropped regardless.
     const pickRenderer = makePickRenderer();
@@ -386,19 +396,19 @@ describe('bodyGlintsPass.drawPick', () => {
   });
 
   it('BEYOND the caption gate skips the invisible (unlit) glint — pick reverts to glint visibility', () => {
-    // Past SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC no label invites the click, so pick follows glint
+    // Past CAPTION_GONE_MPC no label invites the click, so pick follows glint
     // visibility. Camera parked 2× the caption gate down +x; a 160 km MARS between the Sun and the
     // camera is sub-pixel (→ glints branch) AND unlit, so it is skipped.
     const marsFar: SeededPlanet = {
       id: asSceneBodyId('mars'),
       label: 'mars',
-      positionMpc: [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC, 0, 0],
+      positionMpc: [CAPTION_GONE_MPC, 0, 0],
       resolvePx: 3,
       surface: { datumRadiusM: 160000, reliefM: [0, 0] },
       albedo: [0.6, 0.32, 0.23],
       orientation: IDENTITY,
     };
-    const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+    const camFar: Vec3 = [CAPTION_GONE_MPC * 2, 0, 0];
     const pickRenderer = makePickRenderer();
     const state = makePickState(pickRenderer);
 
@@ -413,7 +423,7 @@ describe('bodyGlintsPass.drawPick', () => {
     // backdrop: a LIT ~2 px planet past the caption gate has fully dissolved (backdrop 0), so `draw`
     // packs nothing and its pick footprint must go too. A pick brightness omitting the backdrop would
     // keep it clickable.
-    const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+    const camFar: Vec3 = [CAPTION_GONE_MPC * 2, 0, 0];
     expect(camFar[0]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, camFar[0])).toBe(0);
     const litFar: SeededPlanet = {
@@ -470,7 +480,7 @@ describe('bodyGlintsPass.drawPick', () => {
 
   it('omits the Earth stamp when the camera is beyond the caption gate', () => {
     const pickRenderer2 = makePickRenderer();
-    const camFar: Vec3 = [SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2, 0, 0];
+    const camFar: Vec3 = [CAPTION_GONE_MPC * 2, 0, 0];
     const farEarth = makePickState(pickRenderer2);
     GLINTS.drawPick!(
       PASS_STUB,
@@ -488,7 +498,7 @@ describe('bodyGlintsPass.drawPick', () => {
 
   it('emits the Earth stamp beyond the 1 px sphere cull while inside the caption gate (Bug B)', () => {
     // Earth's sphere pick dies at the SUB_PIXEL_BODY_CULL_PX 1 px cull but its caption stays on
-    // out to SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC. 1e-6 Mpc from a 6371 km Earth is ~1e-7 px
+    // out to CAPTION_GONE_MPC. 1e-6 Mpc from a 6371 km Earth is ~1e-7 px
     // (earthPass.enabled is FALSE) yet inside the caption gate; no planets are seeded, so the Earth
     // stamp is the ONLY pick point.
     const earthSubPixel: SeededPlanet = {
@@ -542,5 +552,31 @@ describe('bodyGlintsPass.drawPick', () => {
     expect(classOf(3)).toBe(1); // Jupiter — heliocentric planet
     expect(classOf(10)).toBe(2); // Io — satellite moon
     expect(classOf(11)).toBe(2); // Europa — satellite moon
+  });
+});
+
+describe('bodyGlintsPass Earth stamp follows the Earth caption band', () => {
+  // The orbit distance disagrees with the eye's distance from the Sun at every pose, so a
+  // stamp gated on anything but the caption's own band lands on the wrong side.
+  it.each([
+    [CAPTION_GONE_MPC / 4, CAPTION_GONE_MPC * 2, true],
+    [CAPTION_GONE_MPC * 0.75, CAPTION_GONE_MPC * 2, true],
+    [CAPTION_GONE_MPC * 1.5, 1e-9, false],
+  ])('eye %f Mpc from the Sun, orbit distance %f Mpc', (eyeMpc, orbitMpc, captioned) => {
+    const eye: Vec3 = [eyeMpc, 0, 0];
+    const ctx: FrameView = {
+      ...makeCtx(eye, [], [], EARTH_RESOLVED),
+      cam: { distance: orbitMpc } as FrameView['cam'],
+    };
+    const pickRenderer = makePickRenderer();
+    GLINTS.drawPick!(PASS_STUB, makeNear0View(eye), ctx, makePickState(pickRenderer));
+
+    const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
+    const stamped = args.points.some(
+      (p) => p.packedId === packSelection(Source.Earth, 0 + PICK_SENTINEL_OFFSET),
+    );
+    expect(viewBandOf(APP_VISIBILITY_REGISTRY, 'label:body', 'earth', ctx) > 0).toBe(captioned);
+    expect(stamped).toBe(captioned);
+    expect(GLINTS.pickEnabled!(STATE, ctx, makeNear0View(eye))).toBe(captioned);
   });
 });

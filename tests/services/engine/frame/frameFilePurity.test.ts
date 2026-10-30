@@ -50,7 +50,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
-  'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
   'layers/body/passes/bodyGlintsPass': 2,
   'layers/body/passes/cloudShellPass': 1,
@@ -59,7 +58,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'layers/body/passes/texturedBodiesPass': 2,
   'layers/milkyWay/passes/milkyWayPass': 1,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
-  'layers/starCatalog/passes/starPointsPass': 2,
+  'layers/starCatalog/passes/starPointsPass': 1,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };
@@ -114,7 +113,6 @@ describe.each([
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
-  ['frame/surfaceTilePlanner', FRAME_DIR + 'surfaceTilePlanner/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
   // `passes/index.ts` is a registry barrel, not a row; the other dirs have no

@@ -2,7 +2,7 @@
 // quad. Endpoints arrive as f32 hi/lo pairs of world Mpc; the camera's own pair
 // is subtracted FIRST, so the huge near-equal terms cancel exactly and only the
 // small remainders carry f32 rounding. The vp is rebased about the camera and
-// emits clip metres (near0OverlayVpF32), so it consumes that eye-relative Mpc.
+// emits near-plane clip units (near0OverlayVpF32), so it consumes that eye-relative Mpc.
 
 import package::bodies::missionTrail::io::TrailSegment;
 import package::bodies::missionTrail::io::TrailUniforms;

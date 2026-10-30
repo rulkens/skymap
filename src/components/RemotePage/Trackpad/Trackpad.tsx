@@ -5,10 +5,12 @@
  */
 
 import { useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { END } from 'redux-saga';
 import { createDeviceChannel } from '../../../services/input/createDeviceChannel';
 import { stampAxisMods } from '../../../utils/remote/stampAxisMods';
 import { AXIS_HINTS } from '../../../data/remote/axisHints';
+import { OPENSPACE_ORBIT_HINT } from '../../../data/remote/openspaceOrbitHint';
 import type { RemoteNavAxis } from '../../../@types/remote/RemoteNavAxis';
 import type { DeviceEvent } from '../../../@types/input/DeviceEvent';
 import styles from './Trackpad.module.css';
@@ -17,9 +19,11 @@ import styles from './Trackpad.module.css';
 export type TrackpadProps = {
   onEvent: (event: DeviceEvent) => void;
   axis: RemoteNavAxis | null;
+  /** Overlays on the frame, siblings of the pad so their pointers stay off its channel. */
+  children?: ReactNode;
 };
 
-function Trackpad({ onEvent, axis }: TrackpadProps) {
+function Trackpad({ onEvent, axis, children }: TrackpadProps) {
   const padRef = useRef<HTMLDivElement>(null);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
@@ -44,7 +48,10 @@ function Trackpad({ onEvent, axis }: TrackpadProps) {
   return (
     <div className={styles.frame}>
       <div ref={padRef} className={styles.pad} />
-      <span className={styles.label}>{AXIS_HINTS[axis ?? 'orbit']}</span>
+      <span className={styles.label}>
+        {axis === 'orbit' ? OPENSPACE_ORBIT_HINT : AXIS_HINTS[axis ?? 'orbit']}
+      </span>
+      {children}
     </div>
   );
 }

@@ -2,7 +2,7 @@
  * Tests for the tier-target helpers — the single source of truth for
  * "how many galaxies do we keep per source per tier?".
  *
- * Per-source caps live on `SOURCE_REGISTRY[source].tierTargets` with
+ * Per-source caps live on `APP_SOURCE_REGISTRY[source].tierTargets` with
  * three encodings:
  *   - missing key  → no cap (use the full source unchanged)
  *   - 0            → exclude this source entirely from this tier
@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets';
 
 describe('tierTarget', () => {

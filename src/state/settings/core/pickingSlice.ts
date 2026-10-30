@@ -19,6 +19,7 @@ export const pickingInitialState: PickingSettings = {
     earthScene: true,
     starCatalog: true,
     blackHole: true,
+    satellite: true,
   },
 };
 

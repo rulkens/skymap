@@ -1,7 +1,7 @@
 /**
  * atmosphereDrawList — the ONE per-frame atmosphere draw-list derivation the sky-view bake and the
  * shell draw both consume: `[earth, ...planets]` filtered by an `ATMOSPHERE_PARAMS` row (data gate),
- * camera inside `FOREGROUND_MAX_DISTANCE_MPC`, and SURFACE disc at/above `SUB_PIXEL_BODY_CULL_PX`.
+ * an active slab row this frame, and SURFACE disc at/above `SUB_PIXEL_BODY_CULL_PX`.
  * One test per gate so a regression lands as a distinct failure.
  */
 
@@ -13,7 +13,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ATMOSPHERE_PARAMS } from '../../../../src/layers/body/present/atmosphereParams';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
+import { BODY_SLAB_ROWS } from '../../../../src/layers/body/present/bodySlabRows';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { BodySurface } from '../../../../src/@types/scene/BodySurface';
@@ -24,6 +24,7 @@ import { seededBodyStates } from '../../../helpers/frame/seededBodyStates';
 import type { SeededBody } from '../../../helpers/frame/SeededBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import type { SlabRow } from '../../../../src/@types/engine/frame/SlabRow';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // Stub with the real states plus the Earth fixture below, REUSING its positionMpc/orientation
@@ -44,17 +45,17 @@ const SEEDED_EARTH: SeededBody = {
 const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(1.0 / 2));
 
 /**
- * The minimal FrameView the derivation reads: `drawCamPos`, `cam.distance` (whole-list near-field
- * cull), `drawPxPerRad` and `bodyPose`. `camDistance` defaults to 0, inside the near-field edge.
+ * The minimal FrameView the derivation reads: `drawCamPos`, the frame's active slab rows,
+ * `drawPxPerRad` and `bodyPose`. Every body row is active by default.
  */
 function makeCtx(
   drawCamPos: Vec3,
-  camDistance = 0,
   bodyPose: BodyPoseProvider = poseFrom(drawCamPos),
+  slabBodyCandidates: readonly SlabRow[] = BODY_SLAB_ROWS,
 ): FrameView {
   return {
     drawCamPos,
-    cam: { distance: camDistance },
+    snapshot: { slabBodyCandidates },
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     bodyPose,
   } as unknown as FrameView;
@@ -92,11 +93,12 @@ describe('atmosphereDrawList', () => {
     expect(list[0]!.params).toBe(ATMOSPHERE_PARAMS['earth']);
   });
 
-  it('excludes a body beyond FOREGROUND_MAX_DISTANCE_MPC', () => {
-    const list = atmosphereDrawList(
-      STATE,
-      makeCtx(camRadiiOut(SEEDED_EARTH, 5), FOREGROUND_MAX_DISTANCE_MPC),
-    );
+  it('lists no body whose slab row is inactive', () => {
+    // Close enough to draw, but the frame yielded Earth's row: the sky-view bake and the
+    // shell must not work off a body that has no slab to draw on.
+    const eye = camRadiiOut(SEEDED_EARTH, 5);
+    const withoutEarth = BODY_SLAB_ROWS.filter((row) => row.anchorId !== SCENE_EARTH.id);
+    const list = atmosphereDrawList(STATE, makeCtx(eye, poseFrom(eye), withoutEarth));
     expect(list).toHaveLength(0);
   });
 
@@ -142,7 +144,7 @@ describe('atmosphereDrawList', () => {
     // entry at all — which is what lets both consumers drop their own guard.
     const list = atmosphereDrawList(
       STATE,
-      makeCtx(camRadiiOut(SEEDED_EARTH, 5), 0, () => null),
+      makeCtx(camRadiiOut(SEEDED_EARTH, 5), () => null),
     );
     expect(list).toEqual([]);
   });

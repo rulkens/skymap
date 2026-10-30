@@ -7,14 +7,15 @@ import type { CraftInfo } from './CraftInfo';
 import type { EarthSceneInfo } from './EarthSceneInfo';
 import type { StarInfo } from './StarInfo';
 import type { BlackHoleInfo } from './BlackHoleInfo';
+import type { SatelliteInfo } from './SatelliteInfo';
 
 /**
  * FocusableTarget — tagged union (`type: FocusableTargetType`) of what the camera can focus:
  * a galaxy, a structure anchor, the Milky Way singleton, the zone-of-avoidance singleton
  * (a line-of-sight effect with no `x`/`y`/`z`, so no focus target), a scene body, a craft,
- * an Earth scene, a star from any catalog, or a black hole.
+ * an Earth scene, a star from any catalog, a black hole, or an Earth satellite.
  *
- * Dispatch is a table lookup on the tag (`DETAIL_CARD`, `URL_HASH_FOR`, `REF_OF`), so a new
+ * Dispatch is a table lookup on the tag (`DETAIL_CARD`, `REF_OF`), so a new
  * arm is one row per table. Used by InfoCard's `hovered` / `selected` and by `refOf`.
  */
 export type FocusableTarget =
@@ -26,4 +27,5 @@ export type FocusableTarget =
   | CraftInfo
   | EarthSceneInfo
   | StarInfo
-  | BlackHoleInfo;
+  | BlackHoleInfo
+  | SatelliteInfo;

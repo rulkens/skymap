@@ -22,22 +22,19 @@ import { bodyCameraDistanceMpc } from '../present/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../present/cloudDeckFade';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../present/isTexturedBodyKey';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from '../present/prepareBodySurfaceFrame';
-import { surfaceTileSpecOf } from '../../../utils/surfaceTiles/surfaceTileSpecOf';
+import { surfaceTileSpecOf } from '../subsystems/surfaceTiles/surfaceTileSpecOf';
 
 export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
   return {
     name: 'surface-tiles',
 
-    enabled(state, ctx, view) {
+    enabled(_state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       const hostId = view.slab.frame.hostId;
       const spec = surfaceTileSpecOf(hostId);
       if (spec === null) return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      const tiles = state.subsystems.surfaceTiles;
-      if (tiles === undefined || tiles === null) return false;
+      const tiles = runtime.surfaceTiles;
       // Every vertex position reads the height atlas, so a cut without it is garbage.
       return (
         tiles.plan.cut.length > 0 &&
@@ -47,9 +44,8 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      const surfaceTiles = state.subsystems.surfaceTiles;
+      const surfaceTiles = runtime.surfaceTiles;
       if (view.slab.frame.kind !== 'body-m') return;
-      if (surfaceTiles === undefined || surfaceTiles === null) return;
       const hostId = view.slab.frame.hostId;
       const spec = surfaceTileSpecOf(hostId);
       if (spec === null) return;

@@ -23,14 +23,13 @@ import type { BodyRelativePose } from '../../../@types/engine/camera/BodyRelativ
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../data/bodies/sceneRings';
-import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../load/bodyTextureSlotKey';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { packRingUniforms } from '../render/packRingUniforms';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from '../../../services/engine/frame/subPixelBodyCullPx';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
@@ -72,7 +71,6 @@ export function ringsPass(runtime: BodyRuntime): ContentPass {
 
     enabled(state, ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
       return ringDrawForBody(ctx, view.slab.frame.hostId, runtime) !== null;
     },
 

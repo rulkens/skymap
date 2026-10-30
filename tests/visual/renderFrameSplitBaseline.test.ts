@@ -3,8 +3,9 @@
  * blocks host the draws, so a pass-split refactor must still hash byte-identically. Boundaries are
  * excluded on purpose: a split changes their count.
  *
- * Recorded at the renderer-mock entry point (the mocks short-circuit before `pass.draw`). The horizon
- * shell is excluded: its fade band mirrors the Milky Way's, so the two never co-exist in one frame.
+ * Recorded at the renderer-mock entry point (the mocks short-circuit before `pass.draw`). The
+ * cosmicHorizon Layer's shell is not composed in: its fade band mirrors the Milky Way's, so the two
+ * never co-exist in one frame.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -32,7 +33,7 @@ import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proce
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import { gatePassByFade } from '../../src/services/engine/layer/gatePassByFade';
-import { APP_VISIBILITY } from '../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../src/compositions/appVisibility';
 import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
 import { milkyWayAggregatePass } from '../../src/layers/milkyWay/passes/milkyWayAggregatePass';
@@ -219,7 +220,7 @@ function makeCompositor(records: DrawRecord[]): any {
 // What `createLayers` gates each pass with: every fade resolves to 1 here.
 const PASS_GATE_STATE = {
   subsystems: { fades: { opacityOf: () => 1 }, clipPlayer: { clipOpacityOf: () => 1 } },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
 } as unknown as Parameters<typeof gatePassByFade>[1];
 
 const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
@@ -278,7 +279,6 @@ describe('renderFrame visual baseline', () => {
       cloudRenderer: milkyWayCloudRenderer,
       aggregateUpsample,
     } as unknown as MilkyWayRuntime;
-    const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
@@ -338,6 +338,7 @@ describe('renderFrame visual baseline', () => {
     };
 
     const galaxyRuntime = {
+      focusBindGroup: {} as GPUBindGroup,
       pointRenderer: galaxyPointRenderer,
       proceduralDiskRenderer,
       texturedDiskRenderer,
@@ -394,6 +395,7 @@ describe('renderFrame visual baseline', () => {
         viewRig: 'mono',
         gpu: {
           labelRendererCosmo: labelRenderer,
+          label3DRenderer: null,
           markerLineRendererCosmo: markerLineRenderer,
           // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
@@ -407,10 +409,6 @@ describe('renderFrame visual baseline', () => {
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
           labelRendererNear: null,
-          // Every `ContentPass.draw` reads its renderer off `state.gpu.*`; the local names below are the logging
-          // renderers declared above, so their `argShape` entries land in `records`. The milkyWay Layer's
-          // renderers ride `milkyWayRuntime` instead.
-          horizonShellRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.

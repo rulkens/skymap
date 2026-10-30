@@ -4,7 +4,7 @@ Read by the shared `refactor-ground` skill (it lives in the bluecode repo and is
 skills folder) before its pass.
 
 - **Where data shapes live.** Registries, type unions, the .bin formats and the store shapes. Growth usually
-  starts as a row: a new source is a `SOURCE_REGISTRY` row first, and its store, renderer and UI shape follow from
+  starts as a row: a new source is a `APP_SOURCE_REGISTRY` row first, and its store, renderer and UI shape follow from
   what kind of row it is.
 - **What a wrong shape costs.** It propagates into the .bin format, the stores and the shaders. Price a break as
   migration, a re-bake, a cache-skew window and any external readers.
