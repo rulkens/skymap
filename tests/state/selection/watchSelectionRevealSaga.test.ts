@@ -15,6 +15,7 @@ import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { settingsRoute } from '../../../src/store/constants';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
+import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import type { RootState } from '../../../src/store/types';
 
 const ISS = { type: 'satellite', noradId: 25544 } as const;
@@ -100,5 +101,10 @@ describe('watchSelectionRevealSaga', () => {
     h.store.dispatch(updateSelectionFocus(ISS));
     expect(h.writes).toEqual([]);
     expect(h.errors).toEqual([]);
+  });
+
+  it('no selection kind is named by two show entries', () => {
+    const kinds = APP_VISIBILITY_REGISTRY.flatMap((e) => ('selects' in e ? (e.selects ?? []) : []));
+    expect(kinds.filter((k, i) => kinds.indexOf(k) !== i)).toEqual([]);
   });
 });
