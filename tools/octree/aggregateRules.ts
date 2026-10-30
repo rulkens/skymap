@@ -3,6 +3,8 @@ import type { ColumnAggregateRule } from '../@types/octree/ColumnAggregateRule';
 import { aggregateMeanAbsMag, fluxFromAbsMag } from '../stars/mergeFluxAggregate';
 
 const AXES = 3;
+const HALF_TURN_DEG = 180;
+const DOUBLED_RAD_PER_DEG = Math.PI / 90;
 
 // Arithmetic order is load-bearing: an f64 reordering moves quantised bytes.
 export const AGGREGATE_RULES: Readonly<Record<ColumnAggregate, ColumnAggregateRule>> = {
@@ -47,6 +49,35 @@ export const AGGREGATE_RULES: Readonly<Record<ColumnAggregate, ColumnAggregateRu
     },
     blob(b, out, at, sums, row) {
       out[at] = sums[0]![row]! / b.subFlux;
+    },
+  },
+  // Axes have period 180°: averaging the doubled angle as a vector keeps 175° and 5° near 0°, not 90°.
+  axialFluxMean: {
+    width: 1,
+    sums: 2,
+    input: 'column',
+    own(r, out, rec, sums, row) {
+      const v = r.value(0);
+      out[rec] = v;
+      const doubled = v * DOUBLED_RAD_PER_DEG;
+      sums[0]![row]! += r.flux * Math.cos(doubled);
+      sums[1]![row]! += r.flux * Math.sin(doubled);
+    },
+    blob(_b, out, at, sums, row) {
+      const deg = Math.atan2(sums[1]![row]!, sums[0]![row]!) / DOUBLED_RAD_PER_DEG;
+      // `+ 180` rounds a tiny negative angle to exactly 180, which `% 180` folds back to 0.
+      out[at] = (deg + HALF_TURN_DEG) % HALF_TURN_DEG;
+    },
+  },
+  none: {
+    width: 1,
+    sums: 0,
+    input: 'column',
+    own(r, out, rec) {
+      out[rec] = r.value(0);
+    },
+    blob(_b, out, at) {
+      out[at] = 0;
     },
   },
 };

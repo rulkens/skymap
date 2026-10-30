@@ -5,7 +5,7 @@
  * point renderer's `draw()` and (via the returned buffer) the pick renderer's
  * per-frame snapshot call this function so their packing never drifts.
  *
- * Why a separate module rather than an inner function in `galaxyPointRenderer.ts`?
+ * Why a separate module rather than an inner function in `galaxyFlatPointRenderer.ts`?
  * The pick path needs to pack a fresh buffer *without* touching the visual
  * pass's uploaded copy.  `pickUniformBytesOf` calls this with the pick-shaped
  * inputs directly — the none-selection sentinel, the `+PICK_PADDING_PX` size,
@@ -17,7 +17,7 @@
  * vertex shader skips the visual-only culls (crossfade-out, intensity floor)
  * that would make disk-sized galaxies unpickable.
  *
- * Byte layout: see `UNIFORM_BYTES` docblock in `galaxyPointRenderer.ts`.
+ * Byte layout: see `UNIFORM_BYTES` docblock in `galaxyFlatPointRenderer.ts`.
  *
  * @module
  */
@@ -31,11 +31,11 @@ import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
  * Byte size of the `Uniforms` struct as seen by the GPU.  The single
  * source of truth for the alloc in `packGalaxyPointUniforms` and for any consumer
  * that needs to know the buffer size up front (e.g. the pick renderer).
- * `galaxyPointRenderer.ts` re-exports this so existing call-sites that already
- * import from `galaxyPointRenderer` don't need a new import path.
+ * `galaxyFlatPointRenderer.ts` re-exports this so existing call-sites that already
+ * import from `galaxyFlatPointRenderer` don't need a new import path.
  *
  * 192 = (16 + 4 + 4 + 4 + 4 + 8 + 4 + 4) × 4 bytes.  See the `UNIFORM_BYTES`
- * docblock in `galaxyPointRenderer.ts` for the full slot-by-slot layout.  The final
+ * docblock in `galaxyFlatPointRenderer.ts` for the full slot-by-slot layout.  The final
  * 4-float block carries the galaxy surface-brightness calibration knobs
  * (galaxySbScale / galaxySbMax / galaxyFalloffStrength) + one pad word.
  */

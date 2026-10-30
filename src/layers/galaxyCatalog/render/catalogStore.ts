@@ -2,7 +2,7 @@
  * CatalogStore — the per-catalog GPU resources behind the point pipeline: the
  * interleaved vertex buffer plus the per-source FadeUniforms and SourceUniforms
  * buffers and bind groups, created together at upload and destroyed together at
- * unload. Split from `galaxyPointRenderer` on the storage/pipeline seam so the
+ * unload. Split from `galaxyFlatPointRenderer` on the storage/pipeline seam so the
  * async upload bookkeeping is testable without a stub pipeline.
  *
  * Two projections of one map: `loadedSources()` is the narrow pick feed (the raw

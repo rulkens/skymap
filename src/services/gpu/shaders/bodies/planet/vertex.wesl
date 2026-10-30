@@ -17,7 +17,7 @@
 //
 // One instanced draw paints every seeded planet, so the per-body data rides
 // instance-step attributes rather than a uniform mutated between draws: that is
-// the house idiom ('galaxyPointRenderer'), and decisively it dodges the
+// the house idiom ('galaxyFlatPointRenderer'), and decisively it dodges the
 // writeBuffer-vs-submit race, since every instance reads its OWN baked record.
 // The mvp and the local camera are forwarded to the fragment because the
 // fragment cannot read vertex attributes and needs both for the ray test and

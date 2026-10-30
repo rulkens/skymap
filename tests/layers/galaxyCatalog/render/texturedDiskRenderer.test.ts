@@ -191,7 +191,7 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
 
     // A sky-cubemap capture sweep: two `draw()` calls (different faces) in
     // the same frame, both before one `submit()` — mirrors the roster
-    // convention pinned in `galaxyPointRenderer.test.ts` /
+    // convention pinned in `galaxyFlatPointRenderer.test.ts` /
     // `starCatalogRenderer`'s own viewSlot tests.
     renderer.draw(
       pass,

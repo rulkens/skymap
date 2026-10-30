@@ -2,6 +2,7 @@ import type { ColumnStore } from '../../@types/octree/ColumnStore';
 import type { OctreeChunkRef } from '../../@types/octree/OctreeChunkRef';
 export const OCTREE_INDEX_MAGIC = 'SKOI';
 export const OCTREE_CHUNK_MAGIC = 'SKOC';
+export const OCTREE_INFO_MAGIC = 'SKOF';
 export const OCTREE_VERSION = 1;
 export const OCTREE_VERSION_OFFSET = 4;
 export const OCTREE_HEADER_BYTES_OFFSET = 6;
@@ -30,6 +31,7 @@ export const COLUMN_STORE_BYTES: Readonly<Record<ColumnStore, number>> = {
   u32: 4,
   i8: 1,
   u16x3: 6,
+  u64: 8,
 };
 export const U16X3_Y_BYTE_OFFSET = 2;
 export const U16X3_Z_BYTE_OFFSET = 4;
@@ -53,4 +55,11 @@ export const LEVEL_KEY_STRIDE = 2 ** 32;
 /** A chunk object's file name: the bake writes it, the reader, collector and `fetch-data` resolve it. */
 export function octreeChunkFileName(ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>): string {
   return `${ref.level}-${ref.morton}.${ref.hash}.bin`;
+}
+
+/** Its info object's file name: the hash stays the last infix, so `logicalDataName` strips it as for any data file. */
+export function octreeChunkInfoFileName(
+  ref: Pick<OctreeChunkRef, 'level' | 'morton' | 'hash'>,
+): string {
+  return `${ref.level}-${ref.morton}.info.${ref.hash}.bin`;
 }

@@ -19,7 +19,7 @@ import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 export function createStarCatalogSlot(
   source: SourceType,
   host: OctreePoolHost<StarColumns>,
-  chunkSlotsOverride: () => number | null,
+  poolRecordsOverride: () => number | null,
 ): AssetSlot<Octree<StarColumns>, StarCatalogReq> {
   const entry = APP_SOURCE_REGISTRY[source];
   if (entry.type !== 'starCatalog' || entry.binBaseName === null) {
@@ -32,7 +32,7 @@ export function createStarCatalogSlot(
     // The slot's race-check ran just before this call, so `lastRequest()` is
     // this commit's own request.
     commit: async (octree): Promise<void> =>
-      installStarPool(host, source, octree, slot.lastRequest()!.tier, chunkSlotsOverride()),
+      installStarPool(host, source, octree, slot.lastRequest()!.tier, poolRecordsOverride()),
     onRelease: () => {
       host.chunkStreams.get(source)?.destroy();
       host.chunkStreams.delete(source);

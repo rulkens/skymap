@@ -85,8 +85,8 @@ vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () =>
   })),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer', () => ({
-  createGalaxyPointRenderer: vi.fn(() => makeStub('galaxyPointRenderer')),
+vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyFlatPointRenderer', () => ({
+  createGalaxyFlatPointRenderer: vi.fn(() => makeStub('galaxyFlatPointRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderTargets', () => ({

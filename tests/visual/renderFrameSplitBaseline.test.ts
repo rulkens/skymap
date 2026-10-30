@@ -44,6 +44,7 @@ import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types
 import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
+import { idleGalaxyOctree } from '../fixtures/idleGalaxyOctree';
 
 type DrawRecord =
   | { kind: 'beginRenderPass' }
@@ -340,6 +341,7 @@ describe('renderFrame visual baseline', () => {
     const galaxyRuntime = {
       focusBindGroup: {} as GPUBindGroup,
       pointRenderer: galaxyPointRenderer,
+      ...idleGalaxyOctree(),
       proceduralDiskRenderer,
       texturedDiskRenderer,
       proceduralDisks: proceduralDisksSubsystem,

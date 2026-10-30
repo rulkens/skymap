@@ -8,9 +8,11 @@
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { GalaxyColumnBlock } from '../../../@types/data/galaxyCatalog/GalaxyColumnBlock';
 import type { GalaxyRecordSource } from '../../../@types/data/galaxyCatalog/GalaxyRecordSource';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 
+import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 import { galaxyMagOffset } from '../../../utils/galaxy/galaxyMagOffset';
 import { galaxyMedianAbsMag } from '../../../utils/galaxy/galaxyMedianAbsMag';
@@ -39,6 +41,25 @@ export function flatGalaxyRecordSource(
   }
 
   const resident = (n: number): number | null => (n >= 0 && n < count ? n : null);
+  const { positions, magU, magG, magR, magI, magZ } = catalog;
+  const block: GalaxyColumnBlock = {
+    count,
+    positions,
+    diameterKpc: catalog.diameterKpc,
+    axisRatio: catalog.axisRatio,
+    positionAngleDeg: catalog.positionAngleDeg,
+    magG,
+    colourIndexAt: (i) =>
+      pickColourIndex(
+        source,
+        magU[i]!,
+        magG[i]!,
+        magR[i]!,
+        magI[i]!,
+        magZ[i]!,
+        Math.hypot(positions[i * 3]!, positions[i * 3 + 1]!, positions[i * 3 + 2]!),
+      ),
+  };
 
   return {
     source,
@@ -51,7 +72,7 @@ export function flatGalaxyRecordSource(
     },
     ordinalOfPick: resident,
     pickOfOrdinal: resident,
-    forEachResidentBlock: (visit) => visit(catalog, 0),
+    forEachResidentBlock: (visit) => visit(block, 0),
     hasDurableId: (id) => rowOfDurableId(id) >= 0,
     loadRow: (ordinal) => extractGalaxyRow(catalog, ordinal, source, famousMeta()),
     resolveDurableId: (id) => resident(rowOfDurableId(id)),

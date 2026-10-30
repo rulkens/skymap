@@ -15,12 +15,12 @@
  *   - `label` is a human-readable identifier useful for devtools
  *     logging, GPU-profiler attribution, and future debug overlays.
  *     The convention is the renderer's factory name without `create`
- *     (e.g. `createGalaxyPointRenderer` → `'galaxyPointRenderer'`).
+ *     (e.g. `createGalaxyFlatPointRenderer` → `'galaxyFlatPointRenderer'`).
  *
  * ### Why not include `draw()`?
  *
- * Draw signatures vary wildly across renderers — `galaxyPointRenderer.draw`
- * takes a `GalaxyPointDrawSettings` record, `galaxyPickRenderer.drawPoints` records
+ * Draw signatures vary wildly across renderers — `galaxyFlatPointRenderer.draw`
+ * takes a `GalaxyPointDrawSettings` record, `galaxyPickRenderer.drawFlatPoints` records
  * into a caller-owned pick pass, `volumeFieldRenderer.draw` reads from a
  * `FrameContext`.  A common base would either force a
  * lowest-common-denominator signature (hurting type clarity) or use a
@@ -31,7 +31,7 @@
  * the full per-renderer breakdown that informed this contract.
  */
 export type Renderer = {
-  /** Human-readable identifier (e.g. `'galaxyPointRenderer'`). */
+  /** Human-readable identifier (e.g. `'galaxyFlatPointRenderer'`). */
   readonly label: string;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;

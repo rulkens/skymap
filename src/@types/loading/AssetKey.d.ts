@@ -21,4 +21,5 @@ export type AssetKey =
   | 'bodyTextureAtlas'
   | 'hiResFamous' // a GPU allocation, not a fetch; its request is keyed on `layerSide`, not the tier
   | BodyTextureSlotKey
-  | `mesh:${string}`; // one per body id; the prefix keeps this a template type instead of widening the union to `string`
+  | `mesh:${string}` // one per body id; the prefix keeps this a template type instead of widening the union to `string`
+  | `galaxyOctree:${string}`; // a galaxy source's octree slot: a Layer's own, so `slotFor` finds it in `layerSlots`

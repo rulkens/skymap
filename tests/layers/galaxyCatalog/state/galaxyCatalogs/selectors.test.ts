@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { selectVisibleSourceMask } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import {
+  selectGalaxyCatalogFormat,
+  selectVisibleSourceMask,
+} from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../../../src/store/constants';
 import { Source } from '../../../../../src/data/source';
@@ -72,5 +75,20 @@ describe('selectVisibleSourceMask', () => {
     });
     selectVisibleSourceMask(stateWithGalaxyCatalogsWrite);
     expect(selectVisibleSourceMask.recomputations()).toBe(baseline + 1);
+  });
+});
+
+describe('selectGalaxyCatalogFormat', () => {
+  it('is the setting, else octree when the row ships one, else skmp', () => {
+    const base = makeRoot();
+    expect(selectGalaxyCatalogFormat(base, Source.Glade)).toBe('octree');
+    expect(selectGalaxyCatalogFormat(base, Source.SDSS)).toBe('skmp');
+    const pinned = makeRoot({
+      galaxyCatalogs: {
+        ...base[settingsRoute].galaxyCatalogs,
+        formats: { [Source.Glade]: 'skmp' },
+      },
+    });
+    expect(selectGalaxyCatalogFormat(pinned, Source.Glade)).toBe('skmp');
   });
 });

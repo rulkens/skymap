@@ -26,6 +26,11 @@ import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointR
 import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { GalaxyColumns } from '../../../@types/data/galaxyCatalog/GalaxyColumns';
+import type { GalaxyOctreeReq } from '../../../@types/loading/GalaxyOctreeReq';
+import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
+import type { GalaxyOctreePayload } from './GalaxyOctreePayload';
+import type { GalaxyPooledPointRenderer } from './GalaxyPooledPointRenderer';
 
 export type GalaxyCatalogRuntime = {
   /** The CPU-side catalog mirror, kept for the flat-only readers (hi-res famous, famous labels). */
@@ -40,16 +45,26 @@ export type GalaxyCatalogRuntime = {
   readonly famousMeta: readonly FamousGalaxyMetaEntry[];
   /** Bumped by every point-slot commit; the two `frame` reconciles key on it. */
   readonly catalogsVersion: number;
+  /** Bumped by the planner when an octree chunk lands or leaves: the resident records changed. */
+  residencyVersion: number;
   /** Captured at `create` the way the pick renderer captures it (see the comment in `create.ts` on why that is safe): passes read the engine's `@group(3)` focus group here, not off `state.gpu`. */
   readonly focusBindGroup: GPUBindGroup;
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */
   readonly publish: (patch: Partial<GalaxyCatalogFacts>) => void;
 
   readonly points: ReadonlyMap<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  /** One slot per source that ships an octree; demanded instead of its point slot when its format is `octree`. */
+  readonly octreePoints: ReadonlyMap<
+    GalaxyCatalogSourceType,
+    AssetSlot<GalaxyOctreePayload, GalaxyOctreeReq>
+  >;
+  /** A source's chunk stream while its committed index names chunks; the octree slot fills and clears it. */
+  readonly chunkStreams: Map<SourceType, OctreeChunkStream<GalaxyColumns>>;
   readonly famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, GalaxyCatalogReq>;
   readonly hiResFamous: AssetSlot<HiResFamousPair, HiResFamousReq>;
 
   readonly pointRenderer: GalaxyPointRenderer;
+  readonly pooledPointRenderer: GalaxyPooledPointRenderer;
   readonly pickRenderer: GalaxyPickRenderer;
   readonly texturedDiskRenderer: TexturedDiskRenderer;
   readonly proceduralDiskRenderer: ProceduralDiskRenderer;

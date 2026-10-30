@@ -20,7 +20,6 @@
 
 import { Source } from '../../../data/source';
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
-import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { absoluteFromApparent, cartesianToRaDec, smoothstep } from '../../../utils/math/index';
 import { galaxySbAmp } from '../../../utils/galaxy/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
@@ -120,19 +119,10 @@ export function createProceduralDiskSubsystem(
         const ar = block.axisRatio[i]!;
         const pa = block.positionAngleDeg[i]!;
 
-        // Distance from origin (NOT from camera) — K-correction uses
-        // cosmological redshift z = d / Hubble distance, which is a
-        // function of the row's position, not the viewer's location.
+        // Distance from origin (NOT from camera): the absolute magnitude is
+        // a function of the row's position, not the viewer's location.
         const dMpcFromOrigin = Math.hypot(x, y, z);
-        const colourIndex = pickColourIndex(
-          source,
-          block.magU[i]!,
-          block.magG[i]!,
-          block.magR[i]!,
-          block.magI[i]!,
-          block.magZ[i]!,
-          dMpcFromOrigin,
-        );
+        const colourIndex = block.colourIndexAt(i);
 
         // The disk recomputes the SAME physical surface brightness the
         // point bake baked (shared `galaxySbAmp` helper + the same

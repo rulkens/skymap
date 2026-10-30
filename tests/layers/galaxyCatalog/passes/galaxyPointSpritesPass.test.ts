@@ -22,6 +22,8 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { GalaxyPointDrawSettings } from '../../../../src/@types/rendering/GalaxyPointDrawSettings';
+import { idleGalaxyOctree } from '../../../fixtures/idleGalaxyOctree';
 
 function makeCam(): OrbitCamera {
   return {
@@ -111,10 +113,10 @@ function makeStateWithRenderer(
   state: EngineState;
   runtime: GalaxyCatalogRuntime;
   drawSpy: ReturnType<typeof vi.fn>;
-  drawPointsSpy: ReturnType<typeof vi.fn>;
+  drawFlatPointsSpy: ReturnType<typeof vi.fn>;
 } {
   const drawSpy = vi.fn();
-  const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
+  const drawFlatPointsSpy = vi.fn<(...args: unknown[]) => void>();
   const state = {
     ...STATE_STUB,
     selection: { select: null, hover: null, focus: null },
@@ -125,9 +127,10 @@ function makeStateWithRenderer(
   const runtime = {
     focusBindGroup: {} as GPUBindGroup,
     pointRenderer: { draw: drawSpy, loadedSources: () => loadedSources },
-    pickRenderer: { drawPoints: drawPointsSpy },
+    pickRenderer: { drawFlatPoints: drawFlatPointsSpy, drawPooledPoints: vi.fn() },
+    ...idleGalaxyOctree(),
   } as unknown as GalaxyCatalogRuntime;
-  return { state, runtime, drawSpy, drawPointsSpy };
+  return { state, runtime, drawSpy, drawFlatPointsSpy };
 }
 
 describe('galaxyPointSpritesPass.draw', () => {
@@ -201,7 +204,7 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       count: 1,
       sourceBuffer: {} as GPUBuffer,
     }));
-    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
+    const { state, runtime, drawFlatPointsSpy } = makeStateWithRenderer({}, loaded);
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
 
@@ -212,7 +215,53 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       state,
       makeGalaxyCatalogFade({ sdss: 0.5, glade: 0 }),
     );
-    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
+    const passedSources = drawFlatPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
     expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS]);
+  });
+});
+
+describe('galaxyPointSpritesPass with an octree source', () => {
+  it('the sprites pass draws flat sources and pooled leaves, each faded by its own source', () => {
+    const { state, runtime, drawSpy } = makeStateWithRenderer({
+      selection: {
+        select: { type: 'galaxyCatalog', source: Source.Glade, index: 7 } as SelectionRef,
+        hover: null,
+        focus: null,
+      } as unknown as EngineState['selection'],
+    });
+    const pooledDraw = vi.fn();
+    const pooledPick = vi.fn();
+    const pickDraws = vi.fn((include: (s: number) => boolean) =>
+      [Source.Glade, Source.SDSS].filter(include),
+    );
+    Object.assign(runtime, {
+      pooledPointRenderer: {
+        ...runtime.pooledPointRenderer,
+        draw: pooledDraw,
+        // GLADE's ordinal 7 sits at pool row 1234 while its chunk is resident.
+        poolRecordIndex: (source: number, ordinal: number) =>
+          source === Source.Glade && ordinal === 7 ? 1234 : null,
+        pickDraws,
+      },
+      pickRenderer: { ...runtime.pickRenderer, drawPooledPoints: pooledPick },
+    });
+    const fade = makeGalaxyCatalogFade({ glade: 0.5, sdss: 0 });
+    const ctx = makeCtx();
+    const pass = galaxyPointSpritesPass(runtime);
+    pass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state, fade);
+
+    const flat = drawSpy.mock.calls[0]![3] as GalaxyPointDrawSettings;
+    const pooled = pooledDraw.mock.calls[0]![3] as GalaxyPointDrawSettings;
+    expect(pooled.fadeOpacityOf(Source.Glade)).toBe(0.5);
+    expect(flat.fadeOpacityOf(Source.SDSS)).toBe(0);
+    // The halo names the record where each pipeline draws it: a pool row for the octree.
+    expect(pooled.selectedPacked).toBe(packSelection(Source.Glade, 1234));
+    expect(flat.selectedPacked).toBe(packSelection(Source.Glade, 7));
+    expect(pooledDraw.mock.calls[0]![4]).toBe(false);
+    // The blobs are the aggregates pass's: drawing them here too would double their glow.
+    expect(pooledDraw.mock.calls[0]![5]).toBe('leaf');
+
+    pass.drawPick!(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state, fade);
+    expect(pooledPick.mock.calls[0]![1]).toEqual([Source.Glade]);
   });
 });

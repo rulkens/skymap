@@ -17,6 +17,7 @@ import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFr
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import { galaxyRecordsOver } from '../../support/galaxyRecordsOver';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { idleGalaxyOctree } from '../../fixtures/idleGalaxyOctree';
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
@@ -42,6 +43,7 @@ function makeRuntime(opts: {
   ]);
   const runtime = {
     hiResFamous: { committed: () => null },
+    ...idleGalaxyOctree(),
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: {
@@ -121,6 +123,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     const publish = vi.fn();
     const runtime = {
       hiResFamous: { committed: () => null },
+      ...idleGalaxyOctree(),
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
       texturedDisks: {

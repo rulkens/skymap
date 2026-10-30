@@ -15,17 +15,26 @@ import type { StarCatalogRenderer } from '../../../../src/layers/starCatalog/@ty
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 
-const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
+// Chunks enough that the pool's records come out at the knob.
+const fetchSpy = vi.hoisted(() =>
+  vi.fn(async () => ({
+    recordCount: 0,
+    nodes: { count: 0 },
+    chunks: [],
+    chunkCount: 16384,
+    chunkCapacity: 1024,
+    chunkNodeCap: 64,
+  })),
+);
 vi.mock('../../../../src/layers/starCatalog/load/starCatalogFetcher', () => ({
   starCatalogFetcher: fetchSpy,
 }));
 
-const POOL_CAP = 256;
+const POOL_CAP = 8_388_608;
 
 function setup(override: { value: number | null }) {
-  const upload = vi.fn<StarCatalogRenderer['upload']>((_s, _o, slots) => {
-    if (slots > POOL_CAP) throw new Error(`only ${POOL_CAP} slots fit`);
-    return 0;
+  const upload = vi.fn<StarCatalogRenderer['upload']>((_s, _o, pool) => {
+    if (pool.records.total > POOL_CAP) throw new Error(`only ${POOL_CAP} records fit`);
   });
   const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
   const host = {
@@ -39,20 +48,23 @@ function setup(override: { value: number | null }) {
 }
 
 const REQ = { source: Source.GaiaStars, tier: 'medium' } as const;
-const tierSlots = () => {
+const tierPoolRecords = () => {
   const entry = APP_SOURCE_REGISTRY[Source.GaiaStars];
   if (entry.type !== 'starCatalog') throw new Error('not a star catalog');
-  return entry.budgets.medium.slots;
+  return entry.budgets.medium.poolRecords;
 };
+// Whole 1,024-record runs, so the pool holds exactly these.
+const SMALL = 131_072;
+const OVER_CAP = 16_777_216;
 
 describe('starCatalogSlot commit', () => {
-  it('honours an override set before the load, else uses the tier slots', async () => {
-    const override = { value: 384 as number | null };
+  it("honours an override set before the load, else uses the tier's records", async () => {
+    const override = { value: 393_216 as number | null };
     const { slot, upload } = setup(override);
     await slot.load(REQ);
     override.value = null;
     await slot.load(REQ);
-    expect(upload.mock.calls.map((c) => c[2])).toEqual([384, tierSlots()]);
+    expect(upload.mock.calls.map((c) => c[2].records.total)).toEqual([393_216, tierPoolRecords()]);
   });
 });
 
@@ -61,8 +73,8 @@ describe('resizeStarPools', () => {
     const { slot, upload, runtime } = setup({ value: null });
     await slot.load(REQ);
     fetchSpy.mockClear();
-    expect(resizeStarPools(runtime, 128)).toBeNull();
-    expect(upload.mock.calls.at(-1)![2]).toBe(128);
+    expect(resizeStarPools(runtime, SMALL)).toBeNull();
+    expect(upload.mock.calls.at(-1)![2].records.total).toBe(SMALL);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -71,10 +83,10 @@ describe('resizeStarPools', () => {
     await slot.load(REQ);
     const destroy = vi.fn();
     chunkStreams.set(Source.GaiaStars, { destroy } as unknown as OctreeChunkStream<StarColumns>);
-    expect(resizeStarPools(runtime, 512)).toBe(`only ${POOL_CAP} slots fit`);
+    expect(resizeStarPools(runtime, OVER_CAP)).toBe(`only ${POOL_CAP} records fit`);
     expect(destroy).not.toHaveBeenCalled();
     expect(chunkStreams.has(Source.GaiaStars)).toBe(true);
-    expect(resizeStarPools(runtime, 128)).toBeNull();
+    expect(resizeStarPools(runtime, SMALL)).toBeNull();
     expect(destroy).toHaveBeenCalledOnce();
   });
 });

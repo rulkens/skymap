@@ -21,7 +21,7 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
 // core's authored table plus every Layer's, and the fold is per-key local.
-const RUNTIME = { points: new Map() } as unknown as GalaxyCatalogRuntime;
+const RUNTIME = { points: new Map(), octreePoints: new Map() } as unknown as GalaxyCatalogRuntime;
 const EXPANDED_ROWS = expandCompanionRows(galaxyCatalogAssetRows(RUNTIME));
 
 function rowFor(key: AssetKey) {
@@ -52,20 +52,52 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
     const sdss = rowFor(Source.SDSS);
     expect(
       sdss.demand(
-        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
+        makeCtx({
+          settings: { galaxyCatalogs: { formats: {}, items: { sdss: { enabled: true } } } },
+        }),
       ),
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
-    expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
+    expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { formats: {}, items: {} } } }))).toBe(
+      false,
+    );
   });
 
   it('a catalog the tier excludes is not demanded even when enabled, and is released', () => {
     const sdss = rowFor(Source.SDSS);
-    const settings = { galaxyCatalogs: { items: { sdss: { enabled: true } } } };
+    const settings = { galaxyCatalogs: { formats: {}, items: { sdss: { enabled: true } } } };
     expect(sdss.demand(makeCtx({ settings, tier: 'small' }))).toBe(false);
     expect(sdss.release?.(makeCtx({ settings, tier: 'small' }))).toBe(true);
     expect(sdss.demand(makeCtx({ settings, tier: 'medium' }))).toBe(true);
     expect(sdss.release?.(makeCtx({ settings, tier: 'medium' }))).toBe(false);
+  });
+
+  it("the GLADE point row is not demanded when GLADE's format is octree", () => {
+    const glade = rowFor(Source.Glade);
+    const settings = (formats: object) => ({
+      galaxyCatalogs: { formats, items: { glade: { enabled: true } } },
+    });
+    expect(glade.demand(makeCtx({ settings: settings({ [Source.Glade]: 'skmp' }) }))).toBe(true);
+    expect(glade.demand(makeCtx({ settings: settings({ [Source.Glade]: 'octree' }) }))).toBe(false);
+    // No setting: the row ships an octree, so that is the default.
+    expect(glade.demand(makeCtx({ settings: settings({}) }))).toBe(false);
+  });
+
+  it("switching GLADE's format releases the slot of the other, so the two never draw together", () => {
+    const point = rowFor(Source.Glade);
+    const octree = rowFor('galaxyOctree:glade');
+    const ctx = (format: string) =>
+      makeCtx({
+        settings: {
+          galaxyCatalogs: {
+            formats: { [Source.Glade]: format },
+            items: { glade: { enabled: true } },
+          },
+        },
+      });
+    expect([octree.demand(ctx('octree')), point.release?.(ctx('octree'))]).toEqual([true, true]);
+    expect([octree.release?.(ctx('skmp')), octree.demand(ctx('skmp'))]).toEqual([true, false]);
+    expect(point.release?.(ctx('skmp'))).toBe(false);
   });
 
   it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {

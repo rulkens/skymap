@@ -209,6 +209,7 @@ function makeState(
     famousGalaxiesMeta: makeFakeSlot('famous-galaxies-meta'),
     pgcAlias: makeFakeSlot('pgc-aliases'),
     hiResFamous: makeFakeSlot('hi-res-famous'),
+    octreePoints: new Map([[Source.Glade, makeFakeSlot('glade-octree')]]),
   } as unknown as GalaxyCatalogRuntime;
   const densityRenderer = { upload: vi.fn() } as never;
   const densityRuntime = {
@@ -254,6 +255,8 @@ function makeState(
         brightness: 1.0,
         depthFade: true,
         provenance: DEFAULT_GALAXY_PROVENANCE,
+        // GLADE pinned to its flat files: these cases are about the point slots.
+        formats: { [Source.Glade]: 'skmp' },
         // All galaxy catalogs enabled (a uniform test scenario; the real
         // boot literal leaves desiDeep off) — galaxy catalog demand reads
         // these `enabled` bits (not `sources.drawMask`), so the boot-load

@@ -16,12 +16,15 @@ import { galaxyCatalogPlanner } from './frame';
 import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
 import { galaxyCatalogSourceCounts } from './load/galaxyCatalogSourceCounts';
 import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
+import { galaxyAggregatesPass } from './passes/galaxyAggregatesPass';
+import { galaxyCutCompute } from './computes/galaxyCutCompute';
 import { proceduralDisksPass } from './passes/proceduralDisksPass';
 import { texturedDisksPass } from './passes/texturedDisksPass';
 import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
+import GalaxyBlobTuningSectionContainer from './ui/GalaxyBlobTuningSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
@@ -39,9 +42,11 @@ export const galaxyCatalogLayer = defineLayer({
   destroy,
   passes: (runtime) => [
     galaxyPointSpritesPass(runtime),
+    galaxyAggregatesPass(runtime),
     proceduralDisksPass(runtime),
     texturedDisksPass(runtime),
   ],
+  computes: (runtime) => [galaxyCutCompute(runtime)],
   assets: galaxyCatalogAssetRows,
   sagas: [watchPaletteWakeSaga],
   sourceCounts: galaxyCatalogSourceCounts,
@@ -57,5 +62,8 @@ export const galaxyCatalogLayer = defineLayer({
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   planners: (runtime) => [galaxyCatalogPlanner(runtime)],
-  ui: [{ slot: 'main', content: GalaxiesSectionContainer }],
+  ui: [
+    { slot: 'main', content: GalaxiesSectionContainer },
+    { slot: 'debug', content: GalaxyBlobTuningSectionContainer },
+  ],
 });

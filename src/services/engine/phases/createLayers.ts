@@ -62,7 +62,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
   // Core's "a source's catalog landed" pulse. The running total equals
-  // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
+  // `galaxyFlatPointRenderer.totalCount()` by construction (per-source last count, summed,
   // replaced on tier swap). The echo is per-arrival, so a catalog enabled mid-session
   // echoes too.
   const countBySource = new Map<SourceType, number>();

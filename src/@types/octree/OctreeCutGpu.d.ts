@@ -4,34 +4,40 @@
  */
 
 import type { SourceType } from '../data/SourceType';
-import type { OctreeChunk } from './OctreeChunk';
+import type { OctreeSlotRun } from './OctreeSlotRun';
 import type { Octree } from './Octree';
 import type { ClaimTimestampWrites } from '../gpu/timing/ClaimTimestampWrites';
 import type { OctreeChunkHost } from './OctreeChunkHost';
 import type { OctreeDrawStream } from './OctreeDrawStream';
 import type { OctreeCutInputs } from './OctreeCutInputs';
 import type { OctreeCutDraw } from './OctreeCutDraw';
+import type { OctreePoolShape } from './OctreePoolShape';
 
 export type OctreeCutGpu = {
   /** `@group(1)` of `vertex.wesl`'s pipelines. */
   readonly drawBgl: GPUBindGroupLayout;
   /**
-   * Build a source's pool-sized buffers (index rows, then `slots` chunk slots);
+   * Build a source's pool-sized buffers (index rows, then `pool.nodes` chunk rows);
    * an empty octree releases them. Throws, creating nothing, past a pool cap.
    */
-  upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void;
-  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
+  upload(
+    source: SourceType,
+    octree: Octree<{ readonly count: number }>,
+    pool: OctreePoolShape,
+  ): void;
+  /**
+   * Write a landed chunk's rows at `run.nodeBase`, their `firstRecord` from `run.poolBase`, mark
+   * them live, zero their fades, then mark its roots resident.
+   */
   uploadChunk(
     source: SourceType,
-    slot: number,
-    chunk: OctreeChunk<{ readonly count: number }>,
+    run: OctreeSlotRun<{ readonly count: number }>,
     host: OctreeChunkHost,
   ): void;
-  /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
+  /** Mark every root of `run`'s chunk in `host` unresident, then its rows dead. */
   evictChunk(
     source: SourceType,
-    slot: number,
-    chunk: OctreeChunk<{ readonly count: number }>,
+    run: OctreeSlotRun<{ readonly count: number }>,
     host: OctreeChunkHost,
   ): void;
   /**

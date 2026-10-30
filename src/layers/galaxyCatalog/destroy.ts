@@ -22,6 +22,9 @@ export function destroy(runtime: GalaxyCatalogRuntime): void {
   runtime.proceduralDiskRenderer.destroy();
   runtime.texturedDiskRenderer.destroy();
   runtime.pointRenderer.destroy();
+  for (const stream of runtime.chunkStreams.values()) stream.destroy();
+  runtime.chunkStreams.clear();
+  runtime.pooledPointRenderer.destroy();
 
   runtime.catalogs.clear();
 }

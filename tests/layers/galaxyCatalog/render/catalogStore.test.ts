@@ -5,7 +5,7 @@
  * bind groups) per loaded `GalaxyCatalogId`. These tests cover the storage
  * life-cycle — upload / replace / unload, the draw-order iterators and the
  * counts — none of which touch a pipeline. That is precisely why the store is separable from
- * `galaxyPointRenderer`: the questions asked below ("does a parallel rebake stomp
+ * `galaxyFlatPointRenderer`: the questions asked below ("does a parallel rebake stomp
  * the fresh buffer?") can be answered without standing up a stub pipeline.
  *
  * ### Why a stub `GPUDevice`

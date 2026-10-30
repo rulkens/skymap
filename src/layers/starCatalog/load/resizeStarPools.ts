@@ -9,7 +9,7 @@ import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 
 export function resizeStarPools(
   runtime: Pick<StarCatalogRuntime, 'catalogs' | 'poolHost'>,
-  slotsOverride: number | null,
+  poolRecordsOverride: number | null,
 ): string | null {
   let error: string | null = null;
   for (const [source, slot] of runtime.catalogs) {
@@ -17,7 +17,7 @@ export function resizeStarPools(
     const req = slot.lastRequest();
     if (octree === null || req === null) continue;
     try {
-      installStarPool(runtime.poolHost, source, octree, req.tier, slotsOverride);
+      installStarPool(runtime.poolHost, source, octree, req.tier, poolRecordsOverride);
     } catch (err) {
       error ??= (err as Error).message;
     }

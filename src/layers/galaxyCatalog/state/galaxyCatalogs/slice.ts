@@ -7,9 +7,12 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
+import type { GalaxyCatalogFormat } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFormat';
+import type { GalaxyCatalogSourceType } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
+import type { GalaxyOctreeTuningKey } from '../../@types/GalaxyOctreeTuningKey';
 
 export const galaxyCatalogsSlice = createSlice({
   name: 'settings/galaxyCatalogs',
@@ -58,11 +61,24 @@ export const galaxyCatalogsSlice = createSlice({
     setGalaxyFalloffStrength: (galaxyCatalogs, action: PayloadAction<number>) => {
       galaxyCatalogs.falloffStrength = action.payload;
     },
+    // The Debug panel's octree blob board: one writer for its three numeric leaves.
+    setGalaxyBlobTuning: (
+      galaxyCatalogs,
+      action: PayloadAction<{ key: GalaxyOctreeTuningKey; value: number }>,
+    ) => {
+      galaxyCatalogs[action.payload.key] = action.payload.value;
+    },
     setGalaxyCatalogVisible: (
       galaxyCatalogs,
       action: PayloadAction<{ id: GalaxyCatalogId; enabled: boolean }>,
     ) => {
       galaxyCatalogs.items[action.payload.id].enabled = action.payload.enabled;
+    },
+    setGalaxyCatalogFormat: (
+      galaxyCatalogs,
+      action: PayloadAction<{ source: GalaxyCatalogSourceType; format: GalaxyCatalogFormat }>,
+    ) => {
+      galaxyCatalogs.formats[action.payload.source] = action.payload.format;
     },
     setGalaxyCatalogLabelEnabled: (
       galaxyCatalogs,
@@ -82,6 +98,8 @@ export const {
   setGalaxySbScale,
   setGalaxySbMax,
   setGalaxyFalloffStrength,
+  setGalaxyBlobTuning,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
+  setGalaxyCatalogFormat,
 } = galaxyCatalogsSlice.actions;

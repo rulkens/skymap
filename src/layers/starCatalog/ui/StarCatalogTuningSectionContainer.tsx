@@ -16,12 +16,12 @@ import {
   setStarCatalogExposureMidX,
   setStarCatalogExposureFarX,
   setStarCatalogAggregateIntensityCap,
-  setStarCatalogChunkSlotsOverride,
+  setStarCatalogPoolRecordsOverride,
 } from '../state/starCatalogs/slice';
 import { selectTier } from '../../../state/tier/selectors';
 import { Source } from '../../../data/source';
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
-import { selectStarChunkSlotsError } from '../../../state/engine/selectors';
+import { selectStarPoolRecordsError } from '../../../state/engine/selectors';
 import type { StarCatalogTuningKey } from '../@types/StarCatalogTuningKey';
 
 const SETTERS = {
@@ -42,24 +42,24 @@ function StarCatalogTuningSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
-  const onChunkSlotsChange = useCallback(
-    (slots: number | null) => dispatch(setStarCatalogChunkSlotsOverride(slots)),
+  const onPoolRecordsChange = useCallback(
+    (records: number | null) => dispatch(setStarCatalogPoolRecordsOverride(records)),
     [dispatch],
   );
 
-  const slotError = useAppSelector(selectStarChunkSlotsError);
+  const poolRecordsError = useAppSelector(selectStarPoolRecordsError);
   const tier = useAppSelector(selectTier);
   const gaia = APP_SOURCE_REGISTRY[Source.GaiaStars];
-  const tierSlots = gaia.type === 'starCatalog' ? gaia.budgets[tier].slots : 0;
+  const tierPoolRecords = gaia.type === 'starCatalog' ? gaia.budgets[tier].poolRecords : 0;
 
   return (
     <StarCatalogTuningSection
       values={starCatalogs}
       onChange={onChange}
-      chunkSlots={starCatalogs.chunkSlotsOverride}
-      tierSlots={tierSlots}
-      onChunkSlotsChange={onChunkSlotsChange}
-      slotError={slotError}
+      poolRecords={starCatalogs.poolRecordsOverride}
+      tierPoolRecords={tierPoolRecords}
+      onPoolRecordsChange={onPoolRecordsChange}
+      poolRecordsError={poolRecordsError}
     />
   );
 }

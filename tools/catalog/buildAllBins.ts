@@ -95,6 +95,7 @@ import { selectTierRecords } from './selectTierRecords';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { estimateLog10StellarMass } from './estimateLog10StellarMass';
 import { bakeBiasWeights } from './bias/bakeBiasWeights';
+import { buildGladeOctree } from './buildGladeOctree';
 import type { BiasWeightKind } from '../@types/catalog/BiasWeightKind';
 import { encodeAngularWeight } from '../../src/utils/galaxy/encodeAngularWeight';
 
@@ -914,6 +915,23 @@ async function runCli(): Promise<void> {
         `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,
       );
     }
+  }
+
+  const gladeRecords = bySource.get(Source.Glade);
+  if (gladeRecords && gladeRecords.length > 0) {
+    // Committed source artefact at the data root, not a raw download (see buildPgcAliases).
+    const aliasPath = resolve('data/pgc_aliases.json');
+    const aliasPgcs = existsSync(aliasPath)
+      ? Object.keys(JSON.parse(readFileSync(aliasPath, 'utf8'))).map(Number)
+      : [];
+    const header = buildGladeOctree(recordsToCloud(gladeRecords, overrides), {
+      outDir,
+      biasWeight,
+      aliasPgcs,
+    });
+    process.stderr.write(
+      `GLADE octree: ${header.stats.chunkCount?.toLocaleString()} chunks, ${header.records.toLocaleString()} index records, ${header.pgcShards?.length ?? 0} pgc shards\n`,
+    );
   }
 }
 

@@ -1,6 +1,6 @@
 /**
  * The renderer's chunk pool on a recording device: buffer sizes from the index
- * and slot count, the caps it refuses past, and the order a landing or evicted
+ * and pool shape, the caps it refuses past, and the order a landing or evicted
  * chunk's writes reach the queue (a root must never refine over rows that are
  * not its chunk's).
  */
@@ -24,6 +24,7 @@ import type { OctreeChunk } from '../../../../src/@types/octree/OctreeChunk';
 import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/starOctreeFamily';
+import { octreePoolShape } from '../../../../src/utils/octree/octreePoolShape';
 
 type Write = { label: string; offset: number; bytes: number; data: ArrayBufferView | ArrayBuffer };
 
@@ -173,7 +174,7 @@ function frame(nowMs: number): StarCutInputs {
 const NODES = `star-cut-nodes-${Source.GaiaStars}`;
 const RECORDS = `star-catalog-records-${Source.GaiaStars}`;
 const OPACITY = `star-cut-opacity-${Source.GaiaStars}`;
-const SLOT_ROWS = `star-cut-slot-rows-${Source.GaiaStars}`;
+const PAGE_ROWS = `star-cut-page-rows-${Source.GaiaStars}`;
 const ROW_BYTES = CUT_NODE_WORDS * WORD_BYTES;
 /** A root's residency writes: its `bits` word, then its `refineDelta` word. */
 const rootWords = (row: number) => [
@@ -181,29 +182,43 @@ const rootWords = (row: number) => [
   [NODES, row * ROW_BYTES + NODE_REFINE_DELTA_WORD * WORD_BYTES],
 ];
 const word = (w: Write) => (w.data as Uint32Array)[0]!;
+/** `records` in runs of 64 for 50-record chunks, and a quarter as many rows in runs of 8 for 7-row ones. */
+const poolOf = (octree: Octree<StarColumns>, records: number) =>
+  octreePoolShape(octree, records, 1 / 4);
+/** Chunk 1's runs: the second record run (64) and the second row run (8). */
+const SECOND = { records: 64, nodes: 8 };
 
 describe('starCatalogRenderer chunk pool', () => {
-  it('upload sizes the pool from the index and the slot count', () => {
+  it('upload sizes the pool from the index and the pool shape', () => {
     const { device, sizeOf } = recordingDevice();
-    createStarCatalogRenderer(device, 'rgba16float').upload(Source.GaiaStars, octreeOf(), 2);
-    expect(sizeOf(NODES)).toBe((10 + 14) * 24);
-    expect(sizeOf(OPACITY)).toBe(24 * 2 * 4);
-    expect(sizeOf(RECORDS)).toBe((100 + 100) * 8);
+    const octree = octreeOf();
+    createStarCatalogRenderer(device, 'rgba16float').upload(
+      Source.GaiaStars,
+      octree,
+      poolOf(octree, 128),
+    );
+    // 128 records × 1/4 = 32 rows; one u32 per 8-row page.
+    expect(sizeOf(NODES)).toBe((10 + 32) * 24);
+    expect(sizeOf(OPACITY)).toBe(42 * 2 * 4);
+    expect(sizeOf(PAGE_ROWS)).toBe((32 / 8) * 4);
+    expect(sizeOf(RECORDS)).toBe((100 + 128) * 8);
   });
 
-  it('upload throws naming the slot count that fits when the record cap is exceeded', () => {
+  it('upload throws when the record cap is exceeded', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    expect(() =>
-      renderer.upload(Source.GaiaStars, octreeOf({ chunkCapacity: 2 ** 25 }), 3),
-    ).toThrow(/1 slot/);
+    const octree = octreeOf({ chunkCapacity: 2 ** 25 });
+    expect(() => renderer.upload(Source.GaiaStars, octree, poolOf(octree, 3 * 2 ** 25))).toThrow(
+      /record index/,
+    );
     expect([...renderer.loadedCatalogs()]).toEqual([]);
   });
 
   it('an index with no chunks gets no pool rows and still draws', () => {
     const { device, sizeOf, encoder } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf({ chunks: 0 }), 256);
+    const octree = octreeOf({ chunks: 0 });
+    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 256 * 64));
     expect(sizeOf(NODES)).toBe(10 * 24);
     expect(sizeOf(RECORDS)).toBe(100 * 8);
     renderer.setFrameCut(frame(0), true);
@@ -212,21 +227,22 @@ describe('starCatalogRenderer chunk pool', () => {
     expect([...renderer.loadedCatalogs()].map((c) => c.source)).toEqual([Source.GaiaStars]);
   });
 
-  it("uploadChunk writes the rows and records before the root's resident bit; evictChunk clears the bit first", () => {
+  it("uploadChunk writes the rows and records at its runs before the root's resident bit; evictChunk clears the bit first", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    const nodeBase = 10 + 1 * 7;
-    const recordBase = 100 + 1 * 50;
+    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 128));
+    const nodeBase = 10 + 8;
+    const recordBase = 100 + 64;
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, SECOND);
     const landed = writes.map((w) => [w.label, w.offset, w.bytes]);
+    // Only the chunk's own row is written and marked live: its page is the run's first (8 / 8).
     expect(landed).toEqual([
       [RECORDS, recordBase * 8, 3 * 8],
-      [NODES, nodeBase * ROW_BYTES, 7 * ROW_BYTES],
-      [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
-      [OPACITY, nodeBase * OPACITY_CHANNELS * 4, 7 * OPACITY_CHANNELS * 4],
+      [NODES, nodeBase * ROW_BYTES, 1 * ROW_BYTES],
+      [PAGE_ROWS, 1 * WORD_BYTES, WORD_BYTES],
+      [OPACITY, nodeBase * OPACITY_CHANNELS * 4, 1 * OPACITY_CHANNELS * 4],
       ...rootWords(1).map((w) => [...w, WORD_BYTES]),
     ]);
     expect([...(writes[2]!.data as Uint32Array)]).toEqual([CHUNK.nodes.count]);
@@ -236,7 +252,7 @@ describe('starCatalogRenderer chunk pool', () => {
     renderer.evictChunk(Source.GaiaStars, 1, null);
     expect(writes.map((w) => [w.label, w.offset, w.bytes])).toEqual([
       ...rootWords(1).map((w) => [...w, WORD_BYTES]),
-      [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
+      [PAGE_ROWS, 1 * WORD_BYTES, WORD_BYTES],
     ]);
     expect([...(writes[2]!.data as Uint32Array)]).toEqual([0]);
     expect(word(writes[0]!) & NODE_RESIDENT_BIT).toBe(0);
@@ -274,14 +290,14 @@ describe('starCatalogRenderer chunk pool', () => {
       records: columns(5),
       chunks: [],
     };
-    renderer.upload(Source.GaiaStars, octree, 2);
+    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 128));
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 0, chunk, null);
+    renderer.uploadChunk(Source.GaiaStars, 0, chunk, null, { records: 0, nodes: 0 });
     expect(writes.map((w) => [w.label, w.offset])).toEqual([
       [RECORDS, 100 * 8],
       [NODES, 10 * ROW_BYTES],
-      [SLOT_ROWS, 0],
+      [PAGE_ROWS, 0],
       [OPACITY, 10 * OPACITY_CHANNELS * 4],
       ...rootWords(1),
       ...rootWords(2),
@@ -298,7 +314,7 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(writes.map((w) => [w.label, w.offset])).toEqual([
       ...rootWords(1),
       ...rootWords(2),
-      [SLOT_ROWS, 0],
+      [PAGE_ROWS, 0],
     ]);
     expect([word(writes[0]!) & NODE_RESIDENT_BIT, word(writes[2]!) & NODE_RESIDENT_BIT]).toEqual([
       0, 0,
@@ -308,8 +324,8 @@ describe('starCatalogRenderer chunk pool', () => {
   it('a slot evicted and refilled between the pick draw and its readback resolves to the star that was drawn', () => {
     const { device } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
+    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 128));
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, SECOND);
     renderer.snapshotPickSlots();
 
     renderer.evictChunk(Source.GaiaStars, 1, null);
@@ -322,18 +338,19 @@ describe('starCatalogRenderer chunk pool', () => {
         nodes: { ...CHUNK.nodes, morton: Uint32Array.of(16) },
       },
       null,
+      SECOND,
     );
     // Chunk 1's third record as drawn (103 + 2), not chunk 2's (106 + 2).
-    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
+    expect(renderer.recordOrdinal(Source.GaiaStars, 166)).toBe(105);
     // The inverse reads the live table: chunk 1 has left it, chunk 2 holds slot 1.
     expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
-    expect(renderer.poolRecordIndex(Source.GaiaStars, 108)).toBe(152);
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 108)).toBe(166);
   });
 
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, octreeOf(), 2);
+    renderer.upload(Source.GaiaStars, octreeOf(), poolOf(octreeOf(), 128));
     renderer.setFrameCut(frame(0), true);
     renderer.drawCut(
       {
@@ -358,8 +375,8 @@ describe('starCatalogRenderer chunk pool', () => {
     );
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null);
-    const at = (10 + 7) * OPACITY_CHANNELS * 4;
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK, null, SECOND);
+    const at = (10 + 8) * OPACITY_CHANNELS * 4;
     const zeroed = writes.filter((w) => w.label.startsWith('star-cut-opacity-'));
     expect(zeroed.map((w) => [w.label, w.offset])).toEqual([
       [OPACITY, at],
@@ -422,13 +439,13 @@ describe('starCatalogRenderer chunk pool', () => {
       records: columns(3),
       chunks: [],
     };
-    renderer.upload(Source.GaiaStars, octree, 2);
-    renderer.uploadChunk(Source.GaiaStars, 1, parent, null);
+    renderer.upload(Source.GaiaStars, octree, poolOf(octree, 128));
+    renderer.uploadChunk(Source.GaiaStars, 1, parent, null, SECOND);
 
     writes.length = 0;
-    renderer.uploadChunk(Source.GaiaStars, 0, child, 1);
-    // The parent's row sits in slot 1: pool row 2 + 1·7; the child's own row in slot 0, row 2.
-    const parentRow = 2 + 1 * 7;
+    renderer.uploadChunk(Source.GaiaStars, 0, child, 1, { records: 0, nodes: 0 });
+    // The parent's row sits at its row run: pool row 2 + 8; the child's own row at run 0, row 2.
+    const parentRow = 2 + 8;
     expect(writes.slice(-2).map((w) => [w.label, w.offset])).toEqual(rootWords(parentRow));
     expect(word(writes.at(-2)!) & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
     expect(word(writes.at(-1)!)).toBe(3 - 1);
