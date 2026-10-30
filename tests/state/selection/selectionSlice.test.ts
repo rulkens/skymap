@@ -49,7 +49,10 @@ describe('selectionSlice pending', () => {
     const resolved = reducer(requested, updateSelectionFocus(ref));
     expect(resolved.pending.focus).toBe('NGC 224');
 
-    const rowLanded = reducer(resolved, setSelectionRow({ slot: 'focus', row: null, focusId: null }));
+    const rowLanded = reducer(
+      resolved,
+      setSelectionRow({ slot: 'focus', row: null, focusId: null }),
+    );
     expect(rowLanded.pending.focus).toBeNull();
   });
 

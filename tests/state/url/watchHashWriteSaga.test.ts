@@ -84,7 +84,9 @@ describe('watchHashWriteSaga', () => {
     // `setSelectionRow` is the SOLE writer of `selectionRows.focus`, so every
     // resolution path — a late catalog pulse, the star-count pulse, a direct ref
     // write — arrives here as this one action. Covering it covers all of them.
-    buildHarness().dispatch(setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }));
+    buildHarness().dispatch(
+      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+    );
     await settle();
 
     expect(lastBody()).toBe('focus=cluster-virgo-m87');

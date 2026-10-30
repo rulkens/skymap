@@ -64,7 +64,8 @@ Start: `/dev` for the app and `/dev website` for the site.
   `http://localhost:<port>` or manual steps ("set the clock to X, focus Y").
   Shape: `#focus=body-<id>&t=<ISO 8601 UTC>` (a valid `t` lands the clock paused
   there); other focus kinds use their own form (`galaxy-cluster-virgo-m87`,
-  `star-<seed id>`; see `src/services/url/urlHashFor.ts`). Other
+  `star-<seed id>`; each Layer's `focusId.encode` in its `*SelectionRow.ts`
+  under `src/layers/*/present/` spells its kind's id). Other
   params: `pose` (copy one with the `l` key), `orientation`, `exhibit`, `tour`,
   `clip`, `home`; values raw, not URL-encoded; full table in
   `src/state/url/hashParamSources.ts`. No param toggles layers or trails, so name
