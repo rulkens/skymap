@@ -9,7 +9,8 @@ A design pass on one page of the companion website, run as a visual round trip. 
 
 ## Hard rules (the owner's rulings)
 
-- **Real renders and films only:** `Shot`, `FeatureFilm`, `data/siteLoops.ts`. No drawn stand-ins, stock textures, gradient washes, glows, glass, boxed cards or gimmicks.
+- **The sky is always real:** pictures of space are app renders and films (`Shot`, `FeatureFilm`, `data/siteLoops.ts`), never drawn stand-ins.
+- **Decoration is allowed** (owner, 2026-10-30: "we can definitely add decoration, but it needs to be applied with style and taste"). Lines, light, gradients, texture and motion may all serve the design. Each one has to earn its place in the round trip, and you must be able to say what it adds. Decoration added by default, or in the generic patterns the frontend-design skill lists, is what the owner rejected before.
 - **The Open app button (`OpenApp`) may be restyled** as part of a page's design. Two directions are already rejected:
   - pictures or ambient motion inside the button ("incredibly ugly");
   - a solid light-accent fill with dark ink ("absolutely terrible").
@@ -17,7 +18,7 @@ A design pass on one page of the companion website, run as a visual round trip. 
   It is shared by every page, so a restyle must hold in the nav, the footer and over photographs.
 - **Places ("Pick somewhere to start") is final.**
 - **Copy and headings stay as they are.** A restyle is not a rewrite. If a heading must change, change the page's `<page>.structure.yaml` too.
-- **Motion answers scroll or the pointer.** Nothing loops for decoration, `prefers-reduced-motion` removes it all, and no new runtime dependencies.
+- **Motion is deliberate.** It mostly answers scroll or the pointer; ambient motion is allowed where it is tasteful and quiet. `prefers-reduced-motion` removes it all, and no new runtime dependencies.
 - **Shared components** (`components/shared/**`, `useGallery`) change only opt-in: a new optional prop or parameter whose default keeps every other page identical.
 - **Read first:** `docs/superpowers/conventions/ui-ux.md` and the page's own components.
 
