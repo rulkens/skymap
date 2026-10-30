@@ -861,6 +861,30 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The Solar System exhibit’s title',
     alt: 'Exhibit: Solar System. One star, eight planets, and mostly distance. The Sun holds about 99.8% of the mass; the rest is spread across orbits that take from 88 days to 165 years.',
   },
+  // Home's classroom: Earth and Jupiter at their lessons' moments, alone on transparency, for the page to set side by
+  // side at one scale. The discs are 0.635 and 0.767 of their frames' widths (measured on the masters).
+  {
+    id: 'lessons-earth',
+    link: 'focus=body-earth&t=2026-06-21T12:00:00Z&pose=a,0,0,0,3.16,0,6e-16,0',
+    settings: { ...CUTOUT, settleMs: 6000 },
+    size: { width: 300, height: 300 },
+    widths: [600, 300],
+    title: 'Earth on 21 June 2026',
+    drawn: 'The surface is satellite photography; the clouds are one fixed composite.',
+    alt: 'Earth from its sunlit side on 21 June, Africa, Europe and the Arctic in daylight, on black.',
+    credit: 'Earth: NASA Blue Marble',
+  },
+  {
+    id: 'lessons-jupiter',
+    link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.3,5.6e-15,0`,
+    settings: { ...CUTOUT, settleMs: 6000 },
+    size: { width: 1000, height: 1000 },
+    widths: [1600, 800],
+    title: 'Jupiter on 14 March 2033',
+    drawn: 'Jupiter’s position and lit side are computed for the date. The cloud tops are a fixed map.',
+    alt: 'Jupiter, its cream and rust cloud bands and storms, on black.',
+    credit: 'Jupiter: Solar System Scope',
+  },
   {
     id: 'class-time',
     link: `${JUPITER}&pose=a,0,0,0,-1.9664,1.0,1.3e-13,0`,

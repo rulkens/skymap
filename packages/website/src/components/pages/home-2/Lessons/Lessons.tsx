@@ -1,21 +1,19 @@
 /*
- * Lessons — Home's pitch for the classroom: four questions a pupil can answer by going there, each over the
- * picture of the view its link opens (one a film of the clock running) and a line on what the link sets up.
- * The questions are the classroom page's own (data/lessons.ts and its class features), put to the pupil. Wide,
- * two by two, every picture one shape and every row's parts on shared lines; narrow, one after another. The
- * section stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky.
+ * Lessons — Home's pitch for the classroom: four questions a pupil can answer by going there, ordered outward, each
+ * under the thing it asks about, cut out of its own view and floated on the page. The first two stand on one
+ * horizon at one scale: a small Earth on 21 June and Jupiter eleven times wider, the app's clock riding on it, a
+ * hairline drawn between them as the section scrolls in. Then Orion with the app's search riding over it, and
+ * Andromeda. The questions are the classroom page's own (data/lessons.ts and its class features). The section
+ * stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky.
  */
-import type { CSSProperties } from 'react';
-
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
 import { appLink } from '../../../../data/appLink.ts';
 import { LESSON_TOPICS } from '../../../../data/lessons.ts';
-import motion from '../../../../styles/motion.module.css';
+import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
-import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Lessons.module.css';
@@ -24,48 +22,45 @@ const lesson = (shot: string) =>
   LESSON_TOPICS.flatMap((topic) => topic.lessons).find((row) => row.shot === shot)!;
 const feature = (shot: string) => CLASS_FEATURES.find((row) => row.shot === shot)!;
 
-// `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label. `over` lays a
-// control of the app, captured on a clear ground, over the picture: at its foot or at its `side`.
-const PARTS = [
-  {
-    ask: 'Can you see the North Pole on 21 June?',
-    line: 'Earth as the Sun lit it that day. Ask what it means for the length of a day there.',
-    shot: 'lesson-earth-june',
-    hash: lesson('lesson-earth-june').hash,
-    action: 'Earth on 21 June',
-  },
-  {
-    ask: 'How many times does Io go round while Europa goes round once?',
-    line: 'Jupiter with the clock paused. Start it, speed it up and count.',
-    shot: 'features-time-jupiter',
-    film: true,
-    over: { id: 'ui-timebar', side: false },
-    hash: feature('class-time').hash,
-    action: 'Jupiter and its moons',
-  },
-  {
-    ask: 'Which is farther away: Betelgeuse, or the centre of the Milky Way?',
-    line: 'Orion and the stars around it. Pupils search for both and compare.',
-    shot: 'features-constellations',
-    over: { id: 'ui-search', side: true },
-    hash: feature('class-search').hash,
-    action: 'Orion and its neighbours',
-  },
-  {
-    ask: 'Had our species appeared when this light left Andromeda?',
-    line: 'A photograph of Andromeda at its catalogued place. The light left 2.5 million years ago.',
-    shot: 'lesson-andromeda',
-    hash: lesson('lesson-andromeda').hash,
-    action: 'Andromeda, the nearest large galaxy',
-  },
-];
+const EARTH = {
+  ask: 'Can you see the North Pole on 21 June?',
+  line: 'Earth as the Sun lit it that day. Ask what it means for the length of a day there.',
+  hash: lesson('lesson-earth-june').hash,
+  action: 'Earth on 21 June',
+};
+const JUPITER = {
+  ask: 'How many times does Io go round while Europa goes round once?',
+  line: 'Jupiter with the clock paused. Start it, speed it up and count.',
+  hash: feature('class-time').hash,
+  action: 'Jupiter and its moons',
+};
+const ORION = {
+  ask: 'Which is farther away: Betelgeuse, or the centre of the Milky Way?',
+  line: 'Orion and the stars around it. Pupils search for both and compare.',
+  hash: feature('class-search').hash,
+  action: 'Orion and its neighbours',
+};
+const ANDROMEDA = {
+  ask: 'Had our species appeared when this light left Andromeda?',
+  line: 'A photograph of Andromeda at its catalogued place. The light left 2.5 million years ago.',
+  hash: lesson('lesson-andromeda').hash,
+  action: 'Andromeda, the nearest large galaxy',
+};
+const SCALE_LABEL = {
+  title: 'Earth and Jupiter at one scale',
+  credit: `${siteShot('lessons-earth').credit}. ${siteShot('lessons-jupiter').credit}`,
+};
 
-// Half the page grid; the whole width on a phone.
-const SIZES = '(max-width: 900px) 100vw, min(calc(50vw - 4rem), 36rem)';
-// An overlay is at most half a picture.
-const OVER_SIZES = '(max-width: 900px) 80vw, 18rem';
-// The horizon strip spans the window; on a phone its 4:3 cut is taken from a strip 3.43 times as wide as tall.
-const HORIZON_SIZES = '(max-width: 900px) 260vw, 100vw';
+// A question with its line and the view that answers it.
+const words = (part: typeof EARTH, className?: string) => (
+  <div className={cx(styles.words, className)}>
+    <h3>{part.ask}</h3>
+    <p className={styles.line}>{part.line}</p>
+    <ViewLink hang href={appLink(part.hash)}>
+      {part.action}
+    </ViewLink>
+  </div>
+);
 
 function Lessons() {
   return (
@@ -76,52 +71,58 @@ function Lessons() {
           Give the class a link and a question: a field trip with no bus, and nothing to install.
         </p>
       </div>
-      <div className={styles.parts}>
-        {PARTS.map((part, at) => (
-          <div key={part.shot} className={styles.part}>
-            <figure className={styles.figure}>
-              <div
-                className={cx(styles.frame, motion.unmask)}
-                style={{ '--reveal-delay': `${(at % 2) * 80}ms` } as CSSProperties}
-                data-reveal="unmask"
-              >
-                <div className={styles.ground}>
-                  {part.film ? (
-                    <FeatureFilm film={part.shot} sizes={SIZES} wide />
-                  ) : (
-                    <Shot id={part.shot} sizes={SIZES} />
-                  )}
-                </div>
-                {part.over && (
-                  <div className={cx(styles.over, part.over.side && styles.side)}>
-                    <Shot id={part.over.id} sizes={OVER_SIZES} />
-                  </div>
-                )}
-              </div>
-              <figcaption className={styles.caption}>
-                <ShotCaption id={part.shot} showDrawn={false} showTitle={false} open={false} />
-              </figcaption>
-            </figure>
-            <div className={styles.words}>
-              <h3>{part.ask}</h3>
-              <p className={styles.line}>{part.line}</p>
+      <div className={styles.near}>
+        <figure className={styles.horizon}>
+          <div className={styles.bodies}>
+            <div className={styles.earth}>
+              <Shot id="lessons-earth" sizes="(max-width: 900px) 16vw, 5rem" />
             </div>
-            <ViewLink hang href={appLink(part.hash)}>
-              {part.action}
-            </ViewLink>
+            <div className={styles.span} aria-hidden />
+            <div className={styles.jupiter}>
+              <Shot id="lessons-jupiter" sizes="(max-width: 900px) 145vw, 46rem" />
+            </div>
+            <div className={styles.clock}>
+              <Shot id="ui-timebar" sizes="(max-width: 900px) 80vw, 24rem" />
+            </div>
           </div>
-        ))}
+          <figcaption className={styles.label}>
+            <ShotCaption label={SCALE_LABEL} />
+          </figcaption>
+        </figure>
+        {words(EARTH, styles.first)}
+        {words(JUPITER, styles.second)}
       </div>
-      <figure className={styles.field}>
-        <div className={styles.horizon}>
-          <Shot id="mars-horizon" sizes={HORIZON_SIZES} />
+      <div className={styles.far}>
+        <div className={styles.part}>
+          <figure className={styles.figure}>
+            <div className={styles.field}>
+              <Shot id="features-constellations" sizes="(max-width: 900px) 100vw, 36rem" />
+            </div>
+            <div className={styles.search}>
+              <Shot id="ui-search" sizes="(max-width: 900px) 84vw, 26rem" alt="" />
+            </div>
+          </figure>
+          {words(ORION)}
+        </div>
+        <div className={styles.part}>
+          <figure className={styles.figure}>
+            <div className={styles.galaxy}>
+              <Shot id="lesson-andromeda" sizes="(max-width: 900px) 100vw, 36rem" />
+            </div>
+          </figure>
+          {words(ANDROMEDA)}
+        </div>
+      </div>
+      <figure className={styles.mars}>
+        <div className={styles.ground}>
+          <Shot id="mars-horizon" sizes="(max-width: 900px) 260vw, 100vw" />
         </div>
         <div className={styles.more}>
           <ObjLink hang href={sitePath('/classroom/')}>
             Use Skymap in the classroom
           </ObjLink>
         </div>
-        <figcaption className={styles.fieldCaption}>
+        <figcaption className={styles.marsCaption}>
           <ShotCaption id="mars-horizon" showDrawn={false} />
         </figcaption>
       </figure>
