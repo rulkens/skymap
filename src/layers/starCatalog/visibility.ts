@@ -19,6 +19,7 @@ export const starCatalogVisibility = [
     cluster: 'starCatalogs',
     items: STAR_CATALOG_IDS,
     bodies: SEEDED_STAR_CATALOGS,
+    selects: ['starCatalog'],
     // Each seeded set recedes from its own region; the survey stars keep drawing from far out.
     bands: {
       foreground: {

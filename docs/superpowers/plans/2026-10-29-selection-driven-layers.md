@@ -204,10 +204,10 @@ review: yes (Redux state)
   `assertSelectsDisjoint(entries: readonly VisibilityEntry[]): void` throws naming the kind when two entries
   list it.
 
-- [ ] **Step 1: Write the failing test** `throws when two show entries select the same kind` (and passes for
+- [x] **Step 1: Write the failing test** `throws when two show entries select the same kind` (and passes for
   `APP_VISIBILITY`).
-- [ ] **Step 2–4:** Run (FAIL), implement, run (PASS).
-- [ ] **Step 5: Commit** `feat(visibility): show entries name the selection kinds they hide`.
+- [x] **Step 2–4:** Run (FAIL), implement, run (PASS).
+- [x] **Step 5: Commit** `feat(visibility): show entries name the selection kinds they hide`.
 
 ### Task 6: `watchSelectionRevealSaga`
 

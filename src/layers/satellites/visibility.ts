@@ -5,5 +5,5 @@ import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry'
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
 
 export const satellitesVisibility = [
-  { key: 'satellites', items: SATELLITE_CLASSES },
+  { key: 'satellites', items: SATELLITE_CLASSES, selects: ['satellite'] },
 ] as const satisfies readonly VisibilityEntry[];
