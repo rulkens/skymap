@@ -127,3 +127,5 @@ Check the phone shot on its own terms: tap targets at least 44 px, no sideways s
   - `npx vitest run tests/packages/website tests/tools/site`.
 - **Shoot the after:** `--label after` at 1440, 1024 and 400.
 - **Show the owner:** a before/after pair per section (1440, and 400 where the phone layout changed) as dash checks. The verdict is the owner's.
+  - Each pair is ONE section at viewport size, at most about 1.5 screens tall. NEVER a full-page shot: the owner can't judge those ("a tiny sliver on my screen").
+  - Point to the live URL for the whole flow.
