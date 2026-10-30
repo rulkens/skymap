@@ -84,7 +84,7 @@ import {
  * `ease` defaults to `'easeInOutCubic'` (the natural choice for A→B camera moves).
  */
 export function tween(
-  ch: 'distance' | 'yaw' | 'pitch' | 'roll',
+  ch: 'distance' | 'yaw' | 'pitch' | 'roll' | 'fov',
   opts: { to: number; over: number; ease?: Ease; space?: Space; frame?: PoseFrame },
 ): CameraAction & { kind: 'set' } {
   return {

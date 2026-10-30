@@ -18,7 +18,7 @@ import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCamer
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, setLens } from '../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import {
@@ -75,13 +75,14 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   // `seedCameraRuntime` copies `base`, so the runtime's first frame reads
   // this commit as an outside one (see its header).
   store.dispatch(commitCameraPose(absoluteArm(neutralPose)));
+  store.dispatch(setLens(fovYRad));
 
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
   const radiusM = (id: SimBodyId): number =>
     SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
 
   const state = {
-    settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
+    settings: { orientation: DEFAULT_ORIENTATION },
     gpu: { galaxyPointRenderer: null, renderTargets: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },

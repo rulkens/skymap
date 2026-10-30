@@ -13,8 +13,8 @@ import { focusMoveClip } from '../../../../src/services/engine/camera/focusMoveC
 import { focusMoveDurationMs } from '../../../../src/services/engine/camera/focusMoveDurationMs';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
-import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import { setFovDeg } from '../../../../src/state/settings/core/cameraSettingsSlice';
+import { setLens, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { degToRad } from '../../../../src/utils/math/degToRad';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { framingPose } from '../../../../src/services/engine/camera/framingPose';
@@ -88,7 +88,7 @@ describe('focusMotions', () => {
         ),
       );
       // Before the first frame, so the clip compiles (and memoises) under the new lens.
-      if (fovDeg !== null) h.store.dispatch(setFovDeg(fovDeg));
+      if (fovDeg !== null) h.store.dispatch(setLens(degToRad(fovDeg)));
       // 1.6 s, past the ~0.83 s flight: the retirement frame is compared too.
       return Array.from({ length: 100 }, () => {
         h.frame();

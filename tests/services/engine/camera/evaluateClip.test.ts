@@ -509,6 +509,37 @@ describe('roll channel', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// The `fov` channel — the lens, frame-independent and log-space like distance.
+// ---------------------------------------------------------------------------
+
+describe('evaluateClip fov channel', () => {
+  it('a fov tween interpolates the lens geometrically', () => {
+    const data: ClipData = {
+      start: { ...START, fov: 0.1 },
+      timeline: [tween('fov', { to: 1, over: 1, ease: 'linear' })],
+    };
+
+    expect(evaluateClip(data, 0.5).fov).toBeCloseTo(Math.sqrt(0.1), 10);
+    expect(evaluateClip(data, 2).fov).toBe(1);
+  });
+
+  it('a clip without a fov track reports no lens, so the live one holds', () => {
+    const data: ClipData = { start: { ...START, fov: 0.3 }, timeline: [dollyTo(100, 2)] };
+
+    expect(evaluateClip(data, 1)).not.toHaveProperty('fov');
+  });
+
+  it('a fov track starts from the start pose lens', () => {
+    const data: ClipData = {
+      start: { ...START, fov: 0.3 },
+      timeline: [wait(1), tween('fov', { to: 0.6, over: 1 })],
+    };
+
+    expect(evaluateClip(data, 0.5).fov).toBe(0.3);
+  });
+});
+
 describe('geodesic composite', () => {
   const FOV_Y = (50 * Math.PI) / 180;
   const TO = { target: [30, 40, 0] as Vec3, distance: 2 };

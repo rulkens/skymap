@@ -338,7 +338,7 @@ describe('compileClip flyPath', () => {
   });
 
   it('rejects a composite whose sample keys differ from its channels', () => {
-    const baseTracks = { distance: [], yaw: [], pitch: [], roll: [], target: [] };
+    const baseTracks = { distance: [], yaw: [], pitch: [], roll: [], target: [], fov: [] };
     const track: CompositeTrack = {
       startSec: 0,
       endSec: 1,

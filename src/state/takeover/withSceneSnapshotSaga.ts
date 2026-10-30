@@ -9,8 +9,8 @@ import { call, put, select } from 'typed-redux-saga';
 
 import { captureScene } from '../scene/captureScene';
 import { restoreSceneSaga } from '../scene/restoreSceneSaga';
-import { mergeSnapshot } from '../settings/mergeSnapshotAction';
-import { DEFAULT_FOV_DEG } from '../../data/defaults';
+import { setLens } from '../camera/cameraSlice';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/cameraFraming';
 
 export function* withSceneSnapshotSaga(
   body: () => Generator,
@@ -35,8 +35,8 @@ export function* withSceneSnapshotSaga(
   // `MAX_DISTANCE_MPC` once the FOV narrows — on a portrait phone the
   // Observable Universe shell overflows the frame below ~59°, barely under the
   // 60° default. So the lens is takeover-owned, not viewer-owned, and the
-  // snapshot above carries `camera` back out on exit.
-  yield* put(mergeSnapshot({ camera: { fovDeg: DEFAULT_FOV_DEG } }));
+  // snapshot above carries the viewer's lens back out on exit.
+  yield* put(setLens(DEFAULT_FOV_Y_RAD));
 
   try {
     yield* body();

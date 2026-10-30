@@ -85,7 +85,7 @@ import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 const ZERO_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
 
 // Every channel, used to build the initial baseTracks record.
-const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'roll', 'target'];
+const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'roll', 'target', 'fov'];
 
 // ---------------------------------------------------------------------------
 // Mutable accumulator — threaded through the recursive walk.
@@ -126,7 +126,8 @@ function startPoseAt(atSec: number, acc: Accum): CameraPose {
 // The first base segment after a composite continues from its final sample;
 // `from` stays absent otherwise, so a clip without composites compiles as before.
 function continuedFromComposite(seg: BaseSegment, acc: Accum): BaseSegment {
-  if (seg.from !== undefined || seg.channel === 'roll') return seg;
+  // No composite samples roll or the lens, so their segments run on from their own values.
+  if (seg.from !== undefined || seg.channel === 'roll' || seg.channel === 'fov') return seg;
   const ch = seg.channel;
   const { value, byComposite } = channelValueAt(
     ch,
