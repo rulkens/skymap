@@ -3,7 +3,6 @@ import type { SatellitesRuntime } from './@types/SatellitesRuntime';
 
 export function destroy(runtime: SatellitesRuntime): void {
   runtime.cancelWake();
-  runtime.selected.stop();
   runtime.propagator.stop();
   runtime.renderer.destroy();
   runtime.orbitRenderer.destroy();

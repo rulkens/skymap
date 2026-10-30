@@ -17,11 +17,8 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 
-// The row reads only `selected` off the runtime; `slot` is carried, never called here.
-const rowWith = (satelliteSelected: boolean) =>
-  satellitesAssetRows({
-    selected: { any: () => satelliteSelected, stop: () => {} },
-  } as unknown as SatellitesRuntime)[0]!;
+// `slot` is carried, never called here.
+const ROW = satellitesAssetRows({} as SatellitesRuntime)[0]!;
 
 const FAR: DemandCtx = {
   settings: {
@@ -36,25 +33,25 @@ const FAR: DemandCtx = {
   cameraPosMpc: [1e-6, 0, 0],
   simDays: CONST_J2000,
   tier: 'medium',
+  selectedKinds: new Set(),
 };
+const FAR_SELECTED: DemandCtx = { ...FAR, selectedKinds: new Set(['satellite']) };
 
 describe('satellitesAssetRows', () => {
   it('neither loads nor holds the catalog far from Earth with nothing asking for it', () => {
-    const row = rowWith(false);
-    expect(row.demand(FAR)).toBe(false);
-    expect(row.release?.(FAR)).toBe(true);
+    expect(ROW.demand(FAR)).toBe(false);
+    expect(ROW.release?.(FAR)).toBe(true);
   });
 
   it('loads and holds the catalog far from Earth while a satellite is selected', () => {
-    const row = rowWith(true);
-    expect(row.demand(FAR)).toBe(true);
-    expect(row.release?.(FAR)).toBe(false);
+    expect(ROW.demand(FAR_SELECTED)).toBe(true);
+    expect(ROW.release?.(FAR_SELECTED)).toBe(false);
   });
 
   // The fade registry throws on an identity it does not hold, and it throws from inside the
   // slot's first state change, so a stale gate silently stops the catalog from ever loading.
   it('gates only a fade identity the Layer declares', () => {
-    const { gates } = rowWith(false);
+    const { gates } = ROW;
     if (gates === undefined) return;
     const declared = satellitesVisibility.flatMap(fadeIdentitiesOf).map(fadeIdentityKey);
     expect(declared).toContain(fadeIdentityKey(gateIdentityOf(gates)));

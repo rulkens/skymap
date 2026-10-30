@@ -170,16 +170,16 @@ review: yes (Redux state)
   ```
   The satellites row demands with `ctx.selectedKinds.has('satellite')` where it read `runtime.selected.any()`.
 
-- [ ] **Step 1: Write the failing test** in `buildDemandCtx.test.ts`:
+- [x] **Step 1: Write the failing test** in `buildDemandCtx.test.ts`:
   `selectedKinds holds the select and focus kinds, never hover` — select `{type:'satellite'}`, focus
   `{type:'body'}`, hover `{type:'starCatalog'}` → `[...ctx.selectedKinds].sort()` equals `['body','satellite']`.
-- [ ] **Step 2: Run** `npx vitest run tests/services/engine/wiring/buildDemandCtx.test.ts` — FAIL.
-- [ ] **Step 3:** Add the member and fill it in `buildDemandCtx`; switch the asset row; update its test's stub
+- [x] **Step 2: Run** `npx vitest run tests/services/engine/wiring/buildDemandCtx.test.ts` — FAIL.
+- [x] **Step 3:** Add the member and fill it in `buildDemandCtx`; switch the asset row; update its test's stub
   ctx (`selectedKinds`) and drop `runtime.selected` from it.
-- [ ] **Step 4:** Delete `createSelectedSatellites`/`SelectedSatellites` and the runtime field; replace
+- [x] **Step 4:** Delete `createSelectedSatellites`/`SelectedSatellites` and the runtime field; replace
   `LayerCoreDeps.store` with the two thunks.
-- [ ] **Step 5: Run** `npm run typecheck`, full `npm test` — PASS; `grep -rn "deps\.store\|createSelectedSatellites" src` — no code hits.
-- [ ] **Step 6: Commit** `refactor(layers): demand reads selectedKinds; Layers stop holding the store`.
+- [x] **Step 5: Run** `npm run typecheck`, full `npm test` — PASS; `grep -rn "deps\.store\|createSelectedSatellites" src` — no code hits.
+- [x] **Step 6: Commit** `refactor(layers): demand reads selectedKinds; Layers stop holding the store`.
 
 ---
 

@@ -336,6 +336,7 @@ function makeState(
       },
     },
     visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([
     ...meshAssetRows(state),
