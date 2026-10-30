@@ -19,9 +19,9 @@ nothing.
   `ctx.settings.galaxyCatalogs.items[id]?.enabled === true`) — no scale
   term anywhere in the demand function for glade, sdss, milliquas, stars,
   or the mcpm volume.
-- At the Earth boot view, the `surveyDeepZoom` band
-  (`src/data/scaleFadeBands.ts`,
-  `{ fullAt: FOREGROUND_MAX_DISTANCE_MPC, goneAt: 0.002 }`) is fully faded
+- At the Earth boot view, the Layer-declared `SURVEY_DEEP_ZOOM` band
+  (`src/data/bands/surveyDeepZoom.ts`,
+  `{ in: [0.002, FOREGROUND_MAX_DISTANCE_MPC] }`) is fully faded
   to zero below 0.002 Mpc, and boot starts well inside that. So glade, sdss,
   milliquas, and the mcpm volume render nothing at boot, yet all fetch at
   boot — roughly 68 MB downloaded to draw nothing.
@@ -59,7 +59,5 @@ covers the gap.
 Deliberately sequenced AFTER the boot load-priority scheduler work (bounded
 priority queue + static per-row rank + low-res body texture atlas). The two
 compose: the scheduler reorders what gets fetched first, this gate reduces
-what gets fetched at all. See also
-[`2026-07-24-filaments-flow-scale-bands.md`](2026-07-24-filaments-flow-scale-bands.md) —
-filaments and flow need `SCALE_FADE_BANDS` rows of their own before they can
-participate in this gate.
+what gets fetched at all. Filaments and flow declare `SURVEY_DEEP_ZOOM` on their
+show entries, so both can participate in this gate.

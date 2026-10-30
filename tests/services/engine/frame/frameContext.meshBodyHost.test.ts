@@ -6,9 +6,17 @@
  * the eye 2 m from the petunias with Earth at its back.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Every craft present, so the hostless Voyager rows exist without loading their tracks.
+vi.mock('../../../../src/utils/scene/spacecraftPresent', () => ({
+  spacecraftPresent: () => true,
+}));
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import { HOSTLESS_MESH_BODIES } from '../../../../src/data/bodies/hostlessMeshBodies';
+import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -21,7 +29,7 @@ import type { CameraProjection } from '../../../../src/@types/camera/CameraProje
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -36,7 +44,7 @@ const STATE = {
     renderTargets: {},
     compositor: {},
   },
-  terrain: FLAT_TERRAIN,
+  terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: BODY_SLAB_ROWS,
@@ -75,6 +83,7 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
         altitudeMpc: pose.distance,
         nowMs: 0,
         simDays: CONST_J2000,
+        bodyStates: deriveBodyStates(CONST_J2000),
       },
       { width: 1920, height: 1080 },
     );
@@ -84,5 +93,34 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
     expect(
       view.slabs.some((slab) => slab.frame.kind === 'body-m' && slab.frame.hostId === 'earth'),
     ).toBe(true);
+  });
+});
+
+describe('deriveFrameContext — slab candidates yield at the foreground band', () => {
+  const candidateIdsAt = (eyeFromHomeMpc: number): readonly string[] => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: eyeFromHomeMpc };
+    const ctx = deriveFrameContext(STATE, {
+      cam: assembleOrbitCamera(pose, PROJECTION, IDENTITY, IDENTITY),
+      arm: absoluteArm(pose),
+      altitudeMpc: pose.distance,
+      nowMs: 0,
+      simDays: CONST_J2000,
+      bodyStates: deriveBodyStates(CONST_J2000),
+    });
+    if (!ctx.isReady) throw new Error('fixture not ready');
+    return ctx.slabBodyCandidates.map((row) => row.anchorId);
+  };
+  const rowIds: string[] = [
+    ...BODY_SLAB_ROWS.map((row) => row.anchorId),
+    ...HOSTLESS_MESH_BODIES.map((body) => body.id),
+  ];
+
+  it('holds every body and hostless mesh row 1 AU from home', () => {
+    expect(candidateIdsAt(SCALE_UNITS.AU_TO_MPC)).toEqual(expect.arrayContaining(rowIds));
+  });
+
+  it('holds no body or hostless mesh row at the foreground cutoff from home', () => {
+    const ids = candidateIdsAt(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(ids.filter((id) => rowIds.includes(id))).toEqual([]);
   });
 });

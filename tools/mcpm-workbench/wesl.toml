@@ -11,7 +11,7 @@
 # imports in or out — so it can sit outside `root` and just be listed in
 # `include`.
 #
-# wesl-plugin locates this file from the *explicit* `weslToml` option in
+# weslStaticPlugin locates this file from the *explicit* `weslToml` option in
 # vite.config.ts, not from the Vite `root` or `process.cwd()` — see that
 # file's header for why the explicit path is mandatory.
 

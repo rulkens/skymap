@@ -11,11 +11,13 @@ export type Label2DProjection = {
   readonly vp: Float32Array | Float64Array;
   /**
    * The same matrix narrowed for the renderer upload. NEAR0's is additionally
-   * rescaled to clip metres (`near0OverlayVpF32`) — NDC-identical to `vp`, but
+   * rescaled by `clipScale` (`near0OverlayVpF32`) — NDC-identical to `vp`, but
    * NOT interchangeable with it for anything divided by `clip.w`.
    */
   readonly vpF32: Float32Array;
   readonly viewportPx: Vec2;
   /** The drawn view's pixels per radian — the label shader's `cam.pxPerRad`. */
   readonly pxPerRad: number;
+  /** The uniform clip scale `vpF32` carries (`near0OverlayClipScale`); 1 on COSMO. */
+  readonly clipScale: number;
 };

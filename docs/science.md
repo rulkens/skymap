@@ -79,7 +79,7 @@ Three kinds of content share the scene; this section says which is which.
 
 - **Bodies**: ray-traced analytic spheres, flat-lit until their surface texture streams in ([planet](../src/services/gpu/shaders/bodies/planet/fragment.wesl), [texturedBody](../src/services/gpu/shaders/bodies/texturedBody/fragment.wesl)).
 - **Earth**: a cubesphere with PBR albedo, roughness, ocean mask and normal relief; night lights as emission; a cloud shell that shadows the ground.
-- **Surface tiles**: streamed by screen density from a quadtree cut over an equirectangular pyramid, a Blue Marble base to z7 with Sentinel-2 insets to z13 in selected regions ([cutSurfaceTiles.ts](../src/utils/surfaceTiles/cutSurfaceTiles.ts), [surfaceTileParams.ts](../src/data/bodies/surfaceTileParams.ts)).
+- **Surface tiles**: streamed by screen density from a quadtree cut over an equirectangular pyramid, a Blue Marble base to z7 with Sentinel-2 insets to z13 in selected regions ([cutSurfaceTiles.ts](../src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts), [surfaceTileParams.ts](../src/data/bodies/surfaceTileParams.ts)).
 - **Atmospheres**: nine bodies carry constituent tables, per-channel scattering and absorption with Rayleigh or Henyey-Greenstein phase, drawn as a multiply-then-add shell over precomputed transmittance, multiple-scattering, and sky-view LUTs in the style of [Bruneton & Neyret 2008](https://github.com/ebruneton/precomputed_atmospheric_scattering) and [Hillaire 2020](https://sebh.github.io/publications/egsr2020.pdf) ([atmosphereParams.ts](../src/layers/body/present/atmosphereParams.ts)).
 - **Saturn's rings**: a single-scattering Chandrasekhar slab with backscatter phase and an analytic planet shadow ([ring](../src/services/gpu/shaders/bodies/ring/fragment.wesl)).
 - **Glints**: moons too small to resolve draw as points scaled by apparent size, albedo, and illuminated phase.
@@ -91,7 +91,7 @@ Three kinds of content share the scene; this section says which is which.
 - **Filaments and constellations**: instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/layers/filaments/render/filamentRenderer.ts), [constellationRenderer.ts](../src/layers/constellations/render/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time.
 - **Structure markers**: world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/layers/structure/render/structureMarkerRenderer.ts)).
 - **Zone of avoidance**: a reduced-resolution analytic raymarch of a galactic-latitude wedge, captioned in curved MSDF lettering ([band.wesl](../src/services/gpu/shaders/zoneOfAvoidance/band.wesl)).
-- **Horizon shell**: the particle horizon at 14.3 Gpc, a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/services/gpu/renderers/horizonShell/horizonShellRenderer.ts)).
+- **Horizon shell**: the particle horizon at 14.3 Gpc, a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/layers/cosmicHorizon/render/horizonShellRenderer.ts)).
 
 ### Volumes and flow
 

@@ -30,7 +30,7 @@ import type { VisibilityEntry } from '../layer/VisibilityEntry';
 import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
-import type { LayerTerrain } from '../layer/LayerTerrain';
+import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
@@ -87,8 +87,8 @@ export type EngineState = {
   label3DProducers: readonly Label3DProducer[];
   /** Core's conics group then every Layer's `guides.orbitTrails` group, each with its fade bound. */
   orbitTrailGroups: readonly GatedOrbitTrailGroup[];
-  /** `FLAT_TERRAIN` until `createLayers` folds core's provider and every Layer's. */
-  terrain: LayerTerrain;
+  /** `datumOnlyTerrainHeight` until `createLayers` folds every Layer's `heightAt`. */
+  terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
   /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */

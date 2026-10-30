@@ -1,7 +1,7 @@
 /**
  * produceSceneBodyCaptions — candidate math for Earth's and the planets' captions, read beside
  * the missions Layer's craft captions (mesh-body cases) and the blackHoles Layer's Galactic
- * Centre caption (a control whose reach is not the solar system's). The producer emits EVERY
+ * Centre caption (a control with no reveal band). The producer emits EVERY
  * candidate every frame, so cases read the candidate's `fadeAlpha` (its TARGET). The shared
  * fade-band / occlusion / registry-ramp mechanics are covered here once, on core's bodies.
  */
@@ -16,7 +16,6 @@ import { sceneBodyLabels } from '../../../../src/layers/body/present/sceneBodyLa
 import { produceMissionCaptions } from '../../../../src/layers/missions/present/produceMissionCaptions';
 import { meshBodyCaption } from '../../../../src/utils/labels/meshBodyCaption';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/data/labels/solarSystemLabelMaxDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -58,9 +57,10 @@ const SCENE_BODIES = positionedBodiesOf(
   deriveBodyStates(CONST_J2000),
 );
 
-function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
+function makeCtx(camPos: Vec3): FrameView {
   return {
     snapshot: {
+      bodyStates: deriveBodyStates(CONST_J2000),
       simDays: CONST_J2000,
       nowMs: 0,
       meshBodies: SCENE_MESH_BODIES,
@@ -68,7 +68,6 @@ function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
       focusBlend: 0,
       focus: ZERO_FOCUS,
     },
-    cam: { distance },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     canvasSize: { width: 1280, height: 720 },
@@ -155,17 +154,6 @@ describe('produceSceneBodyCaptions', () => {
     const offOut = produceSceneBodyCaptions(makeState(), makeCtx(camPos), fadeOf(false));
     expect(fadeAlphaOf(offOut.labels, EARTH_LABEL_ID)).toBe(0);
     for (const id of PLANET_LABEL_IDS) expect(fadeAlphaOf(offOut.labels, id)).toBe(0);
-  });
-
-  it('keeps captioning Sgr A* past the solar-system gate while Earth and the planets go dark', () => {
-    // `captionFadeRules.sgrAStar` has NO SOLAR_SYSTEM_REACH row. A camera near Earth keeps the
-    // Sgr A* distance ~R0, while `ctx.cam.distance` (the quantity the gate reads) is pushed past it.
-    const camPos = worldPosOf(EARTH_LABEL_ID);
-    const ctx = makeCtx(camPos, SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2);
-    const out = produceSceneBodyCaptions(makeState(), ctx, fadeOf());
-    expect(sgrAStarAlpha(makeState(), ctx)).toBeGreaterThan(0);
-    expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBe(0);
-    for (const id of PLANET_LABEL_IDS) expect(fadeAlphaOf(out.labels, id)).toBe(0);
   });
 
   it('drops a caption once its subject outgrows the viewport', () => {

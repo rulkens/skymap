@@ -12,7 +12,7 @@ import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { StarRowFixture } from '../../support/selectionResolverOver';
 

@@ -29,4 +29,6 @@ export type SelectionRef =
       readonly source: StarCatalogSourceType;
       readonly index: number;
     }
-  | { readonly type: 'blackHole'; readonly id: BlackHoleId };
+  | { readonly type: 'blackHole'; readonly id: BlackHoleId }
+  // A satellite is keyed by its NORAD catalog number, which outlives any one day's file.
+  | { readonly type: 'satellite'; readonly noradId: number };

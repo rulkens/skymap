@@ -23,11 +23,8 @@ import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
-import { deriveBodyStates } from './deriveBodyStates';
+import { frameBodyStates } from './frameBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
-import { planSurfaceTiles } from './surfaceTilePlanner/planSurfaceTiles';
-import { surfaceTileOverOf } from './surfaceTilePlanner/surfaceTileOverOf';
-import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -88,10 +85,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const pending = selectPendingInput(stored);
   const steps = pendingToInputSteps(pending, canvasPx);
 
-  // Derived BEFORE the step: the follow driver aims at where the body is this frame,
-  // and this call primes the one-deep `deriveBodyStates` memo.
+  // Derived BEFORE the step: the follow driver aims at where the body is this frame. The
+  // ONE placement of the moving selection; the frame context takes this same Map.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays);
+  const bodyStates = frameBodyStates(stored, state.selectionKindRows, simDays);
 
   const {
     next,
@@ -107,7 +104,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt: state.terrain.heightAt,
+    terrainHeightAt: state.terrainHeightAt,
     clipEpoch,
     schemes: deps.controlSchemes,
   });
@@ -139,7 +136,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // Shared with `pickFrameContext`; only `nowMs`/`poseBasis`/`upBasis`/`simDays` vary
+  // Shared with `pickFrameContext`; only the time, the bases and the body snapshot vary
   // between callers. Safe here because `state.cameraRuntime = next` above already
   // made `state`'s runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
@@ -148,6 +145,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     poseBasis,
     upBasis,
     simDays,
+    bodyStates,
   });
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
@@ -175,8 +173,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // The frame's views, once (mono is `[canvas]`). `deriveView` reads no stamp, so it can
-  // run ahead of focus/plans, and must run ahead of the surface-cut planner and every
-  // Layer's `frame` hook so they can walk every view's frustum.
+  // run ahead of focus/plans, and must run ahead of every planner row so each can walk
+  // every view's frustum.
   const canvas = deriveView(
     snapshot,
     cam,
@@ -219,18 +217,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
   }
 
-  // The one writer of the frame's tile plan; the passes and the terrain seam read it.
-  const surfaceTiles = state.subsystems.surfaceTiles;
-  if (surfaceTiles !== null) {
-    surfaceTiles.plan = planSurfaceTiles(
-      views,
-      surfaceTileOverOf(views),
-      surfaceTiles.stream.residency,
-      (bodyId) => bodySurfaceTier(state, bodyId),
-    );
-    surfaceTiles.stream.apply(surfaceTiles.plan);
-  }
-
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
   // short-circuits.
@@ -267,9 +253,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     rootState,
     nowMs,
     {
-      // Outside the engagement: the manifest loads before anything can
-      // engage, and voting only on engaged frames would sleep the loop mid-fetch.
-      surfaceTilesAnimating: surfaceTiles?.plan.awake ?? false,
       labelsAnimating,
       probeDue: state.cubemapCaptures.probe.due,
       // Read AFTER `renderFrame`: every planner row ran inside it.

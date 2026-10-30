@@ -6,7 +6,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { horizonShellPass } from './horizonShellPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
 import { markerLinesPass } from './markerLinesPass';
@@ -14,18 +13,19 @@ import { labelsCosmoPass } from './labelsCosmoPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { labelsNearPass } from './labelsNearPass';
+import { labelsWorldPass } from './labelsWorldPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 
 /** Core's contributed passes, as a flat set; `FRAME_ORDER` orders them. */
 export const CONTENT_PASSES: readonly ContentPass[] = [
-  horizonShellPass,
   orbitTrailsPass,
   selectionRingPass,
   near0SelectionRingPass,
   markerLinesPass,
   labelsCosmoPass,
   labelsNearPass,
+  labelsWorldPass,
   clipPathDebugPass,
   skyCubemapBlitPass,
   domeResamplePass,

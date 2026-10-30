@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { collectVisibilityGates } from '../../../../src/services/engine/wiring/collectVisibilityGates';
 import { installVisibilityGates } from '../../../../src/services/engine/wiring/installVisibilityGates';
@@ -58,7 +58,7 @@ function makeState(
   const state = {
     settings: writes.reduce((s, p) => settingsReducer(s, setVisibility(p)), INITIAL_SETTINGS),
     subsystems: { fades },
-    visibilityEntries: APP_VISIBILITY,
+    visibilityEntries: APP_VISIBILITY_REGISTRY,
     assetRows: Object.entries(gated).map(([key, gates]) => ({ key, gates, slot: slots[key] })),
   } as unknown as EngineState;
   state.visibilityGates = collectVisibilityGates(state);

@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import {
   createProceduralDiskSubsystem,
   type ProceduralDiskDeps,

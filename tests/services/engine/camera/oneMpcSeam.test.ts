@@ -33,7 +33,6 @@ const TS_FILES: readonly string[] = [
   ...walkFiles('src/services/camera', ['.ts']),
   ...walkFiles('src/utils/camera', ['.ts']),
   ...walkFiles('src/layers', ['.ts']),
-  'src/utils/surfaceTiles/cutSurfaceTiles.ts',
   'src/utils/star/starSphereRangeM.ts',
 ].filter((f) => !SEAM_FILES.includes(f));
 
@@ -107,10 +106,6 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/services/engine/camera/bodyLikeFraming.ts',
     'framing-bridge precedent — converts a body radius to Mpc so bodyFocusDistance and the returned FocusFraming.radius can compose with Mpc-shaped framing math (camera-pivot controller verification, spec §10), not a pose re-derivation',
-  ],
-  [
-    'src/services/engine/frame/near0OverlayClipScale.ts',
-    'clip-unit precedent — the factor is a UNIFORM RESCALE of the NEAR0 overlay clip space (NDC-invariant, keeping clip w off the rasterizer floor); it converts no pose and no position, and the anchors it projects stay in Mpc',
   ],
   [
     'src/services/engine/camera/pivotRadiusMpc.ts',

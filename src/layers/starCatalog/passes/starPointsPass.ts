@@ -58,21 +58,16 @@
  *
  * ### When it draws
  *
- * `enabled` gates on the shared near-field distance gate
- * (`FOREGROUND_MAX_DISTANCE_MPC`), the backdrop-dissolve band
- * (`STAR_BACKDROP_DISSOLVE` > 0), AND an unresolved seeded star —
- * the same sort `draw` consumes, so the enable gate and the uploaded
- * set cannot disagree. The backdrop is a minimum-size additive sprite field,
- * so at galaxy framing the whole roster collapses onto a few pixels into one
- * bright blob; the `STAR_BACKDROP_DISSOLVE` band dissolves it smoothly (its rgb scaled
- * per frame in `draw`) and completes STRICTLY inside the shared gate, so the
- * gate's hard cut lands on already-black sprites and never pops. Once the band
- * hits 0 the layer disables outright — the "opacity 0 ⇒ no render" house rule
- * — which also empties the `(hdr, NEAR0)` render step the executor then skips.
- * The distance gate and the band run before the sort so it is not run at all
- * when the camera is far. The sort is bound at `ctx.drawCamPos` (absolute
- * frame) while `draw` rebases at `view.camPos` (NEAR0's origin-relative frame);
- * the two coincide because `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
+ * `enabled` gates on a seeded star set handing a value above 0 AND an
+ * unresolved seeded star — the same sort `draw` consumes, so the enable gate
+ * and the uploaded set cannot disagree. Each set's handed value carries its
+ * entry's backdrop band (dissolving it from its own region before the sprite
+ * field collapses into one blob at galaxy framing), so once every set hands 0
+ * the layer disables outright — the "opacity 0 ⇒ no render" house rule — which
+ * also empties the `(hdr, NEAR0)` render step the executor then skips. The
+ * sort is bound at `ctx.drawCamPos` (absolute frame) while `draw` rebases at
+ * `view.camPos` (NEAR0's origin-relative frame); the two coincide because
+ * `RENDER_ORIGIN_MPC` is the heliocentric origin [0,0,0].
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -86,24 +81,15 @@ import { SEEDED_STAR_REFS } from '../present/seededStarRefs';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../data/rendering/foregroundMaxDistance';
-import { STAR_BACKDROP_DISSOLVE } from '../data/starBackdropDissolve';
+import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
 import { starExposureRamp } from '../../../utils/star/starExposureRamp';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../data/famousStarPickRadiusPx';
-import { regionById } from '../../../utils/regions/regionById';
 import { regionOfBody } from '../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
 import { focusAlphaMultiplier } from '../../../utils/structure/focusAlphaMultiplier';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
-
-// The scale regime the star backdrop belongs to. Its anchor — not the render
-// origin — is what the dissolve band measures the camera against, so the band
-// keeps meaning the moment a star map is seeded somewhere other than the Sun.
-const STAR_BACKDROP_REGION = regionById('solar-neighbourhood');
 
 /** The regime whose satellites the Galactic Centre's click target covers. */
 const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
@@ -112,28 +98,13 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
   return {
     name: 'star-points',
     fade: 'starCatalog',
-    // Deliberately OFF the sky-cubemap capture roster: the capture face pose
-    // carries a placeholder `distance: 1` Mpc (`cubemapCaptureFrame.ts`'s pose)
-    // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
-    // anything. The S-stars need finite-distance lensing rather than an
-    // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
+    // Deliberately OFF the sky-cubemap capture roster: the S-stars need
+    // finite-distance lensing rather than an at-infinity cubemap — see
+    // `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
 
-    // Distance first, backdrop-band second, sort last — see the module
-    // header's gate note.
-    enabled(state, ctx, _view) {
-      if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-      // Once the dissolve band has zeroed the backdrop, DISABLE the layer rather
-      // than draw black sprites — the "opacity 0 ⇒ no render" house rule, which
-      // also empties the (hdr, NEAR0) step so the executor skips it. Keyed on the
-      // camera's distance from the star map's own region anchor — the Sun, at
-      // [0,0,0], so this is today the same number as the raw origin distance
-      // (drawCamPos is the absolute-frame eye).
-      const regionDistMpc = regionRelativeDistanceMpc(
-        ctx.drawCamPos,
-        STAR_BACKDROP_REGION,
-        sceneBodyStates(state, ctx),
-      );
-      if (fadeBand(STAR_BACKDROP_DISSOLVE, regionDistMpc) <= 0) return false;
+    // Fade before the sort, so the sort is not run at all when the camera is far.
+    enabled(_state, ctx, _view, fade) {
+      if (seededStarsHandedZero(fade)) return false;
       return sceneBodyPresentation(ctx).unresolved.some(({ body }) =>
         SEEDED_STAR_REFS.has(body.id),
       );
@@ -149,17 +120,8 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
       // view translation `rebaseViewProj` folds into the vp.
       const camPos = view.camPos;
 
-      // The backdrop-dissolve alpha for THIS frame, keyed on the camera's distance
-      // from the star map's region anchor — the same quantity `enabled` gates on,
-      // read here from `view.camPos` (the frames coincide; see the module header).
-      // It scales each star's uploaded colour below.
-      const backdropFade = fadeBand(
-        STAR_BACKDROP_DISSOLVE,
-        regionRelativeDistanceMpc(camPos, STAR_BACKDROP_REGION, sceneBodyStates(state, ctx)),
-      );
-
       // Re-express each anchor as a small camera-relative vector, and premultiply
-      // the colour by the dissolve alpha. The subtraction runs on the f64 seed
+      // the colour by the star's fade. The subtraction runs on the f64 seed
       // coordinates before the renderer narrows to f32; narrowing the raw ~1e-6
       // Mpc anchor would already have lost the low bits. Re-partitioned and
       // re-uploaded every frame — the point set is ≤25 stars, so the per-frame
@@ -176,7 +138,6 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
         // Stars outside a focused structure's sphere recede with the survey; each fades
         // with its own catalog's handed value.
         const fade =
-          backdropFade *
           focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus) *
           catalogFade[SEEDED_STAR_REFS.get(star.id)!.item];
         return {
@@ -242,9 +203,9 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
     // star crosses its `resolvePx`). One table per source, never
     // merged: the index means nothing without the code beside it. Anchors are rebased
     // into the camera-relative frame in f64 before narrowing, the SAME seam
-    // `draw` uses — the backdrop-dissolve colour scale is a visual-only concern
-    // the pick omits (pick has no opacity; the `enabled` gate already drops the
-    // whole layer once the band zeroes).
+    // `draw` uses — the fade colour scale is a visual-only concern the pick
+    // omits (pick has no opacity; the `enabled` gate already drops the whole
+    // layer once every seeded set hands 0).
     drawPick(pass, view, ctx, state) {
       const pickRenderer = state.gpu.bodyPickRenderer;
       if (pickRenderer === null) return;

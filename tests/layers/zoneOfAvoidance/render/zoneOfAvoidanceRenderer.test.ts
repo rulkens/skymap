@@ -5,7 +5,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { ZoneOfAvoidanceTuning } from '../../../../src/@types/settings/ZoneOfAvoidanceTuning';
 
 // Minimal mock GPUDevice — Vitest runs in Node without a WebGPU surface.
-// Mirrors horizonShellRenderer.test.ts / labelRenderer.test.ts's pattern:
+// Mirrors labelRenderer.test.ts's pattern:
 // every create* call returns a plausibly-shaped stand-in; createRenderPipeline
 // optionally records the descriptors so pipeline shape can be asserted.
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {

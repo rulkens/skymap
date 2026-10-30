@@ -27,7 +27,7 @@ function TimeSection({ time, onCommand }: TimeSectionProps) {
   return (
     <section className={controls.section}>
       <h2 className={controls.heading}>Time</h2>
-      <p role="status" className={styles.readout}>
+      <p role="status" className={controls.status}>
         {time.mode === 'live' ? 'Live' : dateOf(time.simDays)}
         {time.paused
           ? ', paused'
@@ -60,7 +60,7 @@ function TimeSection({ time, onCommand }: TimeSectionProps) {
           className={controls.button}
           onClick={() => onCommand({ name: 'timeGoLive', payload: null })}
         >
-          Live
+          Go live
         </button>
       </div>
       <div className={controls.row}>

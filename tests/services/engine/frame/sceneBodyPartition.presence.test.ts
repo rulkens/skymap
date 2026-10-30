@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
@@ -11,7 +12,7 @@ import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRe
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { EARTH_SCENE_BODY_IDS } from '../../../../src/data/bodies/earthSceneBodyIds';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { APP_VISIBILITY } from '../../../../src/compositions/appVisibility';
+import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyRuntime } from '../../../../src/layers/body/@types/BodyRuntime';
@@ -23,7 +24,7 @@ import type { StarBody } from '../../../../src/@types/scene/StarBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
@@ -38,13 +39,13 @@ const STATE = {
     renderTargets: {},
     compositor: {},
   },
-  terrain: FLAT_TERRAIN,
+  terrainHeightAt: datumOnlyTerrainHeight,
   subsystems: {
     texturedDisks: {},
     fades: { opacityOf: () => 1 },
     clipPlayer: { clipOpacityOf: () => 1 },
   },
-  visibilityEntries: APP_VISIBILITY,
+  visibilityEntries: APP_VISIBILITY_REGISTRY,
   selectionRows: { hover: null, select: null, focus: null },
   slabRows: [],
   settings: {
@@ -70,6 +71,7 @@ const viewAt = (simDays: number) =>
       altitudeMpc: POSE.distance,
       nowMs: 0,
       simDays,
+      bodyStates: deriveBodyStates(simDays),
     },
     { width: 1920, height: 1080 },
   )!;

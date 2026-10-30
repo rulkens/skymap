@@ -5,6 +5,12 @@
 
 ## Verified current state (2026-08-16 trace)
 
+> Stale since #913 (2026-10-30 review): `orbitControls.ts` is deleted and pinch lives in
+> `src/utils/input/recognize.ts`; ctrl+wheel pinch has been handled since #740
+> (`src/services/input/createDeviceChannel.ts`, `PINCH_WHEEL_GAIN`), which removes half of
+> hypothesis 1's fix. Re-trace this section against the current input stack before asking
+> for the on-device log.
+
 The gesture code is platform-uniform — there is no Windows-specific branch to be wrong:
 
 - Pinch is implemented once, PointerEvent-only, in `src/services/camera/orbitControls.ts`: two `pointerdown`s on the canvas promote `dragMode` to `'pinch'` (line 260); `onMove` zooms from the finger-distance ratio (lines 348–369). No TouchEvent listener exists anywhere in `src/` (grep: zero hits for `touchstart`/`gesturestart`).

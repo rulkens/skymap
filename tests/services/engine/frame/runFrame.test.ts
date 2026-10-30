@@ -48,7 +48,6 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
   };
 });
 
-import { IDLE_SURFACE_TILE_PLAN } from '../../../../src/data/bodies/idleSurfaceTilePlan';
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
@@ -69,6 +68,7 @@ import {
   ORIENTATION_FRAME_QUATERNIONS,
 } from '../../../../src/data/orientation/orientationFrames';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
@@ -101,7 +101,8 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { angleBetween } from '../../../helpers/math/angleBetween';
 
 function makeStore() {
   return configureStore({ reducer: rootReducer });
@@ -170,7 +171,7 @@ function makeState(): EngineState {
     },
     booted: false,
     viewRig: 'mono',
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
@@ -388,12 +389,6 @@ describe('runFrame — orientation-frame roll', () => {
     a[2]! - b[2]!,
   ];
   const norm = (v: readonly number[]): number => Math.hypot(v[0]!, v[1]!, v[2]!);
-  const dot = (a: readonly number[], b: readonly number[]): number =>
-    a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
-  const angleBetween = (a: readonly number[], b: readonly number[]): number => {
-    const c = dot(a, b) / (norm(a) * norm(b));
-    return Math.acos(Math.min(1, Math.max(-1, c)));
-  };
 
   it('a full orientation-frame roll: B(t) reaches the destination pole monotonically and the descriptor clears on completion', () => {
     // Not a produce-path test (see 'during a frame roll the assembled camera position is unchanged...'
@@ -429,7 +424,7 @@ describe('runFrame — orientation-frame roll', () => {
     );
 
     const projection = state.cameraRuntime.outputs.projection;
-    const samples: { t: number; target: number[]; position: number[]; up: number[] }[] = [];
+    const samples: { t: number; target: number[]; position: number[]; up: Vec3 }[] = [];
     for (const t of [0, 250, 500, 750, 1000]) {
       runFrame(state, deps, t);
       const B = state.cameraRuntime.outputs.upBasis;
@@ -852,7 +847,6 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        surfaceTiles: null,
         structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
@@ -957,7 +951,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        surfaceTiles: null,
         structureFocus: {
           update: vi.fn(),
           produceFocusUniforms: vi.fn(() => ({
@@ -999,33 +992,6 @@ describe('runFrame — the planner keep-ticking fold', () => {
 
     runFrame(state, makeCamDeps(state), 0);
 
-    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
-  });
-
-  it('writes the frame tile plan, applies it, and keeps ticking while tiles are in flight', () => {
-    // Bug caught: the plan's wake vote never reaching the keep-ticking
-    // predicate. A landing tile wakes the loop itself; a landing manifest does
-    // not, so only this vote carries the loop through its fetch.
-    const state = makeReadyState();
-    const apply = vi.fn();
-    const residency = {
-      manifest: () => ({ status: 'absent', value: null }),
-      residentSlot: () => null,
-      isInFlight: () => false,
-      hasFailed: () => false,
-      inFlightCount: () => 1,
-      engagedBodyId: () => null,
-    };
-    state.subsystems.surfaceTiles = {
-      stream: { residency, apply },
-      plan: IDLE_SURFACE_TILE_PLAN,
-    } as unknown as EngineState['subsystems']['surfaceTiles'];
-
-    runFrame(state, makeCamDeps(state), 0);
-
-    const written = state.subsystems.surfaceTiles!.plan;
-    expect(written.awake).toBe(true);
-    expect(apply).toHaveBeenCalledWith(written);
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 });

@@ -18,4 +18,5 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   // The two seeded tables and the survey bin number independently, so source is part of the key.
   starCatalog: (t) => (t.type === 'starCatalog' ? `starCatalog:${t.source}:${t.index}` : ''),
   blackHole: (t) => (t.type === 'blackHole' ? `blackHole:${t.id}` : ''),
+  satellite: (t) => (t.type === 'satellite' ? `satellite:${t.noradId}` : ''),
 };

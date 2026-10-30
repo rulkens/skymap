@@ -47,6 +47,7 @@
     "import-mesh": "\"${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}\" --background --factory-startup --python tools/meshes/prebake/importMesh.py --",
     "prebake-mesh": "tsx tools/meshes/prebakeMesh.ts",
     "build-spacecraft-tracks": "tsx tools/bodies/buildSpacecraftTracks.ts && npm run build-data-manifest",
+    "build-satellites": "tsx tools/satellites/buildSatellites.ts",
     "build-meshes": "tsx tools/meshes/buildMeshes.ts && npm run build-data-manifest",
     "promote-mcpm-workbench": "tsx tools/volumes/promoteWorkbenchExport.ts",
     "build-dust": "tsx tools/volumes/buildDustVolume.ts --all && npm run build-data-manifest",
@@ -105,6 +106,7 @@
     "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
     "fetch-height": "tsx tools/fetch/fetchHeightSources.ts",
     "fetch-horizons": "tsx tools/fetch/fetchHorizons.ts",
+    "fetch-celestrak": "tsx tools/fetch/fetchCelestrak.ts",
     "fetch-voyager-windows": "tsx tools/fetch/fetchVoyagerWindows.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
@@ -122,6 +124,7 @@
     "site:check": "npm run check --workspace @skymap/website",
     "site:media": "tsx tools/site/buildHeroMedia.ts",
     "site:links": "tsx --import ./tools/site/stubCssImports.mjs tools/site/checkSiteLinks.ts",
+    "site:structure": "tsx tools/site/checkPageStructure.ts",
     "site:external": "tsx tools/site/checkExternalLinks.ts",
     "site:repeats": "vitest run tests/packages/website/factRepeats.test.ts",
     "site:compare": "tsx tools/site/compareSite.ts",
@@ -173,6 +176,8 @@
     "pngjs": "7.0.0",
     "prettier": "3.8.3",
     "sharp": "0.35.5",
+    "smol-toml": "1.9.0",
+    "tinyglobby": "0.2.17",
     "ts-morph": "28.0.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
@@ -180,11 +185,11 @@
     "vite": "8.2.1",
     "vitest": "4.1.12",
     "wesl": "0.7.26",
-    "wesl-plugin": "0.6.74",
     "wgslender": "1.4.1",
     "wrangler": "4.151.1",
     "ws": "8.22.0",
-    "xatlas-wasm": "0.1.3"
+    "xatlas-wasm": "0.1.3",
+    "yaml": "2.9.1"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
@@ -197,6 +202,7 @@
     "react-markdown": "10.1.0",
     "react-redux": "9.3.0",
     "redux-saga": "1.5.0",
+    "satellite.js": "7.1.0",
     "typed-redux-saga": "1.5.0",
     "wgpu-matrix": "3.4.2"
   }

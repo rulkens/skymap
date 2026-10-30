@@ -26,6 +26,7 @@ function makeCtx(enabled: boolean, distanceMpc: number): DemandCtx {
     cameraPosMpc: [distanceMpc, 0, 0],
     simDays: CONST_J2000,
     tier: 'medium',
+    selectedKinds: new Set(),
   };
 }
 

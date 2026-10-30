@@ -12,7 +12,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { planetsPass } from '../../../../src/layers/body/passes/planetsPass';
 import { texturedBodiesPass } from '../../../../src/layers/body/passes/texturedBodiesPass';
-import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { INSTANCE_FLOATS } from '../../../../src/layers/body/render/planetRenderer';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../src/services/engine/helpers/minPickRadiusMpc';
@@ -89,14 +88,10 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 /** A ctx comfortably inside the shared foreground gate, with a fixed pose for every body. */
-function makeCtx(
-  planets: readonly SeededPlanet[],
-  distance = FOREGROUND_MAX_DISTANCE_MPC / 2,
-): FrameView {
+function makeCtx(planets: readonly SeededPlanet[]): FrameView {
   vi.mocked(sceneBodyStates).mockReturnValue(seededBodyStates(0, planets));
   return {
     snapshot: { meshBodies: [], sceneBodies: positionedBodiesOf(planets) },
-    cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
@@ -148,12 +143,6 @@ function makePartitionFixture() {
 }
 
 describe('planetsPass.enabled', () => {
-  it('is false beyond the foreground gate even for a flat body', () => {
-    const { state, bodies, planets } = makePartitionFixture();
-    const farCtx = makeCtx(bodies, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planets.enabled(state, farCtx, makeBodyView(asSceneBodyId('mercury')))).toBe(false);
-  });
-
   it('is true for the flat-branch row, false for the textured and glint rows', () => {
     const { state, bodies, planets } = makePartitionFixture();
     const ctx = makeCtx(bodies);
@@ -275,12 +264,6 @@ describe('planetsPass.pickEnabled (Bug A — textured-only row stays pickable)',
     const { state, bodies, planets } = makePartitionFixture();
     const ctx = makeCtx(bodies);
     expect(planets.pickEnabled!(state, ctx, makeBodyView(asSceneBodyId('moon')))).toBe(false);
-  });
-
-  it('is false beyond the foreground gate even for a textured row', () => {
-    const { state, bodies, planets } = makePartitionFixture();
-    const farCtx = makeCtx(bodies, FOREGROUND_MAX_DISTANCE_MPC);
-    expect(planets.pickEnabled!(state, farCtx, makeBodyView(asSceneBodyId('mars')))).toBe(false);
   });
 });
 

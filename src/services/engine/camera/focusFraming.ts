@@ -58,6 +58,7 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     case 'earthScene':
     case 'starCatalog':
     case 'blackHole':
+    case 'satellite':
       return bodyLikeFraming(
         row.positionMpc,
         row.driver.footprintRadiusM,
@@ -65,7 +66,7 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         row.driver.focusDistanceRadii,
       );
     // Unreachable by construction: `watchFocusTweenSaga` filters on `ROW_FOCUSABLE` (the one
-    // enforcement site; do not add a second), and `urlHashFor` never encodes this arm.
+    // enforcement site; do not add a second), and the zone-of-avoidance row declares no `focusId`.
     case 'zoneOfAvoidance':
       throw new Error('focusFraming: zoneOfAvoidance has no focus target');
   }

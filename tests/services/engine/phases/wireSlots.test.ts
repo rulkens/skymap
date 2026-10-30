@@ -10,7 +10,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
 import { createAppStore } from '../../../../src/store/createAppStore';
@@ -115,7 +116,7 @@ import { loadDataManifest } from '../../../../src/services/loading/dataManifest'
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 
 /** A fake `AssetSlot` whose lifecycle the test drives: `fire(state)` notifies every subscriber
  *  synchronously. wireSlots only consumes `subscribe` (all-arrivals gate) and `load`, so no fuller
@@ -322,7 +323,7 @@ function makeState(
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set (boot-load expectations stay
     // sdss/2mrs/glade/…, no Blue Marble fetch).
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     cameraRuntime: {
       register: {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
@@ -335,6 +336,7 @@ function makeState(
       },
     },
     visibilityEntries: [...galaxyCatalogVisibility, ...cosmicWebDensityVisibility],
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
   state.assetRows = expandCompanionRows([
     ...meshAssetRows(state),

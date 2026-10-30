@@ -59,6 +59,7 @@ import type {
 } from 'ts-morph';
 import { classifyLocalDeps } from './classifyLocalDeps';
 import { ensureNamedImport } from './ensureNamedImport';
+import { removeImportKeepingTrivia } from './removeImportKeepingTrivia';
 import { retargetNamedImport } from './retargetNamedImport';
 import type { ResolvedSymbol } from './resolveSymbol';
 
@@ -317,7 +318,7 @@ function pruneCarriedImports(bindings: readonly ImportBinding[]): void {
     const keepsDefault = importDecl.getDefaultImport() !== undefined && !losesDefault;
     const keepsNamespace = importDecl.getNamespaceImport() !== undefined && !losesNamespace;
     if (remainingNamed === 0 && !keepsDefault && !keepsNamespace) {
-      importDecl.remove();
+      removeImportKeepingTrivia(importDecl);
       continue;
     }
     for (const binding of group) {

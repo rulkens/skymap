@@ -17,6 +17,11 @@ import { setLens, startCameraTween } from '../../../../src/state/camera/cameraSl
 import { degToRad } from '../../../../src/utils/math/degToRad';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../src/data/camera/focusMoveDefaults';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { framingPose } from '../../../../src/services/engine/camera/framingPose';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { resume, setRate } from '../../../../src/state/time/timeSlice';
+import { RATE_LADDER } from '../../../../src/data/time/rateLadder';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { relErr } from '../../../support/relErr';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
@@ -24,6 +29,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const FOV = Math.PI / 3;
+const ONE_DAY_PER_SEC = RATE_LADDER.findIndex((step) => step.label === '1 day/s');
 
 function geodesicMove(from: CameraPose, to: CameraPose): CameraTweenDescriptor {
   return {
@@ -103,5 +109,29 @@ describe('focusMotions', () => {
     const flight = (frames: typeof steady) =>
       frames.map(({ winner, displayed }) => ({ winner, displayed }));
     expect(flight(dragged)).toEqual(flight(steady));
+  });
+
+  it('a geodesic tween to a moving body hands off to followHold on the live body, with no second ease', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.focus('mars');
+    const row = h.store.getState().selectionRows.focus!;
+    const from = h.store.getState().camera.base.pose as CameraPose;
+    const to = framingPose(row, FOV, from);
+    h.store.dispatch(startCameraTween(geodesicMove(from, to)));
+    // Mars drifts under the flight, so the hand-off frame must catch up to it.
+    h.store.dispatch(resume({ nowMs: h.nowMs() }));
+    h.store.dispatch(setRate({ rateIndex: ONE_DAY_PER_SEC, nowMs: h.nowMs() }));
+
+    h.frame();
+    while (h.state.cameraRuntime.register.winner === 'tween') h.frame();
+
+    const { register, outputs } = h.state.cameraRuntime;
+    const live = deriveBodyStates(outputs.simDays).get(asSceneBodyId('mars'))!.positionMpc;
+    const landed = register.pose.pose as CameraPose;
+    expect(register.winner).toBe('followHold');
+    expect(relErr(landed.distance, to.distance)).toBeLessThan(1e-9);
+    expect([landed.yaw, landed.pitch]).toEqual([to.yaw, to.pitch]);
+    expect(landed.target).toEqual([...live]);
+    expect(landed.target).not.toEqual(to.target);
   });
 });

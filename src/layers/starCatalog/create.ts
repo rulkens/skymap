@@ -92,7 +92,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
           createStarCatalogSlot(
             source,
             poolHost,
-            () => deps.store.getState().settings.starCatalogs.chunkSlotsOverride,
+            () => deps.settings().starCatalogs.chunkSlotsOverride,
           ),
         ] as const,
     ),

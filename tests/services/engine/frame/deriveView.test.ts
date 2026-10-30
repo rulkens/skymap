@@ -21,7 +21,7 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -43,7 +43,7 @@ import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SceneBody } from '../../../../src/@types/scene/SceneBody';
-import { FLAT_TERRAIN } from '../../../../src/data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { PositionedId } from '../../../../src/@types/scene/PositionedId';
 
@@ -69,7 +69,7 @@ function makeState(): EngineState {
   return {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
     slabRows: [],
@@ -90,6 +90,7 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
     altitudeMpc: POSE.distance,
     nowMs: 0,
     simDays: CONST_J2000,
+    bodyStates: deriveBodyStates(CONST_J2000),
   });
   if (!ctx.isReady) throw new Error('fixture not ready');
   return ctx;
@@ -364,7 +365,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       selectionRows: { hover: null, select: null, focus: null },
       slabRows: [],
       visibilityEntries: [],
-      terrain: FLAT_TERRAIN,
+      terrainHeightAt: datumOnlyTerrainHeight,
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
@@ -383,6 +384,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       nearMpc: overrides.nearMpc ?? CAPTURE_NEAR_MPC,
       nowMs: 0,
       axes: overrides.axes,
+      bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
     });
     return capture.isReady ? capture : null;
   }
@@ -424,6 +426,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
     expect(
@@ -432,6 +435,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
     expect(
@@ -440,6 +444,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         eyeMpc: CAPTURE_EYE_MPC,
         nearMpc: CAPTURE_NEAR_MPC,
         nowMs: 0,
+        bodyStates: deriveBodyStates(CAPTURE_LAST_SIM_DAYS),
       }).isReady,
     ).toBe(false);
   });
@@ -606,6 +611,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
       nowMs: 0,
       axes: voyager.orientation,
+      bodyStates,
     });
     expect(capture.isReady).toBe(true);
     if (!capture.isReady) return;
@@ -690,6 +696,7 @@ describe('deriveView — NEAR0 range from the spheres it draws', () => {
       altitudeMpc: pose.distance,
       nowMs: 0,
       simDays: CONST_J2000,
+      bodyStates: deriveBodyStates(CONST_J2000),
     });
     if (!snapshot.isReady) throw new Error('fixture not ready');
     return { cam, snapshot: { ...snapshot, sceneBodies: positionedBodiesOf(bodies, STATES) } };

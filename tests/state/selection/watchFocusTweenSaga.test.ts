@@ -30,7 +30,7 @@ import { structureSelectionRow } from '../../../src/layers/structure/present/str
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
@@ -281,18 +281,14 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
-  // A scene body is FOLLOWED by the camera's follow rows, not tweened —
-  // the tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-  // moves. The saga must return before planting a tween for a body row, while a
-  // non-body focus (here the Milky Way) still tweens as before.
-  it('a body focus plants NO tween (the follow driver owns it); a non-body focus still does', async () => {
+  it('a geodesic focus on a moving body dispatches a tween; an eased one does not', async () => {
     // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
     store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
 
-    // A non-body focus (Milky Way) still plants a tween through the same saga.
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    store.dispatch(setFocusMoveStyle('geodesic'));
+    store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('mars') }));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });

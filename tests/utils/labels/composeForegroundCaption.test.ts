@@ -7,7 +7,6 @@ import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFoc
 
 const ctxWith = (focus: FocusUniformsValue): CaptionComposeContext => ({
   camPos: [0, 0, 0],
-  camOrbitDistanceMpc: 1e-3,
   viewportShortSidePx: 1000,
   drawPxPerRad: 1000,
   focus,
@@ -66,5 +65,20 @@ describe('composeForegroundCaption handed value', () => {
     const handed = composeForegroundCaption(atFullBlend, earthCaption, 0.25).fadeAlpha!;
     expect(atRest).toBeGreaterThan(0);
     expect(handed).toBeCloseTo(atRest * 0.25, 10);
+  });
+});
+
+describe('composeForegroundCaption scene-depth cutoff', () => {
+  // worldEm 1e-6 Mpc at 1e-3 Mpc with 1000 px/rad: a 2 px subject.
+  const resolved: ForegroundCaption = { ...caption, kind: 'meshBody' };
+  // The same subject 1000× farther: 0.002 px, far under the terrain texel that
+  // would be asked whether it hides it.
+  const subPixel: ForegroundCaption = { ...caption, kind: 'meshBody', worldPos: [1, 0, 0] };
+
+  it('asks the sampled depth only once the subject spans a pixel', () => {
+    const near = composeForegroundCaption(ctxWith(ZERO_FOCUS), resolved, 1);
+    expect(near.occludeNearKm).toBeGreaterThan(0);
+    const far = composeForegroundCaption(ctxWith(ZERO_FOCUS), subPixel, 1);
+    expect(far.occludeNearKm).toBeLessThan(0);
   });
 });

@@ -1,7 +1,7 @@
 /**
  * BODY_SLAB_ROWS — the body Layer's `body-m` slab rows: Earth, then every
  * `SCENE_PLANETS` body, one row each. Static: the bodies are constants, so
- * each row exists from boot and its pose alone decides whether it draws.
+ * each row exists from boot; its `activeBand` and pose decide whether it draws.
  */
 
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';

@@ -29,7 +29,7 @@ import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDire
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { FLAT_TERRAIN } from '../../data/camera/flatTerrain';
+import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -52,7 +52,6 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileStream';
 import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
@@ -163,7 +162,6 @@ export function createEngine(
       labelPickRendererNear: null,
       debugLineRenderer: null,
       selectionRingRenderer: null,
-      horizonShellRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.
@@ -181,8 +179,6 @@ export function createEngine(
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      surfaceTiles: null,
-
       cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
@@ -254,7 +250,7 @@ export function createEngine(
     visibilityGates: new Map(),
     label3DProducers: [],
     orbitTrailGroups: [],
-    terrain: FLAT_TERRAIN,
+    terrainHeightAt: datumOnlyTerrainHeight,
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s
@@ -371,9 +367,6 @@ export function createEngine(
     state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
-    // Owns two tile atlases once engaged, which WebGPU never releases on GC.
-    state.subsystems.surfaceTiles?.stream.destroy();
-    state.subsystems.surfaceTiles = null;
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;
     state.subsystems.loadProgress?.destroy();
@@ -434,14 +427,6 @@ export function createEngine(
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.
       assetPriorities: () => assetPriorityBySlotName(state),
-      // Residency from the stream, the rest from this frame's plan.
-      surfaceTiles: () => {
-        const tiles = state.subsystems.surfaceTiles;
-        if (tiles === null) return EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;
-        const { lastPlan, cut, subCamera } = tiles.plan;
-        const plan = lastPlan === null ? null : { ...lastPlan, cutCount: cut.length };
-        return { ...tiles.stream.debugStats(), plan, subCamera };
-      },
       gpuMemory: () => state.gpu.memory?.() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
@@ -467,15 +452,7 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
-          terrainHeightAt: state.terrain.heightAt,
-          residentHeightLevelAt: state.terrain.residentHeightLevelAt,
-          // Null unless the `terrain-pick-marker` overlay is on — its listener
-          // is the only writer, so the pick row is dead with the toggle off.
-          cursorTexPx: state.picking.cursorTexPx,
-          viewportPx: [canvas.width, canvas.height],
-          // What the last frame DREW with (`FrameOutputs`), the same rule this
-          // whole snapshot follows — a mid-poll resize must not retro-change it.
-          fovYRad: outputs.projection.fovYRad,
+          terrainHeightAt: state.terrainHeightAt,
         });
       },
     },
