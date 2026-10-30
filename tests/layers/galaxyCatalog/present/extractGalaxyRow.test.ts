@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { extractGalaxyRow } from '../../../../src/layers/galaxyCatalog/present/extractGalaxyRow';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';

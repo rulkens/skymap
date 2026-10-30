@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';

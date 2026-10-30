@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';

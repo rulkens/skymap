@@ -22,7 +22,8 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { createCatalogStore } from '../../../../src/layers/galaxyCatalog/render/catalogStore';
 import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
@@ -35,7 +36,7 @@ const STATS = { magOffset: 0, medianAbsMag: -20.5 };
 // iterator yields `source`), so resolve the id at each upload/unload call
 // site through the registry.
 function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
-  return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+  return APP_SOURCE_REGISTRY[source].id as GalaxyCatalogId;
 }
 
 // `GPUBufferUsage` and friends come from the shared

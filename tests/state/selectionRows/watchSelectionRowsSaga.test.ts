@@ -35,7 +35,7 @@ import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { selectionRowsRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import {
   buildStarOctree,

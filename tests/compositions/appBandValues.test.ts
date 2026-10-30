@@ -6,6 +6,8 @@ import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc'
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { cosmicFlows } from '../../src/data/exhibits/cosmicFlows';
+import { observableUniverse } from '../../src/layers/cosmicHorizon/exhibits/observableUniverse';
+import { THE_EDGE_MPC } from '../../src/data/animation/tours/grandTour/theEdge';
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
@@ -111,5 +113,15 @@ describe('flow at the Cosmic Flows exhibit pose', () => {
   it('is full at the nearest the exhibit eye can sit to home', () => {
     const { target, distance } = cosmicFlows.pose!;
     expect(valueAt('flow', distance - Math.hypot(...target))).toBe(1);
+  });
+});
+
+// Pins that the shell is absent in the galaxy survey and full where its two showpieces
+// sit: a band edge moved past either pose blanks the exhibit or the tour's edge beat.
+describe('cosmic horizon reach', () => {
+  it('is gone at survey range and full at the exhibit and the tour edge', () => {
+    expect(valueAt('cosmicHorizon', 5)).toBe(0);
+    expect(valueAt('cosmicHorizon', observableUniverse.pose!.distance)).toBe(1);
+    expect(valueAt('cosmicHorizon', THE_EDGE_MPC)).toBe(1);
   });
 });

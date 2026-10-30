@@ -21,7 +21,7 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';

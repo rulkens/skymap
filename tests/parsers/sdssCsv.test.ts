@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseSdssCsv } from '../../tools/parsers/sdssCsv';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 
 /**
  * Tiny inline CSV exercising the three behaviours we care about most:
