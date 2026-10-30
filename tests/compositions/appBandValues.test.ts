@@ -111,10 +111,9 @@ describe('flow at the Cosmic Flows exhibit pose', () => {
   });
 });
 
-// Pins the satellites to Earth's LIVE position: measured from a J2000 anchor, a camera beside
-// today's Earth would sit a fraction of an orbit away and the dots would never show.
+// Pins the satellites band to the live Earth position, read 100 days past J2000.
 describe('satellites near Earth', () => {
-  it('are full at 300 000 km and gone at 600 000 km from Earth, away from J2000', () => {
+  it('are full at 300 000 km and gone at 600 000 km from the live Earth', () => {
     const states = deriveBodyStates(CONST_J2000 + 100);
     const earth = states.get(SCENE_EARTH.id)!.positionMpc;
     const at = (km: number): number => {

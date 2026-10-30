@@ -22,12 +22,13 @@ export function satellitesPlanner(
     name: 'satellites',
     scope: 'once',
     fade: 'satellites',
-    plan(snapshot, views, _state, fade) {
+    hasDistanceBand: true,
+    plan(snapshot, _views, _state, fade) {
       const { propagator, renderer } = runtime;
       const simMs = julianDaysToUnixMs(snapshot.simDays);
       runtime.simRate.observe(simMs, snapshot.nowMs);
       const catalog = propagator.catalog();
-      if (catalog === null || views.length === 0) return IDLE;
+      if (catalog === null) return IDLE;
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
       if (satelliteLayerOpacity(catalog, snapshot.simDays) <= 0) return IDLE;
 

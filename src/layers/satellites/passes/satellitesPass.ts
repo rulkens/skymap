@@ -76,8 +76,7 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
     name: 'satellites',
     fade: 'satellites',
 
-    enabled(state, ctx) {
-      if (!sceneBodyStates(state, ctx).has(SCENE_EARTH.id)) return false;
+    enabled(_state, ctx) {
       return opacityOf(ctx.snapshot.simDays) > 0;
     },
 

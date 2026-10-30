@@ -1,7 +1,8 @@
 /**
  * The handed value for a per-view consumer: `resolveFadeValue` times the address's distance
- * band at this view. Once-scope computes and planners read it at the canvas view (see
- * `gateComputeByFade`, `gatePlannerByFade`); scene-body admission reads the frame camera.
+ * band at this view. Once-scope computes and `hasDistanceBand` planners read it at the anchor
+ * view `views[0]` (see `gateComputeByFade`, `gatePlannerByFade`); scene-body admission reads
+ * the frame camera.
  * Memoised per view and address, since `gatePassByFade` asks up to four times per pass per
  * view; a view is minted per frame, so the memo never outlives the snapshot it read.
  */

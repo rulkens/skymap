@@ -2,8 +2,8 @@
  * satelliteOrbitsPass — the selected and focused satellites' orbits as the same fading trail the
  * planets get, drawn by the Layer's OWN `OrbitTrailRenderer`: core's rewrites its instance buffer on
  * every `draw`, so a second draw in a frame would overwrite the planets' records before submit.
- * Alpha is the class fade (its `nearEarth` band included) times `satelliteLayerOpacity`. NEAR0, under the same occlusion as the
- * trails; no pick.
+ * Alpha is the class fade (its `nearEarth` band included) times `satelliteLayerOpacity`. NEAR0,
+ * under the same occlusion as the trails; no pick.
  */
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
@@ -26,9 +26,8 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
     name: 'satellite-orbits',
     fade: 'satellites',
 
-    enabled(state, ctx) {
+    enabled(_state, ctx) {
       if (runtime.selected.tracked().length === 0) return false;
-      if (!sceneBodyStates(state, ctx).has(SCENE_EARTH.id)) return false;
       return satelliteLayerOpacity(runtime.propagator.catalog(), ctx.snapshot.simDays) > 0;
     },
 
