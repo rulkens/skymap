@@ -1,5 +1,5 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
-import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
+import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
 
 /**
@@ -11,6 +11,6 @@ import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
  * (`ORBITAL_ELEMENTS`, `SAMPLED_BODIES` or `SURFACE_FIXED_SITES`), orientation
  * `ROTATION_ELEMENTS`, all keyed on these ids.
  */
-export const SCENE_MESH_BODIES: readonly MeshBody[] = LAYER_BODY_ROWS.map(
+export const SCENE_MESH_BODIES: readonly MeshBody[] = APP_BODY_REGISTRY.map(
   (row) => row.body,
 ).filter(isMeshBody);

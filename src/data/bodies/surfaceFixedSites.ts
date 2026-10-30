@@ -7,8 +7,8 @@
  */
 
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
-import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
+import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 
-export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = LAYER_BODY_ROWS.flatMap((row) =>
+export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = APP_BODY_REGISTRY.flatMap((row) =>
   row.position.kind === 'site' ? [row.position.site] : [],
 );

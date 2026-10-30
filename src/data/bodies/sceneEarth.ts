@@ -5,10 +5,10 @@
 
 import type { EarthBody } from '../../@types/scene/EarthBody';
 import { isEarthBody } from '../../utils/scene/isEarthBody';
-import { LAYER_BODY_ROWS } from '../../compositions/appBodies';
+import { APP_BODY_REGISTRY } from '../../compositions/appBodies';
 
 function earthRow(): EarthBody {
-  const earth = LAYER_BODY_ROWS.map((row) => row.body).find(isEarthBody);
+  const earth = APP_BODY_REGISTRY.map((row) => row.body).find(isEarthBody);
   if (!earth) throw new Error('sceneEarth: no Layer body row seeds Earth');
   return earth;
 }
