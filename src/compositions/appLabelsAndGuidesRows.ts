@@ -6,7 +6,7 @@
 import { APP_COMPOSITION } from './app';
 import { layerUiContents } from '../utils/layer/layerUiContents';
 
-export const APP_LABELS_AND_GUIDES_ROWS = layerUiContents(
+export const APP_LABELS_AND_GUIDES_REGISTRY = layerUiContents(
   APP_COMPOSITION.layers,
   'labelsAndGuides',
 );
