@@ -13,11 +13,10 @@ import { updateSelectionFocus, updateSelectionSelect } from './selectionSlice';
 import { suspendDuringClip } from './suspendDuringClip';
 import { selectSettings } from '../settings/selectSettings';
 import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
-import { hasSectionSwitch } from '../../utils/visibility/hasSectionSwitch';
+import { settingsClusterOf } from '../../utils/visibility/settingsClusterOf';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 import { visibilityAddressOf } from '../../utils/visibility/visibilityAddressOf';
 import { visibilityClusterOf } from '../../utils/visibility/visibilityClusterOf';
-import { visibilitySwitchOf } from '../../utils/visibility/visibilitySwitchOf';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 
@@ -31,8 +30,7 @@ export function* watchSelectionRevealSaga() {
       const entry = ref && ENTRIES.find((e) => 'key' in e && e.selects?.includes(ref.type));
       if (!entry) return;
       const settings = yield* select(selectSettings);
-      if (!hasSectionSwitch(settings, visibilityClusterOf(entry))) return;
-      if (visibilitySwitchOf(settings, entry)) return;
+      if (settingsClusterOf(settings, visibilityClusterOf(entry)).enabled !== false) return;
       for (const write of setVisibilityActionsFor(settings, visibilityAddressOf(entry), true)) {
         yield* put(write);
       }

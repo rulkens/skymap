@@ -245,7 +245,7 @@ describe('arrivalSaga', () => {
     expect(h.status()).toEqual({ status: 'arrived' });
   });
 
-  it('a cold satellite deep link with Satellites off reveals, loads and arrives', async () => {
+  it('a cold satellite deep link with Satellites off reveals, then arrives once the catalog lands', async () => {
     const h = build();
     h.arrive({ view: { kind: 'focus', id: 'satellite-25544' }, t: Date.UTC(2026, 9, 28, 12) });
     h.boot();
