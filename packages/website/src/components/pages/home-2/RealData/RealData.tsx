@@ -3,8 +3,9 @@
  * names of its sources (data/dataSources.ts, the Science page's table, so nothing is named here that is
  * not there), each name a link to its data page beside the number of objects it gives the scene, as that table
  * counts them, and the count pointed at (the first, until then) stands large over the picture. Each picture is
- * a round window into the scene, no frame. Then the three words every part of
- * the scene is sorted into, as three pictures edge to edge across the window, each word over its picture.
+ * a round window into the scene, no frame. Behind the title, the orbits of the stars round the Milky Way's
+ * central black hole, one of the Stars sources, drift past more slowly than the page. Then the three words every
+ * part of the scene is sorted into, as three pictures edge to edge across the window, each word over its picture.
  */
 import type { CSSProperties } from 'react';
 
@@ -47,6 +48,9 @@ function RealData() {
   return (
     <section className={styles.root} id="data">
       <div className={styles.column}>
+        <div className={styles.orbits} aria-hidden>
+          <Shot id="orbits-s-stars" sizes="(max-width: 900px) 44rem, 64rem" alt="" />
+        </div>
         <SectionHead title="Data you can count on" top>
           <p>
             Skymap places catalogued stars, galaxies and quasars in three dimensions. These are the

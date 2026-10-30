@@ -39,7 +39,7 @@ sections:
     job: "How can I best use Skymap to interactively teach my students about the universe?"
     component: "Lessons"
     layout: "two by two, every picture one shape, questions and links on shared lines"
-    visual: "a picture per part, edges dissolving into the page; Run the clock as the Jupiter film with the app's clock over it"
+    visual: "a picture per part, edges dissolving into the page; Run the clock as the Jupiter film with the app's clock over it; the section stands on Jezero crater (mars-horizon) with the classroom link in its sky"
     parts:
       - heading: "Can you see the North Pole on 21 June?"
         job: "A link for pupils today, nothing to install."
@@ -57,7 +57,7 @@ sections:
     job: "To give the visitor confidence that this is a real scientific tool, what are the sources of the data?"
     component: "RealData"
     layout: "four round windows, each over a ledger of its sources and their counts; then three pictures edge to edge"
-    visual: "one still per kind, the count pointed at large over it; the three words over their pictures"
+    visual: "the S-stars' orbits (orbits-s-stars) behind the title, lagging the scroll; one still per kind, the count pointed at large over it; the three words over their pictures"
     parts:
       - heading: "Galaxies and quasars"
         job: "Which catalogues place them?"

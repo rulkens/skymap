@@ -5,6 +5,62 @@
 
 .column {
   composes: wrap from '../../../../styles/layout.module.css';
+  position: relative;
+  isolation: isolate;
+}
+
+/*
+ * The S-stars' orbits, cut from black, their centre (the frame's) out past the window's left edge so the title
+ * stands over the outer orbits, not over the bright knot. They lag the scroll a little: the title passes over them.
+ */
+.orbits {
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  --w: 64rem;
+  position: absolute;
+  z-index: -1;
+  top: calc(3.5rem - 0.28 * var(--w));
+  left: calc(-1 * var(--bleed) + 3rem - 0.5 * var(--w));
+  width: var(--w);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  /* The frame's lower edge holds glows of the Milky Way's disc; it fades out before the windows below. */
+  mask-image:
+    radial-gradient(closest-side, #000 70%, rgb(0 0 0 / 0)),
+    linear-gradient(180deg, #000 60%, rgb(0 0 0 / 0) 76%);
+  mask-composite: intersect;
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+@keyframes orbits-lag {
+  from {
+    translate: 0 -2rem;
+  }
+
+  to {
+    translate: 0 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .orbits {
+      animation: orbits-lag linear both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .orbits {
+    --w: 30rem;
+    top: calc(-1.5rem - 0.28 * var(--w));
+  }
 }
 
 /* Each kind's picture, title and names are rows shared across the four (subgrid), so the titles line up. */

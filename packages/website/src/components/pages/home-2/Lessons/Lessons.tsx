@@ -2,7 +2,8 @@
  * Lessons — Home's pitch for the classroom: four questions a pupil can answer by going there, each over the
  * picture of the view its link opens (one a film of the clock running) and a line on what the link sets up.
  * The questions are the classroom page's own (data/lessons.ts and its class features), put to the pupil. Wide,
- * two by two, every picture one shape and every row's parts on shared lines; narrow, one after another.
+ * two by two, every picture one shape and every row's parts on shared lines; narrow, one after another. The
+ * section stands on the field trip with no bus: Jezero crater across the window, the way in set in its sky.
  */
 import type { CSSProperties } from 'react';
 
@@ -109,9 +110,19 @@ function Lessons() {
           </div>
         ))}
       </div>
-      <ObjLink className={styles.more} hang href={sitePath('/classroom/')}>
-        Use Skymap in the classroom
-      </ObjLink>
+      <figure className={styles.field}>
+        <div className={styles.horizon}>
+          <Shot id="mars-horizon" sizes="100vw" />
+        </div>
+        <div className={styles.more}>
+          <ObjLink hang href={sitePath('/classroom/')}>
+            Use Skymap in the classroom
+          </ObjLink>
+        </div>
+        <figcaption className={styles.fieldCaption}>
+          <ShotCaption id="mars-horizon" showDrawn={false} />
+        </figcaption>
+      </figure>
     </section>
   );
 }

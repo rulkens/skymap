@@ -110,8 +110,44 @@
   }
 }
 
+/*
+ * The section's ground: Jezero crater from a rover's height, across the window, its sky dissolving into the page.
+ * The way to the classroom page stands in that sky, on the text's left edge; the label goes under the ground.
+ */
+.field {
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  display: grid;
+  margin: 2.5rem calc(-1 * var(--bleed)) 0;
+}
+
+.horizon {
+  grid-area: 1 / 1;
+  aspect-ratio: 1440 / 420;
+  mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 38%, #000 86%, rgb(0 0 0 / 0));
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
 .more {
-  margin-top: 4.5rem;
+  z-index: 1;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  margin: 4.5rem 0 0 var(--bleed);
+}
+
+.fieldCaption {
+  margin: 0 var(--bleed);
 }
 
 /* Narrow, each picture takes the window's whole width; its label keeps to the text's edge. */
@@ -126,5 +162,14 @@
 
   .ground {
     mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 7%, #000 93%, rgb(0 0 0 / 0));
+  }
+
+  /* A taller cut of the strip, so the rover at its middle still reads. */
+  .horizon {
+    aspect-ratio: 4 / 3;
+  }
+
+  .more {
+    margin-top: 2rem;
   }
 }
