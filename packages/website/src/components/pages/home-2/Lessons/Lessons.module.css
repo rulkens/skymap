@@ -79,8 +79,7 @@
 
 /*
  * The app's own control over the picture it acts on, as it sits in the app: translucent, so the render shows
- * through. The clock along the picture's foot; the search panel at its right side. Both drift a little against
- * the picture as the page scrolls, as a pane nearer the eye would.
+ * through. The clock along the picture's foot; the search panel at its right side.
  */
 .over {
   position: absolute;
@@ -92,25 +91,6 @@
   inset: 50% 4% auto auto;
   width: 46%;
   translate: 0 -50%;
-}
-
-@keyframes drift {
-  from {
-    transform: translateY(1rem);
-  }
-
-  to {
-    transform: translateY(-1rem);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .over {
-      animation: drift linear both;
-      animation-timeline: view();
-    }
-  }
 }
 
 .caption {
