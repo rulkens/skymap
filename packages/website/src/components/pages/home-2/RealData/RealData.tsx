@@ -45,7 +45,7 @@ function RealData() {
   return (
     <section className={styles.root} id="data">
       <div className={styles.column}>
-        <SectionHead title="Real data, real science">
+        <SectionHead title="Real data, real science" top>
           <p>
             Skymap places catalogued stars, galaxies and quasars in three dimensions. These are the
             catalogues and the imagery it is built from.
