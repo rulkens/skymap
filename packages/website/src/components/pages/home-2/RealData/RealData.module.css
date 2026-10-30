@@ -21,6 +21,13 @@
   align-content: start;
 }
 
+/* The picture, then its label filling the row the four share, so their addresses stand on one line. */
+.figure,
+.bin {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
 .figure {
   margin: 0 0 1.5rem;
 }
@@ -74,18 +81,19 @@
   margin-top: 7rem;
 }
 
+/* Title, line and link on one left edge, spaced as a part of Stories is: the head of the strip below. */
 .binsHead {
-  composes: wrap grid from '../../../../styles/layout.module.css';
-  align-items: end;
-  margin-bottom: 2rem;
+  composes: wrap from '../../../../styles/layout.module.css';
+  margin-bottom: 2.5rem;
 
   & h3 {
+    margin-bottom: 0.75rem;
     font-size: var(--text-ring-big);
     line-height: var(--leading-display);
   }
 
   & p {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
   }
 }
 
@@ -144,16 +152,6 @@
 
 .bin .caption {
   padding-inline: var(--gutter);
-}
-
-@media (min-width: 901px) {
-  .binsHead h3 {
-    grid-column: span 6;
-  }
-
-  .binsHead > :not(h3) {
-    grid-column: 7 / -1;
-  }
 }
 
 @media (max-width: 900px) {

@@ -46,7 +46,7 @@ function RealData() {
                   <Shot id={kind.shot} sizes="(max-width: 900px) 50vw, 18rem" />
                 </div>
                 <figcaption className={styles.caption}>
-                  <ShotCaption id={kind.shot} showDrawn={false} />
+                  <ShotCaption id={kind.shot} showDrawn={false} foot />
                 </figcaption>
               </figure>
               <h3>{kind.group}</h3>
@@ -80,7 +80,7 @@ function RealData() {
                 </p>
               </div>
               <figcaption className={styles.caption}>
-                <ShotCaption id={bin.shot} showDrawn={false} />
+                <ShotCaption id={bin.shot} showDrawn={false} foot />
               </figcaption>
             </figure>
           ))}

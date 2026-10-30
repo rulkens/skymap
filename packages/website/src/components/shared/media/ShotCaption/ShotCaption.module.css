@@ -137,3 +137,20 @@
     grid-template-columns: 8.5rem 1fr;
   }
 }
+
+/* A label in a row (`foot`): as tall as its room, the address on the room's last line. Only stacked: two columns already set it on a row of its own. */
+.foot {
+  height: 100%;
+}
+
+@container (width < 34rem) {
+  .foot .plate {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .foot .plate > .view {
+    margin-top: auto;
+  }
+}
