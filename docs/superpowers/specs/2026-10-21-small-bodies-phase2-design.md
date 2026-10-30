@@ -96,9 +96,10 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
 - **Orbits** — `position: { kind: 'orbit', elements }` from Horizons osculating
   elements at JDTDB 2461333.5 (2026-10-20), heliocentric ecliptic J2000, mean
   anomaly back-propagated to J2000 unwrapped, `focusId: asSceneBodyId('sun')`,
-  through `orbiter()` (`src/data/bodies/makers/orbiter.ts`) with the ecliptic
-  pole (270°, 66.5607°; `orbitPlaneFrames.ts:23`). The query and full-precision
-  elements are in the recon file.
+  written inline in Pluto's form (no `plane`, so ecliptic), with the recon's
+  1900–2100 secular Ω̇/ω̇ rates and Ω, ω back-propagated by them. (Plan-time
+  call, 2026-10-30: `orbiter()` is the spacecraft maker and pins ω̇ = 0.) The
+  query and full-precision elements are in the recon file.
 - **Correction fit** — `HORIZONS_BODIES` rows (targets `'1;'`, `'4;'`,
   `'101955;'`, centre `'500@10'`, daily step) and `FITTED_BODIES` rows with
   `outside: 'hold'`. Bennu's Horizons record starts 1900-01-02, so its span
@@ -107,7 +108,9 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
   and the Cartesian fit stops at 900 km and throws above 1,000 km
   (`buildEphemerisCorrections.ts:115` runs the ΔM pre-fit only for rows with a
   non-Sun focus). *Builder's call:* extend the ΔM pre-fit to these heliocentric
-  rows, which also keeps each body on its drawn trail; if Bennu still misses
+  rows, which also keeps each body on its drawn trail, as an explicit
+  `FittedBody.fitMeanAnomaly` flag (planets false, so their corrections
+  regenerate unchanged); if Bennu still misses
   the stop, shorten its span to the decades it does fit (`outside: 'hold'`).
   Commit the regenerated corrections.
 - **Rotation** — each row's `rotation` field, IAU pole form as Pluto's (not
@@ -128,9 +131,10 @@ About 960 MB of downloads; all gitignored under `data/raw/meshes/<id>/`.
 
 ### Labels
 
-- `CaptionKind` gains `'smallBody'`: priority below `planet` (20) and above
+- `CaptionKind` gains `'smallBody'`: priority 18, below `planet` (20) and above
   `meshBody` (12); fade `SOLAR_SYSTEM_REACH`, as planets.
-- `Source.SmallBody = 37` and `src/layers/body/sources/smallBody.ts`
+- `Source.SmallBody = 38` (the satellites Layer took 37 after this spec was
+  first written) and `src/layers/body/sources/smallBody.ts`
   (`BodySourceEntry`, label "Small body", plural "Small bodies", `bearsLabel`),
   added to `BODY_SOURCE_ROWS` (`bodySourceRows.ts`); `BodySourceId`, the
   `bodies.items` slot and the checkbox follow from that row.
