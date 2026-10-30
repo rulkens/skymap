@@ -87,7 +87,7 @@ import {
 } from '../../src/data/filament/filamentBinaryFormat';
 import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';

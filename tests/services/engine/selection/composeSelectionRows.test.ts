@@ -17,7 +17,7 @@ import type {
 } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';

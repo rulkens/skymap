@@ -30,6 +30,11 @@ import type { Size } from '../../../../src/@types/rendering/Size';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { deriveSlabs, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { frameBodyStates } from '../../../../src/services/engine/frame/frameBodyStates';
+import { frameContextInputOf } from '../../../../src/services/engine/frame/frameContextInputOf';
+import { sceneBodyStates } from '../../../../src/services/engine/frame/sceneBodyStates';
+import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
+import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
@@ -107,6 +112,7 @@ function frameInput(
     altitudeMpc: pose.distance,
     nowMs: 0,
     simDays: over.simDays ?? CONST_J2000,
+    bodyStates: deriveBodyStates(over.simDays ?? CONST_J2000),
   };
 }
 
@@ -203,6 +209,59 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.simDays).toBe(SCRUBBED);
+  });
+});
+
+describe('deriveFrameContext — the placed selection', () => {
+  // Reverting runFrame's input to `deriveBodyStates` would silently drop the satellite from
+  // the selection ring, the InfoCard distance and the pick path.
+  it('holds the focused satellite where core placed it', () => {
+    const poseId = 'transient:satellite-25544';
+    const ref = { type: 'satellite', noradId: 25544 } as const;
+    const positionMpc: Vec3 = [1e-5, 2e-5, 3e-5];
+    const row = {
+      type: 'satellite',
+      positionMpc,
+      driver: {
+        poseId,
+        followsSimClock: true,
+        placedEachFrame: true,
+        boundingRadiusM: 50,
+        groundRadiusM: null,
+      },
+    } as unknown as SelectionRow;
+    const state = {
+      ...makeState(),
+      selectionRows: { hover: null, select: null, focus: row },
+      selectionKindRows: [
+        { type: 'satellite', extractRow: () => row } as unknown as SelectionKindRow,
+      ],
+      cameraRuntime: { outputs: { displayed: absoluteArm(RESTING_POSE), projection: PROJECTION } },
+    } as unknown as EngineState;
+    const bodyStates = frameBodyStates(
+      {
+        selection: {
+          hover: null,
+          select: null,
+          focus: ref,
+          pending: { select: null, focus: null },
+        },
+        selectionRows: state.selectionRows,
+      },
+      state.selectionKindRows,
+      CONST_J2000,
+    );
+    const { input } = frameContextInputOf(state, {
+      worldPose: RESTING_POSE,
+      nowMs: 0,
+      poseBasis: BASIS,
+      upBasis: BASIS,
+      simDays: CONST_J2000,
+      bodyStates,
+    });
+    expect(sceneBodyStates(state, canvasView(state, input)).get(poseId)!.positionMpc).toEqual(
+      positionMpc,
+    );
   });
 });
 

@@ -7,7 +7,7 @@
  * with the lens (P1).
  */
 
-import { Source } from '../../../data/sources';
+import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';

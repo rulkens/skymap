@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/present/starCatalogSelectionRow';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { SourceEntry } from '../../../../src/@types/data/SourceEntry';
 

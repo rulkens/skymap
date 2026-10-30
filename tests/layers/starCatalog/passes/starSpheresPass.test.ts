@@ -34,7 +34,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';

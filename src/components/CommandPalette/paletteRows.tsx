@@ -7,7 +7,7 @@
  * one component that renders these rows.
  */
 import type { ReactNode } from 'react';
-import { SOURCE_REGISTRY } from '../../data/sources';
+import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { structureShotUrl } from '../../utils/structure/structureShotUrl';
@@ -138,7 +138,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
           {remaining.length > 0 && (
             <span className={styles.secondary}>{remaining.join(' · ')}</span>
           )}
-          <span className={styles.source}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+          <span className={styles.source}>{APP_SOURCE_REGISTRY[m.entry.source].label}</span>
         </>
       ),
     };
