@@ -28,6 +28,22 @@ A design pass on one page of the companion website, run as a visual round trip. 
 - **Critiquing (step 4.3), on every pass:** load `site-critique`. The weakest thing it names is the one thing you fix next.
 - **Any section that adds or changes motion:** load `site-motion` before writing its CSS or script.
 
+## UI creativity: the site's visual language
+
+The default is lively, not quiet. Use these:
+
+- **Palette from the pictures:** each section takes an accent from its own render (Saturn's gold, Mars' rust, the cosmic web's magenta, Earth's blue) for its lines, numbers, rings and hover states. Black stays the ground.
+- **The app's own UI language as decoration:**
+  - ring markers around subjects;
+  - thin orbit arcs and paths that connect sections;
+  - small, precise readouts beside pictures (distance, light-time, date, coordinates), always REAL values from the site's data, never fake HUD noise;
+  - scale bars;
+  - coordinate ticks along edges.
+- **Type as image:** big numerals (light-years, kilometres) and display headlines that overlap pictures, cross column edges or sit behind cut-outs.
+- **Interactive moments:** hover or drag that shows something true, for example a catalogue lighting up its slice of the sky, a timeline scrubbing the moons, a device turning, an orbit drawing in. Each section should have one thing worth touching.
+
+Judge every one of these in the round trip; taste decides, and it must survive reduced motion and phones.
+
 ## Pictures as material, not rectangles
 
 The owner asked: "use screenshots more creatively, i.e. integrate more into the page, cutouts". The tools for that:
@@ -60,7 +76,7 @@ This writes the full page and one picture per h2 section at each width, with the
 
 - Look at 6–10 recent Awwwards Site of the Day winners, favouring dark, image-led, science or product-story sites. Write down concrete techniques: the type scale and contrast, the grid and asymmetry, rhythm between sections, media framing and pinning, restrained scroll motion, caption and link details. `docs/research/2026-09-17-companion-website/13-award-level-design.md` holds an earlier study; extend it rather than repeat it.
 - Load the `frontend-design:frontend-design` skill. Write a compact plan: palette within the site's tokens, type roles and scale, an ASCII wireframe per section, principles. Check it against the skill's list of generic defaults and revise anything that matches.
-- Spend the boldness in ONE place.
+- Give EVERY section one memorable idea (owner, 2026-10-30: "why does the design stay so drab? it could really use some more UI creativity"). Restraint means no noise, not no ideas.
 
 ## 3. Restyle, one section at a time
 
@@ -78,7 +94,7 @@ Change one section, then run the loop below before the next. Commit each section
    - two neighbours with the same rhythm;
    - a phone layout that is merely the desktop stacked.
 4. Fix that one thing. Back to 1.
-5. Stop when a pass finds nothing obvious at either width. Then check 1024, and finally remove one accessory.
+5. Stop when a pass finds nothing obvious at either width. Then check 1024, and finally remove any accessory that adds nothing (but never strip a section back to drab).
 
 ### Alignment (check on every pass, everywhere)
 
