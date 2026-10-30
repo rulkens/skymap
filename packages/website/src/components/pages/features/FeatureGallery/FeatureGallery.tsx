@@ -4,16 +4,17 @@
  * itself every 9 s, waits while the reader is at the thumbnails, and fetches a later view only once warmed.
  * Each picture opens its own view in the app; only the current one can be reached, as the others sit
  * under `visibility: hidden`. Before the page's script runs the first view and its label stand.
- * A view whose id is a loop's (data/siteLoops.ts) is that loop's wide film in place of its picture; a film
- * whose clock ran carries its clock (FilmClock) at its foot. `over` lays the panel of the app's interface
- * that belongs to a view (a card, the switches) at the picture's outer edge, outside the frame's clip;
- * both come and go with their view. `accent` is the section's colour, taken from its pictures, and
- * `reading` one true figure set large across the picture's inner edge.
+ * Everything a slide brings (data/FeatureSlide) changes with it: its piece of the app's interface hangs
+ * across the picture's outer edge, its figure stands in the inner top corner in the slide's own colour, a
+ * film whose clock ran carries its clock (FilmClock) at its foot, and the section's accent follows the
+ * slide. `frameless` lets cut-out renders float on the page; `under` lays a render behind the whole stage.
  */
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { useCallback, useRef } from 'react';
 
+import type { FeatureSlide } from '../../../../@types/FeatureSlide.ts';
 import { appLink } from '../../../../data/appLink.ts';
+import { fact } from '../../../../data/fact.ts';
 import { SITE_LOOPS } from '../../../../data/siteLoops.ts';
 import { siteShot } from '../../../../data/siteShot.ts';
 import { cx } from '../../../../utils/cx.ts';
@@ -34,34 +35,25 @@ type FeatureGalleryProps = {
   href: string;
   label: string;
   side?: 'left' | 'right';
-  // Shot ids from data/siteShots.ts, or loop ids from data/siteLoops.ts to show a film; the first one stands before the script runs.
-  views: readonly string[];
+  // The first slide stands before the script runs.
+  slides: readonly FeatureSlide[];
   // How wide the large picture is drawn (the page's `big`).
   sizes: string;
-  // A view's id to the interface shot (`element`, data/siteShots.ts) laid beside it.
-  over?: Readonly<Record<string, string>>;
-  accent?: string;
-  // A figure true of every view in the section (a data/facts.ts row's), and what it measures.
-  reading?: { value: string; label: string };
+  frameless?: boolean;
+  under?: string;
 };
 
 const THUMB_SIZES = '6rem';
-// A panel is drawn at about a third of the picture.
-const PANEL_SIZES = '(max-width: 900px) 46vw, 16rem';
+// A piece is drawn at about three tenths of the picture, wider on a phone where it stands beside the caption.
+const PIECE_SIZES = '(max-width: 900px) 42vw, 13rem';
+const CUTOUT_SIZES = '(max-width: 900px) 70vw, 28rem';
 
 // The instant a shot's link sets the clock to.
 const linkTime = (link: string) => /(?:^|&)t=([^&]+)/.exec(link)?.[1];
 
-function FeatureGallery({
-  views: slides,
-  sizes,
-  over = {},
-  accent,
-  reading,
-  ...section
-}: FeatureGalleryProps) {
-  const films = slides.map((id) => SITE_LOOPS.find((loop) => loop.id === id));
-  const views = slides.map((id, i) => films[i]?.shot ?? id);
+function FeatureGallery({ slides, sizes, frameless, under, ...section }: FeatureGalleryProps) {
+  const films = slides.map(({ view }) => SITE_LOOPS.find((loop) => loop.id === view));
+  const views = slides.map(({ view }, i) => films[i]?.shot ?? view);
   const gallery = useGallery(views.map((id) => ({ id })));
   const { at, live, byReader, choose, marksRef, layers, warmed } = gallery;
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -90,9 +82,10 @@ function FeatureGallery({
     const from = linkTime(siteShot(views[i]!).link);
     return film && days && from ? { from, days, seconds: film.seconds } : undefined;
   });
+  const accent = slides[live ? wrapIndex(at, slides.length) : 0]!.accent;
 
   return (
-    <div ref={root} style={accent ? ({ '--color-accent': accent } as CSSProperties) : undefined}>
+    <div ref={root} className={styles.root} style={{ '--slide-accent': accent } as CSSProperties}>
       <FeatureSection
         {...section}
         small={
@@ -123,8 +116,21 @@ function FeatureGallery({
           </div>
         }
       >
-        <figure className={cx(styles.figure, section.side === 'left' && styles.left)}>
+        <figure
+          className={cx(
+            styles.figure,
+            section.side === 'left' && styles.left,
+            frameless && styles.frameless,
+          )}
+        >
           <div className={styles.stage}>
+            {under && (
+              <div className={styles.under} aria-hidden>
+                <div className={styles.drift}>
+                  <Shot id={under} sizes={sizes} />
+                </div>
+              </div>
+            )}
             <div className={styles.frame}>
               {views.map((id, i) => {
                 const shot = siteShot(id);
@@ -156,27 +162,21 @@ function FeatureGallery({
               })}
             </div>
             {slides.map(
-              (id, i) =>
-                over[id] && (
-                  <div key={id} className={cx(styles.panel, changes(i))}>
+              ({ view, cutout }, i) =>
+                cutout && (
+                  <div key={view} className={cx(styles.cutout, changes(i))} aria-hidden>
                     <div className={styles.drift}>
-                      <Shot id={over[id]} sizes={PANEL_SIZES} />
+                      <Shot id={cutout} sizes={CUTOUT_SIZES} />
                     </div>
                   </div>
                 ),
-            )}
-            {reading && (
-              <p className={styles.reading}>
-                <span className={styles.value}>{reading.value}</span>
-                <span className={styles.measure}>{reading.label}</span>
-              </p>
             )}
             {clocks.some(Boolean) && (
               <div className={styles.clocks}>
                 {clocks.map(
                   (clock, i) =>
                     clock && (
-                      <div key={slides[i]} className={changes(i)}>
+                      <div key={slides[i]!.view} className={changes(i)}>
                         <FilmClock
                           {...clock}
                           film={() => layers.current[i]?.querySelector('video')}
@@ -188,6 +188,33 @@ function FeatureGallery({
               </div>
             )}
           </div>
+          <div className={styles.readings}>
+            {slides.map(({ view, fact: id, accent: color }, i) => {
+              const figure = id ? fact(id).figure : undefined;
+              return (
+                figure && (
+                  <p key={view} className={cx(styles.reading, changes(i))} style={{ color }}>
+                    <span className={styles.value}>{figure.value}</span>
+                    <span className={styles.measure}>{figure.measure}</span>
+                  </p>
+                )
+              );
+            })}
+          </div>
+          {slides.some((slide) => slide.piece) && (
+            <div className={styles.pieces}>
+              {slides.map(
+                ({ view, piece, bar }, i) =>
+                  piece && (
+                    <div key={view} className={cx(styles.piece, bar && styles.bar, changes(i))}>
+                      <div className={styles.drift}>
+                        <Shot id={piece} sizes={PIECE_SIZES} />
+                      </div>
+                    </div>
+                  ),
+              )}
+            </div>
+          )}
           {/* A change nobody asked for is not read out: a label announced every few seconds talks over the page. */}
           <figcaption className={styles.captions} aria-live={live && !byReader ? 'off' : 'polite'}>
             {views.map((id, i) => (

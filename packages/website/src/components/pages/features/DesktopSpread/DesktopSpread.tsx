@@ -7,6 +7,7 @@
  */
 import type { PointerEvent } from 'react';
 
+import { fact } from '../../../../data/fact.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
@@ -21,6 +22,7 @@ type DesktopSpreadProps = {
 };
 
 const RENDER = 'features-andromeda';
+const DISTANCE = fact('andromeda-distance').figure!;
 // Ten of the page grid's twelve columns, the window's width on a phone.
 const RENDER_SIZES = '(max-width: 900px) 100vw, min(calc(83vw - 4rem), 64rem)';
 const PIECE_SIZES = '(max-width: 900px) 48vw, 20rem';
@@ -59,10 +61,9 @@ function DesktopSpread({ title, line, href, label }: DesktopSpreadProps) {
           <div className={styles.card}>
             <Shot id="ui-card-andromeda" sizes={PIECE_SIZES} />
           </div>
-          {/* data/facts.ts, andromeda-distance. */}
           <p className={styles.reading}>
-            <span className={styles.value}>2.5</span>
-            <span className={styles.measure}>million light-years away</span>
+            <span className={styles.value}>{DISTANCE.value}</span>
+            <span className={styles.measure}>{DISTANCE.measure}</span>
           </p>
         </div>
         <figcaption className={styles.caption}>

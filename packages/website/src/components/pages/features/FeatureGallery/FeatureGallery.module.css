@@ -1,169 +1,32 @@
+/* The section's accent is the current slide's, and eases from one slide's colour to the next. */
+@property --slide-accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #8fb8ff;
+}
+
+/* What reaches past the stage (a render under it) is cut at the window's sides, never scrolled to. */
+.root {
+  --color-accent: var(--slide-accent);
+  overflow-x: clip;
+  transition: --slide-accent 1.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}
+
 .figure {
+  position: relative;
   margin: 0;
 }
 
-/* The frame clips its views; the interface pieces lie on the stage, outside that clip. */
+/* The frame clips its views; the cut-out and the clock lie on the stage, outside that clip. */
 .stage {
   position: relative;
-}
-
-/*
- * A panel (a card, the switches) at the picture's outer edge and past it, so it reads as the thing in hand and
- * the subject in the middle stays clear. The words' side is the inner one.
- */
-.panel {
-  position: absolute;
-  z-index: 1;
-  top: 50%;
-  /* Into the page's gutter, never to the window's edge. */
-  right: calc(1rem - var(--gutter));
-  width: 37%;
-  translate: 0 -50%;
-}
-
-.left .panel {
-  right: auto;
-  left: calc(1rem - var(--gutter));
-}
-
-.panel img {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
-}
-
-/* Narrow, the picture takes the column's width: a panel keeps inside it, over the picture's lower corner. */
-@media (max-width: 900px) {
-  .panel {
-    top: auto;
-    right: 0;
-    bottom: -3rem;
-    width: 46%;
-    translate: none;
-  }
-
-  .left .panel {
-    left: auto;
-    right: 0;
-  }
-
-  .stage:has(.panel) {
-    margin-bottom: 3rem;
-  }
-}
-
-/*
- * The section's figure, set as a picture: thin figures at the title's size in the section's colour, in the
- * picture's inner lower corner (the words' side), over the dark of space; its measure under it. The body face,
- * because the display face's figures are old-style and its 1 reads as an I.
- */
-.reading {
-  display: grid;
-  margin: 0;
-  pointer-events: none;
-}
-
-.value {
-  color: var(--color-accent);
-  font-size: var(--text-h2);
-  font-weight: 300;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
-  white-space: nowrap;
-}
-
-.measure {
-  max-width: 22ch;
-  color: var(--site-text-muted);
-  font-size: var(--text-small);
-}
-
-@media (min-width: 901px) {
-  .reading {
-    position: absolute;
-    z-index: 1;
-    bottom: 6%;
-    left: 4%;
-  }
-
-  .left .reading {
-    right: 4%;
-    left: auto;
-    justify-items: end;
-    text-align: right;
-  }
-
-  .measure {
-    margin-top: 0.5rem;
-    text-shadow: 0 0 1rem #000;
-  }
-}
-
-/* Narrow, the figure stands over the picture, clear of the panel and the label that hang from its foot. */
-@media (max-width: 900px) {
-  .stage {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .reading {
-    order: -1;
-    margin-bottom: 1rem;
-  }
-}
-
-/* A film's clock across the picture's foot, half over it, as the app sets its clock at the foot of the view. */
-.clocks {
-  display: grid;
-
-  & > * {
-    grid-area: 1 / 1;
-  }
-}
-
-@media (min-width: 901px) {
-  .clocks {
-    position: absolute;
-    z-index: 2;
-    right: 4%;
-    bottom: calc(-1 * var(--tap) / 2);
-    width: min(36rem, 86%);
-  }
-
-  .stage:has(.clocks) {
-    margin-bottom: calc(var(--tap) / 2);
-  }
-}
-
-@media (max-width: 900px) {
-  .clocks {
-    position: relative;
-    z-index: 2;
-    margin-top: calc(-1 * var(--tap) / 2);
-    margin-inline: 0.5rem;
-  }
-}
-
-/* Wide, the piece moves a little against the picture as the page scrolls, as a nearer layer would. */
-@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .drift {
-      animation: drift linear both;
-      animation-timeline: view();
-    }
-  }
-}
-
-@keyframes drift {
-  from {
-    translate: 0 1.5rem;
-  }
-
-  to {
-    translate: 0 -1.5rem;
-  }
+  isolation: isolate;
 }
 
 /* One frame the shape of a wide shot; the views lie on one another and the current one shows. */
@@ -200,15 +63,288 @@
   outline-offset: -0.375rem;
 }
 
+/*
+ * Frameless, the views are subjects cut from black: their edges dissolve into the page, and each stands a
+ * little towards the words, leaving the outer side to its card.
+ */
+.frameless .layer img {
+  translate: -7% 0;
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 78%, transparent 100%);
+}
+
+.frameless.left .layer img {
+  translate: 7% 0;
+}
+
 /* A later view does not exist until it is warmed, so it is not fetched. */
 .cold {
   display: none;
+}
+
+/* The pieces and the figures share a box laid exactly over the picture. */
+.pieces,
+.readings {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: 0;
+  aspect-ratio: 16 / 9;
+  pointer-events: none;
+}
+
+/*
+ * A piece of the app's interface (a card, the search, the clock, the switches) hangs across the picture's
+ * outer edge into the page's gutter, as the thing in hand; the subject keeps the middle.
+ */
+.piece {
+  position: absolute;
+  top: 50%;
+  right: calc(1rem - var(--gutter));
+  width: 30%;
+  translate: 0 -50%;
+}
+
+.left .piece {
+  right: auto;
+  left: calc(1rem - var(--gutter));
+}
+
+.piece.bar {
+  width: 52%;
+}
+
+.piece img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.6));
+}
+
+/*
+ * A slide's figure, set as a picture: thin figures at the title's size in the slide's own colour, in the
+ * picture's inner top corner (the words' side), over the dark of space or sky; its measure under it. The
+ * body face, because the display face's figures are old-style and its 1 reads as an I.
+ */
+.reading {
+  position: absolute;
+  top: 5%;
+  left: 4%;
+  display: grid;
+  max-width: 40%;
+  margin: 0;
+}
+
+.left .reading {
+  right: 4%;
+  left: auto;
+  justify-items: end;
+  text-align: right;
+}
+
+/* A floating body reaches higher than a framed view's sky, so its figure stands below it, in the empty black. */
+.frameless .reading {
+  top: auto;
+  bottom: 4%;
+}
+
+.value {
+  font-size: var(--text-h2);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 2rem rgb(0 0 0 / 0.8);
+  white-space: nowrap;
+}
+
+.measure {
+  max-width: 22ch;
+  margin-top: 0.5rem;
+  color: var(--site-text-muted);
+  font-size: var(--text-small);
+  text-shadow:
+    0 0 0.25rem #000,
+    0 0 1rem #000;
 }
 
 /* The labels lie in one cell, so the tallest reserves the room. */
 .captions {
   composes: view-words from '../../../../styles/picture.module.css';
   margin-top: 0.5rem;
+}
+
+/*
+ * A subject cut from black breaks out of the picture's top corner, above the piece, at the far end of the path
+ * the picture draws (Voyager 1 where its line leaves the frame).
+ */
+.cutout {
+  position: absolute;
+  z-index: 2;
+  top: -24%;
+  /* Into the page's gutter, never to the window's edge. */
+  right: calc(1rem - var(--gutter));
+  width: 68%;
+  pointer-events: none;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%);
+  }
+}
+
+/*
+ * A render behind the whole stage, far larger than it and faint, that the page scrolls past more slowly: its
+ * outer lines run on past the frame's edges.
+ */
+.under {
+  position: absolute;
+  z-index: -1;
+  inset: -70% -70%;
+  opacity: 0.4;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 35%, transparent 70%);
+
+  & img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* A film's clock across the picture's foot, half over it, as the app sets its clock at the foot of the view. */
+.clocks {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+@media (min-width: 901px) {
+  .clocks {
+    position: absolute;
+    z-index: 2;
+    right: 4%;
+    bottom: calc(-1 * var(--tap) / 2);
+    width: min(36rem, 86%);
+  }
+
+  .stage:has(.clocks) {
+    margin-bottom: calc(var(--tap) / 2);
+  }
+}
+
+/*
+ * Narrow, the picture takes the column's width: the figure stands over it, and the piece stands beside the
+ * caption, lapping over the picture's foot.
+ */
+@media (max-width: 900px) {
+  .figure {
+    display: grid;
+    grid-template-columns: 1fr 42%;
+    grid-template-areas:
+      'reading reading'
+      'stage stage'
+      'caption pieces';
+    column-gap: 1rem;
+  }
+
+  .stage {
+    grid-area: stage;
+  }
+
+  .readings {
+    position: static;
+    display: grid;
+    grid-area: reading;
+    aspect-ratio: auto;
+    margin-bottom: 1rem;
+  }
+
+  .reading,
+  .left .reading {
+    position: static;
+    grid-area: 1 / 1;
+    max-width: none;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .pieces {
+    position: relative;
+    display: grid;
+    grid-area: pieces;
+    align-items: start;
+    aspect-ratio: auto;
+    margin-top: -2.5rem;
+  }
+
+  .piece,
+  .left .piece {
+    position: static;
+    grid-area: 1 / 1;
+    width: 100%;
+    translate: none;
+  }
+
+  /* A bar is too wide for the caption's side: it spans the column, low over the picture. */
+  .piece.bar {
+    width: calc(100vw - 2 * var(--gutter));
+    margin-left: calc(100% - 100vw + 2 * var(--gutter));
+    translate: 0 calc(-100% + 1.5rem);
+  }
+
+  .captions {
+    grid-area: caption;
+  }
+
+  .figure:not(:has(.pieces)) .captions {
+    grid-column: 1 / -1;
+  }
+
+  .clocks {
+    position: relative;
+    z-index: 2;
+    margin-top: calc(-1 * var(--tap) / 2);
+    margin-inline: 0.5rem;
+  }
+}
+
+/* Wide, the pieces move a little against the picture as the page scrolls, as a nearer layer would. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .drift {
+      animation: drift linear both;
+      animation-timeline: view();
+    }
+
+    .under .drift {
+      animation-name: drift-far;
+    }
+  }
+}
+
+@keyframes drift {
+  from {
+    translate: 0 1.5rem;
+  }
+
+  to {
+    translate: 0 -1.5rem;
+  }
+}
+
+@keyframes drift-far {
+  from {
+    translate: 0 -2.5rem;
+  }
+
+  to {
+    translate: 0 2.5rem;
+  }
 }
 
 .thumbs {

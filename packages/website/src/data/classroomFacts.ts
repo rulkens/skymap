@@ -72,6 +72,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     sourceLabel: 'NASA Jovian satellite fact sheet',
     checked: CHECKED,
     short: 'At 6 hours per second Io, the innermost of the four large moons, laps Jupiter in about 7 seconds.',
+    figure: { value: '1.77', measure: 'days for Io to go round Jupiter' },
   },
   {
     id: 'search-scope',

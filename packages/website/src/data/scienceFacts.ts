@@ -114,6 +114,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/tools/filaments/buildFilaments.ts`,
     sourceLabel: `the filament build, ${IN_REPO}`,
     checked: CHECKED,
+    figure: { value: '5', measure: 'standard deviations clear of the noise, or a ridge is not kept' },
   },
   {
     id: 'sci-flows',
