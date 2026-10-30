@@ -2,6 +2,7 @@
 
 import type { VisibilityEntry } from '../../@types/engine/layer/VisibilityEntry';
 import { FOREGROUND_RECEDE } from '../../data/bands/foregroundRecede';
+import { SOLAR_SYSTEM_CAPTION_RECEDE } from '../../data/bands/solarSystemCaptionRecede';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
@@ -44,5 +45,7 @@ export const starCatalogVisibility = [
     items: LABEL_BEARING_STAR_CATALOG_IDS,
     of: 'starCatalog',
     recession: 'mild',
+    // The curated map fades per star instead (`STAR_MAP_CAPTION_BAND`), which no entry band can.
+    bands: { caption: { ...SOLAR_SYSTEM_CAPTION_RECEDE, items: [SUN_ENTRY.id] } },
   },
 ] as const satisfies readonly VisibilityEntry[];

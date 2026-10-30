@@ -17,15 +17,15 @@ import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { isKeyOf } from '../../../utils/object/isKeyOf';
-import { STAR_CAPTION_KIND } from './starCaptionKinds';
+import { STAR_CAPTION_STYLES } from './starCaptionStyles';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
 /** The catalogs that caption, each carrying its own table and its label item. */
 const CAPTION_SOURCE_ROWS: readonly CaptionSourceRow[] = [
   ...SEEDED_STAR_CATALOGS_BY_SOURCE,
 ].flatMap(([source, row]): readonly CaptionSourceRow[] =>
-  isKeyOf(STAR_CAPTION_KIND, row.id)
-    ? [{ source, item: row.id, kind: STAR_CAPTION_KIND[row.id], stars: row.stars }]
+  isKeyOf(STAR_CAPTION_STYLES, row.id)
+    ? [{ source, item: row.id, ...STAR_CAPTION_STYLES[row.id], stars: row.stars }]
     : [],
 );
 
@@ -42,8 +42,8 @@ function baseCaptionsFor(
 ): readonly (readonly ForegroundCaption[])[] {
   if (bodyStates === cachedStates) return cachedCaptions;
   cachedCaptions = CAPTION_SOURCE_ROWS.map((row) =>
-    row.stars.map((star, seedIndex) =>
-      bodyCaption(
+    row.stars.map((star, seedIndex) => ({
+      ...bodyCaption(
         star,
         bodyFootprintRadiusM(star),
         bodyStates.get(star.id)!.positionMpc,
@@ -51,7 +51,8 @@ function baseCaptionsFor(
         row.kind,
         packSelection(row.source, seedIndex + PICK_SENTINEL_OFFSET),
       ),
-    ),
+      revealBand: row.revealBand,
+    })),
   );
   cachedStates = bodyStates;
   return cachedCaptions;

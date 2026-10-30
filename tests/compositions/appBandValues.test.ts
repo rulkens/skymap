@@ -18,7 +18,13 @@ import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-s
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';
 import { normalize3 } from '../../src/utils/math/normalize3';
+import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
+import { visibilityEntryOf } from '../../src/utils/visibility/visibilityEntryOf';
+import { fadeBand } from '../../src/utils/math/fadeBand';
+import { regionById } from '../../src/utils/regions/regionById';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { FadeBand } from '../../src/@types/math/FadeBand';
+import type { VisibilityAddress } from '../../src/@types/animation/VisibilityAddress';
 
 const BODY_STATES = deriveBodyStates(CONST_J2000);
 
@@ -113,6 +119,67 @@ describe('flow at the Cosmic Flows exhibit pose', () => {
   it('is full at the nearest the exhibit eye can sit to home', () => {
     const { target, distance } = cosmicFlows.pose!;
     expect(valueAt('flow', distance - Math.hypot(...target))).toBe(1);
+  });
+});
+
+// Pins each caption's entry band to the curve it faded by when core applied it per caption
+// kind, edges restated from their sources. The eye backs off along the home → galactic centre
+// line, so a band measured from the wrong anchor reads a different value mid-band.
+describe('caption bands', () => {
+  const gc = BODY_STATES.get(GALACTIC_CENTRE_ANCHOR.id)!.positionMpc;
+  const sun = BODY_STATES.get(asSceneBodyId('sun'))!.positionMpc;
+  const towardGc = normalize3([gc[0] - sun[0], gc[1] - sun[1], gc[2] - sun[2]]);
+  // The caption entry's OWN band: a label with `of` also multiplies its thing's bands (the
+  // star map's backdrop), which `viewBandOf`'s tests pin.
+  const captionValue = (label: string, item: string, from: Readonly<Vec3>, d: number): number =>
+    bandValueOf(
+      visibilityEntryOf(APP_VISIBILITY_REGISTRY, `label:${label}` as VisibilityAddress),
+      item,
+      {
+        drawCamPos: [
+          from[0] - towardGc[0] * d,
+          from[1] - towardGc[1] * d,
+          from[2] - towardGc[2] * d,
+        ],
+        snapshot: { bodyStates: BODY_STATES },
+      },
+    );
+  const beforeMidAfter = ({ fullAt, goneAt }: FadeBand): number[] => [
+    fullAt * 0.9,
+    (fullAt + goneAt) / 2,
+    goneAt * 1.1,
+  ];
+
+  // Four neighbourhood extents, the solar-system captions' reach; full at half of it.
+  const reachMpc = regionById('solar-neighbourhood').extentMpc * 4;
+  const solarSystem: FadeBand = { fullAt: reachMpc / 2, goneAt: reachMpc };
+
+  it.each([
+    ['starCatalog', SUN_ENTRY.id],
+    ['body', 'earth'],
+    ['body', 'planet'],
+    ['missions', 'craft'],
+  ])('label:%s %s fades out over the solar-system reach, measured from the Sun', (label, item) => {
+    for (const d of beforeMidAfter(solarSystem)) {
+      expect(captionValue(label, item, sun, d)).toBeCloseTo(fadeBand(solarSystem, d), 12);
+    }
+  });
+
+  it('the Sun band leaves the star map item alone', () => {
+    expect(captionValue('starCatalog', 'famousStar', sun, reachMpc)).toBe(1);
+  });
+
+  it('label:blackHole fades out a disc diameter past R₀, measured from Sgr A*', () => {
+    const sgrAStar: FadeBand = {
+      fullAt: Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc),
+      goneAt: MILKY_WAY_RADIUS_MPC * 2,
+    };
+    for (const d of beforeMidAfter(sgrAStar)) {
+      expect(captionValue('blackHole', 'sgr-a-star', gc, -d)).toBeCloseTo(
+        fadeBand(sgrAStar, d),
+        12,
+      );
+    }
   });
 });
 

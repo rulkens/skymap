@@ -36,9 +36,9 @@ a _third_ body sits between the camera and Earth's centre.
 
 ## Why the guard that exists does not cover it
 
-The stamp is gated on `earthCaptionPickable` — Earth is seeded, and the camera is
-within `SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC`. There is no condition on Earth
-actually being at glint scale. The comment at `bodyGlintsPass.ts:46-48`
+The stamp is gated on `captionShown(ctx, EARTH_ENTRY.id)` — Earth's `label:body` caption band
+is above 0 at the eye. There is no condition on Earth
+actually being at glint scale. The comment in `bodyGlintsPass.ts`'s `drawPick`
 addresses the resolved case and dismisses it:
 
 > when Earth is resolved and large the extra 18 px point overlapping the sphere
