@@ -62,7 +62,7 @@ function makeState(): EngineState {
 
 const CRAFT_ON = { craft: 1 };
 const CRAFT_OFF = { craft: 0 };
-const BODY_FADE = { earth: 1, planet: 1 };
+const BODY_FADE = { earth: 1, planet: 1, 'small-body': 1 };
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
   return labels.find((l) => l.id === id)?.fadeAlpha;

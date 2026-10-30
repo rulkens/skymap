@@ -98,6 +98,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.SStar:
     case Source.Craft:
     case Source.Satellite:
+    case Source.SmallBody:
     case Source.GaiaStars:
     case Source.Constellations:
     case Source.ZoneOfAvoidance:

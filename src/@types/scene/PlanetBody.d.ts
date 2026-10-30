@@ -24,5 +24,5 @@ export type PlanetBody = {
   /** Apparent diameter (px) at or above which the body draws resolved; below it, a point or glint. */
   readonly resolvePx: number;
   /** Which caption kind, and so which label checkbox, the row's name rides. */
-  readonly captionKind: 'planet';
+  readonly captionKind: 'planet' | 'smallBody';
 };

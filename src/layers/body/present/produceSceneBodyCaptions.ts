@@ -10,6 +10,7 @@ import type { LayerScreenLabel } from '../../../@types/engine/layer/LayerScreenL
 import type { CaptionKind } from '../../../services/engine/presentation/captionPriority';
 import { sceneBodyLabels } from './sceneBodyLabels';
 import { EARTH_ENTRY } from '../sources/earth';
+import { SMALL_BODY_ENTRY } from '../sources/smallBody';
 import { PLANET_ENTRY } from '../sources/planet';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../utils/labels/captionComposeContextOf';
@@ -18,6 +19,7 @@ import { composeForegroundCaption } from '../../../utils/labels/composeForegroun
 const BODY_CAPTION_ITEM: Readonly<Partial<Record<CaptionKind, LabelItemOf<'body'>>>> = {
   earth: EARTH_ENTRY.id,
   planet: PLANET_ENTRY.id,
+  smallBody: SMALL_BODY_ENTRY.id,
 };
 
 // `deriveBodyStates` returns the SAME Map while `simDays` is unchanged: a free change-detector.

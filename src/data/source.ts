@@ -69,11 +69,13 @@ export const Source = {
   McpmWorkbench: 31,
   /** All missions-Layer craft under one code; the pick index runs over `MISSION_CRAFT_IDS`. */
   Craft: 32,
-  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. Codes 38..62 remain. */
+  /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. Codes 39..62 remain. */
   OpenCluster: 33,
   GlobularCluster: 34,
   Nebula: 35,
   GcCluster: 36,
   /** The satellites Layer's points; the pick index runs over the day's catalog. */
   Satellite: 37,
+  /** Vesta, Ceres and Bennu's label checkbox; they pick as `Planet` rows, nothing stamps 38. */
+  SmallBody: 38,
 } as const;

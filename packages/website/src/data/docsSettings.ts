@@ -529,8 +529,8 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Labels & Guides',
         control: 'switch',
-        does: 'Sets the twenty-one switches under it at once. With every one off it switches them all on, the Local Bubble and the constellations included; otherwise it switches them all off.',
-        values: 'On, off, or a dash while the twenty-one differ',
+        does: 'Sets the twenty-two switches under it at once. With every one off it switches them all on, the Local Bubble and the constellations included; otherwise it switches them all off.',
+        values: 'On, off, or a dash while the twenty-two differ',
         first: 'A dash',
       },
       label('Famous Galaxies', 'galaxyCatalogs.items.famousGalaxy.labelEnabled', 'the named galaxies'),
@@ -565,6 +565,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
+      label('Small bodies', 'bodies.items.small-body.labelEnabled', 'the asteroids Vesta and Bennu and the dwarf planet Ceres'),
       {
         name: 'S-star trails',
         control: 'switch',

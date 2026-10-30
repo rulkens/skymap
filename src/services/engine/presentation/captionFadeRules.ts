@@ -70,6 +70,9 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    */
   planet: { fadeTarget: SOLAR_SYSTEM_REACH },
 
+  /** Vesta, Ceres and Bennu: solar-system bodies, so the planets' reach. */
+  smallBody: { fadeTarget: SOLAR_SYSTEM_REACH },
+
   /**
    * The curated local star map. The band is a LOCAL STAR MAP rather than
    * per-body approach labels: full alpha inside the stellar neighbourhood (the
