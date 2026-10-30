@@ -114,27 +114,6 @@
   }
 }
 
-/* As the section scrolls by, the picture draws back to its own size, the way the tour's camera moves out. */
-@keyframes draw-back {
-  from {
-    transform: scale(1.08);
-  }
-}
-
-@supports (animation-timeline: view()) {
-  @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-    .root {
-      view-timeline: --stories block;
-    }
-
-    .layer img {
-      animation: draw-back linear both;
-      animation-timeline: --stories;
-      animation-range: contain;
-    }
-  }
-}
-
 .links {
   display: flex;
   flex-wrap: wrap;
