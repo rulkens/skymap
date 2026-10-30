@@ -167,7 +167,7 @@
     }
 
     &::after {
-      background: var(--color-accent);
+      background: var(--view-accent);
       transform-origin: top;
       scale: 1 0;
       transition: scale var(--duration-reveal) var(--ease-enter);

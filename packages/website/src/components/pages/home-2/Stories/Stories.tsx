@@ -6,6 +6,7 @@
  * label's markers choose the picture. Narrow, nothing is pinned and the parts follow the picture.
  */
 import { useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 
 import { appLink } from '../../../../data/appLink.ts';
 import { HOME_LINKS } from '../../../../data/homeLinks.ts';
@@ -20,8 +21,11 @@ import { useGallery } from '../../../shared/media/PictureBand/useGallery.ts';
 import Shot from '../../../shared/media/Shot/Shot.tsx';
 import styles from './Stories.module.css';
 
-// In the parts' order: the tour, then an exhibit.
-const VIEWS = [{ id: 'tour-cosmic-web' }, { id: 'class-exhibit' }];
+// In the parts' order: the tour, then an exhibit. `accent` is from the picture: the web's violet, the orbits' gold.
+const VIEWS = [
+  { id: 'tour-cosmic-web', accent: '#c98cf2' },
+  { id: 'class-exhibit', accent: '#d9c27a' },
+];
 // Eight columns and the margin to the window's edge; the whole width on a phone.
 const SIZES = '(max-width: 900px) 100vw, calc(66vw + 8rem)';
 
@@ -51,7 +55,12 @@ function Stories() {
 
   return (
     <GalleryContext.Provider value={gallery}>
-      <section ref={gallery.root} className={styles.root} id="stories">
+      <section
+        ref={gallery.root}
+        className={styles.root}
+        id="stories"
+        style={{ '--view-accent': VIEWS[live ? at : 0]!.accent } as CSSProperties}
+      >
         {VIEWS.map((view, i) => (
           <div
             key={view.id}
