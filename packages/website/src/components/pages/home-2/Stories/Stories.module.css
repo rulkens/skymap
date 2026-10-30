@@ -1,83 +1,16 @@
 .root {
-  composes: section from '../../../../styles/layout.module.css';
-  position: relative;
-}
-
-.pin {
-  composes: wrap grid from '../../../../styles/layout.module.css';
+  composes: wrap section from '../../../../styles/layout.module.css';
   /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
   --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
-  align-items: center;
 }
 
-.figure {
-  margin: 0;
-}
-
-/* The views lie on one another and dissolve into the page at every edge but the window's. */
-.stage {
-  position: relative;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  mask-image:
-    linear-gradient(90deg, #000 72%, rgb(0 0 0 / 0)),
-    linear-gradient(180deg, rgb(0 0 0 / 0), #000 9%, #000 88%, rgb(0 0 0 / 0));
-  mask-composite: intersect;
-}
-
-/* The next view arrives from a touch larger, as a camera settling; the last one leaves faster than that. */
-.layer {
-  position: absolute;
-  inset: 0;
-  transition:
-    opacity var(--duration-reveal) var(--ease-enter),
-    scale calc(var(--duration-reveal) + 50ms) var(--ease-enter);
-
-  & picture {
-    display: block;
-    height: 100%;
-  }
-
-  & img {
-    width: 100%;
-    max-width: none;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.away {
-  opacity: 0;
-  scale: 1.04;
-  visibility: hidden;
-  transition:
-    opacity var(--duration-base) var(--ease-leave),
-    scale 0s linear var(--duration-base),
-    visibility 0s linear var(--duration-base);
-}
-
-/* The exhibit's own title stands at its left edge: the crop gives up the panel on the right, which fades anyway. */
-.layer:nth-child(2) img {
-  object-position: 0 50%;
-}
-
-/* A later view does not exist until it is warmed, so it is not fetched. */
-.cold {
-  display: none;
-}
-
-.caption {
-  margin-top: 0.75rem;
+.tour,
+.exhibit {
+  composes: grid from '../../../../styles/layout.module.css';
 }
 
 .lead {
   font-size: var(--text-lead);
-}
-
-.parts {
-  display: grid;
-  gap: 2rem;
-  margin-top: 2.5rem;
 }
 
 .part p {
@@ -90,106 +23,132 @@
   column-gap: 2.5rem;
 }
 
-.half {
-  display: none;
+/* A stage's scene stacks its layers; each layer's picture fills its box at the frame's own shape. */
+.stage {
+  margin: 0;
+
+  & picture {
+    display: block;
+  }
+
+  & img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+}
+
+.scene {
+  position: relative;
+}
+
+/* The title's cut-out has 48 of its 1120 px of shadow margin before its words, 1.2rem at the 28rem drawn here: so
+ * it starts that far before the column line its words stand on. */
+.title {
+  --inset: 1.2rem;
+}
+
+/* The tour: the web on a plate that dissolves into the page, and the tour's caption off the plate, nearest. */
+.plate {
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  mask-image:
+    linear-gradient(90deg, #000 70%, rgb(0 0 0 / 0)),
+    linear-gradient(180deg, rgb(0 0 0 / 0), #000 14%, #000 85%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
+}
+
+.tourCaption {
+  position: absolute;
+  right: 4%;
+  bottom: 6%;
+  width: 22rem;
+  --drift: 2.5rem;
 }
 
 /*
- * Wide, the whole screen holds still for as long as the two halves of the section take to scroll past; the half
- * at the window's middle chooses the part. The picture takes seven columns and the margin to the window's edge.
+ * The exhibit: its orbits across the window, light that adds to the page (an emissive matte), and Jupiter on its
+ * own orbit. That ring's right end is at (56.5%, 50.6%) of the orbits' 16:10 frame (measured on stories-orbits),
+ * and the disc is 27% of cut-jupiter's width: 15rem draws it about two thirds as wide as the ring at 1440.
  */
+.orbits {
+  overflow: hidden;
+  aspect-ratio: 3 / 1;
+  mix-blend-mode: plus-lighter;
+  mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 18%, #000 80%, rgb(0 0 0 / 0));
+
+  & picture,
+  & img {
+    height: 100%;
+  }
+
+  & img {
+    object-fit: cover;
+  }
+}
+
+/* The frame covers the 3:1 box at its full width, so 50.6% of the frame's height is 51.1% of the box's. */
+.planet {
+  position: absolute;
+  top: 51.1%;
+  left: 56.5%;
+  width: 15rem;
+  margin: -4.22rem 0 0 -7.5rem;
+  --drift: 3rem;
+}
+
+.title {
+  position: absolute;
+  bottom: 2%;
+  left: calc(var(--bleed) - var(--inset));
+  width: 28rem;
+  --drift: 1.5rem;
+}
+
+.exhibitStage .label {
+  margin-inline: var(--bleed);
+}
+
 @media (min-width: 901px) {
-  .root {
-    height: calc(var(--section-space) + var(--first-screen) + 60svh);
-  }
-
-  .half {
-    position: absolute;
-    left: 0;
-    display: block;
-    width: 1px;
-    height: 50%;
-
-    &:first-child {
-      top: 0;
-    }
-
-    &:nth-child(2) {
-      top: 50%;
-    }
-  }
-
-  .pin {
-    position: sticky;
-    top: var(--nav-height);
-    height: var(--first-screen);
-  }
-
-  .figure {
-    grid-column: 1 / span 7;
-  }
-
-  .stage {
-    max-height: calc(var(--first-screen) - 6rem);
-    margin-left: calc(-1 * var(--bleed));
+  .tour {
+    align-items: center;
   }
 
   .words {
     grid-column: 8 / -1;
+    grid-row: 1;
   }
 
-  /* A chapter of the list: lit while its picture shows, its line drawn down beside it in the column gap. */
-  .part {
-    position: relative;
-
-    & h3,
-    & p {
-      transition: var(--transition-color);
-    }
-
-    & h3 {
-      color: var(--site-text-dim);
-    }
-
-    & p {
-      color: var(--site-text-faint);
-    }
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0.25rem;
-      bottom: 0;
-      left: -2.75rem;
-      width: 1px;
-      background: rgb(232 238 255 / 0.16);
-    }
-
-    &::after {
-      background: var(--view-accent);
-      transform-origin: top;
-      scale: 1 0;
-      transition: scale var(--duration-reveal) var(--ease-enter);
-    }
+  .tourStage {
+    grid-column: 1 / span 7;
+    grid-row: 1;
+    margin-left: calc(-1 * var(--bleed));
   }
 
-  .lit {
-    & h3 {
-      color: var(--color-fg);
-    }
+  .tourStage .label {
+    margin-left: var(--bleed);
+  }
 
-    & p {
-      color: var(--site-text-muted);
-    }
+  .tourPart {
+    margin-top: 2.5rem;
+  }
 
-    &::after {
-      scale: 1 1;
-    }
+  .exhibit {
+    margin-top: 3rem;
+  }
+
+  .exhibit > .part {
+    grid-column: 8 / -1;
+  }
+
+  /* Its faded top slides under the part's foot. */
+  .exhibitStage {
+    margin: -3rem calc(-1 * var(--bleed)) 0;
   }
 }
 
-/* Narrow: the title and its line, the picture across the whole window with its label, then the parts. */
+/* Narrow: the title and its line, then the tour's stage across the window, its part, the exhibit's part, its stage. */
 @media (max-width: 900px) {
   .words {
     display: contents;
@@ -200,19 +159,163 @@
     min-width: 0;
   }
 
-  .figure {
+  .tourStage {
     order: 1;
-    margin-bottom: 1rem;
+    margin: 1rem calc(-1 * var(--gutter)) 0;
   }
 
-  .parts {
+  .tourPart {
     order: 2;
     margin-top: 1.5rem;
   }
 
-  .stage {
+  .plate {
     aspect-ratio: 4 / 3;
-    margin-inline: calc(-1 * var(--gutter));
-    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 10%, #000 86%, rgb(0 0 0 / 0));
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 12%, #000 80%, rgb(0 0 0 / 0));
+
+    & picture,
+    & img {
+      height: 100%;
+    }
+
+    & img {
+      object-fit: cover;
+      object-position: 25% 0;
+    }
+  }
+
+  .tourCaption {
+    right: var(--gutter);
+    bottom: -12%;
+    width: 78vw;
+  }
+
+  .tourStage .label {
+    margin: 3.5rem var(--gutter) 0;
+  }
+
+  .exhibit {
+    margin-top: 3rem;
+  }
+
+  .exhibitStage {
+    margin: -2rem calc(-1 * var(--gutter)) 0;
+  }
+
+  /* A 5:4 cut of the frame's middle, at its full height: the frame is 1.28 cuts wide, so the ring's end is at 58.3%. */
+  .orbits {
+    aspect-ratio: 5 / 4;
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 12%, #000 82%, rgb(0 0 0 / 0));
+  }
+
+  .planet {
+    top: 50.6%;
+    left: 58.3%;
+    width: 30vw;
+    margin: -8.4vw 0 0 -15vw;
+  }
+
+  .title {
+    --inset: 0.9rem;
+    bottom: 0;
+    left: calc(var(--gutter) - var(--inset));
+    width: 84vw;
+  }
+
+  .exhibitStage .label {
+    margin-inline: var(--gutter);
+  }
+}
+
+/*
+ * Each layer moves at its own depth while its stage crosses the window: `--drift` is how far it runs ahead of the
+ * page (negative lags), at rest where the stage is mid-window. Arrivals play on the inner picture, so they add to
+ * the drift. The rest pose is the finished picture, so without scroll timelines nothing is missing.
+ */
+@keyframes drift {
+  from {
+    translate: 0 var(--drift);
+  }
+
+  to {
+    translate: 0 calc(-1 * var(--drift));
+  }
+}
+
+@keyframes pull-back {
+  from {
+    scale: 1.2;
+  }
+}
+
+@keyframes open-out {
+  from {
+    opacity: 0.3;
+    scale: 0.82;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    translate: var(--from, 2.5rem) 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .tourStage {
+      view-timeline-name: --tour;
+    }
+
+    .exhibitStage {
+      view-timeline-name: --exhibit;
+    }
+
+    .plate {
+      --drift: -1.5rem;
+    }
+
+    .plate,
+    .tourCaption,
+    .planet,
+    .title {
+      animation: drift linear both;
+      animation-range: cover 0% cover 100%;
+    }
+
+    .plate > picture {
+      animation: pull-back linear both;
+      animation-range: entry 0% cover 50%;
+    }
+
+    .orbits > picture {
+      animation: open-out linear both;
+      animation-range: entry 0% cover 45%;
+    }
+
+    .tourCaption > picture,
+    .title > picture {
+      animation: slide-in linear both;
+      animation-range: entry 70% cover 45%;
+    }
+
+    .title > picture {
+      --from: -2.5rem;
+    }
+
+    .plate,
+    .plate > picture,
+    .tourCaption,
+    .tourCaption > picture {
+      animation-timeline: --tour;
+    }
+
+    .orbits > picture,
+    .planet,
+    .title,
+    .title > picture {
+      animation-timeline: --exhibit;
+    }
   }
 }
