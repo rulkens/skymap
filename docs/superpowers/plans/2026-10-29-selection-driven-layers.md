@@ -138,10 +138,10 @@ review: yes (camera follow, frame snapshot identity)
   frame (≤ 2 refs; no memo unless Task 7's perf run asks for one). `enabled` returns false when no such ref
   resolves.
 
-- [ ] **Step 1:** Rewrite the pass's selection read and `satelliteOrbitEllipse`'s arguments; delete `tracked`.
-- [ ] **Step 2: Run** `npm run typecheck`, `npx vitest run tests/layers/satellites` — PASS. No new test: the
+- [x] **Step 1:** Rewrite the pass's selection read and `satelliteOrbitEllipse`'s arguments; delete `tracked`.
+- [x] **Step 2: Run** `npm run typecheck`, `npx vitest run tests/layers/satellites` — PASS. No new test: the
   weld test (`satelliteOrbitEllipse.test.ts`) still pins the geometry; the selection read is routing.
-- [ ] **Step 3: Commit** `refactor(satellites): the trail pass reads the selection from PassState`.
+- [x] **Step 3: Commit** `refactor(satellites): the trail pass reads the selection from PassState`.
 
 ### Task 4: Demand reads `selectedKinds`; the mirror and `LayerCoreDeps.store` go
 

@@ -5,7 +5,7 @@
  * it is rebuilt every frame. km become Mpc BEFORE Earth's heliocentric position joins the centre,
  * as in `satellitePositionMpc`, or the offset would round off an au magnitude.
  */
-import { sgp4 } from '../load/satelliteJsCore';
+import { sgp4, type json2satrec } from '../load/satelliteJsCore';
 import { ellipseFromStateVector } from '../../../utils/orbit/ellipseFromStateVector';
 import { EARTH_GM_KM3_S2 } from '../../../data/earthGmKm3S2';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -13,7 +13,6 @@ import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OrbitConic } from '../../../@types/scene/OrbitConic';
-import type { TrackedSatellite } from '../@types/TrackedSatellite';
 
 const MS_PER_MINUTE = 60_000;
 
@@ -24,15 +23,13 @@ const toWorldMpc = (m: Readonly<Mat3>, [x, y, z]: Readonly<Vec3>, base: Readonly
 ];
 
 export function satelliteOrbitEllipse(
-  satellite: Pick<TrackedSatellite, 'satrec' | 'epochMs'>,
+  satrec: ReturnType<typeof json2satrec>,
+  epochMs: number,
   simDays: number,
   temeToWorld: Readonly<Mat3>,
   earthMpc: Readonly<Vec3>,
 ): OrbitConic | null {
-  const state = sgp4(
-    satellite.satrec,
-    (julianDaysToUnixMs(simDays) - satellite.epochMs) / MS_PER_MINUTE,
-  );
+  const state = sgp4(satrec, (julianDaysToUnixMs(simDays) - epochMs) / MS_PER_MINUTE);
   if (state === null) return null;
   const { position: p, velocity: v } = state;
   const ellipse = ellipseFromStateVector([p.x, p.y, p.z], [v.x, v.y, v.z], EARTH_GM_KM3_S2);

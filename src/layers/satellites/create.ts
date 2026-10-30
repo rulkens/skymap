@@ -1,7 +1,6 @@
 /**
  * create — the satellites Layer in dependency order: the renderers, the propagator (no worker yet),
- * then the slot that drives it, then the selected
- * satellites the orbit rings draw. A landed sweep wakes the frame loop so it is drawn even with
+ * then the slot that drives it, then the selected satellites the catalog demand reads. A landed sweep wakes the frame loop so it is drawn even with
  * the camera at rest.
  */
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
@@ -35,10 +34,10 @@ export function create(deps: LayerCoreDeps): SatellitesRuntime {
     propagator,
     slot,
     simRate: createSimRateTracker(),
-    selected: createSelectedSatellites(
-      { read: () => deps.store.getState().selection, subscribe: deps.store.subscribe },
-      { slot, propagator },
-    ),
+    selected: createSelectedSatellites({
+      read: () => deps.store.getState().selection,
+      subscribe: deps.store.subscribe,
+    }),
     scheduleWake: () => {
       cancelWake();
       wake = setTimeout(() => {
