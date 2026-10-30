@@ -51,7 +51,7 @@ import { inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { setEasedDuration } from '../../../../src/state/settings/core/focusMovesSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
-import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
+import { APP_EXHIBIT_REGISTRY } from '../../../../src/compositions/appExhibits';
 import type { ExhibitId } from '../../../../src/@types/exhibits/ExhibitId';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -335,7 +335,7 @@ describe('pickWinner', () => {
 });
 
 describe('the mission row, lifted from the timeline kind', () => {
-  const drivers = composeControlSchemes(Object.values(APP_EXHIBITS)).skymap.drivers;
+  const drivers = composeControlSchemes(Object.values(APP_EXHIBIT_REGISTRY)).skymap.drivers;
   const mission = drivers.find((d) => d.id === 'mission')!;
   const inExhibit = (id: ExhibitId) => {
     const store = makeStore();
