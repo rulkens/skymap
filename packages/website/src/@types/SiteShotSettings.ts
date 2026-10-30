@@ -49,6 +49,8 @@ export type SiteShotSettings = {
   remote?: true;
   /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */
   crop?: { left: number; top: number; width: number; height: number };
+  /** With `ui`: a CSS selector of one element of the app's interface; the picture is that element alone on a transparent ground, with a margin for its shadow. Not with `crop`. */
+  element?: string;
   /** Extra time before the shot: streamed surface imagery arrives after the app reports settled. */
   settleMs?: number;
 };

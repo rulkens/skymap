@@ -19,6 +19,7 @@ import { readCanvas } from '../utils/shot/readCanvas';
 import { SHOT_ENCODING } from './shotEncoding';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
 import { openSiteShot } from './utils/openSiteShot';
+import { shootElement } from './utils/shootElement';
 import { shootPairedRemote } from './utils/shootPairedRemote';
 
 const MASTERS_DIR = 'data/shots/site';
@@ -58,6 +59,12 @@ if (unknown.length > 0) {
 mkdirSync(MASTERS_DIR, { recursive: true });
 mkdirSync(OUT_DIR, { recursive: true });
 const rows = SITE_SHOTS.filter((shot) => !only || only.includes(shot.id));
+for (const shot of rows) {
+  if (shot.settings?.element && shot.settings.crop) {
+    console.error(`${shot.id}: \`element\` and \`crop\` cannot be used together`);
+    process.exit(1);
+  }
+}
 // `--from-masters` still needs the browser: it sets the card's type.
 const browser = await launchChromium();
 let warnCheckout = true;
@@ -87,6 +94,8 @@ try {
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
         if (shot.settings?.remote) {
           writeFileSync(master, await shootPairedRemote(page, base!, shot));
+        } else if (shot.settings?.element) {
+          writeFileSync(master, await shootElement(page, shot.settings.element));
         } else {
           writeFileSync(
             master,
