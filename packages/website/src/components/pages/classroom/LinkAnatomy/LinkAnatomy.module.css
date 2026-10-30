@@ -41,13 +41,27 @@
   letter-spacing: -0.02em;
   color: var(--color-fg);
   text-shadow: 0 0 1.5rem rgb(0 0 0 / 0.8);
+  /* A part never breaks at its own hyphens, and the copy control stays on the last part's line. */
+  white-space: nowrap;
 }
 
-/* A part never breaks at its own hyphens, and the copy control stays on the last part's line. */
-.url > .host,
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link > .host,
 .line {
   display: block;
-  white-space: nowrap;
+}
+
+/* Pointed at, the whole address lights in the picture's colour, as it does for the third step. */
+.link:is(:hover, :focus-visible) {
+  color: var(--accent);
+
+  & .host {
+    color: var(--accent);
+  }
 }
 
 .host {

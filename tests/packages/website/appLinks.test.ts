@@ -21,8 +21,8 @@ const OTHER_USES: Record<string, number> = {
   'components/pages/home/Places/PlaceLink.tsx': 1,
   // Each slide is a link to its own view, the current one reachable; the caption under it carries the ViewLink.
   'components/pages/features/FeatureGallery/FeatureGallery.tsx': 1,
-  // The address set large as text is copied by its own control; a ViewLink under the picture opens it.
-  'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 1,
+  // The address set large is the link, as a browser's is, and its copy control copies it.
+  'components/pages/classroom/LinkAnatomy/LinkAnatomy.tsx': 2,
   // The address in the window's bar is the link, as a browser's is, and its copy control copies it.
   'components/pages/home-2/Sharing/Sharing.tsx': 2,
 };

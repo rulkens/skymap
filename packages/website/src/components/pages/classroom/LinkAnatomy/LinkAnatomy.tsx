@@ -31,24 +31,25 @@ function LinkAnatomy() {
           <Shot id={SHOT} tall="classroom-hero-portrait" sizes="(max-width: 900px) 100vw, 60vw" />
         </div>
         <div className={styles.address}>
-          {/* One line per part, so each part's number stands in the margin at its line's start. */}
+          {/* One line per part, so each part's number stands in the margin at its line's start. The address is
+              the link, as a browser's is; the copy control sits outside it, a button cannot live in a link. */}
           <p className={styles.url}>
-            <span className={styles.host}>
-              {site.host}
-              {APP_BASE}#
-            </span>
-            <span className={styles.line}>
-              <span className={styles.part} data-n="1">
-                {FOCUS}
+            <a className={styles.link} href={appLink(HASH)}>
+              <span className={styles.host}>
+                {site.host}
+                {APP_BASE}#
               </span>
-              <span className={styles.host}>&amp;</span>
-            </span>
-            <span className={styles.line}>
+              <span className={styles.line}>
+                <span className={styles.part} data-n="1">
+                  {FOCUS}
+                </span>
+                <span className={styles.host}>&amp;</span>
+              </span>
               <span className={styles.part} data-n="2">
                 {TIME}
-              </span>{' '}
-              <CopyButton text={appLink(HASH)} label="Copy the address" />
-            </span>
+              </span>
+            </a>{' '}
+            <CopyButton text={appLink(HASH)} label="Copy the address" />
           </p>
         </div>
         <figcaption className={styles.caption}>
