@@ -2,17 +2,44 @@
   composes: wrap section from '../../../../styles/layout.module.css';
 }
 
+/*
+ * Title over its line on one left edge: RealData, next, opens on a split head, so the two neighbours keep
+ * rhythms of their own.
+ */
+.head {
+  margin-bottom: 3.5rem;
+
+  & p {
+    max-width: var(--measure-lead);
+    margin-bottom: 0;
+    font-size: var(--text-lead);
+  }
+}
+
+/* Two by two: the four parts of a row share their lines (subgrid), so questions and links stand level. */
 .parts {
-  composes: grid from '../../../../styles/layout.module.css';
-  align-items: start;
-  row-gap: 4.5rem;
+  composes: grid halves from '../../../../styles/layout.module.css';
+  row-gap: 5rem;
+}
+
+.part {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+
+  & h3 {
+    margin-bottom: 0.625rem;
+    color: var(--color-fg);
+  }
 }
 
 .figure {
   margin: 0 0 1.75rem;
 }
 
-/* One shape for every picture, the film's: a taller picture is cut about its middle. */
+/* One shape for every picture, the film's; the picture dissolves into the page at its edges. */
 .frame {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -21,38 +48,68 @@
 .ground {
   height: 100%;
   overflow: hidden;
+  mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 0), #000 5%, #000 95%, rgb(0 0 0 / 0)),
+    linear-gradient(180deg, rgb(0 0 0 / 0), #000 7%, #000 93%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
 
   & picture {
     display: block;
     height: 100%;
   }
 
-  & img {
+  & img,
+  & video {
     height: 100%;
     object-fit: cover;
   }
 }
 
+/* Pointing at a part leans in on its picture, inside the frame. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ground img,
+  .ground video {
+    transition: scale var(--duration-base) var(--ease-standard);
+  }
+
+  .part:hover .ground :is(img, video) {
+    scale: 1.03;
+  }
+}
+
 /*
  * The app's own control over the picture it acts on, as it sits in the app: translucent, so the render shows
- * through. The clock along the picture's foot; the search panel at its right side, wide reaching past the
- * picture's edge into the empty column beside it, so it reads as the thing in hand.
+ * through. The clock along the picture's foot; the search panel at its right side. Both drift a little against
+ * the picture as the page scrolls, as a pane nearer the eye would.
  */
 .over {
   position: absolute;
-  inset: auto 6% 6%;
+  z-index: 1;
+  inset: auto 8% 8%;
 }
 
 .side {
-  inset: 50% 5% auto auto;
+  inset: 50% 4% auto auto;
   width: 46%;
   translate: 0 -50%;
 }
 
-@media (min-width: 901px) {
-  .side {
-    right: -12%;
-    width: 52%;
+@keyframes drift {
+  from {
+    transform: translateY(1rem);
+  }
+
+  to {
+    transform: translateY(-1rem);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .over {
+      animation: drift linear both;
+      animation-timeline: view();
+    }
   }
 }
 
@@ -60,45 +117,34 @@
   margin-top: 0.5rem;
 }
 
-/* Narrow, each picture takes the window's whole width; its label keeps to the text's edge. */
-@media (max-width: 900px) {
-  .frame {
-    margin-inline: calc(-1 * var(--gutter));
-  }
+.line {
+  composes: small from '../../../../styles/type.module.css';
+  color: var(--site-text-dim);
 }
 
-.ask {
+.words {
   margin-bottom: 0.75rem;
+
+  & p {
+    margin-bottom: 0;
+  }
 }
 
 .more {
-  margin-top: 4rem;
+  margin-top: 4.5rem;
 }
 
-/*
- * Wide, a large picture and a small one in each row, crossing sides from the first row to the second, and the
- * one on the right set lower: the four read as a sequence rather than a table. Spans in `--cols` (page grid).
- */
-@media (min-width: 901px) {
-  .part:nth-child(1) {
-    grid-column: 1 / span 7;
-    --cols: 7;
+/* Narrow, each picture takes the window's whole width; its label keeps to the text's edge. */
+@media (max-width: 900px) {
+  .parts {
+    row-gap: 3.5rem;
   }
 
-  .part:nth-child(2) {
-    grid-column: 9 / -1;
-    --cols: 4;
-    margin-top: 10rem;
+  .frame {
+    margin-inline: calc(-1 * var(--gutter));
   }
 
-  .part:nth-child(3) {
-    grid-column: 1 / span 5;
-    --cols: 5;
-  }
-
-  .part:nth-child(4) {
-    grid-column: 7 / -1;
-    --cols: 6;
-    margin-top: 8rem;
+  .ground {
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 7%, #000 93%, rgb(0 0 0 / 0));
   }
 }

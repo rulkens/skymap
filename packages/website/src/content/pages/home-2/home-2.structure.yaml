@@ -38,19 +38,19 @@ sections:
   - heading: "Use it in the classroom"
     job: "How can I best use Skymap to interactively teach my students about the universe?"
     component: "Lessons"
-    layout: "two columns, the second set lower: picture, question, link"
-    visual: "a large picture per part; Run the clock as the Jupiter film"
+    layout: "two by two, every picture one shape, questions and links on shared lines"
+    visual: "a picture per part, edges dissolving into the page; Run the clock as the Jupiter film with the app's clock over it"
     parts:
-      - heading: "Ready-made links"
+      - heading: "Can you see the North Pole on 21 June?"
         job: "A link for pupils today, nothing to install."
         shots: [lesson-earth-june]
-      - heading: "Run the clock"
+      - heading: "How many times does Io go round while Europa goes round once?"
         job: "Watch a day, a year, a lunar month."
         shots: [features-time-jupiter]
-      - heading: "Questions to chase"
+      - heading: "Which is farther away: Betelgeuse, or the centre of the Milky Way?"
         job: "A question pupils answer by going there."
         shots: [class-search]
-      - heading: "Feel the scale"
+      - heading: "Had our species appeared when this light left Andromeda?"
         job: "Fly from your town to the cosmic web."
         shots: [lesson-andromeda]
   - heading: "Real data, real science"

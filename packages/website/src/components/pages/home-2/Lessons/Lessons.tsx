@@ -1,15 +1,17 @@
 /*
- * Lessons — Home's pitch for the classroom: four ways into a lesson, each a large picture (one a film of the
- * clock running), a question for the class and the link that opens where it is answered. The questions are
- * the classroom page's own (data/lessons.ts and its class features), so the two pages ask the same thing.
- * Wide, a large and a small picture to a row, crossing sides; narrow, the parts follow one another.
+ * Lessons — Home's pitch for the classroom: four questions a pupil can answer by going there, each over the
+ * picture of the view its link opens (one a film of the clock running) and a line on what the link sets up.
+ * The questions are the classroom page's own (data/lessons.ts and its class features), put to the pupil. Wide,
+ * two by two, every picture one shape and every row's parts on shared lines; narrow, one after another.
  */
+import type { CSSProperties } from 'react';
+
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
 import { appLink } from '../../../../data/appLink.ts';
 import { LESSON_TOPICS } from '../../../../data/lessons.ts';
+import motion from '../../../../styles/motion.module.css';
 import { cx } from '../../../../utils/cx.ts';
 import { sitePath } from '../../../../utils/sitePath.ts';
-import SectionHead from '../../../shared/layout/SectionHead/SectionHead.tsx';
 import ObjLink from '../../../shared/links/ObjLink/ObjLink.tsx';
 import ViewLink from '../../../shared/links/ViewLink/ViewLink.tsx';
 import FeatureFilm from '../../../shared/media/FeatureFilm/FeatureFilm.tsx';
@@ -21,77 +23,71 @@ const lesson = (shot: string) =>
   LESSON_TOPICS.flatMap((topic) => topic.lessons).find((row) => row.shot === shot)!;
 const feature = (shot: string) => CLASS_FEATURES.find((row) => row.shot === shot)!;
 
-const earth = lesson('lesson-earth-june');
-const clock = feature('class-time');
-const search = feature('class-search');
-const andromeda = lesson('lesson-andromeda');
-
 // `film` plays the loop of the same id (data/siteLoops.ts) over its still, which gives the label. `over` lays a
 // control of the app, captured on a clear ground, over the picture: at its foot or at its `side`.
 const PARTS = [
   {
-    title: 'Ready-made links',
-    shot: earth.shot,
-    ask: earth.ask,
-    hash: earth.hash,
-    action: earth.title,
-    large: true,
+    ask: 'Can you see the North Pole on 21 June?',
+    line: 'Earth as the Sun lit it that day. Ask what it means for the length of a day there.',
+    shot: 'lesson-earth-june',
+    hash: lesson('lesson-earth-june').hash,
+    action: 'Earth on 21 June',
   },
   {
-    title: 'Run the clock',
+    ask: 'How many times does Io go round while Europa goes round once?',
+    line: 'Jupiter with the clock paused. Start it, speed it up and count.',
     shot: 'features-time-jupiter',
     film: true,
     over: { id: 'ui-timebar', side: false },
-    large: false,
-    ask: clock.ask,
-    hash: clock.hash,
-    action: clock.action,
+    hash: feature('class-time').hash,
+    action: 'Jupiter and its moons',
   },
   {
-    title: 'Questions to chase',
+    ask: 'Which is farther away: Betelgeuse, or the centre of the Milky Way?',
+    line: 'Orion and the stars around it. Pupils search for both and compare.',
     shot: 'features-constellations',
     over: { id: 'ui-search', side: true },
-    ask: search.ask,
-    hash: search.hash,
-    large: false,
+    hash: feature('class-search').hash,
+    action: 'Orion and its neighbours',
   },
   {
-    title: 'Feel the scale',
-    shot: andromeda.shot,
-    ask: andromeda.ask,
-    hash: andromeda.hash,
-    action: andromeda.title,
-    large: true,
+    ask: 'Had our species appeared when this light left Andromeda?',
+    line: 'A photograph of Andromeda at its catalogued place. The light left 2.5 million years ago.',
+    shot: 'lesson-andromeda',
+    hash: lesson('lesson-andromeda').hash,
+    action: 'Andromeda, the nearest large galaxy',
   },
 ];
 
-// Six or seven of the page grid's twelve columns (`large`), or four or five; the whole width on a phone.
-const sizes = (large: boolean) =>
-  large
-    ? '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)'
-    : '(max-width: 900px) 100vw, min(calc(42vw - 4rem), 29rem)';
-// An overlay is at most four fifths of a small picture.
-const OVER_SIZES = '(max-width: 900px) 80vw, 22rem';
+// Half the page grid; the whole width on a phone.
+const SIZES = '(max-width: 900px) 100vw, min(calc(50vw - 4rem), 36rem)';
+// An overlay is at most half a picture.
+const OVER_SIZES = '(max-width: 900px) 80vw, 18rem';
 
 function Lessons() {
   return (
     <section className={styles.root} id="classroom">
-      <SectionHead title="Use it in the classroom">
+      <div className={styles.head}>
+        <h2>Use it in the classroom</h2>
         <p>
           Give the class a link and a question. The link opens the view in a browser, with nothing
           to install.
         </p>
-      </SectionHead>
+      </div>
       <div className={styles.parts}>
-        {PARTS.map((part) => (
-          <div key={part.title} className={styles.part}>
+        {PARTS.map((part, at) => (
+          <div key={part.shot} className={styles.part}>
             <figure className={styles.figure}>
-              <div className={styles.frame}>
+              <div
+                className={cx(styles.frame, motion.unmask)}
+                style={{ '--reveal-delay': `${(at % 2) * 80}ms` } as CSSProperties}
+                data-reveal
+              >
                 <div className={styles.ground}>
                   {part.film ? (
-                    <FeatureFilm film={part.shot} sizes={sizes(part.large)} wide />
+                    <FeatureFilm film={part.shot} sizes={SIZES} wide />
                   ) : (
-                    <Shot id={part.shot} sizes={sizes(part.large)} />
+                    <Shot id={part.shot} sizes={SIZES} />
                   )}
                 </div>
                 {part.over && (
@@ -104,8 +100,10 @@ function Lessons() {
                 <ShotCaption id={part.shot} showDrawn={false} open={false} />
               </figcaption>
             </figure>
-            <h3>{part.title}</h3>
-            <p className={styles.ask}>{part.ask}</p>
+            <div className={styles.words}>
+              <h3>{part.ask}</h3>
+              <p className={styles.line}>{part.line}</p>
+            </div>
             <ViewLink hang href={appLink(part.hash)}>
               {part.action}
             </ViewLink>
