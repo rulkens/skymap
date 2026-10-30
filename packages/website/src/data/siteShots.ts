@@ -11,6 +11,11 @@ const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCo
 // A data page's picture stands in the text column, 552 px at most: 1280 covers it at 2x.
 const DATA_WIDTHS = [1280, 640];
 const NOON = 't=2026-10-05T12:00:00Z';
+// A cutout: the subject alone on black, for a page to blend in with `screen`.
+const CUTOUT: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true, hideStars: true };
+const CUT_WIDTHS = [1920, 1280];
+// An orbit drawing: the lines are the subject, so the trails stay on and everything else is off.
+const ORBITS: SiteShotSettings = { hideLabels: true, hideStructures: true, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true, hideStars: true };
 // Late morning in Copenhagen at midsummer, the time the park's other pictures are taken at.
 const PARK_TIME = 't=2026-06-21T11:00:00Z';
 // The Time films: stills 960 wide like the films, and 480 for a thumbnail.
@@ -915,25 +920,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'Saturn and its rings inside a selection ring, beside a card listing radius, mass, gravity, day length and more.',
     credit: 'Saturn: Solar System Scope',
   },
-  {
-    id: 'class-card-phone',
-    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,0.38,1.4e-14,0',
-    settings: { ui: true, settleMs: 4000, crop: { left: 600, top: 0, width: 600, height: 750 } },
-    size: FEATURE,
-    widths: PHONE_WIDTHS,
-    title: 'Saturn’s card',
-    caption: 'Cut from a wider window.',
-    drawn: 'The figures on it are textbook values typed into the app.',
-    alt: 'A card headed Saturn listing radius, mass, gravity, day length, year length and more, with part of the planet beside it.',
-    credit: 'Saturn: Solar System Scope',
-  },
-    size: FEATURE,
-    widths: FEATURE_WIDTHS,
-    title: 'The Andromeda Galaxy',
-    drawn: 'The galaxy stands at its catalogued position; its picture is a photograph placed in the scene.',
-    alt: 'A tilted spiral galaxy under its name, on a field of stars, beside a card with its photograph, distance and type.',
-    credit: 'Photograph: Brody Wesner, CC0',
-  },
   // The first-flight tutorial: no pinned time on the first four, because the page describes the app as a visitor finds it, with its clock on the present.
   {
     id: 'start-arrival',
@@ -1536,6 +1522,163 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The app’s Navigation panel',
     drawn: 'The keys and mouse moves are the app’s own.',
     alt: 'A panel headed Navigation: drag to orbit the camera, wheel to zoom, H for the home view, F to focus, Esc to clear the selection and the search keys.',
+  },
+  // Cutouts: one subject on pure black for the pages to blend with `screen`. Stars and the galaxy field are off, so nothing else is in frame.
+  {
+    id: 'cut-hubble',
+    // 20 minutes on from the Features picture, with the camera under Hubble and the Sun beside it: Earth is out of frame, so nothing is behind it. The narrow lens keeps Earth's limb out.
+    link: 'focus=body-hubble&t=2026-09-18T13:20:12Z&pose=a,0,0,0,3.2,-1.0,1.3e-21,0',
+    settings: { ...CUTOUT, fovDeg: 25, exposure: 9, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'The Hubble Space Telescope',
+    drawn: 'The telescope is a 3D model.',
+    alt: 'The Hubble Space Telescope, a silver tube with two dark solar panels, on black.',
+    credit: 'Model: NASA',
+  },
+  {
+    id: 'cut-voyager1',
+    // Rolled so the long science boom lies across the frame; the narrow lens leaves no planet or moon dots in it.
+    link: 'focus=body-voyager1&t=2026-09-18T12:56:32Z&pose=a,0,0,0,3.8408163993487223,-0.6565563346622649,1.75e-21,-0.7',
+    settings: { ...CUTOUT, fovDeg: 20, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'Voyager 1',
+    drawn: 'The spacecraft is a 3D model.',
+    alt: 'A white dish antenna with a boom and instruments, on black.',
+    credit: 'Model: NASA / Michael D. Carbajal',
+  },
+  {
+    id: 'cut-saturn',
+    // Just above the ring plane, lit side; the rings span about 70% of the width. Titan stays in frame as one dot.
+    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,-0.2,1.9e-14,0.2',
+    settings: { ...CUTOUT, fovDeg: 20, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'Saturn',
+    drawn: 'Position and ring tilt are computed for 15 October 2017.',
+    alt: 'Saturn and its open rings, lit from one side, on black.',
+    credit: 'Saturn: Solar System Scope',
+  },
+  {
+    id: 'cut-earth',
+    link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.5,0.2,1.5e-15,0`,
+    settings: { ...CUTOUT, fovDeg: 20, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'Earth',
+    drawn: 'The surface is satellite photography; the clouds are one fixed composite.',
+    alt: 'Earth with the terminator through its middle, the day side lit and the night side dark, on black.',
+    credit: 'Earth: NASA Blue Marble',
+  },
+  // The rovers stand on terrain the app cannot hide, so these are not on black: the camera sits low at the rover's own height (`s` pose, a site's heading, elevation and range) and the Martian sky is dark brown.
+  {
+    id: 'cut-perseverance',
+    link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,11',
+    settings: { ...CUTOUT, fovDeg: 35, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'Perseverance on Mars',
+    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    alt: 'A six-wheeled rover with a camera mast, seen from the side on a slope of smooth brown ground under a dark brown sky.',
+    credit: 'Model: Brian Kumanchik, NASA/JPL-Caltech',
+  },
+  {
+    id: 'cut-curiosity',
+    link: 'focus=body-curiosity&t=2026-10-07T16:00:00Z&pose=s,curiosity,5.0,0.03,11',
+    settings: { ...CUTOUT, fovDeg: 35, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'Curiosity on Mars',
+    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    alt: 'A six-wheeled rover with a long arm and a camera mast, seen from the side on the floor of Gale crater, a ridge rising behind it.',
+    credit: 'Model: NASA/JPL-Caltech',
+  },
+  {
+    id: 'cut-spirit',
+    link: 'focus=body-spirit&t=2026-10-07T08:00:00Z&pose=s,spirit,0.8,0.03,12',
+    settings: { ...CUTOUT, fovDeg: 35, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'Spirit on Mars',
+    drawn: 'The rover is a 3D model standing on measured terrain; the colour of the ground is from orbit.',
+    alt: 'A six-wheeled rover with flat solar panels and a camera mast on smooth orange ground under a dark brown sky.',
+    credit: 'Model: NASA/JPL-Caltech',
+  },
+  // A strip for the foot of a section: the same low camera, Jezero's ground below a flat horizon.
+  {
+    id: 'mars-horizon',
+    link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z&pose=s,perseverance,1.6,0.03,2000',
+    settings: { ...CUTOUT, fovDeg: 60, settleMs: 9000 },
+    size: { width: 1440, height: 420 },
+    widths: [2400, 1440],
+    title: 'Jezero crater from a rover’s height',
+    drawn: 'The ground is measured terrain with colour from orbit; the sky is a model.',
+    alt: 'A rover on a slope of smooth brown ground at the foot of a low ridge, under a dark brown sky.',
+  },
+  // Orbit drawings, seen from above. The app cannot hide Jupiter's own orbit line or the dim cloud of the Milky Way, so each pose is chosen to keep them out of frame or small.
+  {
+    id: 'orbits-inner',
+    link: 't=2026-01-01T00:00:00Z&focus=star-sun&pose=a,0,0,0,0,1.0,1.4e-11,0',
+    settings: { ...ORBITS, settleMs: 6000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'The orbits of Mercury, Venus, Earth and Mars',
+    drawn: 'The orbits are computed and drawn as lines.',
+    alt: 'Four nested ellipses round a dark centre, the outermost orange, on black.',
+  },
+  {
+    id: 'orbits-jupiter-moons',
+    link: 'focus=body-jupiter&t=2033-03-14T21:00:00Z&pose=a,0,0,0,1.0,0.9,1.3e-13,0',
+    settings: { ...ORBITS, settleMs: 6000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'The orbits of Jupiter’s four large moons',
+    drawn: 'The orbits are computed and drawn as lines.',
+    alt: 'Four nested ellipses round Jupiter, on black, with a long straight line crossing them.',
+  },
+  {
+    id: 'orbits-voyager',
+    link: 't=2026-09-18T00:00:00Z&focus=star-sun&pose=a,0,0,0,4.468,0.5,8.5e-10,0',
+    settings: { ...ORBITS, hideOrbitTrails: true, missionTrails: true, settleMs: 6000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'The paths of Voyager 1 and 2',
+    drawn: 'The paths are computed from tracking data.',
+    alt: 'Two green lines leaving a small knot at the centre, one long and straight, the other bending away.',
+  },
+  {
+    id: 'orbits-s-stars',
+    link: 'focus=blackhole-sgr-a-star&t=2026-06-01T00:00:00Z&pose=a,-0.0004469860712306233,-0.007138118108456056,-0.0039657480154262886,-1.7092355667054722,0.8862619633921914,2.4e-7,0',
+    settings: { ...ORBITS, settleMs: 9000 },
+    size: WIDE,
+    widths: CUT_WIDTHS,
+    title: 'The S-stars orbiting Sagittarius A*',
+    drawn: 'The orbits are computed from the stars’ published orbital elements. The paths drawn along them are ours.',
+    alt: 'Many thin elliptical orbits in blue and orange crossing round a bright knot at the centre, on black.',
+  },
+  // The Classroom page's opening question: Earth and the Moon at true scale, seen across the line between them near first quarter.
+  {
+    id: 'class-earth-moon',
+    link: 'focus=body-earth&t=2026-10-18T12:00:00Z&pose=a,0,0,0,5.32,0.5,3e-14,-0.035,-0.245,-0.02',
+    settings: { ...ONE_GALAXY, hideStars: true, fovDeg: 12, settleMs: 4000 },
+    size: { width: 1600, height: 600 },
+    widths: [2880, 1440, 720],
+    title: 'Earth and the Moon at true scale',
+    drawn: 'Both sizes and the distance between them are to scale; the positions and lit sides are computed for 18 October 2026.',
+    alt: 'A small blue Earth on the left and a much smaller grey Moon far to the right, with black between them.',
+    credit: 'Earth: NASA Blue Marble. Moon: Solar System Scope',
+  },
+  {
+    id: 'class-earth-moon-tall',
+    link: 'focus=body-earth&t=2026-10-18T12:00:00Z&pose=a,0,0,0,5.32,0.5,3e-14,-1.6058,-0.245,-0.02',
+    settings: { ...ONE_GALAXY, hideStars: true, fovDeg: 30, settleMs: 4000 },
+    size: { width: 500, height: 1000 },
+    widths: [1000, 500],
+    title: 'Earth and the Moon at true scale',
+    drawn: 'Both sizes and the distance between them are to scale; the positions and lit sides are computed for 18 October 2026.',
+    alt: 'A small blue Earth at the bottom and a much smaller grey Moon far above it, with black between them.',
+    credit: 'Earth: NASA Blue Marble. Moon: Solar System Scope',
   },
   // The Domes page's exhibit chooser: each exhibit as it opens, in the frame of `dome-exhibit` and `class-exhibit`.
   {
