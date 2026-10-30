@@ -15,12 +15,12 @@ const AT = CONST_J2000 + 3;
 const PLACED: Vec3 = [1e-5, 2e-5, 3e-5];
 const base = deriveBodyStates(AT);
 
-const movingRow = (positionMpc: Vec3): SelectionRow =>
+const movingRow = (positionMpc: Vec3, poseId: TransientBodyId = POSE_ID): SelectionRow =>
   ({
     type: 'satellite',
     positionMpc,
     driver: {
-      poseId: POSE_ID,
+      poseId,
       boundingRadiusM: 50,
       footprintRadiusM: 50_000,
       groundRadiusM: null,
@@ -78,5 +78,13 @@ describe('placeLiveSelection', () => {
     const slot = { ref: REF, row: movingRow(PLACED) };
     placeLiveSelection(base, [slot, slot], [row], AT);
     expect(extractRow).toHaveBeenCalledTimes(1);
+  });
+
+  it("keys the position under the extracted row's poseId, not the stored one", () => {
+    const otherId: TransientBodyId = 'transient:satellite-99999';
+    const { row } = kindRow(movingRow(PLACED, otherId));
+    const out = placeLiveSelection(base, [{ ref: REF, row: movingRow([0, 0, 0]) }], [row], AT);
+    expect(out.get(otherId)!.positionMpc).toEqual(PLACED);
+    expect(out.has(POSE_ID)).toBe(false);
   });
 });

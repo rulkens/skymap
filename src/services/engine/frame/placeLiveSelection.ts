@@ -22,16 +22,18 @@ export function placeLiveSelection(
   simDays: number,
 ): ReadonlyMap<PositionedId, BodyState> {
   let placed: Map<PositionedId, BodyState> | null = null;
+  const extractedRefs = new Set<SelectionRef>();
   for (const { ref, row } of slots) {
-    const driver = selectionDriver(row);
-    if (ref === null || driver?.followsSimClock !== true || driver.poseId === null) continue;
-    if (placed?.has(driver.poseId)) continue;
+    if (ref === null || extractedRefs.has(ref) || selectionDriver(row)?.followsSimClock !== true)
+      continue;
+    extractedRefs.add(ref);
     const extracted = kindRows.find((kind) => kind.type === ref.type)?.extractRow(ref, simDays);
-    if (extracted == null || !('positionMpc' in extracted)) continue;
+    const poseId = selectionDriver(extracted ?? null)?.poseId;
+    if (extracted == null || !('positionMpc' in extracted) || poseId == null) continue;
     placed ??= new Map(base);
     const [x, y, z] = extracted.positionMpc;
     // A transient id has no rotation row, so it gets what `orientationForBody` gives one.
-    placed.set(driver.poseId, { positionMpc: [x, y, z], orientation: [...IDENTITY_MAT3] as Mat3 });
+    placed.set(poseId, { positionMpc: [x, y, z], orientation: [...IDENTITY_MAT3] as Mat3 });
   }
   return placed ?? base;
 }
