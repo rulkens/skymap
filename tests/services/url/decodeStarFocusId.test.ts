@@ -11,6 +11,7 @@ import { decodeStarFocusId } from '../../../src/services/url/decodeStarFocusId';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../src/data/bodies/sceneSStars';
 import { Source } from '../../../src/data/source';
+
 describe('decodeStarFocusId', () => {
   it('resolves a seed id to its own table and index, with no survey loaded', () => {
     expect(decodeStarFocusId('star-sirius', false)).toEqual({

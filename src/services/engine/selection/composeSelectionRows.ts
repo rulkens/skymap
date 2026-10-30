@@ -1,3 +1,20 @@
+/**
+ * composeSelectionRows — the one `SelectionResolver` the saga context and the
+ * pick path both read (D5, Ruling 4). `rowsOf` is called per resolution, not
+ * cached, so a Layer row `createLayers` appends after this resolver is built
+ * is visible immediately. Focus ids resolve by claim-then-decode: the one
+ * claiming row is authoritative even when its `decode` returns null; two or
+ * more claims is a boot-shape bug and throws rather than picking a winner.
+ *
+ * `kindsEnabled` gates `resolvePick` ONLY — a deep link, a command-palette
+ * row, or a restored URL selection must still resolve a kind a scene click
+ * cannot reach, so `extractRow`/`resolveFocusId`/`focusIdOf` stay ungated. It
+ * is required rather than defaulting to all-true: a caller that forgot it
+ * would silently ignore every view's pick restriction, which no test or type
+ * would catch. Tests that do not exercise the gate pass
+ * `tests/support/allKindsEnabled`.
+ */
+
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import type { SelectionKind } from '../../../@types/engine/SelectionKind';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';

@@ -1,3 +1,11 @@
+/**
+ * galaxyCatalogSelectionRow — the Layer's `SelectionKindRow` for per-point galaxy
+ * catalogs. A ref's index is the record ordinal (it drifts on a tier swap; the
+ * tier saga re-anchors by durable id); rows and decodes go through the record
+ * bridge, so a lookup still loading defers instead of failing. `claims` makes the
+ * pgc-/sdss-/pos@/famous branches mutually exclusive (composeSelectionRows.ts).
+ */
+
 import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';

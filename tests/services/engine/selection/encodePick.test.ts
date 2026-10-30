@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import { Source } from '../../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { unpackPick } from '../../../../src/data/selectionEncoding';

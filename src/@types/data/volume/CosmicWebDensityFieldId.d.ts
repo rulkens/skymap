@@ -1,4 +1,5 @@
 import type { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+
 type AnyEntry = (typeof APP_SOURCE_REGISTRY)[keyof typeof APP_SOURCE_REGISTRY];
 
 /**

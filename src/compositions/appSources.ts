@@ -5,6 +5,7 @@
  * each entry's literal `type`, so `APP_SOURCE_REGISTRY[Source.SDSS]` narrows without casts.
  * `maxDistMpc` is a display limit (H₀ ≈ 70 km/s/Mpc), not a cut. Integer keys iterate ascending,
  * so `SOURCE_ENTRIES` / `SOURCE_IDS` and the Labels panel follow code value.
+ * `bandLabels` names what each `magU/G/R/I/Z` slot really carries, `'—'` = empty.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';

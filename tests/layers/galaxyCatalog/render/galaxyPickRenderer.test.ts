@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGalaxyPickRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer';
 import { UNIFORM_BYTES } from '../../../../src/layers/galaxyCatalog/render/galaxyPointVertexLayout';
 import { Source } from '../../../../src/data/source';
+
 // A minimal stub device with a tracked writeBuffer — allows assertions
 // about which buffer was targeted and at which byte offset.  `createBuffer`
 // captures the pick uniform buffer by label so the OWN-buffer assertions are

@@ -11,6 +11,7 @@ import {
   milliquasParentSurveyPrefix,
 } from '../../../src/data/galaxyCatalog/sourceClass';
 import { Source } from '../../../src/data/source';
+
 describe('sourceClassLabel', () => {
   it('returns null for Milliquas byte 0 (unclassified)', () => {
     expect(sourceClassLabel(Source.Milliquas, 0)).toBeNull();

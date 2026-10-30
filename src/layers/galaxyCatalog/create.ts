@@ -15,6 +15,7 @@ import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
+
 import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import { GALAXY_CATALOG_SOURCES } from './sources/galaxyCatalogSources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';

@@ -1,3 +1,8 @@
+/**
+ * installStarPool — the star layer's side of `installOctreePool`: resolves the
+ * registry row once, so the shared runtime never reads the registry, and hands
+ * it the pool size and the star chunk format.
+ */
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import { installOctreePool } from '../../../services/octree/installOctreePool';
 import { octreeChunkPath } from '../../../utils/octree/octreeChunkPath';

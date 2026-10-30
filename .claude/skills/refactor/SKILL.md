@@ -106,6 +106,10 @@ are NOT rewritten by any subcommand:
   accept a stale key silently. Grep them separately.
 - **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`)
   hold paths as strings and are not updated.
+- **Leading comments and import spacing**: a rewrite of a file's FIRST import can
+  drop the module header comment above it, and can collapse the blank lines between
+  import groups. After any CLI run, `git diff <base> -U0` and look for
+  `@@ -1,N +1 @@` hunks; restore headers from the base ref.
 
 After any rename/extract/inline/move, `grep` for the old name and old basename to
 catch those by hand.

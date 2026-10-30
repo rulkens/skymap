@@ -1,3 +1,12 @@
+/**
+ * blackHoleSelectionRow — the `blackHole` selection kind. A hole poses from its
+ * PLACE (`anchorId`), so the camera targets the Galactic Centre whatever sits
+ * there, and every radius the driver carries is r_s: arrival and the descent
+ * floor are `focusDistanceRadii` / `standoffRadii` multiples of it. The
+ * footprint stays r_s rather than the lens's extent, or arrival would scale
+ * with the lens (P1).
+ */
+
 import { Source } from '../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';

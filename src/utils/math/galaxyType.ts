@@ -1,3 +1,19 @@
+/**
+ * Source-aware galaxy-type dispatcher.
+ *
+ * Each galaxy catalog carries different photometric bands; using the same colour
+ * thresholds for every source would mis-classify non-SDSS rows. This
+ * function picks the right classifier based on the source enum, so the
+ * InfoCard's "Red, quiescent" / "Blue, star-forming" tag actually reflects
+ * the data the galaxy catalog provides.
+ *
+ * The dispatch table here mirrors (but does not import) the band-slot
+ * mapping in each source entry's `bandLabels` (`src/compositions/appSources.ts`). Keeping the two in sync
+ * is the price of putting the photometric band layout in one place and the
+ * classification thresholds in another — review both whenever a new source
+ * is added.
+ */
+
 import { Source } from '../../data/source';
 import type { GalaxyTypeInfo } from '../../@types/data/galaxyCatalog/GalaxyTypeInfo';
 import type { GalaxyTypeMags } from '../../@types/data/galaxyCatalog/GalaxyTypeMags';
@@ -32,8 +48,8 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
       return Number.isFinite(jk) ? galaxyTypeFromJminusK(jk) : UNKNOWN;
     }
     case Source.FamousGalaxy: {
-      // Famous entries use SDSS-style optical slots (see BAND_LABELS in
-      // sources.ts).  Fall back to u−r like SDSS; most curated entries
+      // Famous entries use SDSS-style optical slots (see the entry's `bandLabels` in
+      // `compositions/appSources.ts`).  Fall back to u−r like SDSS; most curated entries
       // won't carry photometry so UNKNOWN is the usual outcome — that's
       // fine, the InfoCard shows a neutral colour swatch.
       const ur = mags.magU - mags.magR;
@@ -52,8 +68,8 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DesiWedge:
     case Source.DesiSgw: {
       // DESI patches (deep cone + dec-band wedge + Sloan Great Wall): g in
-      // g-slot, r in r-slot (DERED optical fluxes; see BAND_LABELS in
-      // sources.ts). g−r is the natural SDSS-like optical discriminator, so
+      // g-slot, r in r-slot (DERED optical fluxes; see the entry's `bandLabels` in
+      // `compositions/appSources.ts`). g−r is the natural SDSS-like optical discriminator, so
       // this reuses the SDSS-style colour classifier — the mixed BGS/LRG/ELG/QSO
       // population doesn't have a single established red-sequence threshold, but
       // a coarse "red vs blue" InfoCard tag is all this branch needs to provide.

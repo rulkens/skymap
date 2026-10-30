@@ -4,6 +4,7 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
+
 import { Source } from '../../../data/source';
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';

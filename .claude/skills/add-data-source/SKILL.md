@@ -134,7 +134,7 @@ Walk them in the same registry row → settings cluster → fetcher/slot/wiring 
 renderer/layer order the galaxy catalogs use:
 
 - **Registry row + id domain** — a `type: 'starCatalog'` `APP_SOURCE_REGISTRY` row
-  (`src/data/sources/gaia-stars.ts` is the template). `StarCatalogId`
+  (`src/layers/starCatalog/sources/gaia-stars.ts` is the template). `StarCatalogId`
   (`@types/data/starCatalog/StarCatalogId`) is the `type: 'starCatalog'`
   narrowing of the source-entry union, and `STAR_CATALOG_IDS`
   (`src/data/starCatalog/starCatalogIds.ts`) its auto-widening runtime list —

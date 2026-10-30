@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseMilliquas } from '../../tools/parsers/milliquas';
 import { Source } from '../../src/data/source';
+
 describe('parseMilliquas', () => {
   const raw = readFileSync(resolve(__dirname, '../fixtures/milliquas/sample.txt'), 'utf8');
 

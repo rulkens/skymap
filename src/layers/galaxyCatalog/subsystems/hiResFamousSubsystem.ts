@@ -1,3 +1,39 @@
+/**
+ * hiResFamousSubsystem — LOD-3 per-frame planner for Famous-source galaxies.
+ *
+ * One rung above the textured-disk planner.  When a famous galaxy grows
+ * past ~120 px of apparent diameter the curated 128 px atlas tile is at
+ * 1:1 and about to pixel-double, so we cut over to a 512²/1024² hi-res
+ * WebP held in a small fixed-capacity `texture_2d_array` (see
+ * `hiResFamousTexture.ts`).  The crossfade is smooth across the
+ * 120 → 160 px band so the user doesn't perceive the seam — the fragment
+ * shader does the blend; this subsystem only owns the planner state.
+ *
+ * ### Why famous-only + no decimation
+ *
+ * The famous catalog is ~75 rows.  Decimation (the trick the LOD-1 and
+ * LOD-2 planners use to amortise the catalog walk across frames) buys
+ * nothing here — the full walk is 75 squared-distance compares.  Sticky
+ * maps are also unnecessary because every row is visited every frame.
+ *
+ * ### Key choice: `String(idx)` rather than ra/dec
+ *
+ * The atlas planner keys on `galaxyCacheKey(ra, dec)` because its atlas
+ * is shared across all sources.  The hi-res texture is famous-only and
+ * the catalog row index is stable + unique within the array, so we
+ * encode the local index as the key (`String(i)`).  Same identity, half
+ * the string churn, no `cartesianToRaDec` per frame.
+ *
+ * ### Output contract
+ *
+ * Every gated galaxy gets a `byFamousIdx` entry.  Layers that are
+ * allocated but whose bitmap hasn't landed yet emit
+ * `hiResLayerIdx: -1, hiResCrossfadeAlpha: 0` — the consumer treats
+ * that as "atlas tile only" until the upload completes, so there's no
+ * pop at fetch-ready (the alpha ramp picks up where the atlas tile's
+ * fade-in left off).
+ */
+
 import { Source } from '../../../data/source';
 import { cartesianToRaDec } from '../../../utils/math/index';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';

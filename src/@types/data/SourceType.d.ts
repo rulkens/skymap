@@ -1,4 +1,5 @@
 import { Source } from '../../data/source';
+
 /**
  * Union of every numeric value in the `Source` const object — the
  * type used for indexing `APP_SOURCE_REGISTRY`, gating renderer paths,

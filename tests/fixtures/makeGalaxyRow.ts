@@ -1,4 +1,16 @@
+/**
+ * makeGalaxyRow — one shared builder for the `GalaxyRow` literal that many
+ * tests hand-assemble inline. Same churn rationale as `makeGalaxyCatalog`:
+ * centralise the field list so a new field on the row is one edit, not ~N
+ * identical breakages.
+ *
+ * Defaults are neutral zeros / falses; each test passes the values it actually
+ * asserts on via `overrides`. `famous` is optional, so it is omitted here and
+ * an override supplies it when a test exercises the famous-galaxies-meta block.
+ */
+
 import { Source } from '../../src/data/source';
+
 import type { GalaxyRow } from '../../src/@types/engine/GalaxyRow';
 
 export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {

@@ -1,3 +1,24 @@
+/**
+ * texturedDiskSubsystem — LOD-2 per-frame planner body.
+ *
+ * The shared catalog walk ('diskPlannerWalk.ts') owns the loop, the stride
+ * cursor, and the per-row geometry (camDist, px); this subsystem owns
+ * everything LOD-2-specific: the px ≥ 24 gate (famous rows exempt), atlas
+ * slot allocation + fetch scheduling, load-fade × distance-fade, the hi-res
+ * LOD-3 fold, the per-source sticky map, the back-to-front sort, and the
+ * 'DiskInstance[]' output array. 'beginFrame(input)' returns the
+ * DiskRowVisitor the walk drives; the visitor's endFrame stashes the sorted
+ * result on 'lastOutput'.
+ *
+ * Disks-only (no screen-aligned quad fallback): every encoded galaxy has finite
+ * orientation via the build-pipeline fallback, so the `Number.isFinite` checks
+ * below are only a corrupted-`.bin` guard.
+ *
+ * Ownership split with `galaxyAtlasSubsystem`: the atlas owns "did a bitmap land
+ * / permanently fail?" (persistent across frames); this planner owns "when did
+ * it land / is the load-fade still ramping?" (per-frame planning state).
+ */
+
 import { Source } from '../../../data/source';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';

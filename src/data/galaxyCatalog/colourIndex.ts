@@ -1,3 +1,17 @@
+/**
+ * Per-source colour-index computation.
+ *
+ * Each galaxy catalog carries different photometric bands in its five `magU/G/R/I/Z`
+ * slots. Forcing every galaxy catalog through SDSS-style u−g would clamp non-SDSS
+ * colours to the unknown-colour sentinel and lose all galaxy-type
+ * information. The per-source recipe lives on each entry's `colourSpec`
+ * field in `APP_SOURCE_REGISTRY`; this module normalises the result onto the
+ * 0..2 range the WGSL ramp expects.
+ *
+ * See `docs/superpowers/plans/2026-05-03-per-source-colour-index.md` for
+ * the band choices and the K-correction-coefficient rationale.
+ */
+
 import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import type { SourceType } from '../../@types/data/SourceType';
 import { distanceMpcToRedshift } from '../../utils/math/distanceMpcToRedshift';

@@ -28,6 +28,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+
 /** The star this layer currently draws a sphere for — the presence memory. */
 type PresentStar = { ordinal: number; positionMpc: Vec3; bpRp: number };
 

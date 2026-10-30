@@ -1,3 +1,17 @@
+/**
+ * buildGalaxyInfo — the PURE formatting half of the old galaxyInfoBuilder.
+ *
+ * Takes a serializable `GalaxyRow` (the cloud reads `extractGalaxyRow`
+ * produced) and computes the full display-ready `GalaxyInfo`: sky coordinates,
+ * distance, lookback, colours, IAU name, catalogue + thumbnail URLs, the
+ * orientation/diameter provenance, the famous enrichment, and the display-name
+ * ladder. Every helper it calls is a pure util, so this function imports no
+ * engine state and no GPU — which is exactly why React can call it directly in
+ * a memoized selector (the inverse of today's engine-bakes-GalaxyInfo flow).
+ *
+ * `row.objId` is the decimal string of the catalog objID; we parse it back to
+ * a bigint once here because the SDSS/PGC URL + name logic compares it to 0n.
+ */
 import { Source } from '../../../data/source';
 import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
 import {

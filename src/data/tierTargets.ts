@@ -1,3 +1,29 @@
+/**
+ * tierTargets — per-tier subsampling and filename helpers.
+ *
+ * The actual per-(source, tier) caps live on each `GalaxyCatalogSourceEntry`'s
+ * `tierTargets` field (see the galaxyCatalog Layer's `sources/` rows); this module only
+ * exposes the two helpers that read it.
+ *
+ * ### Three encodings, same semantics as before
+ *
+ *   missing key  → no cap; ship the source unchanged.
+ *   0            → exclude this source from this tier entirely (the build
+ *                  skips writing the file; runtime gets a 404).
+ *   positive N   → keep the brightest N galaxies by absolute magnitude.
+ *
+ * Encoding "no cap" as missing-key (rather than +Infinity) means a
+ * builder can write `if (target === undefined) skip subsampling` without
+ * sentinel-equality gymnastics.
+ *
+ * ### Why fixed integer targets (not a fraction)
+ *
+ * Rendering load scales with on-screen instance count, which is bounded
+ * by the total uploaded count.  Fractions like "10% of GLADE" would shift
+ * if GLADE itself grew (e.g. v2.4 release), and the mobile-GPU budget is
+ * an absolute number of points, not a percentage.
+ */
+
 import { APP_SOURCE_REGISTRY } from '../compositions/appSources';
 import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalog/galaxyCatalogFormat';
 import { shipsTierVariants } from '../utils/loading/shipsTierVariants';

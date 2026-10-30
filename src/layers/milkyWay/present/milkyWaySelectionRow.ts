@@ -1,3 +1,5 @@
+/** milkyWaySelectionRow — the singleton overlay: one tag, no per-instance data. */
+
 import { Source } from '../../../data/source';
 import { MILKY_WAY_PICK_ID } from './milkyWayPickId';
 import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';

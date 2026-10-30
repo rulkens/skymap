@@ -1,5 +1,5 @@
 /**
- * `Layer.sources` is inert: `compositions/appSources.ts` imports each Layer's rows into
+ * `Layer.sources` is inert: `compositions/appSources.ts` collects each Layer's rows into
  * `APP_SOURCE_REGISTRY` by direct import, so a Layer can declare rows, skip that edit,
  * and ship with a green suite — its sources simply absent at runtime. The same
  * hole `appSettingsSlices.test.ts` closes for `Layer.settings`.

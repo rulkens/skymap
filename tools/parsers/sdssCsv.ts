@@ -1,3 +1,37 @@
+/**
+ * SDSS CSV parser.
+ *
+ * Turns a raw SDSS SkyServer CSV blob into an array of canonical
+ * `ParsedRecord`s (see `common.ts`). This module knows nothing about the
+ * binary point-cloud format, file I/O, or downstream merging — it just
+ * decodes one specific CSV layout. That separation is what lets
+ * `buildAllBins.ts` reuse this same function alongside the other survey
+ * parsers.
+ *
+ * The expected SDSS CSV (downloaded from
+ * https://skyserver.sdss.org/dr18/SearchTools/sql) carries a header row
+ * with at minimum these columns, in any order, case-insensitive:
+ *
+ *   objID, ra, dec, z, modelMag_u, modelMag_g, modelMag_r, modelMag_i, modelMag_z
+ *
+ * Any extra columns are silently ignored — SkyServer often returns query
+ * metadata or extra photometric flags depending on how the SQL was written.
+ *
+ * Why parse against a *column-index map* rather than fixed positions?
+ *   The same SDSS query, run on different days or by different users,
+ *   can return columns in different orders. Two different SQL queries
+ *   that select the same columns are not guaranteed to emit them in the
+ *   same order either. Looking each column up by name once, up front,
+ *   gives a cheap O(1) integer index that the per-row hot loop can use
+ *   without re-doing string comparison work.
+ *
+ * Why tolerate `#Table1` and `--` comment lines?
+ *   SkyServer prepends a `#Table1` banner to the CSV; some manually-saved
+ *   exports also keep a leading SQL comment (`-- query: SELECT ...`). The
+ *   `nonCommentLines` helper strips both so we don't have to special-case
+ *   them inside the row loop.
+ */
+
 import { Source } from '../../src/data/source';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';

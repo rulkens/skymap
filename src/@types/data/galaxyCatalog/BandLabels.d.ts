@@ -5,7 +5,7 @@
  * structure at every call site.
  *
  * The per-source mapping (which photometric band lives in each slot)
- * lives in the each source entry's `bandLabels` in `APP_SOURCE_REGISTRY`;
+ * lives in each source entry's `bandLabels` in `APP_SOURCE_REGISTRY`;
  * this type only describes the slot-keyed shape.
  */
 export type BandLabels = {

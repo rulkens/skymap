@@ -19,6 +19,7 @@ import {
 } from '../../src/data/selectionEncoding';
 import type { PickResult } from '../../src/@types/data/PickResult';
 import { Source } from '../../src/data/source';
+
 describe('selectionEncoding', () => {
   it('packs (source, localIdx) into the documented bit layout', () => {
     // Source code 3 (e.g. GLADE) in bits 26..31, localIdx 42 in bits 0..25.

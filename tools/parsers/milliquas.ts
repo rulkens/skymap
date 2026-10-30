@@ -1,3 +1,36 @@
+/**
+ * Milliquas v8 (Million Quasars) parser — Flesch 2023, the compilation
+ * AGN catalogue distributed as a single 188-character fixed-width text
+ * file at <https://quasars.org/milliquas.htm>.
+ *
+ * The parser emits a `ParsedRecord[]` whose per-record `classByte` and
+ * `parentSurveyByte` fields carry every InfoCard-visible Milliquas
+ * datum (AGN class letter + parent-survey prefix).  Both fields are
+ * persisted by the v5 .bin format, so the runtime reconstructs the
+ * historical `"<PARENT> J<RA><Dec>"` display name purely from the
+ * binary — no companion JSON sidecar required.
+ *
+ * ---
+ * ### Skip rules (spec-z subset only)
+ *
+ * Drop rows whose Z column is blank, non-positive (`0.000` or a bad
+ * negative measurement), rounded to `.X00` (generic photo-z candidate),
+ * or rounded to `.XY0` with Zcite=GAIA3 (Gaia DR3 QSOC photo-z).  See the
+ * per-rule comments below for the long form.
+ *
+ * ---
+ * ### Why bytes, not strings
+ *
+ * The .bin format carries the class letter as a per-record enum byte
+ * (`classByte`) and the parent-survey prefix as a second per-record
+ * enum byte (`parentSurveyByte`); see `src/data/sourceClass.ts` for
+ * the lookup tables and `src/data/galaxyCatalogFormat.ts` for the
+ * on-disk layout.  A small minority of Milliquas Names are
+ * literature designations (`3C 273`, `M 87`); those map to
+ * `parentSurveyByte = 0` and the runtime falls back to the generic
+ * `MQ J<RA><Dec>` IAU name.
+ */
+
 import { Source } from '../../src/data/source';
 import {
   MILLIQUAS_CLASS_BYTE,
