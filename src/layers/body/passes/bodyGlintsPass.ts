@@ -43,14 +43,12 @@ import { MAX_GLINTS } from '../../../services/gpu/renderers/bodies/bodyGlintRend
 import { BODY_GLINT_INSTANCE_FLOATS } from '../../../data/rendering/bodyGlintInstanceFloats';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 
-const BODY_LABEL = visibilityEntryOf(bodyVisibility, 'label:body');
-
 // Reused every frame: the hot path allocates nothing.
 const staging = new Float32Array(MAX_GLINTS * BODY_GLINT_INSTANCE_FLOATS);
 
-/** `pickEnabled` and `drawPick` must agree with the Earth caption, so both read its band. */
-function earthCaptionPickable(ctx: FrameView): boolean {
-  return bandValueOf(BODY_LABEL, EARTH_ENTRY.id, ctx) > 0;
+/** Picks follow the captions, so `pickEnabled` and `drawPick` read the caption's own band. */
+function captionShown(ctx: FrameView, item: string): boolean {
+  return bandValueOf(visibilityEntryOf(bodyVisibility, 'label:body'), item, ctx) > 0;
 }
 
 export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
@@ -71,7 +69,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       const backdropFade = bodyGlintBackdropFade(ctx.drawCamPos, sceneBodyStates(state, ctx));
       return (
         (backdropFade > 0 && bodySceneBodyPartition(state, ctx, runtime).glints.length > 0) ||
-        earthCaptionPickable(ctx)
+        captionShown(ctx, EARTH_ENTRY.id)
       );
     },
 
@@ -122,7 +120,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       const camPos = view.camPos;
       // The same far-dissolve alpha `draw` folds in, hoisted (per-frame constant).
       const backdropFade = bodyGlintBackdropFade(camPos, states);
-      const planetCaptionShown = bandValueOf(BODY_LABEL, PLANET_ENTRY.id, ctx) > 0;
+      const planetCaptionShown = captionShown(ctx, PLANET_ENTRY.id);
       const pickPoints: BodyGlintPick[] = [];
 
       // Earth is not in the partition (it rides `SCENE_EARTH`), so without this stamp the
@@ -130,7 +128,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
       // shallowest band (`lib/pickDepthBands.wesl`). Gated on the caption band, not
       // `earthPass.enabled`, which dies ten orders of magnitude earlier while the label
       // still shows; the stamp writes the SAME `Source.Earth` id the sphere pick does.
-      if (earthCaptionPickable(ctx)) {
+      if (captionShown(ctx, EARTH_ENTRY.id)) {
         const earthPos = states.get(SCENE_EARTH.id)!.positionMpc;
         pickPoints.push({
           posRelCamMpc: [
