@@ -92,7 +92,6 @@ const CORE_ALLOWED: Readonly<Record<string, number>> = {
   'components/containers/GalaxyProvenanceSectionContainer': 2,
   'data/animation/clips/cosmicFlows': 1,
   'data/bodies/earthSceneBodyIds': 1,
-  'data/bodies/layerBodyRows': 3,
   'data/exhibits/cosmicFlows': 3,
   'data/exhibits/cosmicWeb': 2,
   'data/exhibits/utils/cosmicWebDensityOff': 1,

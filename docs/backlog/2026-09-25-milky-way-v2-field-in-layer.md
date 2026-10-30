@@ -23,7 +23,8 @@ side-by-side comparison rather than being deleted in the same effort.
 
 Still open: whether `'both'` sums to about twice the light, or halves each renderer (grill Q1,
 unanswered); and whether the settings shape is flat v1 knobs plus a `field` group, or
-nested `sprites` and `field`.
+nested `sprites` and `field`. Today's `MilkyWayTuning` is one flat bag of eight sprite knobs that the
+dust pass mostly ignores, and `MILKY_WAY_SLIDER_FIELDS` would show them all while only the v2 field is live.
 
 ## Missing joints (refactor-ground, 2026-09-25)
 
@@ -36,7 +37,9 @@ nested `sprites` and `field`.
    The fix is a `FieldView`: an eye and a basis in the galaxy frame
    (`milkyWayCamPosModel`, and the inverse rotation of `milkyWayModelMatrix`), plus
    `ViewFrustum` tangents so dome faces and VR eyes work. The tool would pass the identity.
-   This extends [field uniforms per view](2026-09-22-field-uniforms-per-view.md).
+   Today the field bypasses the shared per-view `CameraUniforms` prefix
+   (`src/services/gpu/lib/cameraUniforms.ts`) that every other renderer writes through, so it must
+   fold into that prefix before the v2 field joins the frame order.
 2. **The renderer takes a `GPUTexture`.** It reads only `.width`/`.height`, calls
    `createView()`, and uses `dustMapTex` identity as a cache key
    (`createGalaxyFieldRenderer.ts:349-465`). `RenderTargets` exposes no textures.
