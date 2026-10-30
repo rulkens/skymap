@@ -1,0 +1,52 @@
+.root {
+  composes: wrap section from '../../../../styles/layout.module.css';
+}
+
+.parts {
+  composes: grid halves from '../../../../styles/layout.module.css';
+  row-gap: 4.5rem;
+}
+
+.figure {
+  margin: 0 0 1.75rem;
+}
+
+/* One shape for every picture, the film's: a taller picture is cut about its middle. */
+.frame {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.caption {
+  margin-top: 0.5rem;
+}
+
+.ask {
+  margin-bottom: 0.75rem;
+}
+
+.more {
+  margin-top: 4rem;
+}
+
+/* The second column stands lower, so the four read as a sequence rather than a table. */
+@media (min-width: 901px) {
+  .part:nth-child(even) {
+    margin-top: 9rem;
+  }
+
+  /* It gives the room back below, except the last, which the link under the four stands clear of. */
+  .part:nth-child(even):not(:last-child) {
+    margin-bottom: -9rem;
+  }
+}
