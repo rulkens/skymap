@@ -2,7 +2,7 @@
  * Lessons — Home's pitch for the classroom: four ways into a lesson, each a large picture (one a film of the
  * clock running), a question for the class and the link that opens where it is answered. The questions are
  * the classroom page's own (data/lessons.ts and its class features), so the two pages ask the same thing.
- * Wide, the second column stands lower than the first; narrow, the parts follow one another.
+ * Wide, a large and a small picture to a row, crossing sides; narrow, the parts follow one another.
  */
 import { CLASS_FEATURES } from '../../../../content/pages/classroom/classFeatures.ts';
 import { appLink } from '../../../../data/appLink.ts';
@@ -33,27 +33,39 @@ const PARTS = [
     ask: earth.ask,
     hash: earth.hash,
     action: earth.title,
+    large: true,
   },
   {
     title: 'Run the clock',
     shot: 'features-time-jupiter',
     film: true,
+    large: false,
     ask: clock.ask,
     hash: clock.hash,
     action: clock.action,
   },
-  { title: 'Questions to chase', shot: search.shot, ask: search.ask, hash: search.hash },
+  {
+    title: 'Questions to chase',
+    shot: search.shot,
+    ask: search.ask,
+    hash: search.hash,
+    large: false,
+  },
   {
     title: 'Feel the scale',
     shot: andromeda.shot,
     ask: andromeda.ask,
     hash: andromeda.hash,
     action: andromeda.title,
+    large: true,
   },
 ];
 
-// Half the page grid, less a gap; the whole width on a phone.
-const SIZES = '(max-width: 900px) 100vw, min(calc(50vw - 4rem), 36rem)';
+// Six or seven of the page grid's twelve columns (`large`), or four or five; the whole width on a phone.
+const sizes = (large: boolean) =>
+  large
+    ? '(max-width: 900px) 100vw, min(calc(58vw - 4rem), 41rem)'
+    : '(max-width: 900px) 100vw, min(calc(42vw - 4rem), 29rem)';
 
 function Lessons() {
   return (
@@ -70,9 +82,9 @@ function Lessons() {
             <figure className={styles.figure}>
               <div className={styles.frame}>
                 {part.film ? (
-                  <FeatureFilm film={part.shot} sizes={SIZES} wide />
+                  <FeatureFilm film={part.shot} sizes={sizes(part.large)} wide />
                 ) : (
-                  <Shot id={part.shot} sizes={SIZES} />
+                  <Shot id={part.shot} sizes={sizes(part.large)} />
                 )}
               </div>
               <figcaption className={styles.caption}>
