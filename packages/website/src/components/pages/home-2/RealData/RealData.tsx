@@ -23,9 +23,10 @@ import styles from './RealData.module.css';
 
 // The title of each is a group of the table, which picks its sources.
 // `accent` is taken from the picture: the survey's warm near end, starlight, the orbits' gold, Earth's blue.
+// `counts` names what the large number counts where a source's own count does not (`countNoun`).
 const KINDS = [
-  { group: 'Galaxies and quasars', shot: 'features-desi', accent: '#e8a774' },
-  { group: 'Stars', shot: 'render-stars', accent: '#f1e2c4' },
+  { group: 'Galaxies and quasars', counts: 'galaxies and quasars', shot: 'features-desi', accent: '#e8a774' },
+  { group: 'Stars', counts: 'stars', shot: 'render-stars', accent: '#f1e2c4' },
   { group: 'Solar system', shot: 'lesson-solar-system', accent: '#d9c27a' },
   { group: 'Imagery', shot: 'earth-terminator', accent: '#8fb6ff' },
 ];
@@ -42,6 +43,13 @@ const sources = (group: string) =>
     ...row,
     count: row.drawn ?? row.rows,
   }));
+// What a source's count is of: the noun of its catalogue size ("44,599 galaxies"), unless that only says rows,
+// objects or spectra, where the group's word stands in (2MRS holds galaxies only; GLADE and DESI hold both).
+const GENERIC = ['rows', 'objects', 'spectra'];
+const countNoun = (rows: string | undefined, group: string) => {
+  const noun = rows?.split(' ')[1];
+  return noun && !GENERIC.includes(noun) ? noun : group;
+};
 const delay = (at: number) => ({ '--reveal-delay': `${at * 60}ms` }) as CSSProperties;
 
 function RealData() {
@@ -90,7 +98,10 @@ function RealData() {
                         <span className={styles.count}>{row.count}</span>
                         <span className={styles.big} aria-hidden>
                           {row.count.split(' ')[0]}
-                          <small>{shortName(row.name)}</small>
+                          <small>
+                            {kind.counts ? `${countNoun(row.rows, kind.counts)} from ` : ''}
+                            {shortName(row.name)}
+                          </small>
                         </span>
                       </>
                     )}
