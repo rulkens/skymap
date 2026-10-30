@@ -2,8 +2,8 @@
  * satelliteOrbitsPass — the selected and focused satellites' orbits as the same fading trail the
  * planets get, drawn by the Layer's OWN `OrbitTrailRenderer`: core's rewrites its instance buffer on
  * every `draw`, so a second draw in a frame would overwrite the planets' records before submit.
- * Alpha is the class fade times `satelliteLayerOpacity`. NEAR0, under the same occlusion as the
- * trails; no pick.
+ * Alpha is the class fade (its `nearEarth` band included) times `satelliteLayerOpacity`. NEAR0,
+ * under the same occlusion as the trails; no pick.
  */
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
@@ -28,14 +28,10 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
     name: 'satellite-orbits',
     fade: 'satellites',
 
-    enabled(state, ctx, _view, fade) {
+    enabled(state, ctx) {
       const catalog = runtime.propagator.catalog();
       if (selectedSatelliteIndices(state.selection, catalog).length === 0) return false;
-      const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id);
-      if (earth === undefined) return false;
-      return (
-        satelliteLayerOpacity(catalog, ctx.snapshot.simDays, ctx.drawCamPos, earth.positionMpc) > 0
-      );
+      return satelliteLayerOpacity(catalog, ctx.snapshot.simDays) > 0;
     },
 
     draw(pass, view, ctx, state, fade) {
@@ -43,7 +39,7 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
       const { simDays } = ctx.snapshot;
       const eye = ctx.drawCamPos;
       const catalog = runtime.propagator.catalog()!;
-      const opacity = satelliteLayerOpacity(catalog, simDays, eye, earth.positionMpc);
+      const opacity = satelliteLayerOpacity(catalog, simDays);
       const ks = selectedSatelliteIndices(state.selection, catalog);
       if (staging.length < ks.length * INSTANCE_FLOATS) {
         staging = new Float32Array(ks.length * INSTANCE_FLOATS);
