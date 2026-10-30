@@ -70,8 +70,7 @@ function Lessons() {
       <div className={styles.head}>
         <h2>Use it in the classroom</h2>
         <p>
-          Give the class a link and a question. The link opens the view in a browser, with nothing
-          to install.
+          Give the class a link and a question: a field trip with no bus, and nothing to install.
         </p>
       </div>
       <div className={styles.parts}>

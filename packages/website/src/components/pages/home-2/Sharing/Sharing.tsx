@@ -50,7 +50,7 @@ function Sharing() {
         style={{ '--view-accent': view.accent } as CSSProperties}
       >
         <div className={styles.head}>
-          <h2>Ready for sharing</h2>
+          <h2>Wish you were here</h2>
           <p className={styles.lead}>
             Copy the address of any view and send it. It opens on the same view for whoever follows
             it.

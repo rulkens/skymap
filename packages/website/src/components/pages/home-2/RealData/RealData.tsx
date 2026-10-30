@@ -47,7 +47,7 @@ function RealData() {
   return (
     <section className={styles.root} id="data">
       <div className={styles.column}>
-        <SectionHead title="Real data, real science" top>
+        <SectionHead title="Data you can count on" top>
           <p>
             Skymap places catalogued stars, galaxies and quasars in three dimensions. These are the
             catalogues and the imagery it is built from.
@@ -108,7 +108,11 @@ function RealData() {
         <div className={styles.strip}>
           {HONESTY_BINS.map((bin, at) => (
             <figure key={bin.id} className={styles.bin}>
-              <div className={cx(styles.over, motion.unmask)} style={delay(at)} data-reveal="unmask">
+              <div
+                className={cx(styles.over, motion.unmask)}
+                style={delay(at)}
+                data-reveal="unmask"
+              >
                 <Shot id={bin.shot} sizes="(max-width: 900px) 100vw, 34vw" />
                 <p className={styles.word} style={delay(at + 2)} data-reveal="rise">
                   <strong>{bin.title}</strong>

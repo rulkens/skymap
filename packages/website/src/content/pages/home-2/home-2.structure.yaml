@@ -53,7 +53,7 @@ sections:
       - heading: "Had our species appeared when this light left Andromeda?"
         job: "Fly from your town to the cosmic web."
         shots: [lesson-andromeda]
-  - heading: "Real data, real science"
+  - heading: "Data you can count on"
     job: "To give the visitor confidence that this is a real scientific tool, what are the sources of the data?"
     component: "RealData"
     layout: "four round windows, each over a ledger of its sources and their counts; then three pictures edge to edge"
@@ -74,7 +74,7 @@ sections:
       - heading: "Measured, derived and drawn"
         job: "Every part labelled by kind."
         shots: [galaxies-measured, filaments-derived, milky-way-drawn]
-  - heading: "Ready for sharing"
+  - heading: "Wish you were here"
     job: "Show that it is easy to share Skymap locations with friends, colleagues and students."
     component: "Sharing"
     shots: [hubble, saturn]
