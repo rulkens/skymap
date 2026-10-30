@@ -153,7 +153,7 @@ export const near0SelectionRingPass: ContentPass = {
     // Keep the centre between the slab's planes — BOTH can be crossed. The
     // adaptive far plane (`max(orbit·100, 3e-11)` Mpc, `foregroundFrustum`)
     // drops below a pinned anchor when the orbit target is much nearer; the
-    // near plane is FLOORED at `MIN_NEAR_MPC` (~6.2 m) while a mesh body parks
+    // near plane is FLOORED at `MIN_NEAR_MPC` (~0.5 m) while a mesh body parks
     // the camera at two of its own radii (0.9 m for the bowl of petunias). One
     // clip z/w serves all six quad vertices, so outside either plane the whole
     // primitive is discarded and the halo vanishes rather than clips. Scaling

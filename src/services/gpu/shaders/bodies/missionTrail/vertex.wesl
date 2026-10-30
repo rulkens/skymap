@@ -12,10 +12,6 @@ import package::lib::segmentQuad::expandSegmentQuad;
 
 @group(0) @binding(2) var<uniform> u: TrailUniforms;
 
-// Clip w is in near-plane units (near0OverlayClipScale: the near plane sits at w = 1).
-// A segment end behind the eye is slid along the segment to this w, since a quad
-// built from a negative-w endpoint folds across the screen.
-const W_EPS: f32 = 0.01;
 const MPC_TO_KM: f32 = 3.0856775814913673e19;
 
 @vertex
@@ -24,33 +20,30 @@ fn vs(@builtin(vertex_index) vid: u32, seg: TrailSegment) -> VSOut {
   var cornerY = array<f32, 6>(0.0, 1.0, 0.0, 0.0, 1.0, 1.0);
   let corner = vec2<f32>(cornerX[vid], cornerY[vid]);
 
-  var a = (seg.aHi - u.camHi) + (seg.aLo - u.camLo);
-  var b = (seg.bHi - u.camHi) + (seg.bLo - u.camLo);
-  let wa = worldToClip(u.cam, a).w;
-  let wb = worldToClip(u.cam, b).w;
-
-  var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
-  if (wa < W_EPS && wb < W_EPS) {
-    return out;
-  }
-  if (wa < W_EPS) {
-    a = a + (b - a) * ((W_EPS - wa) / (wb - wa));
-  } else if (wb < W_EPS) {
-    b = b + (a - b) * ((W_EPS - wb) / (wa - wb));
-  }
-
-  // A zero-length segment (a head on a vertex) has no tangent; drop it.
+  let a = (seg.aHi - u.camHi) + (seg.aLo - u.camLo);
+  let b = (seg.bHi - u.camHi) + (seg.bLo - u.camLo);
   let aClip = worldToClip(u.cam, a);
   let bClip = worldToClip(u.cam, b);
+
+  // A zero-length segment (a head on a vertex) has no tangent; drop it. One
+  // with an end behind the eye projects to a ray, never short on screen.
+  var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
   let dPx = (bClip.xy / bClip.w - aClip.xy / aClip.w) * 0.5 * u.cam.viewportPx;
-  if (dot(dPx, dPx) < 1e-10) {
+  if (aClip.w > 0.0 && bClip.w > 0.0 && dot(dPx, dPx) < 1e-10) {
     return out;
   }
 
   let p = expandSegmentQuad(u.cam, a, b, corner, 0.5 * u.widthPx);
   // Depthless HDR target: pin z mid-range so no near/far plane clips the quad.
   out.clip = vec4<f32>(p.xy, 0.5 * p.w, p.w);
-  out.relKm = select(a, b, corner.x > 0.5) * MPC_TO_KM;
+  // The occlusion test reads the eye-relative point. A corner whose end is
+  // behind the eye sits off-screen along the trail, so it carries the point
+  // where the trail crosses the eye plane: a ratio of w, with no slide to a
+  // near-zero w that f32 cannot resolve at trail distances.
+  let crossing = a + (b - a) * (aClip.w / (aClip.w - bClip.w));
+  let aKm = select(crossing, a, aClip.w > 0.0);
+  let bKm = select(crossing, b, bClip.w > 0.0);
+  out.relKm = select(aKm, bKm, corner.x > 0.5) * MPC_TO_KM;
   out.side = corner.y * 2.0 - 1.0;
   return out;
 }
