@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { dropFamousMatches } from '../../tools/catalog/dropFamousMatches';
-import { Source } from '../../src/data/sources';
+import { Source } from '../../src/data/source';
 import type { ParsedRecord } from '../../tools/parsers/common';
 
 function rec(ra: number, dec: number): ParsedRecord {

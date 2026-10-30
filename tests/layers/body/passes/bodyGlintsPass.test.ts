@@ -18,7 +18,7 @@ import { SCALE_FADE_BANDS } from '../../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';

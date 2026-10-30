@@ -83,6 +83,7 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
         altitudeMpc: pose.distance,
         nowMs: 0,
         simDays: CONST_J2000,
+        bodyStates: deriveBodyStates(CONST_J2000),
       },
       { width: 1920, height: 1080 },
     );
@@ -104,6 +105,7 @@ describe('deriveFrameContext — slab candidates yield at the foreground band', 
       altitudeMpc: pose.distance,
       nowMs: 0,
       simDays: CONST_J2000,
+      bodyStates: deriveBodyStates(CONST_J2000),
     });
     if (!ctx.isReady) throw new Error('fixture not ready');
     return ctx.slabBodyCandidates.map((row) => row.anchorId);

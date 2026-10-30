@@ -106,6 +106,12 @@ are NOT rewritten by any subcommand:
   accept a stale key silently. Grep them separately.
 - **Ratchet allow-lists** (e.g. `tests/helpers/conventions/inlineTypeFiles.ts`)
   hold paths as strings and are not updated.
+- **Ad-hoc ts-morph importer rewrites**: never repoint importers with a one-off
+  ts-morph script. A module move is `npm run move-files -- <from> <to>` (it rewrites
+  every importer project-wide) and a symbol rename is `refactor rename`. In any
+  ts-morph code, `ImportDeclaration.remove()` on a file's first import drops the
+  module header comment and the blank line after it; use `removeImportKeepingTrivia`
+  (`tools/utils/refactor/`) instead.
 
 After any rename/extract/inline/move, `grep` for the old name and old basename to
 catch those by hand.

@@ -58,7 +58,7 @@ export type Layer<
   /** Exhibit rows, folded after core's into `APP_EXHIBIT_REGISTRY` by import (`appExhibits`); the
    * engine reads them here for their sections' camera rows. Ids unique, asserted at import. */
   readonly exhibits?: readonly Exhibit[];
-  /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
+  /** Typing only: `compositions/appSources.ts` collects the same rows into `APP_SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;
   /** Typing only: the composition root collects the same rows in `compositions/appBodies.ts`. */
   readonly bodies?: readonly LayerBody[];

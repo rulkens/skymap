@@ -10,7 +10,8 @@ import { describe, it, expect } from 'vitest';
 
 import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
-import { SOURCE_REGISTRY, Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import {
   packSelection,
   unpackPick,
@@ -25,7 +26,7 @@ describe('blackHoleSelectionRow', () => {
   it('resolves a Source.SgrAStar pick to the Sgr A* ref', () => {
     const pick = unpackPick(packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET))!;
     expect(ROW.pickSources).toContain(pick.sourceCode);
-    expect(ROW.resolvePick(SOURCE_REGISTRY[Source.SgrAStar], pick)).toEqual(SGR_A_STAR_REF);
+    expect(ROW.resolvePick(APP_SOURCE_REGISTRY[Source.SgrAStar], pick)).toEqual(SGR_A_STAR_REF);
   });
 
   it('focus id round-trips', () => {

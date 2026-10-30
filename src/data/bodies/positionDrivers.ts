@@ -37,7 +37,7 @@ export function positionDriverById(id: string): PositionDriver {
   return driver;
 }
 
-/** As `positionDriverById`, for an id that may be transient (`transientPositions`): no row is null. */
+/** As `positionDriverById`, for an id that may be transient (`TransientBodyId`): no row is null. */
 export function positionDriverOrNull(id: string): PositionDriver | null {
   return BY_ID.get(id) ?? null;
 }

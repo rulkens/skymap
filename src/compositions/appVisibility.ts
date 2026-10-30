@@ -12,6 +12,7 @@ import type { ShowKey } from '../@types/animation/ShowKey';
 import { blackHolesVisibility } from '../layers/blackHoles/visibility';
 import { bodyVisibility } from '../layers/body/visibility';
 import { constellationsVisibility } from '../layers/constellations/visibility';
+import { cosmicHorizonVisibility } from '../layers/cosmicHorizon/visibility';
 import { cosmicWebDensityVisibility } from '../layers/cosmicWebDensity/visibility';
 import { cosmicWebFilamentsVisibility } from '../layers/cosmicWebFilaments/visibility';
 import { flowVisibility } from '../layers/flow/visibility';
@@ -36,6 +37,7 @@ export const APP_VISIBILITY_REGISTRY = [
   ...zoneOfAvoidanceVisibility,
   ...localBubbleVisibility,
   ...lightTimeVisibility,
+  ...cosmicHorizonVisibility,
   ...constellationsVisibility,
   ...blackHolesVisibility,
   ...milkyWayVisibility,

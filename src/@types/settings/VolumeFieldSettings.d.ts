@@ -3,7 +3,7 @@
  * scalar-volume field.
  *
  * Held in `state.settings.cosmicWebDensity.items`, keyed by `CosmicWebDensityFieldId`.
- * The engine seeds these at construction from the field's SOURCE_REGISTRY
+ * The engine seeds these at construction from the field's APP_SOURCE_REGISTRY
  * entry; the SettingsPanel reads authoritative state directly from settings
  * without polling the GPU handle.
  *

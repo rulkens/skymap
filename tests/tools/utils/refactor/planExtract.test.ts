@@ -106,4 +106,39 @@ describe('planExtract', () => {
 
     expect(() => planExtract(project, resolved, '/src/dest.ts')).toThrow(/dest\.ts/);
   });
+
+  it('keeps the source header and import-group spacing when its first import is pruned', () => {
+    const project = projectWith({
+      '/src/util.ts': 'export function helper(x: number) { return x + 1; }',
+      '/src/z.ts': 'export const Z = 1;',
+      '/src/source.ts':
+        "/**\n * Header\n */\nimport { helper } from './util';\n\nimport { Z } from './z';\nexport const keep = Z;\nexport function target(x: number) { return helper(x); }\n",
+    });
+    const resolved = resolveSymbol(project, { file: '/src/source.ts', symbol: 'target' });
+
+    planExtract(project, resolved, '/src/target.ts');
+
+    // getFullText: getText() hides the leading header this test is about.
+    const source = project.getSourceFileOrThrow('/src/source.ts').getFullText();
+    expect(source.startsWith('/**\n * Header\n */\n')).toBe(true);
+    expect(source).not.toContain('helper');
+    expect(source).toContain("import { Z } from './z';");
+  });
+
+  it('keeps an importer header when it repoints a first import that shares a clause', () => {
+    const project = projectWith({
+      '/src/z.ts': 'export const Z = 1;',
+      '/src/source.ts': 'export const other = 1;\nexport function target() { return 1; }\n',
+      '/src/app.ts':
+        "/**\n * Header\n */\nimport { target, other } from './source';\n\nimport { Z } from './z';\nexport const y = target() + other + Z;\n",
+    });
+    const resolved = resolveSymbol(project, { file: '/src/source.ts', symbol: 'target' });
+
+    planExtract(project, resolved, '/src/target.ts');
+
+    const app = project.getSourceFileOrThrow('/src/app.ts').getFullText();
+    expect(app.startsWith('/**\n * Header\n */\nimport { other } from')).toBe(true);
+    expect(app).toMatch(/import \{ target \} from ['"]\.\/target['"]/);
+    expect(app).toMatch(/from '\.\/source';\n\nimport \{ Z \}/);
+  });
 });

@@ -15,7 +15,7 @@ import {
   encodeGalaxyCatalog,
   emptyGalaxyCatalog,
 } from '../../../../src/data/galaxyCatalog/galaxyCatalogFormat';
-import { Source } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 describe('galaxyCatalogFetcher', () => {

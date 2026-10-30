@@ -23,7 +23,7 @@ import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
-import { deriveBodyStates } from './deriveBodyStates';
+import { frameBodyStates } from './frameBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -85,10 +85,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const pending = selectPendingInput(stored);
   const steps = pendingToInputSteps(pending, canvasPx);
 
-  // Derived BEFORE the step: the follow driver aims at where the body is this frame,
-  // and this call primes the one-deep `deriveBodyStates` memo.
+  // Derived BEFORE the step: the follow driver aims at where the body is this frame. The
+  // ONE placement of the moving selection; the frame context takes this same Map.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays);
+  const bodyStates = frameBodyStates(stored, state.selectionKindRows, simDays);
 
   const {
     next,
@@ -136,7 +136,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // Shared with `pickFrameContext`; only `nowMs`/`poseBasis`/`upBasis`/`simDays` vary
+  // Shared with `pickFrameContext`; only the time, the bases and the body snapshot vary
   // between callers. Safe here because `state.cameraRuntime = next` above already
   // made `state`'s runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
@@ -145,6 +145,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     poseBasis,
     upBasis,
     simDays,
+    bodyStates,
   });
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`

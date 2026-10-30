@@ -83,6 +83,7 @@ export function scheduleSkyCaptures(input: {
       eyeMpc: ctx.drawCamPos,
       nearMpc: row.nearMpc,
       nowMs: ctx.snapshot.nowMs,
+      bodyStates: ctx.snapshot.bodyStates,
     });
     if (capture.isReady) {
       for (const face of ALL_CUBE_FACES) {

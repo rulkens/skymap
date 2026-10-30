@@ -30,7 +30,8 @@ const CAPTION_SOURCE_ROWS: readonly CaptionSourceRow[] = [
 );
 
 // `sceneBodyStates` returns the SAME Map by reference while `simDays` is
-// unchanged, so this identity check is a free change-detector — the same
+// unchanged and nothing moving is selected (`placeLiveSelection`), so this
+// identity check is a free change-detector — the same
 // contract `produceSceneBodyCaptions.ts`'s `baseLabelsFor` keeps. One caption
 // list per `CAPTION_SOURCE_ROWS` row, index-aligned, so a caption finds its item.
 let cachedStates: ReadonlyMap<string, BodyState> | undefined;

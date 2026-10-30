@@ -8,14 +8,19 @@
 import { describe, it, expect } from 'vitest';
 
 import { flatGalaxyRecordSource } from '../../../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
-import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/source';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalogRegistryEntry } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 const sourceOver = (source: SourceType, catalog: GalaxyCatalog) =>
-  flatGalaxyRecordSource(SOURCE_REGISTRY[source] as GalaxyCatalogRegistryEntry, catalog, () => []);
+  flatGalaxyRecordSource(
+    APP_SOURCE_REGISTRY[source] as GalaxyCatalogRegistryEntry,
+    catalog,
+    () => [],
+  );
 
 describe('flatGalaxyRecordSource', () => {
   it('stats equal the per-tier values', () => {
