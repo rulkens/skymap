@@ -136,7 +136,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   /** Dispatch a focus row for `id` off its real seeded position, or clear it. */
   const focus = (id: SimBodyId | null): void => {
     if (id === null) {
-      store.dispatch(setSelectionRow({ slot: 'focus', row: null }));
+      store.dispatch(setSelectionRow({ slot: 'focus', row: null, focusId: null }));
       return;
     }
     const body = bodies.get(id)!;
@@ -150,6 +150,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
           positionMpc: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
           driver: bodyDriverGeometry(id),
         },
+        focusId: null,
       }),
     );
   };

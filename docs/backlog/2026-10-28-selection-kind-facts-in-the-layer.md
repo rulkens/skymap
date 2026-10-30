@@ -20,8 +20,6 @@ The core tables the satellites kind had to join (each `file:line` is the satelli
   `src/services/engine/helpers/buildFocusable.ts:80`: whether, and how, a row becomes a focus target.
 - `selectionHaloTable` `src/services/engine/helpers/selectionHaloTable.ts:70`: the halo style.
 - `targetIdentityKey` `src/services/engine/helpers/targetIdentityKey.ts:21`: the identity key.
-- `URL_HASH_FOR` `src/services/url/urlHashFor.ts:37`: the `#focus=` hash, which imports two Layers'
-  encoders (`urlHashFor.ts:15-16`), although each Layer's row already declares `focusId.encode`.
 - `focusFraming` `src/services/engine/camera/focusFraming.ts:61`: camera framing.
 - `mayHaveLabel` `src/utils/selection/mayHaveLabel.ts:23`: whether a hover may carry a label.
 - `pickingSlice` `src/state/settings/core/pickingSlice.ts:22`: the default pick switch.
@@ -63,12 +61,6 @@ Carried over from the two items this one absorbs (their files are deleted).
   sibling of the subsystem bundle; a bundle may reference the kinds it renders pick geometry for.
 - **Trigger.** The next new focusable kind (globular clusters from the Harris catalog are the plausible
   candidate). The Milky Way v1 to v2 swap does not touch this surface.
-- **Verification question** (from the `URL_HASH_FOR` duplication item): is `FocusableTarget` derivable
-  from `SelectionRef` on every arm, so one `focusId.encode` per kind replaces `URL_HASH_FOR`? Ruled
-  2026-10-29 as J15: the selection-rows saga stores `focusId` beside the focus row, and the hash
-  writer, dome status and `shareUrlFor` all read that one selector. Before deleting `focusUrl`, add a
-  galaxy ra/dec parity test. `zoneOfAvoidance` has no `focusId` row; `URL_HASH_FOR` returns null for
-  it, consistent.
 - **J2** (selection presentation in `docs/backlog/2026-10-29-layer-migration-leftovers.md`) is carried
   by this item too.
 

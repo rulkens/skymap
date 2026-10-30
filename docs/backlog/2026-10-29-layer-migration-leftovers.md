@@ -25,7 +25,6 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | M6 | Galaxy provenance debug section | galaxyCatalog | MOVE-NOW | 286 | none: `ui.debug` exists |
 | M7 | Earth settings subgroup | body | MOVE-NOW* | 162 | a placement ruling: it nests inside core's Display section |
 | M8 | Milky Way + seeded-star palette arms | milkyWay, starCatalog | MOVE-NOW | ~100 | none: `search` fits |
-| M9 | `URL_HASH_FOR` + `focusUrl` (duplicates `SelectionKindRow.focusId.encode`) | all | MOVE-NOW (delete) | ~60 | verify galaxy `encode(ref)` matches `selectionToFocusId` |
 | J1 | Seeded stars: Sun, famous stars, S-stars, makers, anchors (§7 step 5) | starCatalog | NEEDS-JOINT | ~2,700 | `BodyPosition` has no `anchor` kind; `SCENE_ANCHORS` / `ORBIT_REACH_BY_REGION` read core tables |
 | J2 | Selection presentation: `buildGalaxyInfo` + galaxy math (via barrel), star arm of `buildFocusable`, galaxy/structure/MW framing | galaxyCatalog, starCatalog, structure, milkyWay | NEEDS-JOINT | ~1,480 | per-kind core tables (`BUILD_FOCUSABLE`, `REF_OF`, `focusFraming`, `mayHaveLabel`, `targetIdentityKey`, `selectionHaloTable`); needs `SelectionKindRow` members |
 | J3 | `ephemerisCorrections.generated` + `barycentricPairs` | body | NEEDS-JOINT | 1,113 | core solver (`orbitRowPlacement`) keys them by id; `LayerBody`/`OrbitalElements` would carry them |
@@ -47,7 +46,7 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | S6 | Shaders for Layer content | all | STAYS | ~6,000 WESL | README rule |
 | S7 | Body infrastructure per spec §4, shared places, labels/markers/selection ring, tours, featured tabs, tier | shared | STAYS | n/a | shared by ≥2 Layers or engine infrastructure |
 
-Totals: MOVE-NOW ~10,700 (M1 8.2k + M2-M9 2.5k). NEEDS-JOINT ~7,300. STAYS ~27,000 including ~11,000 WESL.
+Totals: MOVE-NOW ~10,700 (M1 8.2k + M2-M8 2.4k). NEEDS-JOINT ~7,300. STAYS ~27,000 including ~11,000 WESL.
 
 Known items, refined:
 
@@ -100,9 +99,6 @@ M1 sweep starts.
 ### M8. Milky Way + seeded-star palette arms: ~100
 `rankPaletteMatches`, `paletteRows` and `paletteRowLabel` carry bespoke `milkyWay` and `starCatalog` arms (`data/palette/milkyWayNames`, `BODY_SEARCH_NAMES`, `SEEDED_STAR_CATALOGS_BY_SOURCE`). `LayerSearchEntry {id, names, class, chip}` already fits both; body, missions, earthScenes and blackHoles use it.
 
-### M9. `URL_HASH_FOR` + `focusUrl`: ~60, deletion
-`services/url/urlHashFor.ts` is a per-kind table that re-states what every `SelectionKindRow.focusId.encode` already says. It also imports `layers/blackHoles/present/encodeBlackHoleFocusId`, one of only two core→Layer content imports outside the fold points. `focusIdOf(t)` could be `row(t.type).focusId?.encode(refOf(t)) ?? null`. To verify first: galaxyCatalog's `encode(ref)` must give the same famous→PGC→objID→pos ladder as `selectionToFocusId(GalaxyInfo)`.
-
 ---
 
 ## NEEDS-JOINT: a contract member or seam is missing. Each one needs the user's yes.
@@ -117,7 +113,7 @@ M1 sweep starts.
 **Joint.** `BodyPosition` is `site | orbit | sampled`, and a fixed star is an anchor (`AnchorBody`). Needed: a `{ kind: 'anchor' }` position, or a Layer-folded anchor list, so `SCENE_ANCHORS` becomes a fold. S-stars already fit `orbit`. `ORBIT_REACH_BY_REGION` then reads the composed rows, as the spec says. `SCENE_ANCHORS` already holds a non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`), so the fold is the place-anchor table and should be named and filed as one rather than under `data/bodies/`.
 
 ### J2. Selection presentation tables: ~1,480 movable behind them
-Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusable.ts`), `REF_OF`, `focusFraming` (switch), `mayHaveLabel` (switch), `targetIdentityKey`, `selectionHaloTable`, `URL_HASH_FOR` (M9) and `CORE_DETAIL_CARDS` (M2). That is the anti-goal shape of spec §2: a table keyed by kind gaining a row per Layer. What sits behind the galaxy, star, structure and MW rows:
+Core holds a row per selection kind in `BUILD_FOCUSABLE` (`helpers/buildFocusable.ts`), `REF_OF`, `focusFraming` (switch), `mayHaveLabel` (switch), `targetIdentityKey`, `selectionHaloTable` and `CORE_DETAIL_CARDS` (M2). That is the anti-goal shape of spec §2: a table keyed by kind gaining a row per Layer. What sits behind the galaxy, star, structure and MW rows:
 - `helpers/buildGalaxyInfo` 264, plus `famousDisplayName` 36 and `utils/format/{formatMorphology,formatLookback,famousWikipediaTitle}` 82.
 - Galaxy math reached only through `buildGalaxyInfo`'s barrel import: `sdssName` 82, `galaxyType`+3 117+108, `iauName`+`iauRaDecSuffix` 120, `sdss{Explorer,Thumbnail,Navigate}Url` 97, `dssThumbnailUrl` 49, `aladinLiteUrl` 32, `ned*Url` 67, `galaxyThumbnailFovArcmin` 29, `lookbackTimeGyr` 40, `earthEraForLookback` 56, `hubbleVelocityKmS` 45, `cartesianToRaDecZ` 86, `format{Ra,Dec}Sexagesimal` 85. About 913 in all.
 - The star arm's `starDetail` plus `sStarOrbitInfo` 44, and the camera's `galaxyFocusDistance` 59 + `structureFocusDistance` 82.
