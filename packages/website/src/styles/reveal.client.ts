@@ -11,15 +11,16 @@ const TIMING = { duration: 450, easing: 'cubic-bezier(0, 0, 0.2, 1)', fill: 'bac
 // sliding off its picture while the picture settles from a touch larger.
 const KINDS: Record<string, (el: HTMLElement, delay: number) => Animation[]> = {
   rise: (el, delay) => [
-    el.animate(
-      { opacity: [0, 1], translate: ['0 1.5rem', '0 0'] },
-      { ...TIMING, delay },
-    ),
+    el.animate({ opacity: [0, 1], translate: ['0 1.5rem', '0 0'] }, { ...TIMING, delay }),
   ],
   unmask: (el, delay) => {
-    const from = getComputedStyle(el, '::before').translate;
+    // The veil's own place, off the picture, is where it slides to.
+    const rest = getComputedStyle(el, '::before').translate;
     return [
-      el.animate({ translate: ['0 0', from] }, { ...TIMING, duration: 500, delay, pseudoElement: '::before' }),
+      el.animate(
+        { translate: ['0 0', rest] },
+        { ...TIMING, duration: 500, delay, pseudoElement: '::before' },
+      ),
       ...[...el.querySelectorAll('img, video')].map((media) =>
         media.animate({ scale: [1.06, 1] }, { ...TIMING, duration: 500, delay }),
       ),
