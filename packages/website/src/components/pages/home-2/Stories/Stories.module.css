@@ -1,0 +1,139 @@
+.root {
+  composes: wrap section grid from '../../../../styles/layout.module.css';
+  /* From the column's left edge to the window's: the wrap centres a column at most `--wrap-max` wide. */
+  --bleed: calc(max(0px, (100vw - var(--wrap-max)) / 2) + var(--gutter));
+  align-items: center;
+  row-gap: 2.5rem;
+}
+
+.figure {
+  margin: 0;
+}
+
+/* The views lie on one another; the picture fades into the page above, below and towards the words. */
+.stage {
+  --view-out: 1.4s;
+  --view-in: 1.4s;
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  isolation: isolate;
+
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        180deg,
+        var(--color-bg) 0%,
+        rgb(0 0 0 / 0) 12%,
+        rgb(0 0 0 / 0) 88%,
+        var(--color-bg) 100%
+      ),
+      linear-gradient(90deg, rgb(0 0 0 / 0) 70%, var(--color-bg) 100%);
+  }
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+
+  & picture {
+    display: block;
+    height: 100%;
+  }
+
+  & img {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* A later view does not exist until it is warmed, so it is not fetched. */
+.cold {
+  display: none;
+}
+
+.caption {
+  margin-top: 1rem;
+}
+
+.lead {
+  font-size: var(--text-lead);
+}
+
+.part {
+  margin-top: 2.5rem;
+
+  & p {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (min-width: 901px) {
+  .figure {
+    grid-column: 1 / span 7;
+    --cols: 7;
+  }
+
+  .stage {
+    margin-left: calc(-1 * var(--bleed));
+  }
+
+  .words {
+    grid-column: 8 / -1;
+    --cols: 5;
+  }
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2.5rem;
+}
+
+/* Narrow: the title and its line, the picture across the whole window with its label, then the parts. */
+@media (max-width: 900px) {
+  .root {
+    row-gap: 0;
+  }
+
+  /* With the words dissolved, their parts are the grid's own items: each takes the row. */
+  .words {
+    display: contents;
+  }
+
+  .words > * {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .figure {
+    order: 1;
+    margin-bottom: 1rem;
+  }
+
+  .part {
+    order: 2;
+  }
+
+  .stage {
+    aspect-ratio: 4 / 3;
+    margin-inline: calc(-1 * var(--gutter));
+
+    &::after {
+      background: linear-gradient(
+        180deg,
+        var(--color-bg) 0%,
+        rgb(0 0 0 / 0) 12%,
+        rgb(0 0 0 / 0) 85%,
+        var(--color-bg) 100%
+      );
+    }
+  }
+}
