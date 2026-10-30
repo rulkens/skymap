@@ -1,0 +1,180 @@
+/* Wide: the picture bleeds off the right edge and the address lies over its dark left side, crossing columns. */
+.figure {
+  composes: grid from '../../../../styles/layout.module.css';
+  position: relative;
+  margin: 0 0 3.5rem;
+  align-items: center;
+}
+
+/* Out to the window's right edge: the wrap's gutter, plus the margin beside it once the window is wider than the wrap. */
+.picture {
+  grid-area: 1 / 5 / 2 / -1;
+  margin-right: calc(-1 * max(var(--gutter), (100vw - var(--wrap-max)) / 2 + var(--gutter)));
+  mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 0), #000 30%),
+    linear-gradient(180deg, rgb(0 0 0 / 0), #000 12%, #000 85%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.address {
+  position: relative;
+  z-index: 1;
+  grid-area: 1 / 1 / 2 / span 8;
+
+  /* The copy control ends the address's last line, as a browser's does. */
+  & button {
+    display: inline-grid;
+    vertical-align: middle;
+  }
+}
+
+/* The address as the picture's title: large, in the face the app writes addresses in. */
+.url {
+  margin: 0;
+  font: 400 var(--text-ring-big) / 1.35 var(--font-family-mono);
+  letter-spacing: -0.02em;
+  color: var(--color-fg);
+  text-shadow: 0 0 1.5rem rgb(0 0 0 / 0.8);
+}
+
+/* A part never breaks at its own hyphens, and the copy control stays on the last part's line. */
+.url > .host,
+.line {
+  display: block;
+  white-space: nowrap;
+}
+
+.host {
+  color: var(--site-text-dim);
+}
+
+/* A part the steps write: underlined in the picture's colour, with its step's number in the margin. */
+.part {
+  position: relative;
+  text-decoration: underline 1px var(--accent);
+  text-underline-offset: 0.3em;
+  transition: color var(--duration-base) var(--ease-standard);
+
+  &::before {
+    content: attr(data-n);
+    position: absolute;
+    top: 50%;
+    left: -2.25rem;
+    translate: 0 -50%;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+    letter-spacing: 0;
+    color: var(--accent);
+    text-shadow: none;
+  }
+}
+
+.caption {
+  grid-area: 2 / 5 / 3 / -1;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+/* The steps, numbered in rings like the parts of the address they write. */
+.steps {
+  composes: grid thirds from '../../../../styles/layout.module.css';
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.step {
+  counter-increment: step;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-divider);
+
+  & h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    &::before {
+      content: counter(step);
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+      color: var(--accent);
+      transition: background-color var(--duration-base) var(--ease-standard);
+    }
+  }
+
+  & p {
+    color: var(--site-text-muted);
+  }
+}
+
+/* A step pointed at or focused lights the part of the address it writes; the third, the whole address. */
+.step:is(:hover, :focus-within) h3::before {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.root:has(.step:nth-child(1):is(:hover, :focus-within)) .part[data-n='1'],
+.root:has(.step:nth-child(2):is(:hover, :focus-within)) .part[data-n='2'],
+.root:has(.step:nth-child(3):is(:hover, :focus-within)) .url,
+.root:has(.step:nth-child(3):is(:hover, :focus-within)) .host {
+  color: var(--accent);
+}
+
+/* Narrow: the address, then the picture of the view it opens, then its label. */
+@media (max-width: 900px) {
+  /* Through `.root`, as the composed `.grid` may load after this file and would win a tie. */
+  .root .figure {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .picture {
+    order: 2;
+    margin-inline: calc(-1 * var(--gutter));
+    margin-top: 1rem;
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0), #000 12%, #000 85%, rgb(0 0 0 / 0));
+  }
+
+  /* Room inside the gutter for the numbers that hang left of the parts. */
+  .address {
+    padding-left: 2.25rem;
+  }
+
+  .url {
+    font-size: var(--text-body);
+  }
+
+  .caption {
+    order: 3;
+  }
+
+  .step + .step {
+    margin-top: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .part,
+  .step h3::before {
+    transition: none;
+  }
+}

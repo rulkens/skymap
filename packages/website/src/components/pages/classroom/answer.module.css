@@ -1,0 +1,50 @@
+/*
+ * answer.module.css — the classroom page's kept-back answer: a native `details` whose summary is the site's
+ * ring control, filled while the answer is open. A vocabulary of this page: compose `answer`; the host sets
+ * `--accent`, or the ring takes the link colour.
+ */
+.answer {
+  & summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    cursor: pointer;
+    color: var(--accent, var(--color-accent));
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: '';
+      flex: none;
+      width: 0.875rem;
+      height: 0.875rem;
+      margin-right: 0.75rem;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      transition: background-color var(--duration-fast) var(--ease-standard);
+    }
+  }
+
+  &[open] summary::before {
+    background: currentColor;
+  }
+
+  & summary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 4px;
+  }
+
+  & p {
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer summary::before {
+    transition: none;
+  }
+}

@@ -1,0 +1,29 @@
+/* The verdict as the section's lead, behind the site's ring: filled for yes, hollow and dim for no. */
+.root {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  max-width: var(--measure-lead);
+  margin: 0;
+  font-size: var(--text-lead);
+  color: var(--color-fg);
+  text-wrap: balance;
+
+  &::before {
+    content: '';
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+  }
+}
+
+.root[data-verdict='yes']::before {
+  background: var(--color-accent);
+}
+
+.root[data-verdict='off'],
+.root[data-verdict='no'] {
+  color: var(--site-text-muted);
+}

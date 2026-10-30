@@ -1,0 +1,257 @@
+.root {
+  --accent: var(--color-accent);
+}
+
+/*
+ * The clock bar: a line as long as the lesson, cut where a part begins, each stretch as long as its part
+ * (`--minutes`). A ring marks each start, as the app's clock marks the instant.
+ */
+.bar {
+  composes: bare from '../../../../styles/layout.module.css';
+  display: flex;
+  margin-bottom: 4rem;
+
+  & li {
+    flex: var(--minutes) 1 0;
+    min-width: 0;
+  }
+
+  & a {
+    position: relative;
+    display: block;
+    padding: 1.25rem 0.75rem 0 0;
+    color: var(--site-text-muted);
+    text-decoration: none;
+
+    /* The stretch of line. */
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0 0.25rem auto 0;
+      height: 2px;
+      background: var(--border-control);
+      transition: background-color var(--duration-base) var(--ease-standard);
+    }
+
+    /* The ring at its start. */
+    &::after {
+      content: '';
+      position: absolute;
+      top: -0.3125rem;
+      left: -0.3125rem;
+      width: 0.625rem;
+      height: 0.625rem;
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      background: var(--color-bg);
+    }
+  }
+}
+
+.bar .bell {
+  flex: none;
+
+  & a {
+    padding-right: 0;
+    translate: -100% 0;
+    text-align: right;
+
+    &::before {
+      display: none;
+    }
+
+    &::after {
+      left: auto;
+      right: -0.3125rem;
+      background: var(--accent);
+    }
+  }
+}
+
+.from {
+  display: block;
+  margin-bottom: 0.25rem;
+  font: var(--weight-small) var(--text-small) / 1.5 var(--font-family-mono);
+  color: var(--accent);
+}
+
+.name {
+  display: block;
+  font-size: var(--text-small);
+  font-weight: var(--weight-small);
+  line-height: 1.3;
+}
+
+/* A part pointed at or focused, and the link to it, light its stretch of the bar. */
+.bar a:hover,
+.bar a:focus-visible,
+.root:has(.part:nth-child(1):is(:hover, :focus-within)) .bar li:nth-child(1) a,
+.root:has(.part:nth-child(2):is(:hover, :focus-within)) .bar li:nth-child(2) a,
+.root:has(.part:nth-child(3):is(:hover, :focus-within)) .bar li:nth-child(3) a,
+.root:has(.part:nth-child(4):is(:hover, :focus-within)) .bar li:nth-child(4) a {
+  color: var(--color-fg);
+
+  &::before {
+    background: var(--accent);
+  }
+}
+
+/* Two by two, every part on the same seven rows, so the questions and the links line up across a row. */
+.parts {
+  composes: grid from '../../../../styles/layout.module.css';
+  row-gap: 0;
+}
+
+.part {
+  display: grid;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
+  align-content: start;
+  scroll-margin-top: calc(var(--nav-height) + 2rem);
+
+  & h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 0.75rem;
+  }
+
+  & p {
+    margin: 0 0 0.75rem;
+  }
+
+  & > a {
+    align-self: start;
+    justify-self: start;
+    margin-top: 0.5rem;
+  }
+}
+
+.part:nth-child(n + 3) .picture {
+  margin-top: 5rem;
+}
+
+/* The picture dissolves at its edges into the page. */
+.picture {
+  margin-bottom: 1.5rem;
+  mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 0), #000 6%, #000 94%, rgb(0 0 0 / 0)),
+    linear-gradient(180deg, rgb(0 0 0 / 0), #000 6%, #000 90%, rgb(0 0 0 / 0));
+  mask-composite: intersect;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.prep,
+.label {
+  composes: small from '../../../../styles/type.module.css';
+  color: var(--site-text-dim);
+}
+
+/* The part's number in a ring, as the clock bar marks its start and the link steps further down number theirs. */
+.part h3::before {
+  content: attr(data-n);
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+  color: var(--accent);
+}
+
+/* The question is what the teacher reads out: the display face, a step under the part's title. */
+.ask {
+  font: var(--weight-display) var(--text-body) / 1.3 var(--font-family-display);
+  color: var(--color-fg);
+}
+
+.leave {
+  margin-top: 5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-divider);
+
+  & h3 {
+    margin-bottom: 0.5rem;
+  }
+
+  & > p {
+    max-width: var(--measure-lead);
+    margin: 0 0 0.75rem;
+  }
+}
+
+.answer {
+  composes: answer from '../answer.module.css';
+}
+
+@media (min-width: 901px) {
+  .part {
+    grid-column: span 6;
+  }
+
+  /* The last question sits under the bar's end, where the bell is. */
+  .leave {
+    width: calc((100% + var(--col-gap)) / 2);
+    margin-left: auto;
+  }
+}
+
+/* Narrow: the bar stands upright down the margin of a list, each stretch as tall as its part is long. */
+@media (max-width: 900px) {
+  .bar {
+    flex-direction: column;
+    margin-bottom: 2.5rem;
+
+    & li {
+      flex: none;
+      min-height: calc(var(--minutes) * 0.2rem + 3rem);
+    }
+
+    & a {
+      height: 100%;
+      padding: 0 0 1rem 1.5rem;
+
+      &::before {
+        inset: 0 auto 0.25rem 0;
+        width: 2px;
+        height: auto;
+      }
+    }
+
+    & .bell {
+      min-height: 0;
+
+      & a {
+        padding-bottom: 0;
+        translate: none;
+        text-align: left;
+
+        &::after {
+          left: -0.3125rem;
+          right: auto;
+        }
+      }
+    }
+  }
+
+  .part:nth-child(n + 2) .picture {
+    margin-top: 3.5rem;
+  }
+
+  .picture {
+    margin-inline: calc(-1 * var(--gutter));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar a::before {
+    transition: none;
+  }
+}
