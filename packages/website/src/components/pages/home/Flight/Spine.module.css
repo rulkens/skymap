@@ -23,13 +23,14 @@
   margin-left: -0.5px;
 }
 
+/* The rail stays in the sky's own greys: the picture is the subject, the rail only says where we are. */
 .spine::before {
   bottom: 0;
-  background: rgb(232 238 255 / 0.3);
+  background: rgb(232 238 255 / 0.14);
 }
 
 .fill {
-  background: var(--color-accent);
+  background: rgb(232 238 255 / 0.45);
 }
 
 .dot {
@@ -39,7 +40,7 @@
   height: 0.9375rem;
   margin-top: -0.46875rem;
   padding: 0;
-  border: 1px solid rgb(168 208 255 / 0.8);
+  border: 1px solid rgb(232 238 255 / 0.4);
   border-radius: 50%;
   background: #000;
   cursor: pointer;
@@ -62,7 +63,7 @@
     content: '';
     position: absolute;
     inset: -0.375rem;
-    border: 1px solid var(--color-accent);
+    border: 1px solid rgb(232 238 255 / 0.5);
     border-radius: 50%;
     opacity: 0;
     transform: scale(1.6);
@@ -72,7 +73,8 @@
   }
 
   &[aria-current='true'] {
-    background: var(--color-accent);
+    border-color: var(--color-fg);
+    background: var(--color-fg);
 
     &::before {
       opacity: 1;
