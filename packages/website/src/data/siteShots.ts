@@ -873,6 +873,16 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A panel of fifteen picture cards under seven tabs, among them Perseverance, Hubble, Earth, Saturn and the Cosmic Web.',
   },
   {
+    id: 'home-search',
+    link: 'pose=a,0,0,0,6.14,0.2,5.5e-16,0',
+    settings: { ui: true, minimalUi: true, searchFor: '', settleMs: 3000, crop: { left: 300, top: 40, width: 600, height: 580 } },
+    size: FEATURE,
+    widths: [1200, 800],
+    title: 'The app’s search',
+    drawn: 'Every card is a picture taken in the app.',
+    alt: 'A search box above a panel of picture cards under seven tabs, among them Perseverance, Hubble, Earth, Saturn and the Cosmic Web.',
+  },
+  {
     id: 'class-search-phone',
     link: 'pose=a,0,0,0,6.14,0.2,5.5e-16,0',
     settings: { ui: true, searchFor: '', settleMs: 3000 },
