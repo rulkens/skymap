@@ -17,9 +17,10 @@ import Shot from '../../../shared/media/Shot/Shot.tsx';
 import ShotCaption from '../../../shared/media/ShotCaption/ShotCaption.tsx';
 import styles from './Stories.module.css';
 
-// The tour's stage is seven columns and the margin to the window's edge; the exhibit's the whole window.
-const TOUR_SIZES = '(max-width: 900px) 100vw, 60vw';
-const EXHIBIT_SIZES = '(max-width: 900px) 160vw, 100vw';
+// The tour's stage is seven columns and the margin to the window's edge; the exhibit's the whole window. A phone's
+// 4:3 and 5:4 cuts draw their 16:10 frames 1.2 and 1.28 windows wide.
+const TOUR_SIZES = '(max-width: 900px) 120vw, 60vw';
+const EXHIBIT_SIZES = '(max-width: 900px) 128vw, 100vw';
 const EXHIBIT_LABEL = {
   title: 'The Solar System exhibit, layer by layer',
   credit: siteShot('cut-jupiter').credit,

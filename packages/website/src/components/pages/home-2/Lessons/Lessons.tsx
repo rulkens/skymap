@@ -82,7 +82,7 @@ function Lessons() {
               <Shot id="lessons-jupiter" sizes="(max-width: 900px) 145vw, 46rem" />
             </div>
             <div className={styles.clock}>
-              <Shot id="ui-timebar" sizes="(max-width: 900px) 80vw, 24rem" />
+              <Shot id="ui-timebar" sizes="(max-width: 900px) 80vw, 25rem" />
             </div>
           </div>
           <figcaption className={styles.label}>

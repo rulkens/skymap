@@ -846,8 +846,9 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     id: 'stories-orbits',
     link: 'exhibit=solarSystem',
     settings: { settleMs: 9000, matte: 'emissive', keepPasses: ['orbit-trails'], hideLabels: true },
+    // Drawn across the whole window, so a 1-px orbit needs the frame at 2x of 1440.
     size: { width: 1600, height: 1000 },
-    widths: [1920, 1280, 800],
+    widths: [2880, 1920, 1280, 800],
     title: 'The Solar System exhibit’s orbits',
     drawn: 'The orbits are computed and drawn as lines.',
     alt: 'Nested orbit rings seen at a slant, crowded at the centre, the outer ones crossing the frame.',

@@ -116,8 +116,9 @@
   position: absolute;
   top: calc(50% + 0.24 * var(--jupiter));
   left: var(--jupiter-x);
-  width: 30rem;
-  margin-left: -15rem;
+  /* The app's own size: the widest file is the bar at 2x. */
+  width: 25rem;
+  margin-left: -12.5rem;
   --drift: 2rem;
 }
 
