@@ -58,7 +58,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'layers/body/passes/texturedBodiesPass': 2,
   'layers/milkyWay/passes/milkyWayPass': 1,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
-  'layers/starCatalog/passes/starPointsPass': 2,
+  'layers/starCatalog/passes/starPointsPass': 1,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };

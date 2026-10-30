@@ -43,7 +43,7 @@ describe('star fade bands — pop-free coupling to their gates', () => {
     // hard-cuts the layer, so the gate lands on already-black sprites and never
     // pops. A retune that pushed `goneAt` out to (or past) the gate would
     // reintroduce the hard-cut blob this fix dissolved.
-    expect(STAR_BACKDROP_DISSOLVE.goneAt).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
+    expect(STAR_BACKDROP_DISSOLVE.out[1]).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
   });
 
   it('the body-glint backdrop dissolves fully inside the shared foreground gate', () => {
@@ -65,10 +65,10 @@ describe('both backdrop bands derive from one shape', () => {
     // independently of the other's (the bug this shape consolidation removes),
     // the two ratios would diverge and this would fail; retuning the shared
     // shape moves both ratios together and stays green.
-    expect(STAR_BACKDROP_DISSOLVE.fullAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+    expect(STAR_BACKDROP_DISSOLVE.out[0] / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.fullAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
-    expect(STAR_BACKDROP_DISSOLVE.goneAt / NEIGHBOURHOOD_EXTENT_MPC).toBe(
+    expect(STAR_BACKDROP_DISSOLVE.out[1] / NEIGHBOURHOOD_EXTENT_MPC).toBe(
       SCALE_FADE_BANDS.bodyGlintBackdrop.goneAt / SOLAR_SYSTEM_EXTENT_MPC,
     );
   });

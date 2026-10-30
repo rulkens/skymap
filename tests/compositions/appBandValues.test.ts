@@ -11,6 +11,10 @@ import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
 import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
 import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
+import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-star';
+import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
+import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';
 import { normalize3 } from '../../src/utils/math/normalize3';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 
@@ -55,9 +59,11 @@ describe('near-field entries at the foreground gate', () => {
   );
 });
 
-// Pins each seeded star set to its own region's anchor. The eyes sit on the home → galactic
-// centre line, where measuring from the other region's anchor reads inside the cutoff.
-describe('seeded star sets at the foreground gate', () => {
+// Pins each seeded star set's backdrop dissolve to its own region's anchor. The eyes sit on
+// the home → galactic centre line, 8.2 kpc apart, so measuring from the other region's anchor
+// fails every check: below 1 where full is expected, above 0 where gone is.
+describe('seeded star sets dissolve from their own region', () => {
+  const [, goneAt] = STAR_BACKDROP_DISSOLVE.out;
   const gc = BODY_STATES.get(GALACTIC_CENTRE_ANCHOR.id)!.positionMpc;
   const towardGc = normalize3([gc[0], gc[1], gc[2]]);
   const along = (from: Readonly<Vec3>, distanceMpc: number): Vec3 => [
@@ -66,23 +72,21 @@ describe('seeded star sets at the foreground gate', () => {
     from[2] + towardGc[2] * distanceMpc,
   ];
 
-  it.each(['famousStar', 'sun'])(
-    'seeded neighbourhood stars (%s) are full at 1 kpc from home and gone at the cutoff',
+  it.each([FAMOUS_STAR_ENTRY.id, SUN_ENTRY.id])(
+    'seeded neighbourhood stars (%s) are full at 1 kpc from home and gone at 23 kpc',
     (item) => {
       expect(valueAtEye('starCatalog', along([0, 0, 0], SCALE_UNITS.KPC_TO_MPC), item)).toBe(1);
-      expect(valueAtEye('starCatalog', along([0, 0, 0], FOREGROUND_MAX_DISTANCE_MPC), item)).toBe(
-        0,
-      );
+      expect(valueAtEye('starCatalog', along([0, 0, 0], goneAt), item)).toBe(0);
     },
   );
 
-  it('S-stars are full at the galactic centre and gone at the cutoff from it', () => {
-    expect(valueAtEye('starCatalog', along(gc, SCALE_UNITS.PC_TO_MPC), 'sStar')).toBe(1);
-    expect(valueAtEye('starCatalog', along(gc, -FOREGROUND_MAX_DISTANCE_MPC), 'sStar')).toBe(0);
+  it('S-stars are full at 1 pc from the galactic centre and gone at 23 kpc from it', () => {
+    expect(valueAtEye('starCatalog', along(gc, SCALE_UNITS.PC_TO_MPC), S_STAR_ENTRY.id)).toBe(1);
+    expect(valueAtEye('starCatalog', along(gc, -goneAt), S_STAR_ENTRY.id)).toBe(0);
   });
 
   it.each(STAR_CATALOG_IDS.filter((id) => !(id in SEEDED_STAR_CATALOGS)))(
-    'the survey star item (%s) has no foreground band',
+    'the survey star item (%s) is unbanded',
     (item) => {
       expect(valueAt('starCatalog', 10 * FOREGROUND_MAX_DISTANCE_MPC, item)).toBe(1);
     },
